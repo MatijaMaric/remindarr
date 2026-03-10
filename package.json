@@ -2,17 +2,24 @@
   "name": "jwsync",
   "version": "1.0.0",
   "scripts": {
-    "dev": "bun run --watch server/index.ts",
+    "dev": "concurrently \"bun run dev:server\" \"bun run dev:frontend\"",
+    "dev:server": "bun run --watch server/index.ts",
     "dev:frontend": "cd frontend && bun run dev",
     "build": "cd frontend && bun run build",
     "start": "bun run server/index.ts",
-    "sync": "bun run server/cli/sync.ts"
+    "sync": "bun run server/cli/sync.ts",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.1",
     "hono": "^4.4.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "concurrently": "^9.2.1",
+    "drizzle-kit": "^0.31.9",
     "shadcn": "^4.0.3"
   }
 }

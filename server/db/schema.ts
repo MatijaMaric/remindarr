@@ -1,18 +1,237 @@
 import { Database } from "bun:sqlite";
+import { drizzle, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  index,
+  primaryKey,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
 import { CONFIG } from "../config";
 
-let db: Database;
+// ─── Table Definitions ──────────────────────────────────────────────────────
 
-export function getDb(): Database {
-  if (!db) {
-    db = new Database(CONFIG.DB_PATH, { create: true });
-    db.run("PRAGMA journal_mode = WAL");
-    db.run("PRAGMA foreign_keys = ON");
-    initSchema(db);
-    migrateSchema(db);
+export const titles = sqliteTable(
+  "titles",
+  {
+    id: text("id").primaryKey(),
+    objectType: text("object_type").notNull(),
+    title: text("title").notNull(),
+    releaseYear: integer("release_year"),
+    releaseDate: text("release_date"),
+    runtimeMinutes: integer("runtime_minutes"),
+    shortDescription: text("short_description"),
+    genres: text("genres"),
+    imdbId: text("imdb_id"),
+    tmdbId: text("tmdb_id"),
+    posterUrl: text("poster_url"),
+    ageCertification: text("age_certification"),
+    jwUrl: text("jw_url"),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    index("idx_titles_release_date").on(table.releaseDate),
+    index("idx_titles_object_type").on(table.objectType),
+  ]
+);
+
+export const providers = sqliteTable("providers", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  technicalName: text("technical_name"),
+  iconUrl: text("icon_url"),
+});
+
+export const offers = sqliteTable(
+  "offers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    titleId: text("title_id").references(() => titles.id),
+    providerId: integer("provider_id").references(() => providers.id),
+    monetizationType: text("monetization_type"),
+    presentationType: text("presentation_type"),
+    priceValue: real("price_value"),
+    priceCurrency: text("price_currency"),
+    url: text("url"),
+    availableTo: text("available_to"),
+  },
+  (table) => [
+    index("idx_offers_title_id").on(table.titleId),
+    index("idx_offers_provider_id").on(table.providerId),
+  ]
+);
+
+export const scores = sqliteTable("scores", {
+  titleId: text("title_id")
+    .primaryKey()
+    .references(() => titles.id),
+  imdbScore: real("imdb_score"),
+  imdbVotes: integer("imdb_votes"),
+  tmdbScore: real("tmdb_score"),
+  jwRating: real("jw_rating"),
+});
+
+export const episodes = sqliteTable(
+  "episodes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    seasonNumber: integer("season_number").notNull(),
+    episodeNumber: integer("episode_number").notNull(),
+    name: text("name"),
+    overview: text("overview"),
+    airDate: text("air_date"),
+    stillPath: text("still_path"),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    uniqueIndex("episodes_title_season_episode").on(
+      table.titleId,
+      table.seasonNumber,
+      table.episodeNumber
+    ),
+    index("idx_episodes_air_date").on(table.airDate),
+    index("idx_episodes_title_id").on(table.titleId),
+  ]
+);
+
+export const users = sqliteTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    username: text("username").notNull().unique(),
+    passwordHash: text("password_hash"),
+    displayName: text("display_name"),
+    authProvider: text("auth_provider").notNull().default("local"),
+    providerSubject: text("provider_subject"),
+    isAdmin: integer("is_admin").notNull().default(0),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    uniqueIndex("users_auth_provider_subject").on(
+      table.authProvider,
+      table.providerSubject
+    ),
+  ]
+);
+
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [index("idx_sessions_expires_at").on(table.expiresAt)]
+);
+
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
+export const tracked = sqliteTable(
+  "tracked",
+  {
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    trackedAt: text("tracked_at").default(sql`(datetime('now'))`),
+    notes: text("notes"),
+  },
+  (table) => [primaryKey({ columns: [table.titleId, table.userId] })]
+);
+
+export const schemaVersion = sqliteTable("schema_version", {
+  version: integer("version").primaryKey(),
+});
+
+// ─── Relations ──────────────────────────────────────────────────────────────
+
+export const titlesRelations = relations(titles, ({ many, one }) => ({
+  offers: many(offers),
+  scores: one(scores),
+  episodes: many(episodes),
+  tracked: many(tracked),
+}));
+
+export const providersRelations = relations(providers, ({ many }) => ({
+  offers: many(offers),
+}));
+
+export const offersRelations = relations(offers, ({ one }) => ({
+  title: one(titles, { fields: [offers.titleId], references: [titles.id] }),
+  provider: one(providers, {
+    fields: [offers.providerId],
+    references: [providers.id],
+  }),
+}));
+
+export const scoresRelations = relations(scores, ({ one }) => ({
+  title: one(titles, { fields: [scores.titleId], references: [titles.id] }),
+}));
+
+export const episodesRelations = relations(episodes, ({ one }) => ({
+  title: one(titles, { fields: [episodes.titleId], references: [titles.id] }),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+  sessions: many(sessions),
+  tracked: many(tracked),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
+}));
+
+export const trackedRelations = relations(tracked, ({ one }) => ({
+  title: one(titles, { fields: [tracked.titleId], references: [titles.id] }),
+  user: one(users, { fields: [tracked.userId], references: [users.id] }),
+}));
+
+// ─── Database Instance ──────────────────────────────────────────────────────
+
+const schemaExports = {
+  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, schemaVersion,
+  titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
+  usersRelations, sessionsRelations, trackedRelations,
+};
+
+export type DrizzleDb = BunSQLiteDatabase<typeof schemaExports>;
+
+let drizzleDb: DrizzleDb;
+let rawDb: Database;
+
+export function getDb(): DrizzleDb {
+  if (!drizzleDb) {
+    rawDb = new Database(CONFIG.DB_PATH, { create: true });
+    rawDb.run("PRAGMA journal_mode = WAL");
+    rawDb.run("PRAGMA foreign_keys = ON");
+    initSchema(rawDb);
+    migrateSchema(rawDb);
+    drizzleDb = drizzle(rawDb, { schema: schemaExports });
   }
-  return db;
+  return drizzleDb;
 }
+
+/** Get the raw bun:sqlite Database for edge cases */
+export function getRawDb(): Database {
+  if (!rawDb) getDb();
+  return rawDb;
+}
+
+// ─── Schema Init (kept for backward compat with existing DBs) ───────────────
 
 function initSchema(db: Database) {
   db.run(`
@@ -82,7 +301,6 @@ function initSchema(db: Database) {
     )
   `);
 
-  // Auth tables
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -142,14 +360,11 @@ function migrateSchema(db: Database) {
   const version = getSchemaVersion(db);
 
   if (version < 1) {
-    // Migration 1: Add user_id to tracked table
-    // Check if old tracked table exists (without user_id)
     const trackedInfo = db.prepare(
       "SELECT sql FROM sqlite_master WHERE type='table' AND name='tracked'"
     ).get() as any;
 
     if (trackedInfo && !trackedInfo.sql.includes("user_id")) {
-      // Old tracked table exists — migrate it
       db.run("ALTER TABLE tracked RENAME TO tracked_old");
 
       db.run(`
@@ -161,11 +376,7 @@ function migrateSchema(db: Database) {
           PRIMARY KEY (title_id, user_id)
         )
       `);
-
-      // Data migration happens in index.ts after admin user creation
-      // via migrateTrackedData()
     } else if (!trackedInfo) {
-      // Fresh install — create tracked with user_id from the start
       db.run(`
         CREATE TABLE IF NOT EXISTS tracked (
           title_id TEXT NOT NULL REFERENCES titles(id),
@@ -183,17 +394,16 @@ function migrateSchema(db: Database) {
 
 /** Migrate old tracked data to the admin user. Called from index.ts after admin creation. */
 export function migrateTrackedData(adminUserId: string) {
-  const d = getDb();
+  const d = getRawDb();
   const oldTable = d.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='tracked_old'"
   ).get();
 
   if (oldTable) {
-    d.run(
+    d.prepare(
       `INSERT OR IGNORE INTO tracked (title_id, user_id, tracked_at, notes)
-       SELECT title_id, ?, tracked_at, notes FROM tracked_old`,
-      adminUserId
-    );
+       SELECT title_id, ?, tracked_at, notes FROM tracked_old`
+    ).run(adminUserId);
     d.run("DROP TABLE tracked_old");
     console.log("[Auth] Migrated existing tracked titles to admin user");
   }

@@ -1,8 +1,10 @@
 import { CONFIG } from "../config";
 import { getDb } from "../db/schema";
+import { titles, episodes, tracked } from "../db/schema";
 import { upsertEpisodes, deleteEpisodesForTitle } from "../db/repository";
 import { fetchShowDetails, fetchSeasonEpisodes } from "./client";
 import type { TmdbEpisode } from "./types";
+import { eq, and, count, isNotNull } from "drizzle-orm";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -29,10 +31,12 @@ export async function syncEpisodesForShow(
 
   // Skip ended/canceled shows that already have episodes synced
   if (details.status === "Ended" || details.status === "Canceled") {
-    const existing = db.prepare(
-      "SELECT COUNT(*) as count FROM episodes WHERE title_id = ?"
-    ).get(titleId) as { count: number };
-    if (existing.count > 0) {
+    const existing = db
+      .select({ count: count() })
+      .from(episodes)
+      .where(eq(episodes.titleId, titleId))
+      .get();
+    if (existing && existing.count > 0) {
       return 0;
     }
   }
@@ -53,7 +57,7 @@ export async function syncEpisodesForShow(
   const seasonData = await fetchSeasonEpisodes(tmdbId, seasonToFetch);
 
   // Filter to recent/upcoming episodes
-  const episodes: EpisodeRow[] = seasonData.episodes
+  const episodeList: EpisodeRow[] = seasonData.episodes
     .filter((ep: TmdbEpisode) => ep.air_date && ep.air_date >= cutoffStr)
     .map((ep: TmdbEpisode) => ({
       title_id: titleId,
@@ -65,24 +69,28 @@ export async function syncEpisodesForShow(
       still_path: ep.still_path,
     }));
 
-  if (episodes.length > 0) {
-    upsertEpisodes(episodes);
+  if (episodeList.length > 0) {
+    upsertEpisodes(episodeList);
   }
 
-  console.log(`[TMDB] Synced ${episodes.length} episodes for "${title}" (S${String(seasonToFetch).padStart(2, "0")})`);
-  return episodes.length;
+  console.log(`[TMDB] Synced ${episodeList.length} episodes for "${title}" (S${String(seasonToFetch).padStart(2, "0")})`);
+  return episodeList.length;
 }
 
 export async function syncEpisodes(): Promise<{ synced: number; shows: number }> {
   const db = getDb();
 
   // Get all tracked shows with tmdb_id
-  const trackedShows = db.prepare(`
-    SELECT t.id, t.tmdb_id, t.title
-    FROM tracked tr
-    JOIN titles t ON t.id = tr.title_id
-    WHERE t.object_type = 'SHOW' AND t.tmdb_id IS NOT NULL
-  `).all() as { id: string; tmdb_id: string; title: string }[];
+  const trackedShows = db
+    .select({
+      id: titles.id,
+      tmdb_id: titles.tmdbId,
+      title: titles.title,
+    })
+    .from(tracked)
+    .innerJoin(titles, eq(titles.id, tracked.titleId))
+    .where(and(eq(titles.objectType, "SHOW"), isNotNull(titles.tmdbId)))
+    .all() as { id: string; tmdb_id: string; title: string }[];
 
   if (trackedShows.length === 0) {
     return { synced: 0, shows: 0 };

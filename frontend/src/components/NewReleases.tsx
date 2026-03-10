@@ -33,8 +33,7 @@ export default function NewReleases() {
     setSyncing(true);
     setError("");
     try {
-      const res = await api.syncReleases(daysBack, type || undefined);
-      alert(res.message);
+      await api.syncReleases(daysBack, type || undefined);
       await fetchTitles();
     } catch (err: any) {
       setError(err.message);

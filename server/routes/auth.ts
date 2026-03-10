@@ -113,7 +113,7 @@ app.post("/change-password", async (c) => {
   const fullUser = getUserByUsername(user.username);
   if (!fullUser) return c.json({ error: "User not found" }, 404);
 
-  const valid = await Bun.password.verify(currentPassword, fullUser.password_hash);
+  const valid = fullUser.password_hash ? await Bun.password.verify(currentPassword, fullUser.password_hash) : false;
   if (!valid) {
     return c.json({ error: "Current password is incorrect" }, 401);
   }
@@ -179,11 +179,11 @@ app.get("/oidc/callback", async (c) => {
       if (getUserByUsername(username)) {
         username = `${username}_oidc`;
       }
-      const id = createUser(username, null, userInfo.displayName, "oidc", userInfo.sub);
-      user = { id };
+      const id = createUser(username, null, userInfo.displayName || undefined, "oidc", userInfo.sub);
+      user = getUserByProviderSubject("oidc", userInfo.sub);
     }
 
-    const token = createSession(user.id);
+    const token = createSession(user!.id);
     setSessionCookie(c, token);
 
     return c.redirect("/");
