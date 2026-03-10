@@ -1,0 +1,15 @@
+services:
+  jwsync:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - jwsync-data:/app/data
+    environment:
+      - DB_PATH=/app/data/jwsync.db
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-}
+volumes:
+  jwsync-data:

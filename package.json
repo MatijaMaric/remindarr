@@ -1,0 +1,18 @@
+{
+  "name": "jwsync",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun run --watch server/index.ts",
+    "dev:frontend": "cd frontend && bun run dev",
+    "build": "cd frontend && bun run build",
+    "start": "bun run server/index.ts",
+    "sync": "bun run server/cli/sync.ts"
+  },
+  "dependencies": {
+    "hono": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "shadcn": "^4.0.3"
+  }
+}
