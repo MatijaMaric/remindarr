@@ -7,7 +7,7 @@ export const CONFIG = {
   PAGE_SIZE: 40,
   PAGE_DELAY_MS: 1000,
   PORT: Number(process.env.PORT) || 3000,
-  DB_PATH: process.env.DB_PATH || "./jwsync.db",
+  DB_PATH: process.env.DB_PATH || "./remindarr.db",
   POSTER_BASE_URL: "https://images.justwatch.com/poster",
   ICON_BASE_URL: "https://images.justwatch.com/icon",
   TMDB_API_KEY: process.env.TMDB_API_KEY || "",
@@ -16,7 +16,7 @@ export const CONFIG = {
 
   // Auth
   SESSION_DURATION_HOURS: Number(process.env.SESSION_DURATION_HOURS) || 24 * 7,
-  SESSION_COOKIE_NAME: "jwsync_session",
+  SESSION_COOKIE_NAME: "remindarr_session",
 
   // OIDC (env vars take precedence over DB settings)
   OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || "",
