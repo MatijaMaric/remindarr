@@ -5,6 +5,6 @@ export default defineConfig({
   schema: "./server/db/schema.ts",
   out: "./drizzle",
   dbCredentials: {
-    url: process.env.DB_PATH || "./jwsync.db",
+    url: process.env.DB_PATH || "./remindarr.db",
   },
 });

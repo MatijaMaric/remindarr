@@ -14,7 +14,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <nav className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
-          <h1 className="text-lg font-bold text-white tracking-tight">JWSync</h1>
+          <h1 className="text-lg font-bold text-white tracking-tight">Remindarr</h1>
           <div className="flex gap-1">
             <NavLink
               to="/"

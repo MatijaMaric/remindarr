@@ -80,7 +80,7 @@ setInterval(() => {
   deleteExpiredSessions();
 }, 60 * 60 * 1000);
 
-console.log(`JWSync server running on http://localhost:${CONFIG.PORT}`);
+console.log(`Remindarr server running on http://localhost:${CONFIG.PORT}`);
 
 export default {
   port: CONFIG.PORT,

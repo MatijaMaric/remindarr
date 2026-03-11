@@ -21,5 +21,5 @@ COPY --from=server-build /app/ ./
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 EXPOSE 3000
 VOLUME /app/data
-ENV DB_PATH=/app/data/jwsync.db
+ENV DB_PATH=/app/data/remindarr.db
 CMD ["bun", "run", "server/index.ts"]

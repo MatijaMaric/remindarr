@@ -27,7 +27,7 @@ docker compose up --build
 
 ## Architecture
 
-**JWSync** — a full-stack app for tracking streaming media releases using JustWatch as the data source. Locale is configurable via env vars (defaults to hr_HR).
+**Remindarr** — a full-stack app for tracking streaming media releases using JustWatch as the data source. Locale is configurable via env vars (defaults to hr_HR).
 
 ### Stack
 - **Runtime**: Bun (with built-in SQLite)
