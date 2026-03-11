@@ -15,7 +15,10 @@ import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
+import jobsRoutes from "./routes/jobs";
 import type { AppEnv } from "./types";
+import { registerSyncJobs } from "./jobs/sync";
+import { startWorker, stopWorker } from "./jobs/worker";
 
 // Initialize DB on startup
 getDb();
@@ -72,6 +75,10 @@ app.use("/api/admin/*", requireAuth, requireAdmin);
 app.use("/api/admin", requireAuth, requireAdmin);
 app.route("/api/admin", adminRoutes);
 
+app.use("/api/jobs/*", requireAuth, requireAdmin);
+app.use("/api/jobs", requireAuth, requireAdmin);
+app.route("/api/jobs", jobsRoutes);
+
 // Sync (public — typically triggered by cron)
 app.route("/api/sync", syncRoutes);
 
@@ -88,6 +95,15 @@ app.use("/*", serveStatic({ root: "./frontend/dist", path: "/index.html" }));
 setInterval(() => {
   deleteExpiredSessions();
 }, 60 * 60 * 1000);
+
+// Start background job queue
+registerSyncJobs();
+startWorker();
+
+process.on("SIGTERM", () => {
+  stopWorker();
+  process.exit(0);
+});
 
 console.log(`Remindarr server running on http://localhost:${CONFIG.PORT}`);
 

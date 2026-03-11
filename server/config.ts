@@ -13,6 +13,8 @@ export const CONFIG = {
   TMDB_API_KEY: process.env.TMDB_API_KEY || "",
   TMDB_BASE_URL: "https://api.themoviedb.org/3",
   EPISODE_SYNC_DELAY_MS: 500,
+  SYNC_TITLES_CRON: process.env.SYNC_TITLES_CRON || "0 3 * * *",
+  SYNC_EPISODES_CRON: process.env.SYNC_EPISODES_CRON || "30 3 * * *",
 
   // Auth
   SESSION_DURATION_HOURS: Number(process.env.SESSION_DURATION_HOURS) || 24 * 7,

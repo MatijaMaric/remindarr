@@ -1,9 +1,8 @@
 import { CONFIG } from "../config";
 import { getDb } from "../db/schema";
 import { titles, episodes, tracked } from "../db/schema";
-import { upsertEpisodes, deleteEpisodesForTitle } from "../db/repository";
+import { upsertEpisodes } from "../db/repository";
 import { fetchShowDetails, fetchSeasonEpisodes } from "./client";
-import type { TmdbEpisode } from "./types";
 import { eq, and, count, isNotNull } from "drizzle-orm";
 
 function delay(ms: number): Promise<void> {
@@ -41,40 +40,36 @@ export async function syncEpisodesForShow(
     }
   }
 
-  // 7 days ago for filtering
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 7);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  // Fetch all seasons (1 through number_of_seasons)
+  const allEpisodes: EpisodeRow[] = [];
 
-  // Determine which season to fetch: use next_episode or last_episode season, or latest
-  let seasonToFetch = details.number_of_seasons;
-  if (details.next_episode_to_air) {
-    seasonToFetch = details.next_episode_to_air.season_number;
-  } else if (details.last_episode_to_air) {
-    seasonToFetch = details.last_episode_to_air.season_number;
+  for (let season = 1; season <= details.number_of_seasons; season++) {
+    if (season > 1) await delay(CONFIG.EPISODE_SYNC_DELAY_MS);
+
+    try {
+      const seasonData = await fetchSeasonEpisodes(tmdbId, season);
+      for (const ep of seasonData.episodes) {
+        allEpisodes.push({
+          title_id: titleId,
+          season_number: ep.season_number,
+          episode_number: ep.episode_number,
+          name: ep.name || null,
+          overview: ep.overview || null,
+          air_date: ep.air_date,
+          still_path: ep.still_path,
+        });
+      }
+    } catch (err) {
+      console.error(`[TMDB] Failed to fetch S${String(season).padStart(2, "0")} for "${title}":`, err);
+    }
   }
 
-  const seasonData = await fetchSeasonEpisodes(tmdbId, seasonToFetch);
-
-  // Filter to recent/upcoming episodes
-  const episodeList: EpisodeRow[] = seasonData.episodes
-    .filter((ep: TmdbEpisode) => ep.air_date && ep.air_date >= cutoffStr)
-    .map((ep: TmdbEpisode) => ({
-      title_id: titleId,
-      season_number: ep.season_number,
-      episode_number: ep.episode_number,
-      name: ep.name || null,
-      overview: ep.overview || null,
-      air_date: ep.air_date,
-      still_path: ep.still_path,
-    }));
-
-  if (episodeList.length > 0) {
-    upsertEpisodes(episodeList);
+  if (allEpisodes.length > 0) {
+    upsertEpisodes(allEpisodes);
   }
 
-  console.log(`[TMDB] Synced ${episodeList.length} episodes for "${title}" (S${String(seasonToFetch).padStart(2, "0")})`);
-  return episodeList.length;
+  console.log(`[TMDB] Synced ${allEpisodes.length} episodes across ${details.number_of_seasons} seasons for "${title}"`);
+  return allEpisodes.length;
 }
 
 export async function syncEpisodes(): Promise<{ synced: number; shows: number }> {
