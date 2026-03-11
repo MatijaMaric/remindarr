@@ -561,6 +561,10 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
       updated_at: episodes.updatedAt,
       show_title: titles.title,
       poster_url: titles.posterUrl,
+      is_watched: sql<boolean>`EXISTS(
+        SELECT 1 FROM watched_episodes we
+        WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+      )`,
     })
     .from(episodes)
     .innerJoin(titles, eq(titles.id, episodes.titleId))
@@ -574,6 +578,7 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
 
   return rows.map((row) => ({
     ...row,
+    is_watched: !!row.is_watched,
     offers: getOffersForTitle(row.title_id),
   }));
 }
@@ -581,6 +586,49 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
 export function deleteEpisodesForTitle(titleId: string) {
   const db = getDb();
   db.delete(episodes).where(eq(episodes.titleId, titleId)).run();
+}
+
+export function getUnwatchedEpisodes(userId: string) {
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rows = db
+    .select({
+      id: episodes.id,
+      title_id: episodes.titleId,
+      season_number: episodes.seasonNumber,
+      episode_number: episodes.episodeNumber,
+      name: episodes.name,
+      overview: episodes.overview,
+      air_date: episodes.airDate,
+      still_path: episodes.stillPath,
+      updated_at: episodes.updatedAt,
+      show_title: titles.title,
+      poster_url: titles.posterUrl,
+    })
+    .from(episodes)
+    .innerJoin(titles, eq(titles.id, episodes.titleId))
+    .innerJoin(
+      tracked,
+      and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
+    )
+    .where(
+      and(
+        lt(episodes.airDate, today),
+        sql`NOT EXISTS(
+          SELECT 1 FROM watched_episodes we
+          WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+        )`
+      )
+    )
+    .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
+    .all();
+
+  return rows.map((row) => ({
+    ...row,
+    is_watched: false,
+    offers: getOffersForTitle(row.title_id),
+  }));
 }
 
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
