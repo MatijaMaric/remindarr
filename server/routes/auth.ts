@@ -11,6 +11,7 @@ import {
   getUserByProviderSubject,
   createUser,
   updateUserPassword,
+  updateUserAdmin,
 } from "../db/repository";
 import { getDiscovery, generateState, validateState, exchangeCode } from "../auth/oidc";
 import type { AppEnv } from "../types";
@@ -168,8 +169,11 @@ app.get("/oidc/callback", async (c) => {
   }
 
   try {
-    const { redirectUri } = getOidcConfig();
+    const { redirectUri, adminClaim, adminValue } = getOidcConfig();
     const userInfo = await exchangeCode(code, redirectUri);
+
+    // Determine admin status from claims
+    const isAdmin = checkAdminClaim(userInfo.claims, adminClaim, adminValue);
 
     // Find or create user
     let user = getUserByProviderSubject("oidc", userInfo.sub);
@@ -179,8 +183,11 @@ app.get("/oidc/callback", async (c) => {
       if (getUserByUsername(username)) {
         username = `${username}_oidc`;
       }
-      const id = createUser(username, null, userInfo.displayName || undefined, "oidc", userInfo.sub);
+      const id = createUser(username, null, userInfo.displayName || undefined, "oidc", userInfo.sub, isAdmin);
       user = getUserByProviderSubject("oidc", userInfo.sub);
+    } else {
+      // Sync admin status on every login
+      updateUserAdmin(user.id, isAdmin);
     }
 
     const token = createSession(user!.id);
@@ -192,5 +199,25 @@ app.get("/oidc/callback", async (c) => {
     return c.redirect(`/login?error=${encodeURIComponent(err.message)}`);
   }
 });
+
+/** Check if OIDC claims grant admin status based on configured claim/value. */
+function checkAdminClaim(
+  claims: Record<string, unknown>,
+  claimName: string,
+  claimValue: string
+): boolean {
+  if (!claimName || !claimValue) return false;
+
+  const value = claims[claimName];
+  if (value === undefined || value === null) return false;
+
+  // Array claim (e.g. groups: ["admin", "users"])
+  if (Array.isArray(value)) {
+    return value.some((v) => String(v) === claimValue);
+  }
+
+  // String claim (e.g. role: "admin")
+  return String(value) === claimValue;
+}
 
 export default app;
