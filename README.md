@@ -42,11 +42,23 @@ bun run start    # Start production server on port 3000
 
 ### Docker
 
+**Option 1: Build locally**
+
 ```bash
 docker compose up --build
 ```
 
+**Option 2: Use published image**
+
+```bash
+docker compose up
+```
+
+This uses the image from [GitHub Container Registry](https://github.com/MatijaMaric/jwsync/pkgs/container/jwsync).
+
 The app is available at `http://localhost:3000`. Data is persisted in a Docker volume.
+
+**For Traefik integration**, add labels to the service in your `docker-compose.yml`. See [docker-compose.traefik.example.yml](docker-compose.traefik.example.yml) for a reference setup.
 
 ### Configuration
 
