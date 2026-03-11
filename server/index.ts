@@ -19,6 +19,7 @@ import jobsRoutes from "./routes/jobs";
 import type { AppEnv } from "./types";
 import { registerSyncJobs } from "./jobs/sync";
 import { startWorker, stopWorker } from "./jobs/worker";
+import { initJobsSchema } from "./jobs/queue";
 
 // Initialize DB on startup
 getDb();
@@ -97,6 +98,7 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 // Start background job queue
+initJobsSchema();
 registerSyncJobs();
 startWorker();
 
