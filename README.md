@@ -1,4 +1,4 @@
-# JWSync
+# Remindarr
 
 A full-stack app for tracking streaming media releases using JustWatch as the data source.
 
