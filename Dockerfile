@@ -1,7 +1,7 @@
 # Stage 1: Build frontend
 FROM oven/bun:1 AS frontend-build
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/bun.lockb ./
+COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY frontend/ ./
 RUN bun run build
@@ -9,7 +9,7 @@ RUN bun run build
 # Stage 2: Build server
 FROM oven/bun:1 AS server-build
 WORKDIR /app
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 COPY server/ ./server/
 COPY tsconfig.json ./
