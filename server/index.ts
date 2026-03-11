@@ -72,8 +72,12 @@ app.use("/api/admin/*", requireAuth, requireAdmin);
 app.use("/api/admin", requireAuth, requireAdmin);
 app.route("/api/admin", adminRoutes);
 
-// Sync and episodes (public for now — sync is typically triggered by cron)
+// Sync (public — typically triggered by cron)
 app.route("/api/sync", syncRoutes);
+
+// Episodes (optionalAuth for upcoming, sync is public)
+app.use("/api/episodes/*", optionalAuth);
+app.use("/api/episodes", optionalAuth);
 app.route("/api/episodes", episodesRoutes);
 
 // Serve frontend static files in production
