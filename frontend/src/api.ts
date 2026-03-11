@@ -93,6 +93,23 @@ export async function getUpcomingEpisodes(): Promise<{ today: Episode[]; upcomin
   return fetchJson("/episodes/upcoming");
 }
 
+// ─── Watched Episodes ─────────────────────────────────────────────────────────
+
+export async function watchEpisode(episodeId: number): Promise<void> {
+  await fetchJson(`/watched/${episodeId}`, { method: "POST" });
+}
+
+export async function unwatchEpisode(episodeId: number): Promise<void> {
+  await fetchJson(`/watched/${episodeId}`, { method: "DELETE" });
+}
+
+export async function watchEpisodesBulk(episodeIds: number[], watched: boolean): Promise<void> {
+  await fetchJson("/watched/bulk", {
+    method: "POST",
+    body: JSON.stringify({ episodeIds, watched }),
+  });
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

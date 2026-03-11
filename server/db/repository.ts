@@ -10,6 +10,7 @@ import {
   sessions,
   settings,
   tracked,
+  watchedEpisodes,
 } from "./schema";
 import type { ParsedTitle } from "../justwatch/parser";
 import { extractProviders } from "../justwatch/parser";
@@ -521,6 +522,10 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
       updated_at: episodes.updatedAt,
       show_title: titles.title,
       poster_url: titles.posterUrl,
+      is_watched: sql<boolean>`EXISTS(
+        SELECT 1 FROM watched_episodes we
+        WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+      )`,
     })
     .from(episodes)
     .innerJoin(titles, eq(titles.id, episodes.titleId))
@@ -534,6 +539,7 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
 
   return rows.map((row) => ({
     ...row,
+    is_watched: !!row.is_watched,
     offers: getOffersForTitle(row.title_id),
   }));
 }
@@ -575,6 +581,48 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
 export function deleteEpisodesForTitle(titleId: string) {
   const db = getDb();
   db.delete(episodes).where(eq(episodes.titleId, titleId)).run();
+}
+
+// ─── Watched Episodes ─────────────────────────────────────────────────────────
+
+export function watchEpisode(episodeId: number, userId: string) {
+  const db = getDb();
+  db.insert(watchedEpisodes)
+    .values({ episodeId, userId })
+    .onConflictDoNothing()
+    .run();
+}
+
+export function unwatchEpisode(episodeId: number, userId: string) {
+  const db = getDb();
+  db.delete(watchedEpisodes)
+    .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+    .run();
+}
+
+export function watchEpisodesBulk(episodeIds: number[], userId: string) {
+  const raw = getRawDb();
+  const db = getDb();
+  raw.transaction(() => {
+    for (const episodeId of episodeIds) {
+      db.insert(watchedEpisodes)
+        .values({ episodeId, userId })
+        .onConflictDoNothing()
+        .run();
+    }
+  })();
+}
+
+export function unwatchEpisodesBulk(episodeIds: number[], userId: string) {
+  const raw = getRawDb();
+  const db = getDb();
+  raw.transaction(() => {
+    for (const episodeId of episodeIds) {
+      db.delete(watchedEpisodes)
+        .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+        .run();
+    }
+  })();
 }
 
 // ─── Users ───────────────────────────────────────────────────────────────────

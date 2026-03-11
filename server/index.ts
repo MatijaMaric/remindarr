@@ -9,6 +9,7 @@ import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
 import trackRoutes from "./routes/track";
+import watchedRoutes from "./routes/watched";
 import imdbRoutes from "./routes/imdb";
 import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
@@ -57,6 +58,10 @@ app.route("/api/calendar", calendarRoutes);
 app.use("/api/track/*", requireAuth);
 app.use("/api/track", requireAuth);
 app.route("/api/track", trackRoutes);
+
+app.use("/api/watched/*", requireAuth);
+app.use("/api/watched", requireAuth);
+app.route("/api/watched", watchedRoutes);
 
 app.use("/api/imdb/*", requireAuth);
 app.use("/api/imdb", requireAuth);
