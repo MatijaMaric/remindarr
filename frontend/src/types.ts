@@ -48,6 +48,7 @@ export interface Episode {
   still_path: string | null;
   show_title: string;
   poster_url: string | null;
+  is_watched?: boolean;
   offers?: Offer[];
 }
 
