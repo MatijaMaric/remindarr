@@ -89,6 +89,10 @@ export async function syncEpisodes(): Promise<{ success: boolean; synced: number
   return fetchJson("/episodes/sync", { method: "POST" });
 }
 
+export async function getUpcomingEpisodes(): Promise<{ today: Episode[]; upcoming: Episode[] }> {
+  return fetchJson("/episodes/upcoming");
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

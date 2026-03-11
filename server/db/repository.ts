@@ -538,6 +538,40 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
   }));
 }
 
+export function getEpisodesByDateRange(startDate: string, endDate: string, userId?: string) {
+  const db = getDb();
+  if (!userId) return [];
+
+  const rows = db
+    .select({
+      id: episodes.id,
+      title_id: episodes.titleId,
+      season_number: episodes.seasonNumber,
+      episode_number: episodes.episodeNumber,
+      name: episodes.name,
+      overview: episodes.overview,
+      air_date: episodes.airDate,
+      still_path: episodes.stillPath,
+      updated_at: episodes.updatedAt,
+      show_title: titles.title,
+      poster_url: titles.posterUrl,
+    })
+    .from(episodes)
+    .innerJoin(titles, eq(titles.id, episodes.titleId))
+    .innerJoin(
+      tracked,
+      and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
+    )
+    .where(and(gte(episodes.airDate, startDate), lt(episodes.airDate, endDate)))
+    .orderBy(asc(episodes.airDate), asc(titles.title))
+    .all();
+
+  return rows.map((row) => ({
+    ...row,
+    offers: getOffersForTitle(row.title_id),
+  }));
+}
+
 export function deleteEpisodesForTitle(titleId: string) {
   const db = getDb();
   db.delete(episodes).where(eq(episodes.titleId, titleId)).run();
