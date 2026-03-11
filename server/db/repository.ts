@@ -623,6 +623,14 @@ export function updateUserPassword(userId: string, passwordHash: string) {
     .run();
 }
 
+export function updateUserAdmin(userId: string, isAdmin: boolean) {
+  const db = getDb();
+  db.update(users)
+    .set({ isAdmin: isAdmin ? 1 : 0 })
+    .where(eq(users.id, userId))
+    .run();
+}
+
 // ─── Sessions ────────────────────────────────────────────────────────────────
 
 export function createSession(userId: string): string {
@@ -727,7 +735,12 @@ export function getOidcConfig() {
   const redirectUri =
     CONFIG.OIDC_REDIRECT_URI || getSetting("oidc_redirect_uri") || "";
 
-  return { issuerUrl, clientId, clientSecret, redirectUri };
+  const adminClaim =
+    CONFIG.OIDC_ADMIN_CLAIM || getSetting("oidc_admin_claim") || "";
+  const adminValue =
+    CONFIG.OIDC_ADMIN_VALUE || getSetting("oidc_admin_value") || "";
+
+  return { issuerUrl, clientId, clientSecret, redirectUri, adminClaim, adminValue };
 }
 
 export function isOidcConfigured(): boolean {

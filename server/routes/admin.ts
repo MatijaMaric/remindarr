@@ -13,7 +13,7 @@ import type { AppEnv } from "../types";
 
 const app = new Hono<AppEnv>();
 
-const OIDC_SETTING_KEYS = ["oidc_issuer_url", "oidc_client_id", "oidc_client_secret", "oidc_redirect_uri"];
+const OIDC_SETTING_KEYS = ["oidc_issuer_url", "oidc_client_id", "oidc_client_secret", "oidc_redirect_uri", "oidc_admin_claim", "oidc_admin_value"];
 
 // GET /api/admin/settings
 app.get("/settings", (c) => {
@@ -36,6 +36,14 @@ app.get("/settings", (c) => {
     redirect_uri: {
       value: getOidcConfig().redirectUri,
       source: CONFIG.OIDC_REDIRECT_URI ? "env" : (dbSettings.oidc_redirect_uri ? "db" : "unset"),
+    },
+    admin_claim: {
+      value: getOidcConfig().adminClaim,
+      source: CONFIG.OIDC_ADMIN_CLAIM ? "env" : (dbSettings.oidc_admin_claim ? "db" : "unset"),
+    },
+    admin_value: {
+      value: getOidcConfig().adminValue,
+      source: CONFIG.OIDC_ADMIN_VALUE ? "env" : (dbSettings.oidc_admin_value ? "db" : "unset"),
     },
   };
 

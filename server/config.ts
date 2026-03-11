@@ -23,4 +23,6 @@ export const CONFIG = {
   OIDC_CLIENT_ID: process.env.OIDC_CLIENT_ID || "",
   OIDC_CLIENT_SECRET: process.env.OIDC_CLIENT_SECRET || "",
   OIDC_REDIRECT_URI: process.env.OIDC_REDIRECT_URI || "",
+  OIDC_ADMIN_CLAIM: process.env.OIDC_ADMIN_CLAIM || "",
+  OIDC_ADMIN_VALUE: process.env.OIDC_ADMIN_VALUE || "",
 };
