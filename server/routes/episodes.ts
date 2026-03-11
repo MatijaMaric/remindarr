@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { syncEpisodes } from "../tmdb/sync";
-import { getEpisodesByDateRange } from "../db/repository";
+import { getEpisodesByDateRange, getUnwatchedEpisodes } from "../db/repository";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 
@@ -24,7 +24,9 @@ app.get("/upcoming", (c) => {
   const todayEpisodes = getEpisodesByDateRange(today, tomorrowStr, user.id);
   const upcomingEpisodes = getEpisodesByDateRange(tomorrowStr, nextWeekStr, user.id);
 
-  return c.json({ today: todayEpisodes, upcoming: upcomingEpisodes });
+  const unwatchedEpisodes = getUnwatchedEpisodes(user.id);
+
+  return c.json({ today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
 });
 
 app.post("/sync", async (c) => {
