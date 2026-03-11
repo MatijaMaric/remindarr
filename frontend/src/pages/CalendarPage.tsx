@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon } from "lucide-react";
-import { getCalendarTitles, syncEpisodes } from "../api";
+import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, CheckCircleIcon, CircleIcon } from "lucide-react";
+import { getCalendarTitles, syncEpisodes, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import TitleList from "../components/TitleList";
 import type { Title, Episode, Offer } from "../types";
 
@@ -144,6 +144,42 @@ export default function CalendarPage() {
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
   const today = formatDateKey(new Date());
 
+  const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
+    // Optimistic update
+    setEpisodes((prev) =>
+      prev.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep))
+    );
+    try {
+      if (currentlyWatched) {
+        await unwatchEpisode(episodeId);
+      } else {
+        await watchEpisode(episodeId);
+      }
+    } catch (err) {
+      // Revert on error
+      setEpisodes((prev) =>
+        prev.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep))
+      );
+      console.error("Failed to toggle watched:", err);
+    }
+  };
+
+  const toggleBulkWatched = async (episodeIds: number[], markWatched: boolean) => {
+    // Optimistic update
+    const idSet = new Set(episodeIds);
+    setEpisodes((prev) =>
+      prev.map((ep) => (idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep))
+    );
+    try {
+      await watchEpisodesBulk(episodeIds, markWatched);
+    } catch (err) {
+      setEpisodes((prev) =>
+        prev.map((ep) => (idSet.has(ep.id) ? { ...ep, is_watched: !markWatched } : ep))
+      );
+      console.error("Failed to bulk toggle watched:", err);
+    }
+  };
+
   const handleSyncEpisodes = async () => {
     setSyncing(true);
     try {
@@ -253,7 +289,9 @@ export default function CalendarPage() {
                           key={item.type === "title" ? `t-${item.data.id}` : `e-${item.data.id}-${idx}`}
                           className={`text-[10px] leading-tight rounded px-1 py-0.5 flex items-center gap-1 ${
                             item.type === "episode"
-                              ? "bg-emerald-900/40 text-emerald-300"
+                              ? item.data.is_watched
+                                ? "bg-emerald-900/20 text-emerald-600"
+                                : "bg-emerald-900/40 text-emerald-300"
                               : item.data.object_type === "MOVIE"
                                 ? "bg-blue-900/40 text-blue-300"
                                 : "bg-purple-900/40 text-purple-300"
@@ -314,52 +352,105 @@ export default function CalendarPage() {
           {selectedEpisodes.length > 0 && (
             <div className="mb-6">
               <h4 className="text-sm font-medium text-emerald-400 mb-3">Episodes</h4>
-              <div className="space-y-3">
-                {selectedEpisodes.map((ep) => (
-                  <div key={ep.id} className="flex gap-3 p-3 rounded-lg bg-gray-900/60 border border-gray-800">
-                    {ep.poster_url && (
-                      <img
-                        src={ep.poster_url}
-                        alt={ep.show_title}
-                        className="w-12 h-18 rounded object-cover flex-shrink-0"
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-white">{ep.show_title}</div>
-                      <div className="text-xs text-emerald-400 mt-0.5">
-                        S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
-                        {ep.name && ` — ${ep.name}`}
-                      </div>
-                      {ep.overview && (
-                        <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ep.overview}</p>
+              {(() => {
+                // Group episodes by show
+                const showGroups = new Map<string, typeof selectedEpisodes>();
+                for (const ep of selectedEpisodes) {
+                  const key = ep.title_id;
+                  const group = showGroups.get(key);
+                  if (group) group.push(ep);
+                  else showGroups.set(key, [ep]);
+                }
+
+                return Array.from(showGroups.entries()).map(([titleId, showEps]) => {
+                  const allWatched = showEps.every((ep) => ep.is_watched);
+                  return (
+                    <div key={titleId} className="mb-4">
+                      {showGroups.size > 1 && showEps.length > 1 && (
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-400">{showEps[0].show_title}</span>
+                          <button
+                            onClick={() => toggleBulkWatched(showEps.map((ep) => ep.id), !allWatched)}
+                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                          >
+                            {allWatched ? "Mark all unwatched" : "Mark all watched"}
+                          </button>
+                        </div>
                       )}
-                      {(() => {
-                        const providers = getUniqueProviders(ep.offers);
-                        return providers.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {providers.map((p) => (
-                              <a
-                                key={p.provider_id}
-                                href={p.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title={p.provider_name}
-                              >
-                                <img
-                                  src={p.provider_icon_url}
-                                  alt={p.provider_name}
-                                  className="w-6 h-6 rounded-md"
-                                  loading="lazy"
-                                />
-                              </a>
-                            ))}
+                      <div className="space-y-3">
+                        {showEps.map((ep) => (
+                          <div
+                            key={ep.id}
+                            className={`flex gap-3 p-3 rounded-lg border transition-colors ${
+                              ep.is_watched
+                                ? "bg-gray-900/30 border-gray-800/60 opacity-60"
+                                : "bg-gray-900/60 border-gray-800"
+                            }`}
+                          >
+                            {ep.poster_url && (
+                              <img
+                                src={ep.poster_url}
+                                alt={ep.show_title}
+                                className="w-12 h-18 rounded object-cover flex-shrink-0"
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-sm font-medium text-white">{ep.show_title}</div>
+                                <button
+                                  onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
+                                  className={`flex-shrink-0 p-1 rounded-md transition-colors cursor-pointer ${
+                                    ep.is_watched
+                                      ? "text-emerald-400 hover:text-emerald-300"
+                                      : "text-gray-600 hover:text-gray-400"
+                                  }`}
+                                  title={ep.is_watched ? "Mark as unwatched" : "Mark as watched"}
+                                >
+                                  {ep.is_watched ? (
+                                    <CheckCircleIcon className="size-5" />
+                                  ) : (
+                                    <CircleIcon className="size-5" />
+                                  )}
+                                </button>
+                              </div>
+                              <div className="text-xs text-emerald-400 mt-0.5">
+                                S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
+                                {ep.name && ` — ${ep.name}`}
+                              </div>
+                              {ep.overview && (
+                                <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ep.overview}</p>
+                              )}
+                              {(() => {
+                                const providers = getUniqueProviders(ep.offers);
+                                return providers.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {providers.map((p) => (
+                                      <a
+                                        key={p.provider_id}
+                                        href={p.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={p.provider_name}
+                                      >
+                                        <img
+                                          src={p.provider_icon_url}
+                                          alt={p.provider_name}
+                                          className="w-6 h-6 rounded-md"
+                                          loading="lazy"
+                                        />
+                                      </a>
+                                    ))}
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
                           </div>
-                        ) : null;
-                      })()}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  );
+                });
+              })()}
             </div>
           )}
 

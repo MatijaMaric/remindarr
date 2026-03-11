@@ -153,6 +153,20 @@ export const tracked = sqliteTable(
   (table) => [primaryKey({ columns: [table.titleId, table.userId] })]
 );
 
+export const watchedEpisodes = sqliteTable(
+  "watched_episodes",
+  {
+    episodeId: integer("episode_id")
+      .notNull()
+      .references(() => episodes.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    watchedAt: text("watched_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [primaryKey({ columns: [table.episodeId, table.userId] })]
+);
+
 export const schemaVersion = sqliteTable("schema_version", {
   version: integer("version").primaryKey(),
 });
@@ -200,12 +214,17 @@ export const trackedRelations = relations(tracked, ({ one }) => ({
   user: one(users, { fields: [tracked.userId], references: [users.id] }),
 }));
 
+export const watchedEpisodesRelations = relations(watchedEpisodes, ({ one }) => ({
+  episode: one(episodes, { fields: [watchedEpisodes.episodeId], references: [episodes.id] }),
+  user: one(users, { fields: [watchedEpisodes.userId], references: [users.id] }),
+}));
+
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 const schemaExports = {
-  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, schemaVersion,
+  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, schemaVersion,
   titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
-  usersRelations, sessionsRelations, trackedRelations,
+  usersRelations, sessionsRelations, trackedRelations, watchedEpisodesRelations,
 };
 
 export type DrizzleDb = BunSQLiteDatabase<typeof schemaExports>;
@@ -332,6 +351,15 @@ function initSchema(db: Database) {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS watched_episodes (
+      episode_id INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      watched_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (episode_id, user_id)
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER PRIMARY KEY
     )
@@ -389,6 +417,18 @@ function migrateSchema(db: Database) {
     }
 
     setSchemaVersion(db, 1);
+  }
+
+  if (getSchemaVersion(db) < 2) {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS watched_episodes (
+        episode_id INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        watched_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (episode_id, user_id)
+      )
+    `);
+    setSchemaVersion(db, 2);
   }
 }
 

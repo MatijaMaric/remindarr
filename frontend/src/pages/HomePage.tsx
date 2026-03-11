@@ -1,77 +1,465 @@
-import { useState } from "react";
-import SearchBar from "../components/SearchBar";
-import NewReleases from "../components/NewReleases";
-import TitleList from "../components/TitleList";
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
-import type { Title } from "../types";
-import { normalizeSearchTitle } from "../types";
+import type { Episode, Offer } from "../types";
 
-export default function HomePage() {
-  const [searchResults, setSearchResults] = useState<Title[] | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState("");
+function formatEpisodeCode(ep: Episode): string {
+  const s = String(ep.season_number).padStart(2, "0");
+  const e = String(ep.episode_number).padStart(2, "0");
+  return `S${s}E${e}`;
+}
 
-  async function handleSearch(query: string) {
-    setSearchLoading(true);
-    setSearchError("");
-    try {
-      const res = await api.searchTitles(query);
-      setSearchResults(res.titles.map(normalizeSearchTitle));
-    } catch (err: any) {
-      setSearchError(err.message);
-    } finally {
-      setSearchLoading(false);
+function getUniqueProviders(offers?: Offer[]) {
+  if (!offers?.length) return [];
+  const map = new Map<number, Offer>();
+  for (const o of offers) {
+    if (o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS") {
+      if (!map.has(o.provider_id)) map.set(o.provider_id, o);
     }
   }
+  return Array.from(map.values());
+}
 
-  async function handleImdb(url: string) {
-    setSearchLoading(true);
-    setSearchError("");
-    try {
-      const res = await api.resolveImdb(url);
-      if (res.title) {
-        setSearchResults([normalizeSearchTitle(res.title)]);
-      }
-    } catch (err: any) {
-      setSearchError(err.message);
-    } finally {
-      setSearchLoading(false);
-    }
+function groupByShow(episodes: Episode[]): Map<string, Episode[]> {
+  const map = new Map<string, Episode[]>();
+  for (const ep of episodes) {
+    const key = ep.title_id;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(ep);
   }
+  return map;
+}
 
-  function clearSearch() {
-    setSearchResults(null);
-    setSearchError("");
+function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<number, Episode[]>> {
+  const map = new Map<string, Map<number, Episode[]>>();
+  for (const ep of episodes) {
+    if (!map.has(ep.title_id)) map.set(ep.title_id, new Map());
+    const seasonMap = map.get(ep.title_id)!;
+    if (!seasonMap.has(ep.season_number)) seasonMap.set(ep.season_number, []);
+    seasonMap.get(ep.season_number)!.push(ep);
+  }
+  return map;
+}
+
+function formatUpcomingDate(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if (date.getTime() === tomorrow.getTime()) return "Tomorrow";
+
+  return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+}
+
+function WatchedIcon({ watched, onClick }: { watched: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={`flex-shrink-0 cursor-pointer transition-colors ${
+        watched ? "text-emerald-500 hover:text-gray-500" : "text-gray-600 hover:text-emerald-500"
+      }`}
+      title={watched ? "Mark as unwatched" : "Mark as watched"}
+    >
+      {watched ? (
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <circle cx="12" cy="12" r="9" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Episode; compact?: boolean; onToggleWatched: (id: number, current: boolean) => void }) {
+  const providers = getUniqueProviders(episode.offers);
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 bg-gray-900 rounded-lg border border-gray-800 p-3">
+        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} />
+        {episode.poster_url && (
+          <img
+            src={episode.poster_url}
+            alt={episode.show_title}
+            className="w-10 h-15 rounded object-cover flex-shrink-0"
+            loading="lazy"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white truncate">{episode.show_title}</p>
+          <p className="text-xs text-gray-400">
+            {formatEpisodeCode(episode)}
+            {episode.name && ` · ${episode.name}`}
+          </p>
+        </div>
+        {providers.length > 0 && (
+          <div className="flex gap-1 flex-shrink-0">
+            {providers.slice(0, 3).map((o) => (
+              <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
+                <img src={o.provider_icon_url} alt={o.provider_name} className="w-6 h-6 rounded" loading="lazy" />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <SearchBar onSearch={handleSearch} onImdb={handleImdb} loading={searchLoading} />
-
-      {searchError && (
-        <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
-          {searchError}
+    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+      <div className="flex gap-4 p-4">
+        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} />
+        {episode.poster_url && (
+          <img
+            src={episode.poster_url}
+            alt={episode.show_title}
+            className="w-16 h-24 rounded-lg object-cover flex-shrink-0"
+            loading="lazy"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-white">{episode.show_title}</h3>
+          <p className="text-sm text-indigo-400 font-medium mt-0.5">
+            {formatEpisodeCode(episode)}
+            {episode.name && ` · ${episode.name}`}
+          </p>
+          {episode.overview && (
+            <p className="text-sm text-gray-400 mt-2 line-clamp-2">{episode.overview}</p>
+          )}
+          {providers.length > 0 && (
+            <div className="flex gap-1.5 mt-3">
+              {providers.map((o) => (
+                <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
+                  <img src={o.provider_icon_url} alt={o.provider_name} className="w-7 h-7 rounded-md" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onToggleWatched }: {
+  showTitle: string;
+  episodes: Episode[];
+  posterUrl: string | null;
+  compact?: boolean;
+  onToggleWatched: (id: number, current: boolean) => void;
+}) {
+  if (episodes.length === 1) {
+    return <EpisodeCard episode={episodes[0]} compact={compact} onToggleWatched={onToggleWatched} />;
+  }
+
+  const providers = getUniqueProviders(episodes[0].offers);
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 bg-gray-900 rounded-lg border border-gray-800 p-3">
+        {posterUrl && (
+          <img src={posterUrl} alt={showTitle} className="w-10 h-15 rounded object-cover flex-shrink-0" loading="lazy" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white truncate">{showTitle}</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+            {episodes.map((ep) => (
+              <div key={ep.id} className="flex items-center gap-1">
+                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
+                <span className="text-xs text-gray-400">{formatEpisodeCode(ep)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {providers.length > 0 && (
+          <div className="flex gap-1 flex-shrink-0">
+            {providers.slice(0, 3).map((o) => (
+              <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
+                <img src={o.provider_icon_url} alt={o.provider_name} className="w-6 h-6 rounded" loading="lazy" />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+      <div className="flex gap-4 p-4">
+        {posterUrl && (
+          <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover flex-shrink-0" loading="lazy" />
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-white">{showTitle}</h3>
+          <div className="mt-2 space-y-1">
+            {episodes.map((ep) => (
+              <div key={ep.id} className="flex items-center gap-2 text-sm">
+                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
+                <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
+                {ep.name && <span className="text-gray-400"> · {ep.name}</span>}
+              </div>
+            ))}
+          </div>
+          {providers.length > 0 && (
+            <div className="flex gap-1.5 mt-3">
+              {providers.map((o) => (
+                <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
+                  <img src={o.provider_icon_url} alt={o.provider_name} className="w-7 h-7 rounded-md" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onToggleWatched, onMarkSeasonWatched }: {
+  showTitle: string;
+  seasonNumber: number;
+  episodes: Episode[];
+  posterUrl: string | null;
+  onToggleWatched: (id: number, current: boolean) => void;
+  onMarkSeasonWatched: (episodeIds: number[]) => void;
+}) {
+  const providers = getUniqueProviders(episodes[0]?.offers);
+
+  return (
+    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+      <div className="flex gap-4 p-4">
+        {posterUrl && (
+          <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover flex-shrink-0" loading="lazy" />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-white">{showTitle}</h3>
+            {episodes.length > 1 && (
+              <button
+                onClick={() => onMarkSeasonWatched(episodes.map((ep) => ep.id))}
+                className="text-xs text-gray-400 hover:text-emerald-400 transition-colors flex-shrink-0 cursor-pointer"
+              >
+                Mark season watched
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">Season {seasonNumber}</p>
+          <div className="mt-2 space-y-1">
+            {episodes.map((ep) => (
+              <div key={ep.id} className="flex items-center gap-2 text-sm">
+                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
+                <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
+                {ep.name && <span className="text-gray-400 truncate"> · {ep.name}</span>}
+              </div>
+            ))}
+          </div>
+          {providers.length > 0 && (
+            <div className="flex gap-1.5 mt-3">
+              {providers.map((o) => (
+                <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
+                  <img src={o.provider_icon_url} alt={o.provider_name} className="w-7 h-7 rounded-md" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  const { user, loading: authLoading } = useAuth();
+  const [today, setToday] = useState<Episode[]>([]);
+  const [upcoming, setUpcoming] = useState<Episode[]>([]);
+  const [unwatched, setUnwatched] = useState<Episode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    async function load() {
+      try {
+        const data = await api.getUpcomingEpisodes();
+        setToday(data.today);
+        setUpcoming(data.upcoming);
+        setUnwatched(data.unwatched);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [user, authLoading]);
+
+  const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
+    const updateAll = (eps: Episode[]) =>
+      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
+    const revertAll = (eps: Episode[]) =>
+      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep));
+
+    setToday(updateAll);
+    setUpcoming(updateAll);
+    setUnwatched((prev) => {
+      if (!currentlyWatched) {
+        return prev.filter((ep) => ep.id !== episodeId);
+      }
+      return prev;
+    });
+
+    try {
+      if (currentlyWatched) {
+        await api.unwatchEpisode(episodeId);
+      } else {
+        await api.watchEpisode(episodeId);
+      }
+    } catch (err) {
+      setToday(revertAll);
+      setUpcoming(revertAll);
+      if (!currentlyWatched) {
+        // Re-fetch to restore the removed episode
+        try {
+          const data = await api.getUpcomingEpisodes();
+          setUnwatched(data.unwatched);
+        } catch {}
+      }
+      console.error("Failed to toggle watched:", err);
+    }
+  };
+
+  const markSeasonWatched = async (episodeIds: number[]) => {
+    const idSet = new Set(episodeIds);
+    setUnwatched((prev) => prev.filter((ep) => !idSet.has(ep.id)));
+
+    try {
+      await api.watchEpisodesBulk(episodeIds, true);
+    } catch (err) {
+      // Re-fetch to restore
+      try {
+        const data = await api.getUpcomingEpisodes();
+        setUnwatched(data.unwatched);
+      } catch {}
+      console.error("Failed to bulk mark watched:", err);
+    }
+  };
+
+  if (authLoading || loading) {
+    return <div className="text-gray-500 text-center py-12">Loading...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold text-white mb-2">Welcome to Remindarr</h2>
+        <p className="text-gray-400">Sign in to see your upcoming episodes.</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
+        {error}
+      </div>
+    );
+  }
+
+  const todayByShow = groupByShow(today);
+  const upcomingByDate = new Map<string, Episode[]>();
+  for (const ep of upcoming) {
+    if (!ep.air_date) continue;
+    if (!upcomingByDate.has(ep.air_date)) upcomingByDate.set(ep.air_date, []);
+    upcomingByDate.get(ep.air_date)!.push(ep);
+  }
+  const unwatchedByShowAndSeason = groupByShowAndSeason(unwatched);
+
+  const noEpisodes = today.length === 0 && upcoming.length === 0 && unwatched.length === 0;
+
+  return (
+    <div className="space-y-8">
+      {/* Unwatched Episodes */}
+      {unwatched.length > 0 && (
+        <section>
+          <h2 className="text-xl font-bold text-white mb-4">Unwatched</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from(unwatchedByShowAndSeason.entries()).map(([titleId, seasonMap]) =>
+              Array.from(seasonMap.entries()).map(([seasonNum, eps]) => (
+                <UnwatchedShowGroup
+                  key={`${titleId}-s${seasonNum}`}
+                  showTitle={eps[0].show_title}
+                  seasonNumber={seasonNum}
+                  episodes={eps}
+                  posterUrl={eps[0].poster_url}
+                  onToggleWatched={toggleWatched}
+                  onMarkSeasonWatched={markSeasonWatched}
+                />
+              ))
+            )}
+          </div>
+        </section>
       )}
 
-      {searchResults !== null ? (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Search Results ({searchResults.length})</h2>
-            <button
-              onClick={clearSearch}
-              className="text-sm text-gray-400 hover:text-white cursor-pointer"
-            >
-              Clear
-            </button>
+      {/* Today's Episodes */}
+      <section>
+        <h2 className="text-xl font-bold text-white mb-4">Today</h2>
+        {today.length === 0 ? (
+          <p className="text-gray-500 text-sm">
+            {noEpisodes ? "No upcoming episodes for your tracked shows." : "No episodes airing today."}
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from(todayByShow.entries()).map(([titleId, eps]) => (
+              <ShowEpisodeGroup
+                key={titleId}
+                showTitle={eps[0].show_title}
+                episodes={eps}
+                posterUrl={eps[0].poster_url}
+                onToggleWatched={toggleWatched}
+              />
+            ))}
           </div>
-          <TitleList titles={searchResults} emptyMessage="No results found" />
-        </div>
-      ) : (
-        <div>
-          <h2 className="text-lg font-semibold mb-4">New Releases</h2>
-          <NewReleases />
-        </div>
+        )}
+      </section>
+
+      {/* Upcoming Episodes */}
+      {upcoming.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold text-gray-300 mb-4">Coming Up</h2>
+          <div className="space-y-4">
+            {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
+              const byShow = groupByShow(eps);
+              return (
+                <div key={date}>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">{formatUpcomingDate(date)}</h3>
+                  <div className="space-y-2">
+                    {Array.from(byShow.entries()).map(([titleId, showEps]) => (
+                      <ShowEpisodeGroup
+                        key={titleId}
+                        showTitle={showEps[0].show_title}
+                        episodes={showEps}
+                        posterUrl={showEps[0].poster_url}
+                        compact
+                        onToggleWatched={toggleWatched}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import {
   sessions,
   settings,
   tracked,
+  watchedEpisodes,
 } from "./schema";
 import type { ParsedTitle } from "../justwatch/parser";
 import { extractProviders } from "../justwatch/parser";
@@ -521,6 +522,10 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
       updated_at: episodes.updatedAt,
       show_title: titles.title,
       poster_url: titles.posterUrl,
+      is_watched: sql<boolean>`EXISTS(
+        SELECT 1 FROM watched_episodes we
+        WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+      )`,
     })
     .from(episodes)
     .innerJoin(titles, eq(titles.id, episodes.titleId))
@@ -534,6 +539,46 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
 
   return rows.map((row) => ({
     ...row,
+    is_watched: !!row.is_watched,
+    offers: getOffersForTitle(row.title_id),
+  }));
+}
+
+export function getEpisodesByDateRange(startDate: string, endDate: string, userId?: string) {
+  const db = getDb();
+  if (!userId) return [];
+
+  const rows = db
+    .select({
+      id: episodes.id,
+      title_id: episodes.titleId,
+      season_number: episodes.seasonNumber,
+      episode_number: episodes.episodeNumber,
+      name: episodes.name,
+      overview: episodes.overview,
+      air_date: episodes.airDate,
+      still_path: episodes.stillPath,
+      updated_at: episodes.updatedAt,
+      show_title: titles.title,
+      poster_url: titles.posterUrl,
+      is_watched: sql<boolean>`EXISTS(
+        SELECT 1 FROM watched_episodes we
+        WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+      )`,
+    })
+    .from(episodes)
+    .innerJoin(titles, eq(titles.id, episodes.titleId))
+    .innerJoin(
+      tracked,
+      and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
+    )
+    .where(and(gte(episodes.airDate, startDate), lt(episodes.airDate, endDate)))
+    .orderBy(asc(episodes.airDate), asc(titles.title))
+    .all();
+
+  return rows.map((row) => ({
+    ...row,
+    is_watched: !!row.is_watched,
     offers: getOffersForTitle(row.title_id),
   }));
 }
@@ -541,6 +586,91 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
 export function deleteEpisodesForTitle(titleId: string) {
   const db = getDb();
   db.delete(episodes).where(eq(episodes.titleId, titleId)).run();
+}
+
+export function getUnwatchedEpisodes(userId: string) {
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rows = db
+    .select({
+      id: episodes.id,
+      title_id: episodes.titleId,
+      season_number: episodes.seasonNumber,
+      episode_number: episodes.episodeNumber,
+      name: episodes.name,
+      overview: episodes.overview,
+      air_date: episodes.airDate,
+      still_path: episodes.stillPath,
+      updated_at: episodes.updatedAt,
+      show_title: titles.title,
+      poster_url: titles.posterUrl,
+    })
+    .from(episodes)
+    .innerJoin(titles, eq(titles.id, episodes.titleId))
+    .innerJoin(
+      tracked,
+      and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
+    )
+    .where(
+      and(
+        lt(episodes.airDate, today),
+        sql`NOT EXISTS(
+          SELECT 1 FROM watched_episodes we
+          WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+        )`
+      )
+    )
+    .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
+    .all();
+
+  return rows.map((row) => ({
+    ...row,
+    is_watched: false,
+    offers: getOffersForTitle(row.title_id),
+  }));
+}
+
+// ─── Watched Episodes ─────────────────────────────────────────────────────────
+
+export function watchEpisode(episodeId: number, userId: string) {
+  const db = getDb();
+  db.insert(watchedEpisodes)
+    .values({ episodeId, userId })
+    .onConflictDoNothing()
+    .run();
+}
+
+export function unwatchEpisode(episodeId: number, userId: string) {
+  const db = getDb();
+  db.delete(watchedEpisodes)
+    .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+    .run();
+}
+
+export function watchEpisodesBulk(episodeIds: number[], userId: string) {
+  const raw = getRawDb();
+  const db = getDb();
+  raw.transaction(() => {
+    for (const episodeId of episodeIds) {
+      db.insert(watchedEpisodes)
+        .values({ episodeId, userId })
+        .onConflictDoNothing()
+        .run();
+    }
+  })();
+}
+
+export function unwatchEpisodesBulk(episodeIds: number[], userId: string) {
+  const raw = getRawDb();
+  const db = getDb();
+  raw.transaction(() => {
+    for (const episodeId of episodeIds) {
+      db.delete(watchedEpisodes)
+        .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+        .run();
+    }
+  })();
 }
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -619,6 +749,14 @@ export function updateUserPassword(userId: string, passwordHash: string) {
   const db = getDb();
   db.update(users)
     .set({ passwordHash })
+    .where(eq(users.id, userId))
+    .run();
+}
+
+export function updateUserAdmin(userId: string, isAdmin: boolean) {
+  const db = getDb();
+  db.update(users)
+    .set({ isAdmin: isAdmin ? 1 : 0 })
     .where(eq(users.id, userId))
     .run();
 }
@@ -727,7 +865,12 @@ export function getOidcConfig() {
   const redirectUri =
     CONFIG.OIDC_REDIRECT_URI || getSetting("oidc_redirect_uri") || "";
 
-  return { issuerUrl, clientId, clientSecret, redirectUri };
+  const adminClaim =
+    CONFIG.OIDC_ADMIN_CLAIM || getSetting("oidc_admin_claim") || "";
+  const adminValue =
+    CONFIG.OIDC_ADMIN_VALUE || getSetting("oidc_admin_value") || "";
+
+  return { issuerUrl, clientId, clientSecret, redirectUri, adminClaim, adminValue };
 }
 
 export function isOidcConfigured(): boolean {

@@ -9,6 +9,7 @@ import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
 import trackRoutes from "./routes/track";
+import watchedRoutes from "./routes/watched";
 import imdbRoutes from "./routes/imdb";
 import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
@@ -58,6 +59,10 @@ app.use("/api/track/*", requireAuth);
 app.use("/api/track", requireAuth);
 app.route("/api/track", trackRoutes);
 
+app.use("/api/watched/*", requireAuth);
+app.use("/api/watched", requireAuth);
+app.route("/api/watched", watchedRoutes);
+
 app.use("/api/imdb/*", requireAuth);
 app.use("/api/imdb", requireAuth);
 app.route("/api/imdb", imdbRoutes);
@@ -67,8 +72,12 @@ app.use("/api/admin/*", requireAuth, requireAdmin);
 app.use("/api/admin", requireAuth, requireAdmin);
 app.route("/api/admin", adminRoutes);
 
-// Sync and episodes (public for now — sync is typically triggered by cron)
+// Sync (public — typically triggered by cron)
 app.route("/api/sync", syncRoutes);
+
+// Episodes (optionalAuth for upcoming, sync is public)
+app.use("/api/episodes/*", optionalAuth);
+app.use("/api/episodes", optionalAuth);
 app.route("/api/episodes", episodesRoutes);
 
 // Serve frontend static files in production

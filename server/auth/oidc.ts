@@ -84,6 +84,7 @@ export async function exchangeCode(code: string, redirectUri: string) {
       sub: claims.sub as string,
       username: (claims.preferred_username || claims.email || claims.sub) as string,
       displayName: (claims.name || claims.preferred_username || null) as string | null,
+      claims,
     };
   }
 
@@ -98,5 +99,6 @@ export async function exchangeCode(code: string, redirectUri: string) {
     sub: userinfo.sub as string,
     username: (userinfo.preferred_username || userinfo.email || userinfo.sub) as string,
     displayName: (userinfo.name || null) as string | null,
+    claims: userinfo as Record<string, unknown>,
   };
 }
