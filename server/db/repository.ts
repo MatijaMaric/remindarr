@@ -148,12 +148,11 @@ export function getTitleById(titleId: string, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
-      jw_url: titles.jwUrl,
+      tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
       imdb_votes: scores.imdbVotes,
       tmdb_score: scores.tmdbScore,
-      jw_rating: scores.jwRating,
       is_tracked: trackedSubquery,
     })
     .from(titles)
