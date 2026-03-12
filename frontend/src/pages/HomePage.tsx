@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
@@ -31,7 +31,7 @@ function groupByShow(episodes: Episode[]): Map<string, Episode[]> {
   return map;
 }
 
-function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<number, Episode[]>> {
+export function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<number, Episode[]>> {
   const map = new Map<string, Map<number, Episode[]>>();
   for (const ep of episodes) {
     if (!map.has(ep.title_id)) map.set(ep.title_id, new Map());
@@ -264,6 +264,8 @@ function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onToggleWat
   );
 }
 
+export const EPISODES_PER_PAGE = 5;
+
 function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onToggleWatched, onMarkSeasonWatched }: {
   showTitle: string;
   seasonNumber: number;
@@ -272,7 +274,10 @@ function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onTo
   onToggleWatched: (id: number, current: boolean) => void;
   onMarkSeasonWatched: (episodeIds: number[]) => void;
 }) {
+  const [showAllEpisodes, setShowAllEpisodes] = useState(false);
   const providers = getUniqueProviders(episodes[0]?.offers);
+  const visibleEpisodes = showAllEpisodes ? episodes : episodes.slice(0, EPISODES_PER_PAGE);
+  const hiddenCount = episodes.length - EPISODES_PER_PAGE;
 
   return (
     <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
@@ -298,7 +303,7 @@ function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onTo
           </div>
           <p className="text-xs text-gray-500 mt-0.5">Season {seasonNumber}</p>
           <div className="mt-2 space-y-1">
-            {episodes.map((ep) => (
+            {visibleEpisodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
                 <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
                 <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors truncate">
@@ -308,6 +313,22 @@ function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onTo
               </div>
             ))}
           </div>
+          {!showAllEpisodes && hiddenCount > 0 && (
+            <button
+              onClick={() => setShowAllEpisodes(true)}
+              className="text-xs text-gray-400 hover:text-indigo-400 transition-colors mt-2 cursor-pointer"
+            >
+              Show all ({episodes.length} episodes)
+            </button>
+          )}
+          {showAllEpisodes && episodes.length > EPISODES_PER_PAGE && (
+            <button
+              onClick={() => setShowAllEpisodes(false)}
+              className="text-xs text-gray-400 hover:text-indigo-400 transition-colors mt-2 cursor-pointer"
+            >
+              Show less
+            </button>
+          )}
           {providers.length > 0 && (
             <div className="flex gap-1.5 mt-3">
               {providers.map((o) => (
@@ -323,11 +344,149 @@ function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onTo
   );
 }
 
+function UnwatchedShowCard({ titleId, seasonMap, expanded, onToggleExpand, onToggleWatched, onMarkSeasonWatched }: {
+  titleId: string;
+  seasonMap: Map<number, Episode[]>;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onToggleWatched: (id: number, current: boolean) => void;
+  onMarkSeasonWatched: (episodeIds: number[]) => void;
+}) {
+  const sortedSeasons = Array.from(seasonMap.entries()).sort(([a], [b]) => a - b);
+  const extraSeasons = sortedSeasons.length - 1;
+
+  if (expanded) {
+    return (
+      <div className="space-y-3">
+        {sortedSeasons.map(([seasonNum, eps]) => (
+          <UnwatchedShowGroup
+            key={`${titleId}-s${seasonNum}`}
+            showTitle={eps[0].show_title}
+            seasonNumber={seasonNum}
+            episodes={eps}
+            posterUrl={eps[0].poster_url}
+            onToggleWatched={onToggleWatched}
+            onMarkSeasonWatched={onMarkSeasonWatched}
+          />
+        ))}
+        {sortedSeasons.length > 1 && (
+          <button
+            onClick={onToggleExpand}
+            className="text-xs text-gray-400 hover:text-indigo-400 transition-colors cursor-pointer w-full text-center"
+          >
+            Collapse seasons
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Collapsed: show only earliest season with deck effect
+  const [seasonNum, eps] = sortedSeasons[0];
+
+  return (
+    <div className="relative">
+      {/* Shadow cards for deck effect */}
+      {extraSeasons >= 2 && (
+        <div className="absolute inset-0 translate-y-2 translate-x-2 scale-[0.94] bg-gray-900 rounded-xl border border-gray-800 opacity-30" />
+      )}
+      {extraSeasons >= 1 && (
+        <div className="absolute inset-0 translate-y-1 translate-x-1 scale-[0.97] bg-gray-900 rounded-xl border border-gray-800 opacity-60" />
+      )}
+      {/* Main card */}
+      <div className="relative z-10">
+        <UnwatchedShowGroup
+          showTitle={eps[0].show_title}
+          seasonNumber={seasonNum}
+          episodes={eps}
+          posterUrl={eps[0].poster_url}
+          onToggleWatched={onToggleWatched}
+          onMarkSeasonWatched={onMarkSeasonWatched}
+        />
+        {extraSeasons > 0 && (
+          <button
+            onClick={onToggleExpand}
+            className="w-full text-center text-xs text-gray-400 hover:text-indigo-400 transition-colors py-2 cursor-pointer"
+          >
+            +{extraSeasons} more season{extraSeasons > 1 ? "s" : ""}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UnwatchedCarousel({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollButtons = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollButtons();
+    el.addEventListener("scroll", updateScrollButtons, { passive: true });
+    const observer = new ResizeObserver(updateScrollButtons);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollButtons);
+      observer.disconnect();
+    };
+  }, [updateScrollButtons]);
+
+  const scroll = (direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = 320 + 12; // w-80 (320px) + gap-3 (12px)
+    el.scrollBy({ left: direction === "left" ? -cardWidth : cardWidth, behavior: "smooth" });
+  };
+
+  return (
+    <div className="relative group">
+      {canScrollLeft && (
+        <button
+          onClick={() => scroll("left")}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 bg-gray-800/90 hover:bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        style={{ scrollSnapType: "x mandatory" }}
+      >
+        {children}
+      </div>
+      {canScrollRight && (
+        <button
+          onClick={() => scroll("right")}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20 bg-gray-800/90 hover:bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
   const [today, setToday] = useState<Episode[]>([]);
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const [unwatched, setUnwatched] = useState<Episode[]>([]);
+  const [expandedShows, setExpandedShows] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -442,21 +601,25 @@ export default function HomePage() {
       {unwatched.length > 0 && (
         <section>
           <h2 className="text-xl font-bold text-white mb-4">Unwatched</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from(unwatchedByShowAndSeason.entries()).map(([titleId, seasonMap]) =>
-              Array.from(seasonMap.entries()).map(([seasonNum, eps]) => (
-                <UnwatchedShowGroup
-                  key={`${titleId}-s${seasonNum}`}
-                  showTitle={eps[0].show_title}
-                  seasonNumber={seasonNum}
-                  episodes={eps}
-                  posterUrl={eps[0].poster_url}
+          <UnwatchedCarousel>
+            {Array.from(unwatchedByShowAndSeason.entries()).map(([titleId, seasonMap]) => (
+              <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                <UnwatchedShowCard
+                  titleId={titleId}
+                  seasonMap={seasonMap}
+                  expanded={expandedShows.has(titleId)}
+                  onToggleExpand={() => setExpandedShows((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(titleId)) next.delete(titleId);
+                    else next.add(titleId);
+                    return next;
+                  })}
                   onToggleWatched={toggleWatched}
                   onMarkSeasonWatched={markSeasonWatched}
                 />
-              ))
-            )}
-          </div>
+              </div>
+            ))}
+          </UnwatchedCarousel>
         </section>
       )}
 
