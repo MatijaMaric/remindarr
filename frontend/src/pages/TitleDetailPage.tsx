@@ -83,18 +83,58 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+const NETWORK_DISPLAY_LIMIT = 5;
+const PROVIDER_DISPLAY_LIMIT = 8;
+
+function NetworkList({ networks }: { networks: { id: number; name: string; logo_path: string | null }[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = networks.length > NETWORK_DISPLAY_LIMIT;
+  const visible = expanded ? networks : networks.slice(0, NETWORK_DISPLAY_LIMIT);
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {visible.map(n => (
+        <div key={n.id} className="flex items-center gap-1.5">
+          {n.logo_path && (
+            <img src={`${TMDB_IMG}/w92${n.logo_path}`} alt={n.name} className="h-5 object-contain brightness-0 invert opacity-70" />
+          )}
+          <span className="text-sm text-gray-400">{n.name}</span>
+        </div>
+      ))}
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+        >
+          {expanded ? "Show less" : `+${networks.length - NETWORK_DISPLAY_LIMIT} more`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ProviderRow({ label, providers }: { label: string; providers: { logo_path: string; provider_name: string }[] }) {
+  const [expanded, setExpanded] = useState(false);
   if (!providers?.length) return null;
+  const hasMore = providers.length > PROVIDER_DISPLAY_LIMIT;
+  const visible = expanded ? providers : providers.slice(0, PROVIDER_DISPLAY_LIMIT);
   return (
     <div className="flex items-center gap-3">
       <span className="text-sm text-gray-400 w-20 shrink-0">{label}</span>
-      <div className="flex flex-wrap gap-2">
-        {providers.map((p, i) => (
+      <div className="flex flex-wrap gap-2 items-center">
+        {visible.map((p, i) => (
           <div key={i} className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1">
             <img src={`${TMDB_IMG}/w45${p.logo_path}`} alt={p.provider_name} className="w-6 h-6 rounded" />
             <span className="text-sm text-gray-300">{p.provider_name}</span>
           </div>
         ))}
+        {hasMore && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1"
+          >
+            {expanded ? "Show less" : `+${providers.length - PROVIDER_DISPLAY_LIMIT} more`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -542,16 +582,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
             {/* Networks */}
             {tmdb?.networks && tmdb.networks.length > 0 && (
-              <div className="flex items-center gap-3">
-                {tmdb.networks.map(n => (
-                  <div key={n.id} className="flex items-center gap-1.5">
-                    {n.logo_path && (
-                      <img src={`${TMDB_IMG}/w92${n.logo_path}`} alt={n.name} className="h-5 object-contain brightness-0 invert opacity-70" />
-                    )}
-                    <span className="text-sm text-gray-400">{n.name}</span>
-                  </div>
-                ))}
-              </div>
+              <NetworkList networks={tmdb.networks} />
             )}
 
             <div className="flex items-center gap-6 pt-2">
