@@ -10,6 +10,10 @@ import type {
   TmdbSearchMultiResult,
   TmdbFindResponse,
   TmdbGenreListResponse,
+  TmdbMovieFullDetails,
+  TmdbShowFullDetails,
+  TmdbSeasonDetails,
+  TmdbEpisodeDetails,
 } from "./types";
 
 async function tmdbRequest<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -59,6 +63,40 @@ export async function fetchTvDetails(tmdbId: number): Promise<TmdbTvDetails> {
   return tmdbRequest<TmdbTvDetails>(`/tv/${tmdbId}`, {
     language: tmdbLanguage(),
     append_to_response: "watch/providers,external_ids",
+  });
+}
+
+// ─── Full detail endpoints (for detail pages with credits, release dates) ───
+
+export async function fetchMovieFullDetails(tmdbId: string): Promise<TmdbMovieFullDetails> {
+  return tmdbRequest<TmdbMovieFullDetails>(`/movie/${tmdbId}`, {
+    language: tmdbLanguage(),
+    append_to_response: "credits,release_dates,watch/providers",
+  });
+}
+
+export async function fetchShowFullDetails(tmdbId: string): Promise<TmdbShowFullDetails> {
+  return tmdbRequest<TmdbShowFullDetails>(`/tv/${tmdbId}`, {
+    language: tmdbLanguage(),
+    append_to_response: "credits,content_ratings,watch/providers",
+  });
+}
+
+export async function fetchSeasonDetails(tmdbId: string, seasonNumber: number): Promise<TmdbSeasonDetails> {
+  return tmdbRequest<TmdbSeasonDetails>(`/tv/${tmdbId}/season/${seasonNumber}`, {
+    language: tmdbLanguage(),
+    append_to_response: "credits",
+  });
+}
+
+export async function fetchEpisodeDetails(
+  tmdbId: string,
+  seasonNumber: number,
+  episodeNumber: number
+): Promise<TmdbEpisodeDetails> {
+  return tmdbRequest<TmdbEpisodeDetails>(`/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`, {
+    language: tmdbLanguage(),
+    append_to_response: "credits",
   });
 }
 

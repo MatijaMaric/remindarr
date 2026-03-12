@@ -125,6 +125,52 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
   return parsedTitles.length;
 }
 
+// ─── Single title lookup ─────────────────────────────────────────────────────
+
+export function getTitleById(titleId: string, userId?: string) {
+  const db = getDb();
+
+  const trackedSubquery = userId
+    ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
+    : sql<number>`0`;
+
+  const row = db
+    .select({
+      id: titles.id,
+      object_type: titles.objectType,
+      title: titles.title,
+      release_year: titles.releaseYear,
+      release_date: titles.releaseDate,
+      runtime_minutes: titles.runtimeMinutes,
+      short_description: titles.shortDescription,
+      genres: titles.genres,
+      imdb_id: titles.imdbId,
+      tmdb_id: titles.tmdbId,
+      poster_url: titles.posterUrl,
+      age_certification: titles.ageCertification,
+      jw_url: titles.jwUrl,
+      updated_at: titles.updatedAt,
+      imdb_score: scores.imdbScore,
+      imdb_votes: scores.imdbVotes,
+      tmdb_score: scores.tmdbScore,
+      jw_rating: scores.jwRating,
+      is_tracked: trackedSubquery,
+    })
+    .from(titles)
+    .leftJoin(scores, eq(scores.titleId, titles.id))
+    .where(eq(titles.id, titleId))
+    .get();
+
+  if (!row) return null;
+
+  return {
+    ...row,
+    genres: row.genres ? JSON.parse(row.genres) : [],
+    is_tracked: Boolean(row.is_tracked),
+    offers: getOffersForTitle(row.id),
+  };
+}
+
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 export interface TitleFilters {
