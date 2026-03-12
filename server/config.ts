@@ -1,5 +1,9 @@
 export const CONFIG = {
   COUNTRY: process.env.TMDB_COUNTRY || process.env.JUSTWATCH_COUNTRY || "HR",
+  FALLBACK_COUNTRIES: (process.env.TMDB_FALLBACK_COUNTRIES || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
   LANGUAGE: process.env.TMDB_LANGUAGE || process.env.JUSTWATCH_LANGUAGE || "en",
   DEFAULT_DAYS_BACK: 30,
   PAGE_SIZE: 20,
