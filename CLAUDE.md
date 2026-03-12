@@ -21,9 +21,25 @@ bun run start            # Runs production server
 bun run sync                              # Default sync
 bun run server/cli/sync.ts [daysBack] [type]  # CLI with args
 
+# Testing
+bun test                     # Run all tests
+bun test server/             # Server tests only
+bun test frontend/src/       # Frontend tests only
+bun test --watch             # Watch mode
+
 # Docker
 docker compose up --build
 ```
+
+## Testing Rules
+
+**Every change must include tests.** New features need unit tests. Bug fixes need regression tests.
+
+- Test files are colocated: `foo.ts` → `foo.test.ts` in the same directory
+- Use `bun:test` (built-in test runner) — no external test frameworks
+- DB tests use in-memory SQLite via `server/test-utils/setup.ts` (`setupTestDb()` / `teardownTestDb()`)
+- External APIs (TMDB, OIDC) must be mocked — never make real HTTP calls in tests
+- Run `bun test` before committing to ensure all tests pass
 
 ## Architecture
 

@@ -249,6 +249,13 @@ export function getRawDb(): Database {
   return rawDb;
 }
 
+/** Reset DB singletons (for testing with in-memory databases) */
+export function resetDb() {
+  if (rawDb) rawDb.close();
+  drizzleDb = undefined!;
+  rawDb = undefined!;
+}
+
 // ─── Schema Init (kept for backward compat with existing DBs) ───────────────
 
 function initSchema(db: Database) {
