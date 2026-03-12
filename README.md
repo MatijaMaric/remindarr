@@ -58,8 +58,6 @@ This uses the image from [GitHub Container Registry](https://github.com/MatijaMa
 
 The app is available at `http://localhost:3000`. Data is persisted in a Docker volume.
 
-**For Traefik integration**, add labels to the service in your `docker-compose.yml`. See [docker-compose.traefik.example.yml](docker-compose.traefik.example.yml) for a reference setup.
-
 ### Configuration
 
 Set the locale via environment variables (defaults to Croatia):
