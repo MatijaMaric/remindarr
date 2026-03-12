@@ -164,14 +164,28 @@ export default function CalendarPage() {
     }
   };
 
+  const isEpisodeReleased = (ep: Episode) => {
+    if (!ep.air_date) return false;
+    return ep.air_date <= today;
+  };
+
   const toggleBulkWatched = async (episodeIds: number[], markWatched: boolean) => {
+    // When marking as watched, filter to only released episodes
+    const effectiveIds = markWatched
+      ? episodeIds.filter((id) => {
+          const ep = episodes.find((e) => e.id === id);
+          return ep && isEpisodeReleased(ep);
+        })
+      : episodeIds;
+    if (effectiveIds.length === 0) return;
+
     // Optimistic update
-    const idSet = new Set(episodeIds);
+    const idSet = new Set(effectiveIds);
     setEpisodes((prev) =>
       prev.map((ep) => (idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep))
     );
     try {
-      await watchEpisodesBulk(episodeIds, markWatched);
+      await watchEpisodesBulk(effectiveIds, markWatched);
     } catch (err) {
       setEpisodes((prev) =>
         prev.map((ep) => (idSet.has(ep.id) ? { ...ep, is_watched: !markWatched } : ep))
@@ -397,21 +411,30 @@ export default function CalendarPage() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
                                 <div className="text-sm font-medium text-white">{ep.show_title}</div>
-                                <button
-                                  onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
-                                  className={`flex-shrink-0 p-1 rounded-md transition-colors cursor-pointer ${
-                                    ep.is_watched
-                                      ? "text-emerald-400 hover:text-emerald-300"
-                                      : "text-gray-600 hover:text-gray-400"
-                                  }`}
-                                  title={ep.is_watched ? "Mark as unwatched" : "Mark as watched"}
-                                >
-                                  {ep.is_watched ? (
-                                    <CheckCircleIcon className="size-5" />
-                                  ) : (
+                                {isEpisodeReleased(ep) ? (
+                                  <button
+                                    onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
+                                    className={`flex-shrink-0 p-1 rounded-md transition-colors cursor-pointer ${
+                                      ep.is_watched
+                                        ? "text-emerald-400 hover:text-emerald-300"
+                                        : "text-gray-600 hover:text-gray-400"
+                                    }`}
+                                    title={ep.is_watched ? "Mark as unwatched" : "Mark as watched"}
+                                  >
+                                    {ep.is_watched ? (
+                                      <CheckCircleIcon className="size-5" />
+                                    ) : (
+                                      <CircleIcon className="size-5" />
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span
+                                    className="flex-shrink-0 p-1 text-gray-700 cursor-not-allowed"
+                                    title="Not yet released"
+                                  >
                                     <CircleIcon className="size-5" />
-                                  )}
-                                </button>
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-emerald-400 mt-0.5">
                                 S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}

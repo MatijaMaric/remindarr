@@ -1,8 +1,14 @@
 import { Hono } from "hono";
-import { watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk } from "../db/repository";
+import { watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk, getEpisodeAirDate, getReleasedEpisodeIds } from "../db/repository";
 import type { AppEnv } from "../types";
 
 const app = new Hono<AppEnv>();
+
+function isReleased(airDate: string | null): boolean {
+  if (!airDate) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return airDate <= today;
+}
 
 app.post("/bulk", async (c) => {
   const user = c.get("user")!;
@@ -14,7 +20,11 @@ app.post("/bulk", async (c) => {
   }
 
   if (watched) {
-    watchEpisodesBulk(episodeIds, user.id);
+    const releasedIds = getReleasedEpisodeIds(episodeIds);
+    if (releasedIds.length === 0) {
+      return c.json({ error: "Cannot mark unreleased episodes as watched" }, 400);
+    }
+    watchEpisodesBulk(releasedIds, user.id);
   } else {
     unwatchEpisodesBulk(episodeIds, user.id);
   }
@@ -25,6 +35,10 @@ app.post("/bulk", async (c) => {
 app.post("/:episodeId", (c) => {
   const user = c.get("user")!;
   const episodeId = Number(c.req.param("episodeId"));
+  const airDate = getEpisodeAirDate(episodeId);
+  if (!isReleased(airDate)) {
+    return c.json({ error: "Cannot mark an unreleased episode as watched" }, 400);
+  }
   watchEpisode(episodeId, user.id);
   return c.json({ success: true });
 });

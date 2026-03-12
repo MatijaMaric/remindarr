@@ -53,7 +53,23 @@ function formatUpcomingDate(dateStr: string): string {
   return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
 
-function WatchedIcon({ watched, onClick }: { watched: boolean; onClick: () => void }) {
+function isEpisodeReleased(ep: Episode): boolean {
+  if (!ep.air_date) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return ep.air_date <= today;
+}
+
+function WatchedIcon({ watched, onClick, disabled }: { watched: boolean; onClick: () => void; disabled?: boolean }) {
+  if (disabled) {
+    return (
+      <span className="flex-shrink-0 text-gray-700 cursor-not-allowed" title="Not yet released">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <circle cx="12" cy="12" r="9" />
+        </svg>
+      </span>
+    );
+  }
+
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
@@ -78,10 +94,12 @@ function WatchedIcon({ watched, onClick }: { watched: boolean; onClick: () => vo
 function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Episode; compact?: boolean; onToggleWatched: (id: number, current: boolean) => void }) {
   const providers = getUniqueProviders(episode.offers);
 
+  const unreleased = !isEpisodeReleased(episode);
+
   if (compact) {
     return (
       <div className="flex items-center gap-3 bg-gray-900 rounded-lg border border-gray-800 p-3">
-        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} />
+        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} />
         {episode.poster_url && (
           <img
             src={episode.poster_url}
@@ -113,7 +131,7 @@ function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Episode; 
   return (
     <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
       <div className="flex gap-4 p-4">
-        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} />
+        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} />
         {episode.poster_url && (
           <img
             src={episode.poster_url}
@@ -170,7 +188,7 @@ function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onToggleWat
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-1">
-                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
+                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
                 <span className="text-xs text-gray-400">{formatEpisodeCode(ep)}</span>
               </div>
             ))}
@@ -200,7 +218,7 @@ function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onToggleWat
           <div className="mt-2 space-y-1">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
-                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
+                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
                 <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
                 {ep.name && <span className="text-gray-400"> · {ep.name}</span>}
               </div>

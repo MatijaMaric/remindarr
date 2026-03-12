@@ -633,6 +633,33 @@ export function getUnwatchedEpisodes(userId: string) {
 
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
 
+export function getEpisodeAirDate(episodeId: number): string | null {
+  const db = getDb();
+  const row = db
+    .select({ airDate: episodes.airDate })
+    .from(episodes)
+    .where(eq(episodes.id, episodeId))
+    .get();
+  return row?.airDate ?? null;
+}
+
+export function getReleasedEpisodeIds(episodeIds: number[]): number[] {
+  const today = new Date().toISOString().slice(0, 10);
+  const db = getDb();
+  const rows = db
+    .select({ id: episodes.id })
+    .from(episodes)
+    .where(
+      and(
+        sql`${episodes.id} IN (${sql.join(episodeIds.map((id) => sql`${id}`), sql`, `)})`,
+        sql`${episodes.airDate} IS NOT NULL`,
+        sql`${episodes.airDate} <= ${today}`
+      )
+    )
+    .all();
+  return rows.map((r) => r.id);
+}
+
 export function watchEpisode(episodeId: number, userId: string) {
   const db = getDb();
   db.insert(watchedEpisodes)
