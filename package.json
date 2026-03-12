@@ -8,6 +8,9 @@
     "build": "cd frontend && bun run build",
     "start": "bun run server/index.ts",
     "sync": "bun run server/cli/sync.ts",
+    "test": "bun test",
+    "test:server": "bun test server/",
+    "test:frontend": "bun test frontend/src/",
     "db:generate": "bunx drizzle-kit generate",
     "db:push": "bunx drizzle-kit push",
     "db:studio": "bunx drizzle-kit studio"
