@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, CheckCircleIcon, CircleIcon } from "lucide-react";
 import { getCalendarTitles, syncEpisodes, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import TitleList from "../components/TitleList";
