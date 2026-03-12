@@ -15,6 +15,7 @@ export interface ParsedTitle {
   id: string;
   objectType: "MOVIE" | "SHOW";
   title: string;
+  originalTitle: string | null;
   releaseYear: number | null;
   releaseDate: string | null;
   runtimeMinutes: number | null;
@@ -136,6 +137,7 @@ export function parseMovieDetails(movie: TmdbMovieDetails): ParsedTitle {
     id,
     objectType: "MOVIE",
     title: movie.title,
+    originalTitle: movie.original_title || null,
     releaseYear: parseYear(movie.release_date),
     releaseDate: movie.release_date || null,
     runtimeMinutes: movie.runtime,
@@ -164,6 +166,7 @@ export function parseTvDetails(tv: TmdbTvDetails): ParsedTitle {
     id,
     objectType: "SHOW",
     title: tv.name,
+    originalTitle: tv.original_name || null,
     releaseYear: parseYear(tv.first_air_date),
     releaseDate: tv.first_air_date || null,
     runtimeMinutes: runtime,
@@ -194,6 +197,7 @@ export function parseDiscoverMovie(
     id,
     objectType: "MOVIE",
     title: movie.title,
+    originalTitle: movie.original_title || null,
     releaseYear: parseYear(movie.release_date),
     releaseDate: movie.release_date || null,
     runtimeMinutes: null,
@@ -222,6 +226,7 @@ export function parseDiscoverTv(
     id,
     objectType: "SHOW",
     title: tv.name,
+    originalTitle: tv.original_name || null,
     releaseYear: parseYear(tv.first_air_date),
     releaseDate: tv.first_air_date || null,
     runtimeMinutes: null,
@@ -253,6 +258,7 @@ export function parseSearchResult(
       id,
       objectType: "MOVIE",
       title: result.title || "",
+      originalTitle: null,
       releaseYear: parseYear(result.release_date),
       releaseDate: result.release_date || null,
       runtimeMinutes: null,
@@ -278,6 +284,7 @@ export function parseSearchResult(
     id,
     objectType: "SHOW",
     title: result.name || "",
+    originalTitle: null,
     releaseYear: parseYear(result.first_air_date),
     releaseDate: result.first_air_date || null,
     runtimeMinutes: null,

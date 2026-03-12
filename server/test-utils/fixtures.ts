@@ -6,6 +6,7 @@ export function makeParsedTitle(overrides?: Partial<ParsedTitle>): ParsedTitle {
     id: "movie-123",
     objectType: "MOVIE",
     title: "Test Movie",
+    originalTitle: null,
     releaseYear: 2024,
     releaseDate: "2024-06-15",
     runtimeMinutes: 120,
@@ -43,6 +44,7 @@ export function makeTmdbMovieDetails(overrides?: Partial<TmdbMovieDetails>): Tmd
   return {
     id: 123,
     title: "Test Movie",
+    original_title: "Test Movie",
     overview: "A test movie",
     release_date: "2024-06-15",
     runtime: 120,
@@ -62,6 +64,7 @@ export function makeTmdbTvDetails(overrides?: Partial<TmdbTvDetails>): TmdbTvDet
   return {
     id: 456,
     name: "Test Show",
+    original_name: "Test Show",
     overview: "A test show",
     first_air_date: "2024-01-10",
     episode_run_time: [45],
@@ -82,6 +85,7 @@ export function makeTmdbDiscoverMovie(overrides?: Partial<TmdbDiscoverMovieResul
   return {
     id: 789,
     title: "Discover Movie",
+    original_title: "Discover Movie",
     overview: "A discovered movie",
     release_date: "2024-03-20",
     poster_path: "/discover.jpg",
@@ -99,6 +103,7 @@ export function makeTmdbDiscoverTv(overrides?: Partial<TmdbDiscoverTvResult>): T
   return {
     id: 101,
     name: "Discover Show",
+    original_name: "Discover Show",
     overview: "A discovered show",
     first_air_date: "2024-05-01",
     poster_path: "/discovershow.jpg",

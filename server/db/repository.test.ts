@@ -66,6 +66,18 @@ describe("upsertTitles", () => {
     expect(result!.title).toBe("Updated");
   });
 
+  it("stores and retrieves original_title", () => {
+    upsertTitles([makeParsedTitle({ originalTitle: "Film Original" })]);
+    const result = getTitleById("movie-123");
+    expect(result!.original_title).toBe("Film Original");
+  });
+
+  it("stores null original_title when not provided", () => {
+    upsertTitles([makeParsedTitle({ originalTitle: null })]);
+    const result = getTitleById("movie-123");
+    expect(result!.original_title).toBeNull();
+  });
+
   it("upserts providers and offers", () => {
     const title = makeParsedTitle({
       offers: [

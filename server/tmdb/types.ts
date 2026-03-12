@@ -61,6 +61,7 @@ export interface TmdbWatchProviderResponse {
 export interface TmdbMovieDetails {
   id: number;
   title: string;
+  original_title: string;
   overview: string | null;
   release_date: string;
   runtime: number | null;
@@ -79,6 +80,7 @@ export interface TmdbMovieDetails {
 export interface TmdbTvDetails {
   id: number;
   name: string;
+  original_name: string;
   overview: string | null;
   first_air_date: string;
   episode_run_time: number[];
@@ -100,6 +102,7 @@ export interface TmdbTvDetails {
 export interface TmdbDiscoverMovieResult {
   id: number;
   title: string;
+  original_title: string;
   overview: string | null;
   release_date: string;
   poster_path: string | null;
@@ -114,6 +117,7 @@ export interface TmdbDiscoverMovieResult {
 export interface TmdbDiscoverTvResult {
   id: number;
   name: string;
+  original_name: string;
   overview: string | null;
   first_air_date: string;
   poster_path: string | null;

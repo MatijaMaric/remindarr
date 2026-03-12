@@ -17,6 +17,7 @@ export interface Title {
   id: string;
   object_type: "MOVIE" | "SHOW";
   title: string;
+  original_title: string | null;
   release_year: number | null;
   release_date: string | null;
   runtime_minutes: number | null;
@@ -56,6 +57,7 @@ export interface SearchTitle {
   id: string;
   objectType: "MOVIE" | "SHOW";
   title: string;
+  originalTitle: string | null;
   releaseYear: number | null;
   releaseDate: string | null;
   runtimeMinutes: number | null;
@@ -298,6 +300,7 @@ export function normalizeSearchTitle(t: SearchTitle): Title {
     id: t.id,
     object_type: t.objectType,
     title: t.title,
+    original_title: t.originalTitle,
     release_year: t.releaseYear,
     release_date: t.releaseDate,
     runtime_minutes: t.runtimeMinutes,

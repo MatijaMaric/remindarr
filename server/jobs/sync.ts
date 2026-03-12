@@ -1,9 +1,10 @@
 import { registerHandler } from "./worker";
-import { registerCron } from "./queue";
+import { registerCron, enqueueJob } from "./queue";
 import { CONFIG } from "../config";
 import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
 import { syncEpisodes } from "../tmdb/sync";
+import { migrateTitles } from "./migrate-titles";
 
 export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -23,8 +24,15 @@ export function registerSyncJobs() {
     console.log(`[Sync] Synced ${result.synced} episodes from ${result.shows} shows`);
   });
 
+  registerHandler("migrate-titles", async () => {
+    await migrateTitles();
+  });
+
   // ─── Cron Schedules ────────────────────────────────────────────────────
 
   registerCron("sync-titles", CONFIG.SYNC_TITLES_CRON);
   registerCron("sync-episodes", CONFIG.SYNC_EPISODES_CRON);
+
+  // Enqueue one-time title migration (will no-op if all titles already have original_title)
+  enqueueJob("migrate-titles", undefined, { maxAttempts: 1 });
 }
