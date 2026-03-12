@@ -29,7 +29,7 @@ export const titles = sqliteTable(
     tmdbId: text("tmdb_id"),
     posterUrl: text("poster_url"),
     ageCertification: text("age_certification"),
-    jwUrl: text("jw_url"),
+    tmdbUrl: text("tmdb_url"),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [
@@ -71,7 +71,6 @@ export const scores = sqliteTable("scores", {
   imdbScore: real("imdb_score"),
   imdbVotes: integer("imdb_votes"),
   tmdbScore: real("tmdb_score"),
-  jwRating: real("jw_rating"),
 });
 
 export const episodes = sqliteTable(
@@ -267,7 +266,7 @@ function initSchema(db: Database) {
       tmdb_id TEXT,
       poster_url TEXT,
       age_certification TEXT,
-      jw_url TEXT,
+      tmdb_url TEXT,
       updated_at TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -300,8 +299,7 @@ function initSchema(db: Database) {
       title_id TEXT PRIMARY KEY REFERENCES titles(id),
       imdb_score REAL,
       imdb_votes INTEGER,
-      tmdb_score REAL,
-      jw_rating REAL
+      tmdb_score REAL
     )
   `);
 
@@ -429,6 +427,39 @@ function migrateSchema(db: Database) {
       )
     `);
     setSchemaVersion(db, 2);
+  }
+
+  // Migration v3: Switch from JustWatch to TMDB data source
+  if (getSchemaVersion(db) < 3) {
+    console.log("[Migration v3] Migrating from JustWatch to TMDB data source...");
+
+    // Clear all content data (IDs are changing from JW to TMDB format)
+    db.run("DELETE FROM watched_episodes");
+    db.run("DELETE FROM episodes");
+    db.run("DELETE FROM offers");
+    db.run("DELETE FROM scores");
+    db.run("DELETE FROM tracked");
+    db.run("DELETE FROM titles");
+    db.run("DELETE FROM providers");
+
+    // Rename jw_url to tmdb_url if the column exists
+    const titlesInfo = db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='titles'"
+    ).get() as any;
+    if (titlesInfo?.sql?.includes("jw_url")) {
+      db.run("ALTER TABLE titles RENAME COLUMN jw_url TO tmdb_url");
+    }
+
+    // Remove jw_rating from scores if it exists
+    const scoresInfo = db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='scores'"
+    ).get() as any;
+    if (scoresInfo?.sql?.includes("jw_rating")) {
+      db.run("ALTER TABLE scores DROP COLUMN jw_rating");
+    }
+
+    console.log("[Migration v3] Migration complete. Data cleared for TMDB re-sync.");
+    setSchemaVersion(db, 3);
   }
 }
 

@@ -1,7 +1,7 @@
 import { registerHandler } from "./worker";
 import { registerCron } from "./queue";
 import { CONFIG } from "../config";
-import { fetchNewReleases } from "../justwatch/client";
+import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
 import { syncEpisodes } from "../tmdb/sync";
 
@@ -11,7 +11,7 @@ export function registerSyncJobs() {
   registerHandler("sync-titles", async () => {
     const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });
     const count = upsertTitles(titles);
-    console.log(`[Sync] Synced ${count} titles from JustWatch`);
+    console.log(`[Sync] Synced ${count} titles from TMDB`);
   });
 
   registerHandler("sync-episodes", async () => {

@@ -9,6 +9,13 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Extract the numeric TMDB ID from our internal title ID format "tv-12345" or the tmdb_id field */
+function extractTmdbId(titleId: string, tmdbIdField: string | null): string {
+  if (tmdbIdField) return tmdbIdField;
+  if (titleId.startsWith("tv-")) return titleId.slice(3);
+  return titleId;
+}
+
 interface EpisodeRow {
   title_id: string;
   season_number: number;
@@ -26,7 +33,8 @@ export async function syncEpisodesForShow(
 ): Promise<number> {
   const db = getDb();
 
-  const details = await fetchShowDetails(tmdbId);
+  const resolvedTmdbId = extractTmdbId(titleId, tmdbId);
+  const details = await fetchShowDetails(resolvedTmdbId);
 
   // Skip ended/canceled shows that already have episodes synced
   if (details.status === "Ended" || details.status === "Canceled") {
@@ -47,7 +55,7 @@ export async function syncEpisodesForShow(
     if (season > 1) await delay(CONFIG.EPISODE_SYNC_DELAY_MS);
 
     try {
-      const seasonData = await fetchSeasonEpisodes(tmdbId, season);
+      const seasonData = await fetchSeasonEpisodes(resolvedTmdbId, season);
       for (const ep of seasonData.episodes) {
         allEpisodes.push({
           title_id: titleId,

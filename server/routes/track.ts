@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, deleteEpisodesForTitle } from "../db/repository";
-import type { ParsedTitle } from "../justwatch/parser";
+import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { syncEpisodesForShow } from "../tmdb/sync";
 import type { AppEnv } from "../types";
@@ -28,7 +28,7 @@ function toParsedTitle(t: any): ParsedTitle {
     tmdbId: t.tmdb_id,
     posterUrl: t.poster_url,
     ageCertification: t.age_certification,
-    jwUrl: t.jw_url,
+    tmdbUrl: t.tmdb_url,
     offers: (t.offers || []).map((o: any) => ({
       titleId: t.id,
       providerId: o.provider_id,
@@ -46,7 +46,6 @@ function toParsedTitle(t: any): ParsedTitle {
       imdbScore: t.imdb_score,
       imdbVotes: t.imdb_votes,
       tmdbScore: t.tmdb_score,
-      jwRating: t.jw_rating,
     },
   };
 }

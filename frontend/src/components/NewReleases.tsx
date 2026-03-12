@@ -72,7 +72,7 @@ export default function NewReleases() {
         <TitleList
           titles={titles}
           onTrackToggle={fetchTitles}
-          emptyMessage="No releases found. Click 'Sync New Releases' to fetch data from JustWatch."
+          emptyMessage="No releases found. Click 'Sync New Releases' to fetch data from TMDB."
         />
       )}
     </div>

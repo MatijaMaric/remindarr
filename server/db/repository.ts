@@ -12,8 +12,8 @@ import {
   tracked,
   watchedEpisodes,
 } from "./schema";
-import type { ParsedTitle } from "../justwatch/parser";
-import { extractProviders } from "../justwatch/parser";
+import type { ParsedTitle } from "../tmdb/parser";
+import { extractProviders } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { getRawDb } from "./schema";
 
@@ -63,7 +63,7 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
           tmdbId: t.tmdbId,
           posterUrl: t.posterUrl,
           ageCertification: t.ageCertification,
-          jwUrl: t.jwUrl,
+          tmdbUrl: t.tmdbUrl,
           updatedAt: sql`datetime('now')`,
         })
         .onConflictDoUpdate({
@@ -79,7 +79,7 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
             tmdbId: sql`excluded.tmdb_id`,
             posterUrl: sql`excluded.poster_url`,
             ageCertification: sql`excluded.age_certification`,
-            jwUrl: sql`excluded.jw_url`,
+            tmdbUrl: sql`excluded.tmdb_url`,
             updatedAt: sql`datetime('now')`,
           },
         })
@@ -109,7 +109,6 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
           imdbScore: t.scores.imdbScore,
           imdbVotes: t.scores.imdbVotes,
           tmdbScore: t.scores.tmdbScore,
-          jwRating: t.scores.jwRating,
         })
         .onConflictDoUpdate({
           target: scores.titleId,
@@ -117,7 +116,6 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
             imdbScore: sql`excluded.imdb_score`,
             imdbVotes: sql`excluded.imdb_votes`,
             tmdbScore: sql`excluded.tmdb_score`,
-            jwRating: sql`excluded.jw_rating`,
           },
         })
         .run();
@@ -184,12 +182,11 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
-      jw_url: titles.jwUrl,
+      tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
       imdb_votes: scores.imdbVotes,
       tmdb_score: scores.tmdbScore,
-      jw_rating: scores.jwRating,
       is_tracked: trackedSubquery,
     })
     .from(titles)
@@ -267,12 +264,11 @@ export function getTrackedTitles(userId: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
-      jw_url: titles.jwUrl,
+      tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
       imdb_votes: scores.imdbVotes,
       tmdb_score: scores.tmdbScore,
-      jw_rating: scores.jwRating,
       tracked_at: tracked.trackedAt,
       notes: tracked.notes,
       is_tracked: sql<number>`1`,
@@ -315,12 +311,11 @@ export function searchLocalTitles(query: string, limit = 50, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
-      jw_url: titles.jwUrl,
+      tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
       imdb_votes: scores.imdbVotes,
       tmdb_score: scores.tmdbScore,
-      jw_rating: scores.jwRating,
       is_tracked: trackedSubquery,
     })
     .from(titles)
@@ -413,12 +408,11 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
-      jw_url: titles.jwUrl,
+      tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
       imdb_votes: scores.imdbVotes,
       tmdb_score: scores.tmdbScore,
-      jw_rating: scores.jwRating,
       is_tracked: sql<number>`1`,
     })
     .from(titles)
