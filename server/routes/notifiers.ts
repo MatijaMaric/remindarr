@@ -9,6 +9,7 @@ import {
 } from "../db/repository";
 import { getProvider, getAvailableProviders } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
+import { refreshNotificationSchedule } from "../jobs/notifications";
 
 const app = new Hono<AppEnv>();
 
@@ -76,6 +77,7 @@ app.post("/", async (c) => {
   }
 
   const id = createNotifier(user.id, provider, name, config, time, tz);
+  refreshNotificationSchedule();
   const notifier = getNotifierById(id, user.id);
   return c.json({ notifier }, 201);
 });
@@ -117,6 +119,7 @@ app.put("/:id", async (c) => {
     timezone: body.timezone,
     enabled: body.enabled,
   });
+  refreshNotificationSchedule();
 
   const notifier = getNotifierById(id, user.id);
   return c.json({ notifier });
@@ -133,6 +136,7 @@ app.delete("/:id", (c) => {
   }
 
   deleteNotifier(id, user.id);
+  refreshNotificationSchedule();
   return c.json({ ok: true });
 });
 
