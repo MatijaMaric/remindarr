@@ -77,28 +77,36 @@ export async function exchangeCode(code: string, redirectUri: string) {
   const tokens = await res.json() as { id_token?: string; access_token: string };
 
   // Extract claims from id_token (base64-decode payload)
+  let idTokenClaims: Record<string, unknown> = {};
   if (tokens.id_token) {
     const payload = tokens.id_token.split(".")[1];
-    const claims = JSON.parse(atob(payload));
-    return {
-      sub: claims.sub as string,
-      username: (claims.preferred_username || claims.email || claims.sub) as string,
-      displayName: (claims.name || claims.preferred_username || null) as string | null,
-      claims,
-    };
+    idTokenClaims = JSON.parse(atob(payload));
   }
 
-  // Fallback: use userinfo endpoint
-  const userinfoRes = await fetch(discovery.userinfo_endpoint, {
-    headers: { Authorization: `Bearer ${tokens.access_token}` },
-  });
-  if (!userinfoRes.ok) throw new Error("Failed to fetch userinfo");
-  const userinfo = await userinfoRes.json() as any;
+  // Always fetch userinfo to get full claims (id_token often lacks group/role claims)
+  let userinfoClaims: Record<string, unknown> = {};
+  if (discovery.userinfo_endpoint) {
+    try {
+      const userinfoRes = await fetch(discovery.userinfo_endpoint, {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      if (userinfoRes.ok) {
+        userinfoClaims = await userinfoRes.json() as Record<string, unknown>;
+      }
+    } catch {
+      // Userinfo fetch failed; continue with id_token claims only
+    }
+  }
+
+  // Merge claims: userinfo takes precedence for richer data (e.g. groups)
+  const claims = { ...idTokenClaims, ...userinfoClaims };
+
+  if (!claims.sub) throw new Error("No 'sub' claim found in token or userinfo");
 
   return {
-    sub: userinfo.sub as string,
-    username: (userinfo.preferred_username || userinfo.email || userinfo.sub) as string,
-    displayName: (userinfo.name || null) as string | null,
-    claims: userinfo as Record<string, unknown>,
+    sub: claims.sub as string,
+    username: (claims.preferred_username || claims.email || claims.sub) as string,
+    displayName: ((claims.name || claims.preferred_username || null) as string | null),
+    claims,
   };
 }

@@ -142,7 +142,7 @@ app.get("/oidc/authorize", async (c) => {
       response_type: "code",
       client_id: clientId,
       redirect_uri: redirectUri,
-      scope: "openid profile email",
+      scope: "openid profile email groups",
       state,
     });
 
@@ -201,7 +201,7 @@ app.get("/oidc/callback", async (c) => {
 });
 
 /** Check if OIDC claims grant admin status based on configured claim/value. */
-function checkAdminClaim(
+export function checkAdminClaim(
   claims: Record<string, unknown>,
   claimName: string,
   claimValue: string
