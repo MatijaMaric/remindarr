@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, CheckCircleIcon, CircleIcon } from "lucide-react";
-import { getCalendarTitles, syncEpisodes, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
+import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon } from "lucide-react";
+import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import TitleList from "../components/TitleList";
 import type { Title, Episode, Offer } from "../types";
 
@@ -63,7 +63,6 @@ export default function CalendarPage() {
   const [titles, setTitles] = useState<Title[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const year = currentMonth.getFullYear();
@@ -195,24 +194,6 @@ export default function CalendarPage() {
     }
   };
 
-  const handleSyncEpisodes = async () => {
-    setSyncing(true);
-    try {
-      await syncEpisodes();
-      // Refresh calendar data
-      const data = await getCalendarTitles({
-        month: formatMonth(currentMonth),
-        type: typeFilter || undefined,
-      });
-      setTitles(data.titles);
-      setEpisodes(data.episodes || []);
-    } catch (err) {
-      console.error("Episode sync failed:", err);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header: month nav + type filter */}
@@ -230,14 +211,6 @@ export default function CalendarPage() {
           {loading && <span className="text-sm text-gray-500">Loading...</span>}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleSyncEpisodes}
-            disabled={syncing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCwIcon className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Syncing..." : "Sync Episodes"}
-          </button>
           {typeFilters.map((f) => (
             <button
               key={f.value}
