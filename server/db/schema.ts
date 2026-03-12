@@ -167,6 +167,29 @@ export const watchedEpisodes = sqliteTable(
   (table) => [primaryKey({ columns: [table.episodeId, table.userId] })]
 );
 
+export const notifiers = sqliteTable(
+  "notifiers",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    name: text("name").notNull(),
+    config: text("config").notNull(),
+    notifyTime: text("notify_time").notNull().default("09:00"),
+    timezone: text("timezone").notNull().default("UTC"),
+    enabled: integer("enabled").notNull().default(1),
+    lastSentDate: text("last_sent_date"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    index("idx_notifiers_user_id").on(table.userId),
+    index("idx_notifiers_enabled_time").on(table.enabled, table.notifyTime),
+  ]
+);
+
 export const schemaVersion = sqliteTable("schema_version", {
   version: integer("version").primaryKey(),
 });
@@ -219,12 +242,16 @@ export const watchedEpisodesRelations = relations(watchedEpisodes, ({ one }) => 
   user: one(users, { fields: [watchedEpisodes.userId], references: [users.id] }),
 }));
 
+export const notifiersRelations = relations(notifiers, ({ one }) => ({
+  user: one(users, { fields: [notifiers.userId], references: [users.id] }),
+}));
+
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 const schemaExports = {
-  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, schemaVersion,
+  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, notifiers, schemaVersion,
   titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
-  usersRelations, sessionsRelations, trackedRelations, watchedEpisodesRelations,
+  usersRelations, sessionsRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
 };
 
 export type DrizzleDb = BunSQLiteDatabase<typeof schemaExports>;
@@ -367,6 +394,22 @@ function initSchema(db: Database) {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS notifiers (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL,
+      name TEXT NOT NULL,
+      config TEXT NOT NULL,
+      notify_time TEXT NOT NULL DEFAULT '09:00',
+      timezone TEXT NOT NULL DEFAULT 'UTC',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      last_sent_date TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER PRIMARY KEY
     )
@@ -380,6 +423,8 @@ function initSchema(db: Database) {
   db.run("CREATE INDEX IF NOT EXISTS idx_offers_title_id ON offers(title_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_offers_provider_id ON offers(provider_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_notifiers_user_id ON notifiers(user_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_notifiers_enabled_time ON notifiers(enabled, notify_time)");
 }
 
 function getSchemaVersion(db: Database): number {
@@ -481,6 +526,29 @@ function migrateSchema(db: Database) {
       console.log("[Migration v4] Added original_title column to titles table.");
     }
     setSchemaVersion(db, 4);
+  }
+
+  // Migration v5: Add notifiers table
+  if (getSchemaVersion(db) < 5) {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS notifiers (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        provider TEXT NOT NULL,
+        name TEXT NOT NULL,
+        config TEXT NOT NULL,
+        notify_time TEXT NOT NULL DEFAULT '09:00',
+        timezone TEXT NOT NULL DEFAULT 'UTC',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        last_sent_date TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )
+    `);
+    db.run("CREATE INDEX IF NOT EXISTS idx_notifiers_user_id ON notifiers(user_id)");
+    db.run("CREATE INDEX IF NOT EXISTS idx_notifiers_enabled_time ON notifiers(enabled, notify_time)");
+    console.log("[Migration v5] Created notifiers table.");
+    setSchemaVersion(db, 5);
   }
 }
 

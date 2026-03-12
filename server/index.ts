@@ -17,8 +17,10 @@ import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import jobsRoutes from "./routes/jobs";
 import detailsRoutes from "./routes/details";
+import notifierRoutes from "./routes/notifiers";
 import type { AppEnv } from "./types";
 import { registerSyncJobs } from "./jobs/sync";
+import { registerNotificationJobs } from "./jobs/notifications";
 import { startWorker, stopWorker } from "./jobs/worker";
 import { initJobsSchema } from "./jobs/queue";
 
@@ -72,6 +74,10 @@ app.use("/api/imdb/*", requireAuth);
 app.use("/api/imdb", requireAuth);
 app.route("/api/imdb", imdbRoutes);
 
+app.use("/api/notifiers/*", requireAuth);
+app.use("/api/notifiers", requireAuth);
+app.route("/api/notifiers", notifierRoutes);
+
 // Admin routes
 app.use("/api/admin/*", requireAuth, requireAdmin);
 app.use("/api/admin", requireAuth, requireAdmin);
@@ -106,6 +112,7 @@ setInterval(() => {
 // Start background job queue
 initJobsSchema();
 registerSyncJobs();
+registerNotificationJobs();
 startWorker();
 
 process.on("SIGTERM", () => {

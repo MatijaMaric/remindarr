@@ -192,3 +192,70 @@ export async function getJobs(): Promise<JobsResponse> {
 export async function triggerJob(name: string): Promise<{ success: boolean; jobId: number }> {
   return fetchJson(`/jobs/${encodeURIComponent(name)}`, { method: "POST" });
 }
+
+// ─── Notifiers ──────────────────────────────────────────────────────────────
+
+export interface Notifier {
+  id: string;
+  user_id: string;
+  provider: string;
+  name: string;
+  config: Record<string, string>;
+  notify_time: string;
+  timezone: string;
+  enabled: boolean;
+  last_sent_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getNotifiers(): Promise<{ notifiers: Notifier[] }> {
+  return fetchJson("/notifiers");
+}
+
+export async function getNotifierProviders(): Promise<{ providers: string[] }> {
+  return fetchJson("/notifiers/providers");
+}
+
+export async function createNotifier(data: {
+  provider: string;
+  name: string;
+  config: Record<string, string>;
+  notify_time: string;
+  timezone: string;
+}): Promise<{ notifier: Notifier }> {
+  return fetchJson("/notifiers", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateNotifier(
+  id: string,
+  data: Partial<{
+    name: string;
+    config: Record<string, string>;
+    notify_time: string;
+    timezone: string;
+    enabled: boolean;
+  }>
+): Promise<{ notifier: Notifier }> {
+  return fetchJson(`/notifiers/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteNotifier(id: string): Promise<void> {
+  await fetchJson(`/notifiers/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function testNotifier(
+  id: string
+): Promise<{ success: boolean; message: string }> {
+  return fetchJson(`/notifiers/${encodeURIComponent(id)}/test`, {
+    method: "POST",
+  });
+}
