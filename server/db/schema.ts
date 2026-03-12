@@ -20,6 +20,7 @@ export const titles = sqliteTable(
     id: text("id").primaryKey(),
     objectType: text("object_type").notNull(),
     title: text("title").notNull(),
+    originalTitle: text("original_title"),
     releaseYear: integer("release_year"),
     releaseDate: text("release_date"),
     runtimeMinutes: integer("runtime_minutes"),
@@ -264,6 +265,7 @@ function initSchema(db: Database) {
       id TEXT PRIMARY KEY,
       object_type TEXT NOT NULL,
       title TEXT NOT NULL,
+      original_title TEXT,
       release_year INTEGER,
       release_date TEXT,
       runtime_minutes INTEGER,
@@ -467,6 +469,18 @@ function migrateSchema(db: Database) {
 
     console.log("[Migration v3] Migration complete. Data cleared for TMDB re-sync.");
     setSchemaVersion(db, 3);
+  }
+
+  // Migration v4: Add original_title column to titles
+  if (getSchemaVersion(db) < 4) {
+    const titlesInfo = db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='titles'"
+    ).get() as any;
+    if (titlesInfo && !titlesInfo.sql.includes("original_title")) {
+      db.run("ALTER TABLE titles ADD COLUMN original_title TEXT");
+      console.log("[Migration v4] Added original_title column to titles table.");
+    }
+    setSchemaVersion(db, 4);
   }
 }
 

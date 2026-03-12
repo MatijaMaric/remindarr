@@ -53,6 +53,9 @@ export default function TitleCard({ title, onTrackToggle }: Props) {
           <Link to={`/title/${title.id}`} className="hover:text-indigo-400 transition-colors">
             <h3 className="font-semibold text-sm leading-tight line-clamp-2">{title.title}</h3>
           </Link>
+          {title.original_title && title.original_title !== title.title && (
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1 italic">{title.original_title}</p>
+          )}
           <p className="text-xs text-gray-500 mt-0.5">
             {title.release_year}
             {title.runtime_minutes ? ` \u00B7 ${title.runtime_minutes}m` : ""}

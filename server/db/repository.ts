@@ -54,6 +54,7 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
           id: t.id,
           objectType: t.objectType,
           title: t.title,
+          originalTitle: t.originalTitle,
           releaseYear: t.releaseYear,
           releaseDate: t.releaseDate,
           runtimeMinutes: t.runtimeMinutes,
@@ -70,6 +71,7 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
           target: titles.id,
           set: {
             title: sql`excluded.title`,
+            originalTitle: sql`excluded.original_title`,
             releaseYear: sql`excluded.release_year`,
             releaseDate: sql`excluded.release_date`,
             runtimeMinutes: sql`excluded.runtime_minutes`,
@@ -139,6 +141,7 @@ export function getTitleById(titleId: string, userId?: string) {
       id: titles.id,
       object_type: titles.objectType,
       title: titles.title,
+      original_title: titles.originalTitle,
       release_year: titles.releaseYear,
       release_date: titles.releaseDate,
       runtime_minutes: titles.runtimeMinutes,
@@ -218,6 +221,7 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       id: titles.id,
       object_type: titles.objectType,
       title: titles.title,
+      original_title: titles.originalTitle,
       release_year: titles.releaseYear,
       release_date: titles.releaseDate,
       runtime_minutes: titles.runtimeMinutes,
@@ -300,6 +304,7 @@ export function getTrackedTitles(userId: string) {
       id: titles.id,
       object_type: titles.objectType,
       title: titles.title,
+      original_title: titles.originalTitle,
       release_year: titles.releaseYear,
       release_date: titles.releaseDate,
       runtime_minutes: titles.runtimeMinutes,
@@ -347,6 +352,7 @@ export function searchLocalTitles(query: string, limit = 50, userId?: string) {
       id: titles.id,
       object_type: titles.objectType,
       title: titles.title,
+      original_title: titles.originalTitle,
       release_year: titles.releaseYear,
       release_date: titles.releaseDate,
       runtime_minutes: titles.runtimeMinutes,
@@ -444,6 +450,7 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
       id: titles.id,
       object_type: titles.objectType,
       title: titles.title,
+      original_title: titles.originalTitle,
       release_year: titles.releaseYear,
       release_date: titles.releaseDate,
       runtime_minutes: titles.runtimeMinutes,
@@ -560,6 +567,7 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
       still_path: episodes.stillPath,
       updated_at: episodes.updatedAt,
       show_title: titles.title,
+      show_original_title: titles.originalTitle,
       poster_url: titles.posterUrl,
       is_watched: sql<boolean>`EXISTS(
         SELECT 1 FROM watched_episodes we
@@ -599,6 +607,7 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
       still_path: episodes.stillPath,
       updated_at: episodes.updatedAt,
       show_title: titles.title,
+      show_original_title: titles.originalTitle,
       poster_url: titles.posterUrl,
       is_watched: sql<boolean>`EXISTS(
         SELECT 1 FROM watched_episodes we
@@ -643,6 +652,7 @@ export function getUnwatchedEpisodes(userId: string) {
       still_path: episodes.stillPath,
       updated_at: episodes.updatedAt,
       show_title: titles.title,
+      show_original_title: titles.originalTitle,
       poster_url: titles.posterUrl,
     })
     .from(episodes)

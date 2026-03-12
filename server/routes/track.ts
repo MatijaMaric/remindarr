@@ -19,6 +19,7 @@ function toParsedTitle(t: any): ParsedTitle {
     id: t.id,
     objectType: t.object_type,
     title: t.title,
+    originalTitle: t.original_title || null,
     releaseYear: t.release_year,
     releaseDate: t.release_date,
     runtimeMinutes: t.runtime_minutes,

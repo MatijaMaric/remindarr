@@ -222,10 +222,14 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               {tmdb?.tagline && (
                 <p className="text-sm text-indigo-400 italic mb-1">{tmdb.tagline}</p>
               )}
-              <h1 className="text-3xl font-bold text-white">{title.title}</h1>
-              {tmdb?.original_title && tmdb.original_title !== title.title && (
-                <p className="text-sm text-gray-400 mt-1">{tmdb.original_title}</p>
-              )}
+              <h1 className="text-3xl font-bold text-white">{tmdb?.title || title.title}</h1>
+              {(() => {
+                const displayTitle = tmdb?.title || title.title;
+                const originalTitle = tmdb?.original_title || title.original_title;
+                return originalTitle && originalTitle !== displayTitle ? (
+                  <p className="text-sm text-gray-400 mt-1">{originalTitle}</p>
+                ) : null;
+              })()}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
@@ -484,10 +488,14 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               {tmdb?.tagline && (
                 <p className="text-sm text-indigo-400 italic mb-1">{tmdb.tagline}</p>
               )}
-              <h1 className="text-3xl font-bold text-white">{title.title}</h1>
-              {tmdb?.original_name && tmdb.original_name !== title.title && (
-                <p className="text-sm text-gray-400 mt-1">{tmdb.original_name}</p>
-              )}
+              <h1 className="text-3xl font-bold text-white">{tmdb?.name || title.title}</h1>
+              {(() => {
+                const displayTitle = tmdb?.name || title.title;
+                const originalTitle = tmdb?.original_name || title.original_title;
+                return originalTitle && originalTitle !== displayTitle ? (
+                  <p className="text-sm text-gray-400 mt-1">{originalTitle}</p>
+                ) : null;
+              })()}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
