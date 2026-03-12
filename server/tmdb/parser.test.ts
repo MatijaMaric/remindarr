@@ -1,4 +1,5 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, afterEach } from "bun:test";
+import { CONFIG } from "../config";
 import {
   parseMovieDetails,
   parseTvDetails,
@@ -166,6 +167,176 @@ describe("parseSearchResult", () => {
       new Map()
     );
     expect(result).toBeNull();
+  });
+});
+
+describe("parseWatchProviders fallback", () => {
+  const origCountry = CONFIG.COUNTRY;
+  const origFallback = CONFIG.FALLBACK_COUNTRIES;
+
+  afterEach(() => {
+    CONFIG.COUNTRY = origCountry;
+    CONFIG.FALLBACK_COUNTRIES = origFallback;
+  });
+
+  it("uses primary country when available", () => {
+    CONFIG.COUNTRY = "HR";
+    CONFIG.FALLBACK_COUNTRIES = ["US"];
+
+    const movie = makeTmdbMovieDetails({
+      "watch/providers": {
+        id: 123,
+        results: {
+          HR: {
+            link: "https://tmdb.org",
+            flatrate: [
+              {
+                logo_path: "/netflix.jpg",
+                provider_id: 8,
+                provider_name: "Netflix",
+                display_priority: 1,
+              },
+            ],
+          },
+          US: {
+            link: "https://tmdb.org",
+            flatrate: [
+              {
+                logo_path: "/apple.jpg",
+                provider_id: 350,
+                provider_name: "Apple TV Plus",
+                display_priority: 1,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const result = parseMovieDetails(movie);
+    expect(result.offers).toHaveLength(1);
+    expect(result.offers[0].providerName).toBe("Netflix");
+  });
+
+  it("falls back to first matching fallback country", () => {
+    CONFIG.COUNTRY = "HR";
+    CONFIG.FALLBACK_COUNTRIES = ["US", "GB"];
+
+    const movie = makeTmdbMovieDetails({
+      "watch/providers": {
+        id: 123,
+        results: {
+          US: {
+            link: "https://tmdb.org",
+            flatrate: [
+              {
+                logo_path: "/apple.jpg",
+                provider_id: 350,
+                provider_name: "Apple TV Plus",
+                display_priority: 1,
+              },
+            ],
+          },
+          GB: {
+            link: "https://tmdb.org",
+            flatrate: [
+              {
+                logo_path: "/apple.jpg",
+                provider_id: 350,
+                provider_name: "Apple TV+",
+                display_priority: 1,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const result = parseMovieDetails(movie);
+    expect(result.offers).toHaveLength(1);
+    expect(result.offers[0].providerName).toBe("Apple TV Plus");
+  });
+
+  it("falls back to second country when first also has no data", () => {
+    CONFIG.COUNTRY = "HR";
+    CONFIG.FALLBACK_COUNTRIES = ["US", "GB"];
+
+    const movie = makeTmdbMovieDetails({
+      "watch/providers": {
+        id: 123,
+        results: {
+          GB: {
+            link: "https://tmdb.org",
+            flatrate: [
+              {
+                logo_path: "/apple.jpg",
+                provider_id: 350,
+                provider_name: "Apple TV+",
+                display_priority: 1,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const result = parseMovieDetails(movie);
+    expect(result.offers).toHaveLength(1);
+    expect(result.offers[0].providerName).toBe("Apple TV+");
+  });
+
+  it("returns empty when no country matches", () => {
+    CONFIG.COUNTRY = "HR";
+    CONFIG.FALLBACK_COUNTRIES = ["US", "GB"];
+
+    const movie = makeTmdbMovieDetails({
+      "watch/providers": {
+        id: 123,
+        results: {
+          DE: {
+            link: "https://tmdb.org",
+            flatrate: [
+              {
+                logo_path: "/apple.jpg",
+                provider_id: 350,
+                provider_name: "Apple TV Plus",
+                display_priority: 1,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const result = parseMovieDetails(movie);
+    expect(result.offers).toHaveLength(0);
+  });
+
+  it("works with empty fallback list (default behavior)", () => {
+    CONFIG.COUNTRY = "HR";
+    CONFIG.FALLBACK_COUNTRIES = [];
+
+    const movie = makeTmdbMovieDetails({
+      "watch/providers": {
+        id: 123,
+        results: {
+          US: {
+            link: "https://tmdb.org",
+            flatrate: [
+              {
+                logo_path: "/apple.jpg",
+                provider_id: 350,
+                provider_name: "Apple TV Plus",
+                display_priority: 1,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const result = parseMovieDetails(movie);
+    expect(result.offers).toHaveLength(0);
   });
 });
 

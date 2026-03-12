@@ -87,7 +87,12 @@ function parseWatchProviders(
   tmdbLink: string
 ): ParsedOffer[] {
   if (!wpResponse) return [];
-  const countryData = wpResponse.results[CONFIG.COUNTRY];
+  const countries = [CONFIG.COUNTRY, ...CONFIG.FALLBACK_COUNTRIES];
+  let countryData: TmdbWatchProviderCountry | undefined;
+  for (const country of countries) {
+    countryData = wpResponse.results[country];
+    if (countryData) break;
+  }
   if (!countryData) return [];
 
   const offers: ParsedOffer[] = [];
