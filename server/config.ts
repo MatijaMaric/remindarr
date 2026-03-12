@@ -1,6 +1,6 @@
 export const CONFIG = {
   COUNTRY: process.env.TMDB_COUNTRY || process.env.JUSTWATCH_COUNTRY || "HR",
-  LANGUAGE: process.env.TMDB_LANGUAGE || process.env.JUSTWATCH_LANGUAGE || "hr",
+  LANGUAGE: process.env.TMDB_LANGUAGE || process.env.JUSTWATCH_LANGUAGE || "en",
   DEFAULT_DAYS_BACK: 30,
   PAGE_SIZE: 20,
   PAGE_DELAY_MS: 300,
