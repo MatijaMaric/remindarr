@@ -1,6 +1,6 @@
 # Remindarr
 
-A full-stack app for tracking streaming media releases using JustWatch as the data source.
+A full-stack app for tracking streaming media releases using TMDB as the data source.
 
 ## Stack
 
@@ -64,9 +64,9 @@ Set the locale via environment variables (defaults to Croatia):
 
 | Variable | Default | Example |
 |----------|---------|---------|
-| `JUSTWATCH_COUNTRY` | `HR` | `US`, `DE`, `GB` |
-| `JUSTWATCH_LANGUAGE` | `hr` | `en`, `de` |
-| `JUSTWATCH_LOCALE` | `hr_HR` | `en_US`, `de_DE` |
+| `TMDB_API_KEY` | (required) | Your TMDB API key |
+| `TMDB_COUNTRY` | `HR` | `US`, `DE`, `GB` |
+| `TMDB_LANGUAGE` | `en` | `hr`, `de` |
 
 ## Syncing Data
 
@@ -80,14 +80,13 @@ bun run server/cli/sync.ts [daysBack] [type]   # Custom: days back, object type
 ```
 server/
   index.ts              # Hono app entry point
-  config.ts             # JustWatch API config, DB path, pagination
+  config.ts             # TMDB API config, DB path, pagination
   db/
     schema.ts           # SQLite schema (titles, providers, offers, tracked, scores)
     repository.ts       # All database queries
-  justwatch/
-    client.ts           # GraphQL client for JustWatch API
+  tmdb/
+    client.ts           # TMDB API client
     parser.ts           # API response → internal types
-    queries.ts          # GraphQL query definitions
   imdb/
     resolver.ts         # IMDB URL/ID resolution via autocomplete API
   routes/               # API route handlers
@@ -107,7 +106,7 @@ frontend/src/
 |--------|-------|-------------|
 | `GET` | `/api/titles` | Recent titles (filters: `daysBack`, `objectType`, `provider`) |
 | `GET` | `/api/titles/providers` | Available streaming providers |
-| `GET` | `/api/search?q=` | Live search via JustWatch |
+| `GET` | `/api/search?q=` | Live search via TMDB |
 | `POST` | `/api/sync` | Trigger data sync |
 | `GET/POST/DELETE` | `/api/track/:id` | Watchlist management |
 | `POST` | `/api/imdb` | Resolve IMDB URL, save & auto-track |
