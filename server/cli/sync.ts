@@ -1,4 +1,4 @@
-import { fetchNewReleases } from "../justwatch/client";
+import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
 import { getDb } from "../db/schema";
 

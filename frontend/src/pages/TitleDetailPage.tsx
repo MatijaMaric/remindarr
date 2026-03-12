@@ -262,7 +262,6 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             <div className="flex items-center gap-6 pt-2">
               <RatingBadge label="IMDb" score={title.imdb_score} />
               <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
-              <RatingBadge label="JW" score={title.jw_rating} />
             </div>
 
             <div className="pt-2">
@@ -550,7 +549,6 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             <div className="flex items-center gap-6 pt-2">
               <RatingBadge label="IMDb" score={title.imdb_score} />
               <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
-              <RatingBadge label="JW" score={title.jw_rating} />
             </div>
 
             <div className="pt-2">

@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { getTitleById, getOffersForTitle } from "../db/repository";
+import { getTitleById } from "../db/repository";
 import { CONFIG } from "../config";
 import {
-  fetchMovieDetails,
-  fetchShowDetailsExtended,
+  fetchMovieFullDetails,
+  fetchShowFullDetails,
   fetchSeasonDetails,
   fetchEpisodeDetails,
 } from "../tmdb/client";
@@ -21,7 +21,7 @@ app.get("/movie/:id", async (c) => {
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
     try {
-      tmdb = await fetchMovieDetails(title.tmdb_id);
+      tmdb = await fetchMovieFullDetails(title.tmdb_id);
     } catch (e) {
       console.error(`[Details] TMDB movie fetch failed for ${title.tmdb_id}:`, e);
     }
@@ -42,7 +42,7 @@ app.get("/show/:id", async (c) => {
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
     try {
-      tmdb = await fetchShowDetailsExtended(title.tmdb_id);
+      tmdb = await fetchShowFullDetails(title.tmdb_id);
     } catch (e) {
       console.error(`[Details] TMDB show fetch failed for ${title.tmdb_id}:`, e);
     }
