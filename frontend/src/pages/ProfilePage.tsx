@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
+import type { JobsResponse } from "../api";
 
 interface OidcField {
   value: string;
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <UserSection />
+      {user.is_admin && <BackgroundJobsSection />}
       {user.is_admin && <AdminSection />}
     </div>
   );
@@ -124,6 +126,188 @@ function UserSection() {
         </div>
       )}
     </section>
+  );
+}
+
+function formatJobName(name: string): string {
+  return name
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function formatDate(date: string | null): string {
+  if (!date) return "Never";
+  const d = new Date(date + (date.endsWith("Z") ? "" : "Z"));
+  return d.toLocaleString();
+}
+
+function BackgroundJobsSection() {
+  const [data, setData] = useState<JobsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [triggering, setTriggering] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const refresh = useCallback(() => {
+    api.getJobs().then((d) => {
+      setData(d);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const interval = setInterval(refresh, 15000);
+    return () => clearInterval(interval);
+  }, [refresh]);
+
+  async function handleTrigger(name: string) {
+    setMsg("");
+    setErr("");
+    setTriggering(name);
+    try {
+      await api.triggerJob(name);
+      setMsg(`Job "${formatJobName(name)}" queued successfully`);
+      refresh();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setTriggering(null);
+    }
+  }
+
+  if (loading) return <div className="text-gray-500">Loading jobs...</div>;
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">Background Jobs</h2>
+
+      {msg && (
+        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+          {err}
+        </div>
+      )}
+
+      {/* Cron Schedules */}
+      <div className="bg-gray-900 rounded-lg p-5 mb-4">
+        <h3 className="text-lg font-semibold text-white mb-3">Scheduled Jobs</h3>
+        {data?.crons.length === 0 && (
+          <p className="text-gray-500 text-sm">No scheduled jobs configured.</p>
+        )}
+        <div className="space-y-3">
+          {data?.crons.map((cron) => {
+            const stats = data.stats[cron.name];
+            const isRunning = stats?.running > 0;
+            return (
+              <div
+                key={cron.name}
+                className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-medium">
+                      {formatJobName(cron.name)}
+                    </span>
+                    {isRunning && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-900/50 text-blue-300">
+                        Running
+                      </span>
+                    )}
+                    {!cron.enabled && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-700 text-gray-400">
+                        Disabled
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1 space-y-0.5">
+                    <div>
+                      Schedule: <code className="text-gray-300">{cron.cron}</code>
+                    </div>
+                    <div>Last run: {formatDate(cron.last_run)}</div>
+                    <div>Next run: {formatDate(cron.next_run)}</div>
+                    {stats && (
+                      <div className="flex gap-3 mt-1">
+                        <span className="text-yellow-400">{stats.pending} pending</span>
+                        <span className="text-blue-400">{stats.running} running</span>
+                        <span className="text-green-400">{stats.completed} completed</span>
+                        {stats.failed > 0 && (
+                          <span className="text-red-400">{stats.failed} failed</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleTrigger(cron.name)}
+                  disabled={triggering === cron.name}
+                  className="ml-3 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  {triggering === cron.name ? "Queuing..." : "Run Now"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recent Job History */}
+      {data?.recentJobs && data.recentJobs.length > 0 && (
+        <div className="bg-gray-900 rounded-lg p-5">
+          <h3 className="text-lg font-semibold text-white mb-3">Recent History</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-400 text-left border-b border-gray-800">
+                  <th className="pb-2 font-medium">Job</th>
+                  <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium">Started</th>
+                  <th className="pb-2 font-medium">Completed</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {data.recentJobs.map((job) => (
+                  <tr key={job.id}>
+                    <td className="py-2 text-white">{formatJobName(job.name)}</td>
+                    <td className="py-2">
+                      <JobStatusBadge status={job.status} />
+                    </td>
+                    <td className="py-2 text-gray-400 text-xs">
+                      {formatDate(job.started_at)}
+                    </td>
+                    <td className="py-2 text-gray-400 text-xs">
+                      {formatDate(job.completed_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function JobStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    pending: "bg-yellow-900/50 text-yellow-300",
+    running: "bg-blue-900/50 text-blue-300",
+    completed: "bg-green-900/50 text-green-300",
+    failed: "bg-red-900/50 text-red-300",
+  };
+
+  return (
+    <span
+      className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${styles[status] || "bg-gray-700 text-gray-400"}`}
+    >
+      {status}
+    </span>
   );
 }
 

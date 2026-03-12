@@ -1,14 +1,15 @@
 import { Hono } from "hono";
-import { getJobStats, getCronJobs, enqueueJob } from "../jobs/queue";
+import { getJobStats, getCronJobs, getRecentJobs, enqueueJob } from "../jobs/queue";
 import type { AppEnv } from "../types";
 
 const app = new Hono<AppEnv>();
 
-// GET /api/jobs — job stats and cron schedules
+// GET /api/jobs — job stats, cron schedules, and recent history
 app.get("/", (c) => {
   return c.json({
     stats: getJobStats(),
     crons: getCronJobs(),
+    recentJobs: getRecentJobs(),
   });
 });
 
