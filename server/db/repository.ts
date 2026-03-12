@@ -11,6 +11,7 @@ import {
   settings,
   tracked,
   watchedEpisodes,
+  notifiers,
 } from "./schema";
 import type { ParsedTitle } from "../tmdb/parser";
 import { extractProviders } from "../tmdb/parser";
@@ -952,4 +953,191 @@ export function getOidcConfig() {
 export function isOidcConfigured(): boolean {
   const { issuerUrl, clientId, clientSecret } = getOidcConfig();
   return Boolean(issuerUrl && clientId && clientSecret);
+}
+
+// ─── Notifiers ──────────────────────────────────────────────────────────────
+
+export function createNotifier(
+  userId: string,
+  provider: string,
+  name: string,
+  config: Record<string, string>,
+  notifyTime: string,
+  timezone: string
+): string {
+  const db = getDb();
+  const id = crypto.randomUUID();
+  db.insert(notifiers)
+    .values({
+      id,
+      userId,
+      provider,
+      name,
+      config: JSON.stringify(config),
+      notifyTime,
+      timezone,
+    })
+    .run();
+  return id;
+}
+
+export function updateNotifier(
+  id: string,
+  userId: string,
+  updates: {
+    name?: string;
+    config?: Record<string, string>;
+    notifyTime?: string;
+    timezone?: string;
+    enabled?: boolean;
+  }
+) {
+  const db = getDb();
+  const set: Record<string, any> = { updatedAt: sql`datetime('now')` };
+  if (updates.name !== undefined) set.name = updates.name;
+  if (updates.config !== undefined) set.config = JSON.stringify(updates.config);
+  if (updates.notifyTime !== undefined) set.notifyTime = updates.notifyTime;
+  if (updates.timezone !== undefined) set.timezone = updates.timezone;
+  if (updates.enabled !== undefined) set.enabled = updates.enabled ? 1 : 0;
+
+  db.update(notifiers)
+    .set(set)
+    .where(and(eq(notifiers.id, id), eq(notifiers.userId, userId)))
+    .run();
+}
+
+export function deleteNotifier(id: string, userId: string) {
+  const db = getDb();
+  db.delete(notifiers)
+    .where(and(eq(notifiers.id, id), eq(notifiers.userId, userId)))
+    .run();
+}
+
+export function getNotifiersByUser(userId: string) {
+  const db = getDb();
+  return db
+    .select({
+      id: notifiers.id,
+      user_id: notifiers.userId,
+      provider: notifiers.provider,
+      name: notifiers.name,
+      config: notifiers.config,
+      notify_time: notifiers.notifyTime,
+      timezone: notifiers.timezone,
+      enabled: notifiers.enabled,
+      last_sent_date: notifiers.lastSentDate,
+      created_at: notifiers.createdAt,
+      updated_at: notifiers.updatedAt,
+    })
+    .from(notifiers)
+    .where(eq(notifiers.userId, userId))
+    .orderBy(asc(notifiers.createdAt))
+    .all()
+    .map((row) => ({
+      ...row,
+      config: JSON.parse(row.config),
+      enabled: Boolean(row.enabled),
+    }));
+}
+
+export function getNotifierById(id: string, userId: string) {
+  const db = getDb();
+  const row = db
+    .select({
+      id: notifiers.id,
+      user_id: notifiers.userId,
+      provider: notifiers.provider,
+      name: notifiers.name,
+      config: notifiers.config,
+      notify_time: notifiers.notifyTime,
+      timezone: notifiers.timezone,
+      enabled: notifiers.enabled,
+      last_sent_date: notifiers.lastSentDate,
+      created_at: notifiers.createdAt,
+      updated_at: notifiers.updatedAt,
+    })
+    .from(notifiers)
+    .where(and(eq(notifiers.id, id), eq(notifiers.userId, userId)))
+    .get();
+
+  if (!row) return null;
+  return {
+    ...row,
+    config: JSON.parse(row.config),
+    enabled: Boolean(row.enabled),
+  };
+}
+
+export function getDueNotifiers(
+  timesByTimezone: Map<string, { time: string; date: string }>
+) {
+  const db = getDb();
+  const raw = getRawDb();
+
+  // Get all enabled notifiers
+  const allEnabled = db
+    .select({
+      id: notifiers.id,
+      user_id: notifiers.userId,
+      provider: notifiers.provider,
+      name: notifiers.name,
+      config: notifiers.config,
+      notify_time: notifiers.notifyTime,
+      timezone: notifiers.timezone,
+      last_sent_date: notifiers.lastSentDate,
+    })
+    .from(notifiers)
+    .where(eq(notifiers.enabled, 1))
+    .all();
+
+  // Filter in JS: match notify_time to current time in their timezone,
+  // and ensure we haven't already sent today
+  return allEnabled
+    .filter((n) => {
+      const tzInfo = timesByTimezone.get(n.timezone);
+      if (!tzInfo) return false;
+      return n.notify_time === tzInfo.time && n.last_sent_date !== tzInfo.date;
+    })
+    .map((n) => ({
+      ...n,
+      config: JSON.parse(n.config),
+      todayDate: timesByTimezone.get(n.timezone)!.date,
+    }));
+}
+
+export function markNotifierSent(id: string, date: string) {
+  const db = getDb();
+  db.update(notifiers)
+    .set({ lastSentDate: date, updatedAt: sql`datetime('now')` })
+    .where(eq(notifiers.id, id))
+    .run();
+}
+
+export function getDistinctNotifierTimezones(): string[] {
+  const raw = getRawDb();
+  const rows = raw
+    .prepare("SELECT DISTINCT timezone FROM notifiers WHERE enabled = 1")
+    .all() as { timezone: string }[];
+  return rows.map((r) => r.timezone);
+}
+
+export function getTrackedMoviesByReleaseDate(date: string, userId: string) {
+  const db = getDb();
+  const rows = db
+    .select({
+      id: titles.id,
+      title: titles.title,
+      release_year: titles.releaseYear,
+      release_date: titles.releaseDate,
+      poster_url: titles.posterUrl,
+    })
+    .from(titles)
+    .innerJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+    .where(and(eq(titles.releaseDate, date), eq(titles.objectType, "MOVIE")))
+    .all();
+
+  return rows.map((row) => ({
+    ...row,
+    offers: getOffersForTitle(row.id),
+  }));
 }

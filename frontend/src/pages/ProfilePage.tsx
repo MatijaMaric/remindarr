@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
-import type { JobsResponse } from "../api";
+import type { JobsResponse, Notifier } from "../api";
 
 interface OidcField {
   value: string;
@@ -26,6 +26,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <UserSection />
+      <NotificationsSection />
       {user.is_admin && <BackgroundJobsSection />}
       {user.is_admin && <AdminSection />}
     </div>
@@ -124,6 +125,345 @@ function UserSection() {
             </button>
           </form>
         </div>
+      )}
+    </section>
+  );
+}
+
+const TIMEZONE_OPTIONS = (() => {
+  try {
+    return Intl.supportedValuesOf("timeZone");
+  } catch {
+    return ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Europe/Zagreb", "Asia/Tokyo"];
+  }
+})();
+
+const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+function NotificationsSection() {
+  const [notifiers, setNotifiers] = useState<Notifier[]>([]);
+  const [providers, setProviders] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [testing, setTesting] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  // Form fields
+  const [formProvider, setFormProvider] = useState("discord");
+  const [formName, setFormName] = useState("");
+  const [formWebhookUrl, setFormWebhookUrl] = useState("");
+  const [formTime, setFormTime] = useState("09:00");
+  const [formTimezone, setFormTimezone] = useState(USER_TIMEZONE);
+  const [saving, setSaving] = useState(false);
+
+  const refresh = useCallback(() => {
+    Promise.all([api.getNotifiers(), api.getNotifierProviders()])
+      .then(([n, p]) => {
+        setNotifiers(n.notifiers);
+        setProviders(p.providers);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  function resetForm() {
+    setFormProvider("discord");
+    setFormName("");
+    setFormWebhookUrl("");
+    setFormTime("09:00");
+    setFormTimezone(USER_TIMEZONE);
+    setShowForm(false);
+    setEditingId(null);
+  }
+
+  function startEdit(n: Notifier) {
+    setEditingId(n.id);
+    setFormProvider(n.provider);
+    setFormName(n.name);
+    setFormWebhookUrl(n.config.webhookUrl || "");
+    setFormTime(n.notify_time);
+    setFormTimezone(n.timezone);
+    setShowForm(true);
+    setMsg("");
+    setErr("");
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg("");
+    setErr("");
+    setSaving(true);
+
+    const config: Record<string, string> = {};
+    if (formProvider === "discord") {
+      config.webhookUrl = formWebhookUrl;
+    }
+
+    try {
+      if (editingId) {
+        await api.updateNotifier(editingId, {
+          name: formName,
+          config,
+          notify_time: formTime,
+          timezone: formTimezone,
+        });
+        setMsg("Notifier updated");
+      } else {
+        await api.createNotifier({
+          provider: formProvider,
+          name: formName,
+          config,
+          notify_time: formTime,
+          timezone: formTimezone,
+        });
+        setMsg("Notifier created");
+      }
+      resetForm();
+      refresh();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setMsg("");
+    setErr("");
+    try {
+      await api.deleteNotifier(id);
+      setMsg("Notifier deleted");
+      refresh();
+    } catch (e: any) {
+      setErr(e.message);
+    }
+  }
+
+  async function handleTest(id: string) {
+    setMsg("");
+    setErr("");
+    setTesting(id);
+    try {
+      const result = await api.testNotifier(id);
+      if (result.success) {
+        setMsg(result.message);
+      } else {
+        setErr(result.message);
+      }
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setTesting(null);
+    }
+  }
+
+  async function handleToggle(n: Notifier) {
+    setMsg("");
+    setErr("");
+    setToggling(n.id);
+    try {
+      await api.updateNotifier(n.id, { enabled: !n.enabled });
+      refresh();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setToggling(null);
+    }
+  }
+
+  if (loading) return <div className="text-gray-500">Loading notifications...</div>;
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">Notifications</h2>
+
+      {msg && (
+        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+          {err}
+        </div>
+      )}
+
+      {/* Existing notifiers */}
+      {notifiers.length > 0 && (
+        <div className="space-y-3 mb-4">
+          {notifiers.map((n) => (
+            <div
+              key={n.id}
+              className="bg-gray-900 rounded-lg p-4"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-medium">{n.name}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-900/50 text-indigo-300 capitalize">
+                    {n.provider}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      n.enabled
+                        ? "bg-green-900/50 text-green-300"
+                        : "bg-gray-700 text-gray-400"
+                    }`}
+                  >
+                    {n.enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleToggle(n)}
+                    disabled={toggling === n.id}
+                    className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {toggling === n.id ? "..." : n.enabled ? "Disable" : "Enable"}
+                  </button>
+                  <button
+                    onClick={() => handleTest(n.id)}
+                    disabled={testing === n.id}
+                    className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {testing === n.id ? "Sending..." : "Test"}
+                  </button>
+                  <button
+                    onClick={() => startEdit(n)}
+                    className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(n.id)}
+                    className="px-2 py-1 text-xs bg-red-900/50 hover:bg-red-800/50 text-red-300 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+              <div className="text-xs text-gray-400 space-y-0.5">
+                <div>
+                  Time: <span className="text-gray-300">{n.notify_time}</span>{" "}
+                  <span className="text-gray-500">({n.timezone})</span>
+                </div>
+                {n.last_sent_date && (
+                  <div>Last sent: {n.last_sent_date}</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit form */}
+      {showForm ? (
+        <form onSubmit={handleSave} className="bg-gray-900 rounded-lg p-5 space-y-4">
+          <h3 className="text-lg font-semibold text-white">
+            {editingId ? "Edit Notifier" : "Add Notifier"}
+          </h3>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Provider</label>
+            <select
+              value={formProvider}
+              onChange={(e) => setFormProvider(e.target.value)}
+              disabled={!!editingId}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              {providers.map((p) => (
+                <option key={p} value={p}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
+            <input
+              type="text"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="My Discord"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          {formProvider === "discord" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Webhook URL</label>
+              <input
+                type="url"
+                value={formWebhookUrl}
+                onChange={(e) => setFormWebhookUrl(e.target.value)}
+                placeholder="https://discord.com/api/webhooks/..."
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                required
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Notification Time</label>
+              <input
+                type="time"
+                value={formTime}
+                onChange={(e) => setFormTime(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Timezone</label>
+              <input
+                type="text"
+                value={formTimezone}
+                onChange={(e) => setFormTimezone(e.target.value)}
+                list="timezone-list"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                required
+              />
+              <datalist id="timezone-list">
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <option key={tz} value={tz} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {saving ? "Saving..." : editingId ? "Update" : "Create"}
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button
+          onClick={() => { resetForm(); setShowForm(true); setMsg(""); setErr(""); }}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors cursor-pointer"
+        >
+          Add Notifier
+        </button>
       )}
     </section>
   );
