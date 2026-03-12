@@ -71,7 +71,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const result = await exchangeCode("auth-code", "https://app.example.com/callback");
 
@@ -114,7 +114,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
 
@@ -146,7 +146,7 @@ describe("exchangeCode", () => {
         return new Response("Internal Server Error", { status: 500 });
       }
       return new Response("Not found", { status: 404 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
 
@@ -181,7 +181,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
 
