@@ -350,10 +350,10 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             <ProviderRow label="Rent" providers={watchProviders.rent || []} />
             <ProviderRow label="Buy" providers={watchProviders.buy || []} />
           </div>
-          {/* Also show existing JW offers */}
+          {/* Also show existing offers */}
           {title.offers.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-800">
-              <p className="text-xs text-gray-500 mb-2">Direct links via JustWatch</p>
+              <p className="text-xs text-gray-500 mb-2">Direct links</p>
               <div className="flex flex-wrap gap-2">
                 {dedupeOffers(title.offers).map((offer) => (
                   <a
@@ -635,7 +635,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           </div>
           {title.offers.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-800">
-              <p className="text-xs text-gray-500 mb-2">Direct links via JustWatch</p>
+              <p className="text-xs text-gray-500 mb-2">Direct links</p>
               <div className="flex flex-wrap gap-2">
                 {dedupeOffers(title.offers).map((offer) => (
                   <a

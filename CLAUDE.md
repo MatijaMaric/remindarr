@@ -17,7 +17,7 @@ bun run dev:frontend     # Vite dev server (port 5173, proxies /api to :3000)
 bun run build            # Builds frontend to frontend/dist/
 bun run start            # Runs production server
 
-# Sync data from JustWatch
+# Sync data from TMDB
 bun run sync                              # Default sync
 bun run server/cli/sync.ts [daysBack] [type]  # CLI with args
 
@@ -43,7 +43,7 @@ docker compose up --build
 
 ## Architecture
 
-**Remindarr** — a full-stack app for tracking streaming media releases using JustWatch as the data source. Locale is configurable via env vars (defaults to hr_HR).
+**Remindarr** — a full-stack app for tracking streaming media releases using TMDB as the data source. Locale is configurable via env vars.
 
 ### Stack
 - **Runtime**: Bun (with built-in SQLite)
@@ -53,13 +53,12 @@ docker compose up --build
 
 ### Server (`server/`)
 - `index.ts` — Entry point, Hono app setup, serves static frontend in production
-- `config.ts` — JustWatch API config, DB path, image URLs, pagination settings
+- `config.ts` — TMDB API config, DB path, image URLs, pagination settings
 - `db/schema.ts` — SQLite schema (5 tables: titles, providers, offers, tracked, scores)
 - `db/repository.ts` — All database queries (upsert, search, track/untrack, filters)
-- `justwatch/client.ts` — GraphQL client for JustWatch API (releases + search)
-- `justwatch/parser.ts` — Transforms JW API responses to internal types
-- `justwatch/queries.ts` — GraphQL query definitions
-- `imdb/resolver.ts` — Resolves IMDB URLs/IDs via autocomplete API, matches to JW titles
+- `tmdb/client.ts` — TMDB API client (releases + search + watch providers)
+- `tmdb/parser.ts` — Transforms TMDB API responses to internal types
+- `imdb/resolver.ts` — Resolves IMDB URLs/IDs via autocomplete API, matches to TMDB titles
 - `routes/` — API endpoints: sync, titles, search, track, imdb
 
 ### Frontend (`frontend/src/`)
@@ -69,7 +68,7 @@ docker compose up --build
 - `components/` — TitleCard, TitleList, FilterBar, SearchBar, TrackButton, NewReleases
 
 ### Key Patterns
-- DB titles use snake_case, JustWatch API search results use camelCase — `normalizeSearchTitle()` bridges the gap
+- DB titles use snake_case, TMDB API search results use camelCase — `normalizeSearchTitle()` bridges the gap
 - Offers are deduplicated by provider ID with priority: FLATRATE > FREE > ADS
 - The SearchBar auto-detects IMDB URLs/IDs and routes to a separate resolution flow
 - All DB writes use transactions for consistency
@@ -77,7 +76,7 @@ docker compose up --build
 ### API Routes
 - `GET /api/titles` — Recent titles with filters (daysBack, objectType, provider)
 - `GET /api/titles/providers` — Available streaming services
-- `GET /api/search?q=` — Live search via JustWatch
-- `POST /api/sync` — Trigger data sync from JustWatch
+- `GET /api/search?q=` — Live search via TMDB
+- `POST /api/sync` — Trigger data sync from TMDB
 - `GET/POST/DELETE /api/track/:id` — Watchlist management
 - `POST /api/imdb` — Resolve IMDB URL, save to DB, auto-track
