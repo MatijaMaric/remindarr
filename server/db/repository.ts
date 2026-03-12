@@ -1121,6 +1121,13 @@ export function getDistinctNotifierTimezones(): string[] {
   return rows.map((r) => r.timezone);
 }
 
+export function getEnabledNotifierSchedules(): { notify_time: string; timezone: string }[] {
+  const raw = getRawDb();
+  return raw
+    .prepare("SELECT DISTINCT notify_time, timezone FROM notifiers WHERE enabled = 1")
+    .all() as { notify_time: string; timezone: string }[];
+}
+
 export function getTrackedMoviesByReleaseDate(date: string, userId: string) {
   const db = getDb();
   const rows = db
