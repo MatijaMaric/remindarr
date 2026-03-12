@@ -97,6 +97,203 @@ export interface Provider {
   icon_url: string;
 }
 
+// ─── Detail Types ────────────────────────────────────────────────────────────
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+  order: number;
+}
+
+export interface CrewMember {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profile_path: string | null;
+}
+
+export interface TmdbGenre {
+  id: number;
+  name: string;
+}
+
+export interface ReleaseDateEntry {
+  certification: string;
+  note: string;
+  release_date: string;
+  type: number; // 1=Premiere, 2=Theatrical (limited), 3=Theatrical, 4=Digital, 5=Physical, 6=TV
+}
+
+export interface ReleaseDatesResult {
+  iso_3166_1: string;
+  release_dates: ReleaseDateEntry[];
+}
+
+export interface WatchProviderEntry {
+  logo_path: string;
+  provider_id: number;
+  provider_name: string;
+  display_priority: number;
+}
+
+export interface WatchProviderCountry {
+  link: string;
+  flatrate?: WatchProviderEntry[];
+  rent?: WatchProviderEntry[];
+  buy?: WatchProviderEntry[];
+  ads?: WatchProviderEntry[];
+  free?: WatchProviderEntry[];
+}
+
+export interface ProductionCompany {
+  id: number;
+  name: string;
+  logo_path: string | null;
+  origin_country: string;
+}
+
+export interface SpokenLanguage {
+  iso_639_1: string;
+  english_name: string;
+  name: string;
+}
+
+export interface SeasonSummary {
+  id: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  episode_count: number;
+  poster_path: string | null;
+  season_number: number;
+  vote_average: number;
+}
+
+export interface Network {
+  id: number;
+  name: string;
+  logo_path: string | null;
+  origin_country: string;
+}
+
+export interface MovieDetailsResponse {
+  title: Title;
+  tmdb: {
+    id: number;
+    title: string;
+    original_title: string;
+    overview: string;
+    tagline: string;
+    runtime: number;
+    release_date: string;
+    status: string;
+    budget: number;
+    revenue: number;
+    original_language: string;
+    genres: TmdbGenre[];
+    production_companies: ProductionCompany[];
+    production_countries: { iso_3166_1: string; name: string }[];
+    spoken_languages: SpokenLanguage[];
+    poster_path: string | null;
+    backdrop_path: string | null;
+    vote_average: number;
+    vote_count: number;
+    imdb_id: string | null;
+    credits: { cast: CastMember[]; crew: CrewMember[] };
+    release_dates: { results: ReleaseDatesResult[] };
+    "watch/providers": { results: Record<string, WatchProviderCountry> };
+  } | null;
+  country: string;
+}
+
+export interface ShowDetailsResponse {
+  title: Title;
+  tmdb: {
+    id: number;
+    name: string;
+    original_name: string;
+    overview: string;
+    tagline: string;
+    first_air_date: string;
+    last_air_date: string;
+    status: string;
+    type: string;
+    number_of_seasons: number;
+    number_of_episodes: number;
+    episode_run_time: number[];
+    original_language: string;
+    genres: TmdbGenre[];
+    created_by: { id: number; name: string; profile_path: string | null }[];
+    networks: Network[];
+    production_companies: ProductionCompany[];
+    production_countries: { iso_3166_1: string; name: string }[];
+    spoken_languages: SpokenLanguage[];
+    seasons: SeasonSummary[];
+    poster_path: string | null;
+    backdrop_path: string | null;
+    vote_average: number;
+    vote_count: number;
+    credits: { cast: CastMember[]; crew: CrewMember[] };
+    content_ratings: { results: { iso_3166_1: string; rating: string }[] };
+    "watch/providers": { results: Record<string, WatchProviderCountry> };
+  } | null;
+  country: string;
+}
+
+export interface SeasonDetailsResponse {
+  title: Title;
+  tmdb: {
+    id: number;
+    name: string;
+    overview: string;
+    air_date: string | null;
+    poster_path: string | null;
+    season_number: number;
+    vote_average: number;
+    episodes: {
+      id: number;
+      name: string;
+      overview: string;
+      air_date: string | null;
+      episode_number: number;
+      season_number: number;
+      still_path: string | null;
+      runtime: number | null;
+      vote_average: number;
+      guest_stars: CastMember[];
+      crew: CrewMember[];
+    }[];
+    credits: { cast: CastMember[]; crew: CrewMember[] };
+  } | null;
+  seasonNumber: number;
+  country: string;
+}
+
+export interface EpisodeDetailsResponse {
+  title: Title;
+  tmdb: {
+    id: number;
+    name: string;
+    overview: string;
+    air_date: string | null;
+    episode_number: number;
+    season_number: number;
+    still_path: string | null;
+    runtime: number | null;
+    vote_average: number;
+    vote_count: number;
+    guest_stars: CastMember[];
+    crew: CrewMember[];
+    credits: { cast: CastMember[]; crew: CrewMember[] };
+  } | null;
+  seasonNumber: number;
+  episodeNumber: number;
+  country: string;
+}
+
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {
   return {

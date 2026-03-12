@@ -1,4 +1,13 @@
-import type { Title, SearchTitle, Provider, Episode } from "./types";
+import type {
+  Title,
+  SearchTitle,
+  Provider,
+  Episode,
+  MovieDetailsResponse,
+  ShowDetailsResponse,
+  SeasonDetailsResponse,
+  EpisodeDetailsResponse,
+} from "./types";
 
 const BASE = "/api";
 
@@ -108,6 +117,24 @@ export async function watchEpisodesBulk(episodeIds: number[], watched: boolean):
     method: "POST",
     body: JSON.stringify({ episodeIds, watched }),
   });
+}
+
+// ─── Details ────────────────────────────────────────────────────────────────
+
+export async function getMovieDetails(titleId: string): Promise<MovieDetailsResponse> {
+  return fetchJson(`/details/movie/${encodeURIComponent(titleId)}`);
+}
+
+export async function getShowDetails(titleId: string): Promise<ShowDetailsResponse> {
+  return fetchJson(`/details/show/${encodeURIComponent(titleId)}`);
+}
+
+export async function getSeasonDetails(titleId: string, season: number): Promise<SeasonDetailsResponse> {
+  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}`);
+}
+
+export async function getEpisodeDetails(titleId: string, season: number, episode: number): Promise<EpisodeDetailsResponse> {
+  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}/episode/${episode}`);
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────

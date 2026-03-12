@@ -6,6 +6,9 @@ import TrackedPage from "./pages/TrackedPage";
 import CalendarPage from "./pages/CalendarPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
+import TitleDetailPage from "./pages/TitleDetailPage";
+import SeasonDetailPage from "./pages/SeasonDetailPage";
+import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import RequireAuth from "./components/RequireAuth";
 
 export default function App() {
@@ -106,6 +109,9 @@ export default function App() {
           <Route path="/tracked" element={<RequireAuth><TrackedPage /></RequireAuth>} />
           <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
           <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+          <Route path="/title/:id" element={<TitleDetailPage />} />
+          <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
+          <Route path="/title/:id/season/:season/episode/:episode" element={<EpisodeDetailPage />} />
         </Routes>
       </main>
     </div>

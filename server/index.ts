@@ -16,6 +16,7 @@ import episodesRoutes from "./routes/episodes";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import jobsRoutes from "./routes/jobs";
+import detailsRoutes from "./routes/details";
 import type { AppEnv } from "./types";
 import { registerSyncJobs } from "./jobs/sync";
 import { startWorker, stopWorker } from "./jobs/worker";
@@ -79,6 +80,11 @@ app.route("/api/admin", adminRoutes);
 app.use("/api/jobs/*", requireAuth, requireAdmin);
 app.use("/api/jobs", requireAuth, requireAdmin);
 app.route("/api/jobs", jobsRoutes);
+
+// Detail pages (optionalAuth for is_tracked)
+app.use("/api/details/*", optionalAuth);
+app.use("/api/details", optionalAuth);
+app.route("/api/details", detailsRoutes);
 
 // Sync (public — typically triggered by cron)
 app.route("/api/sync", syncRoutes);

@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import type { Title } from "../types";
 import TrackButton from "./TrackButton";
 
@@ -20,8 +21,8 @@ export default function TitleCard({ title, onTrackToggle }: Props) {
 
   return (
     <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors flex flex-col">
-      {/* Poster */}
-      <div className="aspect-[2/3] bg-gray-800 relative">
+      {/* Poster — clickable link to detail page */}
+      <Link to={`/title/${title.id}`} className="aspect-[2/3] bg-gray-800 relative block">
         {title.poster_url ? (
           <img
             src={title.poster_url}
@@ -44,12 +45,14 @@ export default function TitleCard({ title, onTrackToggle }: Props) {
             {title.imdb_score.toFixed(1)}
           </span>
         )}
-      </div>
+      </Link>
 
       {/* Info */}
       <div className="p-3 flex-1 flex flex-col gap-2">
         <div>
-          <h3 className="font-semibold text-sm leading-tight line-clamp-2">{title.title}</h3>
+          <Link to={`/title/${title.id}`} className="hover:text-indigo-400 transition-colors">
+            <h3 className="font-semibold text-sm leading-tight line-clamp-2">{title.title}</h3>
+          </Link>
           <p className="text-xs text-gray-500 mt-0.5">
             {title.release_year}
             {title.runtime_minutes ? ` \u00B7 ${title.runtime_minutes}m` : ""}
