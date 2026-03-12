@@ -7,6 +7,7 @@ import {
   completeJob,
   failJob,
   getJobStats,
+  getRecentJobs,
   registerCron,
   getCronJobs,
 } from "./queue";
@@ -139,6 +140,33 @@ describe("getJobStats", () => {
     const stats = getJobStats();
     expect(stats["job-a"].pending).toBe(2);
     expect(stats["job-b"].pending).toBe(1);
+  });
+});
+
+describe("getRecentJobs", () => {
+  it("returns recent jobs in descending order", () => {
+    enqueueJob("job-a");
+    enqueueJob("job-b");
+    enqueueJob("job-a");
+
+    const recent = getRecentJobs();
+    expect(recent).toHaveLength(3);
+    expect(recent[0].name).toBe("job-a");
+    expect(recent[0].id).toBeGreaterThan(recent[1].id);
+  });
+
+  it("respects limit parameter", () => {
+    enqueueJob("job-a");
+    enqueueJob("job-b");
+    enqueueJob("job-c");
+
+    const recent = getRecentJobs(2);
+    expect(recent).toHaveLength(2);
+  });
+
+  it("returns empty array when no jobs exist", () => {
+    const recent = getRecentJobs();
+    expect(recent).toHaveLength(0);
   });
 });
 

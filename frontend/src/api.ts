@@ -158,3 +158,37 @@ export async function updateAdminSettings(settings: Record<string, string>): Pro
     body: JSON.stringify(settings),
   });
 }
+
+// ─── Jobs ─────────────────────────────────────────────────────────────────────
+
+export interface CronJobInfo {
+  name: string;
+  cron: string;
+  last_run: string | null;
+  next_run: string;
+  enabled: number;
+}
+
+export interface RecentJob {
+  id: number;
+  name: string;
+  status: "pending" | "running" | "completed" | "failed";
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface JobsResponse {
+  stats: Record<string, { pending: number; running: number; completed: number; failed: number }>;
+  crons: CronJobInfo[];
+  recentJobs: RecentJob[];
+}
+
+export async function getJobs(): Promise<JobsResponse> {
+  return fetchJson("/jobs");
+}
+
+export async function triggerJob(name: string): Promise<{ success: boolean; jobId: number }> {
+  return fetchJson(`/jobs/${encodeURIComponent(name)}`, { method: "POST" });
+}

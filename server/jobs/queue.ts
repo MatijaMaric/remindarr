@@ -338,3 +338,12 @@ export function getCronJobs(): CronJob[] {
   const db = getRawDb();
   return db.prepare("SELECT * FROM cron_jobs ORDER BY name").all() as CronJob[];
 }
+
+export function getRecentJobs(limit: number = 20): Job[] {
+  const db = getRawDb();
+  return db
+    .prepare(
+      `SELECT * FROM jobs ORDER BY id DESC LIMIT ?`
+    )
+    .all(limit) as Job[];
+}
