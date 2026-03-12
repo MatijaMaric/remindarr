@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { searchTitles } from "../justwatch/client";
+import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGenres } from "../tmdb/client";
+import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
 
 const app = new Hono();
 
@@ -10,7 +11,36 @@ app.get("/", async (c) => {
   }
 
   try {
-    const titles = await searchTitles(query);
+    const [genreMap, tvGenreMap, searchResult] = await Promise.all([
+      getMovieGenres(),
+      getTvGenres(),
+      searchMulti(query),
+    ]);
+
+    // Merge genre maps
+    const allGenres = new Map([...genreMap, ...tvGenreMap]);
+
+    // Parse search results (filter out "person" results)
+    const basicTitles = searchResult.results
+      .map((r) => parseSearchResult(r, allGenres))
+      .filter((t): t is ParsedTitle => t !== null);
+
+    // Fetch watch providers for each result
+    const titles = await Promise.all(
+      basicTitles.slice(0, 20).map(async (t) => {
+        try {
+          const tmdbId = parseInt(t.tmdbId || "0", 10);
+          if (t.objectType === "MOVIE") {
+            return parseMovieDetails(await fetchMovieDetails(tmdbId));
+          } else {
+            return parseTvDetails(await fetchTvDetails(tmdbId));
+          }
+        } catch {
+          return t; // Fallback to basic data without watch providers
+        }
+      })
+    );
+
     return c.json({ titles, count: titles.length });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);

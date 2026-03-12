@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { fetchNewReleases } from "../justwatch/client";
+import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
 
 const app = new Hono();

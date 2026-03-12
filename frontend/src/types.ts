@@ -26,11 +26,10 @@ export interface Title {
   tmdb_id: string | null;
   poster_url: string | null;
   age_certification: string | null;
-  jw_url: string | null;
+  tmdb_url: string | null;
   imdb_score: number | null;
   imdb_votes: number | null;
   tmdb_score: number | null;
-  jw_rating: number | null;
   is_tracked: boolean;
   offers: Offer[];
   tracked_at?: string;
@@ -66,13 +65,12 @@ export interface SearchTitle {
   tmdbId: string | null;
   posterUrl: string | null;
   ageCertification: string | null;
-  jwUrl: string | null;
+  tmdbUrl: string | null;
   offers: SearchOffer[];
   scores: {
     imdbScore: number | null;
     imdbVotes: number | null;
     tmdbScore: number | null;
-    jwRating: number | null;
   };
 }
 
@@ -112,11 +110,10 @@ export function normalizeSearchTitle(t: SearchTitle): Title {
     tmdb_id: t.tmdbId,
     poster_url: t.posterUrl,
     age_certification: t.ageCertification,
-    jw_url: t.jwUrl,
+    tmdb_url: t.tmdbUrl,
     imdb_score: t.scores.imdbScore,
     imdb_votes: t.scores.imdbVotes,
     tmdb_score: t.scores.tmdbScore,
-    jw_rating: t.scores.jwRating,
     is_tracked: false,
     offers: t.offers.map((o, i) => ({
       id: i,

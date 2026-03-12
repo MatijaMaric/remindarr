@@ -21,7 +21,7 @@ app.post("/", async (c) => {
   try {
     const title = await resolveImdbUrl(url);
     if (!title) {
-      return c.json({ error: "Title not found on JustWatch" }, 404);
+      return c.json({ error: "Title not found" }, 404);
     }
 
     upsertTitles([title]);
