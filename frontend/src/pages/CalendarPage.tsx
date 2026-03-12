@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, CheckCircleIcon, CircleIcon } from "lucide-react";
 import { getCalendarTitles, syncEpisodes, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import TitleList from "../components/TitleList";
@@ -402,15 +403,19 @@ export default function CalendarPage() {
                             }`}
                           >
                             {ep.poster_url && (
-                              <img
-                                src={ep.poster_url}
-                                alt={ep.show_title}
-                                className="w-12 h-18 rounded object-cover flex-shrink-0"
-                              />
+                              <Link to={`/title/${ep.title_id}`} className="flex-shrink-0">
+                                <img
+                                  src={ep.poster_url}
+                                  alt={ep.show_title}
+                                  className="w-12 h-18 rounded object-cover"
+                                />
+                              </Link>
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <div className="text-sm font-medium text-white">{ep.show_title}</div>
+                                <Link to={`/title/${ep.title_id}`} className="hover:text-indigo-400 transition-colors">
+                                  <div className="text-sm font-medium text-white">{ep.show_title}</div>
+                                </Link>
                                 {isEpisodeReleased(ep) ? (
                                   <button
                                     onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
@@ -436,10 +441,12 @@ export default function CalendarPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-emerald-400 mt-0.5">
-                                S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
-                                {ep.name && ` — ${ep.name}`}
-                              </div>
+                              <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="block hover:text-indigo-400 transition-colors">
+                                <div className="text-xs text-emerald-400 mt-0.5">
+                                  S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
+                                  {ep.name && ` — ${ep.name}`}
+                                </div>
+                              </Link>
                               {ep.overview && (
                                 <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ep.overview}</p>
                               )}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { Episode, Offer } from "../types";
@@ -101,19 +102,25 @@ function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Episode; 
       <div className="flex items-center gap-3 bg-gray-900 rounded-lg border border-gray-800 p-3">
         <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} />
         {episode.poster_url && (
-          <img
-            src={episode.poster_url}
-            alt={episode.show_title}
-            className="w-10 h-15 rounded object-cover flex-shrink-0"
-            loading="lazy"
-          />
+          <Link to={`/title/${episode.title_id}`} className="flex-shrink-0">
+            <img
+              src={episode.poster_url}
+              alt={episode.show_title}
+              className="w-10 h-15 rounded object-cover"
+              loading="lazy"
+            />
+          </Link>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">{episode.show_title}</p>
-          <p className="text-xs text-gray-400">
-            {formatEpisodeCode(episode)}
-            {episode.name && ` · ${episode.name}`}
-          </p>
+          <Link to={`/title/${episode.title_id}`} className="hover:text-indigo-400 transition-colors">
+            <p className="text-sm font-medium text-white truncate">{episode.show_title}</p>
+          </Link>
+          <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-indigo-400 transition-colors">
+            <p className="text-xs text-gray-400">
+              {formatEpisodeCode(episode)}
+              {episode.name && ` · ${episode.name}`}
+            </p>
+          </Link>
         </div>
         {providers.length > 0 && (
           <div className="flex gap-1 flex-shrink-0">
@@ -133,19 +140,25 @@ function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Episode; 
       <div className="flex gap-4 p-4">
         <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} />
         {episode.poster_url && (
-          <img
-            src={episode.poster_url}
-            alt={episode.show_title}
-            className="w-16 h-24 rounded-lg object-cover flex-shrink-0"
-            loading="lazy"
-          />
+          <Link to={`/title/${episode.title_id}`} className="flex-shrink-0">
+            <img
+              src={episode.poster_url}
+              alt={episode.show_title}
+              className="w-16 h-24 rounded-lg object-cover"
+              loading="lazy"
+            />
+          </Link>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white">{episode.show_title}</h3>
-          <p className="text-sm text-indigo-400 font-medium mt-0.5">
-            {formatEpisodeCode(episode)}
-            {episode.name && ` · ${episode.name}`}
-          </p>
+          <Link to={`/title/${episode.title_id}`} className="hover:text-indigo-400 transition-colors">
+            <h3 className="font-semibold text-white">{episode.show_title}</h3>
+          </Link>
+          <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-indigo-400 transition-colors">
+            <p className="text-sm text-indigo-400 font-medium mt-0.5">
+              {formatEpisodeCode(episode)}
+              {episode.name && ` · ${episode.name}`}
+            </p>
+          </Link>
           {episode.overview && (
             <p className="text-sm text-gray-400 mt-2 line-clamp-2">{episode.overview}</p>
           )}
@@ -181,15 +194,21 @@ function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onToggleWat
     return (
       <div className="flex items-center gap-3 bg-gray-900 rounded-lg border border-gray-800 p-3">
         {posterUrl && (
-          <img src={posterUrl} alt={showTitle} className="w-10 h-15 rounded object-cover flex-shrink-0" loading="lazy" />
+          <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
+            <img src={posterUrl} alt={showTitle} className="w-10 h-15 rounded object-cover" loading="lazy" />
+          </Link>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">{showTitle}</p>
+          <Link to={`/title/${episodes[0].title_id}`} className="hover:text-indigo-400 transition-colors">
+            <p className="text-sm font-medium text-white truncate">{showTitle}</p>
+          </Link>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-1">
                 <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
-                <span className="text-xs text-gray-400">{formatEpisodeCode(ep)}</span>
+                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors">
+                  <span className="text-xs text-gray-400">{formatEpisodeCode(ep)}</span>
+                </Link>
               </div>
             ))}
           </div>
@@ -211,16 +230,22 @@ function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onToggleWat
     <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
       <div className="flex gap-4 p-4">
         {posterUrl && (
-          <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover flex-shrink-0" loading="lazy" />
+          <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
+            <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover" loading="lazy" />
+          </Link>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white">{showTitle}</h3>
+          <Link to={`/title/${episodes[0].title_id}`} className="hover:text-indigo-400 transition-colors">
+            <h3 className="font-semibold text-white">{showTitle}</h3>
+          </Link>
           <div className="mt-2 space-y-1">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
                 <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
-                <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
-                {ep.name && <span className="text-gray-400"> · {ep.name}</span>}
+                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors">
+                  <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
+                  {ep.name && <span className="text-gray-400"> · {ep.name}</span>}
+                </Link>
               </div>
             ))}
           </div>
@@ -253,11 +278,15 @@ function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onTo
     <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
       <div className="flex gap-4 p-4">
         {posterUrl && (
-          <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover flex-shrink-0" loading="lazy" />
+          <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
+            <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover" loading="lazy" />
+          </Link>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold text-white">{showTitle}</h3>
+            <Link to={`/title/${episodes[0].title_id}`} className="hover:text-indigo-400 transition-colors">
+              <h3 className="font-semibold text-white">{showTitle}</h3>
+            </Link>
             {episodes.length > 1 && (
               <button
                 onClick={() => onMarkSeasonWatched(episodes.map((ep) => ep.id))}
@@ -272,8 +301,10 @@ function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onTo
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
                 <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
-                <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
-                {ep.name && <span className="text-gray-400 truncate"> · {ep.name}</span>}
+                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors truncate">
+                  <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
+                  {ep.name && <span className="text-gray-400"> · {ep.name}</span>}
+                </Link>
               </div>
             ))}
           </div>
