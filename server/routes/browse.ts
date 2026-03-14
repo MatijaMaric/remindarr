@@ -18,6 +18,7 @@ import {
   parseTvDetails,
   type ParsedTitle,
 } from "../tmdb/parser";
+import { getTrackedTitleIds } from "../db/repository";
 
 const VALID_CATEGORIES = ["popular", "upcoming", "top_rated"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
@@ -87,7 +88,14 @@ app.get("/", async (c) => {
       })
     );
 
-    return c.json({ titles, page, totalPages });
+    const user = c.get("user");
+    const trackedIds = user ? getTrackedTitleIds(user.id) : new Set<string>();
+    const titlesWithTracked = titles.map((t) => ({
+      ...t,
+      isTracked: trackedIds.has(t.id),
+    }));
+
+    return c.json({ titles: titlesWithTracked, page, totalPages });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }

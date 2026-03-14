@@ -310,6 +310,16 @@ export function untrackTitle(titleId: string, userId: string) {
     .run();
 }
 
+export function getTrackedTitleIds(userId: string): Set<string> {
+  const db = getDb();
+  const rows = db
+    .select({ titleId: tracked.titleId })
+    .from(tracked)
+    .where(eq(tracked.userId, userId))
+    .all();
+  return new Set(rows.map((r) => r.titleId));
+}
+
 export function getTrackedTitles(userId: string) {
   const db = getDb();
   const rows = db
