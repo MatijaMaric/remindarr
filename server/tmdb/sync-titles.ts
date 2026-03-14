@@ -1,4 +1,7 @@
 import { CONFIG } from "../config";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "tmdb" });
 import {
   discoverMovies,
   discoverTv,
@@ -56,7 +59,7 @@ export async function fetchNewReleases(options: {
           allTitles.push(parseMovieDetails(details));
         } catch (err) {
           // Fallback to discover data without watch providers
-          console.error(`[TMDB] Failed to fetch movie details for ${movie.id}:`, err);
+          log.error("Failed to fetch movie details", { movieId: movie.id, err });
           allTitles.push(parseDiscoverMovie(movie, movieGenres));
         }
         await delay(CONFIG.PAGE_DELAY_MS);
@@ -85,7 +88,7 @@ export async function fetchNewReleases(options: {
           const details = await fetchTvDetails(show.id);
           allTitles.push(parseTvDetails(details));
         } catch (err) {
-          console.error(`[TMDB] Failed to fetch TV details for ${show.id}:`, err);
+          log.error("Failed to fetch TV details", { showId: show.id, err });
           allTitles.push(parseDiscoverTv(show, tvGenres));
         }
         await delay(CONFIG.PAGE_DELAY_MS);

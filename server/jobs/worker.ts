@@ -1,3 +1,7 @@
+import { logger } from "../logger";
+
+const log = logger.child({ module: "jobs" });
+
 import {
   initJobsSchema,
   claimNextJob,
@@ -30,11 +34,11 @@ async function processJobs() {
     try {
       await handler(job);
       completeJob(job.id);
-      console.log(`[Jobs] Completed "${name}" (job #${job.id})`);
+      log.info("Completed job", { name, jobId: job.id });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       failJob(job.id, message);
-      console.error(`[Jobs] Failed "${name}" (job #${job.id}, attempt ${job.attempts}/${job.max_attempts}): ${message}`);
+      log.error("Failed job", { name, jobId: job.id, attempt: job.attempts, maxAttempts: job.max_attempts, error: message });
     }
   }
 }
@@ -56,7 +60,7 @@ export function startWorker() {
   tickCrons();
   processJobs();
 
-  console.log("[Jobs] Worker started");
+  log.info("Worker started");
 }
 
 export function stopWorker() {
@@ -66,5 +70,5 @@ export function stopWorker() {
   pollTimer = null;
   cronTimer = null;
   cleanupTimer = null;
-  console.log("[Jobs] Worker stopped");
+  log.info("Worker stopped");
 }

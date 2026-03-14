@@ -1,4 +1,7 @@
+import { logger } from "../logger";
 import { registerHandler } from "./worker";
+
+const log = logger.child({ module: "notifications" });
 import { registerCron } from "./queue";
 import {
   getDueNotifiers,
@@ -121,24 +124,20 @@ export function registerNotificationJobs() {
         try {
           timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
         } catch {
-          console.warn(`[Notifications] Invalid timezone: ${tz}`);
+          log.warn("Invalid timezone", { timezone: tz });
         }
       }
 
       const dueNotifiers = getDueNotifiers(timesByTimezone);
       if (dueNotifiers.length === 0) return;
 
-      console.log(
-        `[Notifications] Processing ${dueNotifiers.length} due notifier(s)`
-      );
+      log.info("Processing due notifiers", { count: dueNotifiers.length });
 
       for (const notifier of dueNotifiers) {
         try {
           const provider = getProvider(notifier.provider);
           if (!provider) {
-            console.warn(
-              `[Notifications] Unknown provider "${notifier.provider}" for notifier ${notifier.id}`
-            );
+            log.warn("Unknown provider", { provider: notifier.provider, notifierId: notifier.id });
             continue;
           }
 
@@ -155,14 +154,10 @@ export function registerNotificationJobs() {
 
           await provider.send(notifier.config, content);
           markNotifierSent(notifier.id, notifier.todayDate);
-          console.log(
-            `[Notifications] Sent ${notifier.provider} notification for user ${notifier.user_id}`
-          );
+          log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          console.error(
-            `[Notifications] Failed to send ${notifier.provider} notification for notifier ${notifier.id}: ${message}`
-          );
+          log.error("Failed to send notification", { provider: notifier.provider, notifierId: notifier.id, error: message });
         }
       }
     });

@@ -8,6 +8,9 @@ import {
   fetchEpisodeDetails,
 } from "../tmdb/client";
 import type { AppEnv } from "../types";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "details" });
 
 const app = new Hono<AppEnv>();
 
@@ -23,7 +26,7 @@ app.get("/movie/:id", async (c) => {
     try {
       tmdb = await fetchMovieFullDetails(title.tmdb_id);
     } catch (e) {
-      console.error(`[Details] TMDB movie fetch failed for ${title.tmdb_id}:`, e);
+      log.error("TMDB movie fetch failed", { tmdbId: title.tmdb_id, err: e });
     }
   }
 
@@ -44,7 +47,7 @@ app.get("/show/:id", async (c) => {
     try {
       tmdb = await fetchShowFullDetails(title.tmdb_id);
     } catch (e) {
-      console.error(`[Details] TMDB show fetch failed for ${title.tmdb_id}:`, e);
+      log.error("TMDB show fetch failed", { tmdbId: title.tmdb_id, err: e });
     }
   }
 
@@ -67,7 +70,7 @@ app.get("/show/:id/season/:season", async (c) => {
     try {
       tmdb = await fetchSeasonDetails(title.tmdb_id, seasonNumber);
     } catch (e) {
-      console.error(`[Details] TMDB season fetch failed:`, e);
+      log.error("TMDB season fetch failed", { tmdbId: title.tmdb_id, season: seasonNumber, err: e });
     }
   }
 
@@ -92,7 +95,7 @@ app.get("/show/:id/season/:season/episode/:episode", async (c) => {
     try {
       tmdb = await fetchEpisodeDetails(title.tmdb_id, seasonNumber, episodeNumber);
     } catch (e) {
-      console.error(`[Details] TMDB episode fetch failed:`, e);
+      log.error("TMDB episode fetch failed", { tmdbId: title.tmdb_id, season: seasonNumber, episode: episodeNumber, err: e });
     }
   }
 

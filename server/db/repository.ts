@@ -1,4 +1,5 @@
 import { eq, and, like, sql, gte, lt, desc, asc, exists, count } from "drizzle-orm";
+import { logger } from "../logger";
 import { getDb } from "./schema";
 import {
   titles,
@@ -933,7 +934,7 @@ export function deleteExpiredSessions() {
   const raw = getRawDb();
   const result = raw.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')").run();
   if (result.changes > 0) {
-    console.log(`[Auth] Cleaned up ${result.changes} expired sessions`);
+    logger.child({ module: "db" }).info("Cleaned up expired sessions", { count: result.changes });
   }
 }
 

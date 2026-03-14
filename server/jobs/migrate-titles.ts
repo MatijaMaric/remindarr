@@ -1,4 +1,7 @@
 import { getRawDb } from "../db/schema";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "migrate-titles" });
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { CONFIG } from "../config";
 
@@ -14,7 +17,7 @@ function delay(ms: number): Promise<void> {
  */
 export async function migrateTitles(): Promise<{ updated: number; failed: number }> {
   if (!CONFIG.TMDB_API_KEY) {
-    console.log("[MigrateTitles] Skipping — TMDB_API_KEY not configured");
+    log.info("Skipping migration", { reason: "TMDB_API_KEY not configured" });
     return { updated: 0, failed: 0 };
   }
 
@@ -26,11 +29,11 @@ export async function migrateTitles(): Promise<{ updated: number; failed: number
     .all() as { id: string; object_type: string; tmdb_id: string }[];
 
   if (rows.length === 0) {
-    console.log("[MigrateTitles] No titles need migration");
+    log.info("No titles need migration");
     return { updated: 0, failed: 0 };
   }
 
-  console.log(`[MigrateTitles] Migrating ${rows.length} titles...`);
+  log.info("Migrating titles", { count: rows.length });
   let updated = 0;
   let failed = 0;
 
@@ -55,13 +58,13 @@ export async function migrateTitles(): Promise<{ updated: number; failed: number
       ).run(englishTitle, originalTitle, row.id);
       updated++;
     } catch (err) {
-      console.error(`[MigrateTitles] Failed to migrate ${row.id}:`, err);
+      log.error("Failed to migrate title", { titleId: row.id, err });
       failed++;
     }
 
     await delay(DELAY_MS);
   }
 
-  console.log(`[MigrateTitles] Done: ${updated} updated, ${failed} failed`);
+  log.info("Migration complete", { updated, failed });
   return { updated, failed };
 }

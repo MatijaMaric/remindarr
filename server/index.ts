@@ -20,6 +20,7 @@ import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import type { AppEnv } from "./types";
+import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { startWorker, stopWorker } from "./jobs/worker";
@@ -34,17 +35,16 @@ if (getUserCount() === 0) {
   const hash = await Bun.password.hash(password);
   const adminId = createUser("admin", hash, "Admin", "local", undefined, true);
   migrateTrackedData(adminId);
-  console.log("=".repeat(50));
-  console.log("  Admin account created:");
-  console.log(`  Username: admin`);
-  console.log(`  Password: ${password}`);
-  console.log("=".repeat(50));
+  logger.info("Admin account created", { username: "admin", password });
 }
 
 const app = new Hono<AppEnv>();
 
 // CORS for dev
 app.use("/api/*", cors());
+
+// Request logging
+app.use("/api/*", requestLogger());
 
 // Auth routes (public)
 app.route("/api/auth", authRoutes);
@@ -125,7 +125,7 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
-console.log(`Remindarr server running on http://localhost:${CONFIG.PORT}`);
+logger.info("Server started", { port: CONFIG.PORT });
 
 export default {
   port: CONFIG.PORT,

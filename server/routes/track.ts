@@ -4,6 +4,9 @@ import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { syncEpisodesForShow } from "../tmdb/sync";
 import type { AppEnv } from "../types";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "track" });
 
 const app = new Hono<AppEnv>();
 
@@ -69,7 +72,7 @@ app.post("/:id", async (c) => {
     const titleData = body.titleData;
     if (titleData?.object_type === "SHOW" && titleData?.tmdb_id) {
       syncEpisodesForShow(titleId, titleData.tmdb_id, titleData.title).catch((err) =>
-        console.error(`[TMDB] Background episode sync failed for "${titleData.title}":`, err)
+        log.error("Background episode sync failed", { title: titleData.title, err })
       );
     }
   }

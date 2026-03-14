@@ -1,4 +1,9 @@
 export const CONFIG = {
+  LOG_LEVEL: (process.env.LOG_LEVEL || "info") as
+    | "debug"
+    | "info"
+    | "warn"
+    | "error",
   COUNTRY: process.env.TMDB_COUNTRY || "HR",
   FALLBACK_COUNTRIES: (process.env.TMDB_FALLBACK_COUNTRIES || "")
     .split(",")
