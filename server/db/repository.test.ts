@@ -11,6 +11,8 @@ import {
   untrackTitle,
   getTrackedTitles,
   getProviders,
+  getGenres,
+  getLanguages,
   upsertEpisodes,
   deleteEpisodesForTitle,
   watchEpisode,
@@ -76,6 +78,18 @@ describe("upsertTitles", () => {
     upsertTitles([makeParsedTitle({ originalTitle: null })]);
     const result = getTitleById("movie-123");
     expect(result!.original_title).toBeNull();
+  });
+
+  it("stores and retrieves original_language", () => {
+    upsertTitles([makeParsedTitle({ originalLanguage: "ja" })]);
+    const result = getTitleById("movie-123");
+    expect(result!.original_language).toBe("ja");
+  });
+
+  it("stores null original_language when not provided", () => {
+    upsertTitles([makeParsedTitle({ originalLanguage: null })]);
+    const result = getTitleById("movie-123");
+    expect(result!.original_language).toBeNull();
   });
 
   it("upserts providers and offers", () => {
@@ -167,6 +181,73 @@ describe("getRecentTitles", () => {
     const results = getRecentTitles({ daysBack: 0, limit: 1, offset: 1 });
     expect(results).toHaveLength(1);
     expect(results[0].id).toBe("movie-2");
+  });
+
+  it("filters by genre", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", genres: ["Action", "Drama"], releaseDate: "2025-01-01" }),
+      makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: "2025-01-02" }),
+    ]);
+    const results = getRecentTitles({ daysBack: 0, genre: "Comedy" });
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("Comedy Film");
+  });
+
+  it("filters by language", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: "2025-01-01" }),
+      makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: "2025-01-02" }),
+    ]);
+    const results = getRecentTitles({ daysBack: 0, language: "ja" });
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("Japanese Movie");
+  });
+
+  it("combines genre and language filters", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", genres: ["Action"], originalLanguage: "en", releaseDate: "2025-01-01" }),
+      makeParsedTitle({ id: "movie-2", title: "Korean Action", genres: ["Action"], originalLanguage: "ko", releaseDate: "2025-01-02" }),
+      makeParsedTitle({ id: "movie-3", title: "Korean Drama", genres: ["Drama"], originalLanguage: "ko", releaseDate: "2025-01-03" }),
+    ]);
+    const results = getRecentTitles({ daysBack: 0, genre: "Action", language: "ko" });
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("Korean Action");
+  });
+});
+
+describe("getGenres", () => {
+  it("returns distinct genres sorted alphabetically", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", genres: ["Drama", "Action"] }),
+      makeParsedTitle({ id: "movie-2", genres: ["Comedy", "Action"] }),
+    ]);
+    const genres = getGenres();
+    expect(genres).toEqual(["Action", "Comedy", "Drama"]);
+  });
+
+  it("returns empty array when no titles exist", () => {
+    expect(getGenres()).toEqual([]);
+  });
+});
+
+describe("getLanguages", () => {
+  it("returns distinct languages sorted", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", originalLanguage: "ja" }),
+      makeParsedTitle({ id: "movie-2", originalLanguage: "en" }),
+      makeParsedTitle({ id: "movie-3", originalLanguage: "en" }),
+    ]);
+    const languages = getLanguages();
+    expect(languages).toEqual(["en", "ja"]);
+  });
+
+  it("excludes null languages", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", originalLanguage: null }),
+      makeParsedTitle({ id: "movie-2", originalLanguage: "en" }),
+    ]);
+    const languages = getLanguages();
+    expect(languages).toEqual(["en"]);
   });
 });
 

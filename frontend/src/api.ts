@@ -31,6 +31,8 @@ export async function getTitles(params: {
   daysBack?: number;
   type?: string;
   provider?: string;
+  genre?: string;
+  language?: string;
   limit?: number;
   offset?: number;
 } = {}): Promise<{ titles: Title[]; count: number }> {
@@ -38,6 +40,8 @@ export async function getTitles(params: {
   if (params.daysBack) qs.set("daysBack", String(params.daysBack));
   if (params.type) qs.set("type", params.type);
   if (params.provider) qs.set("provider", params.provider);
+  if (params.genre) qs.set("genre", params.genre);
+  if (params.language) qs.set("language", params.language);
   if (params.limit) qs.set("limit", String(params.limit));
   if (params.offset) qs.set("offset", String(params.offset));
   return fetchJson(`/titles?${qs}`);
@@ -92,6 +96,14 @@ export async function resolveImdb(url: string): Promise<{ success: boolean; titl
 
 export async function getProviders(): Promise<{ providers: Provider[] }> {
   return fetchJson("/titles/providers");
+}
+
+export async function getGenres(): Promise<{ genres: string[] }> {
+  return fetchJson("/titles/genres");
+}
+
+export async function getLanguages(): Promise<{ languages: string[] }> {
+  return fetchJson("/titles/languages");
 }
 
 export async function getCalendarTitles(params: {
