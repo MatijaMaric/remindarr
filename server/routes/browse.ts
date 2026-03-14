@@ -97,9 +97,13 @@ app.get("/", async (c) => {
   const category = c.req.query("category");
   const type = c.req.query("type") || "";
   const page = parseInt(c.req.query("page") || "1", 10);
-  const genreName = c.req.query("genre") || "";
+  const genreParam = c.req.query("genre") || "";
   const providerParam = c.req.query("provider") || "";
   const languageParam = c.req.query("language") || "";
+  const genreNames = genreParam ? genreParam.split(",").filter(Boolean) : [];
+  const providerValues = providerParam ? providerParam.split(",").filter(Boolean) : [];
+  const languageValues = languageParam ? languageParam.split(",").filter(Boolean) : [];
+  const typeValues = type ? type.split(",").filter(Boolean) : [];
 
   if (!category || !VALID_CATEGORIES.includes(category as Category)) {
     return c.json({ error: "Invalid category. Must be one of: popular, upcoming, top_rated" }, 400);
@@ -117,12 +121,14 @@ app.get("/", async (c) => {
 
     // Build discover filters
     const filters: DiscoverFilters = {};
-    if (genreName) {
-      const genreId = reverseGenreLookup(genreName, movieGenreMap, tvGenreMap);
-      if (genreId) filters.withGenres = genreId;
+    if (genreNames.length > 0) {
+      const genreIds = genreNames
+        .map((name) => reverseGenreLookup(name, movieGenreMap, tvGenreMap))
+        .filter(Boolean);
+      if (genreIds.length > 0) filters.withGenres = genreIds.join("|");
     }
-    if (providerParam) filters.withProviders = providerParam;
-    if (languageParam) filters.withOriginalLanguage = languageParam;
+    if (providerValues.length > 0) filters.withProviders = providerValues.join("|");
+    if (languageValues.length > 0) filters.withOriginalLanguage = languageValues[0];
 
     const discoverOpts: CategoryDiscoverOptions = { page, filters };
 
@@ -130,12 +136,15 @@ app.get("/", async (c) => {
     let totalPages = 1;
     let totalResults = 0;
 
-    if (type === "MOVIE") {
+    const fetchMovies = typeValues.length === 0 || typeValues.includes("MOVIE");
+    const fetchShows = typeValues.length === 0 || typeValues.includes("SHOW");
+
+    if (fetchMovies && !fetchShows) {
       const res = await fetchMoviesByCategory(category as Category, discoverOpts);
       basicTitles = res.results.map((m) => parseDiscoverMovie(m, allGenres));
       totalPages = Math.min(res.total_pages, 500);
       totalResults = res.total_results;
-    } else if (type === "SHOW") {
+    } else if (fetchShows && !fetchMovies) {
       const res = await fetchTvByCategory(category as Category, discoverOpts);
       basicTitles = res.results.map((t) => parseDiscoverTv(t, allGenres));
       totalPages = Math.min(res.total_pages, 500);

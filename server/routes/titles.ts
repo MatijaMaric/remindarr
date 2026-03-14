@@ -7,14 +7,19 @@ const app = new Hono<AppEnv>();
 app.get("/", (c) => {
   const user = c.get("user");
   const daysBack = Number(c.req.query("daysBack")) || 30;
-  const objectType = c.req.query("type");
-  const provider = c.req.query("provider");
-  const genre = c.req.query("genre");
-  const language = c.req.query("language");
+  const typeParam = c.req.query("type") || "";
+  const providerParam = c.req.query("provider") || "";
+  const genreParam = c.req.query("genre") || "";
+  const languageParam = c.req.query("language") || "";
   const limit = Number(c.req.query("limit")) || 100;
   const offset = Number(c.req.query("offset")) || 0;
 
-  const titles = getRecentTitles({ daysBack, objectType, provider, genre, language, limit, offset }, user?.id);
+  const objectTypes = typeParam ? typeParam.split(",").filter(Boolean) : [];
+  const providers = providerParam ? providerParam.split(",").filter(Boolean) : [];
+  const genres = genreParam ? genreParam.split(",").filter(Boolean) : [];
+  const languages = languageParam ? languageParam.split(",").filter(Boolean) : [];
+
+  const titles = getRecentTitles({ daysBack, objectTypes, providers, genres, languages, limit, offset }, user?.id);
   return c.json({ titles, count: titles.length });
 });
 

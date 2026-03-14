@@ -8,13 +8,13 @@ import type { BrowseCategory } from "./CategoryBar";
 
 export function filterBrowseTitles(
   titles: Title[],
-  filters: { genre: string; provider: string; language: string }
+  filters: { genre: string[]; provider: string[]; language: string[] }
 ): Title[] {
   return titles.filter((t) => {
-    if (filters.genre && !t.genres.includes(filters.genre)) return false;
-    if (filters.provider && !t.offers.some((o) => o.provider_technical_name === filters.provider))
+    if (filters.genre.length > 0 && !filters.genre.some((g) => t.genres.includes(g))) return false;
+    if (filters.provider.length > 0 && !t.offers.some((o) => filters.provider.includes(o.provider_technical_name)))
       return false;
-    if (filters.language && t.original_language !== filters.language) return false;
+    if (filters.language.length > 0 && !filters.language.includes(t.original_language ?? "")) return false;
     return true;
   });
 }
@@ -23,6 +23,13 @@ export function extractBrowseGenres(titles: Title[]): string[] {
   const set = new Set<string>();
   titles.forEach((t) => t.genres.forEach((g) => set.add(g)));
   return Array.from(set).sort();
+}
+
+interface Provider {
+  id: number;
+  name: string;
+  technical_name: string;
+  icon_url: string;
 }
 
 export function extractBrowseProviders(titles: Title[]): Provider[] {
@@ -52,14 +59,14 @@ export function extractBrowseLanguages(titles: Title[]): string[] {
 
 interface Props {
   category: Exclude<BrowseCategory, "new_releases">;
-  type: string;
-  onTypeChange: (type: string) => void;
-  genre: string;
-  onGenreChange: (genre: string) => void;
-  provider: string;
-  onProviderChange: (provider: string) => void;
-  language: string;
-  onLanguageChange: (language: string) => void;
+  type: string[];
+  onTypeChange: (type: string[]) => void;
+  genre: string[];
+  onGenreChange: (genre: string[]) => void;
+  provider: string[];
+  onProviderChange: (provider: string[]) => void;
+  language: string[];
+  onLanguageChange: (language: string[]) => void;
 }
 
 export default function CategoryBrowse({
@@ -95,11 +102,11 @@ export default function CategoryBrowse({
     try {
       const res = await api.browseTitles({
         category,
-        type: type || undefined,
+        type: type.length ? type.join(",") : undefined,
         page: pageNum,
-        genre: genre || undefined,
-        provider: provider || undefined,
-        language: language || undefined,
+        genre: genre.length ? genre.join(",") : undefined,
+        provider: provider.length ? provider.join(",") : undefined,
+        language: language.length ? language.join(",") : undefined,
       });
       const normalized = res.titles.map(normalizeSearchTitle);
       if (append) {

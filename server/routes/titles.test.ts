@@ -78,6 +78,46 @@ describe("GET /titles", () => {
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].title).toBe("Japanese Movie");
   });
+
+  it("filters by multiple types (comma-separated)", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: today }),
+      makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: today }),
+    ]);
+
+    const res = await app.request("/titles?daysBack=9999&type=MOVIE,SHOW");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(2);
+  });
+
+  it("filters by multiple genres (comma-separated)", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", genres: ["Action"], releaseDate: today }),
+      makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: today }),
+      makeParsedTitle({ id: "movie-3", title: "Drama Film", genres: ["Drama"], releaseDate: today }),
+    ]);
+
+    const res = await app.request("/titles?daysBack=9999&genre=Action,Comedy");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(2);
+    const titles = body.titles.map((t: any) => t.title).sort();
+    expect(titles).toEqual(["Comedy Film", "Test Movie"]);
+  });
+
+  it("filters by multiple languages (comma-separated)", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: today }),
+      makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: today }),
+      makeParsedTitle({ id: "movie-3", title: "French Movie", originalLanguage: "fr", releaseDate: today }),
+    ]);
+
+    const res = await app.request("/titles?daysBack=9999&language=en,ja");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(2);
+  });
 });
 
 describe("GET /titles/genres", () => {

@@ -5,16 +5,16 @@ import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 
 interface Props {
-  type: string;
-  onTypeChange: (type: string) => void;
+  type: string[];
+  onTypeChange: (type: string[]) => void;
   daysBack: number;
   onDaysBackChange: (days: number) => void;
-  genre: string;
-  onGenreChange: (genre: string) => void;
-  provider: string;
-  onProviderChange: (provider: string) => void;
-  language: string;
-  onLanguageChange: (language: string) => void;
+  genre: string[];
+  onGenreChange: (genre: string[]) => void;
+  provider: string[];
+  onProviderChange: (provider: string[]) => void;
+  language: string[];
+  onLanguageChange: (language: string[]) => void;
 }
 
 export default function NewReleases({
@@ -54,10 +54,10 @@ export default function NewReleases({
     try {
       const res = await api.getTitles({
         daysBack,
-        type: type || undefined,
-        genre: genre || undefined,
-        provider: provider || undefined,
-        language: language || undefined,
+        type: type.length ? type.join(",") : undefined,
+        genre: genre.length ? genre.join(",") : undefined,
+        provider: provider.length ? provider.join(",") : undefined,
+        language: language.length ? language.join(",") : undefined,
       });
       setTitles(res.titles);
     } catch (err: any) {
@@ -75,7 +75,7 @@ export default function NewReleases({
     setSyncing(true);
     setError("");
     try {
-      await api.syncReleases(daysBack, type || undefined);
+      await api.syncReleases(daysBack, type.length === 1 ? type[0] : undefined);
       await fetchTitles();
     } catch (err: any) {
       setError(err.message);

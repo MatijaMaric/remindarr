@@ -1,4 +1,4 @@
-import { eq, and, like, sql, gte, lt, desc, asc, exists, count } from "drizzle-orm";
+import { eq, and, or, like, sql, gte, lt, desc, asc, exists, count, inArray } from "drizzle-orm";
 import { logger } from "../logger";
 import { getDb } from "./schema";
 import {
@@ -182,54 +182,54 @@ export function getTitleById(titleId: string, userId?: string) {
 
 export interface TitleFilters {
   daysBack?: number;
-  objectType?: string;
-  provider?: string;
-  genre?: string;
-  language?: string;
+  objectTypes?: string[];
+  providers?: string[];
+  genres?: string[];
+  languages?: string[];
   limit?: number;
   offset?: number;
 }
 
 export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
   const db = getDb();
-  const { daysBack = 30, objectType, provider, genre, language, limit = 100, offset = 0 } = filters;
+  const { daysBack = 30, objectTypes, providers: filterProviders, genres, languages, limit = 100, offset = 0 } = filters;
 
   const conditions: ReturnType<typeof eq>[] = [];
 
   if (daysBack) {
     conditions.push(gte(titles.releaseDate, sql`date('now', ${`-${daysBack} days`})`));
   }
-  if (objectType) {
-    conditions.push(eq(titles.objectType, objectType));
+  if (objectTypes && objectTypes.length > 0) {
+    conditions.push(inArray(titles.objectType, objectTypes));
   }
-  if (provider) {
-    const providerId = Number(provider);
-    if (!isNaN(providerId)) {
-      conditions.push(
-        exists(
+  if (filterProviders && filterProviders.length > 0) {
+    const providerConditions = filterProviders.map((p) => {
+      const providerId = Number(p);
+      if (!isNaN(providerId)) {
+        return exists(
           db
             .select({ one: sql`1` })
             .from(offers)
             .where(and(eq(offers.titleId, titles.id), eq(offers.providerId, providerId)))
-        )
-      );
-    } else {
-      conditions.push(
-        exists(
+        );
+      } else {
+        return exists(
           db
             .select({ one: sql`1` })
             .from(offers)
             .innerJoin(providers, eq(offers.providerId, providers.id))
-            .where(and(eq(offers.titleId, titles.id), eq(providers.technicalName, provider)))
-        )
-      );
-    }
+            .where(and(eq(offers.titleId, titles.id), eq(providers.technicalName, p)))
+        );
+      }
+    });
+    conditions.push(providerConditions.length === 1 ? providerConditions[0] : or(...providerConditions)!);
   }
-  if (genre) {
-    conditions.push(like(titles.genres, `%"${genre}"%`));
+  if (genres && genres.length > 0) {
+    const genreConditions = genres.map((g) => like(titles.genres, `%"${g}"%`));
+    conditions.push(genreConditions.length === 1 ? genreConditions[0] : or(...genreConditions)!);
   }
-  if (language) {
-    conditions.push(eq(titles.originalLanguage, language));
+  if (languages && languages.length > 0) {
+    conditions.push(inArray(titles.originalLanguage, languages));
   }
 
   const trackedSubquery = userId
