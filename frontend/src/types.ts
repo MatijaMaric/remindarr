@@ -74,6 +74,7 @@ export interface SearchTitle {
     imdbVotes: number | null;
     tmdbScore: number | null;
   };
+  isTracked?: boolean;
 }
 
 export interface SearchOffer {
@@ -314,7 +315,7 @@ export function normalizeSearchTitle(t: SearchTitle): Title {
     imdb_score: t.scores.imdbScore,
     imdb_votes: t.scores.imdbVotes,
     tmdb_score: t.scores.tmdbScore,
-    is_tracked: false,
+    is_tracked: t.isTracked ?? false,
     offers: t.offers.map((o, i) => ({
       id: i,
       title_id: t.id,

@@ -10,6 +10,7 @@ import {
   trackTitle,
   untrackTitle,
   getTrackedTitles,
+  getTrackedTitleIds,
   getProviders,
   upsertEpisodes,
   deleteEpisodesForTitle,
@@ -222,6 +223,27 @@ describe("tracking", () => {
 
     const tracked = getTrackedTitles(userId);
     expect(tracked[0].notes).toBe("updated note");
+  });
+
+  it("getTrackedTitleIds returns set of tracked title IDs", () => {
+    upsertTitles([makeParsedTitle({ id: "movie-1" }), makeParsedTitle({ id: "movie-2" })]);
+    const userId = createUser("testuser", "hash");
+
+    trackTitle("movie-1", userId);
+    trackTitle("movie-2", userId);
+
+    const ids = getTrackedTitleIds(userId);
+    expect(ids).toBeInstanceOf(Set);
+    expect(ids.size).toBe(2);
+    expect(ids.has("movie-1")).toBe(true);
+    expect(ids.has("movie-2")).toBe(true);
+    expect(ids.has("movie-999")).toBe(false);
+  });
+
+  it("getTrackedTitleIds returns empty set for user with no tracked titles", () => {
+    const userId = createUser("testuser", "hash");
+    const ids = getTrackedTitleIds(userId);
+    expect(ids.size).toBe(0);
   });
 });
 
