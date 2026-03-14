@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, NavLink, Link, useLocation } from "react-router";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Clapperboard } from "lucide-react";
 import { useAuth } from "./context/AuthContext";
 import HomePage from "./pages/HomePage";
 import BrowsePage from "./pages/BrowsePage";
@@ -12,6 +12,7 @@ import TitleDetailPage from "./pages/TitleDetailPage";
 import SeasonDetailPage from "./pages/SeasonDetailPage";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
 import PersonPage from "./pages/PersonPage";
+import ReelsPage from "./pages/ReelsPage";
 import RequireAuth from "./components/RequireAuth";
 import { navLinkClass } from "./nav-utils";
 
@@ -57,6 +58,12 @@ export default function App() {
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
                   Calendar
+                </NavLink>
+                <NavLink
+                  to="/reels"
+                  className={({ isActive }) => navLinkClass(isActive)}
+                >
+                  Reels
                 </NavLink>
               </>
             )}
@@ -126,6 +133,13 @@ export default function App() {
                 >
                   Calendar
                 </NavLink>
+                <NavLink
+                  to="/reels"
+                  className={({ isActive }) => navLinkClass(isActive, true)}
+                >
+                  <Clapperboard size={16} className="inline mr-1" />
+                  Reels
+                </NavLink>
               </>
             )}
             <div className="border-t border-gray-800 my-2" />
@@ -162,6 +176,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/tracked" element={<RequireAuth><TrackedPage /></RequireAuth>} />
           <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
+          <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
           <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
           <Route path="/title/:id" element={<TitleDetailPage />} />
           <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
