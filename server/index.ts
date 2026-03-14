@@ -21,6 +21,7 @@ import jobsRoutes from "./routes/jobs";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
+import healthRoutes from "./routes/health";
 import type { AppEnv } from "./types";
 import * as Sentry from "@sentry/bun";
 import { logger, requestLogger } from "./logger";
@@ -58,6 +59,9 @@ app.use("/api/*", cors());
 
 // Request logging
 app.use("/api/*", requestLogger());
+
+// Health check (public — used by Sentry uptime monitoring)
+app.route("/api/health", healthRoutes);
 
 // Auth routes (public)
 app.route("/api/auth", authRoutes);
