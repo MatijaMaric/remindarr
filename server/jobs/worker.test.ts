@@ -56,30 +56,21 @@ describe("worker Sentry monitoring", () => {
     );
   });
 
-  it("wraps non-cron job with Sentry.withMonitor without schedule config", async () => {
+  it("does not wrap non-cron job with Sentry.withMonitor", async () => {
     let handlerCalled = false;
     registerHandler("one-off-job", async () => {
       handlerCalled = true;
     });
     enqueueJob("one-off-job");
 
+    withMonitorSpy.mockClear();
     await processJobs();
 
     expect(handlerCalled).toBe(true);
-    expect(withMonitorSpy).toHaveBeenCalledWith(
-      "one-off-job",
-      expect.any(Function),
-      undefined
-    );
+    expect(withMonitorSpy).not.toHaveBeenCalled();
   });
 
   it("reports failure to Sentry when job throws", async () => {
-    withMonitorSpy.mockImplementationOnce(
-      ((_slug: string, fn: () => unknown, _config?: unknown) => {
-        return fn();
-      }) as typeof Sentry.withMonitor
-    );
-
     const jobError = new Error("job failed");
     registerHandler("failing-job", async () => {
       throw jobError;
@@ -88,11 +79,6 @@ describe("worker Sentry monitoring", () => {
 
     await processJobs();
 
-    expect(withMonitorSpy).toHaveBeenCalledWith(
-      "failing-job",
-      expect.any(Function),
-      undefined
-    );
     expect(captureExceptionSpy).toHaveBeenCalledWith(jobError);
   });
 });

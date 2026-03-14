@@ -11,6 +11,8 @@ describe("instrument", () => {
   it("Sentry exports expected functions", () => {
     expect(typeof Sentry.captureException).toBe("function");
     expect(typeof Sentry.init).toBe("function");
+    expect(typeof Sentry.honoIntegration).toBe("function");
+    expect(typeof Sentry.setupHonoErrorHandler).toBe("function");
   });
 });
 

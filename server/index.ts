@@ -43,9 +43,10 @@ if (getUserCount() === 0) {
 
 const app = new Hono<AppEnv>();
 
-// Sentry error handler
+// Sentry error handler (captures exceptions + creates request spans)
+Sentry.setupHonoErrorHandler(app);
+
 app.onError((err, c) => {
-  Sentry.captureException(err);
   if (err instanceof HTTPException) {
     return err.getResponse();
   }
