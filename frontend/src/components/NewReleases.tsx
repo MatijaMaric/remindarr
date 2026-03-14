@@ -16,6 +16,8 @@ interface Props {
   language: string[];
   onLanguageChange: (language: string[]) => void;
   onClearFilters?: () => void;
+  hideTracked?: boolean;
+  onHideTrackedChange?: (value: boolean) => void;
 }
 
 export default function NewReleases({
@@ -30,6 +32,8 @@ export default function NewReleases({
   language,
   onLanguageChange,
   onClearFilters,
+  hideTracked,
+  onHideTrackedChange,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,6 +64,7 @@ export default function NewReleases({
         genre: genre.length ? genre.join(",") : undefined,
         provider: provider.length ? provider.join(",") : undefined,
         language: language.length ? language.join(",") : undefined,
+        excludeTracked: hideTracked || undefined,
       });
       setTitles(res.titles);
     } catch (err: any) {
@@ -67,7 +72,7 @@ export default function NewReleases({
     } finally {
       setLoading(false);
     }
-  }, [daysBack, type, genre, provider, language]);
+  }, [daysBack, type, genre, provider, language, hideTracked]);
 
   useEffect(() => {
     fetchTitles();
@@ -104,6 +109,8 @@ export default function NewReleases({
           onLanguageChange={onLanguageChange}
           languages={languages}
           onClearFilters={onClearFilters}
+          hideTracked={hideTracked}
+          onHideTrackedChange={onHideTrackedChange}
         />
         <button
           onClick={handleSync}

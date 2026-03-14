@@ -1,4 +1,4 @@
-import { eq, and, or, like, sql, gte, lt, desc, asc, exists, count, inArray } from "drizzle-orm";
+import { eq, and, or, like, sql, gte, lt, desc, asc, exists, notExists, count, inArray } from "drizzle-orm";
 import { logger } from "../logger";
 import { getDb } from "./schema";
 import {
@@ -186,13 +186,14 @@ export interface TitleFilters {
   providers?: string[];
   genres?: string[];
   languages?: string[];
+  excludeTracked?: boolean;
   limit?: number;
   offset?: number;
 }
 
 export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
   const db = getDb();
-  const { daysBack = 30, objectTypes, providers: filterProviders, genres, languages, limit = 100, offset = 0 } = filters;
+  const { daysBack = 30, objectTypes, providers: filterProviders, genres, languages, excludeTracked, limit = 100, offset = 0 } = filters;
 
   const conditions: ReturnType<typeof eq>[] = [];
 
@@ -230,6 +231,16 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
   }
   if (languages && languages.length > 0) {
     conditions.push(inArray(titles.originalLanguage, languages));
+  }
+  if (excludeTracked && userId) {
+    conditions.push(
+      notExists(
+        db
+          .select({ one: sql`1` })
+          .from(tracked)
+          .where(and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+      )
+    );
   }
 
   const trackedSubquery = userId

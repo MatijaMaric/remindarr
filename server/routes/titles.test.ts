@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
-import { upsertTitles } from "../db/repository";
+import { upsertTitles, trackTitle, createUser } from "../db/repository";
 import titlesApp from "./titles";
 import type { AppEnv } from "../types";
 
@@ -117,6 +117,29 @@ describe("GET /titles", () => {
     const res = await app.request("/titles?daysBack=9999&language=en,ja");
     const body = await res.json();
     expect(body.titles).toHaveLength(2);
+  });
+
+  it("excludes tracked titles when excludeTracked=1 and user is present", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Tracked", releaseDate: today }),
+      makeParsedTitle({ id: "movie-2", title: "Untracked", releaseDate: today }),
+    ]);
+    const userId = createUser("testuser", "hash");
+    trackTitle("movie-1", userId);
+
+    // Create app with user middleware
+    const authedApp = new Hono<AppEnv>();
+    authedApp.use("*", async (c, next) => {
+      c.set("user", { id: userId, username: "testuser", display_name: null, auth_provider: "local", is_admin: false });
+      await next();
+    });
+    authedApp.route("/titles", titlesApp);
+
+    const res = await authedApp.request("/titles?daysBack=9999&excludeTracked=1");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].title).toBe("Untracked");
   });
 });
 
