@@ -136,6 +136,53 @@ export async function discoverTv(options: {
   return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/discover/tv", params);
 }
 
+// ─── Category endpoints (popular, upcoming, top rated) ─────────────────────
+
+export async function fetchPopularMovies(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/movie/popular", {
+    language: tmdbLanguage(),
+    region: CONFIG.COUNTRY,
+    page: String(page),
+  });
+}
+
+export async function fetchPopularTv(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/tv/popular", {
+    language: tmdbLanguage(),
+    page: String(page),
+  });
+}
+
+export async function fetchUpcomingMovies(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/movie/upcoming", {
+    language: tmdbLanguage(),
+    region: CONFIG.COUNTRY,
+    page: String(page),
+  });
+}
+
+export async function fetchOnTheAirTv(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/tv/on_the_air", {
+    language: tmdbLanguage(),
+    page: String(page),
+  });
+}
+
+export async function fetchTopRatedMovies(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/movie/top_rated", {
+    language: tmdbLanguage(),
+    region: CONFIG.COUNTRY,
+    page: String(page),
+  });
+}
+
+export async function fetchTopRatedTv(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/tv/top_rated", {
+    language: tmdbLanguage(),
+    page: String(page),
+  });
+}
+
 // ─── Search ─────────────────────────────────────────────────────────────────
 
 export async function searchMulti(

@@ -1,12 +1,22 @@
 import { useState } from "react";
 import SearchBar from "../components/SearchBar";
 import NewReleases from "../components/NewReleases";
+import CategoryBar, { type BrowseCategory } from "../components/CategoryBar";
+import CategoryBrowse from "../components/CategoryBrowse";
 import TitleList from "../components/TitleList";
 import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
 
+const CATEGORY_LABELS: Record<BrowseCategory, string> = {
+  new_releases: "New Releases",
+  popular: "Popular",
+  upcoming: "Upcoming",
+  top_rated: "Top Rated",
+};
+
 export default function BrowsePage() {
+  const [category, setCategory] = useState<BrowseCategory>("new_releases");
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
@@ -48,6 +58,8 @@ export default function BrowsePage() {
     <div className="space-y-6">
       <SearchBar onSearch={handleSearch} onImdb={handleImdb} loading={searchLoading} />
 
+      <CategoryBar category={category} onCategoryChange={setCategory} />
+
       {searchError && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
           {searchError}
@@ -69,8 +81,12 @@ export default function BrowsePage() {
         </div>
       ) : (
         <div>
-          <h2 className="text-lg font-semibold mb-4">New Releases</h2>
-          <NewReleases />
+          <h2 className="text-lg font-semibold mb-4">{CATEGORY_LABELS[category]}</h2>
+          {category === "new_releases" ? (
+            <NewReleases />
+          ) : (
+            <CategoryBrowse key={category} category={category} />
+          )}
         </div>
       )}
     </div>

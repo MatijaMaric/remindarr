@@ -16,6 +16,7 @@ import episodesRoutes from "./routes/episodes";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import jobsRoutes from "./routes/jobs";
+import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import type { AppEnv } from "./types";
@@ -56,6 +57,10 @@ app.route("/api/titles", titlesRoutes);
 app.use("/api/search/*", optionalAuth);
 app.use("/api/search", optionalAuth);
 app.route("/api/search", searchRoutes);
+
+app.use("/api/browse/*", optionalAuth);
+app.use("/api/browse", optionalAuth);
+app.route("/api/browse", browseRoutes);
 
 app.use("/api/calendar/*", optionalAuth);
 app.use("/api/calendar", optionalAuth);

@@ -47,6 +47,18 @@ export async function searchTitles(query: string): Promise<{ titles: SearchTitle
   return fetchJson(`/search?q=${encodeURIComponent(query)}`);
 }
 
+export async function browseTitles(params: {
+  category: string;
+  type?: string;
+  page?: number;
+}): Promise<{ titles: SearchTitle[]; page: number; totalPages: number }> {
+  const qs = new URLSearchParams();
+  qs.set("category", params.category);
+  if (params.type) qs.set("type", params.type);
+  if (params.page) qs.set("page", String(params.page));
+  return fetchJson(`/browse?${qs}`);
+}
+
 export async function syncReleases(daysBack = 30, type?: string): Promise<{ success: boolean; count: number; message: string }> {
   return fetchJson("/sync", {
     method: "POST",
