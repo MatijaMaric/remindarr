@@ -1,4 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import * as Sentry from "@sentry/react";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "error-boundary" });
 
 interface Props {
   children: ReactNode;
@@ -17,7 +21,13 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, info.componentStack);
+    log.error("Unhandled render error", {
+      error,
+      componentStack: info.componentStack,
+    });
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: info.componentStack } },
+    });
   }
 
   handleReset = () => {
