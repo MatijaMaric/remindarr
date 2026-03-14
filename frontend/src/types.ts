@@ -297,6 +297,56 @@ export interface EpisodeDetailsResponse {
   country: string;
 }
 
+// ─── Person Types ────────────────────────────────────────────────────────────
+
+export interface PersonCastCredit {
+  id: number;
+  media_type: "movie" | "tv";
+  title?: string;
+  name?: string;
+  character: string;
+  release_date?: string;
+  first_air_date?: string;
+  poster_path: string | null;
+  vote_average: number;
+  vote_count: number;
+  popularity: number;
+}
+
+export interface PersonCrewCredit {
+  id: number;
+  media_type: "movie" | "tv";
+  title?: string;
+  name?: string;
+  job: string;
+  department: string;
+  release_date?: string;
+  first_air_date?: string;
+  poster_path: string | null;
+  vote_average: number;
+  vote_count: number;
+  popularity: number;
+}
+
+export interface PersonDetailsResponse {
+  person: {
+    id: number;
+    name: string;
+    biography: string;
+    birthday: string | null;
+    deathday: string | null;
+    place_of_birth: string | null;
+    known_for_department: string;
+    profile_path: string | null;
+    also_known_as: string[];
+    popularity: number;
+    combined_credits: {
+      cast: PersonCastCredit[];
+      crew: PersonCrewCredit[];
+    };
+  };
+}
+
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {
   return {

@@ -8,6 +8,7 @@ import {
   fetchShowFullDetails,
   fetchSeasonDetails,
   fetchEpisodeDetails,
+  fetchPersonDetails,
 } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import type { AppEnv } from "../types";
@@ -142,6 +143,25 @@ app.get("/show/:id/season/:season/episode/:episode", async (c) => {
     episodeNumber,
     country,
   });
+});
+
+app.get("/person/:personId", async (c) => {
+  const personId = Number(c.req.param("personId"));
+  if (!personId || isNaN(personId)) {
+    return c.json({ error: "Invalid person ID" }, 400);
+  }
+
+  if (!CONFIG.TMDB_API_KEY) {
+    return c.json({ error: "TMDB not configured" }, 503);
+  }
+
+  try {
+    const person = await fetchPersonDetails(personId);
+    return c.json({ person });
+  } catch (e) {
+    log.error("TMDB person fetch failed", { personId, err: e });
+    return c.json({ error: "Person not found" }, 404);
+  }
 });
 
 export default app;

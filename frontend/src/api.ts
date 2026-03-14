@@ -7,6 +7,7 @@ import type {
   ShowDetailsResponse,
   SeasonDetailsResponse,
   EpisodeDetailsResponse,
+  PersonDetailsResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -165,6 +166,10 @@ export async function getSeasonDetails(titleId: string, season: number): Promise
 
 export async function getEpisodeDetails(titleId: string, season: number, episode: number): Promise<EpisodeDetailsResponse> {
   return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}/episode/${episode}`);
+}
+
+export async function getPersonDetails(personId: number): Promise<PersonDetailsResponse> {
+  return fetchJson(`/details/person/${personId}`);
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────

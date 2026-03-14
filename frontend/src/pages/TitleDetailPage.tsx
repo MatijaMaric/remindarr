@@ -12,6 +12,7 @@ import type {
   SeasonSummary,
 } from "../types";
 import TrackButton from "../components/TrackButton";
+import PersonCard from "../components/PersonCard";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -52,24 +53,6 @@ function RatingBadge({ label, score, max = 10 }: { label: string; score: number 
       <span className="text-xl font-bold text-white">
         {score.toFixed(1)}<span className="text-sm text-gray-500">/{max}</span>
       </span>
-    </div>
-  );
-}
-
-function PersonCard({ name, role, profilePath }: { name: string; role: string; profilePath: string | null }) {
-  return (
-    <div className="flex-shrink-0 w-28 text-center">
-      <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-gray-800 mb-2">
-        {profilePath ? (
-          <img src={`${TMDB_IMG}/w185${profilePath}`} alt={name} className="w-full h-full object-cover" loading="lazy" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-600 text-2xl">
-            {name.charAt(0)}
-          </div>
-        )}
-      </div>
-      <p className="text-sm font-medium text-white truncate">{name}</p>
-      <p className="text-xs text-gray-400 truncate">{role}</p>
     </div>
   );
 }
@@ -346,7 +329,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
         <Section title="Cast">
           <div className="flex gap-4 overflow-x-auto pb-2">
             {cast.map((c: CastMember) => (
-              <PersonCard key={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
+              <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
           </div>
         </Section>
@@ -609,7 +592,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
         <Section title="Created By">
           <div className="flex gap-4">
             {creators.map((c) => (
-              <PersonCard key={c.id} name={c.name} role="Creator" profilePath={c.profile_path} />
+              <PersonCard key={c.id} id={c.id} name={c.name} role="Creator" profilePath={c.profile_path} />
             ))}
           </div>
         </Section>
@@ -619,7 +602,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
         <Section title="Cast">
           <div className="flex gap-4 overflow-x-auto pb-2">
             {cast.map((c: CastMember) => (
-              <PersonCard key={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
+              <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
           </div>
         </Section>
