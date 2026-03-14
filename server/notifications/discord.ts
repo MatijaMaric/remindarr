@@ -1,4 +1,5 @@
 import { CONFIG } from "../config";
+import { traceHttp } from "../tracing";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 const DISCORD_WEBHOOK_PATTERN =
@@ -31,21 +32,23 @@ export class DiscordProvider implements NotificationProvider {
     const embeds = this.buildEmbeds(content);
     if (embeds.length === 0) return;
 
-    const response = await fetch(config.webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: "Remindarr",
-        embeds,
-      }),
-    });
+    await traceHttp("POST", config.webhookUrl, async () => {
+      const response = await fetch(config.webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: "Remindarr",
+          embeds,
+        }),
+      });
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(
-        `Discord webhook failed (${response.status}): ${text}`
-      );
-    }
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(
+          `Discord webhook failed (${response.status}): ${text}`
+        );
+      }
+    });
   }
 
   private buildEmbeds(content: NotificationContent) {

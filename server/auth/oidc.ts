@@ -1,4 +1,5 @@
 import { getOidcConfig } from "../db/repository";
+import { traceHttp } from "../tracing";
 
 interface OidcDiscovery {
   authorization_endpoint: string;
@@ -18,7 +19,7 @@ export async function getDiscovery(): Promise<OidcDiscovery> {
   }
 
   const url = `${issuerUrl.replace(/\/$/, "")}/.well-known/openid-configuration`;
-  const res = await fetch(url);
+  const res = await traceHttp("GET", url, () => fetch(url));
   if (!res.ok) throw new Error(`OIDC discovery failed: ${res.status}`);
 
   const data = await res.json() as OidcDiscovery;
@@ -57,17 +58,19 @@ export async function exchangeCode(code: string, redirectUri: string) {
   const { clientId, clientSecret } = getOidcConfig();
   const discovery = await getDiscovery();
 
-  const res = await fetch(discovery.token_endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri,
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
+  const res = await traceHttp("POST", discovery.token_endpoint, () =>
+    fetch(discovery.token_endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
+    })
+  );
 
   if (!res.ok) {
     const err = await res.text();
@@ -87,9 +90,11 @@ export async function exchangeCode(code: string, redirectUri: string) {
   let userinfoClaims: Record<string, unknown> = {};
   if (discovery.userinfo_endpoint) {
     try {
-      const userinfoRes = await fetch(discovery.userinfo_endpoint, {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-      });
+      const userinfoRes = await traceHttp("GET", discovery.userinfo_endpoint, () =>
+        fetch(discovery.userinfo_endpoint, {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        })
+      );
       if (userinfoRes.ok) {
         userinfoClaims = await userinfoRes.json() as Record<string, unknown>;
       }
