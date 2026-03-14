@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { Hono } from "hono";
+import type { TmdbDiscoverMovieResult, TmdbDiscoverTvResult } from "../tmdb/types";
 
-const mockFetchPopularMovies = mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchPopularTv = mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchUpcomingMovies = mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchOnTheAirTv = mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchTopRatedMovies = mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchTopRatedTv = mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 }));
+const mockFetchPopularMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
+const mockFetchPopularTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
+const mockFetchUpcomingMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
+const mockFetchOnTheAirTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
+const mockFetchTopRatedMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
+const mockFetchTopRatedTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockFetchMovieDetails = mock(() => Promise.resolve({}));
 const mockFetchTvDetails = mock(() => Promise.resolve({}));
 const mockGetMovieGenres = mock(() => Promise.resolve(new Map([[28, "Action"]])));
