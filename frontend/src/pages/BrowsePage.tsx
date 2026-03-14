@@ -73,6 +73,18 @@ function useQueryParamArray(
   return [value, setValue];
 }
 
+export const FILTER_KEYS = ["type", "genre", "provider", "language", "daysBack"] as const;
+
+export function buildCategoryParams(prev: URLSearchParams, cat: BrowseCategory): URLSearchParams {
+  const next = new URLSearchParams(prev);
+  if (cat === "popular") {
+    next.delete("category");
+  } else {
+    next.set("category", cat);
+  }
+  return next;
+}
+
 export default function BrowsePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
@@ -86,27 +98,23 @@ export default function BrowsePage() {
 
   const setCategory = useCallback(
     (cat: BrowseCategory) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          if (cat === "popular") {
-            next.delete("category");
-          } else {
-            next.set("category", cat);
-          }
-          // Clear filters when switching categories
-          next.delete("type");
-          next.delete("genre");
-          next.delete("provider");
-          next.delete("language");
-          next.delete("daysBack");
-          return next;
-        },
-        { replace: true }
-      );
+      setSearchParams((prev) => buildCategoryParams(prev, cat), { replace: true });
     },
     [setSearchParams]
   );
+
+  const clearFilters = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        for (const key of FILTER_KEYS) {
+          next.delete(key);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  }, [setSearchParams]);
 
   const [type, setType] = useQueryParamArray(searchParams, setSearchParams, "type");
   const [genre, setGenre] = useQueryParamArray(searchParams, setSearchParams, "genre");
@@ -192,6 +200,7 @@ export default function BrowsePage() {
               onProviderChange={setProvider}
               language={language}
               onLanguageChange={setLanguage}
+              onClearFilters={clearFilters}
             />
           ) : (
             <CategoryBrowse
@@ -205,6 +214,7 @@ export default function BrowsePage() {
               onProviderChange={setProvider}
               language={language}
               onLanguageChange={setLanguage}
+              onClearFilters={clearFilters}
             />
           )}
         </div>

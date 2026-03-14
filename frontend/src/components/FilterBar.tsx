@@ -25,6 +25,7 @@ interface Props {
   language?: string[];
   onLanguageChange?: (language: string[]) => void;
   languages?: string[] | LanguageOption[];
+  onClearFilters?: () => void;
 }
 
 const TYPES = [
@@ -73,7 +74,14 @@ export default function FilterBar({
   language,
   onLanguageChange,
   languages,
+  onClearFilters,
 }: Props) {
+  const hasActiveFilters =
+    type.length > 0 ||
+    (daysBack !== undefined && daysBack !== 30 && showDaysFilter) ||
+    (genre && genre.length > 0) ||
+    (provider && provider.length > 0) ||
+    (language && language.length > 0);
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
@@ -145,6 +153,14 @@ export default function FilterBar({
           selected={language || []}
           onChange={onLanguageChange}
         />
+      )}
+      {onClearFilters && hasActiveFilters && (
+        <button
+          onClick={onClearFilters}
+          className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-colors cursor-pointer"
+        >
+          Clear filters
+        </button>
       )}
     </div>
   );
