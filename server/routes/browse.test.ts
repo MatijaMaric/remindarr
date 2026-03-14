@@ -1,7 +1,10 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
 import { Hono } from "hono";
 import type { TmdbDiscoverMovieResult, TmdbDiscoverTvResult } from "../tmdb/types";
 import type { AppEnv } from "../types";
+import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { upsertTitles, trackTitle, createUser } from "../db/repository";
+import { makeParsedTitle } from "../test-utils/fixtures";
 
 const mockFetchPopularMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockFetchPopularTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
@@ -13,10 +16,8 @@ const mockFetchMovieDetails = mock(() => Promise.resolve({}));
 const mockFetchTvDetails = mock(() => Promise.resolve({}));
 const mockGetMovieGenres = mock(() => Promise.resolve(new Map([[28, "Action"]])));
 const mockGetTvGenres = mock(() => Promise.resolve(new Map([[18, "Drama"]])));
-const realClient = await import("../tmdb/client");
-const realRepo = await import("../db/repository");
 
-const mockGetTrackedTitleIds = mock((...args: Parameters<typeof realRepo.getTrackedTitleIds>) => realRepo.getTrackedTitleIds(...args));
+const realClient = await import("../tmdb/client");
 
 mock.module("../tmdb/client", () => ({
   ...realClient,
@@ -33,17 +34,14 @@ mock.module("../tmdb/client", () => ({
   searchMulti: mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 })),
 }));
 
-mock.module("../db/repository", () => ({
-  ...realRepo,
-  getTrackedTitleIds: mockGetTrackedTitleIds,
-}));
-
 const { makeTmdbDiscoverMovie, makeTmdbDiscoverTv, makeTmdbMovieDetails, makeTmdbTvDetails } = await import("../test-utils/fixtures");
 const browseApp = (await import("./browse")).default;
 
 let app: Hono<AppEnv>;
 
 beforeEach(() => {
+  setupTestDb();
+
   app = new Hono<AppEnv>();
   app.route("/browse", browseApp);
 
@@ -55,7 +53,10 @@ beforeEach(() => {
   mockFetchTopRatedTv.mockClear();
   mockFetchMovieDetails.mockClear();
   mockFetchTvDetails.mockClear();
-  mockGetTrackedTitleIds.mockClear();
+});
+
+afterAll(() => {
+  teardownTestDb();
 });
 
 describe("GET /browse", () => {
@@ -196,20 +197,23 @@ describe("GET /browse", () => {
     const body = await res.json();
 
     expect(body.titles[0].isTracked).toBe(false);
-    expect(mockGetTrackedTitleIds).not.toHaveBeenCalled();
   });
 
   it("returns isTracked=true for tracked titles when user is authenticated", async () => {
+    // Set up real DB data for tracking
+    upsertTitles([makeParsedTitle({ id: "movie-555" })]);
+    const userId = createUser("testuser", "hash");
+    trackTitle("movie-555", userId);
+
     const movie = makeTmdbDiscoverMovie({ id: 555 });
     mockFetchPopularMovies.mockResolvedValueOnce({
       results: [movie], total_pages: 1, total_results: 1, page: 1,
     });
     mockFetchMovieDetails.mockResolvedValueOnce(makeTmdbMovieDetails({ id: 555 }));
-    mockGetTrackedTitleIds.mockReturnValueOnce(new Set(["movie-555"]));
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/browse/*", async (c, next) => {
-      c.set("user", { id: "user-1", username: "testuser", display_name: null, auth_provider: "test", is_admin: false });
+      c.set("user", { id: userId, username: "testuser", display_name: null, auth_provider: "test", is_admin: false });
       await next();
     });
     authedApp.route("/browse", browseApp);
@@ -218,6 +222,5 @@ describe("GET /browse", () => {
     const body = await res.json();
 
     expect(body.titles[0].isTracked).toBe(true);
-    expect(mockGetTrackedTitleIds).toHaveBeenCalledWith("user-1");
   });
 });
