@@ -68,6 +68,8 @@ interface Props {
   language: string[];
   onLanguageChange: (language: string[]) => void;
   onClearFilters?: () => void;
+  hideTracked?: boolean;
+  onHideTrackedChange?: (value: boolean) => void;
 }
 
 export default function CategoryBrowse({
@@ -81,6 +83,8 @@ export default function CategoryBrowse({
   language,
   onLanguageChange,
   onClearFilters,
+  hideTracked,
+  onHideTrackedChange,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,6 +181,8 @@ export default function CategoryBrowse({
         onLanguageChange={onLanguageChange}
         languages={availableLanguages}
         onClearFilters={onClearFilters}
+        hideTracked={hideTracked}
+        onHideTrackedChange={onHideTrackedChange}
       />
 
       {error && (
@@ -192,7 +198,7 @@ export default function CategoryBrowse({
           {totalResults > 0 && (
             <p className="text-sm text-gray-500">{totalResults} result{totalResults !== 1 ? "s" : ""}</p>
           )}
-          <TitleList titles={titles} emptyMessage="No titles found." />
+          <TitleList titles={hideTracked ? titles.filter((t) => !t.is_tracked) : titles} emptyMessage="No titles found." />
           {page < totalPages && (
             <div ref={sentinelRef} className="text-center py-4">
               {loadingMore && (

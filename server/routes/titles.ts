@@ -11,6 +11,7 @@ app.get("/", (c) => {
   const providerParam = c.req.query("provider") || "";
   const genreParam = c.req.query("genre") || "";
   const languageParam = c.req.query("language") || "";
+  const excludeTracked = c.req.query("excludeTracked") === "1";
   const limit = Number(c.req.query("limit")) || 100;
   const offset = Number(c.req.query("offset")) || 0;
 
@@ -19,7 +20,7 @@ app.get("/", (c) => {
   const genres = genreParam ? genreParam.split(",").filter(Boolean) : [];
   const languages = languageParam ? languageParam.split(",").filter(Boolean) : [];
 
-  const titles = getRecentTitles({ daysBack, objectTypes, providers, genres, languages, limit, offset }, user?.id);
+  const titles = getRecentTitles({ daysBack, objectTypes, providers, genres, languages, excludeTracked, limit, offset }, user?.id);
   return c.json({ titles, count: titles.length });
 });
 

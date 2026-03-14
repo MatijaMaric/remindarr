@@ -26,6 +26,8 @@ interface Props {
   onLanguageChange?: (language: string[]) => void;
   languages?: string[] | LanguageOption[];
   onClearFilters?: () => void;
+  hideTracked?: boolean;
+  onHideTrackedChange?: (value: boolean) => void;
 }
 
 const TYPES = [
@@ -75,6 +77,8 @@ export default function FilterBar({
   onLanguageChange,
   languages,
   onClearFilters,
+  hideTracked,
+  onHideTrackedChange,
 }: Props) {
   const hasActiveFilters =
     type.length > 0 ||
@@ -153,6 +157,18 @@ export default function FilterBar({
           selected={language || []}
           onChange={onLanguageChange}
         />
+      )}
+      {onHideTrackedChange && (
+        <button
+          onClick={() => onHideTrackedChange(!hideTracked)}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            hideTracked
+              ? "bg-blue-600 text-white"
+              : "bg-gray-800 text-gray-400 hover:text-white"
+          }`}
+        >
+          Hide Tracked
+        </button>
       )}
       {onClearFilters && hasActiveFilters && (
         <button

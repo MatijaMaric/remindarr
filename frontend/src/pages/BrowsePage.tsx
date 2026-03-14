@@ -126,6 +126,12 @@ export default function BrowsePage() {
     (days: number) => setDaysBackStr(String(days)),
     [setDaysBackStr]
   );
+  const [hideTrackedStr, setHideTrackedStr] = useQueryParam(searchParams, setSearchParams, "hideTracked");
+  const hideTracked = hideTrackedStr === "1";
+  const setHideTracked = useCallback(
+    (value: boolean) => setHideTrackedStr(value ? "1" : ""),
+    [setHideTrackedStr]
+  );
 
   async function handleSearch(query: string) {
     setSearchLoading(true);
@@ -201,6 +207,8 @@ export default function BrowsePage() {
               language={language}
               onLanguageChange={setLanguage}
               onClearFilters={clearFilters}
+              hideTracked={hideTracked}
+              onHideTrackedChange={setHideTracked}
             />
           ) : (
             <CategoryBrowse
@@ -215,6 +223,8 @@ export default function BrowsePage() {
               language={language}
               onLanguageChange={setLanguage}
               onClearFilters={clearFilters}
+              hideTracked={hideTracked}
+              onHideTrackedChange={setHideTracked}
             />
           )}
         </div>

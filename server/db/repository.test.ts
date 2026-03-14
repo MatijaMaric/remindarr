@@ -214,6 +214,40 @@ describe("getRecentTitles", () => {
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Korean Action");
   });
+
+  it("excludes tracked titles when excludeTracked is true", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Tracked Movie", releaseDate: "2025-01-01" }),
+      makeParsedTitle({ id: "movie-2", title: "Untracked Movie", releaseDate: "2025-01-02" }),
+    ]);
+    const userId = createUser("testuser", "hash");
+    trackTitle("movie-1", userId);
+
+    const results = getRecentTitles({ daysBack: 0, excludeTracked: true }, userId);
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("Untracked Movie");
+  });
+
+  it("includes tracked titles when excludeTracked is false", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Tracked Movie", releaseDate: "2025-01-01" }),
+      makeParsedTitle({ id: "movie-2", title: "Untracked Movie", releaseDate: "2025-01-02" }),
+    ]);
+    const userId = createUser("testuser", "hash");
+    trackTitle("movie-1", userId);
+
+    const results = getRecentTitles({ daysBack: 0, excludeTracked: false }, userId);
+    expect(results).toHaveLength(2);
+  });
+
+  it("ignores excludeTracked when no userId is provided", () => {
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" }),
+      makeParsedTitle({ id: "movie-2", title: "Movie 2", releaseDate: "2025-01-02" }),
+    ]);
+    const results = getRecentTitles({ daysBack: 0, excludeTracked: true });
+    expect(results).toHaveLength(2);
+  });
 });
 
 describe("getGenres", () => {

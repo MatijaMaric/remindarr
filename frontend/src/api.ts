@@ -34,6 +34,7 @@ export async function getTitles(params: {
   provider?: string;
   genre?: string;
   language?: string;
+  excludeTracked?: boolean;
   limit?: number;
   offset?: number;
 } = {}): Promise<{ titles: Title[]; count: number }> {
@@ -43,6 +44,7 @@ export async function getTitles(params: {
   if (params.provider) qs.set("provider", params.provider);
   if (params.genre) qs.set("genre", params.genre);
   if (params.language) qs.set("language", params.language);
+  if (params.excludeTracked) qs.set("excludeTracked", "1");
   if (params.limit) qs.set("limit", String(params.limit));
   if (params.offset) qs.set("offset", String(params.offset));
   return fetchJson(`/titles?${qs}`);
