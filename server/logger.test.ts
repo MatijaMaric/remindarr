@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { Logger } from "./logger";
+import { Hono } from "hono";
+import { Logger, requestLogger } from "./logger";
 
 describe("Logger", () => {
   let logSpy: ReturnType<typeof spyOn>;
@@ -121,5 +122,109 @@ describe("Logger", () => {
     expect(logSpy).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledTimes(1);
     expect(lastError().msg).toBe("visible");
+  });
+
+  it("handles circular references gracefully", () => {
+    const log = new Logger("debug");
+    const circular: Record<string, unknown> = { a: 1 };
+    circular.self = circular;
+    log.info("circular", circular);
+    const entry = lastLog();
+    expect(entry.serializationError).toBe("Failed to serialize log data");
+    expect(entry.msg).toBe("circular");
+  });
+
+  it("per-call data overrides bindings with same key", () => {
+    const log = new Logger("debug");
+    const child = log.child({ module: "tmdb", op: "default" });
+    child.info("override", { op: "sync" });
+    const entry = lastLog();
+    expect(entry.module).toBe("tmdb");
+    expect(entry.op).toBe("sync");
+  });
+
+  it("handles data with non-Error objects unchanged", () => {
+    const log = new Logger("debug");
+    log.info("mixed", { count: 5, name: "test", nested: { a: 1 } });
+    const entry = lastLog();
+    expect(entry.count).toBe(5);
+    expect(entry.name).toBe("test");
+    expect(entry.nested).toEqual({ a: 1 });
+  });
+});
+
+describe("requestLogger", () => {
+  let logSpy: ReturnType<typeof spyOn>;
+  let errorSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    logSpy = spyOn(console, "log").mockImplementation(() => {});
+    errorSpy = spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  function parsedLog(): Record<string, unknown> {
+    const calls = logSpy.mock.calls;
+    for (let i = calls.length - 1; i >= 0; i--) {
+      const parsed = JSON.parse(calls[i][0] as string);
+      if (parsed.module === "http") return parsed;
+    }
+    throw new Error("No http log found");
+  }
+
+  function parsedError(): Record<string, unknown> {
+    const calls = errorSpy.mock.calls;
+    for (let i = calls.length - 1; i >= 0; i--) {
+      const parsed = JSON.parse(calls[i][0] as string);
+      if (parsed.module === "http") return parsed;
+    }
+    throw new Error("No http error log found");
+  }
+
+  it("logs successful requests at info level", async () => {
+    const app = new Hono();
+    app.use("*", requestLogger());
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    const res = await app.request("/test");
+    expect(res.status).toBe(200);
+
+    const entry = parsedLog();
+    expect(entry.level).toBe("info");
+    expect(entry.module).toBe("http");
+    expect(entry.msg).toBe("GET /test");
+    expect(entry.status).toBe(200);
+    expect(typeof entry.duration).toBe("number");
+  });
+
+  it("logs 404 responses at warn level", async () => {
+    const app = new Hono();
+    app.use("*", requestLogger());
+    app.get("/exists", (c) => c.json({ ok: true }));
+    app.get("/missing", (c) => c.json({ error: "not found" }, 404));
+
+    const res = await app.request("/missing");
+    expect(res.status).toBe(404);
+
+    const entry = parsedError();
+    expect(entry.level).toBe("warn");
+    expect(entry.status).toBe(404);
+  });
+
+  it("logs 500 responses at error level", async () => {
+    const app = new Hono();
+    app.use("*", requestLogger());
+    app.get("/fail", (c) => c.json({ error: "internal" }, 500));
+
+    const res = await app.request("/fail");
+    expect(res.status).toBe(500);
+
+    const entry = parsedError();
+    expect(entry.level).toBe("error");
+    expect(entry.status).toBe(500);
   });
 });
