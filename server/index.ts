@@ -22,7 +22,7 @@ import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import type { AppEnv } from "./types";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
@@ -43,9 +43,10 @@ if (getUserCount() === 0) {
 
 const app = new Hono<AppEnv>();
 
-// Sentry error handler
+// Sentry error handler (captures exceptions + creates request spans)
+Sentry.setupHonoErrorHandler(app);
+
 app.onError((err, c) => {
-  Sentry.captureException(err);
   if (err instanceof HTTPException) {
     return err.getResponse();
   }

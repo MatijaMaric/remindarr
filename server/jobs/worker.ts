@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "jobs" });
@@ -42,13 +42,17 @@ export async function processJobs() {
       : undefined;
 
     try {
-      await Sentry.withMonitor(
-        name,
-        async () => {
-          await handler(job);
-        },
-        monitorConfig
-      );
+      if (cronExpr) {
+        await Sentry.withMonitor(
+          name,
+          async () => {
+            await handler(job);
+          },
+          monitorConfig
+        );
+      } else {
+        await handler(job);
+      }
       completeJob(job.id);
       log.info("Completed job", { name, jobId: job.id });
     } catch (err) {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 
 describe("instrument", () => {
   it("captureException is callable and does not throw without DSN", () => {
@@ -11,6 +11,8 @@ describe("instrument", () => {
   it("Sentry exports expected functions", () => {
     expect(typeof Sentry.captureException).toBe("function");
     expect(typeof Sentry.init).toBe("function");
+    expect(typeof Sentry.honoIntegration).toBe("function");
+    expect(typeof Sentry.setupHonoErrorHandler).toBe("function");
   });
 });
 
