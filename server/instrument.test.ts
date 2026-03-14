@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 
 describe("instrument", () => {
   it("captureException is callable and does not throw without DSN", () => {

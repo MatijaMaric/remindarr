@@ -22,7 +22,7 @@ import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import type { AppEnv } from "./types";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
