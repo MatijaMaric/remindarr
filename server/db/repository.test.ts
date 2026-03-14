@@ -168,7 +168,7 @@ describe("getRecentTitles", () => {
       makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: "2025-01-01" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, objectType: "SHOW" });
+    const results = getRecentTitles({ daysBack: 0, objectTypes: ["SHOW"] });
     expect(results).toHaveLength(1);
     expect(results[0].object_type).toBe("SHOW");
   });
@@ -189,7 +189,7 @@ describe("getRecentTitles", () => {
       makeParsedTitle({ id: "movie-1", genres: ["Action", "Drama"], releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: "2025-01-02" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, genre: "Comedy" });
+    const results = getRecentTitles({ daysBack: 0, genres: ["Comedy"] });
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Comedy Film");
   });
@@ -199,7 +199,7 @@ describe("getRecentTitles", () => {
       makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: "2025-01-02" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, language: "ja" });
+    const results = getRecentTitles({ daysBack: 0, languages: ["ja"] });
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Japanese Movie");
   });
@@ -210,7 +210,7 @@ describe("getRecentTitles", () => {
       makeParsedTitle({ id: "movie-2", title: "Korean Action", genres: ["Action"], originalLanguage: "ko", releaseDate: "2025-01-02" }),
       makeParsedTitle({ id: "movie-3", title: "Korean Drama", genres: ["Drama"], originalLanguage: "ko", releaseDate: "2025-01-03" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, genre: "Action", language: "ko" });
+    const results = getRecentTitles({ daysBack: 0, genres: ["Action"], languages: ["ko"] });
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Korean Action");
   });

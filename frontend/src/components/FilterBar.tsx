@@ -1,3 +1,5 @@
+import MultiSelectDropdown from "./MultiSelectDropdown";
+
 interface ProviderOption {
   id: number;
   name: string;
@@ -9,24 +11,23 @@ interface LanguageOption {
 }
 
 interface Props {
-  type: string;
-  onTypeChange: (type: string) => void;
+  type: string[];
+  onTypeChange: (type: string[]) => void;
   daysBack?: number;
   onDaysBackChange?: (days: number) => void;
   showDaysFilter?: boolean;
-  genre?: string;
-  onGenreChange?: (genre: string) => void;
+  genre?: string[];
+  onGenreChange?: (genre: string[]) => void;
   genres?: string[];
-  provider?: string;
-  onProviderChange?: (provider: string) => void;
+  provider?: string[];
+  onProviderChange?: (provider: string[]) => void;
   providers?: ProviderOption[];
-  language?: string;
-  onLanguageChange?: (language: string) => void;
+  language?: string[];
+  onLanguageChange?: (language: string[]) => void;
   languages?: string[] | LanguageOption[];
 }
 
 const TYPES = [
-  { value: "", label: "All" },
   { value: "MOVIE", label: "Movies" },
   { value: "SHOW", label: "Shows" },
 ];
@@ -38,9 +39,6 @@ const DAYS = [
   { value: 90, label: "90d" },
 ];
 
-const selectClass =
-  "bg-gray-800 text-gray-300 text-xs rounded-lg px-3 py-1.5 border-0 outline-none cursor-pointer appearance-none hover:text-white focus:ring-1 focus:ring-gray-600";
-
 function languageLabel(code: string): string {
   try {
     const names = new Intl.DisplayNames(["en"], { type: "language" });
@@ -48,6 +46,16 @@ function languageLabel(code: string): string {
   } catch {
     return code;
   }
+}
+
+function toggleType(current: string[], value: string): string[] {
+  if (current.includes(value)) {
+    return current.filter((v) => v !== value);
+  }
+  const next = [...current, value];
+  // If all types selected, normalize to empty (= all)
+  if (TYPES.every((t) => next.includes(t.value))) return [];
+  return next;
 }
 
 export default function FilterBar({
@@ -69,12 +77,22 @@ export default function FilterBar({
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
+        <button
+          onClick={() => onTypeChange([])}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            type.length === 0
+              ? "bg-gray-700 text-white"
+              : "text-gray-400 hover:text-white"
+          }`}
+        >
+          All
+        </button>
         {TYPES.map((t) => (
           <button
             key={t.value}
-            onClick={() => onTypeChange(t.value)}
+            onClick={() => onTypeChange(toggleType(type, t.value))}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              type === t.value
+              type.includes(t.value)
                 ? "bg-gray-700 text-white"
                 : "text-gray-400 hover:text-white"
             }`}
@@ -101,52 +119,32 @@ export default function FilterBar({
         </div>
       )}
       {genres && genres.length > 0 && onGenreChange && (
-        <select
-          value={genre || ""}
-          onChange={(e) => onGenreChange(e.target.value)}
-          className={selectClass}
-        >
-          <option value="">All Genres</option>
-          {genres.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
+        <MultiSelectDropdown
+          label="All Genres"
+          options={genres.map((g) => ({ value: g, label: g }))}
+          selected={genre || []}
+          onChange={onGenreChange}
+        />
       )}
       {providers && providers.length > 0 && onProviderChange && (
-        <select
-          value={provider || ""}
-          onChange={(e) => onProviderChange(e.target.value)}
-          className={selectClass}
-        >
-          <option value="">All Platforms</option>
-          {providers.map((p) => (
-            <option key={p.id} value={String(p.id)}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        <MultiSelectDropdown
+          label="All Platforms"
+          options={providers.map((p) => ({ value: String(p.id), label: p.name }))}
+          selected={provider || []}
+          onChange={onProviderChange}
+        />
       )}
       {languages && languages.length > 0 && onLanguageChange && (
-        <select
-          value={language || ""}
-          onChange={(e) => onLanguageChange(e.target.value)}
-          className={selectClass}
-        >
-          <option value="">All Languages</option>
-          {languages.map((l) =>
-            typeof l === "string" ? (
-              <option key={l} value={l}>
-                {languageLabel(l)}
-              </option>
-            ) : (
-              <option key={l.code} value={l.code}>
-                {l.name}
-              </option>
-            )
+        <MultiSelectDropdown
+          label="All Languages"
+          options={(languages as (string | LanguageOption)[]).map((l) =>
+            typeof l === "string"
+              ? { value: l, label: languageLabel(l) }
+              : { value: l.code, label: l.name }
           )}
-        </select>
+          selected={language || []}
+          onChange={onLanguageChange}
+        />
       )}
     </div>
   );

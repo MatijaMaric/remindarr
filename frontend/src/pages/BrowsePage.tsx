@@ -46,6 +46,33 @@ function useQueryParam(
   return [value, setValue];
 }
 
+function useQueryParamArray(
+  searchParams: URLSearchParams,
+  setSearchParams: ReturnType<typeof useSearchParams>[1],
+  key: string
+): [string[], (values: string[]) => void] {
+  const raw = searchParams.get(key) || "";
+  const value = raw ? raw.split(",") : [];
+  const setValue = useCallback(
+    (newValues: string[]) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (newValues.length > 0) {
+            next.set(key, newValues.join(","));
+          } else {
+            next.delete(key);
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams, key]
+  );
+  return [value, setValue];
+}
+
 export default function BrowsePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
@@ -81,10 +108,10 @@ export default function BrowsePage() {
     [setSearchParams]
   );
 
-  const [type, setType] = useQueryParam(searchParams, setSearchParams, "type");
-  const [genre, setGenre] = useQueryParam(searchParams, setSearchParams, "genre");
-  const [provider, setProvider] = useQueryParam(searchParams, setSearchParams, "provider");
-  const [language, setLanguage] = useQueryParam(searchParams, setSearchParams, "language");
+  const [type, setType] = useQueryParamArray(searchParams, setSearchParams, "type");
+  const [genre, setGenre] = useQueryParamArray(searchParams, setSearchParams, "genre");
+  const [provider, setProvider] = useQueryParamArray(searchParams, setSearchParams, "provider");
+  const [language, setLanguage] = useQueryParamArray(searchParams, setSearchParams, "language");
   const [daysBackStr, setDaysBackStr] = useQueryParam(searchParams, setSearchParams, "daysBack", "30");
   const daysBack = parseInt(daysBackStr, 10) || 30;
   const setDaysBack = useCallback(
