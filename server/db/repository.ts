@@ -61,6 +61,7 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
           runtimeMinutes: t.runtimeMinutes,
           shortDescription: t.shortDescription,
           genres: JSON.stringify(t.genres),
+          originalLanguage: t.originalLanguage,
           imdbId: t.imdbId,
           tmdbId: t.tmdbId,
           posterUrl: t.posterUrl,
@@ -78,6 +79,7 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
             runtimeMinutes: sql`excluded.runtime_minutes`,
             shortDescription: sql`excluded.short_description`,
             genres: sql`excluded.genres`,
+            originalLanguage: sql`excluded.original_language`,
             imdbId: sql`excluded.imdb_id`,
             tmdbId: sql`excluded.tmdb_id`,
             posterUrl: sql`excluded.poster_url`,
@@ -152,6 +154,7 @@ export function getTitleById(titleId: string, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
+      original_language: titles.originalLanguage,
       tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
@@ -180,13 +183,15 @@ export interface TitleFilters {
   daysBack?: number;
   objectType?: string;
   provider?: string;
+  genre?: string;
+  language?: string;
   limit?: number;
   offset?: number;
 }
 
 export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
   const db = getDb();
-  const { daysBack = 30, objectType, provider, limit = 100, offset = 0 } = filters;
+  const { daysBack = 30, objectType, provider, genre, language, limit = 100, offset = 0 } = filters;
 
   const conditions: ReturnType<typeof eq>[] = [];
 
@@ -212,6 +217,12 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       )
     );
   }
+  if (genre) {
+    conditions.push(like(titles.genres, `%"${genre}"%`));
+  }
+  if (language) {
+    conditions.push(eq(titles.originalLanguage, language));
+  }
 
   const trackedSubquery = userId
     ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
@@ -232,6 +243,7 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
+      original_language: titles.originalLanguage,
       tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
@@ -298,6 +310,16 @@ export function untrackTitle(titleId: string, userId: string) {
     .run();
 }
 
+export function getTrackedTitleIds(userId: string): Set<string> {
+  const db = getDb();
+  const rows = db
+    .select({ titleId: tracked.titleId })
+    .from(tracked)
+    .where(eq(tracked.userId, userId))
+    .all();
+  return new Set(rows.map((r) => r.titleId));
+}
+
 export function getTrackedTitles(userId: string) {
   const db = getDb();
   const rows = db
@@ -315,6 +337,7 @@ export function getTrackedTitles(userId: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
+      original_language: titles.originalLanguage,
       tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
@@ -363,6 +386,7 @@ export function searchLocalTitles(query: string, limit = 50, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
+      original_language: titles.originalLanguage,
       tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
@@ -461,6 +485,7 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
       age_certification: titles.ageCertification,
+      original_language: titles.originalLanguage,
       tmdb_url: titles.tmdbUrl,
       updated_at: titles.updatedAt,
       imdb_score: scores.imdbScore,
@@ -494,6 +519,28 @@ export function getProviders() {
     .from(providers)
     .orderBy(asc(providers.name))
     .all();
+}
+
+export function getGenres(): string[] {
+  const raw = getRawDb();
+  const rows = raw.prepare(
+    "SELECT DISTINCT genres FROM titles WHERE genres IS NOT NULL AND genres != '[]'"
+  ).all() as { genres: string }[];
+
+  const genreSet = new Set<string>();
+  for (const row of rows) {
+    const parsed = JSON.parse(row.genres) as string[];
+    for (const g of parsed) genreSet.add(g);
+  }
+  return Array.from(genreSet).sort();
+}
+
+export function getLanguages(): string[] {
+  const raw = getRawDb();
+  const rows = raw.prepare(
+    "SELECT DISTINCT original_language FROM titles WHERE original_language IS NOT NULL ORDER BY original_language"
+  ).all() as { original_language: string }[];
+  return rows.map((r) => r.original_language);
 }
 
 // ─── Episodes ────────────────────────────────────────────────────────────────

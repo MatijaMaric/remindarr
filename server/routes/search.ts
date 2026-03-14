@@ -1,8 +1,11 @@
 import { Hono } from "hono";
 import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGenres } from "../tmdb/client";
 import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
+import { getTrackedTitleIds } from "../db/repository";
 
-const app = new Hono();
+import type { AppEnv } from "../types";
+
+const app = new Hono<AppEnv>();
 
 app.get("/", async (c) => {
   const query = c.req.query("q");
@@ -41,7 +44,14 @@ app.get("/", async (c) => {
       })
     );
 
-    return c.json({ titles, count: titles.length });
+    const user = c.get("user");
+    const trackedIds = user ? getTrackedTitleIds(user.id) : new Set<string>();
+    const titlesWithTracked = titles.map((t) => ({
+      ...t,
+      isTracked: trackedIds.has(t.id),
+    }));
+
+    return c.json({ titles: titlesWithTracked, count: titlesWithTracked.length });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }

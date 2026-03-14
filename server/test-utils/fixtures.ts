@@ -12,6 +12,7 @@ export function makeParsedTitle(overrides?: Partial<ParsedTitle>): ParsedTitle {
     runtimeMinutes: 120,
     shortDescription: "A test movie",
     genres: ["Action", "Drama"],
+    originalLanguage: "en",
     imdbId: "tt1234567",
     tmdbId: "123",
     posterUrl: "https://image.tmdb.org/t/p/w342/test.jpg",

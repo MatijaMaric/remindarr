@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import * as api from "../api";
-import type { Title } from "../types";
+import type { Title, Provider } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 
@@ -10,20 +10,43 @@ export default function NewReleases() {
   const [syncing, setSyncing] = useState(false);
   const [type, setType] = useState("");
   const [daysBack, setDaysBack] = useState(30);
+  const [genre, setGenre] = useState("");
+  const [provider, setProvider] = useState("");
+  const [language, setLanguage] = useState("");
   const [error, setError] = useState("");
+
+  const [genres, setGenres] = useState<string[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
+
+  useEffect(() => {
+    Promise.all([api.getGenres(), api.getProviders(), api.getLanguages()]).then(
+      ([g, p, l]) => {
+        setGenres(g.genres);
+        setProviders(p.providers);
+        setLanguages(l.languages);
+      }
+    );
+  }, []);
 
   const fetchTitles = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.getTitles({ daysBack, type: type || undefined });
+      const res = await api.getTitles({
+        daysBack,
+        type: type || undefined,
+        genre: genre || undefined,
+        provider: provider || undefined,
+        language: language || undefined,
+      });
       setTitles(res.titles);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [daysBack, type]);
+  }, [daysBack, type, genre, provider, language]);
 
   useEffect(() => {
     fetchTitles();
@@ -50,6 +73,15 @@ export default function NewReleases() {
           onTypeChange={setType}
           daysBack={daysBack}
           onDaysBackChange={setDaysBack}
+          genre={genre}
+          onGenreChange={setGenre}
+          genres={genres}
+          provider={provider}
+          onProviderChange={setProvider}
+          providers={providers}
+          language={language}
+          onLanguageChange={setLanguage}
+          languages={languages}
         />
         <button
           onClick={handleSync}
