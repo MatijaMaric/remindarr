@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router";
+import { Maximize2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { Episode, Offer } from "../types";
@@ -600,7 +601,17 @@ export default function HomePage() {
       {/* Unwatched Episodes */}
       {unwatched.length > 0 && (
         <section>
-          <h2 className="text-xl font-bold text-white mb-4">Unwatched</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-xl font-bold text-white">Unwatched</h2>
+            <Link
+              to="/reels"
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-400 transition-colors"
+              title="Full-screen reels view"
+            >
+              <Maximize2 size={14} />
+              Reels
+            </Link>
+          </div>
           <UnwatchedCarousel>
             {Array.from(unwatchedByShowAndSeason.entries()).map(([titleId, seasonMap]) => (
               <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
