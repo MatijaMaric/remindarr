@@ -21,8 +21,11 @@ bun run start            # Runs production server
 bun run sync                              # Default sync
 bun run server/cli/sync.ts [daysBack] [type]  # CLI with args
 
+# CI check (type check + tests — run before committing)
+bun run check                # Full CI pipeline: server tsc + frontend tsc + tests
+
 # Testing
-bun test                     # Run all tests
+bun test                     # Run all tests (no type check)
 bun test server/             # Server tests only
 bun test frontend/src/       # Frontend tests only
 bun test --watch             # Watch mode
@@ -39,7 +42,7 @@ docker compose up --build
 - Use `bun:test` (built-in test runner) — no external test frameworks
 - DB tests use in-memory SQLite via `server/test-utils/setup.ts` (`setupTestDb()` / `teardownTestDb()`)
 - External APIs (TMDB, OIDC) must be mocked — never make real HTTP calls in tests
-- Run `bun test` before committing to ensure all tests pass
+- **Run `bun run check` before committing** — this runs the full CI pipeline locally (server type check, frontend type check, and all tests). Do not use `bun test` alone as it skips type checking.
 
 ## Architecture
 
