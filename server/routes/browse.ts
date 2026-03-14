@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import {
   fetchPopularMovies,
   fetchPopularTv,
-  fetchUpcomingMovies,
+  discoverMovies,
   fetchOnTheAirTv,
   fetchTopRatedMovies,
   fetchTopRatedTv,
@@ -24,9 +24,25 @@ import type { AppEnv } from "../types";
 const VALID_CATEGORIES = ["popular", "upcoming", "top_rated"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
 
+function formatDate(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function fetchUpcomingMoviesDiscover(page: number) {
+  const today = new Date();
+  const sixMonthsLater = new Date(today);
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  return discoverMovies({
+    releaseDateGte: formatDate(today),
+    releaseDateLte: formatDate(sixMonthsLater),
+    sortBy: "release_date.asc",
+    page,
+  });
+}
+
 const movieFetchers: Record<Category, (page: number) => ReturnType<typeof fetchPopularMovies>> = {
   popular: fetchPopularMovies,
-  upcoming: fetchUpcomingMovies,
+  upcoming: fetchUpcomingMoviesDiscover,
   top_rated: fetchTopRatedMovies,
 };
 
