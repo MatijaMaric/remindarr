@@ -4,15 +4,34 @@ import type { Title, Provider } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 
-export default function NewReleases() {
+interface Props {
+  type: string;
+  onTypeChange: (type: string) => void;
+  daysBack: number;
+  onDaysBackChange: (days: number) => void;
+  genre: string;
+  onGenreChange: (genre: string) => void;
+  provider: string;
+  onProviderChange: (provider: string) => void;
+  language: string;
+  onLanguageChange: (language: string) => void;
+}
+
+export default function NewReleases({
+  type,
+  onTypeChange,
+  daysBack,
+  onDaysBackChange,
+  genre,
+  onGenreChange,
+  provider,
+  onProviderChange,
+  language,
+  onLanguageChange,
+}: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [type, setType] = useState("");
-  const [daysBack, setDaysBack] = useState(30);
-  const [genre, setGenre] = useState("");
-  const [provider, setProvider] = useState("");
-  const [language, setLanguage] = useState("");
   const [error, setError] = useState("");
 
   const [genres, setGenres] = useState<string[]>([]);
@@ -70,17 +89,17 @@ export default function NewReleases() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <FilterBar
           type={type}
-          onTypeChange={setType}
+          onTypeChange={onTypeChange}
           daysBack={daysBack}
-          onDaysBackChange={setDaysBack}
+          onDaysBackChange={onDaysBackChange}
           genre={genre}
-          onGenreChange={setGenre}
+          onGenreChange={onGenreChange}
           genres={genres}
           provider={provider}
-          onProviderChange={setProvider}
+          onProviderChange={onProviderChange}
           providers={providers}
           language={language}
-          onLanguageChange={setLanguage}
+          onLanguageChange={onLanguageChange}
           languages={languages}
         />
         <button

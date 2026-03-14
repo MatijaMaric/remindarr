@@ -102,22 +102,33 @@ export async function fetchEpisodeDetails(
 
 // ─── Discover endpoints ─────────────────────────────────────────────────────
 
+export interface DiscoverFilters {
+  withGenres?: string;       // comma-separated TMDB genre IDs
+  withProviders?: string;    // comma-separated TMDB provider IDs
+  withOriginalLanguage?: string; // ISO 639-1 language code
+}
+
 export async function discoverMovies(options: {
   releaseDateGte?: string;
   releaseDateLte?: string;
   page?: number;
   sortBy?: string;
+  voteCountGte?: string;
+  filters?: DiscoverFilters;
 }): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
   const params: Record<string, string> = {
     language: tmdbLanguage(),
     region: CONFIG.COUNTRY,
     sort_by: options.sortBy || "release_date.desc",
     page: String(options.page || 1),
-    "vote_count.gte": "0",
+    "vote_count.gte": options.voteCountGte || "0",
     watch_region: CONFIG.COUNTRY,
   };
   if (options.releaseDateGte) params["release_date.gte"] = options.releaseDateGte;
   if (options.releaseDateLte) params["release_date.lte"] = options.releaseDateLte;
+  if (options.filters?.withGenres) params["with_genres"] = options.filters.withGenres;
+  if (options.filters?.withProviders) params["with_watch_providers"] = options.filters.withProviders;
+  if (options.filters?.withOriginalLanguage) params["with_original_language"] = options.filters.withOriginalLanguage;
   return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/discover/movie", params);
 }
 
@@ -125,15 +136,22 @@ export async function discoverTv(options: {
   firstAirDateGte?: string;
   firstAirDateLte?: string;
   page?: number;
+  sortBy?: string;
+  voteCountGte?: string;
+  filters?: DiscoverFilters;
 }): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
   const params: Record<string, string> = {
     language: tmdbLanguage(),
     watch_region: CONFIG.COUNTRY,
-    sort_by: "first_air_date.desc",
+    sort_by: options.sortBy || "first_air_date.desc",
     page: String(options.page || 1),
   };
+  if (options.voteCountGte) params["vote_count.gte"] = options.voteCountGte;
   if (options.firstAirDateGte) params["first_air_date.gte"] = options.firstAirDateGte;
   if (options.firstAirDateLte) params["first_air_date.lte"] = options.firstAirDateLte;
+  if (options.filters?.withGenres) params["with_genres"] = options.filters.withGenres;
+  if (options.filters?.withProviders) params["with_watch_providers"] = options.filters.withProviders;
+  if (options.filters?.withOriginalLanguage) params["with_original_language"] = options.filters.withOriginalLanguage;
   return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/discover/tv", params);
 }
 

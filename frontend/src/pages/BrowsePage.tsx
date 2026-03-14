@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback } from "react";
+import { useSearchParams } from "react-router";
 import SearchBar from "../components/SearchBar";
 import NewReleases from "../components/NewReleases";
 import CategoryBar, { type BrowseCategory } from "../components/CategoryBar";
@@ -7,6 +8,9 @@ import TitleList from "../components/TitleList";
 import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
+import { useState } from "react";
+
+const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
 
 const CATEGORY_LABELS: Record<BrowseCategory, string> = {
   new_releases: "New Releases",
@@ -15,11 +19,78 @@ const CATEGORY_LABELS: Record<BrowseCategory, string> = {
   top_rated: "Top Rated",
 };
 
+function useQueryParam(
+  searchParams: URLSearchParams,
+  setSearchParams: ReturnType<typeof useSearchParams>[1],
+  key: string,
+  defaultValue = ""
+): [string, (value: string) => void] {
+  const value = searchParams.get(key) || defaultValue;
+  const setValue = useCallback(
+    (newValue: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (newValue && newValue !== defaultValue) {
+            next.set(key, newValue);
+          } else {
+            next.delete(key);
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams, key, defaultValue]
+  );
+  return [value, setValue];
+}
+
 export default function BrowsePage() {
-  const [category, setCategory] = useState<BrowseCategory>("popular");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+
+  const rawCategory = searchParams.get("category") || "popular";
+  const category: BrowseCategory = VALID_CATEGORIES.includes(rawCategory as BrowseCategory)
+    ? (rawCategory as BrowseCategory)
+    : "popular";
+
+  const setCategory = useCallback(
+    (cat: BrowseCategory) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (cat === "popular") {
+            next.delete("category");
+          } else {
+            next.set("category", cat);
+          }
+          // Clear filters when switching categories
+          next.delete("type");
+          next.delete("genre");
+          next.delete("provider");
+          next.delete("language");
+          next.delete("daysBack");
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  const [type, setType] = useQueryParam(searchParams, setSearchParams, "type");
+  const [genre, setGenre] = useQueryParam(searchParams, setSearchParams, "genre");
+  const [provider, setProvider] = useQueryParam(searchParams, setSearchParams, "provider");
+  const [language, setLanguage] = useQueryParam(searchParams, setSearchParams, "language");
+  const [daysBackStr, setDaysBackStr] = useQueryParam(searchParams, setSearchParams, "daysBack", "30");
+  const daysBack = parseInt(daysBackStr, 10) || 30;
+  const setDaysBack = useCallback(
+    (days: number) => setDaysBackStr(String(days)),
+    [setDaysBackStr]
+  );
 
   async function handleSearch(query: string) {
     setSearchLoading(true);
@@ -83,9 +154,31 @@ export default function BrowsePage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">{CATEGORY_LABELS[category]}</h2>
           {category === "new_releases" ? (
-            <NewReleases />
+            <NewReleases
+              type={type}
+              onTypeChange={setType}
+              daysBack={daysBack}
+              onDaysBackChange={setDaysBack}
+              genre={genre}
+              onGenreChange={setGenre}
+              provider={provider}
+              onProviderChange={setProvider}
+              language={language}
+              onLanguageChange={setLanguage}
+            />
           ) : (
-            <CategoryBrowse key={category} category={category} />
+            <CategoryBrowse
+              key={category}
+              category={category}
+              type={type}
+              onTypeChange={setType}
+              genre={genre}
+              onGenreChange={setGenre}
+              provider={provider}
+              onProviderChange={setProvider}
+              language={language}
+              onLanguageChange={setLanguage}
+            />
           )}
         </div>
       )}
