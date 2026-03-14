@@ -1,12 +1,15 @@
 import { Hono } from "hono";
-import { getTitleById } from "../db/repository";
+import { getTitleById, upsertTitles } from "../db/repository";
 import { CONFIG } from "../config";
 import {
+  fetchMovieDetails,
+  fetchTvDetails,
   fetchMovieFullDetails,
   fetchShowFullDetails,
   fetchSeasonDetails,
   fetchEpisodeDetails,
 } from "../tmdb/client";
+import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 
@@ -16,9 +19,42 @@ const app = new Hono<AppEnv>();
 
 const country = CONFIG.COUNTRY;
 
+function parseTitleId(titleId: string): { type: "MOVIE" | "SHOW"; tmdbId: number } | null {
+  const movieMatch = titleId.match(/^movie-(\d+)$/);
+  if (movieMatch) return { type: "MOVIE", tmdbId: parseInt(movieMatch[1], 10) };
+
+  const tvMatch = titleId.match(/^tv-(\d+)$/);
+  if (tvMatch) return { type: "SHOW", tmdbId: parseInt(tvMatch[1], 10) };
+
+  return null;
+}
+
+async function getOrFetchTitle(titleId: string, userId?: string) {
+  let title = getTitleById(titleId, userId);
+  if (title) return title;
+
+  const parsed = parseTitleId(titleId);
+  if (!parsed || !CONFIG.TMDB_API_KEY) return null;
+
+  try {
+    if (parsed.type === "MOVIE") {
+      const tmdbData = await fetchMovieDetails(parsed.tmdbId);
+      upsertTitles([parseMovieDetails(tmdbData)]);
+    } else {
+      const tmdbData = await fetchTvDetails(parsed.tmdbId);
+      upsertTitles([parseTvDetails(tmdbData)]);
+    }
+  } catch (e) {
+    log.error("TMDB fallback fetch failed", { titleId, err: e });
+    return null;
+  }
+
+  return getTitleById(titleId, userId);
+}
+
 app.get("/movie/:id", async (c) => {
   const user = c.get("user");
-  const title = getTitleById(c.req.param("id"), user?.id);
+  const title = await getOrFetchTitle(c.req.param("id"), user?.id);
   if (!title) return c.json({ error: "Title not found" }, 404);
 
   let tmdb = null;
@@ -39,7 +75,7 @@ app.get("/movie/:id", async (c) => {
 
 app.get("/show/:id", async (c) => {
   const user = c.get("user");
-  const title = getTitleById(c.req.param("id"), user?.id);
+  const title = await getOrFetchTitle(c.req.param("id"), user?.id);
   if (!title) return c.json({ error: "Title not found" }, 404);
 
   let tmdb = null;
@@ -60,7 +96,7 @@ app.get("/show/:id", async (c) => {
 
 app.get("/show/:id/season/:season", async (c) => {
   const user = c.get("user");
-  const title = getTitleById(c.req.param("id"), user?.id);
+  const title = await getOrFetchTitle(c.req.param("id"), user?.id);
   if (!title) return c.json({ error: "Title not found" }, 404);
 
   const seasonNumber = Number(c.req.param("season"));
@@ -84,7 +120,7 @@ app.get("/show/:id/season/:season", async (c) => {
 
 app.get("/show/:id/season/:season/episode/:episode", async (c) => {
   const user = c.get("user");
-  const title = getTitleById(c.req.param("id"), user?.id);
+  const title = await getOrFetchTitle(c.req.param("id"), user?.id);
   if (!title) return c.json({ error: "Title not found" }, 404);
 
   const seasonNumber = Number(c.req.param("season"));
