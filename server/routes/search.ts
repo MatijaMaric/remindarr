@@ -3,7 +3,9 @@ import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGe
 import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
 import { getTrackedTitleIds } from "../db/repository";
 
-const app = new Hono();
+import type { AppEnv } from "../types";
+
+const app = new Hono<AppEnv>();
 
 app.get("/", async (c) => {
   const query = c.req.query("q");

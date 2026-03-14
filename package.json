@@ -8,6 +8,7 @@
     "build": "cd frontend && bun run build",
     "start": "bun run server/index.ts",
     "sync": "bun run server/cli/sync.ts",
+    "check": "bunx tsc --noEmit && cd frontend && bunx tsc --noEmit && cd .. && bun test",
     "test": "bun test",
     "test:server": "bun test server/",
     "test:frontend": "bun test frontend/src/",

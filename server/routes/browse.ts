@@ -19,6 +19,7 @@ import {
   type ParsedTitle,
 } from "../tmdb/parser";
 import { getTrackedTitleIds } from "../db/repository";
+import type { AppEnv } from "../types";
 
 const VALID_CATEGORIES = ["popular", "upcoming", "top_rated"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
@@ -35,7 +36,7 @@ const tvFetchers: Record<Category, (page: number) => ReturnType<typeof fetchPopu
   top_rated: fetchTopRatedTv,
 };
 
-const app = new Hono();
+const app = new Hono<AppEnv>();
 
 app.get("/", async (c) => {
   const category = c.req.query("category");

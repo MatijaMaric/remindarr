@@ -25,6 +25,7 @@ function toParsedTitle(t: any): ParsedTitle {
     runtimeMinutes: t.runtime_minutes,
     shortDescription: t.short_description,
     genres: t.genres || [],
+    originalLanguage: t.original_language || null,
     imdbId: t.imdb_id,
     tmdbId: t.tmdb_id,
     posterUrl: t.poster_url,
