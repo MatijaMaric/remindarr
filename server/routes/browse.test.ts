@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
 import { Hono } from "hono";
 import type { TmdbDiscoverMovieResult, TmdbDiscoverTvResult } from "../tmdb/types";
 import type { AppEnv } from "../types";
+import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { upsertTitles, trackTitle, createUser } from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
@@ -202,6 +203,34 @@ describe("GET /browse", () => {
     const body = await res.json();
 
     expect(body.titles[0].isTracked).toBe(false);
+  });
+
+  it("returns genres and offers in response for client-side filtering", async () => {
+    const movie = makeTmdbDiscoverMovie({ id: 900 });
+    mockFetchPopularMovies.mockResolvedValueOnce({
+      results: [movie], total_pages: 1, total_results: 1, page: 1,
+    });
+    mockFetchMovieDetails.mockResolvedValueOnce(makeTmdbMovieDetails({
+      id: 900,
+      genres: [{ id: 28, name: "Action" }, { id: 35, name: "Comedy" }],
+      "watch/providers": {
+        id: 900,
+        results: {
+          [CONFIG.COUNTRY]: {
+            link: "https://tmdb.org",
+            flatrate: [{ logo_path: "/nf.jpg", provider_id: 8, provider_name: "Netflix", display_priority: 1 }],
+          },
+        },
+      },
+    }));
+
+    const res = await app.request("/browse?category=popular&type=MOVIE");
+    const body = await res.json();
+
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].genres).toEqual(["Action", "Comedy"]);
+    expect(body.titles[0].offers.length).toBeGreaterThan(0);
+    expect(body.titles[0].offers[0].providerName).toBe("Netflix");
   });
 
   it("returns isTracked=true for tracked titles when user is authenticated", async () => {
