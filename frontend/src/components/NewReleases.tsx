@@ -15,6 +15,7 @@ interface Props {
   onProviderChange: (provider: string[]) => void;
   language: string[];
   onLanguageChange: (language: string[]) => void;
+  onClearFilters?: () => void;
 }
 
 export default function NewReleases({
@@ -28,6 +29,7 @@ export default function NewReleases({
   onProviderChange,
   language,
   onLanguageChange,
+  onClearFilters,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
@@ -101,6 +103,7 @@ export default function NewReleases({
           language={language}
           onLanguageChange={onLanguageChange}
           languages={languages}
+          onClearFilters={onClearFilters}
         />
         <button
           onClick={handleSync}
