@@ -21,6 +21,7 @@ export interface ParsedTitle {
   runtimeMinutes: number | null;
   shortDescription: string | null;
   genres: string[];
+  originalLanguage: string | null;
   imdbId: string | null;
   tmdbId: string | null;
   posterUrl: string | null;
@@ -143,6 +144,7 @@ export function parseMovieDetails(movie: TmdbMovieDetails): ParsedTitle {
     runtimeMinutes: movie.runtime,
     shortDescription: movie.overview,
     genres: movie.genres.map((g) => g.name),
+    originalLanguage: movie.original_language || null,
     imdbId: movie.external_ids?.imdb_id || null,
     tmdbId: String(movie.id),
     posterUrl: posterUrl(movie.poster_path),
@@ -172,6 +174,7 @@ export function parseTvDetails(tv: TmdbTvDetails): ParsedTitle {
     runtimeMinutes: runtime,
     shortDescription: tv.overview,
     genres: tv.genres.map((g) => g.name),
+    originalLanguage: tv.original_language || null,
     imdbId: tv.external_ids?.imdb_id || null,
     tmdbId: String(tv.id),
     posterUrl: posterUrl(tv.poster_path),
@@ -203,6 +206,7 @@ export function parseDiscoverMovie(
     runtimeMinutes: null,
     shortDescription: movie.overview,
     genres: movie.genre_ids.map((gid) => genreMap.get(gid) || "").filter(Boolean),
+    originalLanguage: movie.original_language || null,
     imdbId: null,
     tmdbId: String(movie.id),
     posterUrl: posterUrl(movie.poster_path),
@@ -232,6 +236,7 @@ export function parseDiscoverTv(
     runtimeMinutes: null,
     shortDescription: tv.overview,
     genres: tv.genre_ids.map((gid) => genreMap.get(gid) || "").filter(Boolean),
+    originalLanguage: tv.original_language || null,
     imdbId: null,
     tmdbId: String(tv.id),
     posterUrl: posterUrl(tv.poster_path),
@@ -264,6 +269,7 @@ export function parseSearchResult(
       runtimeMinutes: null,
       shortDescription: result.overview || null,
       genres: (result.genre_ids || []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
+      originalLanguage: null,
       imdbId: null,
       tmdbId: String(result.id),
       posterUrl: posterUrl(result.poster_path || null),
@@ -290,6 +296,7 @@ export function parseSearchResult(
     runtimeMinutes: null,
     shortDescription: result.overview || null,
     genres: (result.genre_ids || []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
+    originalLanguage: null,
     imdbId: null,
     tmdbId: String(result.id),
     posterUrl: posterUrl(result.poster_path || null),

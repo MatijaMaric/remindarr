@@ -52,6 +52,61 @@ describe("GET /titles", () => {
     expect(body.titles).toHaveLength(0);
     expect(body.count).toBe(0);
   });
+
+  it("filters by genre", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", genres: ["Action"], releaseDate: today }),
+      makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: today }),
+    ]);
+
+    const res = await app.request("/titles?daysBack=9999&genre=Comedy");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].title).toBe("Comedy Film");
+  });
+
+  it("filters by language", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([
+      makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: today }),
+      makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: today }),
+    ]);
+
+    const res = await app.request("/titles?daysBack=9999&language=ja");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].title).toBe("Japanese Movie");
+  });
+});
+
+describe("GET /titles/genres", () => {
+  it("returns available genres", async () => {
+    upsertTitles([
+      makeParsedTitle({ genres: ["Action", "Drama"] }),
+    ]);
+
+    const res = await app.request("/titles/genres");
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.genres).toContain("Action");
+    expect(body.genres).toContain("Drama");
+  });
+});
+
+describe("GET /titles/languages", () => {
+  it("returns available languages", async () => {
+    upsertTitles([
+      makeParsedTitle({ originalLanguage: "en" }),
+    ]);
+
+    const res = await app.request("/titles/languages");
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.languages).toContain("en");
+  });
 });
 
 describe("GET /titles/providers", () => {

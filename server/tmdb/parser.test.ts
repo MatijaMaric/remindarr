@@ -63,6 +63,12 @@ describe("parseMovieDetails", () => {
     expect(result.originalTitle).toBe("Film Original");
   });
 
+  it("parses original_language", () => {
+    const movie = makeTmdbMovieDetails({ original_language: "ja" });
+    const result = parseMovieDetails(movie);
+    expect(result.originalLanguage).toBe("ja");
+  });
+
   it("parses watch providers for configured country", () => {
     const movie = makeTmdbMovieDetails({
       "watch/providers": {
@@ -115,6 +121,12 @@ describe("parseTvDetails", () => {
     const result = parseTvDetails(tv);
     expect(result.originalTitle).toBe("Original Show Name");
   });
+
+  it("parses original_language", () => {
+    const tv = makeTmdbTvDetails({ original_language: "ko" });
+    const result = parseTvDetails(tv);
+    expect(result.originalLanguage).toBe("ko");
+  });
 });
 
 describe("parseDiscoverMovie", () => {
@@ -144,6 +156,13 @@ describe("parseDiscoverMovie", () => {
     const result = parseDiscoverMovie(movie, genreMap);
     expect(result.originalTitle).toBe("Pelicula");
   });
+
+  it("parses original_language", () => {
+    const genreMap = new Map([[28, "Action"]]);
+    const movie = makeTmdbDiscoverMovie({ original_language: "fr" });
+    const result = parseDiscoverMovie(movie, genreMap);
+    expect(result.originalLanguage).toBe("fr");
+  });
 });
 
 describe("parseDiscoverTv", () => {
@@ -163,6 +182,13 @@ describe("parseDiscoverTv", () => {
     const tv = makeTmdbDiscoverTv({ original_name: "Serie Original" });
     const result = parseDiscoverTv(tv, genreMap);
     expect(result.originalTitle).toBe("Serie Original");
+  });
+
+  it("parses original_language", () => {
+    const genreMap = new Map([[18, "Drama"]]);
+    const tv = makeTmdbDiscoverTv({ original_language: "es" });
+    const result = parseDiscoverTv(tv, genreMap);
+    expect(result.originalLanguage).toBe("es");
   });
 });
 

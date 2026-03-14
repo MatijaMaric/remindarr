@@ -30,6 +30,7 @@ export const titles = sqliteTable(
     tmdbId: text("tmdb_id"),
     posterUrl: text("poster_url"),
     ageCertification: text("age_certification"),
+    originalLanguage: text("original_language"),
     tmdbUrl: text("tmdb_url"),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
@@ -302,6 +303,7 @@ function initSchema(db: Database) {
       tmdb_id TEXT,
       poster_url TEXT,
       age_certification TEXT,
+      original_language TEXT,
       tmdb_url TEXT,
       updated_at TEXT DEFAULT (datetime('now'))
     )
@@ -549,6 +551,18 @@ function migrateSchema(db: Database) {
     db.run("CREATE INDEX IF NOT EXISTS idx_notifiers_enabled_time ON notifiers(enabled, notify_time)");
     console.log("[Migration v5] Created notifiers table.");
     setSchemaVersion(db, 5);
+  }
+
+  // Migration v6: Add original_language column to titles
+  if (getSchemaVersion(db) < 6) {
+    const titlesInfo = db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='titles'"
+    ).get() as any;
+    if (titlesInfo && !titlesInfo.sql.includes("original_language")) {
+      db.run("ALTER TABLE titles ADD COLUMN original_language TEXT");
+      console.log("[Migration v6] Added original_language column to titles table.");
+    }
+    setSchemaVersion(db, 6);
   }
 }
 
