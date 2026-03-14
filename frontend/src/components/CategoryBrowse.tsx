@@ -52,19 +52,38 @@ export function extractBrowseLanguages(titles: Title[]): string[] {
 
 interface Props {
   category: Exclude<BrowseCategory, "new_releases">;
+  type: string;
+  onTypeChange: (type: string) => void;
+  genre: string;
+  onGenreChange: (genre: string) => void;
+  provider: string;
+  onProviderChange: (provider: string) => void;
+  language: string;
+  onLanguageChange: (language: string) => void;
 }
 
-export default function CategoryBrowse({ category }: Props) {
-  const [rawTitles, setRawTitles] = useState<Title[]>([]);
+export default function CategoryBrowse({
+  category,
+  type,
+  onTypeChange,
+  genre,
+  onGenreChange,
+  provider,
+  onProviderChange,
+  language,
+  onLanguageChange,
+}: Props) {
+  const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [type, setType] = useState("");
-  const [genre, setGenre] = useState("");
-  const [provider, setProvider] = useState("");
-  const [language, setLanguage] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+
+  // Track providers/languages from loaded titles for dropdowns
+  const availableProviders = useMemo(() => extractBrowseProviders(titles), [titles]);
+  const availableLanguages = useMemo(() => extractBrowseLanguages(titles), [titles]);
 
   const fetchTitles = useCallback(async (pageNum: number, append: boolean) => {
     if (append) {
@@ -78,15 +97,18 @@ export default function CategoryBrowse({ category }: Props) {
         category,
         type: type || undefined,
         page: pageNum,
+        genre: genre || undefined,
+        provider: provider || undefined,
+        language: language || undefined,
       });
       const normalized = res.titles.map(normalizeSearchTitle);
       if (append) {
-        setRawTitles((prev) => [...prev, ...normalized]);
+        setTitles((prev) => [...prev, ...normalized]);
       } else {
-        setRawTitles(normalized);
-        setGenre("");
-        setProvider("");
-        setLanguage("");
+        setTitles(normalized);
+      }
+      if (res.availableGenres) {
+        setAvailableGenres(res.availableGenres);
       }
       setTotalPages(res.totalPages);
       setPage(pageNum);
@@ -96,7 +118,7 @@ export default function CategoryBrowse({ category }: Props) {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [category, type]);
+  }, [category, type, genre, provider, language]);
 
   useEffect(() => {
     fetchTitles(1, false);
@@ -121,28 +143,20 @@ export default function CategoryBrowse({ category }: Props) {
     return () => observer.disconnect();
   }, [page, totalPages, loadingMore, fetchTitles]);
 
-  const availableGenres = useMemo(() => extractBrowseGenres(rawTitles), [rawTitles]);
-  const availableProviders = useMemo(() => extractBrowseProviders(rawTitles), [rawTitles]);
-  const availableLanguages = useMemo(() => extractBrowseLanguages(rawTitles), [rawTitles]);
-  const titles = useMemo(
-    () => filterBrowseTitles(rawTitles, { genre, provider, language }),
-    [rawTitles, genre, provider, language]
-  );
-
   return (
     <div className="space-y-4">
       <FilterBar
         type={type}
-        onTypeChange={setType}
+        onTypeChange={onTypeChange}
         showDaysFilter={false}
         genre={genre}
-        onGenreChange={setGenre}
+        onGenreChange={onGenreChange}
         genres={availableGenres}
         provider={provider}
-        onProviderChange={setProvider}
+        onProviderChange={onProviderChange}
         providers={availableProviders}
         language={language}
-        onLanguageChange={setLanguage}
+        onLanguageChange={onLanguageChange}
         languages={availableLanguages}
       />
 

@@ -7,27 +7,19 @@ import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { upsertTitles, trackTitle, createUser } from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
 
-const mockFetchPopularMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchPopularTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockDiscoverMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchOnTheAirTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchTopRatedMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchTopRatedTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
+const mockDiscoverTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockFetchMovieDetails = mock(() => Promise.resolve({}));
 const mockFetchTvDetails = mock(() => Promise.resolve({}));
-const mockGetMovieGenres = mock(() => Promise.resolve(new Map([[28, "Action"]])));
-const mockGetTvGenres = mock(() => Promise.resolve(new Map([[18, "Drama"]])));
+const mockGetMovieGenres = mock(() => Promise.resolve(new Map([[28, "Action"], [878, "Science Fiction"]])));
+const mockGetTvGenres = mock(() => Promise.resolve(new Map([[18, "Drama"], [10765, "Sci-Fi & Fantasy"]])));
 
 const realClient = await import("../tmdb/client");
 
 mock.module("../tmdb/client", () => ({
   ...realClient,
-  fetchPopularMovies: mockFetchPopularMovies,
-  fetchPopularTv: mockFetchPopularTv,
   discoverMovies: mockDiscoverMovies,
-  fetchOnTheAirTv: mockFetchOnTheAirTv,
-  fetchTopRatedMovies: mockFetchTopRatedMovies,
-  fetchTopRatedTv: mockFetchTopRatedTv,
+  discoverTv: mockDiscoverTv,
   fetchMovieDetails: mockFetchMovieDetails,
   fetchTvDetails: mockFetchTvDetails,
   getMovieGenres: mockGetMovieGenres,
@@ -46,12 +38,8 @@ beforeEach(() => {
   app = new Hono<AppEnv>();
   app.route("/browse", browseApp);
 
-  mockFetchPopularMovies.mockClear();
-  mockFetchPopularTv.mockClear();
   mockDiscoverMovies.mockClear();
-  mockFetchOnTheAirTv.mockClear();
-  mockFetchTopRatedMovies.mockClear();
-  mockFetchTopRatedTv.mockClear();
+  mockDiscoverTv.mockClear();
   mockFetchMovieDetails.mockClear();
   mockFetchTvDetails.mockClear();
 });
@@ -75,7 +63,7 @@ describe("GET /browse", () => {
 
   it("fetches popular movies when type=MOVIE", async () => {
     const movie = makeTmdbDiscoverMovie();
-    mockFetchPopularMovies.mockResolvedValueOnce({
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [movie], total_pages: 5, total_results: 100, page: 1,
     });
     mockFetchMovieDetails.mockResolvedValueOnce(makeTmdbMovieDetails({ id: movie.id }));
@@ -87,13 +75,15 @@ describe("GET /browse", () => {
     expect(body.titles).toHaveLength(1);
     expect(body.page).toBe(1);
     expect(body.totalPages).toBe(5);
-    expect(mockFetchPopularMovies).toHaveBeenCalledWith(1);
-    expect(mockFetchPopularTv).not.toHaveBeenCalled();
+    expect(mockDiscoverMovies).toHaveBeenCalledTimes(1);
+    const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.sortBy).toBe("popularity.desc");
+    expect(mockDiscoverTv).not.toHaveBeenCalled();
   });
 
   it("fetches popular TV when type=SHOW", async () => {
     const tv = makeTmdbDiscoverTv();
-    mockFetchPopularTv.mockResolvedValueOnce({
+    mockDiscoverTv.mockResolvedValueOnce({
       results: [tv], total_pages: 3, total_results: 60, page: 1,
     });
     mockFetchTvDetails.mockResolvedValueOnce(makeTmdbTvDetails({ id: tv.id }));
@@ -103,17 +93,19 @@ describe("GET /browse", () => {
 
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
-    expect(mockFetchPopularTv).toHaveBeenCalledWith(1);
-    expect(mockFetchPopularMovies).not.toHaveBeenCalled();
+    expect(mockDiscoverTv).toHaveBeenCalledTimes(1);
+    const callArgs = (mockDiscoverTv.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.sortBy).toBe("popularity.desc");
+    expect(mockDiscoverMovies).not.toHaveBeenCalled();
   });
 
   it("fetches both types when type is omitted", async () => {
     const movie = makeTmdbDiscoverMovie();
     const tv = makeTmdbDiscoverTv();
-    mockFetchPopularMovies.mockResolvedValueOnce({
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [movie], total_pages: 2, total_results: 40, page: 1,
     });
-    mockFetchPopularTv.mockResolvedValueOnce({
+    mockDiscoverTv.mockResolvedValueOnce({
       results: [tv], total_pages: 3, total_results: 60, page: 1,
     });
     mockFetchMovieDetails.mockResolvedValueOnce(makeTmdbMovieDetails({ id: movie.id }));
@@ -125,8 +117,8 @@ describe("GET /browse", () => {
     const body = await res.json();
     expect(body.titles).toHaveLength(2);
     expect(body.totalPages).toBe(3); // max of 2 and 3
-    expect(mockFetchPopularMovies).toHaveBeenCalled();
-    expect(mockFetchPopularTv).toHaveBeenCalled();
+    expect(mockDiscoverMovies).toHaveBeenCalled();
+    expect(mockDiscoverTv).toHaveBeenCalled();
   });
 
   it("uses discover endpoint for upcoming movies with date range", async () => {
@@ -144,28 +136,35 @@ describe("GET /browse", () => {
     expect(callArgs.page).toBe(1);
   });
 
-  it("uses on_the_air for upcoming TV shows", async () => {
-    mockFetchOnTheAirTv.mockResolvedValueOnce({
+  it("uses discover endpoint for upcoming TV shows with date range", async () => {
+    mockDiscoverTv.mockResolvedValueOnce({
       results: [], total_pages: 1, total_results: 0, page: 1,
     });
 
     const res = await app.request("/browse?category=upcoming&type=SHOW");
     expect(res.status).toBe(200);
-    expect(mockFetchOnTheAirTv).toHaveBeenCalled();
+    expect(mockDiscoverTv).toHaveBeenCalledTimes(1);
+    const callArgs = (mockDiscoverTv.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.firstAirDateGte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(callArgs.firstAirDateLte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(callArgs.sortBy).toBe("first_air_date.asc");
   });
 
-  it("uses top_rated fetchers for top_rated category", async () => {
-    mockFetchTopRatedMovies.mockResolvedValueOnce({
+  it("uses top_rated discover for top_rated category", async () => {
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [], total_pages: 1, total_results: 0, page: 1,
     });
 
     const res = await app.request("/browse?category=top_rated&type=MOVIE");
     expect(res.status).toBe(200);
-    expect(mockFetchTopRatedMovies).toHaveBeenCalled();
+    expect(mockDiscoverMovies).toHaveBeenCalledTimes(1);
+    const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.sortBy).toBe("vote_average.desc");
+    expect(callArgs.voteCountGte).toBe("200");
   });
 
   it("passes page parameter correctly", async () => {
-    mockFetchPopularMovies.mockResolvedValueOnce({
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [], total_pages: 10, total_results: 200, page: 3,
     });
 
@@ -174,12 +173,13 @@ describe("GET /browse", () => {
 
     const body = await res.json();
     expect(body.page).toBe(3);
-    expect(mockFetchPopularMovies).toHaveBeenCalledWith(3);
+    const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.page).toBe(3);
   });
 
   it("falls back to basic data when detail fetch fails", async () => {
     const movie = makeTmdbDiscoverMovie();
-    mockFetchPopularMovies.mockResolvedValueOnce({
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [movie], total_pages: 1, total_results: 1, page: 1,
     });
     mockFetchMovieDetails.mockRejectedValueOnce(new Error("API error"));
@@ -194,7 +194,7 @@ describe("GET /browse", () => {
 
   it("returns isTracked=false when no user is authenticated", async () => {
     const movie = makeTmdbDiscoverMovie();
-    mockFetchPopularMovies.mockResolvedValueOnce({
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [movie], total_pages: 1, total_results: 1, page: 1,
     });
     mockFetchMovieDetails.mockResolvedValueOnce(makeTmdbMovieDetails({ id: movie.id }));
@@ -205,9 +205,9 @@ describe("GET /browse", () => {
     expect(body.titles[0].isTracked).toBe(false);
   });
 
-  it("returns genres and offers in response for client-side filtering", async () => {
+  it("returns genres and offers in response for filtering", async () => {
     const movie = makeTmdbDiscoverMovie({ id: 900 });
-    mockFetchPopularMovies.mockResolvedValueOnce({
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [movie], total_pages: 1, total_results: 1, page: 1,
     });
     mockFetchMovieDetails.mockResolvedValueOnce(makeTmdbMovieDetails({
@@ -233,6 +233,21 @@ describe("GET /browse", () => {
     expect(body.titles[0].offers[0].providerName).toBe("Netflix");
   });
 
+  it("returns availableGenres from TMDB genre maps", async () => {
+    mockDiscoverMovies.mockResolvedValueOnce({
+      results: [], total_pages: 1, total_results: 0, page: 1,
+    });
+
+    const res = await app.request("/browse?category=popular&type=MOVIE");
+    const body = await res.json();
+
+    expect(body.availableGenres).toBeDefined();
+    expect(body.availableGenres).toContain("Action");
+    expect(body.availableGenres).toContain("Drama");
+    expect(body.availableGenres).toContain("Science Fiction");
+    expect(body.availableGenres).toContain("Sci-Fi & Fantasy");
+  });
+
   it("returns isTracked=true for tracked titles when user is authenticated", async () => {
     // Set up real DB data for tracking
     upsertTitles([makeParsedTitle({ id: "movie-555" })]);
@@ -240,7 +255,7 @@ describe("GET /browse", () => {
     trackTitle("movie-555", userId);
 
     const movie = makeTmdbDiscoverMovie({ id: 555 });
-    mockFetchPopularMovies.mockResolvedValueOnce({
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [movie], total_pages: 1, total_results: 1, page: 1,
     });
     mockFetchMovieDetails.mockResolvedValueOnce(makeTmdbMovieDetails({ id: 555 }));
@@ -256,5 +271,94 @@ describe("GET /browse", () => {
     const body = await res.json();
 
     expect(body.titles[0].isTracked).toBe(true);
+  });
+
+  describe("genre filtering", () => {
+    it("passes genre filter as TMDB genre ID to discover", async () => {
+      mockDiscoverMovies.mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=MOVIE&genre=Action");
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, string>;
+      expect(filters.withGenres).toBe("28"); // Action = genre ID 28
+    });
+
+    it("passes TV genre filter correctly", async () => {
+      mockDiscoverTv.mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=upcoming&type=SHOW&genre=Sci-Fi%20%26%20Fantasy");
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockDiscoverTv.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, string>;
+      expect(filters.withGenres).toBe("10765"); // Sci-Fi & Fantasy
+    });
+
+    it("does not pass genre filter when genre name is not found", async () => {
+      mockDiscoverMovies.mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=MOVIE&genre=Nonexistent");
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, string>;
+      expect(filters.withGenres).toBeUndefined();
+    });
+  });
+
+  describe("provider filtering", () => {
+    it("passes provider ID to discover filters", async () => {
+      mockDiscoverMovies.mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=MOVIE&provider=8");
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, string>;
+      expect(filters.withProviders).toBe("8");
+    });
+  });
+
+  describe("language filtering", () => {
+    it("passes language code to discover filters", async () => {
+      mockDiscoverTv.mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=SHOW&language=ja");
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockDiscoverTv.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, string>;
+      expect(filters.withOriginalLanguage).toBe("ja");
+    });
+  });
+
+  describe("combined filters", () => {
+    it("passes all filters together", async () => {
+      mockDiscoverMovies.mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=top_rated&type=MOVIE&genre=Action&provider=8&language=en");
+      expect(res.status).toBe(200);
+
+      const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, string>;
+      expect(filters.withGenres).toBe("28");
+      expect(filters.withProviders).toBe("8");
+      expect(filters.withOriginalLanguage).toBe("en");
+      expect(callArgs.sortBy).toBe("vote_average.desc");
+    });
   });
 });
