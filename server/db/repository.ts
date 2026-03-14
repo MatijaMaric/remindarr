@@ -203,20 +203,27 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
     conditions.push(eq(titles.objectType, objectType));
   }
   if (provider) {
-    conditions.push(
-      exists(
-        db
-          .select({ one: sql`1` })
-          .from(offers)
-          .innerJoin(providers, eq(offers.providerId, providers.id))
-          .where(
-            and(
-              eq(offers.titleId, titles.id),
-              eq(providers.technicalName, provider)
-            )
-          )
-      )
-    );
+    const providerId = Number(provider);
+    if (!isNaN(providerId)) {
+      conditions.push(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(offers)
+            .where(and(eq(offers.titleId, titles.id), eq(offers.providerId, providerId)))
+        )
+      );
+    } else {
+      conditions.push(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(offers)
+            .innerJoin(providers, eq(offers.providerId, providers.id))
+            .where(and(eq(offers.titleId, titles.id), eq(providers.technicalName, provider)))
+        )
+      );
+    }
   }
   if (genre) {
     conditions.push(like(titles.genres, `%"${genre}"%`));
@@ -455,20 +462,27 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     conditions.push(eq(titles.objectType, objectType));
   }
   if (provider) {
-    conditions.push(
-      exists(
-        db
-          .select({ one: sql`1` })
-          .from(offers)
-          .innerJoin(providers, eq(offers.providerId, providers.id))
-          .where(
-            and(
-              eq(offers.titleId, titles.id),
-              eq(providers.technicalName, provider)
-            )
-          )
-      )
-    );
+    const providerId = Number(provider);
+    if (!isNaN(providerId)) {
+      conditions.push(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(offers)
+            .where(and(eq(offers.titleId, titles.id), eq(offers.providerId, providerId)))
+        )
+      );
+    } else {
+      conditions.push(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(offers)
+            .innerJoin(providers, eq(offers.providerId, providers.id))
+            .where(and(eq(offers.titleId, titles.id), eq(providers.technicalName, provider)))
+        )
+      );
+    }
   }
 
   const rows = db

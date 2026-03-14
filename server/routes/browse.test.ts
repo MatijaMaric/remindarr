@@ -13,6 +13,19 @@ const mockFetchMovieDetails = mock(() => Promise.resolve({}));
 const mockFetchTvDetails = mock(() => Promise.resolve({}));
 const mockGetMovieGenres = mock(() => Promise.resolve(new Map([[28, "Action"], [878, "Science Fiction"]])));
 const mockGetTvGenres = mock(() => Promise.resolve(new Map([[18, "Drama"], [10765, "Sci-Fi & Fantasy"]])));
+const mockGetMovieWatchProviders = mock(() => Promise.resolve([
+  { id: 8, name: "Netflix", iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg" },
+  { id: 337, name: "Disney Plus", iconUrl: "https://image.tmdb.org/t/p/w92/dp.jpg" },
+]));
+const mockGetTvWatchProviders = mock(() => Promise.resolve([
+  { id: 8, name: "Netflix", iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg" },
+  { id: 1899, name: "Max", iconUrl: "https://image.tmdb.org/t/p/w92/max.jpg" },
+]));
+const mockGetLanguages = mock(() => Promise.resolve([
+  { code: "en", name: "English" },
+  { code: "ja", name: "Japanese" },
+  { code: "fr", name: "French" },
+]));
 
 const realClient = await import("../tmdb/client");
 
@@ -24,6 +37,9 @@ mock.module("../tmdb/client", () => ({
   fetchTvDetails: mockFetchTvDetails,
   getMovieGenres: mockGetMovieGenres,
   getTvGenres: mockGetTvGenres,
+  getMovieWatchProviders: mockGetMovieWatchProviders,
+  getTvWatchProviders: mockGetTvWatchProviders,
+  getLanguages: mockGetLanguages,
   searchMulti: mock(() => Promise.resolve({ results: [], total_pages: 1, total_results: 0, page: 1 })),
 }));
 
@@ -42,6 +58,9 @@ beforeEach(() => {
   mockDiscoverTv.mockClear();
   mockFetchMovieDetails.mockClear();
   mockFetchTvDetails.mockClear();
+  mockGetMovieWatchProviders.mockClear();
+  mockGetTvWatchProviders.mockClear();
+  mockGetLanguages.mockClear();
 });
 
 afterAll(() => {
@@ -75,6 +94,7 @@ describe("GET /browse", () => {
     expect(body.titles).toHaveLength(1);
     expect(body.page).toBe(1);
     expect(body.totalPages).toBe(5);
+    expect(body.totalResults).toBe(100);
     expect(mockDiscoverMovies).toHaveBeenCalledTimes(1);
     const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
     expect(callArgs.sortBy).toBe("popularity.desc");
@@ -117,6 +137,7 @@ describe("GET /browse", () => {
     const body = await res.json();
     expect(body.titles).toHaveLength(2);
     expect(body.totalPages).toBe(3); // max of 2 and 3
+    expect(body.totalResults).toBe(100); // 40 + 60
     expect(mockDiscoverMovies).toHaveBeenCalled();
     expect(mockDiscoverTv).toHaveBeenCalled();
   });
@@ -246,6 +267,24 @@ describe("GET /browse", () => {
     expect(body.availableGenres).toContain("Drama");
     expect(body.availableGenres).toContain("Science Fiction");
     expect(body.availableGenres).toContain("Sci-Fi & Fantasy");
+  });
+
+  it("returns availableProviders and availableLanguages from TMDB", async () => {
+    mockDiscoverMovies.mockResolvedValueOnce({
+      results: [], total_pages: 1, total_results: 0, page: 1,
+    });
+
+    const res = await app.request("/browse?category=popular&type=MOVIE");
+    const body = await res.json();
+
+    expect(body.availableProviders).toBeDefined();
+    expect(body.availableProviders.length).toBeGreaterThan(0);
+    expect(body.availableProviders.find((p: any) => p.name === "Netflix")).toBeDefined();
+    expect(body.availableProviders.find((p: any) => p.name === "Max")).toBeDefined();
+
+    expect(body.availableLanguages).toBeDefined();
+    expect(body.availableLanguages.length).toBeGreaterThan(0);
+    expect(body.availableLanguages.find((l: any) => l.code === "en")).toBeDefined();
   });
 
   it("returns isTracked=true for tracked titles when user is authenticated", async () => {

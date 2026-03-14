@@ -58,7 +58,15 @@ export async function browseTitles(params: {
   genre?: string;
   provider?: string;
   language?: string;
-}): Promise<{ titles: SearchTitle[]; page: number; totalPages: number; availableGenres: string[] }> {
+}): Promise<{
+  titles: SearchTitle[];
+  page: number;
+  totalPages: number;
+  totalResults: number;
+  availableGenres: string[];
+  availableProviders: { id: number; name: string; iconUrl: string }[];
+  availableLanguages: { code: string; name: string }[];
+}> {
   const qs = new URLSearchParams();
   qs.set("category", params.category);
   if (params.type) qs.set("type", params.type);
