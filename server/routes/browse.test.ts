@@ -15,7 +15,11 @@ const mockGetMovieGenres = mock(() => Promise.resolve(new Map([[28, "Action"]]))
 const mockGetTvGenres = mock(() => Promise.resolve(new Map([[18, "Drama"]])));
 const mockGetTrackedTitleIds = mock(() => new Set<string>());
 
+const realClient = await import("../tmdb/client");
+const realRepo = await import("../db/repository");
+
 mock.module("../tmdb/client", () => ({
+  ...realClient,
   fetchPopularMovies: mockFetchPopularMovies,
   fetchPopularTv: mockFetchPopularTv,
   fetchUpcomingMovies: mockFetchUpcomingMovies,
@@ -30,6 +34,7 @@ mock.module("../tmdb/client", () => ({
 }));
 
 mock.module("../db/repository", () => ({
+  ...realRepo,
   getTrackedTitleIds: mockGetTrackedTitleIds,
 }));
 
