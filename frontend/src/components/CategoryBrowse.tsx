@@ -1,20 +1,67 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import * as api from "../api";
-import type { Title } from "../types";
+import type { Title, Provider } from "../types";
 import { normalizeSearchTitle } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 import type { BrowseCategory } from "./CategoryBar";
+
+export function filterBrowseTitles(
+  titles: Title[],
+  filters: { genre: string; provider: string; language: string }
+): Title[] {
+  return titles.filter((t) => {
+    if (filters.genre && !t.genres.includes(filters.genre)) return false;
+    if (filters.provider && !t.offers.some((o) => o.provider_technical_name === filters.provider))
+      return false;
+    if (filters.language && t.original_language !== filters.language) return false;
+    return true;
+  });
+}
+
+export function extractBrowseGenres(titles: Title[]): string[] {
+  const set = new Set<string>();
+  titles.forEach((t) => t.genres.forEach((g) => set.add(g)));
+  return Array.from(set).sort();
+}
+
+export function extractBrowseProviders(titles: Title[]): Provider[] {
+  const map = new Map<string, Provider>();
+  titles.forEach((t) =>
+    t.offers.forEach((o) => {
+      if (!map.has(o.provider_technical_name)) {
+        map.set(o.provider_technical_name, {
+          id: o.provider_id,
+          name: o.provider_name,
+          technical_name: o.provider_technical_name,
+          icon_url: o.provider_icon_url,
+        });
+      }
+    })
+  );
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function extractBrowseLanguages(titles: Title[]): string[] {
+  const set = new Set<string>();
+  titles.forEach((t) => {
+    if (t.original_language) set.add(t.original_language);
+  });
+  return Array.from(set).sort();
+}
 
 interface Props {
   category: Exclude<BrowseCategory, "new_releases">;
 }
 
 export default function CategoryBrowse({ category }: Props) {
-  const [titles, setTitles] = useState<Title[]>([]);
+  const [rawTitles, setRawTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [type, setType] = useState("");
+  const [genre, setGenre] = useState("");
+  const [provider, setProvider] = useState("");
+  const [language, setLanguage] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
@@ -34,9 +81,12 @@ export default function CategoryBrowse({ category }: Props) {
       });
       const normalized = res.titles.map(normalizeSearchTitle);
       if (append) {
-        setTitles((prev) => [...prev, ...normalized]);
+        setRawTitles((prev) => [...prev, ...normalized]);
       } else {
-        setTitles(normalized);
+        setRawTitles(normalized);
+        setGenre("");
+        setProvider("");
+        setLanguage("");
       }
       setTotalPages(res.totalPages);
       setPage(pageNum);
@@ -71,12 +121,29 @@ export default function CategoryBrowse({ category }: Props) {
     return () => observer.disconnect();
   }, [page, totalPages, loadingMore, fetchTitles]);
 
+  const availableGenres = useMemo(() => extractBrowseGenres(rawTitles), [rawTitles]);
+  const availableProviders = useMemo(() => extractBrowseProviders(rawTitles), [rawTitles]);
+  const availableLanguages = useMemo(() => extractBrowseLanguages(rawTitles), [rawTitles]);
+  const titles = useMemo(
+    () => filterBrowseTitles(rawTitles, { genre, provider, language }),
+    [rawTitles, genre, provider, language]
+  );
+
   return (
     <div className="space-y-4">
       <FilterBar
         type={type}
         onTypeChange={setType}
         showDaysFilter={false}
+        genre={genre}
+        onGenreChange={setGenre}
+        genres={availableGenres}
+        provider={provider}
+        onProviderChange={setProvider}
+        providers={availableProviders}
+        language={language}
+        onLanguageChange={setLanguage}
+        languages={availableLanguages}
       />
 
       {error && (
