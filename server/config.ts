@@ -33,4 +33,7 @@ export const CONFIG = {
   OIDC_REDIRECT_URI: process.env.OIDC_REDIRECT_URI || "",
   OIDC_ADMIN_CLAIM: process.env.OIDC_ADMIN_CLAIM || "",
   OIDC_ADMIN_VALUE: process.env.OIDC_ADMIN_VALUE || "",
+
+  // Sentry
+  SENTRY_DSN: process.env.SENTRY_DSN || "",
 };
