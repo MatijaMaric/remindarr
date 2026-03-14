@@ -9,10 +9,10 @@ const mockFetchMovieDetails = mock(() => Promise.resolve({}));
 const mockFetchTvDetails = mock(() => Promise.resolve({}));
 const mockGetMovieGenres = mock(() => Promise.resolve(new Map([[28, "Action"]])));
 const mockGetTvGenres = mock(() => Promise.resolve(new Map([[18, "Drama"]])));
-const mockGetTrackedTitleIds = mock(() => new Set<string>());
-
 const realClient = await import("../tmdb/client");
 const realRepo = await import("../db/repository");
+
+const mockGetTrackedTitleIds = mock((...args: Parameters<typeof realRepo.getTrackedTitleIds>) => realRepo.getTrackedTitleIds(...args));
 
 mock.module("../tmdb/client", () => ({
   ...realClient,
