@@ -1,4 +1,5 @@
 import { CONFIG } from "../config";
+import { traceHttp } from "../tracing";
 import type {
   TmdbShowDetails,
   TmdbSeasonResponse,
@@ -26,17 +27,19 @@ async function tmdbRequest<T>(path: string, params?: Record<string, string>): Pr
       url.searchParams.set(key, value);
     }
   }
-  const res = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${CONFIG.TMDB_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+  return traceHttp("GET", url.toString(), async () => {
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${CONFIG.TMDB_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`TMDB API error ${res.status}: ${body}`);
+    }
+    return res.json() as Promise<T>;
   });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`TMDB API error ${res.status}: ${body}`);
-  }
-  return res.json() as Promise<T>;
 }
 
 function tmdbLanguage(): string {
