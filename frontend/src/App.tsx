@@ -11,6 +11,7 @@ import ProfilePage from "./pages/ProfilePage";
 import TitleDetailPage from "./pages/TitleDetailPage";
 import SeasonDetailPage from "./pages/SeasonDetailPage";
 import EpisodeDetailPage from "./pages/EpisodeDetailPage";
+import PersonPage from "./pages/PersonPage";
 import RequireAuth from "./components/RequireAuth";
 import { navLinkClass } from "./nav-utils";
 
@@ -165,6 +166,7 @@ export default function App() {
           <Route path="/title/:id" element={<TitleDetailPage />} />
           <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
           <Route path="/title/:id/season/:season/episode/:episode" element={<EpisodeDetailPage />} />
+          <Route path="/person/:personId" element={<PersonPage />} />
         </Routes>
       </main>
     </div>

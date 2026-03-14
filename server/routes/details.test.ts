@@ -15,6 +15,7 @@ const mockFetchMovieFullDetails = mock(() => Promise.resolve(null));
 const mockFetchShowFullDetails = mock(() => Promise.resolve(null));
 const mockFetchSeasonDetails = mock(() => Promise.resolve(null));
 const mockFetchEpisodeDetails = mock(() => Promise.resolve(null));
+const mockFetchPersonDetails = mock(() => Promise.resolve(null as any));
 
 const realClient = await import("../tmdb/client");
 
@@ -26,6 +27,7 @@ mock.module("../tmdb/client", () => ({
   fetchShowFullDetails: mockFetchShowFullDetails,
   fetchSeasonDetails: mockFetchSeasonDetails,
   fetchEpisodeDetails: mockFetchEpisodeDetails,
+  fetchPersonDetails: mockFetchPersonDetails,
 }));
 
 const { makeTmdbMovieDetails, makeTmdbTvDetails } = await import("../test-utils/fixtures");
@@ -45,6 +47,7 @@ beforeEach(() => {
   mockFetchShowFullDetails.mockClear();
   mockFetchSeasonDetails.mockClear();
   mockFetchEpisodeDetails.mockClear();
+  mockFetchPersonDetails.mockClear();
 });
 
 afterAll(() => {
@@ -137,5 +140,41 @@ describe("GET /details/show/:id/season/:season", () => {
     expect(body.title.title).toBe("Season Show");
     expect(body.seasonNumber).toBe(1);
     expect(mockFetchTvDetails).toHaveBeenCalledWith(555);
+  });
+});
+
+describe("GET /details/person/:personId", () => {
+  it("returns person details from TMDB", async () => {
+    mockFetchPersonDetails.mockResolvedValueOnce({
+      id: 123,
+      name: "Test Actor",
+      biography: "A test biography",
+      birthday: "1990-01-15",
+      deathday: null,
+      place_of_birth: "Test City",
+      known_for_department: "Acting",
+      profile_path: "/test.jpg",
+      also_known_as: [],
+      popularity: 50,
+      combined_credits: { cast: [], crew: [] },
+    });
+
+    const res = await app.request("/details/person/123");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.person.name).toBe("Test Actor");
+    expect(body.person.biography).toBe("A test biography");
+    expect(mockFetchPersonDetails).toHaveBeenCalledWith(123);
+  });
+
+  it("returns 400 for invalid person ID", async () => {
+    const res = await app.request("/details/person/abc");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when TMDB fetch fails", async () => {
+    mockFetchPersonDetails.mockRejectedValueOnce(new Error("Not found"));
+    const res = await app.request("/details/person/999");
+    expect(res.status).toBe(404);
   });
 });

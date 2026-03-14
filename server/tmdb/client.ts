@@ -14,6 +14,7 @@ import type {
   TmdbShowFullDetails,
   TmdbSeasonDetails,
   TmdbEpisodeDetails,
+  TmdbPersonDetails,
 } from "./types";
 
 async function tmdbRequest<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -97,6 +98,15 @@ export async function fetchEpisodeDetails(
   return tmdbRequest<TmdbEpisodeDetails>(`/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`, {
     language: tmdbLanguage(),
     append_to_response: "credits",
+  });
+}
+
+// ─── Person endpoints ────────────────────────────────────────────────────────
+
+export async function fetchPersonDetails(personId: number): Promise<TmdbPersonDetails> {
+  return tmdbRequest<TmdbPersonDetails>(`/person/${personId}`, {
+    language: tmdbLanguage(),
+    append_to_response: "combined_credits",
   });
 }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import * as api from "../api";
 import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
+import PersonCard from "../components/PersonCard";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -154,17 +155,7 @@ export default function EpisodeDetailPage() {
           <h2 className="text-lg font-semibold text-white">Cast</h2>
           <div className="flex gap-4 overflow-x-auto pb-2">
             {allCast.slice(0, 20).map((c) => (
-              <div key={c.id} className="flex-shrink-0 w-28 text-center">
-                <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-gray-800 mb-2">
-                  {c.profile_path ? (
-                    <img src={`${TMDB_IMG}/w185${c.profile_path}`} alt={c.name} className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-600 text-2xl">{c.name.charAt(0)}</div>
-                  )}
-                </div>
-                <p className="text-sm font-medium text-white truncate">{c.name}</p>
-                <p className="text-xs text-gray-400 truncate">{c.character}</p>
-              </div>
+              <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
           </div>
         </section>
