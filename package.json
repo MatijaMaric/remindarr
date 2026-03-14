@@ -17,6 +17,7 @@
     "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
+    "@sentry/node": "^10.43.0",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.4.0"
   },

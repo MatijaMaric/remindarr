@@ -1,5 +1,7 @@
+import "./instrument";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import { serveStatic } from "hono/bun";
 import { CONFIG } from "./config";
 import { getDb, migrateTrackedData } from "./db/schema";
@@ -20,6 +22,7 @@ import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import type { AppEnv } from "./types";
+import * as Sentry from "@sentry/node";
 import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
@@ -39,6 +42,15 @@ if (getUserCount() === 0) {
 }
 
 const app = new Hono<AppEnv>();
+
+// Sentry error handler
+app.onError((err, c) => {
+  Sentry.captureException(err);
+  if (err instanceof HTTPException) {
+    return err.getResponse();
+  }
+  return c.json({ error: "Internal server error" }, 500);
+});
 
 // CORS for dev
 app.use("/api/*", cors());
