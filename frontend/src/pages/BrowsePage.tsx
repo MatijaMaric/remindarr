@@ -16,7 +16,7 @@ const CATEGORY_LABELS: Record<BrowseCategory, string> = {
 };
 
 export default function BrowsePage() {
-  const [category, setCategory] = useState<BrowseCategory>("new_releases");
+  const [category, setCategory] = useState<BrowseCategory>("popular");
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
