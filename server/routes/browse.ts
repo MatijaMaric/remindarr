@@ -6,6 +6,9 @@ import {
   fetchTvDetails,
   getMovieGenres,
   getTvGenres,
+  getMovieWatchProviders,
+  getTvWatchProviders,
+  getLanguages,
   type DiscoverFilters,
 } from "../tmdb/client";
 import {
@@ -103,7 +106,13 @@ app.get("/", async (c) => {
   }
 
   try {
-    const [movieGenreMap, tvGenreMap] = await Promise.all([getMovieGenres(), getTvGenres()]);
+    const [movieGenreMap, tvGenreMap, movieProviders, tvProviders, tmdbLanguages] = await Promise.all([
+      getMovieGenres(),
+      getTvGenres(),
+      getMovieWatchProviders(),
+      getTvWatchProviders(),
+      getLanguages(),
+    ]);
     const allGenres = new Map([...movieGenreMap, ...tvGenreMap]);
 
     // Build discover filters
@@ -119,15 +128,18 @@ app.get("/", async (c) => {
 
     let basicTitles: ParsedTitle[] = [];
     let totalPages = 1;
+    let totalResults = 0;
 
     if (type === "MOVIE") {
       const res = await fetchMoviesByCategory(category as Category, discoverOpts);
       basicTitles = res.results.map((m) => parseDiscoverMovie(m, allGenres));
       totalPages = Math.min(res.total_pages, 500);
+      totalResults = res.total_results;
     } else if (type === "SHOW") {
       const res = await fetchTvByCategory(category as Category, discoverOpts);
       basicTitles = res.results.map((t) => parseDiscoverTv(t, allGenres));
       totalPages = Math.min(res.total_pages, 500);
+      totalResults = res.total_results;
     } else {
       const [movieRes, tvRes] = await Promise.all([
         fetchMoviesByCategory(category as Category, discoverOpts),
@@ -137,6 +149,7 @@ app.get("/", async (c) => {
       const tvShows = tvRes.results.map((t) => parseDiscoverTv(t, allGenres));
       basicTitles = [...movies, ...tvShows];
       totalPages = Math.min(Math.max(movieRes.total_pages, tvRes.total_pages), 500);
+      totalResults = movieRes.total_results + tvRes.total_results;
     }
 
     // Fetch full details with watch providers for each result
@@ -162,10 +175,19 @@ app.get("/", async (c) => {
       isTracked: trackedIds.has(t.id),
     }));
 
-    // Build available genres from TMDB genre maps for dropdown population
+    // Build available filter options from TMDB data for dropdown population
     const availableGenres = Array.from(new Set([...movieGenreMap.values(), ...tvGenreMap.values()])).sort();
 
-    return c.json({ titles: titlesWithTracked, page, totalPages, availableGenres });
+    // Deduplicate providers by ID and sort by name
+    const providerMap = new Map<number, { id: number; name: string; iconUrl: string }>();
+    for (const p of [...movieProviders, ...tvProviders]) {
+      if (!providerMap.has(p.id)) providerMap.set(p.id, p);
+    }
+    const availableProviders = Array.from(providerMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+    const availableLanguages = tmdbLanguages;
+
+    return c.json({ titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }

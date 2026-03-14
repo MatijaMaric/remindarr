@@ -1,4 +1,12 @@
-import type { Provider } from "../types";
+interface ProviderOption {
+  id: number;
+  name: string;
+}
+
+interface LanguageOption {
+  code: string;
+  name: string;
+}
 
 interface Props {
   type: string;
@@ -11,10 +19,10 @@ interface Props {
   genres?: string[];
   provider?: string;
   onProviderChange?: (provider: string) => void;
-  providers?: Provider[];
+  providers?: ProviderOption[];
   language?: string;
   onLanguageChange?: (language: string) => void;
-  languages?: string[];
+  languages?: string[] | LanguageOption[];
 }
 
 const TYPES = [
@@ -114,7 +122,7 @@ export default function FilterBar({
         >
           <option value="">All Platforms</option>
           {providers.map((p) => (
-            <option key={p.technical_name} value={p.technical_name}>
+            <option key={p.id} value={String(p.id)}>
               {p.name}
             </option>
           ))}
@@ -127,11 +135,17 @@ export default function FilterBar({
           className={selectClass}
         >
           <option value="">All Languages</option>
-          {languages.map((l) => (
-            <option key={l} value={l}>
-              {languageLabel(l)}
-            </option>
-          ))}
+          {languages.map((l) =>
+            typeof l === "string" ? (
+              <option key={l} value={l}>
+                {languageLabel(l)}
+              </option>
+            ) : (
+              <option key={l.code} value={l.code}>
+                {l.name}
+              </option>
+            )
+          )}
         </select>
       )}
     </div>

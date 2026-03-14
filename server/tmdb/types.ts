@@ -166,6 +166,28 @@ export interface TmdbGenreListResponse {
   genres: TmdbGenre[];
 }
 
+// ─── Watch provider list ────────────────────────────────────────────────────
+
+export interface TmdbWatchProviderListEntry {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+  display_priority: number;
+  display_priorities: Record<string, number>;
+}
+
+export interface TmdbWatchProviderListResponse {
+  results: TmdbWatchProviderListEntry[];
+}
+
+// ─── Language list ──────────────────────────────────────────────────────────
+
+export interface TmdbLanguage {
+  iso_639_1: string;
+  english_name: string;
+  name: string;
+}
+
 // ─── Full Detail Types (for detail pages with credits, release dates) ───────
 
 export interface TmdbCastMember {

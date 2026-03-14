@@ -10,6 +10,8 @@ import type {
   TmdbSearchMultiResult,
   TmdbFindResponse,
   TmdbGenreListResponse,
+  TmdbWatchProviderListResponse,
+  TmdbLanguage,
   TmdbMovieFullDetails,
   TmdbShowFullDetails,
   TmdbSeasonDetails,
@@ -256,4 +258,51 @@ export async function getTvGenres(): Promise<Map<number, string>> {
   });
   tvGenreCache = new Map(data.genres.map((g) => [g.id, g.name]));
   return tvGenreCache;
+}
+
+// ─── Watch provider lists (for filter dropdowns) ────────────────────────────
+
+let movieProviderCache: { id: number; name: string; iconUrl: string }[] | null = null;
+let tvProviderCache: { id: number; name: string; iconUrl: string }[] | null = null;
+
+export async function getMovieWatchProviders(): Promise<{ id: number; name: string; iconUrl: string }[]> {
+  if (movieProviderCache) return movieProviderCache;
+  const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/movie", {
+    watch_region: CONFIG.COUNTRY,
+    language: tmdbLanguage(),
+  });
+  movieProviderCache = data.results.map((p) => ({
+    id: p.provider_id,
+    name: p.provider_name,
+    iconUrl: `${CONFIG.TMDB_IMAGE_BASE_URL}/w92${p.logo_path}`,
+  }));
+  return movieProviderCache;
+}
+
+export async function getTvWatchProviders(): Promise<{ id: number; name: string; iconUrl: string }[]> {
+  if (tvProviderCache) return tvProviderCache;
+  const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/tv", {
+    watch_region: CONFIG.COUNTRY,
+    language: tmdbLanguage(),
+  });
+  tvProviderCache = data.results.map((p) => ({
+    id: p.provider_id,
+    name: p.provider_name,
+    iconUrl: `${CONFIG.TMDB_IMAGE_BASE_URL}/w92${p.logo_path}`,
+  }));
+  return tvProviderCache;
+}
+
+// ─── Language list ──────────────────────────────────────────────────────────
+
+let languageCache: { code: string; name: string }[] | null = null;
+
+export async function getLanguages(): Promise<{ code: string; name: string }[]> {
+  if (languageCache) return languageCache;
+  const data = await tmdbRequest<TmdbLanguage[]>("/configuration/languages");
+  languageCache = data
+    .map((l) => ({ code: l.iso_639_1, name: l.english_name }))
+    .filter((l) => l.name && l.name !== "No Language")
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return languageCache;
 }

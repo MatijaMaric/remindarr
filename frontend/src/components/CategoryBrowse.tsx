@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import * as api from "../api";
-import type { Title, Provider } from "../types";
+import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
@@ -79,11 +79,11 @@ export default function CategoryBrowse({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
+  const [totalResults, setTotalResults] = useState(0);
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
 
-  // Track providers/languages from loaded titles for dropdowns
-  const availableProviders = useMemo(() => extractBrowseProviders(titles), [titles]);
-  const availableLanguages = useMemo(() => extractBrowseLanguages(titles), [titles]);
+  const [availableProviders, setAvailableProviders] = useState<{ id: number; name: string; iconUrl: string }[]>([]);
+  const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
 
   const fetchTitles = useCallback(async (pageNum: number, append: boolean) => {
     if (append) {
@@ -110,7 +110,16 @@ export default function CategoryBrowse({
       if (res.availableGenres) {
         setAvailableGenres(res.availableGenres);
       }
+      if (res.availableProviders) {
+        setAvailableProviders(res.availableProviders);
+      }
+      if (res.availableLanguages) {
+        setAvailableLanguages(res.availableLanguages);
+      }
       setTotalPages(res.totalPages);
+      if (!append) {
+        setTotalResults(res.totalResults);
+      }
       setPage(pageNum);
     } catch (err: any) {
       setError(err.message);
@@ -170,6 +179,9 @@ export default function CategoryBrowse({
         <div className="text-center py-12 text-gray-500">Loading...</div>
       ) : (
         <>
+          {totalResults > 0 && (
+            <p className="text-sm text-gray-500">{totalResults} result{totalResults !== 1 ? "s" : ""}</p>
+          )}
           <TitleList titles={titles} emptyMessage="No titles found." />
           {page < totalPages && (
             <div ref={sentinelRef} className="text-center py-4">
