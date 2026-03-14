@@ -70,6 +70,13 @@ docker compose up --build
 - `pages/` — HomePage (browse + search) and TrackedPage (watchlist)
 - `components/` — TitleCard, TitleList, FilterBar, SearchBar, TrackButton, NewReleases
 
+### Logging
+- All server-side code MUST use the structured logger from `server/logger.ts` — never use `console.log/warn/error` directly
+- Create module-scoped child loggers: `const log = logger.child({ module: "my-module" })`
+- Log level is configurable via `LOG_LEVEL` env var (debug, info, warn, error), defaults to "info"
+- Pass contextual data as the second argument: `log.info("message", { key: value })`
+- Frontend code may continue using `console.error`
+
 ### Key Patterns
 - DB titles use snake_case, TMDB API search results use camelCase — `normalizeSearchTitle()` bridges the gap
 - Offers are deduplicated by provider ID with priority: FLATRATE > FREE > ADS

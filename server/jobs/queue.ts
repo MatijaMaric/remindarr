@@ -1,4 +1,7 @@
 import { getRawDb } from "../db/schema";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "jobs" });
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -266,7 +269,7 @@ export function recoverStaleJobs(staleMinutes: number = 30) {
     )
     .run(staleMinutes);
   if (result.changes > 0) {
-    console.log(`[Jobs] Recovered ${result.changes} stale jobs`);
+    log.info("Recovered stale jobs", { count: result.changes });
   }
 }
 
@@ -300,7 +303,7 @@ export function registerCron(name: string, cron: string) {
      ON CONFLICT(name) DO UPDATE SET cron = excluded.cron, next_run = excluded.next_run`
   ).run(name, cron, nextRun);
 
-  console.log(`[Jobs] Registered cron "${name}": ${cron} (next: ${nextRun})`);
+  log.info("Registered cron", { name, cron, nextRun });
 }
 
 export function tickCrons() {
@@ -323,7 +326,7 @@ export function tickCrons() {
 
     if (!existing) {
       enqueueJob(cron.name);
-      console.log(`[Jobs] Cron "${cron.name}" enqueued`);
+      log.info("Cron enqueued", { name: cron.name });
     }
 
     // Advance to next run

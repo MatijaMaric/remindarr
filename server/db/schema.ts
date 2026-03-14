@@ -11,6 +11,9 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 import { CONFIG } from "../config";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "migration" });
 
 // ─── Table Definitions ──────────────────────────────────────────────────────
 
@@ -487,7 +490,7 @@ function migrateSchema(db: Database) {
 
   // Migration v3: Switch from JustWatch to TMDB data source
   if (getSchemaVersion(db) < 3) {
-    console.log("[Migration v3] Migrating from JustWatch to TMDB data source...");
+    log.info("Migrating from JustWatch to TMDB data source", { version: 3 });
 
     // Clear all content data (IDs are changing from JW to TMDB format)
     db.run("DELETE FROM watched_episodes");
@@ -514,7 +517,7 @@ function migrateSchema(db: Database) {
       db.run("ALTER TABLE scores DROP COLUMN jw_rating");
     }
 
-    console.log("[Migration v3] Migration complete. Data cleared for TMDB re-sync.");
+    log.info("Migration complete, data cleared for TMDB re-sync", { version: 3 });
     setSchemaVersion(db, 3);
   }
 
@@ -525,7 +528,7 @@ function migrateSchema(db: Database) {
     ).get() as any;
     if (titlesInfo && !titlesInfo.sql.includes("original_title")) {
       db.run("ALTER TABLE titles ADD COLUMN original_title TEXT");
-      console.log("[Migration v4] Added original_title column to titles table.");
+      log.info("Added original_title column to titles table", { version: 4 });
     }
     setSchemaVersion(db, 4);
   }
@@ -549,7 +552,7 @@ function migrateSchema(db: Database) {
     `);
     db.run("CREATE INDEX IF NOT EXISTS idx_notifiers_user_id ON notifiers(user_id)");
     db.run("CREATE INDEX IF NOT EXISTS idx_notifiers_enabled_time ON notifiers(enabled, notify_time)");
-    console.log("[Migration v5] Created notifiers table.");
+    log.info("Created notifiers table", { version: 5 });
     setSchemaVersion(db, 5);
   }
 
@@ -560,7 +563,7 @@ function migrateSchema(db: Database) {
     ).get() as any;
     if (titlesInfo && !titlesInfo.sql.includes("original_language")) {
       db.run("ALTER TABLE titles ADD COLUMN original_language TEXT");
-      console.log("[Migration v6] Added original_language column to titles table.");
+      log.info("Added original_language column to titles table", { version: 6 });
     }
     setSchemaVersion(db, 6);
   }
@@ -579,6 +582,6 @@ export function migrateTrackedData(adminUserId: string) {
        SELECT title_id, ?, tracked_at, notes FROM tracked_old`
     ).run(adminUserId);
     d.run("DROP TABLE tracked_old");
-    console.log("[Auth] Migrated existing tracked titles to admin user");
+    log.info("Migrated existing tracked titles to admin user");
   }
 }

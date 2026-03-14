@@ -15,6 +15,9 @@ import {
 } from "../db/repository";
 import { getDiscovery, generateState, validateState, exchangeCode } from "../auth/oidc";
 import type { AppEnv } from "../types";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "auth" });
 
 const app = new Hono<AppEnv>();
 
@@ -195,7 +198,7 @@ app.get("/oidc/callback", async (c) => {
 
     return c.redirect("/");
   } catch (err: any) {
-    console.error("[OIDC] Callback error:", err);
+    log.error("OIDC callback error", { err });
     return c.redirect(`/login?error=${encodeURIComponent(err.message)}`);
   }
 });

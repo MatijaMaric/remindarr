@@ -1,4 +1,7 @@
+import { logger } from "../logger";
 import { registerHandler } from "./worker";
+
+const log = logger.child({ module: "sync" });
 import { registerCron, enqueueJob } from "./queue";
 import { CONFIG } from "../config";
 import { fetchNewReleases } from "../tmdb/sync-titles";
@@ -12,16 +15,16 @@ export function registerSyncJobs() {
   registerHandler("sync-titles", async () => {
     const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });
     const count = upsertTitles(titles);
-    console.log(`[Sync] Synced ${count} titles from TMDB`);
+    log.info("Synced titles from TMDB", { count });
   });
 
   registerHandler("sync-episodes", async () => {
     if (!CONFIG.TMDB_API_KEY) {
-      console.log("[Sync] Skipping episode sync — TMDB_API_KEY not configured");
+      log.info("Skipping episode sync", { reason: "TMDB_API_KEY not configured" });
       return;
     }
     const result = await syncEpisodes();
-    console.log(`[Sync] Synced ${result.synced} episodes from ${result.shows} shows`);
+    log.info("Synced episodes", { synced: result.synced, shows: result.shows });
   });
 
   registerHandler("migrate-titles", async () => {

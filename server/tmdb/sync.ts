@@ -1,4 +1,7 @@
 import { CONFIG } from "../config";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "tmdb" });
 import { getDb } from "../db/schema";
 import { titles, episodes, tracked } from "../db/schema";
 import { upsertEpisodes } from "../db/repository";
@@ -68,7 +71,7 @@ export async function syncEpisodesForShow(
         });
       }
     } catch (err) {
-      console.error(`[TMDB] Failed to fetch S${String(season).padStart(2, "0")} for "${title}":`, err);
+      log.error("Failed to fetch season", { season, title, err });
     }
   }
 
@@ -76,7 +79,7 @@ export async function syncEpisodesForShow(
     upsertEpisodes(allEpisodes);
   }
 
-  console.log(`[TMDB] Synced ${allEpisodes.length} episodes across ${details.number_of_seasons} seasons for "${title}"`);
+  log.info("Synced episodes", { episodes: allEpisodes.length, seasons: details.number_of_seasons, title });
   return allEpisodes.length;
 }
 
@@ -110,7 +113,7 @@ export async function syncEpisodes(): Promise<{ synced: number; shows: number }>
         showsProcessed++;
       }
     } catch (err) {
-      console.error(`[TMDB] Failed to sync "${show.title}" (tmdb:${show.tmdb_id}):`, err);
+      log.error("Failed to sync show", { title: show.title, tmdbId: show.tmdb_id, err });
     }
 
     // Rate limit delay
