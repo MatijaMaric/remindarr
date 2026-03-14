@@ -8,7 +8,7 @@ import { makeParsedTitle } from "../test-utils/fixtures";
 
 const mockFetchPopularMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockFetchPopularTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
-const mockFetchUpcomingMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
+const mockDiscoverMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockFetchOnTheAirTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockFetchTopRatedMovies = mock(() => Promise.resolve({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }));
 const mockFetchTopRatedTv = mock(() => Promise.resolve({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }));
@@ -23,7 +23,7 @@ mock.module("../tmdb/client", () => ({
   ...realClient,
   fetchPopularMovies: mockFetchPopularMovies,
   fetchPopularTv: mockFetchPopularTv,
-  fetchUpcomingMovies: mockFetchUpcomingMovies,
+  discoverMovies: mockDiscoverMovies,
   fetchOnTheAirTv: mockFetchOnTheAirTv,
   fetchTopRatedMovies: mockFetchTopRatedMovies,
   fetchTopRatedTv: mockFetchTopRatedTv,
@@ -47,7 +47,7 @@ beforeEach(() => {
 
   mockFetchPopularMovies.mockClear();
   mockFetchPopularTv.mockClear();
-  mockFetchUpcomingMovies.mockClear();
+  mockDiscoverMovies.mockClear();
   mockFetchOnTheAirTv.mockClear();
   mockFetchTopRatedMovies.mockClear();
   mockFetchTopRatedTv.mockClear();
@@ -128,14 +128,19 @@ describe("GET /browse", () => {
     expect(mockFetchPopularTv).toHaveBeenCalled();
   });
 
-  it("uses upcoming fetchers for upcoming category", async () => {
-    mockFetchUpcomingMovies.mockResolvedValueOnce({
+  it("uses discover endpoint for upcoming movies with date range", async () => {
+    mockDiscoverMovies.mockResolvedValueOnce({
       results: [], total_pages: 1, total_results: 0, page: 1,
     });
 
     const res = await app.request("/browse?category=upcoming&type=MOVIE");
     expect(res.status).toBe(200);
-    expect(mockFetchUpcomingMovies).toHaveBeenCalled();
+    expect(mockDiscoverMovies).toHaveBeenCalledTimes(1);
+    const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.releaseDateGte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(callArgs.releaseDateLte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(callArgs.sortBy).toBe("release_date.asc");
+    expect(callArgs.page).toBe(1);
   });
 
   it("uses on_the_air for upcoming TV shows", async () => {

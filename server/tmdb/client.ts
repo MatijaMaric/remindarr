@@ -106,11 +106,12 @@ export async function discoverMovies(options: {
   releaseDateGte?: string;
   releaseDateLte?: string;
   page?: number;
+  sortBy?: string;
 }): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
   const params: Record<string, string> = {
     language: tmdbLanguage(),
     region: CONFIG.COUNTRY,
-    sort_by: "release_date.desc",
+    sort_by: options.sortBy || "release_date.desc",
     page: String(options.page || 1),
     "vote_count.gte": "0",
     watch_region: CONFIG.COUNTRY,
