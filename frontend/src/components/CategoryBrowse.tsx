@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
@@ -52,11 +52,24 @@ export default function CategoryBrowse({ category }: Props) {
     fetchTitles(1, false);
   }, [fetchTitles]);
 
-  function handleLoadMore() {
-    if (page < totalPages) {
-      fetchTitles(page + 1, true);
-    }
-  }
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && page < totalPages && !loadingMore) {
+          fetchTitles(page + 1, true);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [page, totalPages, loadingMore, fetchTitles]);
 
   return (
     <div className="space-y-4">
@@ -78,14 +91,10 @@ export default function CategoryBrowse({ category }: Props) {
         <>
           <TitleList titles={titles} emptyMessage="No titles found." />
           {page < totalPages && (
-            <div className="text-center py-4">
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                className="px-6 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
-              >
-                {loadingMore ? "Loading..." : "Load More"}
-              </button>
+            <div ref={sentinelRef} className="text-center py-4">
+              {loadingMore && (
+                <div className="text-gray-500 text-sm">Loading...</div>
+              )}
             </div>
           )}
         </>
