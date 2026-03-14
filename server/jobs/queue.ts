@@ -337,6 +337,14 @@ export function tickCrons() {
   }
 }
 
+export function getCronExpression(name: string): string | null {
+  const db = getRawDb();
+  const row = db
+    .prepare("SELECT cron FROM cron_jobs WHERE name = ? AND enabled = 1")
+    .get(name) as { cron: string } | null;
+  return row?.cron ?? null;
+}
+
 export function getCronJobs(): CronJob[] {
   const db = getRawDb();
   return db.prepare("SELECT * FROM cron_jobs ORDER BY name").all() as CronJob[];

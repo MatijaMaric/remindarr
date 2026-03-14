@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "jobs" });
@@ -10,6 +11,7 @@ import {
   tickCrons,
   recoverStaleJobs,
   cleanupOldJobs,
+  getCronExpression,
   type JobHandler,
 } from "./queue";
 
@@ -26,13 +28,27 @@ export function registerHandler(name: string, handler: JobHandler) {
   handlers.set(name, handler);
 }
 
-async function processJobs() {
+export async function processJobs() {
   for (const [name, handler] of handlers) {
     const job = claimNextJob(name);
     if (!job) continue;
 
+    const cronExpr = getCronExpression(name);
+    const monitorConfig = cronExpr
+      ? {
+          schedule: { type: "crontab" as const, value: cronExpr },
+          maxRuntime: 30,
+        }
+      : undefined;
+
     try {
-      await handler(job);
+      await Sentry.withMonitor(
+        name,
+        async () => {
+          await handler(job);
+        },
+        monitorConfig
+      );
       completeJob(job.id);
       log.info("Completed job", { name, jobId: job.id });
     } catch (err) {
