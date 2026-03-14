@@ -10,9 +10,12 @@ const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(
   }) as typeof Sentry.withMonitor
 );
 
+const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id");
+
 beforeEach(() => {
   setupTestDb();
   withMonitorSpy.mockClear();
+  captureExceptionSpy.mockClear();
 });
 
 afterAll(() => {
@@ -77,8 +80,9 @@ describe("worker Sentry monitoring", () => {
       }) as typeof Sentry.withMonitor
     );
 
+    const jobError = new Error("job failed");
     registerHandler("failing-job", async () => {
-      throw new Error("job failed");
+      throw jobError;
     });
     enqueueJob("failing-job");
 
@@ -89,5 +93,6 @@ describe("worker Sentry monitoring", () => {
       expect.any(Function),
       undefined
     );
+    expect(captureExceptionSpy).toHaveBeenCalledWith(jobError);
   });
 });

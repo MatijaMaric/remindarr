@@ -132,8 +132,9 @@ registerSyncJobs();
 registerNotificationJobs();
 startWorker();
 
-process.on("SIGTERM", () => {
+process.on("SIGTERM", async () => {
   stopWorker();
+  await Sentry.flush(2000);
   process.exit(0);
 });
 

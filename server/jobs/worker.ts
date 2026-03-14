@@ -52,6 +52,7 @@ export async function processJobs() {
       completeJob(job.id);
       log.info("Completed job", { name, jobId: job.id });
     } catch (err) {
+      Sentry.captureException(err);
       const message = err instanceof Error ? err.message : String(err);
       failJob(job.id, message);
       log.error("Failed job", { name, jobId: job.id, attempt: job.attempts, maxAttempts: job.max_attempts, error: message });
