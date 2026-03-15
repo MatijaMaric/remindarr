@@ -10,6 +10,7 @@ RUN bun run build
 FROM oven/bun:1 AS server-build
 WORKDIR /app
 COPY package.json bun.lock ./
+COPY frontend/package.json ./frontend/
 RUN bun install --frozen-lockfile --production
 COPY server/ ./server/
 COPY tsconfig.json ./
