@@ -100,7 +100,7 @@ export default function App() {
           </div>
         </div>
       </nav>
-      <main className={`${isReelsPage ? "" : "max-w-7xl mx-auto px-4 py-6"} pb-20 sm:pb-6`}>
+      <main className={isReelsPage ? "" : "max-w-7xl mx-auto px-4 py-6 pb-20 sm:pb-6"}>
         <Routes>
           <Route path="/" element={<MobileHomeRedirect />} />
           <Route path="/browse" element={<BrowsePage />} />

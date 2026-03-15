@@ -17,7 +17,7 @@ export default function BottomTabBar() {
           <>
             <NavLink to="/reels" className={({ isActive }) => bottomTabClass(isActive)}>
               <Clapperboard size={ICON_SIZE} />
-              <span className="text-[10px] mt-0.5">Reels</span>
+              <span className="text-[10px] mt-0.5">Watch</span>
             </NavLink>
 
             <NavLink to="/upcoming" className={({ isActive }) => bottomTabClass(isActive)}>

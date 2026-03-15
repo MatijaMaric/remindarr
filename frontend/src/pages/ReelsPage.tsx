@@ -278,7 +278,7 @@ export default function ReelsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center" style={{ minHeight: "calc(100dvh - 3.5rem - 5rem)" }}>
+      <div className="flex items-center justify-center" style={{ minHeight: "calc(100dvh - 5rem)" }}>
         <p className="text-gray-500">Loading...</p>
       </div>
     );
@@ -286,7 +286,7 @@ export default function ReelsPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 3.5rem - 5rem)" }}>
+      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 5rem)" }}>
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
           <Link to="/" className="text-indigo-400 hover:text-indigo-300">
@@ -299,7 +299,7 @@ export default function ReelsPage() {
 
   if (cards.length === 0) {
     return (
-      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 3.5rem - 5rem)" }}>
+      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 5rem)" }}>
         <div className="text-center">
           <p className="text-gray-400 text-lg mb-2">No unwatched episodes</p>
           <p className="text-gray-600 text-sm mb-6">You're all caught up!</p>
@@ -316,7 +316,7 @@ export default function ReelsPage() {
       <div
         ref={scrollRef}
         className="overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-        style={{ height: "calc(100dvh - 3.5rem - 5rem)" }}
+        style={{ height: "calc(100dvh - 5rem)" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
