@@ -18,6 +18,7 @@ export const CONFIG = {
   TMDB_API_KEY: process.env.TMDB_API_KEY || "",
   TMDB_BASE_URL: "https://api.themoviedb.org/3",
   TMDB_IMAGE_BASE_URL: "https://image.tmdb.org/t/p",
+  TMDB_API_TIMEOUT_MS: Number(process.env.TMDB_API_TIMEOUT_MS) || 15000,
   EPISODE_SYNC_DELAY_MS: 500,
   SYNC_TITLES_CRON: process.env.SYNC_TITLES_CRON || "0 3 * * *",
   SYNC_EPISODES_CRON: process.env.SYNC_EPISODES_CRON || "30 3 * * *",
@@ -33,6 +34,9 @@ export const CONFIG = {
   OIDC_REDIRECT_URI: process.env.OIDC_REDIRECT_URI || "",
   OIDC_ADMIN_CLAIM: process.env.OIDC_ADMIN_CLAIM || "",
   OIDC_ADMIN_VALUE: process.env.OIDC_ADMIN_VALUE || "",
+
+  // CORS
+  CORS_ORIGIN: process.env.CORS_ORIGIN || "",
 
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",

@@ -160,6 +160,7 @@ export default function FilterBar({
       )}
       {onHideTrackedChange && (
         <button
+          aria-pressed={hideTracked}
           onClick={() => onHideTrackedChange(!hideTracked)}
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
             hideTracked

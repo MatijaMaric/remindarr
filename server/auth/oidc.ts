@@ -1,4 +1,4 @@
-import { getOidcConfig } from "../db/repository";
+import { getOidcConfig, createOidcState, consumeOidcState, cleanExpiredOidcStates } from "../db/repository";
 import { traceHttp } from "../tracing";
 
 interface OidcDiscovery {
@@ -32,25 +32,20 @@ export function clearDiscoveryCache() {
   cachedDiscovery = null;
 }
 
-// Simple in-memory state store for OIDC authorization flow
-const stateStore = new Map<string, number>();
+// SQLite-backed state store for OIDC authorization flow
+// Supports multi-instance deployments and avoids memory leak risks
 
 export function generateState(): string {
-  // Clean up old states (older than 10 minutes)
-  const now = Date.now();
-  for (const [key, ts] of stateStore) {
-    if (now - ts > 10 * 60 * 1000) stateStore.delete(key);
-  }
+  // Clean up expired states
+  cleanExpiredOidcStates();
 
   const state = crypto.randomUUID();
-  stateStore.set(state, now);
+  createOidcState(state);
   return state;
 }
 
 export function validateState(state: string): boolean {
-  if (!stateStore.has(state)) return false;
-  stateStore.delete(state);
-  return true;
+  return consumeOidcState(state);
 }
 
 /** Exchange authorization code for tokens and extract user info from id_token */

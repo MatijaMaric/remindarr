@@ -519,8 +519,8 @@ export default function HomePage() {
     const revertAll = (eps: Episode[]) =>
       eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep));
 
-    setToday(updateAll);
-    setUpcoming(updateAll);
+    setToday((prev) => updateAll(prev));
+    setUpcoming((prev) => updateAll(prev));
     setUnwatched((prev) => {
       if (!currentlyWatched) {
         return prev.filter((ep) => ep.id !== episodeId);
@@ -535,8 +535,8 @@ export default function HomePage() {
         await api.watchEpisode(episodeId);
       }
     } catch (err) {
-      setToday(revertAll);
-      setUpcoming(revertAll);
+      setToday((prev) => revertAll(prev));
+      setUpcoming((prev) => revertAll(prev));
       if (!currentlyWatched) {
         // Re-fetch to restore the removed episode
         try {

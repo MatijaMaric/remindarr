@@ -28,17 +28,24 @@ async function tmdbRequest<T>(path: string, params?: Record<string, string>): Pr
     }
   }
   return traceHttp("GET", url.toString(), async () => {
-    const res = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${CONFIG.TMDB_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`TMDB API error ${res.status}: ${body}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CONFIG.TMDB_API_TIMEOUT_MS);
+    try {
+      const res = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${CONFIG.TMDB_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`TMDB API error ${res.status}: ${body}`);
+      }
+      return res.json() as Promise<T>;
+    } finally {
+      clearTimeout(timeout);
     }
-    return res.json() as Promise<T>;
   });
 }
 

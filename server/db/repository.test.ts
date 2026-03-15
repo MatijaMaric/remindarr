@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { getRawDb } from "./schema";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import {
   upsertTitles,
   getTitleById,
   getRecentTitles,
   getOffersForTitle,
+  getOffersForTitles,
   searchLocalTitles,
   trackTitle,
   untrackTitle,
@@ -36,6 +38,10 @@ import {
   getSettingsByPrefix,
   getOidcConfig,
   isOidcConfigured,
+  createNotifier,
+  getNotifiersByUser,
+  getNotifierById,
+  getDueNotifiers,
 } from "./repository";
 import { CONFIG } from "../config";
 
@@ -106,6 +112,38 @@ describe("upsertTitles", () => {
     expect(offers[0].provider_name).toBe("Netflix");
   });
 
+  it("batch-fetches offers for multiple titles", () => {
+    upsertTitles([
+      makeParsedTitle({
+        id: "movie-1",
+        title: "Movie One",
+        offers: [makeParsedOffer({ titleId: "movie-1", providerId: 8, providerName: "Netflix" })],
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Movie Two",
+        offers: [makeParsedOffer({ titleId: "movie-2", providerId: 337, providerName: "Disney Plus" })],
+      }),
+      makeParsedTitle({
+        id: "movie-3",
+        title: "Movie Three",
+        offers: [],
+      }),
+    ]);
+
+    const offerMap = getOffersForTitles(["movie-1", "movie-2", "movie-3"]);
+    expect(offerMap.get("movie-1")).toHaveLength(1);
+    expect(offerMap.get("movie-1")![0].provider_name).toBe("Netflix");
+    expect(offerMap.get("movie-2")).toHaveLength(1);
+    expect(offerMap.get("movie-2")![0].provider_name).toBe("Disney Plus");
+    expect(offerMap.get("movie-3")).toBeUndefined();
+  });
+
+  it("returns empty map for empty titleIds", () => {
+    const offerMap = getOffersForTitles([]);
+    expect(offerMap.size).toBe(0);
+  });
+
   it("upserts scores", () => {
     upsertTitles([makeParsedTitle({ scores: { imdbScore: 8.0, imdbVotes: 5000, tmdbScore: 7.5 } })]);
     const result = getTitleById("movie-123");
@@ -161,6 +199,29 @@ describe("getRecentTitles", () => {
     const results = getRecentTitles({ daysBack: 0 });
     expect(results).toHaveLength(2);
     expect(results[0].title).toBe("New");
+  });
+
+  it("includes offers via batch fetch", () => {
+    upsertTitles([
+      makeParsedTitle({
+        id: "movie-1",
+        releaseDate: "2025-01-01",
+        offers: [makeParsedOffer({ titleId: "movie-1", providerId: 8, providerName: "Netflix" })],
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "No Offers",
+        releaseDate: "2025-01-02",
+        offers: [],
+      }),
+    ]);
+    const results = getRecentTitles({ daysBack: 0 });
+    expect(results).toHaveLength(2);
+    const withOffers = results.find((r) => r.id === "movie-1")!;
+    const withoutOffers = results.find((r) => r.id === "movie-2")!;
+    expect(withOffers.offers).toHaveLength(1);
+    expect(withOffers.offers[0].provider_name).toBe("Netflix");
+    expect(withoutOffers.offers).toEqual([]);
   });
 
   it("filters by objectType", () => {
@@ -568,9 +629,16 @@ describe("episodes", () => {
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Updated", overview: null, air_date: "2024-01-01", still_path: null },
     ]);
 
-    // Verify no duplicate by inserting again — if there were duplicates, this would cause unique constraint issues
-    // The upsert should succeed without error
-    expect(true).toBe(true);
+    const row = getRawDb().prepare(
+      "SELECT count(*) as cnt FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1"
+    ).get() as { cnt: number };
+    expect(row.cnt).toBe(1);
+
+    // Also verify the upsert updated the name
+    const ep = getRawDb().prepare(
+      "SELECT name FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1"
+    ).get() as { name: string };
+    expect(ep.name).toBe("Updated");
   });
 });
 
@@ -624,5 +692,60 @@ describe("getProviders", () => {
     expect(providers).toHaveLength(2);
     expect(providers[0].name).toBe("Disney Plus");
     expect(providers[1].name).toBe("Netflix");
+  });
+});
+
+// ─── Notifier JSON.parse error handling ─────────────────────────────────────
+
+describe("notifier config parsing", () => {
+  function createTestUser() {
+    return createUser("testuser", "hash123");
+  }
+
+  function corruptNotifierConfig(notifierId: string) {
+    const raw = getRawDb();
+    raw.prepare("UPDATE notifiers SET config = '{invalid json' WHERE id = ?").run(notifierId);
+  }
+
+  it("getNotifiersByUser returns empty config for corrupted JSON", () => {
+    const userId = createTestUser();
+    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    corruptNotifierConfig(id);
+
+    const notifiers = getNotifiersByUser(userId);
+    expect(notifiers).toHaveLength(1);
+    expect(notifiers[0].config).toEqual({});
+  });
+
+  it("getNotifierById returns empty config for corrupted JSON", () => {
+    const userId = createTestUser();
+    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    corruptNotifierConfig(id);
+
+    const notifier = getNotifierById(id, userId);
+    expect(notifier).not.toBeNull();
+    expect(notifier!.config).toEqual({});
+  });
+
+  it("getDueNotifiers returns empty config for corrupted JSON", () => {
+    const userId = createTestUser();
+    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    corruptNotifierConfig(id);
+
+    const timesByTimezone = new Map([
+      ["UTC", { time: "09:00", date: "2026-03-15" }],
+    ]);
+    const due = getDueNotifiers(timesByTimezone);
+    expect(due).toHaveLength(1);
+    expect(due[0].config).toEqual({});
+  });
+
+  it("getNotifiersByUser parses valid config correctly", () => {
+    const userId = createTestUser();
+    createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+
+    const notifiers = getNotifiersByUser(userId);
+    expect(notifiers).toHaveLength(1);
+    expect(notifiers[0].config).toEqual({ url: "http://example.com" });
   });
 });
