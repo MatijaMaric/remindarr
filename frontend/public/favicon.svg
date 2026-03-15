@@ -1,4 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="64" fill="#1a1a1a"/>
-  <text x="256" y="360" font-family="system-ui, sans-serif" font-size="360" font-weight="700" fill="#ffffff" text-anchor="middle">R</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1628"/>
+      <stop offset="100%" stop-color="#080c18"/>
+    </linearGradient>
+    <linearGradient id="bell" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#ff5088"/>
+      <stop offset="40%" stop-color="#e63956"/>
+      <stop offset="100%" stop-color="#c42a3e"/>
+    </linearGradient>
+    <linearGradient id="bellShine" x1="0.3" y1="0" x2="0.7" y2="0.6">
+      <stop offset="0%" stop-color="#ff80aa" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ff5088" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.4">
+      <stop offset="0%" stop-color="#ff4d6a" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ff4d6a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Glow behind bell -->
+  <circle cx="256" cy="230" r="180" fill="url(#glow)"/>
+  <!-- Bell body -->
+  <path d="M256 80 c-8 0-16 6-16 14 v10 c-52 12-90 58-90 114 v72 c0 12-18 28-30 36 h272 c-12-8-30-24-30-36 v-72 c0-56-38-102-90-114 v-10 c0-8-8-14-16-14z" fill="url(#bell)"/>
+  <!-- Bell shine -->
+  <path d="M256 80 c-8 0-16 6-16 14 v10 c-52 12-90 58-90 114 v72 c0 12-18 28-30 36 h272 c-12-8-30-24-30-36 v-72 c0-56-38-102-90-114 v-10 c0-8-8-14-16-14z" fill="url(#bellShine)"/>
+  <!-- Bell rim -->
+  <ellipse cx="256" cy="326" rx="136" ry="18" fill="#b02040"/>
+  <!-- Clapper -->
+  <circle cx="256" cy="356" r="22" fill="#ff6040"/>
+  <!-- Top knob -->
+  <circle cx="256" cy="76" r="18" fill="#ff3070"/>
+  <!-- Side knob -->
+  <circle cx="358" cy="130" r="14" fill="#ff6040"/>
+  <!-- Play triangle -->
+  <path d="M228 195 L228 275 L300 235 Z" fill="rgba(255,255,255,0.9)"/>
 </svg>
