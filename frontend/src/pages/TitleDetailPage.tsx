@@ -13,6 +13,7 @@ import type {
 } from "../types";
 import TrackButton from "../components/TrackButton";
 import PersonCard from "../components/PersonCard";
+import ExternalLinks from "../components/ExternalLinks";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -423,6 +424,17 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
         </Section>
       )}
 
+      {/* External Links */}
+      {tmdb && (
+        <Section title="Links">
+          <ExternalLinks
+            externalIds={tmdb.external_ids ?? { imdb_id: tmdb.imdb_id }}
+            tmdbId={tmdb.id}
+            type="movie"
+          />
+        </Section>
+      )}
+
       {/* Additional Info */}
       {tmdb && (
         <Section title="Details">
@@ -696,6 +708,17 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               </a>
             ))}
           </div>
+        </Section>
+      )}
+
+      {/* External Links */}
+      {tmdb && (
+        <Section title="Links">
+          <ExternalLinks
+            externalIds={tmdb.external_ids}
+            tmdbId={tmdb.id}
+            type="tv"
+          />
         </Section>
       )}
 

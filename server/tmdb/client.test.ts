@@ -151,19 +151,19 @@ describe("fetchMovieFullDetails", () => {
     await fetchMovieFullDetails("55");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/movie/55");
-    expect(url.searchParams.get("append_to_response")).toBe("credits,release_dates,watch/providers");
+    expect(url.searchParams.get("append_to_response")).toBe("credits,release_dates,watch/providers,external_ids");
   });
 });
 
 // ─── fetchShowFullDetails ───────────────────────────────────────────────────
 
 describe("fetchShowFullDetails", () => {
-  it("appends credits, content_ratings, watch/providers", async () => {
+  it("appends credits, content_ratings, watch/providers, external_ids", async () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 1 }));
     await fetchShowFullDetails("77");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/tv/77");
-    expect(url.searchParams.get("append_to_response")).toBe("credits,content_ratings,watch/providers");
+    expect(url.searchParams.get("append_to_response")).toBe("credits,content_ratings,watch/providers,external_ids");
   });
 });
 
@@ -201,7 +201,7 @@ describe("fetchPersonDetails", () => {
     expect(result.name).toBe("Actor Name");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/person/200");
-    expect(url.searchParams.get("append_to_response")).toBe("combined_credits");
+    expect(url.searchParams.get("append_to_response")).toBe("combined_credits,external_ids");
   });
 });
 

@@ -1,3 +1,10 @@
+export interface ExternalIds {
+  imdb_id?: string | null;
+  facebook_id?: string | null;
+  instagram_id?: string | null;
+  twitter_id?: string | null;
+}
+
 export interface Offer {
   id: number;
   title_id: string;
@@ -208,6 +215,7 @@ export interface MovieDetailsResponse {
     credits: { cast: CastMember[]; crew: CrewMember[] };
     release_dates: { results: ReleaseDatesResult[] };
     "watch/providers": { results: Record<string, WatchProviderCountry> };
+    external_ids?: ExternalIds;
   } | null;
   country: string;
 }
@@ -242,6 +250,7 @@ export interface ShowDetailsResponse {
     credits: { cast: CastMember[]; crew: CrewMember[] };
     content_ratings: { results: { iso_3166_1: string; rating: string }[] };
     "watch/providers": { results: Record<string, WatchProviderCountry> };
+    external_ids?: ExternalIds;
   } | null;
   country: string;
 }
@@ -344,6 +353,7 @@ export interface PersonDetailsResponse {
       cast: PersonCastCredit[];
       crew: PersonCrewCredit[];
     };
+    external_ids?: ExternalIds;
   };
 }
 
