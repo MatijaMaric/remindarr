@@ -32,14 +32,14 @@ describe("BottomTabBar", () => {
   it("renders 5 tabs when user is authenticated", () => {
     render(<BottomTabBar />, { wrapper: Wrapper });
 
-    expect(screen.getByText("Home")).toBeDefined();
+    expect(screen.getByText("Reels")).toBeDefined();
+    expect(screen.getByText("Upcoming")).toBeDefined();
     expect(screen.getByText("Browse")).toBeDefined();
-    expect(screen.getByText("Tracked")).toBeDefined();
     expect(screen.getByText("Calendar")).toBeDefined();
     expect(screen.getByText("Profile")).toBeDefined();
   });
 
-  it("renders Home, Browse, and Sign In when user is not authenticated", () => {
+  it("renders Browse and Sign In when user is not authenticated", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     render(
       <MemoryRouter>
@@ -49,10 +49,10 @@ describe("BottomTabBar", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Home")).toBeDefined();
     expect(screen.getByText("Browse")).toBeDefined();
     expect(screen.getByText("Sign In")).toBeDefined();
-    expect(screen.queryByText("Tracked")).toBeNull();
+    expect(screen.queryByText("Reels")).toBeNull();
+    expect(screen.queryByText("Upcoming")).toBeNull();
     expect(screen.queryByText("Calendar")).toBeNull();
     expect(screen.queryByText("Profile")).toBeNull();
   });
@@ -81,9 +81,9 @@ describe("BottomTabBar", () => {
 
     const links = screen.getAllByRole("link");
     const hrefs = links.map((link) => link.getAttribute("href"));
-    expect(hrefs).toContain("/");
+    expect(hrefs).toContain("/reels");
+    expect(hrefs).toContain("/upcoming");
     expect(hrefs).toContain("/browse");
-    expect(hrefs).toContain("/tracked");
     expect(hrefs).toContain("/calendar");
     expect(hrefs).toContain("/profile");
   });
@@ -100,7 +100,6 @@ describe("BottomTabBar", () => {
 
     const links = screen.getAllByRole("link");
     const hrefs = links.map((link) => link.getAttribute("href"));
-    expect(hrefs).toContain("/");
     expect(hrefs).toContain("/browse");
     expect(hrefs).toContain("/login");
   });

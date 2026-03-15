@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, Link } from "react-router";
-import { X } from "lucide-react";
+import { Link } from "react-router";
+import { Undo2 } from "lucide-react";
 import * as api from "../api";
 import type { Episode } from "../types";
 import ReelsCard from "../components/ReelsCard";
+import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
 
 interface ShowCard {
   titleId: string;
@@ -12,6 +13,13 @@ interface ShowCard {
   episodes: Episode[];
   currentIndex: number;
   caughtUp: boolean;
+}
+
+interface UndoAction {
+  titleId: string;
+  previousIndex: number;
+  episodeId: number;
+  wasCaughtUp: boolean;
 }
 
 export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
@@ -41,14 +49,25 @@ export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
 }
 
 export default function ReelsPage() {
-  const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<ShowCard[]>([]);
   const cardsRef = useRef<ShowCard[]>([]);
   cardsRef.current = cards;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Undo state
+  const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Season panel state
+  const [seasonPanel, setSeasonPanel] = useState<{ card: ShowCard; seasonNumber: number } | null>(null);
+
+  // Swipe detection
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Track visible card index for swipe context
+  const [visibleCardIndex, setVisibleCardIndex] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -64,22 +83,50 @@ export default function ReelsPage() {
     load();
   }, []);
 
-  // Loop: when sentinel at bottom becomes visible, scroll back to top
+  // Track visible card via scroll position
   useEffect(() => {
-    const sentinel = sentinelRef.current;
     const container = scrollRef.current;
-    if (!sentinel || !container || cards.length === 0) return;
+    if (!container) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          container.scrollTo({ top: 0, behavior: "smooth" });
-        }
-      },
-      { root: container, threshold: 0.5 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    function onScroll() {
+      if (!container) return;
+      const cardHeight = container.clientHeight;
+      if (cardHeight === 0) return;
+      const index = Math.round(container.scrollTop / cardHeight);
+      setVisibleCardIndex(index);
+    }
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Seamless loop: when scrolled to the clone at the end, jump to the real first card
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || cards.length === 0) return;
+
+    function onScrollEnd() {
+      if (!container) return;
+      const cardHeight = container.clientHeight;
+      if (cardHeight === 0) return;
+      const index = Math.round(container.scrollTop / cardHeight);
+      // The clone is at position cards.length (0-indexed)
+      if (index >= cards.length) {
+        container.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      }
+    }
+
+    let scrollTimer: ReturnType<typeof setTimeout>;
+    function onScroll() {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(onScrollEnd, 150);
+    }
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      clearTimeout(scrollTimer);
+    };
   }, [cards.length]);
 
   // Keyboard navigation
@@ -89,7 +136,7 @@ export default function ReelsPage() {
 
     function handleKeyDown(e: KeyboardEvent) {
       if (!container) return;
-      const cardHeight = window.innerHeight;
+      const cardHeight = container.clientHeight;
       if (e.key === "ArrowDown" || e.key === "j") {
         e.preventDefault();
         container.scrollBy({ top: cardHeight, behavior: "smooth" });
@@ -103,12 +150,41 @@ export default function ReelsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Swipe detection for season panel
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    // Only trigger on horizontal swipe (dx > 80px, and more horizontal than vertical)
+    if (dx < -80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      // Swipe left -> open season panel
+      const card = cardsRef.current[visibleCardIndex];
+      if (card && !card.caughtUp) {
+        const currentEp = card.episodes[card.currentIndex];
+        setSeasonPanel({ card, seasonNumber: currentEp.season_number });
+      }
+    }
+  }, [visibleCardIndex]);
+
   const markWatched = useCallback(async (titleId: string) => {
-    // Read from ref to avoid stale closure when rapid swiping/tapping
     const card = cardsRef.current.find((c) => c.titleId === titleId);
     if (!card || card.caughtUp) return;
     const episode = card.episodes[card.currentIndex];
     if (!episode) return;
+
+    // Store undo action
+    const action: UndoAction = {
+      titleId,
+      previousIndex: card.currentIndex,
+      episodeId: episode.id,
+      wasCaughtUp: false,
+    };
 
     setCards((prev) => {
       return prev.map((c) => {
@@ -124,6 +200,11 @@ export default function ReelsPage() {
       });
     });
 
+    // Show undo toast
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoAction(action);
+    undoTimerRef.current = setTimeout(() => setUndoAction(null), 5000);
+
     try {
       await api.watchEpisode(episode.id);
     } catch (err) {
@@ -137,13 +218,67 @@ export default function ReelsPage() {
           return { ...c, currentIndex: Math.max(0, c.currentIndex - 1) };
         })
       );
+      setUndoAction(null);
       console.error("Failed to mark watched:", err);
+    }
+  }, []);
+
+  const handleUndo = useCallback(async () => {
+    if (!undoAction) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoAction(null);
+
+    // Revert the card state
+    setCards((prev) =>
+      prev.map((c) => {
+        if (c.titleId !== undoAction.titleId) return c;
+        return {
+          ...c,
+          currentIndex: undoAction.previousIndex,
+          caughtUp: false,
+        };
+      })
+    );
+
+    try {
+      await api.unwatchEpisode(undoAction.episodeId);
+    } catch (err) {
+      console.error("Failed to undo:", err);
+    }
+  }, [undoAction]);
+
+  // Season panel: bulk mark watched
+  const handleBulkWatch = useCallback(async (episodeIds: number[]) => {
+    try {
+      await api.watchEpisodesBulk(episodeIds, true);
+      // Reload data
+      const data = await api.getUpcomingEpisodes();
+      setCards(getFirstUnwatchedPerShow(data.unwatched));
+      setSeasonPanel(null);
+    } catch (err) {
+      console.error("Failed to bulk mark watched:", err);
+    }
+  }, []);
+
+  // Season panel: toggle individual episode watched
+  const handleSeasonToggleWatched = useCallback(async (episodeId: number, currentlyWatched: boolean) => {
+    try {
+      if (currentlyWatched) {
+        await api.unwatchEpisode(episodeId);
+      } else {
+        await api.watchEpisode(episodeId);
+      }
+      // Reload data
+      const data = await api.getUpcomingEpisodes();
+      setCards(getFirstUnwatchedPerShow(data.unwatched));
+    } catch (err) {
+      console.error("Failed to toggle watched:", err);
     }
   }, []);
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+      <div className="flex items-center justify-center" style={{ minHeight: "calc(100dvh - 3.5rem - 5rem)" }}>
         <p className="text-gray-500">Loading...</p>
       </div>
     );
@@ -151,12 +286,12 @@ export default function ReelsPage() {
 
   if (error) {
     return (
-      <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6">
+      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 3.5rem - 5rem)" }}>
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
-          <button onClick={() => navigate(-1)} className="text-indigo-400 hover:text-indigo-300 cursor-pointer">
+          <Link to="/" className="text-indigo-400 hover:text-indigo-300">
             Go back
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -164,12 +299,12 @@ export default function ReelsPage() {
 
   if (cards.length === 0) {
     return (
-      <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6">
+      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 3.5rem - 5rem)" }}>
         <div className="text-center">
           <p className="text-gray-400 text-lg mb-2">No unwatched episodes</p>
           <p className="text-gray-600 text-sm mb-6">You're all caught up!</p>
-          <Link to="/" className="text-indigo-400 hover:text-indigo-300">
-            Back to Home
+          <Link to="/upcoming" className="text-indigo-400 hover:text-indigo-300">
+            View Upcoming
           </Link>
         </div>
       </div>
@@ -177,35 +312,63 @@ export default function ReelsPage() {
   }
 
   return (
-    <div
-      ref={scrollRef}
-      className="fixed inset-0 z-[100] bg-black overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-    >
-      {/* Close button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="fixed top-4 left-4 z-[110] bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer"
-        aria-label="Close"
+    <>
+      <div
+        ref={scrollRef}
+        className="overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        style={{ height: "calc(100dvh - 3.5rem - 5rem)" }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
-        <X size={24} />
-      </button>
+        {/* Cards */}
+        {cards.map((card, i) => (
+          <ReelsCard
+            key={card.titleId}
+            episode={card.episodes[card.caughtUp ? card.episodes.length - 1 : card.currentIndex]}
+            caughtUp={card.caughtUp}
+            onMarkWatched={() => markWatched(card.titleId)}
+            index={i}
+            total={cards.length}
+          />
+        ))}
 
-      {/* Cards */}
-      {cards.map((card, i) => (
-        <ReelsCard
-          key={card.titleId}
-          episode={card.episodes[card.caughtUp ? card.episodes.length - 1 : card.currentIndex]}
-          caughtUp={card.caughtUp}
-          onMarkWatched={() => markWatched(card.titleId)}
-          index={i}
-          total={cards.length}
-        />
-      ))}
-
-      {/* Sentinel for loop detection */}
-      <div ref={sentinelRef} className="snap-start h-dvh w-full flex items-center justify-center">
-        <p className="text-gray-600 text-sm">Scrolling back to start...</p>
+        {/* Clone of first card for seamless loop */}
+        {cards.length > 1 && (
+          <ReelsCard
+            key="clone-first"
+            episode={cards[0].episodes[cards[0].caughtUp ? cards[0].episodes.length - 1 : cards[0].currentIndex]}
+            caughtUp={cards[0].caughtUp}
+            onMarkWatched={() => markWatched(cards[0].titleId)}
+            index={0}
+            total={cards.length}
+          />
+        )}
       </div>
-    </div>
+
+      {/* Undo toast */}
+      {undoAction && (
+        <div className="fixed bottom-22 left-1/2 -translate-x-1/2 z-[60] sm:bottom-8">
+          <button
+            onClick={handleUndo}
+            className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-full shadow-lg border border-gray-700 transition-colors cursor-pointer"
+          >
+            <Undo2 size={16} />
+            <span className="text-sm font-medium">Undo</span>
+          </button>
+        </div>
+      )}
+
+      {/* Season panel */}
+      {seasonPanel && (
+        <ReelsSeasonPanel
+          showTitle={seasonPanel.card.showTitle}
+          episodes={seasonPanel.card.episodes.filter((ep) => ep.season_number === seasonPanel.seasonNumber)}
+          seasonNumber={seasonPanel.seasonNumber}
+          onClose={() => setSeasonPanel(null)}
+          onBulkWatch={handleBulkWatch}
+          onToggleWatched={handleSeasonToggleWatched}
+        />
+      )}
+    </>
   );
 }
