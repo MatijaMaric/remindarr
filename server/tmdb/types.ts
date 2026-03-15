@@ -35,6 +35,9 @@ export interface TmdbGenre {
 export interface TmdbExternalIds {
   imdb_id: string | null;
   tvdb_id?: number | null;
+  facebook_id?: string | null;
+  instagram_id?: string | null;
+  twitter_id?: string | null;
 }
 
 export interface TmdbWatchProviderEntry {
@@ -295,6 +298,7 @@ export interface TmdbMovieFullDetails {
   credits: TmdbCredits;
   release_dates: { results: TmdbReleaseDatesResult[] };
   "watch/providers": { results: Record<string, TmdbWatchProviderCountry> };
+  external_ids?: TmdbExternalIds;
 }
 
 export interface TmdbShowFullDetails {
@@ -327,6 +331,7 @@ export interface TmdbShowFullDetails {
   credits: TmdbCredits;
   content_ratings: { results: TmdbContentRatingResult[] };
   "watch/providers": { results: Record<string, TmdbWatchProviderCountry> };
+  external_ids?: TmdbExternalIds;
 }
 
 export interface TmdbSeasonDetails {
@@ -410,4 +415,5 @@ export interface TmdbPersonDetails {
   also_known_as: string[];
   popularity: number;
   combined_credits: TmdbPersonCombinedCredits;
+  external_ids?: TmdbExternalIds;
 }

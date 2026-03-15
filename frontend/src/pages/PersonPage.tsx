@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import * as api from "../api";
 import type { PersonDetailsResponse, PersonCastCredit, PersonCrewCredit } from "../types";
+import ExternalLinks from "../components/ExternalLinks";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 const BIO_TRUNCATE_LENGTH = 600;
@@ -180,6 +181,11 @@ export default function PersonPage() {
               </div>
             )}
           </div>
+          <ExternalLinks
+            externalIds={person.external_ids}
+            tmdbId={person.id}
+            type="person"
+          />
         </div>
       </div>
 

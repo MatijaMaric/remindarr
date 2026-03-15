@@ -84,14 +84,14 @@ export async function fetchTvDetails(tmdbId: number): Promise<TmdbTvDetails> {
 export async function fetchMovieFullDetails(tmdbId: string): Promise<TmdbMovieFullDetails> {
   return tmdbRequest<TmdbMovieFullDetails>(`/movie/${tmdbId}`, {
     language: tmdbLanguage(),
-    append_to_response: "credits,release_dates,watch/providers",
+    append_to_response: "credits,release_dates,watch/providers,external_ids",
   });
 }
 
 export async function fetchShowFullDetails(tmdbId: string): Promise<TmdbShowFullDetails> {
   return tmdbRequest<TmdbShowFullDetails>(`/tv/${tmdbId}`, {
     language: tmdbLanguage(),
-    append_to_response: "credits,content_ratings,watch/providers",
+    append_to_response: "credits,content_ratings,watch/providers,external_ids",
   });
 }
 
@@ -118,7 +118,7 @@ export async function fetchEpisodeDetails(
 export async function fetchPersonDetails(personId: number): Promise<TmdbPersonDetails> {
   return tmdbRequest<TmdbPersonDetails>(`/person/${personId}`, {
     language: tmdbLanguage(),
-    append_to_response: "combined_credits",
+    append_to_response: "combined_credits,external_ids",
   });
 }
 
