@@ -45,6 +45,8 @@ export default function ReelsPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<ShowCard[]>([]);
+  const cardsRef = useRef<ShowCard[]>([]);
+  cardsRef.current = cards;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -102,25 +104,25 @@ export default function ReelsPage() {
   }, []);
 
   const markWatched = useCallback(async (titleId: string) => {
-    setCards((prev) => {
-      return prev.map((card) => {
-        if (card.titleId !== titleId || card.caughtUp) return card;
-        const episode = card.episodes[card.currentIndex];
-        if (!episode) return card;
-
-        const nextIndex = card.currentIndex + 1;
-        if (nextIndex >= card.episodes.length) {
-          return { ...card, caughtUp: true };
-        }
-        return { ...card, currentIndex: nextIndex };
-      });
-    });
-
-    // Find the episode to mark
-    const card = cards.find((c) => c.titleId === titleId);
+    // Read from ref to avoid stale closure when rapid swiping/tapping
+    const card = cardsRef.current.find((c) => c.titleId === titleId);
     if (!card || card.caughtUp) return;
     const episode = card.episodes[card.currentIndex];
     if (!episode) return;
+
+    setCards((prev) => {
+      return prev.map((c) => {
+        if (c.titleId !== titleId || c.caughtUp) return c;
+        const ep = c.episodes[c.currentIndex];
+        if (!ep) return c;
+
+        const nextIndex = c.currentIndex + 1;
+        if (nextIndex >= c.episodes.length) {
+          return { ...c, caughtUp: true };
+        }
+        return { ...c, currentIndex: nextIndex };
+      });
+    });
 
     try {
       await api.watchEpisode(episode.id);
@@ -137,7 +139,7 @@ export default function ReelsPage() {
       );
       console.error("Failed to mark watched:", err);
     }
-  }, [cards]);
+  }, []);
 
   if (loading) {
     return (
