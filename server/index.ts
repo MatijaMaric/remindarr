@@ -55,8 +55,18 @@ app.onError((err, c) => {
   return c.json({ error: "Internal server error" }, 500);
 });
 
-// CORS for dev
-app.use("/api/*", cors());
+// CORS — restricted to explicit origins via CORS_ORIGIN env var (comma-separated).
+// When not set, no CORS headers are sent (same-origin policy applies).
+if (CONFIG.CORS_ORIGIN) {
+  const origins = CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+  app.use(
+    "/api/*",
+    cors({
+      origin: origins,
+      credentials: true,
+    }),
+  );
+}
 
 // Request logging
 app.use("/api/*", requestLogger());

@@ -34,6 +34,9 @@ export const CONFIG = {
   OIDC_ADMIN_CLAIM: process.env.OIDC_ADMIN_CLAIM || "",
   OIDC_ADMIN_VALUE: process.env.OIDC_ADMIN_VALUE || "",
 
+  // CORS
+  CORS_ORIGIN: process.env.CORS_ORIGIN || "",
+
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 };
