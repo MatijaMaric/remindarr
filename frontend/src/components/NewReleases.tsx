@@ -3,6 +3,7 @@ import * as api from "../api";
 import type { Title, Provider } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
+import { loadFilters } from "./loadFilters";
 
 interface Props {
   type: string[];
@@ -45,13 +46,11 @@ export default function NewReleases({
   const [languages, setLanguages] = useState<string[]>([]);
 
   useEffect(() => {
-    Promise.all([api.getGenres(), api.getProviders(), api.getLanguages()]).then(
-      ([g, p, l]) => {
-        setGenres(g.genres);
-        setProviders(p.providers);
-        setLanguages(l.languages);
-      }
-    );
+    loadFilters().then(({ genres, providers, languages }) => {
+      setGenres(genres);
+      setProviders(providers);
+      setLanguages(languages);
+    });
   }, []);
 
   const fetchTitles = useCallback(async () => {

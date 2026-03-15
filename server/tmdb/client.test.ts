@@ -1,4 +1,4 @@
-import { describe, it, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
+import { describe, it, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
 import * as Sentry from "@sentry/bun";
 
 // ─── Mock tracing to pass through ───────────────────────────────────────────
@@ -27,8 +27,6 @@ beforeEach(() => {
 afterEach(() => {
   sentrySpy?.mockRestore();
   fetchSpy?.mockRestore();
-  // Reset module-level caches by re-importing wouldn't work easily,
-  // so we test cache behavior in dedicated tests
 });
 
 // ─── Import after mocks are set up ──────────────────────────────────────────
@@ -522,7 +520,6 @@ describe("getLanguages", () => {
 describe("malformed responses", () => {
   it("handles empty JSON object without crashing", async () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse({}));
-    // fetchShowDetails returns whatever JSON comes back — no crash
     const result = await fetchShowDetails("1");
     expect(result).toEqual({} as any);
   });
@@ -537,5 +534,29 @@ describe("malformed responses", () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 1, name: null, status: null, number_of_seasons: null, next_episode_to_air: null, last_episode_to_air: null }));
     const result = await fetchShowDetails("1");
     expect((result as any).name).toBeNull();
+  });
+});
+
+// ─── Timeout tests (added from master — tests AbortController timeout) ──────
+
+describe("tmdbRequest timeout", () => {
+  test("passes abort signal to fetch", async () => {
+    fetchSpy.mockImplementationOnce(async (_url: string | URL | Request, init?: RequestInit) => {
+      expect(init?.signal).toBeDefined();
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      return jsonResponse({ id: 1, name: "Test", status: "Returning", number_of_seasons: 1, next_episode_to_air: null, last_episode_to_air: null });
+    });
+    await fetchShowDetails("1");
+  });
+
+  test("completes successfully when response is fast", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 1, results: [{ id: 1 }] }));
+    const result = await searchMulti("test");
+    expect(result.results).toHaveLength(1);
+  });
+
+  test("throws on non-ok response", async () => {
+    fetchSpy.mockResolvedValueOnce(textResponse("Not Found", 404));
+    await expect(searchMulti("test")).rejects.toThrow("TMDB API error 404: Not Found");
   });
 });

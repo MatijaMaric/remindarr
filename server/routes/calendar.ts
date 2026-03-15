@@ -14,6 +14,10 @@ app.get("/", (c) => {
   const objectType = c.req.query("type");
   const provider = c.req.query("provider");
 
+  if (objectType && !["MOVIE", "SHOW"].includes(objectType)) {
+    return c.json({ error: "Invalid type. Must be one of: MOVIE, SHOW" }, 400);
+  }
+
   const titles = getTitlesByMonth({ month, objectType, provider }, user?.id);
   const episodes = getEpisodesByMonth({ month, objectType, provider }, user?.id);
   return c.json({ titles, episodes, count: titles.length });
