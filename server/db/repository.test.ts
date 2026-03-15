@@ -36,8 +36,13 @@ import {
   getSettingsByPrefix,
   getOidcConfig,
   isOidcConfigured,
+  createNotifier,
+  getNotifiersByUser,
+  getNotifierById,
+  getDueNotifiers,
 } from "./repository";
 import { CONFIG } from "../config";
+import { getRawDb } from "./schema";
 
 beforeEach(() => {
   setupTestDb();
@@ -624,5 +629,60 @@ describe("getProviders", () => {
     expect(providers).toHaveLength(2);
     expect(providers[0].name).toBe("Disney Plus");
     expect(providers[1].name).toBe("Netflix");
+  });
+});
+
+// ─── Notifier JSON.parse error handling ─────────────────────────────────────
+
+describe("notifier config parsing", () => {
+  function createTestUser() {
+    return createUser("testuser", "hash123");
+  }
+
+  function corruptNotifierConfig(notifierId: string) {
+    const raw = getRawDb();
+    raw.prepare("UPDATE notifiers SET config = '{invalid json' WHERE id = ?").run(notifierId);
+  }
+
+  it("getNotifiersByUser returns empty config for corrupted JSON", () => {
+    const userId = createTestUser();
+    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    corruptNotifierConfig(id);
+
+    const notifiers = getNotifiersByUser(userId);
+    expect(notifiers).toHaveLength(1);
+    expect(notifiers[0].config).toEqual({});
+  });
+
+  it("getNotifierById returns empty config for corrupted JSON", () => {
+    const userId = createTestUser();
+    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    corruptNotifierConfig(id);
+
+    const notifier = getNotifierById(id, userId);
+    expect(notifier).not.toBeNull();
+    expect(notifier!.config).toEqual({});
+  });
+
+  it("getDueNotifiers returns empty config for corrupted JSON", () => {
+    const userId = createTestUser();
+    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    corruptNotifierConfig(id);
+
+    const timesByTimezone = new Map([
+      ["UTC", { time: "09:00", date: "2026-03-15" }],
+    ]);
+    const due = getDueNotifiers(timesByTimezone);
+    expect(due).toHaveLength(1);
+    expect(due[0].config).toEqual({});
+  });
+
+  it("getNotifiersByUser parses valid config correctly", () => {
+    const userId = createTestUser();
+    createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+
+    const notifiers = getNotifiersByUser(userId);
+    expect(notifiers).toHaveLength(1);
+    expect(notifiers[0].config).toEqual({ url: "http://example.com" });
   });
 });
