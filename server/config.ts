@@ -38,6 +38,11 @@ export const CONFIG = {
   // CORS
   CORS_ORIGIN: process.env.CORS_ORIGIN || "",
 
+  // Web Push (VAPID)
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || "",
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || "",
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT || "",
+
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 };

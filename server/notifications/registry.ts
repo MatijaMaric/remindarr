@@ -1,8 +1,10 @@
 import { DiscordProvider } from "./discord";
+import { WebPushProvider } from "./webpush";
 import type { NotificationProvider } from "./types";
 
 const providers = new Map<string, NotificationProvider>();
 providers.set("discord", new DiscordProvider());
+providers.set("webpush", new WebPushProvider());
 
 export function getProvider(name: string): NotificationProvider | undefined {
   return providers.get(name);

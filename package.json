@@ -20,7 +20,8 @@
   "dependencies": {
     "@sentry/bun": "^10.43.0",
     "drizzle-orm": "^0.45.1",
-    "hono": "^4.4.0"
+    "hono": "^4.4.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.8.4",
@@ -30,6 +31,7 @@
     "@types/bun": "latest",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/web-push": "^3.6.4",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.9",
     "happy-dom": "^20.8.4"

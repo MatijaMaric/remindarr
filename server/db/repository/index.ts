@@ -67,6 +67,7 @@ export {
   createNotifier,
   updateNotifier,
   deleteNotifier,
+  disableNotifier,
   getNotifiersByUser,
   getNotifierById,
   getDueNotifiers,

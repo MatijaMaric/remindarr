@@ -257,6 +257,10 @@ export interface Notifier {
   updated_at: string;
 }
 
+export async function getVapidPublicKey(): Promise<{ publicKey: string }> {
+  return fetchJson("/notifiers/vapid-public-key");
+}
+
 export async function getNotifiers(): Promise<{ notifiers: Notifier[] }> {
   return fetchJson("/notifiers");
 }

@@ -10,6 +10,7 @@ import {
 import { getProvider, getAvailableProviders } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { refreshNotificationSchedule } from "../jobs/notifications";
+import { getVapidPublicKey } from "../notifications/vapid";
 
 const app = new Hono<AppEnv>();
 
@@ -40,6 +41,16 @@ app.get("/", (c) => {
 // GET /providers — available provider types
 app.get("/providers", (c) => {
   return c.json({ providers: getAvailableProviders() });
+});
+
+// GET /vapid-public-key — VAPID public key for push subscriptions
+app.get("/vapid-public-key", (c) => {
+  try {
+    const publicKey = getVapidPublicKey();
+    return c.json({ publicKey });
+  } catch {
+    return c.json({ error: "VAPID keys not configured" }, 500);
+  }
 });
 
 // POST / — create notifier

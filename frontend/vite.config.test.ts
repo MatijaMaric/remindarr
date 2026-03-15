@@ -6,17 +6,19 @@ describe("PWA configuration", () => {
     expect(pwaOptions.registerType).toBe("autoUpdate");
   });
 
-  it("enables clientsClaim for immediate SW control", () => {
-    expect(pwaOptions.workbox?.clientsClaim).toBe(true);
+  it("uses injectManifest strategy for custom service worker", () => {
+    expect(pwaOptions.strategies).toBe("injectManifest");
   });
 
-  it("enables cleanupOutdatedCaches to remove stale caches", () => {
-    expect(pwaOptions.workbox?.cleanupOutdatedCaches).toBe(true);
+  it("points to custom service worker source", () => {
+    expect(pwaOptions.srcDir).toBe("src");
+    expect(pwaOptions.filename).toBe("sw.ts");
   });
 
-  it("excludes /api/ routes from navigateFallback", () => {
-    const denylist = pwaOptions.workbox?.navigateFallbackDenylist;
-    expect(denylist).toBeDefined();
-    expect(denylist!.some((re) => re.test("/api/titles"))).toBe(true);
+  it("configures glob patterns for precaching", () => {
+    expect(pwaOptions.injectManifest?.globPatterns).toBeDefined();
+    expect(pwaOptions.injectManifest!.globPatterns!).toContain(
+      "**/*.{js,css,html,ico,png,svg,woff2}"
+    );
   });
 });

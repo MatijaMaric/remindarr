@@ -190,6 +190,16 @@ export function getDueNotifiers(
   });
 }
 
+export function disableNotifier(id: string) {
+  return traceDbQuery("disableNotifier", () => {
+    const db = getDb();
+    db.update(notifiers)
+      .set({ enabled: 0, updatedAt: sql`datetime('now')` })
+      .where(eq(notifiers.id, id))
+      .run();
+  });
+}
+
 export function markNotifierSent(id: string, date: string) {
   return traceDbQuery("markNotifierSent", () => {
     const db = getDb();

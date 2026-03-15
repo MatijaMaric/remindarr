@@ -8,9 +8,11 @@ import {
   getDistinctNotifierTimezones,
   getEnabledNotifierSchedules,
   markNotifierSent,
+  disableNotifier,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
+import { SubscriptionExpiredError } from "../notifications/webpush";
 
 function getCurrentTimeInTimezone(tz: string): { time: string; date: string } {
   const now = new Date();
@@ -156,6 +158,11 @@ export function registerNotificationJobs() {
           markNotifierSent(notifier.id, notifier.todayDate);
           log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
         } catch (err) {
+          if (err instanceof SubscriptionExpiredError) {
+            log.warn("Push subscription expired, disabling notifier", { notifierId: notifier.id });
+            disableNotifier(notifier.id);
+            continue;
+          }
           const message = err instanceof Error ? err.message : String(err);
           log.error("Failed to send notification", { provider: notifier.provider, notifierId: notifier.id, error: message });
         }
