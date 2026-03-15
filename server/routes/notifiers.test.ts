@@ -37,7 +37,6 @@ function jsonHeaders() {
 
 const validNotifier = {
   provider: "discord",
-  name: "My Discord",
   config: {
     webhookUrl: "https://discord.com/api/webhooks/123456789/abcdefghijklmnop",
   },
@@ -79,7 +78,7 @@ describe("POST /notifiers", () => {
     });
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.notifier.name).toBe("My Discord");
+    expect(body.notifier.name).toBe("Discord");
     expect(body.notifier.provider).toBe("discord");
     expect(body.notifier.notify_time).toBe("09:00");
     expect(body.notifier.timezone).toBe("UTC");
@@ -144,11 +143,10 @@ describe("PUT /notifiers/:id", () => {
     const res = await app.request(`/notifiers/${notifier.id}`, {
       method: "PUT",
       headers: jsonHeaders(),
-      body: JSON.stringify({ name: "Updated Discord", notify_time: "18:00" }),
+      body: JSON.stringify({ notify_time: "18:00" }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.notifier.name).toBe("Updated Discord");
     expect(body.notifier.notify_time).toBe("18:00");
   });
 
@@ -156,7 +154,7 @@ describe("PUT /notifiers/:id", () => {
     const res = await app.request("/notifiers/nonexistent", {
       method: "PUT",
       headers: jsonHeaders(),
-      body: JSON.stringify({ name: "Test" }),
+      body: JSON.stringify({ notify_time: "10:00" }),
     });
     expect(res.status).toBe(404);
   });
@@ -212,7 +210,7 @@ describe("ownership enforcement", () => {
     const updateRes = await app.request(`/notifiers/${notifier.id}`, {
       method: "PUT",
       headers: { ...user2Headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Hacked" }),
+      body: JSON.stringify({ notify_time: "10:00" }),
     });
     expect(updateRes.status).toBe(404);
 

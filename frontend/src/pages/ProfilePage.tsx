@@ -167,7 +167,6 @@ function PushNotificationsSection() {
 
       await api.createNotifier({
         provider: "webpush",
-        name: "This Device",
         config: subscription,
         notify_time: "09:00",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -310,7 +309,6 @@ function NotificationsSection() {
 
   // Form fields
   const [formProvider, setFormProvider] = useState("discord");
-  const [formName, setFormName] = useState("");
   const [formWebhookUrl, setFormWebhookUrl] = useState("");
   const [formTime, setFormTime] = useState("09:00");
   const [formTimezone, setFormTimezone] = useState(USER_TIMEZONE);
@@ -333,7 +331,6 @@ function NotificationsSection() {
 
   function resetForm() {
     setFormProvider("discord");
-    setFormName("");
     setFormWebhookUrl("");
     setFormTime("09:00");
     setFormTimezone(USER_TIMEZONE);
@@ -344,7 +341,6 @@ function NotificationsSection() {
   function startEdit(n: Notifier) {
     setEditingId(n.id);
     setFormProvider(n.provider);
-    setFormName(n.name);
     setFormWebhookUrl(n.config.webhookUrl || "");
     setFormTime(n.notify_time);
     setFormTimezone(n.timezone);
@@ -367,7 +363,6 @@ function NotificationsSection() {
     try {
       if (editingId) {
         await api.updateNotifier(editingId, {
-          name: formName,
           config,
           notify_time: formTime,
           timezone: formTimezone,
@@ -376,7 +371,6 @@ function NotificationsSection() {
       } else {
         await api.createNotifier({
           provider: formProvider,
-          name: formName,
           config,
           notify_time: formTime,
           timezone: formTimezone,
@@ -463,10 +457,7 @@ function NotificationsSection() {
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-medium">{n.name}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-900/50 text-indigo-300 capitalize">
-                    {n.provider}
-                  </span>
+                  <span className="text-white font-medium capitalize">{n.provider}</span>
                   <span
                     className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                       n.enabled
@@ -541,18 +532,6 @@ function NotificationsSection() {
                 </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
-            <input
-              type="text"
-              value={formName}
-              onChange={(e) => setFormName(e.target.value)}
-              placeholder="My Discord"
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-            />
           </div>
 
           {formProvider === "discord" && (

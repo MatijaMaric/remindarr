@@ -271,7 +271,6 @@ export async function getNotifierProviders(): Promise<{ providers: string[] }> {
 
 export async function createNotifier(data: {
   provider: string;
-  name: string;
   config: Record<string, string>;
   notify_time: string;
   timezone: string;
@@ -285,7 +284,6 @@ export async function createNotifier(data: {
 export async function updateNotifier(
   id: string,
   data: Partial<{
-    name: string;
     config: Record<string, string>;
     notify_time: string;
     timezone: string;
