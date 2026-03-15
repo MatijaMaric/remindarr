@@ -1,15 +1,18 @@
-import { describe, it, expect, mock, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import * as Sentry from "@sentry/react";
 import ErrorBoundary from "./ErrorBoundary";
 
-const realSentry = await import("@sentry/react");
+let spies: ReturnType<typeof spyOn>[] = [];
 
-// Mock Sentry to prevent actual calls
-mock.module("@sentry/react", () => ({
-  captureException: mock(() => {}),
-}));
+beforeEach(() => {
+  spies = [
+    spyOn(Sentry, "captureException").mockImplementation(() => ""),
+  ];
+});
 
-afterAll(() => {
-  mock.module("@sentry/react", () => realSentry);
+afterEach(() => {
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 describe("ErrorBoundary", () => {
@@ -38,8 +41,7 @@ describe("ErrorBoundary", () => {
     expect(instance.state.error).toBeNull();
   });
 
-  it("componentDidCatch reports to Sentry", async () => {
-    const Sentry = await import("@sentry/react");
+  it("componentDidCatch reports to Sentry", () => {
     const instance = new ErrorBoundary({ children: null });
     const error = new Error("render crash");
     const info = { componentStack: "<App>\n<ErrorBoundary>", digest: undefined };

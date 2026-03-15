@@ -1,26 +1,9 @@
-import { describe, it, expect, mock, afterEach, afterAll } from "bun:test";
-
-const realMultiSelectDropdown = await import("./MultiSelectDropdown");
-
-// Mock MultiSelectDropdown to simplify FilterBar tests
-mock.module("./MultiSelectDropdown", () => ({
-  default: ({ label, selected, onChange }: { label: string; selected: string[]; onChange: (v: string[]) => void }) => (
-    <div data-testid={`dropdown-${label}`}>
-      <span>{selected.length > 0 ? `${selected.length} selected` : label}</span>
-      <button onClick={() => onChange([])}>clear-{label}</button>
-    </div>
-  ),
-}));
-
+import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import FilterBar from "./FilterBar";
 
 afterEach(() => {
   cleanup();
-});
-
-afterAll(() => {
-  mock.module("./MultiSelectDropdown", () => realMultiSelectDropdown);
 });
 
 describe("FilterBar", () => {
@@ -118,7 +101,8 @@ describe("FilterBar", () => {
       />
     );
 
-    expect(screen.getByTestId("dropdown-All Genres")).toBeDefined();
+    // Real MultiSelectDropdown renders a button with the label text
+    expect(screen.getByRole("button", { name: "All Genres" })).toBeDefined();
   });
 
   it("renders provider dropdown when providers are provided", () => {
@@ -135,7 +119,7 @@ describe("FilterBar", () => {
       />
     );
 
-    expect(screen.getByTestId("dropdown-All Platforms")).toBeDefined();
+    expect(screen.getByRole("button", { name: "All Platforms" })).toBeDefined();
   });
 
   it("renders Hide Tracked button when handler provided", () => {

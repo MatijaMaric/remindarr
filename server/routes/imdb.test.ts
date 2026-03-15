@@ -1,50 +1,48 @@
-import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
 import { createUser, createSession } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import { CONFIG } from "../config";
+import * as resolver from "../imdb/resolver";
 import type { AppEnv } from "../types";
-
-const mockResolveImdbUrl = mock(() => Promise.resolve(makeParsedTitle()));
-
-const realResolver = await import("../imdb/resolver");
-
-mock.module("../imdb/resolver", () => ({
-  ...realResolver,
-  resolveImdbUrl: mockResolveImdbUrl,
-}));
-
-const imdbApp = (await import("./imdb")).default;
 
 let app: Hono<AppEnv>;
 let userCookie: string;
+let spies: ReturnType<typeof spyOn>[] = [];
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
+
+  spies = [
+    spyOn(resolver, "resolveImdbUrl").mockResolvedValue(makeParsedTitle()),
+  ];
 
   const userId = createUser("testuser", "hash");
   const token = createSession(userId);
   userCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
 
+  const imdbApp = (await import("./imdb")).default;
   app = new Hono<AppEnv>();
   app.use("/imdb/*", requireAuth);
   app.use("/imdb", requireAuth);
   app.route("/imdb", imdbApp);
+});
 
-  mockResolveImdbUrl.mockClear();
+afterEach(() => {
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 afterAll(() => {
   teardownTestDb();
-  mock.module("../imdb/resolver", () => realResolver);
 });
 
 describe("POST /imdb", () => {
   it("resolves IMDB URL, upserts, and tracks title", async () => {
     const title = makeParsedTitle({ id: "movie-999", title: "IMDB Movie" });
-    mockResolveImdbUrl.mockResolvedValueOnce(title);
+    (resolver.resolveImdbUrl as any).mockResolvedValueOnce(title);
 
     const res = await app.request("/imdb", {
       method: "POST",
@@ -89,7 +87,7 @@ describe("POST /imdb", () => {
   });
 
   it("returns 404 when title is not found on TMDB", async () => {
-    mockResolveImdbUrl.mockResolvedValueOnce(null as any);
+    (resolver.resolveImdbUrl as any).mockResolvedValueOnce(null);
 
     const res = await app.request("/imdb", {
       method: "POST",
@@ -105,7 +103,7 @@ describe("POST /imdb", () => {
   });
 
   it("returns 500 when resolver throws", async () => {
-    mockResolveImdbUrl.mockRejectedValueOnce(new Error("TMDB down"));
+    (resolver.resolveImdbUrl as any).mockRejectedValueOnce(new Error("TMDB down"));
 
     const res = await app.request("/imdb", {
       method: "POST",
@@ -145,7 +143,7 @@ describe("POST /imdb", () => {
 
   it("accepts raw IMDB ID", async () => {
     const title = makeParsedTitle({ id: "movie-555" });
-    mockResolveImdbUrl.mockResolvedValueOnce(title);
+    (resolver.resolveImdbUrl as any).mockResolvedValueOnce(title);
 
     const res = await app.request("/imdb", {
       method: "POST",

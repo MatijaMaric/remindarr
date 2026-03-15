@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { syncEpisodes } from "../tmdb/sync";
+import * as sync from "../tmdb/sync";
 import { getEpisodesByDateRange, getUnwatchedEpisodes } from "../db/repository";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
@@ -34,7 +34,7 @@ app.post("/sync", async (c) => {
     return c.json({ error: "TMDB_API_KEY not configured" }, 500);
   }
 
-  const result = await syncEpisodes();
+  const result = await sync.syncEpisodes();
   return c.json({
     success: true,
     ...result,

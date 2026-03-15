@@ -1,36 +1,34 @@
-import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { CONFIG } from "../config";
+import * as sync from "../tmdb/sync";
 import type { AppEnv } from "../types";
 
-const mockSyncEpisodes = mock(() =>
-  Promise.resolve({ synced: 5, shows: 2 })
-);
-const mockSyncEpisodesForShow = mock(() => Promise.resolve({ synced: 0 }));
-
-const realSync = await import("../tmdb/sync");
-
-mock.module("../tmdb/sync", () => ({
-  ...realSync,
-  syncEpisodes: mockSyncEpisodes,
-  syncEpisodesForShow: mockSyncEpisodesForShow,
-}));
-
-const episodesApp = (await import("./episodes")).default;
-
 let app: Hono<AppEnv>;
+let spies: ReturnType<typeof spyOn>[] = [];
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
+
+  spies = [
+    spyOn(sync, "syncEpisodes").mockResolvedValue({ synced: 5, shows: 2 }),
+    spyOn(sync, "syncEpisodesForShow").mockResolvedValue({ synced: 0 } as any),
+  ];
+
+  // Import fresh route after spies are set up
+  const episodesApp = (await import("./episodes")).default;
   app = new Hono<AppEnv>();
   app.route("/episodes", episodesApp);
-  mockSyncEpisodes.mockClear();
+});
+
+afterEach(() => {
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 afterAll(() => {
   teardownTestDb();
-  mock.module("../tmdb/sync", () => realSync);
 });
 
 describe("GET /episodes/upcoming", () => {
@@ -57,6 +55,7 @@ describe("GET /episodes/upcoming", () => {
       });
       await next();
     });
+    const episodesApp = (await import("./episodes")).default;
     authedApp.route("/episodes", episodesApp);
 
     const res = await authedApp.request("/episodes/upcoming");
@@ -73,7 +72,7 @@ describe("POST /episodes/sync", () => {
     const origKey = CONFIG.TMDB_API_KEY;
     CONFIG.TMDB_API_KEY = "test-key";
 
-    mockSyncEpisodes.mockResolvedValueOnce({ synced: 5, shows: 2 });
+    (sync.syncEpisodes as any).mockResolvedValueOnce({ synced: 5, shows: 2 });
 
     const res = await app.request("/episodes/sync", { method: "POST" });
     expect(res.status).toBe(200);
