@@ -31,13 +31,5 @@ jobs:
       - name: Run tests
         run: bun test
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Validate Docker build
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Build frontend
+        run: cd frontend && bun run build
