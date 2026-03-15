@@ -44,7 +44,6 @@ import {
   getDueNotifiers,
 } from "./repository";
 import { CONFIG } from "../config";
-import { getRawDb } from "./schema";
 
 beforeEach(() => {
   setupTestDb();
