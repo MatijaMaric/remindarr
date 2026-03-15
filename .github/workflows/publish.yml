@@ -1,12 +1,18 @@
 name: Publish to GHCR
 
 on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [master]
   push:
-    branches:
-      - master
     tags:
       - 'v*'
   workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
@@ -14,6 +20,10 @@ env:
 
 jobs:
   publish:
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read

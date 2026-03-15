@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,3 +34,6 @@ jobs:
 
       - name: Run tests
         run: bun test
+
+      - name: Build frontend
+        run: cd frontend && bun run build
