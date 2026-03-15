@@ -1,0 +1,181 @@
+import { describe, it, expect, mock, afterEach } from "bun:test";
+
+// Mock MultiSelectDropdown to simplify FilterBar tests
+mock.module("./MultiSelectDropdown", () => ({
+  default: ({ label, selected, onChange }: { label: string; selected: string[]; onChange: (v: string[]) => void }) => (
+    <div data-testid={`dropdown-${label}`}>
+      <span>{selected.length > 0 ? `${selected.length} selected` : label}</span>
+      <button onClick={() => onChange([])}>clear-{label}</button>
+    </div>
+  ),
+}));
+
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import FilterBar from "./FilterBar";
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("FilterBar", () => {
+  const defaultProps = {
+    type: [] as string[],
+    onTypeChange: mock(() => {}),
+  };
+
+  it("renders type toggle buttons (All, Movies, Shows)", () => {
+    render(<FilterBar {...defaultProps} />);
+
+    expect(screen.getByRole("button", { name: "All" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Movies" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Shows" })).toBeDefined();
+  });
+
+  it("calls onTypeChange with empty array when 'All' is clicked", () => {
+    const onTypeChange = mock(() => {});
+    render(<FilterBar {...defaultProps} onTypeChange={onTypeChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(onTypeChange).toHaveBeenCalledWith([]);
+  });
+
+  it("calls onTypeChange with MOVIE when 'Movies' is clicked from empty", () => {
+    const onTypeChange = mock(() => {});
+    render(<FilterBar {...defaultProps} type={[]} onTypeChange={onTypeChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    expect(onTypeChange).toHaveBeenCalledWith(["MOVIE"]);
+  });
+
+  it("calls onTypeChange to deselect when clicking already selected type", () => {
+    const onTypeChange = mock(() => {});
+    render(<FilterBar {...defaultProps} type={["MOVIE"]} onTypeChange={onTypeChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Movies" }));
+    expect(onTypeChange).toHaveBeenCalledWith([]);
+  });
+
+  it("normalizes to empty when both types are selected", () => {
+    const onTypeChange = mock(() => {});
+    render(<FilterBar {...defaultProps} type={["MOVIE"]} onTypeChange={onTypeChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Shows" }));
+    expect(onTypeChange).toHaveBeenCalledWith([]);
+  });
+
+  it("renders days filter when showDaysFilter is true", () => {
+    const onDaysBackChange = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        showDaysFilter={true}
+        daysBack={30}
+        onDaysBackChange={onDaysBackChange}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "7d" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "14d" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "30d" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "90d" })).toBeDefined();
+  });
+
+  it("does not render days filter when showDaysFilter is false", () => {
+    render(<FilterBar {...defaultProps} showDaysFilter={false} />);
+
+    expect(screen.queryByRole("button", { name: "7d" })).toBeNull();
+  });
+
+  it("calls onDaysBackChange when a day button is clicked", () => {
+    const onDaysBackChange = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        showDaysFilter={true}
+        daysBack={30}
+        onDaysBackChange={onDaysBackChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "7d" }));
+    expect(onDaysBackChange).toHaveBeenCalledWith(7);
+  });
+
+  it("renders genre dropdown when genres are provided", () => {
+    const onGenreChange = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        genres={["Action", "Comedy"]}
+        genre={[]}
+        onGenreChange={onGenreChange}
+      />
+    );
+
+    expect(screen.getByTestId("dropdown-All Genres")).toBeDefined();
+  });
+
+  it("renders provider dropdown when providers are provided", () => {
+    const onProviderChange = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        providers={[
+          { id: 1, name: "Netflix" },
+          { id: 2, name: "Disney+" },
+        ]}
+        provider={[]}
+        onProviderChange={onProviderChange}
+      />
+    );
+
+    expect(screen.getByTestId("dropdown-All Platforms")).toBeDefined();
+  });
+
+  it("renders Hide Tracked button when handler provided", () => {
+    const onHideTrackedChange = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        hideTracked={false}
+        onHideTrackedChange={onHideTrackedChange}
+      />
+    );
+
+    const btn = screen.getByRole("button", { name: "Hide Tracked" });
+    expect(btn).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(onHideTrackedChange).toHaveBeenCalledWith(true);
+  });
+
+  it("shows Clear filters button when filters are active", () => {
+    const onClearFilters = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        type={["MOVIE"]}
+        onClearFilters={onClearFilters}
+      />
+    );
+
+    const btn = screen.getByRole("button", { name: "Clear filters" });
+    expect(btn).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(onClearFilters).toHaveBeenCalled();
+  });
+
+  it("hides Clear filters button when no filters are active", () => {
+    const onClearFilters = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        type={[]}
+        onClearFilters={onClearFilters}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+  });
+});
