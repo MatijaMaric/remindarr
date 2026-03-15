@@ -32,7 +32,7 @@ describe("BottomTabBar", () => {
   it("renders 5 tabs when user is authenticated", () => {
     render(<BottomTabBar />, { wrapper: Wrapper });
 
-    expect(screen.getByText("Reels")).toBeDefined();
+    expect(screen.getByText("Watch")).toBeDefined();
     expect(screen.getByText("Upcoming")).toBeDefined();
     expect(screen.getByText("Browse")).toBeDefined();
     expect(screen.getByText("Calendar")).toBeDefined();
@@ -51,7 +51,7 @@ describe("BottomTabBar", () => {
 
     expect(screen.getByText("Browse")).toBeDefined();
     expect(screen.getByText("Sign In")).toBeDefined();
-    expect(screen.queryByText("Reels")).toBeNull();
+    expect(screen.queryByText("Watch")).toBeNull();
     expect(screen.queryByText("Upcoming")).toBeNull();
     expect(screen.queryByText("Calendar")).toBeNull();
     expect(screen.queryByText("Profile")).toBeNull();
