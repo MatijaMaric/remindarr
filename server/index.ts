@@ -7,6 +7,7 @@ import { CONFIG } from "./config";
 import { getDb, migrateTrackedData } from "./db/schema";
 import { getUserCount, createUser, deleteExpiredSessions } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
+import { rateLimiter } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
@@ -82,6 +83,9 @@ app.use("/api/titles/*", optionalAuth);
 app.use("/api/titles", optionalAuth);
 app.route("/api/titles", titlesRoutes);
 
+// Rate limit search: 30 requests per minute
+app.use("/api/search/*", rateLimiter({ limit: 30, windowMs: 60_000 }));
+app.use("/api/search", rateLimiter({ limit: 30, windowMs: 60_000 }));
 app.use("/api/search/*", optionalAuth);
 app.use("/api/search", optionalAuth);
 app.route("/api/search", searchRoutes);
@@ -126,6 +130,8 @@ app.use("/api/details", optionalAuth);
 app.route("/api/details", detailsRoutes);
 
 // Sync (public — typically triggered by cron)
+app.use("/api/sync/*", rateLimiter({ limit: 5, windowMs: 60_000 }));
+app.use("/api/sync", rateLimiter({ limit: 5, windowMs: 60_000 }));
 app.route("/api/sync", syncRoutes);
 
 // Episodes (optionalAuth for upcoming, sync is public)
