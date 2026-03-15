@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { getRawDb } from "./schema";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import {
   upsertTitles,
@@ -568,9 +569,16 @@ describe("episodes", () => {
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Updated", overview: null, air_date: "2024-01-01", still_path: null },
     ]);
 
-    // Verify no duplicate by inserting again — if there were duplicates, this would cause unique constraint issues
-    // The upsert should succeed without error
-    expect(true).toBe(true);
+    const row = getRawDb().prepare(
+      "SELECT count(*) as cnt FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1"
+    ).get() as { cnt: number };
+    expect(row.cnt).toBe(1);
+
+    // Also verify the upsert updated the name
+    const ep = getRawDb().prepare(
+      "SELECT name FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1"
+    ).get() as { name: string };
+    expect(ep.name).toBe("Updated");
   });
 });
 
