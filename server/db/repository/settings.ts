@@ -1,6 +1,6 @@
-import { eq, like, sql } from "drizzle-orm";
+import { eq, like, sql, lt } from "drizzle-orm";
 import { getDb } from "../schema";
-import { settings } from "../schema";
+import { settings, oidcStates } from "../schema";
 import { CONFIG } from "../../config";
 import { traceDbQuery } from "../../tracing";
 
@@ -76,5 +76,38 @@ export function isOidcConfigured(): boolean {
   return traceDbQuery("isOidcConfigured", () => {
     const { issuerUrl, clientId, clientSecret } = getOidcConfig();
     return Boolean(issuerUrl && clientId && clientSecret);
+  });
+}
+
+// ─── OIDC State Store ────────────────────────────────────────────────────────
+
+const OIDC_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export function createOidcState(state: string): void {
+  traceDbQuery("createOidcState", () => {
+    const db = getDb();
+    db.insert(oidcStates).values({ state, createdAt: Date.now() }).run();
+  });
+}
+
+export function consumeOidcState(state: string): boolean {
+  return traceDbQuery("consumeOidcState", () => {
+    const db = getDb();
+    const row = db
+      .select()
+      .from(oidcStates)
+      .where(eq(oidcStates.state, state))
+      .get();
+    if (!row) return false;
+    db.delete(oidcStates).where(eq(oidcStates.state, state)).run();
+    return Date.now() - row.createdAt < OIDC_STATE_TTL_MS;
+  });
+}
+
+export function cleanExpiredOidcStates(): void {
+  traceDbQuery("cleanExpiredOidcStates", () => {
+    const db = getDb();
+    const cutoff = Date.now() - OIDC_STATE_TTL_MS;
+    db.delete(oidcStates).where(lt(oidcStates.createdAt, cutoff)).run();
   });
 }

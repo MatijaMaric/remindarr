@@ -4,7 +4,7 @@ import { titles, providers, offers, scores, tracked } from "../schema";
 import type { ParsedTitle } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
-import { getOffersForTitle } from "./offers";
+import { getOffersForTitle, getOffersForTitles } from "./offers";
 
 // ─── Title / Offer / Score upserts ───────────────────────────────────────────
 
@@ -270,11 +270,12 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       .offset(offset)
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
       is_tracked: Boolean(row.is_tracked),
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }
@@ -317,11 +318,12 @@ export function searchLocalTitles(query: string, limit = 50, userId?: string) {
       .limit(limit)
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
       is_tracked: Boolean(row.is_tracked),
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }
@@ -424,11 +426,12 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     .orderBy(asc(titles.releaseDate))
     .all();
 
+  const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
   return rows.map((row) => ({
     ...row,
     genres: row.genres ? JSON.parse(row.genres) : [],
     is_tracked: Boolean(row.is_tracked),
-    offers: getOffersForTitle(row.id),
+    offers: offersByTitle.get(row.id) ?? [],
   }));
   });
 }

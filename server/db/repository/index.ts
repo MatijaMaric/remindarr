@@ -1,7 +1,7 @@
 // Re-exports all repository functions for backward compatibility.
 // Individual modules can be imported directly for smaller dependency scope.
 
-export { getOffersForTitle } from "./offers";
+export { getOffersForTitle, getOffersForTitles } from "./offers";
 
 export {
   upsertTitles,
@@ -58,6 +58,9 @@ export {
   getSettingsByPrefix,
   getOidcConfig,
   isOidcConfigured,
+  createOidcState,
+  consumeOidcState,
+  cleanExpiredOidcStates,
 } from "./settings";
 
 export {

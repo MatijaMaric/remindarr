@@ -1,8 +1,10 @@
 import { eq, and, sql, asc } from "drizzle-orm";
 import { getDb, getRawDb } from "../schema";
-import { titles, offers, providers, tracked, notifiers } from "../schema";
+import { notifiers } from "../schema";
+import { logger } from "../../logger";
 import { traceDbQuery } from "../../tracing";
-import { getOffersForTitle } from "./offers";
+
+const log = logger.child({ module: "repository" });
 
 export function createNotifier(
   userId: string,
@@ -87,11 +89,20 @@ export function getNotifiersByUser(userId: string) {
       .where(eq(notifiers.userId, userId))
       .orderBy(asc(notifiers.createdAt))
       .all()
-      .map((row) => ({
-        ...row,
-        config: JSON.parse(row.config),
-        enabled: Boolean(row.enabled),
-      }));
+      .map((row) => {
+        let config: Record<string, string>;
+        try {
+          config = JSON.parse(row.config);
+        } catch {
+          log.warn("Failed to parse notifier config", { id: row.id });
+          config = {};
+        }
+        return {
+          ...row,
+          config,
+          enabled: Boolean(row.enabled),
+        };
+      });
   });
 }
 
@@ -117,9 +128,16 @@ export function getNotifierById(id: string, userId: string) {
       .get();
 
     if (!row) return null;
+    let config: Record<string, string>;
+    try {
+      config = JSON.parse(row.config);
+    } catch {
+      log.warn("Failed to parse notifier config", { id: row.id });
+      config = {};
+    }
     return {
       ...row,
-      config: JSON.parse(row.config),
+      config,
       enabled: Boolean(row.enabled),
     };
   });
@@ -155,11 +173,20 @@ export function getDueNotifiers(
         if (!tzInfo) return false;
         return n.notify_time === tzInfo.time && n.last_sent_date !== tzInfo.date;
       })
-      .map((n) => ({
-        ...n,
-        config: JSON.parse(n.config),
-        todayDate: timesByTimezone.get(n.timezone)!.date,
-      }));
+      .map((n) => {
+        let config: Record<string, string>;
+        try {
+          config = JSON.parse(n.config);
+        } catch {
+          log.warn("Failed to parse notifier config", { id: n.id });
+          config = {};
+        }
+        return {
+          ...n,
+          config,
+          todayDate: timesByTimezone.get(n.timezone)!.date,
+        };
+      });
   });
 }
 

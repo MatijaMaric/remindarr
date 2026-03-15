@@ -2,7 +2,7 @@ import { eq, and, sql, desc } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, offers, providers, scores, tracked } from "../schema";
 import { traceDbQuery } from "../../tracing";
-import { getOffersForTitle } from "./offers";
+import { getOffersForTitles } from "./offers";
 
 export function trackTitle(titleId: string, userId: string, notes?: string) {
   return traceDbQuery("trackTitle", () => {
@@ -73,11 +73,12 @@ export function getTrackedTitles(userId: string) {
       .orderBy(desc(tracked.trackedAt))
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
       is_tracked: true,
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }
@@ -98,9 +99,10 @@ export function getTrackedMoviesByReleaseDate(date: string, userId: string) {
       .where(and(eq(titles.releaseDate, date), eq(titles.objectType, "MOVIE")))
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }

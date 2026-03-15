@@ -2,7 +2,7 @@ import { eq, and, sql, gte, lt, asc } from "drizzle-orm";
 import { getDb, getRawDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
-import { getOffersForTitle } from "./offers";
+import { getOffersForTitles } from "./offers";
 import type { MonthFilters } from "./titles";
 
 export function upsertEpisodes(
@@ -95,10 +95,11 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
+    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
-      offers: getOffersForTitle(row.title_id),
+      offers: offersByTitle.get(row.title_id) ?? [],
     }));
   });
 }
@@ -137,10 +138,11 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
+    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
-      offers: getOffersForTitle(row.title_id),
+      offers: offersByTitle.get(row.title_id) ?? [],
     }));
   });
 }
@@ -190,10 +192,11 @@ export function getUnwatchedEpisodes(userId: string) {
       .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
       .all();
 
+    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: false,
-      offers: getOffersForTitle(row.title_id),
+      offers: offersByTitle.get(row.title_id) ?? [],
     }));
   });
 }
