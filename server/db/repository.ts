@@ -287,11 +287,12 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       .offset(offset)
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
       is_tracked: Boolean(row.is_tracked),
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }
@@ -318,6 +319,33 @@ export function getOffersForTitle(titleId: string) {
       .innerJoin(providers, eq(offers.providerId, providers.id))
       .where(eq(offers.titleId, titleId))
       .all();
+  });
+}
+
+export function getOffersForTitles(titleIds: string[]) {
+  return traceDbQuery("getOffersForTitles", () => {
+    if (titleIds.length === 0) return new Map<string, ReturnType<typeof getOffersForTitle>>();
+    const db = getDb();
+    const allOffers = db
+      .select({
+        id: offers.id,
+        title_id: offers.titleId,
+        provider_id: offers.providerId,
+        monetization_type: offers.monetizationType,
+        presentation_type: offers.presentationType,
+        price_value: offers.priceValue,
+        price_currency: offers.priceCurrency,
+        url: offers.url,
+        available_to: offers.availableTo,
+        provider_name: providers.name,
+        provider_technical_name: providers.technicalName,
+        provider_icon_url: providers.iconUrl,
+      })
+      .from(offers)
+      .innerJoin(providers, eq(offers.providerId, providers.id))
+      .where(inArray(offers.titleId, titleIds))
+      .all();
+    return Map.groupBy(allOffers, (o) => o.title_id);
   });
 }
 
@@ -392,11 +420,12 @@ export function getTrackedTitles(userId: string) {
       .orderBy(desc(tracked.trackedAt))
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
       is_tracked: true,
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }
@@ -441,11 +470,12 @@ export function searchLocalTitles(query: string, limit = 50, userId?: string) {
       .limit(limit)
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
       is_tracked: Boolean(row.is_tracked),
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }
@@ -548,11 +578,12 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     .orderBy(asc(titles.releaseDate))
     .all();
 
+  const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
   return rows.map((row) => ({
     ...row,
     genres: row.genres ? JSON.parse(row.genres) : [],
     is_tracked: Boolean(row.is_tracked),
-    offers: getOffersForTitle(row.id),
+    offers: offersByTitle.get(row.id) ?? [],
   }));
   });
 }
@@ -691,10 +722,11 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
+    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
-      offers: getOffersForTitle(row.title_id),
+      offers: offersByTitle.get(row.title_id) ?? [],
     }));
   });
 }
@@ -733,10 +765,11 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
+    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
-      offers: getOffersForTitle(row.title_id),
+      offers: offersByTitle.get(row.title_id) ?? [],
     }));
   });
 }
@@ -786,10 +819,11 @@ export function getUnwatchedEpisodes(userId: string) {
       .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
       .all();
 
+    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: false,
-      offers: getOffersForTitle(row.title_id),
+      offers: offersByTitle.get(row.title_id) ?? [],
     }));
   });
 }
@@ -1378,9 +1412,10 @@ export function getTrackedMoviesByReleaseDate(date: string, userId: string) {
       .where(and(eq(titles.releaseDate, date), eq(titles.objectType, "MOVIE")))
       .all();
 
+    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
-      offers: getOffersForTitle(row.id),
+      offers: offersByTitle.get(row.id) ?? [],
     }));
   });
 }

@@ -7,6 +7,7 @@ import {
   getTitleById,
   getRecentTitles,
   getOffersForTitle,
+  getOffersForTitles,
   searchLocalTitles,
   trackTitle,
   untrackTitle,
@@ -112,6 +113,38 @@ describe("upsertTitles", () => {
     expect(offers[0].provider_name).toBe("Netflix");
   });
 
+  it("batch-fetches offers for multiple titles", () => {
+    upsertTitles([
+      makeParsedTitle({
+        id: "movie-1",
+        title: "Movie One",
+        offers: [makeParsedOffer({ titleId: "movie-1", providerId: 8, providerName: "Netflix" })],
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Movie Two",
+        offers: [makeParsedOffer({ titleId: "movie-2", providerId: 337, providerName: "Disney Plus" })],
+      }),
+      makeParsedTitle({
+        id: "movie-3",
+        title: "Movie Three",
+        offers: [],
+      }),
+    ]);
+
+    const offerMap = getOffersForTitles(["movie-1", "movie-2", "movie-3"]);
+    expect(offerMap.get("movie-1")).toHaveLength(1);
+    expect(offerMap.get("movie-1")![0].provider_name).toBe("Netflix");
+    expect(offerMap.get("movie-2")).toHaveLength(1);
+    expect(offerMap.get("movie-2")![0].provider_name).toBe("Disney Plus");
+    expect(offerMap.get("movie-3")).toBeUndefined();
+  });
+
+  it("returns empty map for empty titleIds", () => {
+    const offerMap = getOffersForTitles([]);
+    expect(offerMap.size).toBe(0);
+  });
+
   it("upserts scores", () => {
     upsertTitles([makeParsedTitle({ scores: { imdbScore: 8.0, imdbVotes: 5000, tmdbScore: 7.5 } })]);
     const result = getTitleById("movie-123");
@@ -167,6 +200,29 @@ describe("getRecentTitles", () => {
     const results = getRecentTitles({ daysBack: 0 });
     expect(results).toHaveLength(2);
     expect(results[0].title).toBe("New");
+  });
+
+  it("includes offers via batch fetch", () => {
+    upsertTitles([
+      makeParsedTitle({
+        id: "movie-1",
+        releaseDate: "2025-01-01",
+        offers: [makeParsedOffer({ titleId: "movie-1", providerId: 8, providerName: "Netflix" })],
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "No Offers",
+        releaseDate: "2025-01-02",
+        offers: [],
+      }),
+    ]);
+    const results = getRecentTitles({ daysBack: 0 });
+    expect(results).toHaveLength(2);
+    const withOffers = results.find((r) => r.id === "movie-1")!;
+    const withoutOffers = results.find((r) => r.id === "movie-2")!;
+    expect(withOffers.offers).toHaveLength(1);
+    expect(withOffers.offers[0].provider_name).toBe("Netflix");
+    expect(withoutOffers.offers).toEqual([]);
   });
 
   it("filters by objectType", () => {
