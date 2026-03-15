@@ -58,11 +58,13 @@ app.post("/", async (c) => {
   const user = c.get("user")!;
   const body = await c.req.json();
 
-  const { provider, name, config, notify_time, timezone } = body;
+  const { provider, config, notify_time, timezone } = body;
 
-  if (!provider || !name || !config) {
-    return c.json({ error: "provider, name, and config are required" }, 400);
+  if (!provider || !config) {
+    return c.json({ error: "provider and config are required" }, 400);
   }
+
+  const name = provider.charAt(0).toUpperCase() + provider.slice(1);
 
   const providerImpl = getProvider(provider);
   if (!providerImpl) {
@@ -124,7 +126,6 @@ app.put("/:id", async (c) => {
   }
 
   updateNotifier(id, user.id, {
-    name: body.name,
     config: body.config,
     notifyTime: body.notify_time,
     timezone: body.timezone,
