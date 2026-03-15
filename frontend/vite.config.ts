@@ -12,6 +12,7 @@ export const pwaOptions: Partial<VitePWAOptions> = {
     navigateFallback: "/index.html",
     navigateFallbackDenylist: [/^\/api\//],
     clientsClaim: true,
+    skipWaiting: true,
     cleanupOutdatedCaches: true,
   },
   manifest: {
