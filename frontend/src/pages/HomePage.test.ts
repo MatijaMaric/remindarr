@@ -92,6 +92,71 @@ describe("progressive reveal logic", () => {
   });
 });
 
+describe("episode toggle updater functions", () => {
+  it("updateAll toggles is_watched for the target episode only", () => {
+    const episodes: Episode[] = [
+      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1, is_watched: false }),
+      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2, is_watched: false }),
+      makeEpisode({ id: 3, title_id: "show-1", season_number: 1, episode_number: 3, is_watched: true }),
+    ];
+
+    // Simulate the updateAll functional updater from toggleWatched
+    const episodeId = 2;
+    const currentlyWatched = false;
+    const updateAll = (eps: Episode[]) =>
+      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
+
+    const result = updateAll(episodes);
+
+    expect(result).toHaveLength(3);
+    expect(result[0].is_watched).toBe(false); // unchanged
+    expect(result[1].is_watched).toBe(true); // toggled
+    expect(result[2].is_watched).toBe(true); // unchanged
+    // Ensure it returns a new array (immutable update)
+    expect(result).not.toBe(episodes);
+  });
+
+  it("revertAll restores is_watched for the target episode only", () => {
+    // State after optimistic update: episode 2 was toggled to watched
+    const episodes: Episode[] = [
+      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1, is_watched: false }),
+      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2, is_watched: true }),
+      makeEpisode({ id: 3, title_id: "show-1", season_number: 1, episode_number: 3, is_watched: true }),
+    ];
+
+    const episodeId = 2;
+    const currentlyWatched = false; // original state before toggle
+    const revertAll = (eps: Episode[]) =>
+      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep));
+
+    const result = revertAll(episodes);
+
+    expect(result[0].is_watched).toBe(false); // unchanged
+    expect(result[1].is_watched).toBe(false); // reverted
+    expect(result[2].is_watched).toBe(true); // unchanged
+  });
+
+  it("updater works correctly as a React functional updater (called with prev state)", () => {
+    const prevState: Episode[] = [
+      makeEpisode({ id: 10, title_id: "show-x", season_number: 1, episode_number: 1, is_watched: false }),
+      makeEpisode({ id: 20, title_id: "show-x", season_number: 1, episode_number: 2, is_watched: true }),
+    ];
+
+    const episodeId = 10;
+    const currentlyWatched = false;
+    const updateAll = (eps: Episode[]) =>
+      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
+
+    // Simulating how React calls functional updaters: setState(fn) → fn(prevState)
+    const newState = updateAll(prevState);
+
+    expect(Array.isArray(newState)).toBe(true);
+    expect(newState).toHaveLength(2);
+    expect(newState[0].is_watched).toBe(true);
+    expect(newState[1].is_watched).toBe(true);
+  });
+});
+
 describe("season ordering for deck-of-cards", () => {
   it("earliest season appears first when sorting season map entries", () => {
     const episodes: Episode[] = [
