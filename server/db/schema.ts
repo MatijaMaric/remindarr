@@ -194,6 +194,11 @@ export const notifiers = sqliteTable(
   ]
 );
 
+export const oidcStates = sqliteTable("oidc_states", {
+  state: text("state").primaryKey(),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const schemaVersion = sqliteTable("schema_version", {
   version: integer("version").primaryKey(),
 });
@@ -253,7 +258,7 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 const schemaExports = {
-  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, notifiers, schemaVersion,
+  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, notifiers, oidcStates, schemaVersion,
   titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
   usersRelations, sessionsRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
 };
@@ -415,6 +420,13 @@ function initSchema(db: Database) {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS oidc_states (
+      state TEXT PRIMARY KEY,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER PRIMARY KEY
     )
@@ -566,6 +578,17 @@ function migrateSchema(db: Database) {
       log.info("Added original_language column to titles table", { version: 6 });
     }
     setSchemaVersion(db, 6);
+  }
+  // Migration v7: Add oidc_states table
+  if (getSchemaVersion(db) < 7) {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS oidc_states (
+        state TEXT PRIMARY KEY,
+        created_at INTEGER NOT NULL
+      )
+    `);
+    log.info("Created oidc_states table", { version: 7 });
+    setSchemaVersion(db, 7);
   }
 }
 
