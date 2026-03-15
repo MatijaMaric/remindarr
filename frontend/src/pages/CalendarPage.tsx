@@ -98,6 +98,7 @@ function AgendaCalendar() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLDivElement>(null);
   const monthOptions = useMemo(() => getMonthOptions(), []);
 
   // Track which months we've loaded to avoid duplicates
@@ -154,6 +155,15 @@ function AgendaCalendar() {
       setInitialLoading(false);
     });
   }, [typeFilter, loadMonth]);
+
+  // Scroll to today after initial load
+  useEffect(() => {
+    if (!initialLoading && todayRef.current) {
+      requestAnimationFrame(() => {
+        todayRef.current?.scrollIntoView({ block: "start" });
+      });
+    }
+  }, [initialLoading]);
 
   // Load more months at bottom
   const loadNextMonth = useCallback(async () => {
@@ -341,7 +351,7 @@ function AgendaCalendar() {
                 });
 
                 return (
-                  <div key={dateKey}>
+                  <div key={dateKey} ref={isDateToday ? todayRef : undefined}>
                     {/* Date header */}
                     <div className={`sticky top-0 z-10 px-3 py-2 text-sm font-medium ${
                       isDateToday
