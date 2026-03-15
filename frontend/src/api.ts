@@ -8,6 +8,9 @@ import type {
   SeasonDetailsResponse,
   EpisodeDetailsResponse,
   PersonDetailsResponse,
+  AdminSettings,
+  AdminSettingsUpdateRequest,
+  AdminSettingsUpdateResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -193,11 +196,11 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 
-export async function getAdminSettings(): Promise<any> {
+export async function getAdminSettings(): Promise<AdminSettings> {
   return fetchJson("/admin/settings");
 }
 
-export async function updateAdminSettings(settings: Record<string, string>): Promise<any> {
+export async function updateAdminSettings(settings: AdminSettingsUpdateRequest): Promise<AdminSettingsUpdateResponse> {
   return fetchJson("/admin/settings", {
     method: "PUT",
     body: JSON.stringify(settings),

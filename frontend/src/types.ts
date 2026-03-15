@@ -347,6 +347,39 @@ export interface PersonDetailsResponse {
   };
 }
 
+// ─── Admin Settings Types ────────────────────────────────────────────────────
+
+export interface OidcSettingField {
+  value: string;
+  source: "env" | "db" | "unset";
+}
+
+export interface AdminSettings {
+  oidc: {
+    issuer_url: OidcSettingField;
+    client_id: OidcSettingField;
+    client_secret: OidcSettingField;
+    redirect_uri: OidcSettingField;
+    admin_claim: OidcSettingField;
+    admin_value: OidcSettingField;
+  };
+  oidc_configured: boolean;
+}
+
+export interface AdminSettingsUpdateRequest {
+  oidc_issuer_url?: string;
+  oidc_client_id?: string;
+  oidc_client_secret?: string;
+  oidc_redirect_uri?: string;
+  oidc_admin_claim?: string;
+  oidc_admin_value?: string;
+}
+
+export interface AdminSettingsUpdateResponse {
+  success: boolean;
+  oidc_configured: boolean;
+}
+
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {
   return {
