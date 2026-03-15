@@ -6,14 +6,14 @@ const app = new Hono<AppEnv>();
 
 app.get("/", (c) => {
   const user = c.get("user");
-  const daysBack = Number(c.req.query("daysBack")) || 30;
+  const daysBack = Math.max(1, Math.min(Number(c.req.query("daysBack")) || 30, 365));
   const typeParam = c.req.query("type") || "";
   const providerParam = c.req.query("provider") || "";
   const genreParam = c.req.query("genre") || "";
   const languageParam = c.req.query("language") || "";
   const excludeTracked = c.req.query("excludeTracked") === "1";
-  const limit = Number(c.req.query("limit")) || 100;
-  const offset = Number(c.req.query("offset")) || 0;
+  const limit = Math.max(1, Math.min(Number(c.req.query("limit")) || 100, 1000));
+  const offset = Math.max(0, Number(c.req.query("offset")) || 0);
 
   const objectTypes = typeParam ? typeParam.split(",").filter(Boolean) : [];
   const providers = providerParam ? providerParam.split(",").filter(Boolean) : [];
