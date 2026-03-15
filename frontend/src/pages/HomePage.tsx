@@ -9,9 +9,7 @@ import {
   getUniqueProviders,
   groupByShow,
   formatUpcomingDate,
-  isEpisodeReleased,
   WatchedIcon,
-  EpisodeCard,
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
 
