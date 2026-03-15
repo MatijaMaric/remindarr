@@ -1,10 +1,23 @@
 import { CheckCircle, Check } from "lucide-react";
+import { Link } from "react-router";
 import type { Episode, Offer } from "../types";
 
 function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
   const e = String(ep.episode_number).padStart(2, "0");
   return `S${s}E${e}`;
+}
+
+function formatAirDate(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  const date = new Date(dateStr + "T00:00:00");
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function isToday(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return dateStr === today;
 }
 
 function getUniqueProviders(offers?: Offer[]) {
@@ -39,9 +52,11 @@ interface ReelsCardProps {
 export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, total }: ReelsCardProps) {
   const bgUrl = getBackgroundImageUrl(episode);
   const providers = getUniqueProviders(episode.offers);
+  const airDateFormatted = formatAirDate(episode.air_date);
+  const isNew = isToday(episode.air_date);
 
   return (
-    <div className="snap-start h-dvh w-full relative flex-shrink-0 overflow-hidden">
+    <div className="snap-start w-full relative flex-shrink-0 overflow-hidden" style={{ height: "calc(100dvh - 3.5rem - 5rem)" }}>
       {/* Background image */}
       {bgUrl ? (
         <img
@@ -62,8 +77,15 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
         {index + 1} / {total}
       </div>
 
+      {/* Swipe hint */}
+      {!caughtUp && (
+        <div className="absolute top-4 left-4 z-10 bg-black/30 px-2 py-1 rounded-full text-[10px] text-white/50">
+          Swipe left for season
+        </div>
+      )}
+
       {/* Bottom content */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 pb-10 z-10">
+      <div className="absolute bottom-0 left-0 right-0 p-6 pb-4 z-10">
         {caughtUp ? (
           <div className="text-center py-8">
             <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full text-lg font-semibold mb-2">
@@ -74,16 +96,34 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
           </div>
         ) : (
           <>
-            {/* Show title */}
-            <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-lg">
-              {episode.show_title}
-            </h2>
+            {/* Show title - linked */}
+            <Link to={`/title/${episode.title_id}`}>
+              <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-lg hover:text-indigo-300 transition-colors">
+                {episode.show_title}
+              </h2>
+            </Link>
 
-            {/* Episode code + name */}
-            <p className="text-base text-white/90 font-medium mb-2 drop-shadow">
-              {formatEpisodeCode(episode)}
-              {episode.name && ` · ${episode.name}`}
-            </p>
+            {/* Episode code + name - linked */}
+            <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}>
+              <p className="text-base text-white/90 font-medium mb-1 drop-shadow hover:text-indigo-300 transition-colors">
+                {formatEpisodeCode(episode)}
+                {episode.name && ` · ${episode.name}`}
+              </p>
+            </Link>
+
+            {/* Air date + NEW badge */}
+            <div className="flex items-center gap-2 mb-2">
+              {airDateFormatted && (
+                <span className="text-sm text-white/60 drop-shadow">
+                  {airDateFormatted}
+                </span>
+              )}
+              {isNew && (
+                <span className="bg-emerald-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                  NEW
+                </span>
+              )}
+            </div>
 
             {/* Overview */}
             {episode.overview && (

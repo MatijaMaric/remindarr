@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link } from "react-router";
 import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon } from "lucide-react";
 import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
+import { useIsMobile } from "../hooks/useIsMobile";
 import TitleList from "../components/TitleList";
 import type { Title, Episode, Offer } from "../types";
 
@@ -57,7 +58,412 @@ const typeFilters = [
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Generate month options for ±24 months
+function getMonthOptions(): { label: string; value: string }[] {
+  const options: { label: string; value: string }[] = [];
+  const now = new Date();
+  for (let i = -24; i <= 24; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    options.push({
+      label: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }),
+      value: formatMonth(d),
+    });
+  }
+  return options;
+}
+
 export default function CalendarPage() {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return <AgendaCalendar />;
+  }
+
+  return <GridCalendar />;
+}
+
+// ─── Mobile Agenda View ──────────────────────────────────────────────────────
+
+interface AgendaMonth {
+  month: string; // "YYYY-MM"
+  titles: Title[];
+  episodes: Episode[];
+}
+
+function AgendaCalendar() {
+  const [typeFilter, setTypeFilter] = useState("");
+  const [months, setMonths] = useState<AgendaMonth[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const monthOptions = useMemo(() => getMonthOptions(), []);
+
+  // Track which months we've loaded to avoid duplicates
+  const loadedMonthsRef = useRef(new Set<string>());
+  const [earliestMonth, setEarliestMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  });
+  const [latestMonth, setLatestMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  });
+
+  const today = useMemo(() => formatDateKey(new Date()), []);
+
+  // Load a specific month's data
+  const loadMonth = useCallback(async (monthStr: string): Promise<AgendaMonth | null> => {
+    if (loadedMonthsRef.current.has(monthStr)) return null;
+    loadedMonthsRef.current.add(monthStr);
+    try {
+      const data = await getCalendarTitles({
+        month: monthStr,
+        type: typeFilter || undefined,
+      });
+      return { month: monthStr, titles: data.titles, episodes: data.episodes || [] };
+    } catch {
+      loadedMonthsRef.current.delete(monthStr);
+      return null;
+    }
+  }, [typeFilter]);
+
+  // Initial load: current month ± 1
+  useEffect(() => {
+    loadedMonthsRef.current.clear();
+    setMonths([]);
+    setInitialLoading(true);
+
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const curr = new Date(now.getFullYear(), now.getMonth(), 1);
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    setEarliestMonth(prev);
+    setLatestMonth(next);
+
+    Promise.all([
+      loadMonth(formatMonth(prev)),
+      loadMonth(formatMonth(curr)),
+      loadMonth(formatMonth(next)),
+    ]).then((results) => {
+      const loaded = results.filter((r): r is AgendaMonth => r !== null);
+      loaded.sort((a, b) => a.month.localeCompare(b.month));
+      setMonths(loaded);
+      setInitialLoading(false);
+    });
+  }, [typeFilter, loadMonth]);
+
+  // Load more months at bottom
+  const loadNextMonth = useCallback(async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    const next = new Date(latestMonth.getFullYear(), latestMonth.getMonth() + 1, 1);
+    const result = await loadMonth(formatMonth(next));
+    if (result) {
+      setMonths((prev) => [...prev, result]);
+    }
+    setLatestMonth(next);
+    setLoadingMore(false);
+  }, [latestMonth, loadMonth, loadingMore]);
+
+  // Load more months at top
+  const loadPrevMonth = useCallback(async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    const prev = new Date(earliestMonth.getFullYear(), earliestMonth.getMonth() - 1, 1);
+    const result = await loadMonth(formatMonth(prev));
+    if (result) {
+      setMonths((prevMonths) => [result, ...prevMonths]);
+    }
+    setEarliestMonth(prev);
+    setLoadingMore(false);
+  }, [earliestMonth, loadMonth, loadingMore]);
+
+  // IntersectionObserver for infinite scroll down
+  useEffect(() => {
+    const el = bottomRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadNextMonth();
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadNextMonth]);
+
+  // IntersectionObserver for infinite scroll up
+  useEffect(() => {
+    const el = topRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadPrevMonth();
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadPrevMonth]);
+
+  // Jump to month
+  const jumpToMonth = useCallback(async (monthStr: string) => {
+    loadedMonthsRef.current.clear();
+    setMonths([]);
+    setInitialLoading(true);
+
+    const [yearStr, monthNum] = monthStr.split("-");
+    const target = new Date(parseInt(yearStr), parseInt(monthNum) - 1, 1);
+    const prev = new Date(target.getFullYear(), target.getMonth() - 1, 1);
+    const next = new Date(target.getFullYear(), target.getMonth() + 1, 1);
+
+    setEarliestMonth(prev);
+    setLatestMonth(next);
+
+    const results = await Promise.all([
+      loadMonth(formatMonth(prev)),
+      loadMonth(monthStr),
+      loadMonth(formatMonth(next)),
+    ]);
+    const loaded = results.filter((r): r is AgendaMonth => r !== null);
+    loaded.sort((a, b) => a.month.localeCompare(b.month));
+    setMonths(loaded);
+    setInitialLoading(false);
+  }, [loadMonth]);
+
+  // Build agenda items sorted by date
+  const agendaItems = useMemo(() => {
+    const byDate = new Map<string, CalendarItem[]>();
+
+    for (const m of months) {
+      for (const t of m.titles) {
+        if (!t.release_date) continue;
+        const arr = byDate.get(t.release_date);
+        if (arr) arr.push({ type: "title", data: t });
+        else byDate.set(t.release_date, [{ type: "title", data: t }]);
+      }
+      for (const ep of m.episodes) {
+        if (!ep.air_date) continue;
+        const arr = byDate.get(ep.air_date);
+        if (arr) arr.push({ type: "episode", data: ep });
+        else byDate.set(ep.air_date, [{ type: "episode", data: ep }]);
+      }
+    }
+
+    return new Map([...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  }, [months]);
+
+  // Toggle watched
+  const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
+    setMonths((prev) =>
+      prev.map((m) => ({
+        ...m,
+        episodes: m.episodes.map((ep) =>
+          ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep
+        ),
+      }))
+    );
+    try {
+      if (currentlyWatched) {
+        await unwatchEpisode(episodeId);
+      } else {
+        await watchEpisode(episodeId);
+      }
+    } catch {
+      setMonths((prev) =>
+        prev.map((m) => ({
+          ...m,
+          episodes: m.episodes.map((ep) =>
+            ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep
+          ),
+        }))
+      );
+    }
+  };
+
+  const isEpisodeReleased = (ep: Episode) => {
+    if (!ep.air_date) return false;
+    return ep.air_date <= today;
+  };
+
+  return (
+    <div ref={containerRef} className="space-y-4">
+      {/* Header: month picker + type filter */}
+      <div className="flex flex-col gap-3">
+        <select
+          value={formatMonth(new Date())}
+          onChange={(e) => jumpToMonth(e.target.value)}
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          {monthOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          {typeFilters.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setTypeFilter(f.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                typeFilter === f.value
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-400 hover:text-white hover:bg-gray-800"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {initialLoading ? (
+        <div className="text-center py-8 text-gray-500">Loading...</div>
+      ) : (
+        <>
+          {/* Load more top sentinel */}
+          <div ref={topRef} className="h-1" />
+
+          {agendaItems.size === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">No items for this period.</div>
+          ) : (
+            <div className="space-y-1">
+              {Array.from(agendaItems.entries()).map(([dateKey, items]) => {
+                const isDateToday = dateKey === today;
+                const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                });
+
+                return (
+                  <div key={dateKey}>
+                    {/* Date header */}
+                    <div className={`sticky top-0 z-10 px-3 py-2 text-sm font-medium ${
+                      isDateToday
+                        ? "bg-indigo-900/60 text-indigo-300 border-l-2 border-indigo-500"
+                        : "bg-gray-900/95 text-gray-400"
+                    }`}>
+                      {isDateToday ? `Today — ${dateLabel}` : dateLabel}
+                    </div>
+
+                    {/* Items for this date */}
+                    <div className="space-y-1 px-2 py-1">
+                      {items.map((item, idx) => {
+                        if (item.type === "episode") {
+                          const ep = item.data;
+                          const released = isEpisodeReleased(ep);
+                          return (
+                            <div
+                              key={`e-${ep.id}-${idx}`}
+                              className={`flex items-center gap-3 p-2.5 rounded-lg ${
+                                ep.is_watched
+                                  ? "bg-gray-900/30 opacity-60"
+                                  : "bg-gray-900/60"
+                              }`}
+                            >
+                              {released ? (
+                                <button
+                                  onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
+                                  className={`flex-shrink-0 cursor-pointer transition-colors ${
+                                    ep.is_watched
+                                      ? "text-emerald-400 hover:text-emerald-300"
+                                      : "text-gray-600 hover:text-gray-400"
+                                  }`}
+                                >
+                                  {ep.is_watched ? <CheckCircleIcon className="size-5" /> : <CircleIcon className="size-5" />}
+                                </button>
+                              ) : (
+                                <span className="flex-shrink-0 text-gray-700">
+                                  <CircleIcon className="size-5" />
+                                </span>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <Link to={`/title/${ep.title_id}`} className="hover:text-indigo-400 transition-colors">
+                                  <p className="text-sm font-medium text-white truncate">{ep.show_title}</p>
+                                </Link>
+                                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors">
+                                  <p className="text-xs text-emerald-400">
+                                    S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
+                                    {ep.name && ` — ${ep.name}`}
+                                  </p>
+                                </Link>
+                              </div>
+                              {(() => {
+                                const providers = getUniqueProviders(ep.offers);
+                                return providers.length > 0 ? (
+                                  <div className="flex gap-1 flex-shrink-0">
+                                    {providers.slice(0, 2).map((p) => (
+                                      <img
+                                        key={p.provider_id}
+                                        src={p.provider_icon_url}
+                                        alt={p.provider_name}
+                                        className="w-5 h-5 rounded-sm"
+                                        loading="lazy"
+                                      />
+                                    ))}
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+                          );
+                        }
+
+                        // Title item
+                        const t = item.data;
+                        return (
+                          <Link
+                            key={`t-${t.id}-${idx}`}
+                            to={`/title/${t.id}`}
+                            className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-800/60 transition-colors ${
+                              t.object_type === "MOVIE" ? "bg-blue-900/20" : "bg-purple-900/20"
+                            }`}
+                          >
+                            {t.poster_url && (
+                              <img
+                                src={t.poster_url}
+                                alt={t.title}
+                                className="w-8 h-12 rounded object-cover flex-shrink-0"
+                                loading="lazy"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">{t.title}</p>
+                              <p className={`text-xs ${
+                                t.object_type === "MOVIE" ? "text-blue-400" : "text-purple-400"
+                              }`}>
+                                {t.object_type === "MOVIE" ? "Movie" : "Show"}
+                                {t.release_year && ` · ${t.release_year}`}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Load more bottom sentinel */}
+          <div ref={bottomRef} className="h-1" />
+          {loadingMore && (
+            <div className="text-center py-4 text-gray-500 text-sm">Loading more...</div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Desktop Grid Calendar ──────────────────────────────────────────────────
+
+function GridCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [typeFilter, setTypeFilter] = useState("");
   const [titles, setTitles] = useState<Title[]>([]);
