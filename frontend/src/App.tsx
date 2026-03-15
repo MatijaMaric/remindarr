@@ -22,7 +22,10 @@ export default function App() {
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <nav className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
-          <Link to="/" className="text-lg font-bold text-white tracking-tight hover:text-indigo-400 transition-colors">Remindarr</Link>
+          <Link to="/" className="flex items-center gap-2 text-lg font-bold text-white tracking-tight hover:text-indigo-400 transition-colors">
+            <img src="/favicon.svg" alt="" className="w-7 h-7 rounded" />
+            Remindarr
+          </Link>
           {/* Desktop nav links */}
           <div className="hidden sm:flex gap-1">
             <NavLink
