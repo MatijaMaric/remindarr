@@ -7,6 +7,7 @@ import { CONFIG } from "./config";
 import { getDb, migrateTrackedData } from "./db/schema";
 import { getUserCount, createUser, deleteExpiredSessions } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
+import { rateLimiter } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
@@ -39,7 +40,8 @@ if (getUserCount() === 0) {
   const hash = await Bun.password.hash(password);
   const adminId = createUser("admin", hash, "Admin", "local", undefined, true);
   migrateTrackedData(adminId);
-  logger.info("Admin account created", { username: "admin", password });
+  logger.info("Admin account created", { username: "admin" });
+  console.log(`\n  Default admin password: ${password}\n  Change it after first login.\n`);
 }
 
 const app = new Hono<AppEnv>();
@@ -54,8 +56,18 @@ app.onError((err, c) => {
   return c.json({ error: "Internal server error" }, 500);
 });
 
-// CORS for dev
-app.use("/api/*", cors());
+// CORS — restricted to explicit origins via CORS_ORIGIN env var (comma-separated).
+// When not set, no CORS headers are sent (same-origin policy applies).
+if (CONFIG.CORS_ORIGIN) {
+  const origins = CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+  app.use(
+    "/api/*",
+    cors({
+      origin: origins,
+      credentials: true,
+    }),
+  );
+}
 
 // Request logging
 app.use("/api/*", requestLogger());
@@ -71,6 +83,9 @@ app.use("/api/titles/*", optionalAuth);
 app.use("/api/titles", optionalAuth);
 app.route("/api/titles", titlesRoutes);
 
+// Rate limit search: 30 requests per minute
+app.use("/api/search/*", rateLimiter({ limit: 30, windowMs: 60_000 }));
+app.use("/api/search", rateLimiter({ limit: 30, windowMs: 60_000 }));
 app.use("/api/search/*", optionalAuth);
 app.use("/api/search", optionalAuth);
 app.route("/api/search", searchRoutes);
@@ -115,6 +130,8 @@ app.use("/api/details", optionalAuth);
 app.route("/api/details", detailsRoutes);
 
 // Sync (public — typically triggered by cron)
+app.use("/api/sync/*", rateLimiter({ limit: 5, windowMs: 60_000 }));
+app.use("/api/sync", rateLimiter({ limit: 5, windowMs: 60_000 }));
 app.route("/api/sync", syncRoutes);
 
 // Episodes (optionalAuth for upcoming, sync is public)

@@ -199,7 +199,18 @@ export default function CategoryBrowse({
             <p className="text-sm text-gray-500">{totalResults} result{totalResults !== 1 ? "s" : ""}</p>
           )}
           <TitleList titles={hideTracked ? titles.filter((t) => !t.is_tracked) : titles} emptyMessage="No titles found." />
-          {page < totalPages && (
+          {error && (
+            <div className="text-center py-4 text-red-400">
+              <p>{error}</p>
+              <button
+                onClick={() => fetchTitles(page + 1, true)}
+                className="mt-2 text-sm underline hover:text-red-300"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {!error && page < totalPages && (
             <div ref={sentinelRef} className="text-center py-4">
               {loadingMore && (
                 <div className="text-gray-500 text-sm">Loading...</div>

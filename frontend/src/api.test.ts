@@ -15,7 +15,7 @@ const mockFetch = mock(async (url: string, options?: RequestInit) => {
 
 globalThis.fetch = mockFetch as any;
 
-const { browseTitles } = await import("./api");
+const { browseTitles, getAdminSettings, updateAdminSettings } = await import("./api");
 
 beforeEach(() => {
   lastFetchUrl = "";
@@ -45,5 +45,59 @@ describe("browseTitles", () => {
   it("omits type param when not provided", async () => {
     await browseTitles({ category: "popular" });
     expect(lastFetchUrl).not.toContain("type=");
+  });
+});
+
+describe("getAdminSettings", () => {
+  it("calls /api/admin/settings", async () => {
+    const mockSettings = {
+      oidc: {
+        issuer_url: { value: "https://example.com", source: "db" },
+        client_id: { value: "my-client", source: "db" },
+        client_secret: { value: "********", source: "db" },
+        redirect_uri: { value: "", source: "unset" },
+        admin_claim: { value: "", source: "unset" },
+        admin_value: { value: "", source: "unset" },
+      },
+      oidc_configured: true,
+    };
+    mockFetch.mockImplementationOnce(async (url: string, options?: RequestInit) => {
+      lastFetchUrl = url;
+      lastFetchOptions = options;
+      return new Response(JSON.stringify(mockSettings), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    const result = await getAdminSettings();
+    expect(lastFetchUrl).toBe("/api/admin/settings");
+    expect(result.oidc_configured).toBe(true);
+    expect(result.oidc.issuer_url.value).toBe("https://example.com");
+    expect(result.oidc.issuer_url.source).toBe("db");
+  });
+});
+
+describe("updateAdminSettings", () => {
+  it("calls PUT /api/admin/settings with body", async () => {
+    const mockResponse = { success: true, oidc_configured: true };
+    mockFetch.mockImplementationOnce(async (url: string, options?: RequestInit) => {
+      lastFetchUrl = url;
+      lastFetchOptions = options;
+      return new Response(JSON.stringify(mockResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    const result = await updateAdminSettings({
+      oidc_issuer_url: "https://example.com",
+      oidc_client_id: "my-client",
+    });
+    expect(lastFetchUrl).toBe("/api/admin/settings");
+    expect(lastFetchOptions?.method).toBe("PUT");
+    const body = JSON.parse(lastFetchOptions?.body as string);
+    expect(body.oidc_issuer_url).toBe("https://example.com");
+    expect(body.oidc_client_id).toBe("my-client");
+    expect(result.success).toBe(true);
+    expect(result.oidc_configured).toBe(true);
   });
 });

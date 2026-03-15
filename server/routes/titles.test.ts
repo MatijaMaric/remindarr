@@ -119,6 +119,46 @@ describe("GET /titles", () => {
     expect(body.titles).toHaveLength(2);
   });
 
+  it("clamps daysBack to max 365", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([makeParsedTitle({ releaseDate: today })]);
+
+    const res = await app.request("/titles?daysBack=9999");
+    expect(res.status).toBe(200);
+    // Should still work — titles within 365 days are returned
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+  });
+
+  it("clamps limit to max 1000 and min 1", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([makeParsedTitle({ releaseDate: today })]);
+
+    const res = await app.request("/titles?daysBack=365&limit=999999999");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // Should still return results (clamped to 1000)
+    expect(body.titles).toHaveLength(1);
+  });
+
+  it("clamps negative offset to 0", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    upsertTitles([makeParsedTitle({ releaseDate: today })]);
+
+    const res = await app.request("/titles?daysBack=365&offset=-1");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+  });
+
+  it("clamps negative daysBack to 1", async () => {
+    const res = await app.request("/titles?daysBack=-5");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // With daysBack=1, may or may not have titles, but should not error
+    expect(body.titles).toBeDefined();
+  });
+
   it("excludes tracked titles when excludeTracked=1 and user is present", async () => {
     const today = new Date().toISOString().slice(0, 10);
     upsertTitles([

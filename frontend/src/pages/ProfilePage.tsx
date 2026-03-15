@@ -2,21 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { JobsResponse, Notifier } from "../api";
-
-interface OidcField {
-  value: string;
-  source: "env" | "db" | "unset";
-}
-
-interface AdminSettings {
-  oidc: {
-    issuer_url: OidcField;
-    client_id: OidcField;
-    client_secret: OidcField;
-    redirect_uri: OidcField;
-  };
-  oidc_configured: boolean;
-}
+import type { AdminSettings } from "../types";
 
 export default function ProfilePage() {
   const { user } = useAuth();
