@@ -105,8 +105,8 @@ function ProviderRow({ label, providers }: { label: string; providers: { logo_pa
     <div className="flex items-center gap-3">
       <span className="text-sm text-gray-400 w-20 shrink-0">{label}</span>
       <div className="flex flex-wrap gap-2 items-center">
-        {visible.map((p, i) => (
-          <div key={i} className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1">
+        {visible.map((p) => (
+          <div key={p.provider_name} className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1">
             <img src={`${TMDB_IMG}/w45${p.logo_path}`} alt={p.provider_name} className="w-6 h-6 rounded" />
             <span className="text-sm text-gray-300">{p.provider_name}</span>
           </div>
@@ -280,8 +280,8 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
             {genres.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {genres.map((g, i) => (
-                  <span key={i} className="bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
+                {genres.map((g) => (
+                  <span key={g} className="bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
                 ))}
               </div>
             )}
@@ -350,8 +350,8 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                 </tr>
               </thead>
               <tbody>
-                {releaseDates.release_dates.map((rd, i) => (
-                  <tr key={i} className="border-b border-gray-800/50 last:border-0">
+                {releaseDates.release_dates.map((rd) => (
+                  <tr key={`${rd.release_date}-${rd.type}`} className="border-b border-gray-800/50 last:border-0">
                     <td className="py-2 px-4 text-gray-300">{RELEASE_TYPE_LABELS[rd.type] || `Type ${rd.type}`}</td>
                     <td className="py-2 px-4 text-gray-300">{formatDate(rd.release_date)}</td>
                     <td className="py-2 px-4">
@@ -558,8 +558,8 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
             {genres.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {genres.map((g, i) => (
-                  <span key={i} className="bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
+                {genres.map((g) => (
+                  <span key={g} className="bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
                 ))}
               </div>
             )}
