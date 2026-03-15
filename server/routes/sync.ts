@@ -5,10 +5,15 @@ import { upsertTitles } from "../db/repository";
 const app = new Hono();
 
 app.post("/", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const daysBack = body.daysBack || 30;
-  const objectType = body.type;
-  const maxPages = body.maxPages || 10;
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON in request body" }, 400);
+  }
+  const daysBack = (body.daysBack as number) || 30;
+  const objectType = body.type as "MOVIE" | "SHOW" | undefined;
+  const maxPages = (body.maxPages as number) || 10;
 
   try {
     const titles = await fetchNewReleases({ daysBack, objectType, maxPages });
