@@ -178,16 +178,24 @@ app.get("/oidc/callback", async (c) => {
     // Determine admin status from claims
     const isAdmin = checkAdminClaim(userInfo.claims, adminClaim, adminValue);
 
-    // Find or create user
+    // Find or create user (with retry to handle concurrent OIDC logins)
     let user = getUserByProviderSubject("oidc", userInfo.sub);
     if (!user) {
-      // Ensure unique username
-      let username = userInfo.username;
-      if (getUserByUsername(username)) {
-        username = `${username}_oidc`;
+      try {
+        // Ensure unique username
+        let username = userInfo.username;
+        if (getUserByUsername(username)) {
+          username = `${username}_oidc`;
+        }
+        createUser(username, null, userInfo.displayName || undefined, "oidc", userInfo.sub, isAdmin);
+      } catch (err) {
+        // Another concurrent request may have created the user — retry lookup
+        user = getUserByProviderSubject("oidc", userInfo.sub);
+        if (!user) throw err; // Re-throw if it's a different error
       }
-      const id = createUser(username, null, userInfo.displayName || undefined, "oidc", userInfo.sub, isAdmin);
-      user = getUserByProviderSubject("oidc", userInfo.sub);
+      if (!user) {
+        user = getUserByProviderSubject("oidc", userInfo.sub);
+      }
     } else {
       // Sync admin status on every login
       updateUserAdmin(user.id, isAdmin);
