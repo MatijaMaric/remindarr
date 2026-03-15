@@ -39,7 +39,8 @@ if (getUserCount() === 0) {
   const hash = await Bun.password.hash(password);
   const adminId = createUser("admin", hash, "Admin", "local", undefined, true);
   migrateTrackedData(adminId);
-  logger.info("Admin account created", { username: "admin", password });
+  logger.info("Admin account created", { username: "admin" });
+  console.log(`\n  Default admin password: ${password}\n  Change it after first login.\n`);
 }
 
 const app = new Hono<AppEnv>();
