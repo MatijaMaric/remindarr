@@ -1,10 +1,11 @@
 # Stage 1: Build frontend
 FROM oven/bun:1.3.9 AS frontend-build
-WORKDIR /app/frontend
-COPY frontend/package.json frontend/bun.lock ./
-RUN bun install --frozen-lockfile
-COPY frontend/ ./
-RUN bun run build
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY frontend/package.json frontend/bun.lock ./frontend/
+RUN cd frontend && bun install --frozen-lockfile
+COPY frontend/ ./frontend/
+RUN cd frontend && bun run build
 
 # Stage 2: Build server
 FROM oven/bun:1.3.9 AS server-build
