@@ -3,8 +3,8 @@ import { CONFIG } from "../config";
 CONFIG.DB_PATH = ":memory:";
 
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { exchangeCode, clearDiscoveryCache, getDiscovery } from "./oidc";
-import { setSetting } from "../db/repository";
+import { exchangeCode, clearDiscoveryCache, getDiscovery, generateState, validateState } from "./oidc";
+import { setSetting, createOidcState, consumeOidcState, cleanExpiredOidcStates } from "../db/repository";
 
 // Helper to create a fake JWT with given payload
 function fakeJwt(payload: Record<string, unknown>): string {
@@ -187,5 +187,64 @@ describe("exchangeCode", () => {
 
     expect(result.sub).toBe("user-no-jwt");
     expect(result.claims.groups).toEqual(["admin"]);
+  });
+});
+
+describe("OIDC state store", () => {
+  it("generates and validates a state token", () => {
+    const state = generateState();
+    expect(typeof state).toBe("string");
+    expect(state.length).toBeGreaterThan(0);
+    expect(validateState(state)).toBe(true);
+  });
+
+  it("rejects an unknown state token", () => {
+    expect(validateState("nonexistent")).toBe(false);
+  });
+
+  it("consumes state on validation (single use)", () => {
+    const state = generateState();
+    expect(validateState(state)).toBe(true);
+    expect(validateState(state)).toBe(false);
+  });
+
+  it("rejects expired state tokens", () => {
+    // Directly insert a state with old timestamp
+    const oldState = "expired-state";
+    createOidcState(oldState);
+    // Manually update created_at to 11 minutes ago
+    const { getDb } = require("../db/schema");
+    const db = getDb();
+    const elevenMinutesAgo = Date.now() - 11 * 60 * 1000;
+    db.run(
+      require("drizzle-orm").sql`UPDATE oidc_states SET created_at = ${elevenMinutesAgo} WHERE state = ${oldState}`
+    );
+
+    expect(consumeOidcState(oldState)).toBe(false);
+  });
+
+  it("cleans up expired states", () => {
+    const { getDb } = require("../db/schema");
+    const db = getDb();
+    const elevenMinutesAgo = Date.now() - 11 * 60 * 1000;
+
+    // Insert some expired states directly
+    createOidcState("expired-1");
+    createOidcState("expired-2");
+    db.run(
+      require("drizzle-orm").sql`UPDATE oidc_states SET created_at = ${elevenMinutesAgo}`
+    );
+
+    // Insert a fresh state
+    createOidcState("fresh-1");
+
+    cleanExpiredOidcStates();
+
+    // Expired states should be gone
+    expect(consumeOidcState("expired-1")).toBe(false);
+    expect(consumeOidcState("expired-2")).toBe(false);
+
+    // Fresh state should still be valid
+    expect(consumeOidcState("fresh-1")).toBe(true);
   });
 });

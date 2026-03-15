@@ -16,9 +16,10 @@ let app: Hono<AppEnv>;
 
 beforeEach(() => {
   setupTestDb();
+  mockFetchNewReleases.mockClear();
+
   app = new Hono<AppEnv>();
   app.route("/sync", syncApp);
-  mockFetchNewReleases.mockClear();
 });
 
 afterAll(() => {
@@ -26,6 +27,19 @@ afterAll(() => {
 });
 
 describe("POST /sync", () => {
+  it("returns 400 for malformed JSON body", async () => {
+    const res = await app.request("/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "not valid json{",
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid JSON in request body");
+    expect(mockFetchNewReleases).not.toHaveBeenCalled();
+  });
+
   it("syncs titles with default parameters", async () => {
     mockFetchNewReleases.mockResolvedValueOnce([makeParsedTitle()]);
 
@@ -65,19 +79,6 @@ describe("POST /sync", () => {
       objectType: "MOVIE",
       maxPages: 5,
     });
-  });
-
-  it("handles invalid JSON body gracefully", async () => {
-    mockFetchNewReleases.mockResolvedValueOnce([]);
-
-    const res = await app.request("/sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "not json",
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("returns 500 when fetchNewReleases throws", async () => {

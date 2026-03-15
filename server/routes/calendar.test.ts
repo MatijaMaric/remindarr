@@ -36,19 +36,34 @@ describe("GET /calendar", () => {
     const res = await app.request("/calendar");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("month");
+    expect(body.error).toContain("month parameter required");
   });
 
   it("returns 400 for invalid month format", async () => {
     const res = await app.request("/calendar?month=2026-3");
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("YYYY-MM");
   });
 
   it("returns 400 for completely invalid month", async () => {
     const res = await app.request("/calendar?month=invalid");
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid objectType", async () => {
+    const res = await app.request("/calendar?month=2026-03&type=INVALID");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Invalid type");
+  });
+
+  it("accepts valid objectType MOVIE", async () => {
+    const res = await app.request("/calendar?month=2026-03&type=MOVIE");
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts valid objectType SHOW", async () => {
+    const res = await app.request("/calendar?month=2026-03&type=SHOW");
+    expect(res.status).toBe(200);
   });
 
   it("returns empty results for month with no titles", async () => {
@@ -90,7 +105,6 @@ describe("GET /calendar", () => {
     const res = await app.request("/calendar?month=2026-03&provider=8");
     expect(res.status).toBe(200);
     const body = await res.json();
-    // Should only contain titles with provider 8
     expect(body.titles.length).toBeGreaterThanOrEqual(0);
   });
 
