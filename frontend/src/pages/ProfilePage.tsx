@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { JobsResponse, Notifier } from "../api";
 import type { AdminSettings } from "../types";
+import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../lib/push";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <UserSection />
+      {isPushSupported() && <PushNotificationsSection />}
       <NotificationsSection />
       {user.is_admin && <BackgroundJobsSection />}
       {user.is_admin && <AdminSection />}
@@ -116,6 +118,175 @@ function UserSection() {
   );
 }
 
+function PushNotificationsSection() {
+  const [loading, setLoading] = useState(true);
+  const [enabling, setEnabling] = useState(false);
+  const [disabling, setDisabling] = useState(false);
+  const [pushNotifier, setPushNotifier] = useState<Notifier | null>(null);
+  const [hasSubscription, setHasSubscription] = useState(false);
+  const [permissionState, setPermissionState] = useState(Notification.permission);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [testing, setTesting] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [{ notifiers }, subscription] = await Promise.all([
+        api.getNotifiers(),
+        getExistingSubscription(),
+      ]);
+      const webpushNotifier = notifiers.find((n) => n.provider === "webpush") || null;
+      setPushNotifier(webpushNotifier);
+      setHasSubscription(!!subscription);
+      setPermissionState(Notification.permission);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  async function handleEnable() {
+    setMsg("");
+    setErr("");
+    setEnabling(true);
+    try {
+      const permission = await Notification.requestPermission();
+      setPermissionState(permission);
+      if (permission !== "granted") {
+        setErr("Notification permission denied. Please enable it in your browser settings.");
+        return;
+      }
+
+      const { publicKey } = await api.getVapidPublicKey();
+      const subscription = await subscribeToPush(publicKey);
+
+      await api.createNotifier({
+        provider: "webpush",
+        name: "This Device",
+        config: subscription,
+        notify_time: "09:00",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+
+      setMsg("Push notifications enabled");
+      await refresh();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setEnabling(false);
+    }
+  }
+
+  async function handleDisable() {
+    setMsg("");
+    setErr("");
+    setDisabling(true);
+    try {
+      await unsubscribeFromPush();
+      if (pushNotifier) {
+        await api.deleteNotifier(pushNotifier.id);
+      }
+      setMsg("Push notifications disabled");
+      await refresh();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setDisabling(false);
+    }
+  }
+
+  async function handleTest() {
+    if (!pushNotifier) return;
+    setMsg("");
+    setErr("");
+    setTesting(true);
+    try {
+      const result = await api.testNotifier(pushNotifier.id);
+      if (result.success) {
+        setMsg(result.message);
+      } else {
+        setErr(result.message);
+      }
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  if (loading) return <div className="text-gray-500">Loading push notification status...</div>;
+
+  const isEnabled = !!pushNotifier && pushNotifier.enabled && hasSubscription;
+  const isDenied = permissionState === "denied";
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">Push Notifications</h2>
+
+      {msg && (
+        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+          {err}
+        </div>
+      )}
+
+      <div className="bg-gray-900 rounded-lg p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-white font-medium">
+              {isEnabled ? "Push notifications are enabled" : "Get notified about new releases"}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              {isEnabled
+                ? "You'll receive notifications on this device"
+                : isDenied
+                  ? "Notifications are blocked. Enable them in your browser settings."
+                  : "Receive native push notifications for new episodes and movies"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isEnabled ? (
+              <>
+                <button
+                  onClick={handleTest}
+                  disabled={testing}
+                  className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {testing ? "Sending..." : "Test"}
+                </button>
+                <button
+                  onClick={handleDisable}
+                  disabled={disabling}
+                  className="px-3 py-1.5 text-sm bg-red-900/50 hover:bg-red-800/50 text-red-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {disabling ? "Disabling..." : "Disable"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleEnable}
+                disabled={enabling || isDenied}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {enabling ? "Enabling..." : "Enable"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const TIMEZONE_OPTIONS = (() => {
   try {
     return Intl.supportedValuesOf("timeZone");
@@ -148,8 +319,9 @@ function NotificationsSection() {
   const refresh = useCallback(() => {
     Promise.all([api.getNotifiers(), api.getNotifierProviders()])
       .then(([n, p]) => {
-        setNotifiers(n.notifiers);
-        setProviders(p.providers);
+        // Hide webpush from manual notifier list — it's managed via PushNotificationsSection
+        setNotifiers(n.notifiers.filter((x) => x.provider !== "webpush"));
+        setProviders(p.providers.filter((x) => x !== "webpush"));
         setLoading(false);
       })
       .catch(() => setLoading(false));

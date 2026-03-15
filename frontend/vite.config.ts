@@ -6,14 +6,12 @@ import { VitePWA } from "vite-plugin-pwa";
 import type { VitePWAOptions } from "vite-plugin-pwa";
 
 export const pwaOptions: Partial<VitePWAOptions> = {
+  strategies: "injectManifest",
+  srcDir: "src",
+  filename: "sw.ts",
   registerType: "autoUpdate",
-  workbox: {
+  injectManifest: {
     globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-    navigateFallback: "/index.html",
-    navigateFallbackDenylist: [/^\/api\//],
-    clientsClaim: true,
-    skipWaiting: true,
-    cleanupOutdatedCaches: true,
   },
   manifest: {
     name: "Remindarr",
