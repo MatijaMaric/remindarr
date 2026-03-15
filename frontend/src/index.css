@@ -127,3 +127,7 @@
     @apply font-sans overflow-x-hidden;
     }
 }
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
