@@ -1,22 +1,26 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import * as api from "../api";
+import { loadFilters } from "./loadFilters";
 
 const mockProviders = [
   { id: 1, name: "Netflix", technical_name: "netflix", icon_url: "" },
 ];
 
-beforeEach(() => {
-  mock.restore();
+let spies: ReturnType<typeof spyOn>[] = [];
+
+afterEach(() => {
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 describe("loadFilters", () => {
   it("returns all filter data when all API calls succeed", async () => {
-    mock.module("../api", () => ({
-      getGenres: () => Promise.resolve({ genres: ["Action", "Drama"] }),
-      getProviders: () => Promise.resolve({ providers: mockProviders }),
-      getLanguages: () => Promise.resolve({ languages: ["en", "fr"] }),
-    }));
+    spies = [
+      spyOn(api, "getGenres").mockResolvedValue({ genres: ["Action", "Drama"] } as any),
+      spyOn(api, "getProviders").mockResolvedValue({ providers: mockProviders } as any),
+      spyOn(api, "getLanguages").mockResolvedValue({ languages: ["en", "fr"] } as any),
+    ];
 
-    const { loadFilters } = await import("./loadFilters");
     const result = await loadFilters();
 
     expect(result.genres).toEqual(["Action", "Drama"]);
@@ -25,13 +29,12 @@ describe("loadFilters", () => {
   });
 
   it("returns empty genres when getGenres fails", async () => {
-    mock.module("../api", () => ({
-      getGenres: () => Promise.reject(new Error("Network error")),
-      getProviders: () => Promise.resolve({ providers: mockProviders }),
-      getLanguages: () => Promise.resolve({ languages: ["en"] }),
-    }));
+    spies = [
+      spyOn(api, "getGenres").mockRejectedValue(new Error("Network error")),
+      spyOn(api, "getProviders").mockResolvedValue({ providers: mockProviders } as any),
+      spyOn(api, "getLanguages").mockResolvedValue({ languages: ["en"] } as any),
+    ];
 
-    const { loadFilters } = await import("./loadFilters");
     const result = await loadFilters();
 
     expect(result.genres).toEqual([]);
@@ -40,13 +43,12 @@ describe("loadFilters", () => {
   });
 
   it("returns empty providers when getProviders fails", async () => {
-    mock.module("../api", () => ({
-      getGenres: () => Promise.resolve({ genres: ["Action"] }),
-      getProviders: () => Promise.reject(new Error("Server error")),
-      getLanguages: () => Promise.resolve({ languages: ["en"] }),
-    }));
+    spies = [
+      spyOn(api, "getGenres").mockResolvedValue({ genres: ["Action"] } as any),
+      spyOn(api, "getProviders").mockRejectedValue(new Error("Server error")),
+      spyOn(api, "getLanguages").mockResolvedValue({ languages: ["en"] } as any),
+    ];
 
-    const { loadFilters } = await import("./loadFilters");
     const result = await loadFilters();
 
     expect(result.genres).toEqual(["Action"]);
@@ -55,13 +57,12 @@ describe("loadFilters", () => {
   });
 
   it("returns empty languages when getLanguages fails", async () => {
-    mock.module("../api", () => ({
-      getGenres: () => Promise.resolve({ genres: ["Action"] }),
-      getProviders: () => Promise.resolve({ providers: mockProviders }),
-      getLanguages: () => Promise.reject(new Error("Timeout")),
-    }));
+    spies = [
+      spyOn(api, "getGenres").mockResolvedValue({ genres: ["Action"] } as any),
+      spyOn(api, "getProviders").mockResolvedValue({ providers: mockProviders } as any),
+      spyOn(api, "getLanguages").mockRejectedValue(new Error("Timeout")),
+    ];
 
-    const { loadFilters } = await import("./loadFilters");
     const result = await loadFilters();
 
     expect(result.genres).toEqual(["Action"]);
@@ -70,13 +71,12 @@ describe("loadFilters", () => {
   });
 
   it("returns all empty arrays when all API calls fail", async () => {
-    mock.module("../api", () => ({
-      getGenres: () => Promise.reject(new Error("fail")),
-      getProviders: () => Promise.reject(new Error("fail")),
-      getLanguages: () => Promise.reject(new Error("fail")),
-    }));
+    spies = [
+      spyOn(api, "getGenres").mockRejectedValue(new Error("fail")),
+      spyOn(api, "getProviders").mockRejectedValue(new Error("fail")),
+      spyOn(api, "getLanguages").mockRejectedValue(new Error("fail")),
+    ];
 
-    const { loadFilters } = await import("./loadFilters");
     const result = await loadFilters();
 
     expect(result.genres).toEqual([]);

@@ -1,22 +1,38 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
-
-// Mock react-router Link as a plain anchor
-mock.module("react-router", () => ({
-  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode; [k: string]: unknown }) => (
-    <a href={to} {...rest}>{children}</a>
-  ),
-}));
-
-// Mock TrackButton to simplify TitleCard tests
-mock.module("./TrackButton", () => ({
-  default: ({ titleId, isTracked }: { titleId: string; isTracked: boolean }) => (
-    <button data-testid={`track-${titleId}`}>{isTracked ? "Tracked" : "Track"}</button>
-  ),
-}));
-
+import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import TitleCard from "./TitleCard";
+import { AuthContext } from "../context/AuthContext";
+import * as api from "../api";
 import type { Title } from "../types";
+import type { ReactNode } from "react";
+
+const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+
+const mockAuthValue = {
+  user: mockUser,
+  providers: null,
+  loading: false,
+  login: mock(() => Promise.resolve()),
+  logout: mock(() => Promise.resolve()),
+  refresh: mock(() => Promise.resolve()),
+};
+
+function Wrapper({ children }: { children: ReactNode }) {
+  return (
+    <MemoryRouter>
+      <AuthContext value={mockAuthValue as any}>{children}</AuthContext>
+    </MemoryRouter>
+  );
+}
+
+function NoUserWrapper({ children }: { children: ReactNode }) {
+  return (
+    <MemoryRouter>
+      <AuthContext value={{ ...mockAuthValue, user: null } as any}>{children}</AuthContext>
+    </MemoryRouter>
+  );
+}
 
 function makeTitle(overrides: Partial<Title> = {}): Title {
   return {
@@ -44,14 +60,25 @@ function makeTitle(overrides: Partial<Title> = {}): Title {
   };
 }
 
+let spies: ReturnType<typeof spyOn>[] = [];
+
+beforeEach(() => {
+  spies = [
+    spyOn(api, "trackTitle").mockResolvedValue(undefined as any),
+    spyOn(api, "untrackTitle").mockResolvedValue(undefined as any),
+  ];
+});
+
 afterEach(() => {
   cleanup();
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 describe("TitleCard", () => {
   it("renders movie title and year", () => {
     const title = makeTitle({ title: "Inception", release_year: 2010 });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText("Inception")).toBeDefined();
     expect(screen.getByText(/2010/)).toBeDefined();
@@ -59,7 +86,7 @@ describe("TitleCard", () => {
 
   it("renders poster image when poster_url is present", () => {
     const title = makeTitle({ poster_url: "https://example.com/poster.jpg" });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     const img = screen.getByAltText("Test Movie");
     expect(img).toBeDefined();
@@ -68,35 +95,35 @@ describe("TitleCard", () => {
 
   it("renders 'No poster' when poster_url is null", () => {
     const title = makeTitle({ poster_url: null });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText("No poster")).toBeDefined();
   });
 
   it("shows TV badge for shows", () => {
     const title = makeTitle({ object_type: "SHOW" });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText("TV")).toBeDefined();
   });
 
   it("does not show TV badge for movies", () => {
     const title = makeTitle({ object_type: "MOVIE" });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.queryByText("TV")).toBeNull();
   });
 
   it("shows IMDB score badge when present", () => {
     const title = makeTitle({ imdb_score: 9.2 });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText("9.2")).toBeDefined();
   });
 
   it("does not show IMDB score badge when null", () => {
     const title = makeTitle({ imdb_score: null });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.queryByText(/\d\.\d/)).toBeNull();
   });
@@ -106,7 +133,7 @@ describe("TitleCard", () => {
       title: "English Title",
       original_title: "Titre Original",
     });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText("Titre Original")).toBeDefined();
   });
@@ -116,7 +143,7 @@ describe("TitleCard", () => {
       title: "Same Title",
       original_title: "Same Title",
     });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     const elements = screen.getAllByText("Same Title");
     expect(elements.length).toBe(1);
@@ -124,7 +151,7 @@ describe("TitleCard", () => {
 
   it("shows runtime when present", () => {
     const title = makeTitle({ release_year: 2024, runtime_minutes: 142 });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText(/142m/)).toBeDefined();
   });
@@ -148,7 +175,7 @@ describe("TitleCard", () => {
         },
       ],
     });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     const providerImg = screen.getByAltText("Netflix");
     expect(providerImg).toBeDefined();
@@ -176,7 +203,7 @@ describe("TitleCard", () => {
         },
       ],
     });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     const icons = screen.getAllByAltText("Netflix");
     expect(icons.length).toBe(1);
@@ -184,7 +211,7 @@ describe("TitleCard", () => {
 
   it("links to title detail page", () => {
     const title = makeTitle({ id: "movie-42" });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     const links = screen.getAllByRole("link");
     const detailLinks = links.filter(
@@ -195,9 +222,9 @@ describe("TitleCard", () => {
 
   it("renders track button with correct state", () => {
     const title = makeTitle({ id: "movie-99", is_tracked: true });
-    render(<TitleCard title={title} />);
+    render(<TitleCard title={title} />, { wrapper: Wrapper });
 
-    expect(screen.getByTestId("track-movie-99")).toBeDefined();
-    expect(screen.getByTestId("track-movie-99").textContent).toBe("Tracked");
+    // Real TrackButton renders a button with text "Tracked" when is_tracked=true
+    expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
   });
 });

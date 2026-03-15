@@ -1,4 +1,4 @@
-import { describe, it, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
+import { describe, it, test, expect, spyOn, afterEach, beforeEach } from "bun:test";
 import * as Sentry from "@sentry/bun";
 
 // ─── Mock tracing to pass through ───────────────────────────────────────────
@@ -29,7 +29,7 @@ afterEach(() => {
   fetchSpy?.mockRestore();
 });
 
-// ─── Import after mocks are set up ──────────────────────────────────────────
+// ─── Import client functions ────────────────────────────────────────────────
 import {
   fetchShowDetails,
   fetchSeasonEpisodes,

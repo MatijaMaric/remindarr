@@ -23,7 +23,7 @@ interface AuthContextType {
   refresh: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>(null!);
+export const AuthContext = createContext<AuthContextType>(null!);
 
 export function useAuth() {
   return useContext(AuthContext);

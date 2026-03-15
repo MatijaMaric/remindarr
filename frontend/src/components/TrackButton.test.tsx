@@ -1,61 +1,64 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import type { ReactNode } from "react";
+import TrackButton from "./TrackButton";
+import * as api from "../api";
+import { AuthContext } from "../context/AuthContext";
 
-// Mock the api module before importing the component
-mock.module("../api", () => ({
-  trackTitle: mock(() => Promise.resolve()),
-  untrackTitle: mock(() => Promise.resolve()),
-}));
+const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
 
-// Mock useAuth to return a logged-in user by default
-const mockUseAuth = mock(() => ({
-  user: { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false },
+const mockAuthValue = {
+  user: mockUser,
   providers: null,
   loading: false,
   login: mock(() => Promise.resolve()),
   logout: mock(() => Promise.resolve()),
   refresh: mock(() => Promise.resolve()),
-}));
+};
 
-mock.module("../context/AuthContext", () => ({
-  useAuth: mockUseAuth,
-}));
+function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+  return <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>;
+}
 
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import TrackButton from "./TrackButton";
-import * as api from "../api";
+let spies: ReturnType<typeof spyOn>[] = [];
+
+beforeEach(() => {
+  spies = [
+    spyOn(api, "trackTitle").mockResolvedValue(undefined as any),
+    spyOn(api, "untrackTitle").mockResolvedValue(undefined as any),
+  ];
+});
 
 afterEach(() => {
   cleanup();
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 describe("TrackButton", () => {
   it("renders 'Track' when not tracked", () => {
-    render(<TrackButton titleId="123" isTracked={false} />);
+    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
     expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
   });
 
   it("renders 'Tracked' when tracked", () => {
-    render(<TrackButton titleId="123" isTracked={true} />);
+    render(<TrackButton titleId="123" isTracked={true} />, { wrapper: Wrapper });
     expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
   });
 
   it("returns null when user is not logged in", () => {
-    mockUseAuth.mockReturnValueOnce({
-      user: null,
-      providers: null,
-      loading: false,
-      login: mock(() => Promise.resolve()),
-      logout: mock(() => Promise.resolve()),
-      refresh: mock(() => Promise.resolve()),
-    });
-
-    const { container } = render(<TrackButton titleId="123" isTracked={false} />);
+    const noUserAuth = { ...mockAuthValue, user: null };
+    const { container } = render(
+      <AuthContext value={noUserAuth as any}>
+        <TrackButton titleId="123" isTracked={false} />
+      </AuthContext>
+    );
     expect(container.innerHTML).toBe("");
   });
 
   it("calls trackTitle and updates to 'Tracked' on click", async () => {
     const onToggle = mock(() => {});
-    render(<TrackButton titleId="123" isTracked={false} onToggle={onToggle} />);
+    render(<TrackButton titleId="123" isTracked={false} onToggle={onToggle} />, { wrapper: Wrapper });
 
     const button = screen.getByRole("button", { name: "Track" });
     fireEvent.click(button);
@@ -70,7 +73,7 @@ describe("TrackButton", () => {
 
   it("calls untrackTitle and updates to 'Track' on click", async () => {
     const onToggle = mock(() => {});
-    render(<TrackButton titleId="456" isTracked={true} onToggle={onToggle} />);
+    render(<TrackButton titleId="456" isTracked={true} onToggle={onToggle} />, { wrapper: Wrapper });
 
     const button = screen.getByRole("button", { name: "Tracked" });
     fireEvent.click(button);
@@ -86,11 +89,11 @@ describe("TrackButton", () => {
   it("shows loading indicator while toggling", async () => {
     // Make trackTitle hang to observe loading state
     let resolveTrack: () => void;
-    (api.trackTitle as ReturnType<typeof mock>).mockImplementationOnce(
+    (api.trackTitle as any).mockImplementationOnce(
       () => new Promise<void>((resolve) => { resolveTrack = resolve; })
     );
 
-    render(<TrackButton titleId="789" isTracked={false} />);
+    render(<TrackButton titleId="789" isTracked={false} />, { wrapper: Wrapper });
 
     const button = screen.getByRole("button", { name: "Track" });
     fireEvent.click(button);

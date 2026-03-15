@@ -1,25 +1,28 @@
-import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
+import * as syncTitles from "../tmdb/sync-titles";
 import type { AppEnv } from "../types";
 
-const mockFetchNewReleases = mock(() => Promise.resolve([makeParsedTitle()]));
-
-mock.module("../tmdb/sync-titles", () => ({
-  fetchNewReleases: mockFetchNewReleases,
-}));
-
-const syncApp = (await import("./sync")).default;
-
 let app: Hono<AppEnv>;
+let spies: ReturnType<typeof spyOn>[] = [];
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
-  mockFetchNewReleases.mockClear();
 
+  spies = [
+    spyOn(syncTitles, "fetchNewReleases").mockResolvedValue([makeParsedTitle()]),
+  ];
+
+  const syncApp = (await import("./sync")).default;
   app = new Hono<AppEnv>();
   app.route("/sync", syncApp);
+});
+
+afterEach(() => {
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 afterAll(() => {
@@ -37,11 +40,11 @@ describe("POST /sync", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid JSON in request body");
-    expect(mockFetchNewReleases).not.toHaveBeenCalled();
+    expect(syncTitles.fetchNewReleases).not.toHaveBeenCalled();
   });
 
   it("syncs titles with default parameters", async () => {
-    mockFetchNewReleases.mockResolvedValueOnce([makeParsedTitle()]);
+    (syncTitles.fetchNewReleases as any).mockResolvedValueOnce([makeParsedTitle()]);
 
     const res = await app.request("/sync", {
       method: "POST",
@@ -54,7 +57,7 @@ describe("POST /sync", () => {
     expect(body.count).toBe(1);
     expect(body.message).toContain("Synced");
 
-    expect(mockFetchNewReleases).toHaveBeenCalledWith({
+    expect(syncTitles.fetchNewReleases).toHaveBeenCalledWith({
       daysBack: 30,
       objectType: undefined,
       maxPages: 10,
@@ -62,7 +65,7 @@ describe("POST /sync", () => {
   });
 
   it("passes custom parameters to fetchNewReleases", async () => {
-    mockFetchNewReleases.mockResolvedValueOnce([]);
+    (syncTitles.fetchNewReleases as any).mockResolvedValueOnce([]);
 
     const res = await app.request("/sync", {
       method: "POST",
@@ -74,7 +77,7 @@ describe("POST /sync", () => {
     expect(body.success).toBe(true);
     expect(body.count).toBe(0);
 
-    expect(mockFetchNewReleases).toHaveBeenCalledWith({
+    expect(syncTitles.fetchNewReleases).toHaveBeenCalledWith({
       daysBack: 7,
       objectType: "MOVIE",
       maxPages: 5,
@@ -82,7 +85,7 @@ describe("POST /sync", () => {
   });
 
   it("returns 500 when fetchNewReleases throws", async () => {
-    mockFetchNewReleases.mockRejectedValueOnce(new Error("TMDB API down"));
+    (syncTitles.fetchNewReleases as any).mockRejectedValueOnce(new Error("TMDB API down"));
 
     const res = await app.request("/sync", {
       method: "POST",

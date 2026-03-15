@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, mock, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, getUserByUsername, getUserByProviderSubject, setSetting } from "../db/repository";
@@ -8,12 +8,12 @@ import { generateState, clearDiscoveryCache } from "../auth/oidc";
 import type { AppEnv } from "../types";
 
 let app: Hono<AppEnv>;
-let originalFetch: typeof globalThis.fetch;
+let fetchSpy: ReturnType<typeof spyOn>;
 
 beforeEach(async () => {
   setupTestDb();
   clearDiscoveryCache();
-  originalFetch = globalThis.fetch;
+  fetchSpy = spyOn(globalThis, "fetch");
   app = new Hono<AppEnv>();
   app.route("/auth", authApp);
 
@@ -23,7 +23,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  fetchSpy.mockRestore();
 });
 
 afterAll(() => {
@@ -261,7 +261,7 @@ function mockFetchForOidc(
   userinfoPayload: Record<string, unknown>,
   idTokenPayload?: Record<string, unknown>
 ) {
-  globalThis.fetch = mock(async (url: string | URL | Request) => {
+  fetchSpy.mockImplementation(async (url: string | URL | Request) => {
     const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
     if (urlStr.includes(".well-known/openid-configuration")) {
@@ -279,7 +279,7 @@ function mockFetchForOidc(
       return new Response(JSON.stringify(userinfoPayload));
     }
     return new Response("Not found", { status: 404 });
-  }) as unknown as typeof fetch;
+  });
 }
 
 describe("GET /auth/oidc/authorize", () => {
@@ -293,9 +293,9 @@ describe("GET /auth/oidc/authorize", () => {
   it("redirects to authorization endpoint when OIDC is configured", async () => {
     setupOidcConfig();
 
-    globalThis.fetch = mock(async () => {
+    fetchSpy.mockImplementation(async () => {
       return new Response(JSON.stringify(DISCOVERY));
-    }) as unknown as typeof fetch;
+    });
 
     const res = await app.request("/auth/oidc/authorize");
     expect(res.status).toBe(302);
@@ -422,7 +422,7 @@ describe("GET /auth/oidc/callback", () => {
     setupOidcConfig();
     const state = generateState();
 
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -432,7 +432,7 @@ describe("GET /auth/oidc/callback", () => {
         return new Response("invalid_grant", { status: 400 });
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     const res = await app.request(`/auth/oidc/callback?code=bad-code&state=${state}`);
     expect(res.status).toBe(302);

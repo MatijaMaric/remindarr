@@ -1,27 +1,28 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 
 // Track fetch calls
 let lastFetchUrl = "";
 let lastFetchOptions: RequestInit | undefined;
-
-const mockFetch = mock(async (url: string, options?: RequestInit) => {
-  lastFetchUrl = url;
-  lastFetchOptions = options;
-  return new Response(
-    JSON.stringify({ titles: [], page: 1, totalPages: 1 }),
-    { status: 200, headers: { "Content-Type": "application/json" } }
-  );
-});
-
-globalThis.fetch = mockFetch as any;
-
-const { browseTitles, getAdminSettings, updateAdminSettings } = await import("./api");
+let fetchSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
   lastFetchUrl = "";
   lastFetchOptions = undefined;
-  mockFetch.mockClear();
+  fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async (url: string | URL | Request, options?: RequestInit) => {
+    lastFetchUrl = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
+    lastFetchOptions = options;
+    return new Response(
+      JSON.stringify({ titles: [], page: 1, totalPages: 1 }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  });
 });
+
+afterEach(() => {
+  fetchSpy.mockRestore();
+});
+
+const { browseTitles, getAdminSettings, updateAdminSettings } = await import("./api");
 
 describe("browseTitles", () => {
   it("calls /api/browse with category param", async () => {
@@ -61,8 +62,8 @@ describe("getAdminSettings", () => {
       },
       oidc_configured: true,
     };
-    mockFetch.mockImplementationOnce(async (url: string, options?: RequestInit) => {
-      lastFetchUrl = url;
+    fetchSpy.mockImplementationOnce(async (url: string | URL | Request, options?: RequestInit) => {
+      lastFetchUrl = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
       lastFetchOptions = options;
       return new Response(JSON.stringify(mockSettings), {
         status: 200,
@@ -80,8 +81,8 @@ describe("getAdminSettings", () => {
 describe("updateAdminSettings", () => {
   it("calls PUT /api/admin/settings with body", async () => {
     const mockResponse = { success: true, oidc_configured: true };
-    mockFetch.mockImplementationOnce(async (url: string, options?: RequestInit) => {
-      lastFetchUrl = url;
+    fetchSpy.mockImplementationOnce(async (url: string | URL | Request, options?: RequestInit) => {
+      lastFetchUrl = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
       lastFetchOptions = options;
       return new Response(JSON.stringify(mockResponse), {
         status: 200,

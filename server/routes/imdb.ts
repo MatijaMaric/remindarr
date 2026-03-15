@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { extractImdbId, resolveImdbUrl } from "../imdb/resolver";
+import * as resolver from "../imdb/resolver";
 import { upsertTitles, trackTitle } from "../db/repository";
 import type { AppEnv } from "../types";
 
@@ -13,13 +13,13 @@ app.post("/", async (c) => {
     return c.json({ error: "url is required" }, 400);
   }
 
-  const imdbId = extractImdbId(url);
+  const imdbId = resolver.extractImdbId(url);
   if (!imdbId) {
     return c.json({ error: "Invalid IMDB URL or ID" }, 400);
   }
 
   try {
-    const title = await resolveImdbUrl(url);
+    const title = await resolver.resolveImdbUrl(url);
     if (!title) {
       return c.json({ error: "Title not found" }, 404);
     }

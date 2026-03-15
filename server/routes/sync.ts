@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { fetchNewReleases } from "../tmdb/sync-titles";
+import * as syncTitles from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
 
 const app = new Hono();
@@ -16,7 +16,7 @@ app.post("/", async (c) => {
   const maxPages = (body.maxPages as number) || 10;
 
   try {
-    const titles = await fetchNewReleases({ daysBack, objectType, maxPages });
+    const titles = await syncTitles.fetchNewReleases({ daysBack, objectType, maxPages });
     const count = upsertTitles(titles);
     return c.json({ success: true, count, message: `Synced ${count} titles` });
   } catch (err: any) {
