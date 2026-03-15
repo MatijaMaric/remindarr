@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, createSession } from "../db/repository";
+import { getDb } from "../db/schema";
+import { sessions } from "../db/schema";
+import { eq } from "drizzle-orm";
 import { optionalAuth, requireAuth, requireAdmin } from "./auth";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
@@ -103,5 +106,44 @@ describe("requireAdmin", () => {
       headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${validToken}` },
     });
     expect(res.status).toBe(403);
+  });
+});
+
+describe("session expiration", () => {
+  it("requireAuth returns 401 for expired session", async () => {
+    const userId = createUser("expired-user", "hash", "Expired User");
+    const expiredToken = createSession(userId);
+
+    // Manually set session expiry to the past
+    const db = getDb();
+    db.update(sessions)
+      .set({ expiresAt: "2000-01-01T00:00:00.000Z" })
+      .where(eq(sessions.id, expiredToken))
+      .run();
+
+    const res = await app.request("/protected/test", {
+      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${expiredToken}` },
+    });
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("Session expired");
+  });
+
+  it("optionalAuth does not set user for expired session", async () => {
+    const userId = createUser("expired-user2", "hash", "Expired User 2");
+    const expiredToken = createSession(userId);
+
+    const db = getDb();
+    db.update(sessions)
+      .set({ expiresAt: "2000-01-01T00:00:00.000Z" })
+      .where(eq(sessions.id, expiredToken))
+      .run();
+
+    const res = await app.request("/optional/test", {
+      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${expiredToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user).toBeNull();
   });
 });
