@@ -184,6 +184,34 @@ describe("GET /browse", () => {
     expect(callArgs.voteCountGte).toBe("200");
   });
 
+  it("clamps negative page to 1", async () => {
+    mockDiscoverMovies.mockResolvedValueOnce({
+      results: [], total_pages: 10, total_results: 200, page: 1,
+    });
+
+    const res = await app.request("/browse?category=popular&type=MOVIE&page=-5");
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.page).toBe(1);
+    const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.page).toBe(1);
+  });
+
+  it("clamps NaN page to 1", async () => {
+    mockDiscoverMovies.mockResolvedValueOnce({
+      results: [], total_pages: 10, total_results: 200, page: 1,
+    });
+
+    const res = await app.request("/browse?category=popular&type=MOVIE&page=abc");
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.page).toBe(1);
+    const callArgs = (mockDiscoverMovies.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(callArgs.page).toBe(1);
+  });
+
   it("passes page parameter correctly", async () => {
     mockDiscoverMovies.mockResolvedValueOnce({
       results: [], total_pages: 10, total_results: 200, page: 3,
