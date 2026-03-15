@@ -1,4 +1,7 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, afterAll } from "bun:test";
+
+const realReactRouter = await import("react-router");
+const realTrackButton = await import("./TrackButton");
 
 // Mock react-router Link as a plain anchor
 mock.module("react-router", () => ({
@@ -46,6 +49,11 @@ function makeTitle(overrides: Partial<Title> = {}): Title {
 
 afterEach(() => {
   cleanup();
+});
+
+afterAll(() => {
+  mock.module("react-router", () => realReactRouter);
+  mock.module("./TrackButton", () => realTrackButton);
 });
 
 describe("TitleCard", () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { CONFIG } from "../config";
 CONFIG.DB_PATH = ":memory:";
 
@@ -19,12 +19,12 @@ const DISCOVERY = {
   userinfo_endpoint: "https://auth.example.com/userinfo",
 };
 
-let originalFetch: typeof globalThis.fetch;
+let fetchSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
   setupTestDb();
   clearDiscoveryCache();
-  originalFetch = globalThis.fetch;
+  fetchSpy = spyOn(globalThis, "fetch");
 
   // Configure OIDC settings in the DB
   setSetting("oidc_issuer_url", "https://auth.example.com");
@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  fetchSpy.mockRestore();
   teardownTestDb();
 });
 
@@ -53,7 +53,7 @@ describe("exchangeCode", () => {
       groups: ["admin", "users"],
     };
 
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -71,7 +71,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     const result = await exchangeCode("auth-code", "https://app.example.com/callback");
 
@@ -96,7 +96,7 @@ describe("exchangeCode", () => {
       groups: ["remindarr"],
     };
 
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -114,7 +114,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
 
@@ -128,7 +128,7 @@ describe("exchangeCode", () => {
       name: "Fallback User",
     };
 
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -146,7 +146,7 @@ describe("exchangeCode", () => {
         return new Response("Internal Server Error", { status: 500 });
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
 
@@ -163,7 +163,7 @@ describe("exchangeCode", () => {
       groups: ["admin"],
     };
 
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -181,7 +181,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
 
@@ -190,7 +190,7 @@ describe("exchangeCode", () => {
   });
 
   it("throws when token exchange fails", async () => {
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -200,7 +200,7 @@ describe("exchangeCode", () => {
         return new Response("invalid_grant", { status: 400 });
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     await expect(exchangeCode("bad-code", "https://app.example.com/callback")).rejects.toThrow(
       "Token exchange failed: 400"
@@ -208,7 +208,7 @@ describe("exchangeCode", () => {
   });
 
   it("throws when no sub claim is found", async () => {
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -226,7 +226,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify({ preferred_username: "nosub" }));
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     await expect(exchangeCode("code", "https://app.example.com/callback")).rejects.toThrow(
       "No 'sub' claim found"
@@ -240,7 +240,7 @@ describe("exchangeCode", () => {
       name: "Email User",
     };
 
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -253,7 +253,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
     expect(result.username).toBe("user@example.com");
@@ -262,7 +262,7 @@ describe("exchangeCode", () => {
   it("uses sub as username when preferred_username and email are missing", async () => {
     const userinfoPayload = { sub: "user-sub-only" };
 
-    globalThis.fetch = mock(async (url: string | URL | Request) => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 
       if (urlStr.includes(".well-known/openid-configuration")) {
@@ -275,7 +275,7 @@ describe("exchangeCode", () => {
         return new Response(JSON.stringify(userinfoPayload));
       }
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     const result = await exchangeCode("code", "https://app.example.com/callback");
     expect(result.username).toBe("user-sub-only");
@@ -285,9 +285,9 @@ describe("exchangeCode", () => {
 
 describe("getDiscovery", () => {
   it("fetches and returns discovery document", async () => {
-    globalThis.fetch = mock(async () => {
+    fetchSpy.mockImplementation(async () => {
       return new Response(JSON.stringify(DISCOVERY));
-    }) as unknown as typeof fetch;
+    });
 
     const result = await getDiscovery();
     expect(result.authorization_endpoint).toBe(DISCOVERY.authorization_endpoint);
@@ -297,10 +297,10 @@ describe("getDiscovery", () => {
 
   it("caches discovery and reuses it", async () => {
     let fetchCount = 0;
-    globalThis.fetch = mock(async () => {
+    fetchSpy.mockImplementation(async () => {
       fetchCount++;
       return new Response(JSON.stringify(DISCOVERY));
-    }) as unknown as typeof fetch;
+    });
 
     await getDiscovery();
     await getDiscovery();
@@ -308,9 +308,9 @@ describe("getDiscovery", () => {
   });
 
   it("throws when discovery fetch fails", async () => {
-    globalThis.fetch = mock(async () => {
+    fetchSpy.mockImplementation(async () => {
       return new Response("Not found", { status: 404 });
-    }) as unknown as typeof fetch;
+    });
 
     await expect(getDiscovery()).rejects.toThrow("OIDC discovery failed: 404");
   });

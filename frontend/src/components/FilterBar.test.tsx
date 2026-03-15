@@ -1,4 +1,6 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, afterAll } from "bun:test";
+
+const realMultiSelectDropdown = await import("./MultiSelectDropdown");
 
 // Mock MultiSelectDropdown to simplify FilterBar tests
 mock.module("./MultiSelectDropdown", () => ({
@@ -15,6 +17,10 @@ import FilterBar from "./FilterBar";
 
 afterEach(() => {
   cleanup();
+});
+
+afterAll(() => {
+  mock.module("./MultiSelectDropdown", () => realMultiSelectDropdown);
 });
 
 describe("FilterBar", () => {

@@ -6,6 +6,8 @@ import type { AppEnv } from "../types";
 
 const mockFetchNewReleases = mock(() => Promise.resolve([makeParsedTitle()]));
 
+const realSyncTitles = await import("../tmdb/sync-titles");
+
 mock.module("../tmdb/sync-titles", () => ({
   fetchNewReleases: mockFetchNewReleases,
 }));
@@ -24,6 +26,7 @@ beforeEach(() => {
 
 afterAll(() => {
   teardownTestDb();
+  mock.module("../tmdb/sync-titles", () => realSyncTitles);
 });
 
 describe("POST /sync", () => {

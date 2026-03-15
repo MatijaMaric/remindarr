@@ -38,6 +38,7 @@ beforeEach(() => {
 
 afterAll(() => {
   teardownTestDb();
+  mock.module("../imdb/resolver", () => realResolver);
 });
 
 describe("POST /imdb", () => {

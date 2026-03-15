@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { DiscordProvider } from "./discord";
 import type { NotificationContent } from "./types";
 
@@ -46,14 +46,18 @@ describe("DiscordProvider.validateConfig", () => {
 
 describe("DiscordProvider.send", () => {
   let fetchCalls: Array<{ url: string; options: any }> = [];
+  let fetchSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
     fetchCalls = [];
-    // @ts-ignore
-    globalThis.fetch = mock(async (url: string, options: any) => {
-      fetchCalls.push({ url, options });
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: string | URL | Request, options?: any) => {
+      fetchCalls.push({ url: url as string, options });
       return new Response("", { status: 204 });
-    });
+    }) as typeof fetch);
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
   });
 
   const sampleContent: NotificationContent = {
@@ -125,8 +129,7 @@ describe("DiscordProvider.send", () => {
   });
 
   it("throws on non-2xx response", async () => {
-    // @ts-ignore
-    globalThis.fetch = mock(async () => {
+    fetchSpy.mockImplementation(async () => {
       return new Response("Bad Request", { status: 400 });
     });
 

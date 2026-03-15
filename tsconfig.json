@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "types": ["bun-types"]
+    "types": ["@types/bun"]
   },
   "include": ["server/**/*.ts"],
   "exclude": ["node_modules", "frontend"]

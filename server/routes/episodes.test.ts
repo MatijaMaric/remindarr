@@ -30,6 +30,7 @@ beforeEach(() => {
 
 afterAll(() => {
   teardownTestDb();
+  mock.module("../tmdb/sync", () => realSync);
 });
 
 describe("GET /episodes/upcoming", () => {

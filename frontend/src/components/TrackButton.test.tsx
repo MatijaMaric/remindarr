@@ -1,4 +1,7 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, afterAll } from "bun:test";
+
+const realApi = await import("../api");
+const realAuthContext = await import("../context/AuthContext");
 
 // Mock the api module before importing the component
 mock.module("../api", () => ({
@@ -26,6 +29,11 @@ import * as api from "../api";
 
 afterEach(() => {
   cleanup();
+});
+
+afterAll(() => {
+  mock.module("../api", () => realApi);
+  mock.module("../context/AuthContext", () => realAuthContext);
 });
 
 describe("TrackButton", () => {

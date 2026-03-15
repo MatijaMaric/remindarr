@@ -1,10 +1,16 @@
-import { describe, it, expect, mock } from "bun:test";
+import { describe, it, expect, mock, afterAll } from "bun:test";
 import ErrorBoundary from "./ErrorBoundary";
+
+const realSentry = await import("@sentry/react");
 
 // Mock Sentry to prevent actual calls
 mock.module("@sentry/react", () => ({
   captureException: mock(() => {}),
 }));
+
+afterAll(() => {
+  mock.module("@sentry/react", () => realSentry);
+});
 
 describe("ErrorBoundary", () => {
   it("initializes with no error state", () => {

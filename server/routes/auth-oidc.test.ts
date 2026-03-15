@@ -7,6 +7,10 @@ import {
 } from "../db/repository";
 import type { AppEnv } from "../types";
 
+// Save references to real modules before mocking
+const realOidc = await import("../auth/oidc");
+const realRepo = await import("../db/repository");
+
 // Mock OIDC module to avoid real HTTP calls
 const mockExchangeCode = mock(() =>
   Promise.resolve({
@@ -34,7 +38,6 @@ mock.module("../auth/oidc", () => ({
 }));
 
 // Mock isOidcConfigured and getOidcConfig via repository mock
-const realRepo = await import("../db/repository");
 mock.module("../db/repository", () => ({
   ...realRepo,
   isOidcConfigured: () => true,
@@ -63,6 +66,9 @@ beforeEach(() => {
 
 afterAll(() => {
   teardownTestDb();
+  // Restore the real modules so other test files are not affected
+  mock.module("../auth/oidc", () => realOidc);
+  mock.module("../db/repository", () => realRepo);
 });
 
 describe("GET /auth/oidc/callback - race condition", () => {

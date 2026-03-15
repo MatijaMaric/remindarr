@@ -1,39 +1,19 @@
-import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { upsertTitles } from "../db/repository";
-import { makeParsedTitle } from "../test-utils/fixtures";
+import { makeParsedTitle, makeTmdbMovieDetails, makeTmdbTvDetails } from "../test-utils/fixtures";
+import * as tmdbClient from "../tmdb/client";
 
 // Ensure TMDB API key is set so fallback logic is exercised
 CONFIG.TMDB_API_KEY = "test-api-key";
 
-const mockFetchMovieDetails = mock(() => Promise.resolve({}));
-const mockFetchTvDetails = mock(() => Promise.resolve({}));
-const mockFetchMovieFullDetails = mock(() => Promise.resolve(null));
-const mockFetchShowFullDetails = mock(() => Promise.resolve(null));
-const mockFetchSeasonDetails = mock(() => Promise.resolve(null));
-const mockFetchEpisodeDetails = mock(() => Promise.resolve(null));
-const mockFetchPersonDetails = mock(() => Promise.resolve(null as any));
-
-const realClient = await import("../tmdb/client");
-
-mock.module("../tmdb/client", () => ({
-  ...realClient,
-  fetchMovieDetails: mockFetchMovieDetails,
-  fetchTvDetails: mockFetchTvDetails,
-  fetchMovieFullDetails: mockFetchMovieFullDetails,
-  fetchShowFullDetails: mockFetchShowFullDetails,
-  fetchSeasonDetails: mockFetchSeasonDetails,
-  fetchEpisodeDetails: mockFetchEpisodeDetails,
-  fetchPersonDetails: mockFetchPersonDetails,
-}));
-
-const { makeTmdbMovieDetails, makeTmdbTvDetails } = await import("../test-utils/fixtures");
 const detailsApp = (await import("./details")).default;
 
 let app: Hono<AppEnv>;
+let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(() => {
   setupTestDb();
@@ -41,18 +21,31 @@ beforeEach(() => {
   app = new Hono<AppEnv>();
   app.route("/details", detailsApp);
 
-  mockFetchMovieDetails.mockClear();
-  mockFetchTvDetails.mockClear();
-  mockFetchMovieFullDetails.mockClear();
-  mockFetchShowFullDetails.mockClear();
-  mockFetchSeasonDetails.mockClear();
-  mockFetchEpisodeDetails.mockClear();
-  mockFetchPersonDetails.mockClear();
+  // Set up spies for all TMDB client functions used by the details route
+  spies = [
+    spyOn(tmdbClient, "fetchMovieDetails").mockResolvedValue({} as any),
+    spyOn(tmdbClient, "fetchTvDetails").mockResolvedValue({} as any),
+    spyOn(tmdbClient, "fetchMovieFullDetails").mockResolvedValue(null as any),
+    spyOn(tmdbClient, "fetchShowFullDetails").mockResolvedValue(null as any),
+    spyOn(tmdbClient, "fetchSeasonDetails").mockResolvedValue(null as any),
+    spyOn(tmdbClient, "fetchEpisodeDetails").mockResolvedValue(null as any),
+    spyOn(tmdbClient, "fetchPersonDetails").mockResolvedValue(null as any),
+  ];
+});
+
+afterEach(() => {
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 afterAll(() => {
   teardownTestDb();
 });
+
+// Helper to get a spy by function name
+function getSpy(name: keyof typeof tmdbClient) {
+  return tmdbClient[name] as ReturnType<typeof spyOn>;
+}
 
 describe("GET /details/movie/:id", () => {
   it("returns title from DB without TMDB fallback", async () => {
@@ -63,11 +56,11 @@ describe("GET /details/movie/:id", () => {
 
     const body = await res.json();
     expect(body.title.title).toBe("DB Movie");
-    expect(mockFetchMovieDetails).not.toHaveBeenCalled();
+    expect(tmdbClient.fetchMovieDetails).not.toHaveBeenCalled();
   });
 
   it("fetches from TMDB and persists when title not in DB", async () => {
-    mockFetchMovieDetails.mockResolvedValueOnce(
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
       makeTmdbMovieDetails({ id: 999, title: "TMDB Movie" })
     );
 
@@ -77,11 +70,11 @@ describe("GET /details/movie/:id", () => {
     const body = await res.json();
     expect(body.title.title).toBe("TMDB Movie");
     expect(body.title.id).toBe("movie-999");
-    expect(mockFetchMovieDetails).toHaveBeenCalledWith(999);
+    expect(tmdbClient.fetchMovieDetails).toHaveBeenCalledWith(999);
   });
 
   it("returns 404 when TMDB fallback fails", async () => {
-    mockFetchMovieDetails.mockRejectedValueOnce(new Error("TMDB API error"));
+    (tmdbClient.fetchMovieDetails as any).mockRejectedValueOnce(new Error("TMDB API error"));
 
     const res = await app.request("/details/movie/movie-999");
     expect(res.status).toBe(404);
@@ -102,11 +95,11 @@ describe("GET /details/show/:id", () => {
 
     const body = await res.json();
     expect(body.title.title).toBe("DB Show");
-    expect(mockFetchTvDetails).not.toHaveBeenCalled();
+    expect(tmdbClient.fetchTvDetails).not.toHaveBeenCalled();
   });
 
   it("fetches from TMDB and persists when show not in DB", async () => {
-    mockFetchTvDetails.mockResolvedValueOnce(
+    (tmdbClient.fetchTvDetails as any).mockResolvedValueOnce(
       makeTmdbTvDetails({ id: 789, name: "TMDB Show" })
     );
 
@@ -116,11 +109,11 @@ describe("GET /details/show/:id", () => {
     const body = await res.json();
     expect(body.title.title).toBe("TMDB Show");
     expect(body.title.id).toBe("tv-789");
-    expect(mockFetchTvDetails).toHaveBeenCalledWith(789);
+    expect(tmdbClient.fetchTvDetails).toHaveBeenCalledWith(789);
   });
 
   it("returns 404 when TMDB fallback fails", async () => {
-    mockFetchTvDetails.mockRejectedValueOnce(new Error("TMDB API error"));
+    (tmdbClient.fetchTvDetails as any).mockRejectedValueOnce(new Error("TMDB API error"));
 
     const res = await app.request("/details/show/tv-789");
     expect(res.status).toBe(404);
@@ -129,7 +122,7 @@ describe("GET /details/show/:id", () => {
 
 describe("GET /details/show/:id/season/:season", () => {
   it("fetches show from TMDB when not in DB for season endpoint", async () => {
-    mockFetchTvDetails.mockResolvedValueOnce(
+    (tmdbClient.fetchTvDetails as any).mockResolvedValueOnce(
       makeTmdbTvDetails({ id: 555, name: "Season Show" })
     );
 
@@ -139,13 +132,13 @@ describe("GET /details/show/:id/season/:season", () => {
     const body = await res.json();
     expect(body.title.title).toBe("Season Show");
     expect(body.seasonNumber).toBe(1);
-    expect(mockFetchTvDetails).toHaveBeenCalledWith(555);
+    expect(tmdbClient.fetchTvDetails).toHaveBeenCalledWith(555);
   });
 });
 
 describe("GET /details/person/:personId", () => {
   it("returns person details from TMDB", async () => {
-    mockFetchPersonDetails.mockResolvedValueOnce({
+    (tmdbClient.fetchPersonDetails as any).mockResolvedValueOnce({
       id: 123,
       name: "Test Actor",
       biography: "A test biography",
@@ -164,7 +157,7 @@ describe("GET /details/person/:personId", () => {
     const body = await res.json();
     expect(body.person.name).toBe("Test Actor");
     expect(body.person.biography).toBe("A test biography");
-    expect(mockFetchPersonDetails).toHaveBeenCalledWith(123);
+    expect(tmdbClient.fetchPersonDetails).toHaveBeenCalledWith(123);
   });
 
   it("returns 400 for invalid person ID", async () => {
@@ -173,7 +166,7 @@ describe("GET /details/person/:personId", () => {
   });
 
   it("returns 404 when TMDB fetch fails", async () => {
-    mockFetchPersonDetails.mockRejectedValueOnce(new Error("Not found"));
+    (tmdbClient.fetchPersonDetails as any).mockRejectedValueOnce(new Error("Not found"));
     const res = await app.request("/details/person/999");
     expect(res.status).toBe(404);
   });
