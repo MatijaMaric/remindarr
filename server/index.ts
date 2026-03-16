@@ -46,13 +46,11 @@ if (getUserCount() === 0) {
 
 const app = new Hono<AppEnv>();
 
-// Sentry error handler (captures exceptions + creates request spans)
-Sentry.setupHonoErrorHandler(app);
-
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
     return err.getResponse();
   }
+  Sentry.captureException(err);
   return c.json({ error: "Internal server error" }, 500);
 });
 
