@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link } from "react-router";
-import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon, LayoutGridIcon, ListIcon } from "lucide-react";
 import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleList from "../components/TitleList";
@@ -72,14 +72,50 @@ function getMonthOptions(): { label: string; value: string }[] {
   return options;
 }
 
+type ViewMode = "grid" | "agenda";
+
+function ViewToggle({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
+  return (
+    <div className="flex items-center bg-gray-800 rounded-lg p-0.5">
+      <button
+        onClick={() => onViewModeChange("grid")}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+          viewMode === "grid"
+            ? "bg-indigo-600 text-white"
+            : "text-gray-400 hover:text-white"
+        }`}
+        title="Grid view"
+      >
+        <LayoutGridIcon className="size-4" />
+      </button>
+      <button
+        onClick={() => onViewModeChange("agenda")}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+          viewMode === "agenda"
+            ? "bg-indigo-600 text-white"
+            : "text-gray-400 hover:text-white"
+        }`}
+        title="Agenda view"
+      >
+        <ListIcon className="size-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function CalendarPage() {
   const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   if (isMobile) {
     return <AgendaCalendar />;
   }
 
-  return <GridCalendar />;
+  if (viewMode === "agenda") {
+    return <AgendaCalendar viewMode={viewMode} onViewModeChange={setViewMode} />;
+  }
+
+  return <GridCalendar viewMode={viewMode} onViewModeChange={setViewMode} />;
 }
 
 // ─── Mobile Agenda View ──────────────────────────────────────────────────────
@@ -90,7 +126,7 @@ interface AgendaMonth {
   episodes: Episode[];
 }
 
-function AgendaCalendar() {
+function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; onViewModeChange?: (mode: ViewMode) => void } = {}) {
   const [typeFilter, setTypeFilter] = useState("");
   const [months, setMonths] = useState<AgendaMonth[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -303,17 +339,22 @@ function AgendaCalendar() {
     <div ref={containerRef} className="space-y-4">
       {/* Header: month picker + type filter */}
       <div className="flex flex-col gap-3">
-        <select
-          value={formatMonth(new Date())}
-          onChange={(e) => jumpToMonth(e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          {monthOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3">
+          <select
+            value={formatMonth(new Date())}
+            onChange={(e) => jumpToMonth(e.target.value)}
+            className={`px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${viewMode ? "flex-1" : "w-full"}`}
+          >
+            {monthOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {viewMode && onViewModeChange && (
+            <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {typeFilters.map((f) => (
             <button
@@ -473,7 +514,7 @@ function AgendaCalendar() {
 
 // ─── Desktop Grid Calendar ──────────────────────────────────────────────────
 
-function GridCalendar() {
+function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [typeFilter, setTypeFilter] = useState("");
   const [titles, setTitles] = useState<Title[]>([]);
@@ -640,6 +681,7 @@ function GridCalendar() {
               {f.label}
             </button>
           ))}
+          <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
         </div>
       </div>
 
