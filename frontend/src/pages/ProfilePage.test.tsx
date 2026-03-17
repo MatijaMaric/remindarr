@@ -30,7 +30,7 @@ mock.module("../api", () => ({
   getNotifiers: mockGetNotifiers,
   getNotifierProviders: mock(() => Promise.resolve({ providers: ["discord"] })),
   getVapidPublicKey: mock(() => Promise.resolve({ publicKey: "test-key" })),
-  createNotifier: mock(() => Promise.resolve({ notifier: {} })),
+  createNotifier: mock(() => Promise.resolve({ notifier: { id: "n-new" } })),
   updateNotifier: mock(() => Promise.resolve({ notifier: {} })),
   deleteNotifier: mockDeleteNotifier,
   testNotifier: mockTestNotifier,
@@ -188,6 +188,33 @@ describe("PushNotificationsSection", () => {
 
     // Should NOT have cleaned up
     expect(mockDeleteNotifier).not.toHaveBeenCalled();
+  });
+
+  it("cleans up when fresh subscription fails verification after enable", async () => {
+    // Start with no notifiers (user sees Enable button)
+    mockGetNotifiers.mockImplementation(() => Promise.resolve({ notifiers: [] }));
+    mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
+
+    // Test notification will report expired subscription
+    mockTestNotifier.mockImplementation(() =>
+      Promise.resolve({ success: false, message: "Push subscription expired: https://fcm.example.com/send/new" })
+    );
+
+    render(<ProfilePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Enable")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText("Enable"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Could not establish/)).toBeDefined();
+    });
+
+    // Should have cleaned up the just-created notifier
+    expect(mockDeleteNotifier).toHaveBeenCalledWith("n-new");
+    expect(mockUnsubscribeFromPush).toHaveBeenCalled();
   });
 
   it("renders normally when push is enabled and healthy", async () => {
