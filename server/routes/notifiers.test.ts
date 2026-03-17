@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, createSession } from "../db/repository";
@@ -6,10 +6,14 @@ import { requireAuth } from "../middleware/auth";
 import { CONFIG } from "../config";
 import notifierApp from "./notifiers";
 import type { AppEnv } from "../types";
+import * as registry from "../notifications/registry";
+import * as Sentry from "@sentry/bun";
+import { SubscriptionExpiredError } from "../notifications/webpush";
 
 let app: Hono<AppEnv>;
 let userToken: string;
 let userId: string;
+let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(() => {
   setupTestDb();
@@ -21,6 +25,11 @@ beforeEach(() => {
   app.use("/notifiers/*", requireAuth);
   app.use("/notifiers", requireAuth);
   app.route("/notifiers", notifierApp);
+});
+
+afterEach(() => {
+  spies.forEach((s) => s.mockRestore());
+  spies = [];
 });
 
 afterAll(() => {
@@ -179,6 +188,108 @@ describe("DELETE /notifiers/:id", () => {
     const listRes = await app.request("/notifiers", { headers: headers() });
     const body = await listRes.json();
     expect(body.notifiers).toHaveLength(0);
+  });
+});
+
+describe("POST /notifiers/:id/test", () => {
+  async function createDiscordNotifier() {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    const { notifier } = await res.json();
+    return notifier;
+  }
+
+  it("returns 404 for non-existent notifier", async () => {
+    const res = await app.request("/notifiers/nonexistent/test", {
+      method: "POST",
+      headers: headers(),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 200 with success:true when send succeeds", async () => {
+    const notifier = await createDiscordNotifier();
+
+    const mockProvider = {
+      name: "discord",
+      validateConfig: () => ({ valid: true }),
+      send: async () => {},
+    };
+    spies.push(spyOn(registry, "getProvider").mockReturnValue(mockProvider));
+
+    const res = await app.request(`/notifiers/${notifier.id}/test`, {
+      method: "POST",
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.message).toBe("Test notification sent");
+  });
+
+  it("returns 200 with success:false when send throws", async () => {
+    const notifier = await createDiscordNotifier();
+
+    const mockProvider = {
+      name: "discord",
+      validateConfig: () => ({ valid: true }),
+      send: async () => { throw new Error("Connection refused"); },
+    };
+    spies.push(spyOn(registry, "getProvider").mockReturnValue(mockProvider));
+    spies.push(spyOn(Sentry, "captureException").mockImplementation(() => ""));
+
+    const res = await app.request(`/notifiers/${notifier.id}/test`, {
+      method: "POST",
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.message).toBe("Connection refused");
+  });
+
+  it("captures non-SubscriptionExpiredError in Sentry", async () => {
+    const notifier = await createDiscordNotifier();
+
+    const sendError = new Error("Web push failed");
+    const mockProvider = {
+      name: "discord",
+      validateConfig: () => ({ valid: true }),
+      send: async () => { throw sendError; },
+    };
+    spies.push(spyOn(registry, "getProvider").mockReturnValue(mockProvider));
+    const sentrySpy = spyOn(Sentry, "captureException").mockImplementation(() => "");
+    spies.push(sentrySpy);
+
+    await app.request(`/notifiers/${notifier.id}/test`, {
+      method: "POST",
+      headers: headers(),
+    });
+
+    expect(sentrySpy).toHaveBeenCalledWith(sendError);
+  });
+
+  it("does not capture SubscriptionExpiredError in Sentry", async () => {
+    const notifier = await createDiscordNotifier();
+
+    const mockProvider = {
+      name: "discord",
+      validateConfig: () => ({ valid: true }),
+      send: async () => { throw new SubscriptionExpiredError("https://example.com/push"); },
+    };
+    spies.push(spyOn(registry, "getProvider").mockReturnValue(mockProvider));
+    const sentrySpy = spyOn(Sentry, "captureException").mockImplementation(() => "");
+    spies.push(sentrySpy);
+
+    await app.request(`/notifiers/${notifier.id}/test`, {
+      method: "POST",
+      headers: headers(),
+    });
+
+    expect(sentrySpy).not.toHaveBeenCalled();
   });
 });
 

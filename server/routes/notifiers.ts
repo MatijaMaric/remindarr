@@ -11,6 +11,8 @@ import { getProvider, getAvailableProviders } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { refreshNotificationSchedule } from "../jobs/notifications";
 import { getVapidPublicKey } from "../notifications/vapid";
+import { SubscriptionExpiredError } from "../notifications/webpush";
+import * as Sentry from "@sentry/bun";
 
 const app = new Hono<AppEnv>();
 
@@ -192,9 +194,11 @@ app.post("/:id/test", async (c) => {
     await providerImpl.send(notifier.config, content);
     return c.json({ success: true, message: "Test notification sent" });
   } catch (err: any) {
+    if (!(err instanceof SubscriptionExpiredError)) {
+      Sentry.captureException(err);
+    }
     return c.json(
       { success: false, message: err.message || "Failed to send" },
-      500
     );
   }
 });
