@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link } from "react-router";
-import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon, LayoutGridIcon, ListIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon, LayoutGridIcon, ListIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleList from "../components/TitleList";
@@ -128,6 +128,7 @@ interface AgendaMonth {
 
 function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; onViewModeChange?: (mode: ViewMode) => void } = {}) {
   const [typeFilter, setTypeFilter] = useState("");
+  const [hideWatched, setHideWatched] = useState(true);
   const [months, setMonths] = useState<AgendaMonth[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -293,6 +294,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
       }
       for (const ep of m.episodes) {
         if (!ep.air_date) continue;
+        if (hideWatched && ep.is_watched) continue;
         const arr = byDate.get(ep.air_date);
         if (arr) arr.push({ type: "episode", data: ep });
         else byDate.set(ep.air_date, [{ type: "episode", data: ep }]);
@@ -300,7 +302,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
     }
 
     return new Map([...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)));
-  }, [months]);
+  }, [months, hideWatched]);
 
   // Toggle watched
   const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
@@ -369,6 +371,18 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
               {f.label}
             </button>
           ))}
+          <button
+            onClick={() => setHideWatched((v) => !v)}
+            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              hideWatched
+                ? "bg-indigo-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-gray-800"
+            }`}
+            title={hideWatched ? "Show watched" : "Hide watched"}
+          >
+            {hideWatched ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+            <span className="hidden sm:inline">Hide watched</span>
+          </button>
         </div>
       </div>
 

@@ -87,4 +87,40 @@ describe("CalendarPage", () => {
     expect(screen.queryByTitle("Grid view")).toBeNull();
     expect(screen.queryByTitle("Agenda view")).toBeNull();
   });
+
+  it("shows hide watched toggle in agenda mode, selected by default", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    // Switch to agenda
+    fireEvent.click(screen.getByTitle("Agenda view"));
+
+    const toggle = screen.getByTitle("Show watched");
+    expect(toggle).toBeDefined();
+    // Active state = indigo background class
+    expect(toggle.className).toContain("bg-indigo-600");
+  });
+
+  it("toggles hide watched off when clicked", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    // Switch to agenda
+    fireEvent.click(screen.getByTitle("Agenda view"));
+
+    const toggle = screen.getByTitle("Show watched");
+    fireEvent.click(toggle);
+
+    // Now it should show "Hide watched" title (inactive state)
+    const toggleOff = screen.getByTitle("Hide watched");
+    expect(toggleOff).toBeDefined();
+    expect(toggleOff.className).not.toContain("bg-indigo-600");
+  });
+
+  it("shows hide watched toggle on mobile agenda", () => {
+    mockIsMobile = true;
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    const toggle = screen.getByTitle("Show watched");
+    expect(toggle).toBeDefined();
+    expect(toggle.className).toContain("bg-indigo-600");
+  });
 });
