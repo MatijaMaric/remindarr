@@ -181,12 +181,23 @@ function PushNotificationsSection() {
       const { publicKey } = await api.getVapidPublicKey();
       const subscription = await subscribeToPush(publicKey);
 
-      await api.createNotifier({
+      const { notifier } = await api.createNotifier({
         provider: "webpush",
         config: subscription,
         notify_time: "09:00",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
+
+      // Verify the subscription actually works by sending a test push
+      const testResult = await api.testNotifier(notifier.id);
+      if (!testResult.success && testResult.message.toLowerCase().includes("subscription expired")) {
+        // Fresh subscription is already invalid — clean up
+        try { await unsubscribeFromPush(); } catch { /* ignore */ }
+        try { await api.deleteNotifier(notifier.id); } catch { /* ignore */ }
+        setErr("Could not establish a working push subscription. Please try clearing site data and re-enabling.");
+        await refresh();
+        return;
+      }
 
       setMsg("Push notifications enabled");
       await refresh();
