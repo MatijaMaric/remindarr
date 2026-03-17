@@ -37,7 +37,7 @@ export default function App() {
       <nav className={`bg-gray-900 border-b border-gray-800 sticky top-0 z-50 ${isReelsPage ? "hidden sm:block" : ""}`}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
           <Link to="/" className="flex items-center gap-2 text-lg font-bold text-white tracking-tight hover:text-indigo-400 transition-colors">
-            <img src="/favicon.svg" alt="" className="w-7 h-7 rounded" />
+            <img src="/favicon.png" alt="" className="w-7 h-7 rounded" />
             Remindarr
           </Link>
           {/* Desktop nav links */}
