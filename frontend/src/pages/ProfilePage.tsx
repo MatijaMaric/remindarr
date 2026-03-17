@@ -136,8 +136,24 @@ function PushNotificationsSection() {
         getExistingSubscription(),
       ]);
       const webpushNotifier = notifiers.find((n) => n.provider === "webpush") || null;
-      setPushNotifier(webpushNotifier);
-      setHasSubscription(!!subscription);
+
+      // Auto-cleanup stale states
+      if (webpushNotifier && !webpushNotifier.enabled) {
+        // Background job disabled it (expired subscription) — clean up
+        try { await unsubscribeFromPush(); } catch { /* ignore */ }
+        try { await api.deleteNotifier(webpushNotifier.id); } catch { /* ignore */ }
+        setPushNotifier(null);
+        setHasSubscription(false);
+        setErr("Push subscription expired. Please re-enable push notifications.");
+      } else if (webpushNotifier && !subscription) {
+        // DB record exists but browser has no subscription — stale
+        try { await api.deleteNotifier(webpushNotifier.id); } catch { /* ignore */ }
+        setPushNotifier(null);
+        setHasSubscription(false);
+      } else {
+        setPushNotifier(webpushNotifier);
+        setHasSubscription(!!subscription);
+      }
       setPermissionState(Notification.permission);
     } catch {
       // ignore
@@ -208,6 +224,13 @@ function PushNotificationsSection() {
       const result = await api.testNotifier(pushNotifier.id);
       if (result.success) {
         setMsg(result.message);
+      } else if (result.message.toLowerCase().includes("subscription expired")) {
+        // Auto-cleanup expired subscription
+        try { await unsubscribeFromPush(); } catch { /* ignore */ }
+        try { await api.deleteNotifier(pushNotifier.id); } catch { /* ignore */ }
+        setPushNotifier(null);
+        setHasSubscription(false);
+        setErr("Push subscription expired. Please re-enable push notifications.");
       } else {
         setErr(result.message);
       }
