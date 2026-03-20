@@ -59,6 +59,7 @@ import type { DrizzleDb } from "./platform/types";
 
 interface Env {
   DB: D1Database;
+  ASSETS?: { fetch: typeof fetch };
   TMDB_API_KEY?: string;
   TMDB_COUNTRY?: string;
   TMDB_LANGUAGE?: string;
@@ -206,7 +207,7 @@ function createApp(env: Env) {
 
   // SPA fallback — serve index.html for client-side routes (mirrors serveStatic in index.ts)
   app.get("*", async (c) => {
-    const assets = (c.env as Record<string, any>)?.ASSETS;
+    const assets = (c.env as unknown as Env).ASSETS;
     if (assets?.fetch) {
       return assets.fetch(new Request(new URL("/index.html", c.req.url)));
     }
