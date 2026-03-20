@@ -4,10 +4,10 @@ import { settings, oidcStates } from "../schema";
 import { CONFIG } from "../../config";
 import { traceDbQuery } from "../../tracing";
 
-export function getSetting(key: string): string | null {
-  return traceDbQuery("getSetting", () => {
+export async function getSetting(key: string): Promise<string | null> {
+  return traceDbQuery("getSetting", async () => {
     const db = getDb();
-    const row = db
+    const row = await db
       .select({ value: settings.value })
       .from(settings)
       .where(eq(settings.key, key))
@@ -16,10 +16,10 @@ export function getSetting(key: string): string | null {
   });
 }
 
-export function setSetting(key: string, value: string) {
-  return traceDbQuery("setSetting", () => {
+export async function setSetting(key: string, value: string) {
+  return traceDbQuery("setSetting", async () => {
     const db = getDb();
-    db.insert(settings)
+    await db.insert(settings)
       .values({ key, value })
       .onConflictDoUpdate({
         target: settings.key,
@@ -29,17 +29,17 @@ export function setSetting(key: string, value: string) {
   });
 }
 
-export function deleteSetting(key: string) {
-  return traceDbQuery("deleteSetting", () => {
+export async function deleteSetting(key: string) {
+  return traceDbQuery("deleteSetting", async () => {
     const db = getDb();
-    db.delete(settings).where(eq(settings.key, key)).run();
+    await db.delete(settings).where(eq(settings.key, key)).run();
   });
 }
 
-export function getSettingsByPrefix(prefix: string): Record<string, string> {
-  return traceDbQuery("getSettingsByPrefix", () => {
+export async function getSettingsByPrefix(prefix: string): Promise<Record<string, string>> {
+  return traceDbQuery("getSettingsByPrefix", async () => {
     const db = getDb();
-    const rows = db
+    const rows = await db
       .select({ key: settings.key, value: settings.value })
       .from(settings)
       .where(like(settings.key, `${prefix}%`))
@@ -54,27 +54,27 @@ export function getSettingsByPrefix(prefix: string): Record<string, string> {
 
 // ─── OIDC Config Resolution ─────────────────────────────────────────────────
 
-export function getOidcConfig() {
-  return traceDbQuery("getOidcConfig", () => {
-    const issuerUrl = CONFIG.OIDC_ISSUER_URL || getSetting("oidc_issuer_url") || "";
-    const clientId = CONFIG.OIDC_CLIENT_ID || getSetting("oidc_client_id") || "";
+export async function getOidcConfig() {
+  return traceDbQuery("getOidcConfig", async () => {
+    const issuerUrl = CONFIG.OIDC_ISSUER_URL || await getSetting("oidc_issuer_url") || "";
+    const clientId = CONFIG.OIDC_CLIENT_ID || await getSetting("oidc_client_id") || "";
     const clientSecret =
-      CONFIG.OIDC_CLIENT_SECRET || getSetting("oidc_client_secret") || "";
+      CONFIG.OIDC_CLIENT_SECRET || await getSetting("oidc_client_secret") || "";
     const redirectUri =
-      CONFIG.OIDC_REDIRECT_URI || getSetting("oidc_redirect_uri") || "";
+      CONFIG.OIDC_REDIRECT_URI || await getSetting("oidc_redirect_uri") || "";
 
     const adminClaim =
-      CONFIG.OIDC_ADMIN_CLAIM || getSetting("oidc_admin_claim") || "";
+      CONFIG.OIDC_ADMIN_CLAIM || await getSetting("oidc_admin_claim") || "";
     const adminValue =
-      CONFIG.OIDC_ADMIN_VALUE || getSetting("oidc_admin_value") || "";
+      CONFIG.OIDC_ADMIN_VALUE || await getSetting("oidc_admin_value") || "";
 
     return { issuerUrl, clientId, clientSecret, redirectUri, adminClaim, adminValue };
   });
 }
 
-export function isOidcConfigured(): boolean {
-  return traceDbQuery("isOidcConfigured", () => {
-    const { issuerUrl, clientId, clientSecret } = getOidcConfig();
+export async function isOidcConfigured(): Promise<boolean> {
+  return traceDbQuery("isOidcConfigured", async () => {
+    const { issuerUrl, clientId, clientSecret } = await getOidcConfig();
     return Boolean(issuerUrl && clientId && clientSecret);
   });
 }
@@ -83,31 +83,31 @@ export function isOidcConfigured(): boolean {
 
 const OIDC_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-export function createOidcState(state: string): void {
-  traceDbQuery("createOidcState", () => {
+export async function createOidcState(state: string): Promise<void> {
+  return traceDbQuery("createOidcState", async () => {
     const db = getDb();
-    db.insert(oidcStates).values({ state, createdAt: Date.now() }).run();
+    await db.insert(oidcStates).values({ state, createdAt: Date.now() }).run();
   });
 }
 
-export function consumeOidcState(state: string): boolean {
-  return traceDbQuery("consumeOidcState", () => {
+export async function consumeOidcState(state: string): Promise<boolean> {
+  return traceDbQuery("consumeOidcState", async () => {
     const db = getDb();
-    const row = db
+    const row = await db
       .select()
       .from(oidcStates)
       .where(eq(oidcStates.state, state))
       .get();
     if (!row) return false;
-    db.delete(oidcStates).where(eq(oidcStates.state, state)).run();
+    await db.delete(oidcStates).where(eq(oidcStates.state, state)).run();
     return Date.now() - row.createdAt < OIDC_STATE_TTL_MS;
   });
 }
 
-export function cleanExpiredOidcStates(): void {
-  traceDbQuery("cleanExpiredOidcStates", () => {
+export async function cleanExpiredOidcStates(): Promise<void> {
+  return traceDbQuery("cleanExpiredOidcStates", async () => {
     const db = getDb();
     const cutoff = Date.now() - OIDC_STATE_TTL_MS;
-    db.delete(oidcStates).where(lt(oidcStates.createdAt, cutoff)).run();
+    await db.delete(oidcStates).where(lt(oidcStates.createdAt, cutoff)).run();
   });
 }

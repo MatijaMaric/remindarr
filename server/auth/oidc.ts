@@ -11,7 +11,7 @@ let cachedDiscovery: { data: OidcDiscovery; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function getDiscovery(): Promise<OidcDiscovery> {
-  const { issuerUrl } = getOidcConfig();
+  const { issuerUrl } = await getOidcConfig();
   if (!issuerUrl) throw new Error("OIDC issuer URL not configured");
 
   if (cachedDiscovery && Date.now() - cachedDiscovery.fetchedAt < CACHE_TTL_MS) {
@@ -35,22 +35,22 @@ export function clearDiscoveryCache() {
 // SQLite-backed state store for OIDC authorization flow
 // Supports multi-instance deployments and avoids memory leak risks
 
-export function generateState(): string {
+export async function generateState(): Promise<string> {
   // Clean up expired states
-  cleanExpiredOidcStates();
+  await cleanExpiredOidcStates();
 
   const state = crypto.randomUUID();
-  createOidcState(state);
+  await createOidcState(state);
   return state;
 }
 
-export function validateState(state: string): boolean {
-  return consumeOidcState(state);
+export async function validateState(state: string): Promise<boolean> {
+  return await consumeOidcState(state);
 }
 
 /** Exchange authorization code for tokens and extract user info from id_token */
 export async function exchangeCode(code: string, redirectUri: string) {
-  const { clientId, clientSecret } = getOidcConfig();
+  const { clientId, clientSecret } = await getOidcConfig();
   const discovery = await getDiscovery();
 
   const res = await traceHttp("POST", discovery.token_endpoint, () =>

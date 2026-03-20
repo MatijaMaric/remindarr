@@ -13,14 +13,14 @@ let app: Hono<AppEnv>;
 let validToken: string;
 let adminToken: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
 
-  const userId = createUser("testuser", "hash", "Test User");
-  validToken = createSession(userId);
+  const userId = await createUser("testuser", "hash", "Test User");
+  validToken = await createSession(userId);
 
-  const adminId = createUser("admin", "hash", "Admin", "local", undefined, true);
-  adminToken = createSession(adminId);
+  const adminId = await createUser("admin", "hash", "Admin", "local", undefined, true);
+  adminToken = await createSession(adminId);
 
   app = new Hono<AppEnv>();
 
@@ -111,8 +111,8 @@ describe("requireAdmin", () => {
 
 describe("session expiration", () => {
   it("requireAuth returns 401 for expired session", async () => {
-    const userId = createUser("expired-user", "hash", "Expired User");
-    const expiredToken = createSession(userId);
+    const userId = await createUser("expired-user", "hash", "Expired User");
+    const expiredToken = await createSession(userId);
 
     // Manually set session expiry to the past
     const db = getDb();
@@ -130,8 +130,8 @@ describe("session expiration", () => {
   });
 
   it("optionalAuth does not set user for expired session", async () => {
-    const userId = createUser("expired-user2", "hash", "Expired User 2");
-    const expiredToken = createSession(userId);
+    const userId = await createUser("expired-user2", "hash", "Expired User 2");
+    const expiredToken = await createSession(userId);
 
     const db = getDb();
     db.update(sessions)

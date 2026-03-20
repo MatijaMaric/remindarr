@@ -1,0 +1,36 @@
+name = "remindarr"
+main = "server/worker.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static frontend assets
+assets = { directory = "./frontend/dist" }
+
+# D1 SQLite database
+[[d1_databases]]
+binding = "DB"
+database_name = "remindarr"
+database_id = "" # Set per-environment: wrangler d1 create remindarr
+
+# Non-secret config (override via wrangler.toml or dashboard)
+[vars]
+TMDB_COUNTRY = "HR"
+TMDB_LANGUAGE = "en"
+LOG_LEVEL = "info"
+
+# Secrets (set via `wrangler secret put <NAME>`):
+# TMDB_API_KEY
+# OIDC_CLIENT_SECRET
+# SENTRY_DSN
+# VAPID_PUBLIC_KEY
+# VAPID_PRIVATE_KEY
+# VAPID_SUBJECT
+
+# Cron triggers for background jobs
+[triggers]
+crons = [
+  "0 3 * * *",      # sync-titles
+  "30 3 * * *",     # sync-episodes
+  "*/5 * * * *",    # send-notifications (check every 5 min)
+  "0 0 * * *",      # cleanup (expired sessions, old jobs)
+]

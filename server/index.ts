@@ -30,21 +30,30 @@ import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { startWorker, stopWorker } from "./jobs/worker";
 import { initJobsSchema } from "./jobs/queue";
+import { BunPlatform } from "./platform/bun";
 
 // Initialize DB on startup
 getDb();
 
+const platform = new BunPlatform();
+
 // Create admin account on first launch
-if (getUserCount() === 0) {
+if (await getUserCount() === 0) {
   const password = crypto.randomUUID().slice(0, 16);
-  const hash = await Bun.password.hash(password);
-  const adminId = createUser("admin", hash, "Admin", "local", undefined, true);
+  const hash = await platform.hashPassword(password);
+  const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
   migrateTrackedData(adminId);
   logger.info("Admin account created", { username: "admin" });
   console.log(`\n  Default admin password: ${password}\n  Change it after first login.\n`);
 }
 
 const app = new Hono<AppEnv>();
+
+// Inject platform into context for route handlers
+app.use("*", async (c, next) => {
+  c.set("platform", platform);
+  await next();
+});
 
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
@@ -149,7 +158,7 @@ setInterval(() => {
 // Start background job queue
 initJobsSchema();
 registerSyncJobs();
-registerNotificationJobs();
+await registerNotificationJobs();
 startWorker();
 
 process.on("SIGTERM", async () => {

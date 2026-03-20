@@ -10,9 +10,9 @@ const log = logger.child({ module: "track" });
 
 const app = new Hono<AppEnv>();
 
-app.get("/", (c) => {
+app.get("/", async (c) => {
   const user = c.get("user")!;
-  const titles = getTrackedTitles(user.id);
+  const titles = await getTrackedTitles(user.id);
   return c.json({ titles, count: titles.length });
 });
 
@@ -62,10 +62,10 @@ app.post("/:id", async (c) => {
 
   // If title data is provided (e.g. from search results), upsert it first
   if (body.titleData) {
-    upsertTitles([toParsedTitle(body.titleData)]);
+    await upsertTitles([toParsedTitle(body.titleData)]);
   }
 
-  trackTitle(titleId, user.id, body.notes);
+  await trackTitle(titleId, user.id, body.notes);
 
   // Fire-and-forget episode sync for shows with a TMDB ID
   if (CONFIG.TMDB_API_KEY) {
@@ -80,11 +80,11 @@ app.post("/:id", async (c) => {
   return c.json({ success: true, message: `Tracking ${titleId}` });
 });
 
-app.delete("/:id", (c) => {
+app.delete("/:id", async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("id");
-  untrackTitle(titleId, user.id);
-  deleteEpisodesForTitle(titleId);
+  await untrackTitle(titleId, user.id);
+  await deleteEpisodesForTitle(titleId);
   return c.json({ success: true, message: `Untracked ${titleId}` });
 });
 

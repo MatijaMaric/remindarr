@@ -4,10 +4,10 @@ import { titles, offers, providers, scores, tracked } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles } from "./offers";
 
-export function trackTitle(titleId: string, userId: string, notes?: string) {
-  return traceDbQuery("trackTitle", () => {
+export async function trackTitle(titleId: string, userId: string, notes?: string) {
+  return traceDbQuery("trackTitle", async () => {
     const db = getDb();
-    db.insert(tracked)
+    await db.insert(tracked)
       .values({ titleId, userId, notes: notes || null })
       .onConflictDoUpdate({
         target: [tracked.titleId, tracked.userId],
@@ -17,19 +17,19 @@ export function trackTitle(titleId: string, userId: string, notes?: string) {
   });
 }
 
-export function untrackTitle(titleId: string, userId: string) {
-  return traceDbQuery("untrackTitle", () => {
+export async function untrackTitle(titleId: string, userId: string) {
+  return traceDbQuery("untrackTitle", async () => {
     const db = getDb();
-    db.delete(tracked)
+    await db.delete(tracked)
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
   });
 }
 
-export function getTrackedTitleIds(userId: string): Set<string> {
-  return traceDbQuery("getTrackedTitleIds", () => {
+export async function getTrackedTitleIds(userId: string): Promise<Set<string>> {
+  return traceDbQuery("getTrackedTitleIds", async () => {
     const db = getDb();
-    const rows = db
+    const rows = await db
       .select({ titleId: tracked.titleId })
       .from(tracked)
       .where(eq(tracked.userId, userId))
@@ -38,10 +38,10 @@ export function getTrackedTitleIds(userId: string): Set<string> {
   });
 }
 
-export function getTrackedTitles(userId: string) {
-  return traceDbQuery("getTrackedTitles", () => {
+export async function getTrackedTitles(userId: string) {
+  return traceDbQuery("getTrackedTitles", async () => {
     const db = getDb();
-    const rows = db
+    const rows = await db
       .select({
         id: titles.id,
         object_type: titles.objectType,
@@ -73,7 +73,7 @@ export function getTrackedTitles(userId: string) {
       .orderBy(desc(tracked.trackedAt))
       .all();
 
-    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
+    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
@@ -83,10 +83,10 @@ export function getTrackedTitles(userId: string) {
   });
 }
 
-export function getTrackedMoviesByReleaseDate(date: string, userId: string) {
-  return traceDbQuery("getTrackedMoviesByReleaseDate", () => {
+export async function getTrackedMoviesByReleaseDate(date: string, userId: string) {
+  return traceDbQuery("getTrackedMoviesByReleaseDate", async () => {
     const db = getDb();
-    const rows = db
+    const rows = await db
       .select({
         id: titles.id,
         title: titles.title,
@@ -99,7 +99,7 @@ export function getTrackedMoviesByReleaseDate(date: string, userId: string) {
       .where(and(eq(titles.releaseDate, date), eq(titles.objectType, "MOVIE")))
       .all();
 
-    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
+    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       offers: offersByTitle.get(row.id) ?? [],

@@ -4,17 +4,17 @@ import {
 } from "../db/repository";
 import type { NotificationContent } from "./types";
 
-export function buildNotificationContent(
+export async function buildNotificationContent(
   userId: string,
   date: string
-): NotificationContent {
+): Promise<NotificationContent> {
   // Get the next day for the date range query
   const d = new Date(date + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + 1);
   const nextDay = d.toISOString().slice(0, 10);
 
   // Episodes airing today for tracked shows
-  const rawEpisodes = getEpisodesByDateRange(date, nextDay, userId);
+  const rawEpisodes = await getEpisodesByDateRange(date, nextDay, userId);
   const episodes = rawEpisodes.map((ep) => ({
     showTitle: ep.show_title,
     seasonNumber: ep.season_number,
@@ -28,7 +28,7 @@ export function buildNotificationContent(
   }));
 
   // Tracked movies releasing today
-  const rawMovies = getTrackedMoviesByReleaseDate(date, userId);
+  const rawMovies = await getTrackedMoviesByReleaseDate(date, userId);
   const movies = rawMovies.map((m) => ({
     title: m.title,
     releaseYear: m.release_year,

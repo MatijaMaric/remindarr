@@ -11,7 +11,7 @@ interface VapidKeys {
   subject: string;
 }
 
-export function getVapidKeys(): VapidKeys {
+export async function getVapidKeys(): Promise<VapidKeys> {
   // Priority: env vars > settings table > auto-generate
   let publicKey = CONFIG.VAPID_PUBLIC_KEY;
   let privateKey = CONFIG.VAPID_PRIVATE_KEY;
@@ -19,9 +19,9 @@ export function getVapidKeys(): VapidKeys {
 
   if (!publicKey || !privateKey) {
     // Try settings table
-    publicKey = getSetting("vapid_public_key") || "";
-    privateKey = getSetting("vapid_private_key") || "";
-    subject = subject || getSetting("vapid_subject") || "";
+    publicKey = await getSetting("vapid_public_key") || "";
+    privateKey = await getSetting("vapid_private_key") || "";
+    subject = subject || await getSetting("vapid_subject") || "";
   }
 
   if (!publicKey || !privateKey) {
@@ -30,20 +30,21 @@ export function getVapidKeys(): VapidKeys {
     const keys = webpush.generateVAPIDKeys();
     publicKey = keys.publicKey;
     privateKey = keys.privateKey;
-    setSetting("vapid_public_key", publicKey);
-    setSetting("vapid_private_key", privateKey);
+    await setSetting("vapid_public_key", publicKey);
+    await setSetting("vapid_private_key", privateKey);
   }
 
   if (!subject) {
     subject = "mailto:noreply@remindarr.local";
-    if (!CONFIG.VAPID_SUBJECT && !getSetting("vapid_subject")) {
-      setSetting("vapid_subject", subject);
+    if (!CONFIG.VAPID_SUBJECT && !await getSetting("vapid_subject")) {
+      await setSetting("vapid_subject", subject);
     }
   }
 
   return { publicKey, privateKey, subject };
 }
 
-export function getVapidPublicKey(): string {
-  return getVapidKeys().publicKey;
+export async function getVapidPublicKey(): Promise<string> {
+  const keys = await getVapidKeys();
+  return keys.publicKey;
 }

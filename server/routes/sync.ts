@@ -17,7 +17,7 @@ app.post("/", async (c) => {
 
   try {
     const titles = await syncTitles.fetchNewReleases({ daysBack, objectType, maxPages });
-    const count = upsertTitles(titles);
+    const count = await upsertTitles(titles);
     return c.json({ success: true, count, message: `Synced ${count} titles` });
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500);

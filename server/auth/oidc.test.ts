@@ -21,16 +21,16 @@ const DISCOVERY = {
 
 let fetchSpy: ReturnType<typeof spyOn>;
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
   clearDiscoveryCache();
   fetchSpy = spyOn(globalThis, "fetch");
 
   // Configure OIDC settings in the DB
-  setSetting("oidc_issuer_url", "https://auth.example.com");
-  setSetting("oidc_client_id", "test-client");
-  setSetting("oidc_client_secret", "test-secret");
-  setSetting("oidc_redirect_uri", "https://app.example.com/callback");
+  await setSetting("oidc_issuer_url", "https://auth.example.com");
+  await setSetting("oidc_client_id", "test-client");
+  await setSetting("oidc_client_secret", "test-secret");
+  await setSetting("oidc_redirect_uri", "https://app.example.com/callback");
 });
 
 afterEach(() => {
@@ -317,34 +317,34 @@ describe("getDiscovery", () => {
 
   it("throws when issuer URL is not configured", async () => {
     // Remove the issuer URL setting
-    setSetting("oidc_issuer_url", "");
+    await setSetting("oidc_issuer_url", "");
 
     await expect(getDiscovery()).rejects.toThrow("OIDC issuer URL not configured");
   });
 });
 
 describe("OIDC state store", () => {
-  it("generates and validates a state token", () => {
-    const state = generateState();
+  it("generates and validates a state token", async () => {
+    const state = await generateState();
     expect(typeof state).toBe("string");
     expect(state.length).toBeGreaterThan(0);
-    expect(validateState(state)).toBe(true);
+    expect(await validateState(state)).toBe(true);
   });
 
-  it("rejects an unknown state token", () => {
-    expect(validateState("nonexistent")).toBe(false);
+  it("rejects an unknown state token", async () => {
+    expect(await validateState("nonexistent")).toBe(false);
   });
 
-  it("consumes state on validation (single use)", () => {
-    const state = generateState();
-    expect(validateState(state)).toBe(true);
-    expect(validateState(state)).toBe(false);
+  it("consumes state on validation (single use)", async () => {
+    const state = await generateState();
+    expect(await validateState(state)).toBe(true);
+    expect(await validateState(state)).toBe(false);
   });
 
-  it("rejects expired state tokens", () => {
+  it("rejects expired state tokens", async () => {
     // Directly insert a state with old timestamp
     const oldState = "expired-state";
-    createOidcState(oldState);
+    await createOidcState(oldState);
     // Manually update created_at to 11 minutes ago
     const { getDb } = require("../db/schema");
     const db = getDb();
@@ -353,31 +353,31 @@ describe("OIDC state store", () => {
       require("drizzle-orm").sql`UPDATE oidc_states SET created_at = ${elevenMinutesAgo} WHERE state = ${oldState}`
     );
 
-    expect(consumeOidcState(oldState)).toBe(false);
+    expect(await consumeOidcState(oldState)).toBe(false);
   });
 
-  it("cleans up expired states", () => {
+  it("cleans up expired states", async () => {
     const { getDb } = require("../db/schema");
     const db = getDb();
     const elevenMinutesAgo = Date.now() - 11 * 60 * 1000;
 
     // Insert some expired states directly
-    createOidcState("expired-1");
-    createOidcState("expired-2");
+    await createOidcState("expired-1");
+    await createOidcState("expired-2");
     db.run(
       require("drizzle-orm").sql`UPDATE oidc_states SET created_at = ${elevenMinutesAgo}`
     );
 
     // Insert a fresh state
-    createOidcState("fresh-1");
+    await createOidcState("fresh-1");
 
-    cleanExpiredOidcStates();
+    await cleanExpiredOidcStates();
 
     // Expired states should be gone
-    expect(consumeOidcState("expired-1")).toBe(false);
-    expect(consumeOidcState("expired-2")).toBe(false);
+    expect(await consumeOidcState("expired-1")).toBe(false);
+    expect(await consumeOidcState("expired-2")).toBe(false);
 
     // Fresh state should still be valid
-    expect(consumeOidcState("fresh-1")).toBe(true);
+    expect(await consumeOidcState("fresh-1")).toBe(true);
   });
 });

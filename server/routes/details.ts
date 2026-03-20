@@ -31,7 +31,7 @@ function parseTitleId(titleId: string): { type: "MOVIE" | "SHOW"; tmdbId: number
 }
 
 async function getOrFetchTitle(titleId: string, userId?: string) {
-  let title = getTitleById(titleId, userId);
+  let title = await getTitleById(titleId, userId);
   if (title) return title;
 
   const parsed = parseTitleId(titleId);
@@ -40,17 +40,17 @@ async function getOrFetchTitle(titleId: string, userId?: string) {
   try {
     if (parsed.type === "MOVIE") {
       const tmdbData = await fetchMovieDetails(parsed.tmdbId);
-      upsertTitles([parseMovieDetails(tmdbData)]);
+      await upsertTitles([parseMovieDetails(tmdbData)]);
     } else {
       const tmdbData = await fetchTvDetails(parsed.tmdbId);
-      upsertTitles([parseTvDetails(tmdbData)]);
+      await upsertTitles([parseTvDetails(tmdbData)]);
     }
   } catch (e) {
     log.error("TMDB fallback fetch failed", { titleId, err: e });
     return null;
   }
 
-  return getTitleById(titleId, userId);
+  return await getTitleById(titleId, userId);
 }
 
 app.get("/movie/:id", async (c) => {

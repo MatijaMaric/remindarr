@@ -6,7 +6,7 @@ import type { AppEnv } from "../types";
 
 const app = new Hono<AppEnv>();
 
-app.get("/upcoming", (c) => {
+app.get("/upcoming", async (c) => {
   const user = c.get("user");
   if (!user) {
     return c.json({ today: [], upcoming: [] });
@@ -21,10 +21,10 @@ app.get("/upcoming", (c) => {
   nextWeek.setDate(nextWeek.getDate() + 8);
   const nextWeekStr = nextWeek.toISOString().slice(0, 10);
 
-  const todayEpisodes = getEpisodesByDateRange(today, tomorrowStr, user.id);
-  const upcomingEpisodes = getEpisodesByDateRange(tomorrowStr, nextWeekStr, user.id);
+  const todayEpisodes = await getEpisodesByDateRange(today, tomorrowStr, user.id);
+  const upcomingEpisodes = await getEpisodesByDateRange(tomorrowStr, nextWeekStr, user.id);
 
-  const unwatchedEpisodes = getUnwatchedEpisodes(user.id);
+  const unwatchedEpisodes = await getUnwatchedEpisodes(user.id);
 
   return c.json({ today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
 });

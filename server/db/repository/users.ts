@@ -1,22 +1,22 @@
 import { eq, and, sql, count } from "drizzle-orm";
-import { getDb, getRawDb } from "../schema";
+import { getDb } from "../schema";
 import { users, sessions } from "../schema";
 import { logger } from "../../logger";
 import { CONFIG } from "../../config";
 import { traceDbQuery } from "../../tracing";
 
-export function createUser(
+export async function createUser(
   username: string,
   passwordHash: string | null,
   displayName?: string,
   authProvider = "local",
   providerSubject?: string,
   isAdmin = false
-): string {
-  return traceDbQuery("createUser", () => {
+): Promise<string> {
+  return traceDbQuery("createUser", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
-    db.insert(users)
+    await db.insert(users)
       .values({
         id,
         username,
@@ -42,28 +42,28 @@ const userColumns = {
   created_at: users.createdAt,
 };
 
-export function getUserByUsername(username: string) {
-  return traceDbQuery("getUserByUsername", () => {
+export async function getUserByUsername(username: string) {
+  return traceDbQuery("getUserByUsername", async () => {
     const db = getDb();
-    return db.select(userColumns).from(users).where(eq(users.username, username)).get() ?? null;
+    return await db.select(userColumns).from(users).where(eq(users.username, username)).get() ?? null;
   });
 }
 
-export function getUserById(id: string) {
-  return traceDbQuery("getUserById", () => {
+export async function getUserById(id: string) {
+  return traceDbQuery("getUserById", async () => {
     const db = getDb();
-    return db.select(userColumns).from(users).where(eq(users.id, id)).get() ?? null;
+    return await db.select(userColumns).from(users).where(eq(users.id, id)).get() ?? null;
   });
 }
 
-export function getUserByProviderSubject(
+export async function getUserByProviderSubject(
   authProvider: string,
   providerSubject: string
 ) {
-  return traceDbQuery("getUserByProviderSubject", () => {
+  return traceDbQuery("getUserByProviderSubject", async () => {
     const db = getDb();
     return (
-      db
+      await db
         .select(userColumns)
         .from(users)
         .where(
@@ -77,28 +77,28 @@ export function getUserByProviderSubject(
   });
 }
 
-export function getUserCount(): number {
-  return traceDbQuery("getUserCount", () => {
+export async function getUserCount(): Promise<number> {
+  return traceDbQuery("getUserCount", async () => {
     const db = getDb();
-    const row = db.select({ count: count() }).from(users).get();
+    const row = await db.select({ count: count() }).from(users).get();
     return row?.count ?? 0;
   });
 }
 
-export function updateUserPassword(userId: string, passwordHash: string) {
-  return traceDbQuery("updateUserPassword", () => {
+export async function updateUserPassword(userId: string, passwordHash: string) {
+  return traceDbQuery("updateUserPassword", async () => {
     const db = getDb();
-    db.update(users)
+    await db.update(users)
       .set({ passwordHash })
       .where(eq(users.id, userId))
       .run();
   });
 }
 
-export function updateUserAdmin(userId: string, isAdmin: boolean) {
-  return traceDbQuery("updateUserAdmin", () => {
+export async function updateUserAdmin(userId: string, isAdmin: boolean) {
+  return traceDbQuery("updateUserAdmin", async () => {
     const db = getDb();
-    db.update(users)
+    await db.update(users)
       .set({ isAdmin: isAdmin ? 1 : 0 })
       .where(eq(users.id, userId))
       .run();
@@ -107,22 +107,22 @@ export function updateUserAdmin(userId: string, isAdmin: boolean) {
 
 // ─── Sessions ────────────────────────────────────────────────────────────────
 
-export function createSession(userId: string): string {
-  return traceDbQuery("createSession", () => {
+export async function createSession(userId: string): Promise<string> {
+  return traceDbQuery("createSession", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
     const expiresAt = new Date(
       Date.now() + CONFIG.SESSION_DURATION_HOURS * 3600 * 1000
     ).toISOString();
-    db.insert(sessions).values({ id, userId, expiresAt }).run();
+    await db.insert(sessions).values({ id, userId, expiresAt }).run();
     return id;
   });
 }
 
-export function getSessionWithUser(token: string) {
-  return traceDbQuery("getSessionWithUser", () => {
+export async function getSessionWithUser(token: string) {
+  return traceDbQuery("getSessionWithUser", async () => {
     const db = getDb();
-    const row = db
+    const row = await db
       .select({
         id: users.id,
         username: users.username,
@@ -148,19 +148,25 @@ export function getSessionWithUser(token: string) {
   });
 }
 
-export function deleteSession(token: string) {
-  return traceDbQuery("deleteSession", () => {
+export async function deleteSession(token: string) {
+  return traceDbQuery("deleteSession", async () => {
     const db = getDb();
-    db.delete(sessions).where(eq(sessions.id, token)).run();
+    await db.delete(sessions).where(eq(sessions.id, token)).run();
   });
 }
 
-export function deleteExpiredSessions() {
-  return traceDbQuery("deleteExpiredSessions", () => {
-    const raw = getRawDb();
-    const result = raw.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')").run();
-    if (result.changes > 0) {
-      logger.child({ module: "db" }).info("Cleaned up expired sessions", { count: result.changes });
+export async function deleteExpiredSessions() {
+  return traceDbQuery("deleteExpiredSessions", async () => {
+    const db = getDb();
+    const result = await db.delete(sessions)
+      .where(sql`${sessions.expiresAt} <= datetime('now')`)
+      .run();
+    // D1 returns { changes } in meta, bun:sqlite returns it directly
+    const changes = typeof result === "object" && result !== null && "changes" in result
+      ? (result as any).changes
+      : 0;
+    if (changes > 0) {
+      logger.child({ module: "db" }).info("Cleaned up expired sessions", { count: changes });
     }
   });
 }

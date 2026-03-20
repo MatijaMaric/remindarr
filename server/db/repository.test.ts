@@ -56,64 +56,64 @@ afterAll(() => {
 // ─── Title Upserts ──────────────────────────────────────────────────────────
 
 describe("upsertTitles", () => {
-  it("inserts titles into the database", () => {
+  it("inserts titles into the database", async () => {
     const title = makeParsedTitle();
-    const count = upsertTitles([title]);
+    const count = await upsertTitles([title]);
     expect(count).toBe(1);
 
-    const result = getTitleById("movie-123");
+    const result = await getTitleById("movie-123");
     expect(result).not.toBeNull();
     expect(result!.title).toBe("Test Movie");
     expect(result!.object_type).toBe("MOVIE");
   });
 
-  it("upserts titles on conflict", () => {
-    upsertTitles([makeParsedTitle({ title: "Original" })]);
-    upsertTitles([makeParsedTitle({ title: "Updated" })]);
+  it("upserts titles on conflict", async () => {
+    await upsertTitles([makeParsedTitle({ title: "Original" })]);
+    await upsertTitles([makeParsedTitle({ title: "Updated" })]);
 
-    const result = getTitleById("movie-123");
+    const result = await getTitleById("movie-123");
     expect(result!.title).toBe("Updated");
   });
 
-  it("stores and retrieves original_title", () => {
-    upsertTitles([makeParsedTitle({ originalTitle: "Film Original" })]);
-    const result = getTitleById("movie-123");
+  it("stores and retrieves original_title", async () => {
+    await upsertTitles([makeParsedTitle({ originalTitle: "Film Original" })]);
+    const result = await getTitleById("movie-123");
     expect(result!.original_title).toBe("Film Original");
   });
 
-  it("stores null original_title when not provided", () => {
-    upsertTitles([makeParsedTitle({ originalTitle: null })]);
-    const result = getTitleById("movie-123");
+  it("stores null original_title when not provided", async () => {
+    await upsertTitles([makeParsedTitle({ originalTitle: null })]);
+    const result = await getTitleById("movie-123");
     expect(result!.original_title).toBeNull();
   });
 
-  it("stores and retrieves original_language", () => {
-    upsertTitles([makeParsedTitle({ originalLanguage: "ja" })]);
-    const result = getTitleById("movie-123");
+  it("stores and retrieves original_language", async () => {
+    await upsertTitles([makeParsedTitle({ originalLanguage: "ja" })]);
+    const result = await getTitleById("movie-123");
     expect(result!.original_language).toBe("ja");
   });
 
-  it("stores null original_language when not provided", () => {
-    upsertTitles([makeParsedTitle({ originalLanguage: null })]);
-    const result = getTitleById("movie-123");
+  it("stores null original_language when not provided", async () => {
+    await upsertTitles([makeParsedTitle({ originalLanguage: null })]);
+    const result = await getTitleById("movie-123");
     expect(result!.original_language).toBeNull();
   });
 
-  it("upserts providers and offers", () => {
+  it("upserts providers and offers", async () => {
     const title = makeParsedTitle({
       offers: [
         makeParsedOffer({ providerId: 8, providerName: "Netflix" }),
       ],
     });
-    upsertTitles([title]);
+    await upsertTitles([title]);
 
-    const offers = getOffersForTitle("movie-123");
+    const offers = await getOffersForTitle("movie-123");
     expect(offers).toHaveLength(1);
     expect(offers[0].provider_name).toBe("Netflix");
   });
 
-  it("batch-fetches offers for multiple titles", () => {
-    upsertTitles([
+  it("batch-fetches offers for multiple titles", async () => {
+    await upsertTitles([
       makeParsedTitle({
         id: "movie-1",
         title: "Movie One",
@@ -131,7 +131,7 @@ describe("upsertTitles", () => {
       }),
     ]);
 
-    const offerMap = getOffersForTitles(["movie-1", "movie-2", "movie-3"]);
+    const offerMap = await getOffersForTitles(["movie-1", "movie-2", "movie-3"]);
     expect(offerMap.get("movie-1")).toHaveLength(1);
     expect(offerMap.get("movie-1")![0].provider_name).toBe("Netflix");
     expect(offerMap.get("movie-2")).toHaveLength(1);
@@ -139,23 +139,23 @@ describe("upsertTitles", () => {
     expect(offerMap.get("movie-3")).toBeUndefined();
   });
 
-  it("returns empty map for empty titleIds", () => {
-    const offerMap = getOffersForTitles([]);
+  it("returns empty map for empty titleIds", async () => {
+    const offerMap = await getOffersForTitles([]);
     expect(offerMap.size).toBe(0);
   });
 
-  it("upserts scores", () => {
-    upsertTitles([makeParsedTitle({ scores: { imdbScore: 8.0, imdbVotes: 5000, tmdbScore: 7.5 } })]);
-    const result = getTitleById("movie-123");
+  it("upserts scores", async () => {
+    await upsertTitles([makeParsedTitle({ scores: { imdbScore: 8.0, imdbVotes: 5000, tmdbScore: 7.5 } })]);
+    const result = await getTitleById("movie-123");
     expect(result!.imdb_score).toBe(8.0);
     expect(result!.tmdb_score).toBe(7.5);
   });
 
-  it("replaces offers on re-upsert", () => {
-    upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8 })] })]);
-    upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 337, providerName: "Disney" })] })]);
+  it("replaces offers on re-upsert", async () => {
+    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8 })] })]);
+    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 337, providerName: "Disney" })] })]);
 
-    const offers = getOffersForTitle("movie-123");
+    const offers = await getOffersForTitle("movie-123");
     expect(offers).toHaveLength(1);
     expect(offers[0].provider_id).toBe(337);
   });
@@ -164,45 +164,45 @@ describe("upsertTitles", () => {
 // ─── Title Queries ──────────────────────────────────────────────────────────
 
 describe("getTitleById", () => {
-  it("returns null for non-existent title", () => {
-    expect(getTitleById("nonexistent")).toBeNull();
+  it("returns null for non-existent title", async () => {
+    expect(await getTitleById("nonexistent")).toBeNull();
   });
 
-  it("returns title with parsed genres", () => {
-    upsertTitles([makeParsedTitle({ genres: ["Action", "Comedy"] })]);
-    const result = getTitleById("movie-123");
+  it("returns title with parsed genres", async () => {
+    await upsertTitles([makeParsedTitle({ genres: ["Action", "Comedy"] })]);
+    const result = await getTitleById("movie-123");
     expect(result!.genres).toEqual(["Action", "Comedy"]);
   });
 
-  it("returns is_tracked=false without user", () => {
-    upsertTitles([makeParsedTitle()]);
-    const result = getTitleById("movie-123");
+  it("returns is_tracked=false without user", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const result = await getTitleById("movie-123");
     expect(result!.is_tracked).toBe(false);
   });
 
-  it("returns is_tracked=true when user has tracked", () => {
-    upsertTitles([makeParsedTitle()]);
-    const userId = createUser("testuser", "hash");
-    trackTitle("movie-123", userId);
+  it("returns is_tracked=true when user has tracked", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const userId = await createUser("testuser", "hash");
+    await trackTitle("movie-123", userId);
 
-    const result = getTitleById("movie-123", userId);
+    const result = await getTitleById("movie-123", userId);
     expect(result!.is_tracked).toBe(true);
   });
 });
 
 describe("getRecentTitles", () => {
-  it("returns titles sorted by release date desc", () => {
-    upsertTitles([
+  it("returns titles sorted by release date desc", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", title: "Old", releaseDate: "2020-01-01", releaseYear: 2020 }),
       makeParsedTitle({ id: "movie-2", title: "New", releaseDate: "2025-01-01", releaseYear: 2025 }),
     ]);
-    const results = getRecentTitles({ daysBack: 0 });
+    const results = await getRecentTitles({ daysBack: 0 });
     expect(results).toHaveLength(2);
     expect(results[0].title).toBe("New");
   });
 
-  it("includes offers via batch fetch", () => {
-    upsertTitles([
+  it("includes offers via batch fetch", async () => {
+    await upsertTitles([
       makeParsedTitle({
         id: "movie-1",
         releaseDate: "2025-01-01",
@@ -215,7 +215,7 @@ describe("getRecentTitles", () => {
         offers: [],
       }),
     ]);
-    const results = getRecentTitles({ daysBack: 0 });
+    const results = await getRecentTitles({ daysBack: 0 });
     expect(results).toHaveLength(2);
     const withOffers = results.find((r) => r.id === "movie-1")!;
     const withoutOffers = results.find((r) => r.id === "movie-2")!;
@@ -224,191 +224,191 @@ describe("getRecentTitles", () => {
     expect(withoutOffers.offers).toEqual([]);
   });
 
-  it("filters by objectType", () => {
-    upsertTitles([
+  it("filters by objectType", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: "2025-01-01" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, objectTypes: ["SHOW"] });
+    const results = await getRecentTitles({ daysBack: 0, objectTypes: ["SHOW"] });
     expect(results).toHaveLength(1);
     expect(results[0].object_type).toBe("SHOW");
   });
 
-  it("respects limit and offset", () => {
-    upsertTitles([
+  it("respects limit and offset", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Movie 2", releaseDate: "2025-01-02" }),
       makeParsedTitle({ id: "movie-3", title: "Movie 3", releaseDate: "2025-01-03" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, limit: 1, offset: 1 });
+    const results = await getRecentTitles({ daysBack: 0, limit: 1, offset: 1 });
     expect(results).toHaveLength(1);
     expect(results[0].id).toBe("movie-2");
   });
 
-  it("filters by genre", () => {
-    upsertTitles([
+  it("filters by genre", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", genres: ["Action", "Drama"], releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: "2025-01-02" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, genres: ["Comedy"] });
+    const results = await getRecentTitles({ daysBack: 0, genres: ["Comedy"] });
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Comedy Film");
   });
 
-  it("filters by language", () => {
-    upsertTitles([
+  it("filters by language", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: "2025-01-02" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, languages: ["ja"] });
+    const results = await getRecentTitles({ daysBack: 0, languages: ["ja"] });
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Japanese Movie");
   });
 
-  it("combines genre and language filters", () => {
-    upsertTitles([
+  it("combines genre and language filters", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", genres: ["Action"], originalLanguage: "en", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Korean Action", genres: ["Action"], originalLanguage: "ko", releaseDate: "2025-01-02" }),
       makeParsedTitle({ id: "movie-3", title: "Korean Drama", genres: ["Drama"], originalLanguage: "ko", releaseDate: "2025-01-03" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, genres: ["Action"], languages: ["ko"] });
+    const results = await getRecentTitles({ daysBack: 0, genres: ["Action"], languages: ["ko"] });
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Korean Action");
   });
 
-  it("excludes tracked titles when excludeTracked is true", () => {
-    upsertTitles([
+  it("excludes tracked titles when excludeTracked is true", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", title: "Tracked Movie", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Untracked Movie", releaseDate: "2025-01-02" }),
     ]);
-    const userId = createUser("testuser", "hash");
-    trackTitle("movie-1", userId);
+    const userId = await createUser("testuser", "hash");
+    await trackTitle("movie-1", userId);
 
-    const results = getRecentTitles({ daysBack: 0, excludeTracked: true }, userId);
+    const results = await getRecentTitles({ daysBack: 0, excludeTracked: true }, userId);
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Untracked Movie");
   });
 
-  it("includes tracked titles when excludeTracked is false", () => {
-    upsertTitles([
+  it("includes tracked titles when excludeTracked is false", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", title: "Tracked Movie", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Untracked Movie", releaseDate: "2025-01-02" }),
     ]);
-    const userId = createUser("testuser", "hash");
-    trackTitle("movie-1", userId);
+    const userId = await createUser("testuser", "hash");
+    await trackTitle("movie-1", userId);
 
-    const results = getRecentTitles({ daysBack: 0, excludeTracked: false }, userId);
+    const results = await getRecentTitles({ daysBack: 0, excludeTracked: false }, userId);
     expect(results).toHaveLength(2);
   });
 
-  it("ignores excludeTracked when no userId is provided", () => {
-    upsertTitles([
+  it("ignores excludeTracked when no userId is provided", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" }),
       makeParsedTitle({ id: "movie-2", title: "Movie 2", releaseDate: "2025-01-02" }),
     ]);
-    const results = getRecentTitles({ daysBack: 0, excludeTracked: true });
+    const results = await getRecentTitles({ daysBack: 0, excludeTracked: true });
     expect(results).toHaveLength(2);
   });
 });
 
 describe("getGenres", () => {
-  it("returns distinct genres sorted alphabetically", () => {
-    upsertTitles([
+  it("returns distinct genres sorted alphabetically", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", genres: ["Drama", "Action"] }),
       makeParsedTitle({ id: "movie-2", genres: ["Comedy", "Action"] }),
     ]);
-    const genres = getGenres();
+    const genres = await getGenres();
     expect(genres).toEqual(["Action", "Comedy", "Drama"]);
   });
 
-  it("returns empty array when no titles exist", () => {
-    expect(getGenres()).toEqual([]);
+  it("returns empty array when no titles exist", async () => {
+    expect(await getGenres()).toEqual([]);
   });
 });
 
 describe("getLanguages", () => {
-  it("returns distinct languages sorted", () => {
-    upsertTitles([
+  it("returns distinct languages sorted", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", originalLanguage: "ja" }),
       makeParsedTitle({ id: "movie-2", originalLanguage: "en" }),
       makeParsedTitle({ id: "movie-3", originalLanguage: "en" }),
     ]);
-    const languages = getLanguages();
+    const languages = await getLanguages();
     expect(languages).toEqual(["en", "ja"]);
   });
 
-  it("excludes null languages", () => {
-    upsertTitles([
+  it("excludes null languages", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", originalLanguage: null }),
       makeParsedTitle({ id: "movie-2", originalLanguage: "en" }),
     ]);
-    const languages = getLanguages();
+    const languages = await getLanguages();
     expect(languages).toEqual(["en"]);
   });
 });
 
 describe("searchLocalTitles", () => {
-  it("finds titles by partial name match", () => {
-    upsertTitles([
+  it("finds titles by partial name match", async () => {
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", title: "The Dark Knight" }),
       makeParsedTitle({ id: "movie-2", title: "Batman Begins" }),
     ]);
-    const results = searchLocalTitles("Dark");
+    const results = await searchLocalTitles("Dark");
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("The Dark Knight");
   });
 
-  it("returns empty for no matches", () => {
-    upsertTitles([makeParsedTitle()]);
-    expect(searchLocalTitles("NonExistent")).toHaveLength(0);
+  it("returns empty for no matches", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    expect(await searchLocalTitles("NonExistent")).toHaveLength(0);
   });
 });
 
 // ─── Tracking ───────────────────────────────────────────────────────────────
 
 describe("tracking", () => {
-  it("tracks and untracks a title", () => {
-    upsertTitles([makeParsedTitle()]);
-    const userId = createUser("testuser", "hash");
+  it("tracks and untracks a title", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const userId = await createUser("testuser", "hash");
 
-    trackTitle("movie-123", userId);
-    let tracked = getTrackedTitles(userId);
+    await trackTitle("movie-123", userId);
+    let tracked = await getTrackedTitles(userId);
     expect(tracked).toHaveLength(1);
     expect(tracked[0].is_tracked).toBe(true);
 
-    untrackTitle("movie-123", userId);
-    tracked = getTrackedTitles(userId);
+    await untrackTitle("movie-123", userId);
+    tracked = await getTrackedTitles(userId);
     expect(tracked).toHaveLength(0);
   });
 
-  it("tracking is idempotent", () => {
-    upsertTitles([makeParsedTitle()]);
-    const userId = createUser("testuser", "hash");
+  it("tracking is idempotent", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const userId = await createUser("testuser", "hash");
 
-    trackTitle("movie-123", userId);
-    trackTitle("movie-123", userId);
-    expect(getTrackedTitles(userId)).toHaveLength(1);
+    await trackTitle("movie-123", userId);
+    await trackTitle("movie-123", userId);
+    expect(await getTrackedTitles(userId)).toHaveLength(1);
   });
 
-  it("updates notes on re-track", () => {
-    upsertTitles([makeParsedTitle()]);
-    const userId = createUser("testuser", "hash");
+  it("updates notes on re-track", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const userId = await createUser("testuser", "hash");
 
-    trackTitle("movie-123", userId, "first note");
-    trackTitle("movie-123", userId, "updated note");
+    await trackTitle("movie-123", userId, "first note");
+    await trackTitle("movie-123", userId, "updated note");
 
-    const tracked = getTrackedTitles(userId);
+    const tracked = await getTrackedTitles(userId);
     expect(tracked[0].notes).toBe("updated note");
   });
 
-  it("getTrackedTitleIds returns set of tracked title IDs", () => {
-    upsertTitles([makeParsedTitle({ id: "movie-1" }), makeParsedTitle({ id: "movie-2" })]);
-    const userId = createUser("testuser", "hash");
+  it("getTrackedTitleIds returns set of tracked title IDs", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1" }), makeParsedTitle({ id: "movie-2" })]);
+    const userId = await createUser("testuser", "hash");
 
-    trackTitle("movie-1", userId);
-    trackTitle("movie-2", userId);
+    await trackTitle("movie-1", userId);
+    await trackTitle("movie-2", userId);
 
-    const ids = getTrackedTitleIds(userId);
+    const ids = await getTrackedTitleIds(userId);
     expect(ids).toBeInstanceOf(Set);
     expect(ids.size).toBe(2);
     expect(ids.has("movie-1")).toBe(true);
@@ -416,9 +416,9 @@ describe("tracking", () => {
     expect(ids.has("movie-999")).toBe(false);
   });
 
-  it("getTrackedTitleIds returns empty set for user with no tracked titles", () => {
-    const userId = createUser("testuser", "hash");
-    const ids = getTrackedTitleIds(userId);
+  it("getTrackedTitleIds returns empty set for user with no tracked titles", async () => {
+    const userId = await createUser("testuser", "hash");
+    const ids = await getTrackedTitleIds(userId);
     expect(ids.size).toBe(0);
   });
 });
@@ -426,9 +426,9 @@ describe("tracking", () => {
 // ─── Users ──────────────────────────────────────────────────────────────────
 
 describe("users", () => {
-  it("creates and retrieves a user by username", () => {
-    const userId = createUser("alice", "hash123", "Alice");
-    const user = getUserByUsername("alice");
+  it("creates and retrieves a user by username", async () => {
+    const userId = await createUser("alice", "hash123", "Alice");
+    const user = await getUserByUsername("alice");
 
     expect(user).not.toBeNull();
     expect(user!.id).toBe(userId);
@@ -437,50 +437,50 @@ describe("users", () => {
     expect(user!.is_admin).toBe(0);
   });
 
-  it("retrieves user by ID", () => {
-    const userId = createUser("bob", "hash");
-    const user = getUserById(userId);
+  it("retrieves user by ID", async () => {
+    const userId = await createUser("bob", "hash");
+    const user = await getUserById(userId);
     expect(user).not.toBeNull();
     expect(user!.username).toBe("bob");
   });
 
-  it("returns null for non-existent user", () => {
-    expect(getUserByUsername("nonexistent")).toBeNull();
-    expect(getUserById("nonexistent")).toBeNull();
+  it("returns null for non-existent user", async () => {
+    expect(await getUserByUsername("nonexistent")).toBeNull();
+    expect(await getUserById("nonexistent")).toBeNull();
   });
 
-  it("creates admin user", () => {
-    createUser("admin", "hash", undefined, "local", undefined, true);
-    const user = getUserByUsername("admin");
+  it("creates admin user", async () => {
+    await createUser("admin", "hash", undefined, "local", undefined, true);
+    const user = await getUserByUsername("admin");
     expect(user!.is_admin).toBe(1);
   });
 
-  it("counts users", () => {
-    expect(getUserCount()).toBe(0);
-    createUser("user1", "hash");
-    createUser("user2", "hash");
-    expect(getUserCount()).toBe(2);
+  it("counts users", async () => {
+    expect(await getUserCount()).toBe(0);
+    await createUser("user1", "hash");
+    await createUser("user2", "hash");
+    expect(await getUserCount()).toBe(2);
   });
 
-  it("updates password", () => {
-    const userId = createUser("user", "oldhash");
-    updateUserPassword(userId, "newhash");
-    const user = getUserById(userId);
+  it("updates password", async () => {
+    const userId = await createUser("user", "oldhash");
+    await updateUserPassword(userId, "newhash");
+    const user = await getUserById(userId);
     expect(user!.password_hash).toBe("newhash");
   });
 
-  it("updates admin status", () => {
-    const userId = createUser("user", "hash");
-    updateUserAdmin(userId, true);
-    expect(getUserById(userId)!.is_admin).toBe(1);
+  it("updates admin status", async () => {
+    const userId = await createUser("user", "hash");
+    await updateUserAdmin(userId, true);
+    expect((await getUserById(userId))!.is_admin).toBe(1);
 
-    updateUserAdmin(userId, false);
-    expect(getUserById(userId)!.is_admin).toBe(0);
+    await updateUserAdmin(userId, false);
+    expect((await getUserById(userId))!.is_admin).toBe(0);
   });
 
-  it("finds user by provider subject", () => {
-    createUser("oidcuser", null, "OIDC User", "oidc", "subject-123");
-    const user = getUserByProviderSubject("oidc", "subject-123");
+  it("finds user by provider subject", async () => {
+    await createUser("oidcuser", null, "OIDC User", "oidc", "subject-123");
+    const user = await getUserByProviderSubject("oidc", "subject-123");
     expect(user).not.toBeNull();
     expect(user!.username).toBe("oidcuser");
   });
@@ -489,32 +489,32 @@ describe("users", () => {
 // ─── Sessions ───────────────────────────────────────────────────────────────
 
 describe("sessions", () => {
-  it("creates session and retrieves user", () => {
-    const userId = createUser("sessionuser", "hash", "Session User");
-    const token = createSession(userId);
+  it("creates session and retrieves user", async () => {
+    const userId = await createUser("sessionuser", "hash", "Session User");
+    const token = await createSession(userId);
 
-    const session = getSessionWithUser(token);
+    const session = await getSessionWithUser(token);
     expect(session).not.toBeNull();
     expect(session!.id).toBe(userId);
     expect(session!.username).toBe("sessionuser");
   });
 
-  it("returns null for invalid token", () => {
-    expect(getSessionWithUser("invalid-token")).toBeNull();
+  it("returns null for invalid token", async () => {
+    expect(await getSessionWithUser("invalid-token")).toBeNull();
   });
 
-  it("deletes session", () => {
-    const userId = createUser("user", "hash");
-    const token = createSession(userId);
+  it("deletes session", async () => {
+    const userId = await createUser("user", "hash");
+    const token = await createSession(userId);
 
-    deleteSession(token);
-    expect(getSessionWithUser(token)).toBeNull();
+    await deleteSession(token);
+    expect(await getSessionWithUser(token)).toBeNull();
   });
 
-  it("returns is_admin as boolean", () => {
-    const userId = createUser("admin", "hash", undefined, "local", undefined, true);
-    const token = createSession(userId);
-    const session = getSessionWithUser(token);
+  it("returns is_admin as boolean", async () => {
+    const userId = await createUser("admin", "hash", undefined, "local", undefined, true);
+    const token = await createSession(userId);
+    const session = await getSessionWithUser(token);
     expect(session!.is_admin).toBe(true);
   });
 });
@@ -522,25 +522,25 @@ describe("sessions", () => {
 // ─── Settings ───────────────────────────────────────────────────────────────
 
 describe("settings", () => {
-  it("get/set/delete settings", () => {
-    expect(getSetting("key1")).toBeNull();
+  it("get/set/delete settings", async () => {
+    expect(await getSetting("key1")).toBeNull();
 
-    setSetting("key1", "value1");
-    expect(getSetting("key1")).toBe("value1");
+    await setSetting("key1", "value1");
+    expect(await getSetting("key1")).toBe("value1");
 
-    setSetting("key1", "updated");
-    expect(getSetting("key1")).toBe("updated");
+    await setSetting("key1", "updated");
+    expect(await getSetting("key1")).toBe("updated");
 
-    deleteSetting("key1");
-    expect(getSetting("key1")).toBeNull();
+    await deleteSetting("key1");
+    expect(await getSetting("key1")).toBeNull();
   });
 
-  it("gets settings by prefix", () => {
-    setSetting("oidc_issuer", "https://auth.example.com");
-    setSetting("oidc_client_id", "my-client");
-    setSetting("other_key", "other");
+  it("gets settings by prefix", async () => {
+    await setSetting("oidc_issuer", "https://auth.example.com");
+    await setSetting("oidc_client_id", "my-client");
+    await setSetting("other_key", "other");
 
-    const result = getSettingsByPrefix("oidc_");
+    const result = await getSettingsByPrefix("oidc_");
     expect(Object.keys(result)).toHaveLength(2);
     expect(result["oidc_issuer"]).toBe("https://auth.example.com");
     expect(result["oidc_client_id"]).toBe("my-client");
@@ -550,7 +550,7 @@ describe("settings", () => {
 // ─── OIDC Config ────────────────────────────────────────────────────────────
 
 describe("OIDC config", () => {
-  it("returns empty config when nothing set", () => {
+  it("returns empty config when nothing set", async () => {
     const savedConfig = { ...CONFIG };
     CONFIG.OIDC_ISSUER_URL = "";
     CONFIG.OIDC_CLIENT_ID = "";
@@ -559,41 +559,41 @@ describe("OIDC config", () => {
     CONFIG.OIDC_ADMIN_CLAIM = "";
     CONFIG.OIDC_ADMIN_VALUE = "";
 
-    const config = getOidcConfig();
+    const config = await getOidcConfig();
     expect(config.issuerUrl).toBe("");
-    expect(isOidcConfigured()).toBe(false);
+    expect(await isOidcConfigured()).toBe(false);
 
     Object.assign(CONFIG, savedConfig);
   });
 
-  it("prefers env vars over DB settings", () => {
+  it("prefers env vars over DB settings", async () => {
     const savedConfig = { ...CONFIG };
     CONFIG.OIDC_ISSUER_URL = "https://env.example.com";
     CONFIG.OIDC_CLIENT_ID = "env-client";
     CONFIG.OIDC_CLIENT_SECRET = "env-secret";
 
-    setSetting("oidc_issuer_url", "https://db.example.com");
+    await setSetting("oidc_issuer_url", "https://db.example.com");
 
-    const config = getOidcConfig();
+    const config = await getOidcConfig();
     expect(config.issuerUrl).toBe("https://env.example.com");
-    expect(isOidcConfigured()).toBe(true);
+    expect(await isOidcConfigured()).toBe(true);
 
     Object.assign(CONFIG, savedConfig);
   });
 
-  it("falls back to DB settings", () => {
+  it("falls back to DB settings", async () => {
     const savedConfig = { ...CONFIG };
     CONFIG.OIDC_ISSUER_URL = "";
     CONFIG.OIDC_CLIENT_ID = "";
     CONFIG.OIDC_CLIENT_SECRET = "";
 
-    setSetting("oidc_issuer_url", "https://db.example.com");
-    setSetting("oidc_client_id", "db-client");
-    setSetting("oidc_client_secret", "db-secret");
+    await setSetting("oidc_issuer_url", "https://db.example.com");
+    await setSetting("oidc_client_id", "db-client");
+    await setSetting("oidc_client_secret", "db-secret");
 
-    const config = getOidcConfig();
+    const config = await getOidcConfig();
     expect(config.issuerUrl).toBe("https://db.example.com");
-    expect(isOidcConfigured()).toBe(true);
+    expect(await isOidcConfigured()).toBe(true);
 
     Object.assign(CONFIG, savedConfig);
   });
@@ -602,30 +602,30 @@ describe("OIDC config", () => {
 // ─── Episodes ───────────────────────────────────────────────────────────────
 
 describe("episodes", () => {
-  it("upserts and deletes episodes", () => {
-    upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
+  it("upserts and deletes episodes", async () => {
+    await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
 
-    const count = upsertEpisodes([
+    const count = await upsertEpisodes([
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: "2024-01-01", still_path: null },
       { title_id: "tv-1", season_number: 1, episode_number: 2, name: "Episode 2", overview: null, air_date: "2024-01-08", still_path: null },
     ]);
     expect(count).toBe(2);
 
-    deleteEpisodesForTitle("tv-1");
+    await deleteEpisodesForTitle("tv-1");
     // After delete, no episodes should exist — verify via upsert working again without conflicts
-    const count2 = upsertEpisodes([
+    const count2 = await upsertEpisodes([
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "New Pilot", overview: null, air_date: "2024-01-01", still_path: null },
     ]);
     expect(count2).toBe(1);
   });
 
-  it("upserts episodes on conflict", () => {
-    upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
+  it("upserts episodes on conflict", async () => {
+    await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
 
-    upsertEpisodes([
+    await upsertEpisodes([
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Original", overview: null, air_date: "2024-01-01", still_path: null },
     ]);
-    upsertEpisodes([
+    await upsertEpisodes([
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Updated", overview: null, air_date: "2024-01-01", still_path: null },
     ]);
 
@@ -645,33 +645,33 @@ describe("episodes", () => {
 // ─── Watched Episodes ───────────────────────────────────────────────────────
 
 describe("watched episodes", () => {
-  it("watches and unwatches an episode", () => {
-    upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
-    upsertEpisodes([
+  it("watches and unwatches an episode", async () => {
+    await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: "2024-01-01", still_path: null },
     ]);
-    const userId = createUser("user", "hash");
+    const userId = await createUser("user", "hash");
 
     // Watch is idempotent
-    watchEpisode(1, userId);
-    watchEpisode(1, userId);
+    await watchEpisode(1, userId);
+    await watchEpisode(1, userId);
 
     // Unwatch
-    unwatchEpisode(1, userId);
+    await unwatchEpisode(1, userId);
     // Should not throw
-    unwatchEpisode(1, userId);
+    await unwatchEpisode(1, userId);
   });
 
-  it("bulk watch and unwatch", () => {
-    upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
-    upsertEpisodes([
+  it("bulk watch and unwatch", async () => {
+    await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
       { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: "2024-01-01", still_path: null },
       { title_id: "tv-1", season_number: 1, episode_number: 2, name: "Ep2", overview: null, air_date: "2024-01-08", still_path: null },
     ]);
-    const userId = createUser("user", "hash");
+    const userId = await createUser("user", "hash");
 
-    watchEpisodesBulk([1, 2], userId);
-    unwatchEpisodesBulk([1, 2], userId);
+    await watchEpisodesBulk([1, 2], userId);
+    await unwatchEpisodesBulk([1, 2], userId);
     // Should not throw
   });
 });
@@ -679,8 +679,8 @@ describe("watched episodes", () => {
 // ─── Providers ──────────────────────────────────────────────────────────────
 
 describe("getProviders", () => {
-  it("returns providers sorted by name", () => {
-    upsertTitles([
+  it("returns providers sorted by name", async () => {
+    await upsertTitles([
       makeParsedTitle({
         offers: [
           makeParsedOffer({ providerId: 337, providerName: "Disney Plus" }),
@@ -688,7 +688,7 @@ describe("getProviders", () => {
         ],
       }),
     ]);
-    const providers = getProviders();
+    const providers = await getProviders();
     expect(providers).toHaveLength(2);
     expect(providers[0].name).toBe("Disney Plus");
     expect(providers[1].name).toBe("Netflix");
@@ -698,8 +698,8 @@ describe("getProviders", () => {
 // ─── Notifier JSON.parse error handling ─────────────────────────────────────
 
 describe("notifier config parsing", () => {
-  function createTestUser() {
-    return createUser("testuser", "hash123");
+  async function createTestUser() {
+    return await createUser("testuser", "hash123");
   }
 
   function corruptNotifierConfig(notifierId: string) {
@@ -707,44 +707,44 @@ describe("notifier config parsing", () => {
     raw.prepare("UPDATE notifiers SET config = '{invalid json' WHERE id = ?").run(notifierId);
   }
 
-  it("getNotifiersByUser returns empty config for corrupted JSON", () => {
-    const userId = createTestUser();
-    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+  it("getNotifiersByUser returns empty config for corrupted JSON", async () => {
+    const userId = await createTestUser();
+    const id = await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
     corruptNotifierConfig(id);
 
-    const notifiers = getNotifiersByUser(userId);
+    const notifiers = await getNotifiersByUser(userId);
     expect(notifiers).toHaveLength(1);
     expect(notifiers[0].config).toEqual({});
   });
 
-  it("getNotifierById returns empty config for corrupted JSON", () => {
-    const userId = createTestUser();
-    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+  it("getNotifierById returns empty config for corrupted JSON", async () => {
+    const userId = await createTestUser();
+    const id = await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
     corruptNotifierConfig(id);
 
-    const notifier = getNotifierById(id, userId);
+    const notifier = await getNotifierById(id, userId);
     expect(notifier).not.toBeNull();
     expect(notifier!.config).toEqual({});
   });
 
-  it("getDueNotifiers returns empty config for corrupted JSON", () => {
-    const userId = createTestUser();
-    const id = createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+  it("getDueNotifiers returns empty config for corrupted JSON", async () => {
+    const userId = await createTestUser();
+    const id = await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
     corruptNotifierConfig(id);
 
     const timesByTimezone = new Map([
       ["UTC", { time: "09:00", date: "2026-03-15" }],
     ]);
-    const due = getDueNotifiers(timesByTimezone);
+    const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(1);
     expect(due[0].config).toEqual({});
   });
 
-  it("getNotifiersByUser parses valid config correctly", () => {
-    const userId = createTestUser();
-    createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+  it("getNotifiersByUser parses valid config correctly", async () => {
+    const userId = await createTestUser();
+    await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
 
-    const notifiers = getNotifiersByUser(userId);
+    const notifiers = await getNotifiersByUser(userId);
     expect(notifiers).toHaveLength(1);
     expect(notifiers[0].config).toEqual({ url: "http://example.com" });
   });

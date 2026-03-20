@@ -19,8 +19,8 @@ beforeEach(async () => {
     spyOn(resolver, "resolveImdbUrl").mockResolvedValue(makeParsedTitle()),
   ];
 
-  const userId = createUser("testuser", "hash");
-  const token = createSession(userId);
+  const userId = await createUser("testuser", "hash");
+  const token = await createSession(userId);
   userCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
 
   const imdbApp = (await import("./imdb")).default;

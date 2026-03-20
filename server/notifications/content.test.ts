@@ -11,9 +11,9 @@ import { buildNotificationContent } from "./content";
 
 let userId: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
-  userId = createUser("testuser", "hash");
+  userId = await createUser("testuser", "hash");
 });
 
 afterAll(() => {
@@ -21,11 +21,11 @@ afterAll(() => {
 });
 
 describe("buildNotificationContent", () => {
-  it("returns episodes airing today for tracked shows", () => {
+  it("returns episodes airing today for tracked shows", async () => {
     const today = "2026-03-12";
 
     // Create a show and track it
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({
         id: "show-1",
         objectType: "SHOW",
@@ -33,10 +33,10 @@ describe("buildNotificationContent", () => {
         releaseDate: "2026-01-01",
       }),
     ]);
-    trackTitle("show-1", userId);
+    await trackTitle("show-1", userId);
 
     // Add episode airing today
-    upsertEpisodes([
+    await upsertEpisodes([
       {
         title_id: "show-1",
         season_number: 1,
@@ -48,7 +48,7 @@ describe("buildNotificationContent", () => {
       },
     ]);
 
-    const content = buildNotificationContent(userId, today);
+    const content = await buildNotificationContent(userId, today);
 
     expect(content.episodes).toHaveLength(1);
     expect(content.episodes[0].showTitle).toBe("Test Show");
@@ -58,10 +58,10 @@ describe("buildNotificationContent", () => {
     expect(content.date).toBe(today);
   });
 
-  it("returns tracked movies releasing today", () => {
+  it("returns tracked movies releasing today", async () => {
     const today = "2026-03-12";
 
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({
         id: "movie-1",
         objectType: "MOVIE",
@@ -70,26 +70,26 @@ describe("buildNotificationContent", () => {
         releaseYear: 2026,
       }),
     ]);
-    trackTitle("movie-1", userId);
+    await trackTitle("movie-1", userId);
 
-    const content = buildNotificationContent(userId, today);
+    const content = await buildNotificationContent(userId, today);
 
     expect(content.movies).toHaveLength(1);
     expect(content.movies[0].title).toBe("New Movie");
     expect(content.movies[0].releaseYear).toBe(2026);
   });
 
-  it("returns empty content when nothing is releasing", () => {
-    const content = buildNotificationContent(userId, "2026-03-12");
+  it("returns empty content when nothing is releasing", async () => {
+    const content = await buildNotificationContent(userId, "2026-03-12");
 
     expect(content.episodes).toHaveLength(0);
     expect(content.movies).toHaveLength(0);
   });
 
-  it("does not include untracked titles", () => {
+  it("does not include untracked titles", async () => {
     const today = "2026-03-12";
 
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({
         id: "movie-2",
         objectType: "MOVIE",
@@ -99,15 +99,15 @@ describe("buildNotificationContent", () => {
     ]);
     // Intentionally NOT tracking
 
-    const content = buildNotificationContent(userId, today);
+    const content = await buildNotificationContent(userId, today);
     expect(content.movies).toHaveLength(0);
   });
 
-  it("scopes content to the requesting user", () => {
+  it("scopes content to the requesting user", async () => {
     const today = "2026-03-12";
-    const otherUserId = createUser("other", "hash");
+    const otherUserId = await createUser("other", "hash");
 
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({
         id: "movie-3",
         objectType: "MOVIE",
@@ -115,12 +115,12 @@ describe("buildNotificationContent", () => {
         releaseDate: today,
       }),
     ]);
-    trackTitle("movie-3", otherUserId);
+    await trackTitle("movie-3", otherUserId);
 
-    const content = buildNotificationContent(userId, today);
+    const content = await buildNotificationContent(userId, today);
     expect(content.movies).toHaveLength(0);
 
-    const otherContent = buildNotificationContent(otherUserId, today);
+    const otherContent = await buildNotificationContent(otherUserId, today);
     expect(otherContent.movies).toHaveLength(1);
   });
 });

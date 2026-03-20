@@ -15,11 +15,11 @@ let userToken: string;
 let userId: string;
 let spies: ReturnType<typeof spyOn>[] = [];
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
 
-  userId = createUser("testuser", "hash");
-  userToken = createSession(userId);
+  userId = await createUser("testuser", "hash");
+  userToken = await createSession(userId);
 
   app = new Hono<AppEnv>();
   app.use("/notifiers/*", requireAuth);
@@ -304,8 +304,8 @@ describe("ownership enforcement", () => {
     const { notifier } = await createRes.json();
 
     // Create user 2
-    const user2Id = createUser("other", "hash");
-    const user2Token = createSession(user2Id);
+    const user2Id = await createUser("other", "hash");
+    const user2Token = await createSession(user2Id);
     const user2Headers = {
       Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${user2Token}`,
     };

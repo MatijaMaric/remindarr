@@ -1,11 +1,11 @@
 import { eq, and, sql, gte, lt, asc } from "drizzle-orm";
-import { getDb, getRawDb } from "../schema";
+import { getDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles } from "./offers";
 import type { MonthFilters } from "./titles";
 
-export function upsertEpisodes(
+export async function upsertEpisodes(
   episodeList: {
     title_id: string;
     season_number: number;
@@ -16,43 +16,40 @@ export function upsertEpisodes(
     still_path: string | null;
   }[]
 ) {
-  return traceDbQuery("upsertEpisodes", () => {
+  return traceDbQuery("upsertEpisodes", async () => {
     const db = getDb();
-    const raw = getRawDb();
 
-    raw.transaction(() => {
-      for (const ep of episodeList) {
-        db.insert(episodes)
-          .values({
-            titleId: ep.title_id,
-            seasonNumber: ep.season_number,
-            episodeNumber: ep.episode_number,
-            name: ep.name,
-            overview: ep.overview,
-            airDate: ep.air_date,
-            stillPath: ep.still_path,
+    for (const ep of episodeList) {
+      await db.insert(episodes)
+        .values({
+          titleId: ep.title_id,
+          seasonNumber: ep.season_number,
+          episodeNumber: ep.episode_number,
+          name: ep.name,
+          overview: ep.overview,
+          airDate: ep.air_date,
+          stillPath: ep.still_path,
+          updatedAt: sql`datetime('now')`,
+        })
+        .onConflictDoUpdate({
+          target: [episodes.titleId, episodes.seasonNumber, episodes.episodeNumber],
+          set: {
+            name: sql`excluded.name`,
+            overview: sql`excluded.overview`,
+            airDate: sql`excluded.air_date`,
+            stillPath: sql`excluded.still_path`,
             updatedAt: sql`datetime('now')`,
-          })
-          .onConflictDoUpdate({
-            target: [episodes.titleId, episodes.seasonNumber, episodes.episodeNumber],
-            set: {
-              name: sql`excluded.name`,
-              overview: sql`excluded.overview`,
-              airDate: sql`excluded.air_date`,
-              stillPath: sql`excluded.still_path`,
-              updatedAt: sql`datetime('now')`,
-            },
-          })
-          .run();
-      }
-    })();
+          },
+        })
+        .run();
+    }
 
     return episodeList.length;
   });
 }
 
-export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
-  return traceDbQuery("getEpisodesByMonth", () => {
+export async function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
+  return traceDbQuery("getEpisodesByMonth", async () => {
     const db = getDb();
     const { month, objectType } = filters;
 
@@ -66,7 +63,7 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
     if (objectType === "MOVIE") return [];
     if (!userId) return [];
 
-    const rows = db
+    const rows = await db
       .select({
         id: episodes.id,
         title_id: episodes.titleId,
@@ -95,7 +92,7 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
-    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
+    const offersByTitle = await getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
@@ -104,12 +101,12 @@ export function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
   });
 }
 
-export function getEpisodesByDateRange(startDate: string, endDate: string, userId?: string) {
-  return traceDbQuery("getEpisodesByDateRange", () => {
+export async function getEpisodesByDateRange(startDate: string, endDate: string, userId?: string) {
+  return traceDbQuery("getEpisodesByDateRange", async () => {
     const db = getDb();
     if (!userId) return [];
 
-    const rows = db
+    const rows = await db
       .select({
         id: episodes.id,
         title_id: episodes.titleId,
@@ -138,7 +135,7 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
-    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
+    const offersByTitle = await getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
@@ -147,19 +144,19 @@ export function getEpisodesByDateRange(startDate: string, endDate: string, userI
   });
 }
 
-export function deleteEpisodesForTitle(titleId: string) {
-  return traceDbQuery("deleteEpisodesForTitle", () => {
+export async function deleteEpisodesForTitle(titleId: string) {
+  return traceDbQuery("deleteEpisodesForTitle", async () => {
     const db = getDb();
-    db.delete(episodes).where(eq(episodes.titleId, titleId)).run();
+    await db.delete(episodes).where(eq(episodes.titleId, titleId)).run();
   });
 }
 
-export function getUnwatchedEpisodes(userId: string) {
-  return traceDbQuery("getUnwatchedEpisodes", () => {
+export async function getUnwatchedEpisodes(userId: string) {
+  return traceDbQuery("getUnwatchedEpisodes", async () => {
     const db = getDb();
     const today = new Date().toISOString().slice(0, 10);
 
-    const rows = db
+    const rows = await db
       .select({
         id: episodes.id,
         title_id: episodes.titleId,
@@ -192,7 +189,7 @@ export function getUnwatchedEpisodes(userId: string) {
       .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
       .all();
 
-    const offersByTitle = getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
+    const offersByTitle = await getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
     return rows.map((row) => ({
       ...row,
       is_watched: false,
@@ -203,10 +200,10 @@ export function getUnwatchedEpisodes(userId: string) {
 
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
 
-export function getEpisodeAirDate(episodeId: number): string | null {
-  return traceDbQuery("getEpisodeAirDate", () => {
+export async function getEpisodeAirDate(episodeId: number): Promise<string | null> {
+  return traceDbQuery("getEpisodeAirDate", async () => {
     const db = getDb();
-    const row = db
+    const row = await db
       .select({ airDate: episodes.airDate })
       .from(episodes)
       .where(eq(episodes.id, episodeId))
@@ -215,11 +212,11 @@ export function getEpisodeAirDate(episodeId: number): string | null {
   });
 }
 
-export function getReleasedEpisodeIds(episodeIds: number[]): number[] {
-  return traceDbQuery("getReleasedEpisodeIds", () => {
+export async function getReleasedEpisodeIds(episodeIds: number[]): Promise<number[]> {
+  return traceDbQuery("getReleasedEpisodeIds", async () => {
     const today = new Date().toISOString().slice(0, 10);
     const db = getDb();
-    const rows = db
+    const rows = await db
       .select({ id: episodes.id })
       .from(episodes)
       .where(
@@ -234,50 +231,44 @@ export function getReleasedEpisodeIds(episodeIds: number[]): number[] {
   });
 }
 
-export function watchEpisode(episodeId: number, userId: string) {
-  return traceDbQuery("watchEpisode", () => {
+export async function watchEpisode(episodeId: number, userId: string) {
+  return traceDbQuery("watchEpisode", async () => {
     const db = getDb();
-    db.insert(watchedEpisodes)
+    await db.insert(watchedEpisodes)
       .values({ episodeId, userId })
       .onConflictDoNothing()
       .run();
   });
 }
 
-export function unwatchEpisode(episodeId: number, userId: string) {
-  return traceDbQuery("unwatchEpisode", () => {
+export async function unwatchEpisode(episodeId: number, userId: string) {
+  return traceDbQuery("unwatchEpisode", async () => {
     const db = getDb();
-    db.delete(watchedEpisodes)
+    await db.delete(watchedEpisodes)
       .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
       .run();
   });
 }
 
-export function watchEpisodesBulk(episodeIds: number[], userId: string) {
-  return traceDbQuery("watchEpisodesBulk", () => {
-    const raw = getRawDb();
+export async function watchEpisodesBulk(episodeIds: number[], userId: string) {
+  return traceDbQuery("watchEpisodesBulk", async () => {
     const db = getDb();
-    raw.transaction(() => {
-      for (const episodeId of episodeIds) {
-        db.insert(watchedEpisodes)
-          .values({ episodeId, userId })
-          .onConflictDoNothing()
-          .run();
-      }
-    })();
+    for (const episodeId of episodeIds) {
+      await db.insert(watchedEpisodes)
+        .values({ episodeId, userId })
+        .onConflictDoNothing()
+        .run();
+    }
   });
 }
 
-export function unwatchEpisodesBulk(episodeIds: number[], userId: string) {
-  return traceDbQuery("unwatchEpisodesBulk", () => {
-    const raw = getRawDb();
+export async function unwatchEpisodesBulk(episodeIds: number[], userId: string) {
+  return traceDbQuery("unwatchEpisodesBulk", async () => {
     const db = getDb();
-    raw.transaction(() => {
-      for (const episodeId of episodeIds) {
-        db.delete(watchedEpisodes)
-          .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
-          .run();
-      }
-    })();
+    for (const episodeId of episodeIds) {
+      await db.delete(watchedEpisodes)
+        .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+        .run();
+    }
   });
 }

@@ -45,7 +45,7 @@ app.get("/", async (c) => {
     );
 
     const user = c.get("user");
-    const trackedIds = user ? getTrackedTitleIds(user.id) : new Set<string>();
+    const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
     const titlesWithTracked = titles.map((t) => ({
       ...t,
       isTracked: trackedIds.has(t.id),

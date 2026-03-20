@@ -34,9 +34,9 @@ function isValidTimezone(tz: string): boolean {
 }
 
 // GET / — list user's notifiers
-app.get("/", (c) => {
+app.get("/", async (c) => {
   const user = c.get("user")!;
-  const notifiers = getNotifiersByUser(user.id);
+  const notifiers = await getNotifiersByUser(user.id);
   return c.json({ notifiers });
 });
 
@@ -46,9 +46,9 @@ app.get("/providers", (c) => {
 });
 
 // GET /vapid-public-key — VAPID public key for push subscriptions
-app.get("/vapid-public-key", (c) => {
+app.get("/vapid-public-key", async (c) => {
   try {
-    const publicKey = getVapidPublicKey();
+    const publicKey = await getVapidPublicKey();
     return c.json({ publicKey });
   } catch {
     return c.json({ error: "VAPID keys not configured" }, 500);
@@ -91,9 +91,9 @@ app.post("/", async (c) => {
     return c.json({ error: "Invalid timezone" }, 400);
   }
 
-  const id = createNotifier(user.id, provider, name, config, time, tz);
-  refreshNotificationSchedule();
-  const notifier = getNotifierById(id, user.id);
+  const id = await createNotifier(user.id, provider, name, config, time, tz);
+  await refreshNotificationSchedule();
+  const notifier = await getNotifierById(id, user.id);
   return c.json({ notifier }, 201);
 });
 
@@ -103,7 +103,7 @@ app.put("/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const existing = getNotifierById(id, user.id);
+  const existing = await getNotifierById(id, user.id);
   if (!existing) {
     return c.json({ error: "Notifier not found" }, 404);
   }
@@ -127,30 +127,30 @@ app.put("/:id", async (c) => {
     return c.json({ error: "Invalid timezone" }, 400);
   }
 
-  updateNotifier(id, user.id, {
+  await updateNotifier(id, user.id, {
     config: body.config,
     notifyTime: body.notify_time,
     timezone: body.timezone,
     enabled: body.enabled,
   });
-  refreshNotificationSchedule();
+  await refreshNotificationSchedule();
 
-  const notifier = getNotifierById(id, user.id);
+  const notifier = await getNotifierById(id, user.id);
   return c.json({ notifier });
 });
 
 // DELETE /:id — delete notifier
-app.delete("/:id", (c) => {
+app.delete("/:id", async (c) => {
   const user = c.get("user")!;
   const id = c.req.param("id");
 
-  const existing = getNotifierById(id, user.id);
+  const existing = await getNotifierById(id, user.id);
   if (!existing) {
     return c.json({ error: "Notifier not found" }, 404);
   }
 
-  deleteNotifier(id, user.id);
-  refreshNotificationSchedule();
+  await deleteNotifier(id, user.id);
+  await refreshNotificationSchedule();
   return c.json({ ok: true });
 });
 
@@ -159,7 +159,7 @@ app.post("/:id/test", async (c) => {
   const user = c.get("user")!;
   const id = c.req.param("id");
 
-  const notifier = getNotifierById(id, user.id);
+  const notifier = await getNotifierById(id, user.id);
   if (!notifier) {
     return c.json({ error: "Notifier not found" }, 404);
   }
@@ -170,7 +170,7 @@ app.post("/:id/test", async (c) => {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  let content = buildNotificationContent(user.id, today);
+  let content = await buildNotificationContent(user.id, today);
 
   // If nothing is releasing today, send sample content
   if (content.episodes.length === 0 && content.movies.length === 0) {

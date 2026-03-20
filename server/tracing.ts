@@ -1,7 +1,8 @@
 import * as Sentry from "@sentry/bun";
 
 /**
- * Wraps a synchronous DB operation in a Sentry span.
+ * Wraps a DB operation in a Sentry span.
+ * Supports both sync (bun:sqlite) and async (D1) return types.
  */
 export function traceDbQuery<T>(operation: string, fn: () => T): T {
   return Sentry.startSpan(

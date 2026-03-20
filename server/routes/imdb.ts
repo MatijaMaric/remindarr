@@ -24,8 +24,8 @@ app.post("/", async (c) => {
       return c.json({ error: "Title not found" }, 404);
     }
 
-    upsertTitles([title]);
-    trackTitle(title.id, user.id);
+    await upsertTitles([title]);
+    await trackTitle(title.id, user.id);
 
     return c.json({ success: true, title });
   } catch (err: any) {

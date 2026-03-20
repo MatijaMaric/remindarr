@@ -11,11 +11,11 @@ import type { AppEnv } from "../types";
 let app: Hono<AppEnv>;
 let userToken: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
 
-  const userId = createUser("trackuser", "hash");
-  userToken = createSession(userId);
+  const userId = await createUser("trackuser", "hash");
+  userToken = await createSession(userId);
 
   app = new Hono<AppEnv>();
   app.use("/track/*", requireAuth);
@@ -46,7 +46,7 @@ describe("GET /track", () => {
 
 describe("POST /track/:id", () => {
   it("tracks a title", async () => {
-    upsertTitles([makeParsedTitle()]);
+    await upsertTitles([makeParsedTitle()]);
 
     const res = await app.request("/track/movie-123", {
       method: "POST",
@@ -66,7 +66,7 @@ describe("POST /track/:id", () => {
 
 describe("DELETE /track/:id", () => {
   it("untracks a title", async () => {
-    upsertTitles([makeParsedTitle()]);
+    await upsertTitles([makeParsedTitle()]);
 
     // Track first
     await app.request("/track/movie-123", {

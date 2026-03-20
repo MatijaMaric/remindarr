@@ -19,8 +19,8 @@ beforeEach(async () => {
   app.route("/jobs", jobsApp);
 
   const hash = await Bun.password.hash("admin123");
-  const adminId = createUser("admin", hash, "Admin", "local", undefined, true);
-  const token = createSession(adminId);
+  const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
+  const token = await createSession(adminId);
   adminCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
 });
 
@@ -55,8 +55,8 @@ describe("GET /jobs", () => {
 
   it("returns 403 for non-admin user", async () => {
     const hash = await Bun.password.hash("user123");
-    const userId = createUser("regularuser", hash, "User");
-    const token = createSession(userId);
+    const userId = await createUser("regularuser", hash, "User");
+    const token = await createSession(userId);
     const userCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
 
     const res = await app.request("/jobs", {
