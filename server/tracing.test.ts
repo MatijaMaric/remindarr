@@ -1,5 +1,5 @@
 import { describe, it, expect, spyOn, afterEach } from "bun:test";
-import * as Sentry from "@sentry/bun";
+import Sentry from "./sentry";
 import { traceDbQuery, traceHttp } from "./tracing";
 
 describe("traceDbQuery", () => {

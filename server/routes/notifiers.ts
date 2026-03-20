@@ -12,7 +12,7 @@ import { buildNotificationContent } from "../notifications/content";
 import { refreshNotificationSchedule } from "../jobs/schedule";
 import { getVapidPublicKey } from "../notifications/vapid";
 import { SubscriptionExpiredError } from "../notifications/webpush";
-import * as Sentry from "@sentry/bun";
+import Sentry from "../sentry";
 
 const app = new Hono<AppEnv>();
 

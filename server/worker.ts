@@ -73,8 +73,16 @@ interface Env {
   VAPID_SUBJECT?: string;
 }
 
-function createApp() {
+const platform = new CloudflarePlatform();
+
+function createApp(env: Env) {
   const app = new Hono<AppEnv>();
+
+  // Inject platform into context for route handlers
+  app.use("*", async (c, next) => {
+    c.set("platform", platform);
+    await next();
+  });
 
   app.onError((err, c) => {
     if (err instanceof HTTPException) {
@@ -83,6 +91,12 @@ function createApp() {
     logger.error("Unhandled error", { error: err.message });
     return c.json({ error: "Internal server error" }, 500);
   });
+
+  // CORS — restricted to explicit origins via CORS_ORIGIN env var
+  if (env.CORS_ORIGIN) {
+    const origins = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+    app.use("/api/*", cors({ origin: origins, credentials: true }));
+  }
 
   // Request logging
   app.use("/api/*", requestLogger());
@@ -155,69 +169,76 @@ function createApp() {
   return app;
 }
 
-const app = createApp();
+let app: Hono<AppEnv> | null = null;
+let adminChecked = false;
+
+function getApp(env: Env): Hono<AppEnv> {
+  if (!app) {
+    app = createApp(env);
+  }
+  return app;
+}
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
-    const platform = new CloudflarePlatform();
+    ctx.passThroughOnException();
+    try {
+      const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
+      const honoApp = getApp(env);
 
-    return runWithDb(db, async () => {
-      // Inject platform + CORS
-      const originalFetch = app.fetch;
+      return await runWithDb(db, async () => {
+        // Create admin on first request if no users exist
+        if (!adminChecked) {
+          adminChecked = true;
+          const userCount = await getUserCount();
+          if (userCount === 0) {
+            const password = crypto.randomUUID().slice(0, 16);
+            const hash = await platform.hashPassword(password);
+            await createUser("admin", hash, "Admin", "local", undefined, true);
+            logger.info("Admin account created", { username: "admin", password });
+          }
+        }
 
-      // Set up CORS if configured
-      if (env.CORS_ORIGIN) {
-        const origins = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
-        app.use(
-          "/api/*",
-          cors({ origin: origins, credentials: true })
-        );
-      }
-
-      // Create admin on first request if no users exist
-      const userCount = await getUserCount();
-      if (userCount === 0) {
-        const password = crypto.randomUUID().slice(0, 16);
-        const hash = await platform.hashPassword(password);
-        await createUser("admin", hash, "Admin", "local", undefined, true);
-        logger.info("Admin account created", { username: "admin", password });
-      }
-
-      // Use a middleware-like approach to inject platform
-      const url = new URL(request.url);
-      const c = { set: () => {} }; // Hono will handle this via middleware
-
-      return app.fetch(request, { ...env, platform } as any, ctx as any);
-    });
+        return honoApp.fetch(request, env, ctx as any);
+      });
+    } catch (err) {
+      logger.error("Worker fetch error", {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      return new Response("Internal Server Error", { status: 500 });
+    }
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
+    try {
+      const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
 
-    await runWithDb(db, async () => {
-      const cron = event.cron;
-      logger.info("Scheduled event", { cron });
+      await runWithDb(db, async () => {
+        const cron = event.cron;
+        logger.info("Scheduled event", { cron });
 
-      switch (cron) {
-        case "0 3 * * *":
-          // sync-titles
-          logger.info("Running sync-titles cron");
-          break;
-        case "30 3 * * *":
-          // sync-episodes
-          logger.info("Running sync-episodes cron");
-          break;
-        case "*/5 * * * *":
-          // send-notifications
-          logger.info("Running send-notifications cron");
-          break;
-        case "0 0 * * *":
-          // cleanup
-          await deleteExpiredSessions();
-          logger.info("Cleanup complete");
-          break;
-      }
-    });
+        switch (cron) {
+          case "0 3 * * *":
+            logger.info("Running sync-titles cron");
+            break;
+          case "30 3 * * *":
+            logger.info("Running sync-episodes cron");
+            break;
+          case "*/5 * * * *":
+            logger.info("Running send-notifications cron");
+            break;
+          case "0 0 * * *":
+            await deleteExpiredSessions();
+            logger.info("Cleanup complete");
+            break;
+        }
+      });
+    } catch (err) {
+      logger.error("Worker scheduled error", {
+        cron: event.cron,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   },
 };

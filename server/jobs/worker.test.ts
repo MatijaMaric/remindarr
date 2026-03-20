@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
-import * as Sentry from "@sentry/bun";
+import Sentry from "../sentry";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { enqueueJob, registerCron, getCronExpression } from "./queue";
 import { registerHandler, processJobs, stopWorker } from "./worker";
