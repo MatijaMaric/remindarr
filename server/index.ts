@@ -29,7 +29,8 @@ import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { startWorker, stopWorker } from "./jobs/worker";
-import { initJobsSchema } from "./jobs/queue";
+import { initJobsSchema, registerCron } from "./jobs/queue";
+import { setScheduleCallback } from "./jobs/schedule";
 import { BunPlatform } from "./platform/bun";
 
 // Initialize DB on startup
@@ -157,6 +158,7 @@ setInterval(() => {
 
 // Start background job queue
 initJobsSchema();
+setScheduleCallback(registerCron);
 registerSyncJobs();
 await registerNotificationJobs();
 startWorker();

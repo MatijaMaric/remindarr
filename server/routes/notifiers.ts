@@ -9,7 +9,7 @@ import {
 } from "../db/repository";
 import { getProvider, getAvailableProviders } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
-import { refreshNotificationSchedule } from "../jobs/notifications";
+import { refreshNotificationSchedule } from "../jobs/schedule";
 import { getVapidPublicKey } from "../notifications/vapid";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import * as Sentry from "@sentry/bun";
