@@ -30,17 +30,24 @@ function serializeData(data: LogData): LogData {
 }
 
 export class Logger {
-  private levelThreshold: number;
+  private _levelThreshold: number;
   private bindings: LogData;
+  private root: Logger;
 
   constructor(level: LogLevel, bindings: LogData = {}) {
-    this.levelThreshold = LEVELS[level];
+    this._levelThreshold = LEVELS[level];
     this.bindings = bindings;
+    this.root = this;
+  }
+
+  /** Update the log level threshold (propagates to all child loggers). */
+  setLevel(level: LogLevel): void {
+    this._levelThreshold = LEVELS[level];
   }
 
   child(bindings: LogData): Logger {
     const child = new Logger("debug", { ...this.bindings, ...bindings });
-    child.levelThreshold = this.levelThreshold;
+    child.root = this.root;
     return child;
   }
 
@@ -61,7 +68,7 @@ export class Logger {
   }
 
   private log(level: LogLevel, msg: string, data?: LogData): void {
-    if (LEVELS[level] < this.levelThreshold) return;
+    if (LEVELS[level] < this.root._levelThreshold) return;
 
     const entry: LogData = {
       time: new Date().toISOString(),
@@ -91,11 +98,11 @@ export class Logger {
   }
 }
 
-export let logger = new Logger(CONFIG.LOG_LEVEL);
+export const logger = new Logger(CONFIG.LOG_LEVEL);
 
-/** Reinitialize the logger with a new level (called after patchConfig on CF Workers). */
+/** Update the global logger threshold (propagates to all child loggers). */
 export function resetLogLevel(level: LogLevel): void {
-  logger = new Logger(level);
+  logger.setLevel(level);
 }
 
 export function requestLogger(): MiddlewareHandler {

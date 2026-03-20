@@ -159,6 +159,26 @@ describe("GET /titles", () => {
     expect(body.titles).toBeDefined();
   });
 
+  it("filters titles by daysBack date range", async () => {
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 10);
+    const recentStr = recentDate.toISOString().slice(0, 10);
+
+    const oldDate = new Date();
+    oldDate.setDate(oldDate.getDate() - 60);
+    const oldStr = oldDate.toISOString().slice(0, 10);
+
+    await upsertTitles([
+      makeParsedTitle({ id: "recent-1", title: "Recent Movie", releaseDate: recentStr }),
+      makeParsedTitle({ id: "old-1", title: "Old Movie", releaseDate: oldStr }),
+    ]);
+
+    const res = await app.request("/titles?daysBack=30");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].title).toBe("Recent Movie");
+  });
+
   it("excludes tracked titles when excludeTracked=1 and user is present", async () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
