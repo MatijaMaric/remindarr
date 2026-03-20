@@ -272,7 +272,7 @@ function createApp(env: Env) {
     }
     Sentry.captureException(err);
     logger.error("Unhandled error", { error: err.message, stack: err.stack });
-    return c.json({ error: "Internal server error" }, 500);
+    return c.json({ error: "Internal server error", detail: err.message, stack: err.stack }, 500);
   });
 
   // CORS — restricted to explicit origins via CORS_ORIGIN env var
@@ -419,7 +419,12 @@ export default {
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
       });
-      return new Response("Internal Server Error", { status: 500 });
+      const msg = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack : undefined;
+      return new Response(JSON.stringify({ error: msg, stack }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
     }
   },
 
