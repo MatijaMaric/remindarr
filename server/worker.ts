@@ -207,9 +207,27 @@ function createApp(env: Env) {
 
   // SPA fallback — serve index.html for client-side routes (mirrors serveStatic in index.ts)
   app.get("*", async (c) => {
-    const assets = (c.env as unknown as Env).ASSETS;
-    if (assets?.fetch) {
-      return assets.fetch(new Request(new URL("/index.html", c.req.url)));
+    // Skip API paths that weren't matched by any route
+    if (c.req.path.startsWith("/api/")) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    try {
+      const assets = (c.env as unknown as Env).ASSETS;
+      if (assets?.fetch) {
+        const url = new URL("/index.html", c.req.url);
+        const resp = await assets.fetch(url.toString());
+        if (resp.ok) {
+          return new Response(resp.body, {
+            status: 200,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          });
+        }
+      }
+    } catch (err) {
+      logger.error("SPA fallback error", {
+        error: err instanceof Error ? err.message : String(err),
+        path: c.req.path,
+      });
     }
     return c.text("Not Found", 404);
   });
