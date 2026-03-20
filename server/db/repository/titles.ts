@@ -185,7 +185,10 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
     const conditions: ReturnType<typeof eq>[] = [];
 
     if (daysBack) {
-      conditions.push(gte(titles.releaseDate, sql`date('now', ${`-${daysBack} days`})`));
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - daysBack);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      conditions.push(gte(titles.releaseDate, cutoffStr));
     }
     if (objectTypes && objectTypes.length > 0) {
       conditions.push(inArray(titles.objectType, objectTypes));

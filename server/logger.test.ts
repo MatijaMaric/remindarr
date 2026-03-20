@@ -183,6 +183,40 @@ describe("resetLogLevel", () => {
     logger.debug("visible now");
     expect(logSpy).toHaveBeenCalledTimes(1);
   });
+
+  it("propagates level changes to existing child loggers", () => {
+    resetLogLevel("info");
+    const child = logger.child({ module: "browse" });
+
+    // Child should suppress debug at info level
+    child.debug("hidden");
+    expect(logSpy).not.toHaveBeenCalled();
+
+    // After resetting to debug, the same child should now emit debug
+    resetLogLevel("debug");
+    child.debug("visible");
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const entry = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(entry.msg).toBe("visible");
+    expect(entry.module).toBe("browse");
+  });
+
+  it("propagates level changes to nested child loggers", () => {
+    resetLogLevel("info");
+    const child = logger.child({ module: "browse" });
+    const grandchild = child.child({ op: "fetch" });
+
+    grandchild.debug("hidden");
+    expect(logSpy).not.toHaveBeenCalled();
+
+    resetLogLevel("debug");
+    grandchild.debug("visible");
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const entry = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(entry.msg).toBe("visible");
+    expect(entry.module).toBe("browse");
+    expect(entry.op).toBe("fetch");
+  });
 });
 
 describe("requestLogger", () => {
