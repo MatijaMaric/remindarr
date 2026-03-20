@@ -29,25 +29,21 @@ export function rateLimiter(options: RateLimitOptions) {
     ((c) => c.req.header("x-forwarded-for") ?? "anonymous");
 
   const buckets = new Map<string, TokenBucket>();
-
-  // Periodically clean up stale buckets to prevent memory leaks
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [key, bucket] of buckets) {
-      if (now - bucket.lastRefill > windowMs * 2) {
-        buckets.delete(key);
-      }
-    }
-  }, windowMs * 2);
-
-  // Allow the timer to not block process exit
-  if (cleanupInterval.unref) {
-    cleanupInterval.unref();
-  }
+  let lastCleanup = Date.now();
 
   return createMiddleware<AppEnv>(async (c, next) => {
     const key = keyGenerator(c);
     const now = Date.now();
+
+    // Lazy cleanup of stale buckets to prevent memory leaks
+    if (now - lastCleanup > windowMs * 2) {
+      for (const [k, bucket] of buckets) {
+        if (now - bucket.lastRefill > windowMs * 2) {
+          buckets.delete(k);
+        }
+      }
+      lastCleanup = now;
+    }
 
     let bucket = buckets.get(key);
     if (!bucket) {
