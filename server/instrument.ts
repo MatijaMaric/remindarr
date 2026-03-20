@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/bun";
+import Sentry from "./sentry";
 
 const dsn = process.env.SENTRY_DSN;
 

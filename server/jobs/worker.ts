@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/bun";
+import Sentry from "../sentry";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "jobs" });

@@ -7,7 +7,7 @@ import { CONFIG } from "../config";
 import notifierApp from "./notifiers";
 import type { AppEnv } from "../types";
 import * as registry from "../notifications/registry";
-import * as Sentry from "@sentry/bun";
+import Sentry from "../sentry";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 
 let app: Hono<AppEnv>;

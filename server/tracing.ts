@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/bun";
+import Sentry from "./sentry";
 
 /**
  * Wraps a DB operation in a Sentry span.

@@ -1,5 +1,5 @@
 import { describe, it, test, expect, spyOn, afterEach, beforeEach } from "bun:test";
-import * as Sentry from "@sentry/bun";
+import Sentry from "../sentry";
 
 // ─── Mock tracing to pass through ───────────────────────────────────────────
 let sentrySpy: ReturnType<typeof spyOn>;

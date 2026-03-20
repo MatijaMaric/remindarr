@@ -24,7 +24,7 @@ import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import healthRoutes from "./routes/health";
 import type { AppEnv } from "./types";
-import * as Sentry from "@sentry/bun";
+import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
