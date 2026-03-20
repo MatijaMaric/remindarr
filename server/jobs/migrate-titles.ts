@@ -1,4 +1,4 @@
-import { getRawDb } from "../db/schema";
+import { getRawDb } from "../db/bun-db";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "migrate-titles" });

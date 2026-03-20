@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { getRawDb } from "./schema";
+import { getRawDb } from "./bun-db";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import {
   upsertTitles,
