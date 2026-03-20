@@ -204,6 +204,15 @@ function createApp(env: Env) {
   app.use("/api/episodes", optionalAuth);
   app.route("/api/episodes", episodesRoutes);
 
+  // SPA fallback — serve index.html for client-side routes (mirrors serveStatic in index.ts)
+  app.get("*", async (c) => {
+    const assets = (c.env as Record<string, any>)?.ASSETS;
+    if (assets?.fetch) {
+      return assets.fetch(new Request(new URL("/index.html", c.req.url)));
+    }
+    return c.text("Not Found", 404);
+  });
+
   return app;
 }
 
