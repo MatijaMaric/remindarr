@@ -51,7 +51,9 @@ import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import healthRoutes from "./routes/health";
 import type { AppEnv } from "./types";
-import { logger, requestLogger } from "./logger";
+import { logger, requestLogger, resetLogLevel } from "./logger";
+import { patchConfig } from "./config";
+import Sentry from "./sentry";
 import { CloudflarePlatform } from "./platform/cloudflare";
 import type { DrizzleDb } from "./platform/types";
 
@@ -60,6 +62,7 @@ interface Env {
   TMDB_API_KEY?: string;
   TMDB_COUNTRY?: string;
   TMDB_LANGUAGE?: string;
+  LOG_LEVEL?: string;
   CORS_ORIGIN?: string;
   SENTRY_DSN?: string;
   OIDC_ISSUER_URL?: string;
@@ -74,6 +77,40 @@ interface Env {
 }
 
 const platform = new CloudflarePlatform();
+let configPatched = false;
+
+/**
+ * Patch the global CONFIG singleton with CF Workers env bindings.
+ * Secrets and vars are only available via the env parameter, not process.env.
+ * Only patches once per isolate lifetime (values don't change between requests).
+ */
+function patchConfigFromEnv(env: Env): void {
+  if (configPatched) return;
+  configPatched = true;
+
+  patchConfig({
+    TMDB_API_KEY: env.TMDB_API_KEY || "",
+    COUNTRY: env.TMDB_COUNTRY || undefined,
+    LANGUAGE: env.TMDB_LANGUAGE || undefined,
+    LOG_LEVEL: (env.LOG_LEVEL as "debug" | "info" | "warn" | "error") || undefined,
+    CORS_ORIGIN: env.CORS_ORIGIN || undefined,
+    SENTRY_DSN: env.SENTRY_DSN || "",
+    OIDC_ISSUER_URL: env.OIDC_ISSUER_URL || "",
+    OIDC_CLIENT_ID: env.OIDC_CLIENT_ID || "",
+    OIDC_CLIENT_SECRET: env.OIDC_CLIENT_SECRET || "",
+    OIDC_REDIRECT_URI: env.OIDC_REDIRECT_URI || "",
+    OIDC_ADMIN_CLAIM: env.OIDC_ADMIN_CLAIM || "",
+    OIDC_ADMIN_VALUE: env.OIDC_ADMIN_VALUE || "",
+    VAPID_PUBLIC_KEY: env.VAPID_PUBLIC_KEY || "",
+    VAPID_PRIVATE_KEY: env.VAPID_PRIVATE_KEY || "",
+    VAPID_SUBJECT: env.VAPID_SUBJECT || "",
+  });
+
+  // Reinitialize logger in case LOG_LEVEL changed
+  if (env.LOG_LEVEL) {
+    resetLogLevel(env.LOG_LEVEL as "debug" | "info" | "warn" | "error");
+  }
+}
 
 function createApp(env: Env) {
   const app = new Hono<AppEnv>();
@@ -88,7 +125,8 @@ function createApp(env: Env) {
     if (err instanceof HTTPException) {
       return err.getResponse();
     }
-    logger.error("Unhandled error", { error: err.message });
+    Sentry.captureException(err);
+    logger.error("Unhandled error", { error: err.message, stack: err.stack });
     return c.json({ error: "Internal server error" }, 500);
   });
 
@@ -182,6 +220,7 @@ function getApp(env: Env): Hono<AppEnv> {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     ctx.passThroughOnException();
+    patchConfigFromEnv(env);
     try {
       const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
       const honoApp = getApp(env);
@@ -202,6 +241,7 @@ export default {
         return honoApp.fetch(request, env, ctx as any);
       });
     } catch (err) {
+      Sentry.captureException(err);
       logger.error("Worker fetch error", {
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
@@ -211,6 +251,7 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    patchConfigFromEnv(env);
     try {
       const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
 

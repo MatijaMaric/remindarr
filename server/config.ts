@@ -46,3 +46,12 @@ export const CONFIG = {
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 };
+
+/**
+ * Patch CONFIG at runtime.
+ * Used by the CF Workers entry point to inject env bindings (secrets + vars)
+ * that are not available via process.env.
+ */
+export function patchConfig(overrides: Partial<typeof CONFIG>): void {
+  Object.assign(CONFIG, overrides);
+}
