@@ -20,6 +20,9 @@ import {
 } from "../tmdb/parser";
 import { getTrackedTitleIds } from "../db/repository";
 import type { AppEnv } from "../types";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "browse" });
 
 const VALID_CATEGORIES = ["popular", "upcoming", "top_rated"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
@@ -198,6 +201,7 @@ app.get("/", async (c) => {
 
     return c.json({ titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages });
   } catch (err: any) {
+    log.error("Browse error", { error: err.message, stack: err.stack });
     return c.json({ error: err.message }, 500);
   }
 });

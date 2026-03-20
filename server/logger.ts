@@ -91,7 +91,12 @@ export class Logger {
   }
 }
 
-export const logger = new Logger(CONFIG.LOG_LEVEL);
+export let logger = new Logger(CONFIG.LOG_LEVEL);
+
+/** Reinitialize the logger with a new level (called after patchConfig on CF Workers). */
+export function resetLogLevel(level: LogLevel): void {
+  logger = new Logger(level);
+}
 
 export function requestLogger(): MiddlewareHandler {
   const log = logger.child({ module: "http" });

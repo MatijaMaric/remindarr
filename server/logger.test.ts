@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Hono } from "hono";
-import { Logger, requestLogger } from "./logger";
+import { Logger, requestLogger, resetLogLevel, logger } from "./logger";
 
 describe("Logger", () => {
   let logSpy: ReturnType<typeof spyOn>;
@@ -150,6 +150,38 @@ describe("Logger", () => {
     expect(entry.count).toBe(5);
     expect(entry.name).toBe("test");
     expect(entry.nested).toEqual({ a: 1 });
+  });
+});
+
+describe("resetLogLevel", () => {
+  let logSpy: ReturnType<typeof spyOn>;
+  let errorSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    logSpy = spyOn(console, "log").mockImplementation(() => {});
+    errorSpy = spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    // Restore default level
+    resetLogLevel("info");
+  });
+
+  it("changes the global logger threshold", () => {
+    resetLogLevel("error");
+    logger.info("should be suppressed");
+    logger.warn("should be suppressed");
+    logger.error("should appear");
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows debug messages when set to debug", () => {
+    resetLogLevel("debug");
+    logger.debug("visible now");
+    expect(logSpy).toHaveBeenCalledTimes(1);
   });
 });
 
