@@ -4,7 +4,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { serveStatic } from "hono/bun";
 import { CONFIG } from "./config";
-import { getDb, migrateTrackedData } from "./db/schema";
+import { initBunDb, migrateTrackedData } from "./db/bun-db";
 import { getUserCount, createUser, deleteExpiredSessions } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rate-limit";
@@ -33,7 +33,7 @@ import { initJobsSchema } from "./jobs/queue";
 import { BunPlatform } from "./platform/bun";
 
 // Initialize DB on startup
-getDb();
+initBunDb();
 
 const platform = new BunPlatform();
 

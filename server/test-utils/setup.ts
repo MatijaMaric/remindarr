@@ -1,12 +1,12 @@
 import { CONFIG } from "../config";
 CONFIG.DB_PATH = ":memory:";
 
-import { getDb, resetDb, getRawDb } from "../db/schema";
+import { initBunDb, resetDb } from "../db/bun-db";
 import { initJobsSchema } from "../jobs/queue";
 
 export function setupTestDb() {
   resetDb();
-  getDb();
+  initBunDb();
   initJobsSchema();
 }
 

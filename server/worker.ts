@@ -44,7 +44,8 @@ import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
-import jobsRoutes from "./routes/jobs";
+// jobsRoutes excluded: uses Bun-only in-memory job queue (bun:sqlite).
+// CF Workers uses cron triggers instead (see scheduled handler below).
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
@@ -134,9 +135,7 @@ function createApp() {
   app.use("/api/admin", requireAuth, requireAdmin);
   app.route("/api/admin", adminRoutes);
 
-  app.use("/api/jobs/*", requireAuth, requireAdmin);
-  app.use("/api/jobs", requireAuth, requireAdmin);
-  app.route("/api/jobs", jobsRoutes);
+  // /api/jobs not available on CF Workers (uses Bun-only in-memory queue)
 
   // Detail pages
   app.use("/api/details/*", optionalAuth);
