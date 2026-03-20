@@ -28,6 +28,17 @@ LOG_LEVEL = "info"
 # VAPID_PRIVATE_KEY
 # VAPID_SUBJECT
 
+# Observability — persist logs and traces for debugging
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
 # Cron triggers for background jobs
 [triggers]
 crons = [
