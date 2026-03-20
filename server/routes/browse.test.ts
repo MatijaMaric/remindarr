@@ -302,9 +302,9 @@ describe("GET /browse", () => {
 
   it("returns isTracked=true for tracked titles when user is authenticated", async () => {
     // Set up real DB data for tracking
-    upsertTitles([makeParsedTitle({ id: "movie-555" })]);
-    const userId = createUser("testuser", "hash");
-    trackTitle("movie-555", userId);
+    await upsertTitles([makeParsedTitle({ id: "movie-555" })]);
+    const userId = await createUser("testuser", "hash");
+    await trackTitle("movie-555", userId);
 
     const movie = makeTmdbDiscoverMovie({ id: 555 });
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({

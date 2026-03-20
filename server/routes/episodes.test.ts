@@ -42,7 +42,7 @@ describe("GET /episodes/upcoming", () => {
 
   it("returns episodes for authenticated user", async () => {
     const { createUser } = await import("../db/repository");
-    const userId = createUser("testuser", "hash");
+    const userId = await createUser("testuser", "hash");
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/episodes/*", async (c, next) => {

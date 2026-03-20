@@ -20,7 +20,7 @@ afterAll(() => {
 
 describe("GET /calendar", () => {
   it("returns titles for a given month", async () => {
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", releaseDate: "2026-03-15" }),
     ]);
 
@@ -75,7 +75,7 @@ describe("GET /calendar", () => {
   });
 
   it("filters by object type", async () => {
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: "2026-03-15" }),
       makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "A Show", releaseDate: "2026-03-15" }),
     ]);
@@ -88,7 +88,7 @@ describe("GET /calendar", () => {
   });
 
   it("filters by provider", async () => {
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({
         id: "movie-1",
         releaseDate: "2026-03-15",
@@ -109,7 +109,7 @@ describe("GET /calendar", () => {
   });
 
   it("works with authenticated user context", async () => {
-    const userId = createUser("testuser", "hash");
+    const userId = await createUser("testuser", "hash");
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/calendar/*", async (c, next) => {
@@ -124,7 +124,7 @@ describe("GET /calendar", () => {
     });
     authedApp.route("/calendar", calendarApp);
 
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", releaseDate: "2026-03-15" }),
     ]);
 

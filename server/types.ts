@@ -1,3 +1,5 @@
+import type { Platform } from "./platform/types";
+
 export type AuthUser = {
   id: string;
   username: string;
@@ -9,5 +11,6 @@ export type AuthUser = {
 export type AppEnv = {
   Variables: {
     user?: AuthUser;
+    platform?: Platform;
   };
 };

@@ -26,15 +26,15 @@ beforeEach(() => {
       displayName: "OIDC User",
       claims: { sub: "oidc-sub-123", groups: ["users"] },
     }),
-    spyOn(oidc, "validateState").mockReturnValue(true),
-    spyOn(oidc, "generateState").mockReturnValue("mock-state"),
+    spyOn(oidc, "validateState").mockResolvedValue(true),
+    spyOn(oidc, "generateState").mockResolvedValue("mock-state"),
     spyOn(oidc, "getDiscovery").mockResolvedValue({
       authorization_endpoint: "https://idp.example.com/authorize",
       token_endpoint: "https://idp.example.com/token",
       userinfo_endpoint: "https://idp.example.com/userinfo",
     }),
-    spyOn(repository, "isOidcConfigured").mockReturnValue(true),
-    spyOn(repository, "getOidcConfig").mockReturnValue({
+    spyOn(repository, "isOidcConfigured").mockResolvedValue(true),
+    spyOn(repository, "getOidcConfig").mockResolvedValue({
       issuerUrl: "https://idp.example.com",
       clientId: "client-id",
       clientSecret: "client-secret",
@@ -57,7 +57,7 @@ afterAll(() => {
 describe("GET /auth/oidc/callback - race condition", () => {
   it("handles concurrent user creation (UNIQUE constraint) gracefully", async () => {
     // Simulate the race: pre-create the OIDC user so createUser will hit UNIQUE constraint
-    createUser("oidcuser", null, "OIDC User", "oidc", "oidc-sub-123", false);
+    await createUser("oidcuser", null, "OIDC User", "oidc", "oidc-sub-123", false);
 
     // The callback should catch the duplicate error and find the existing user
     const res = await app.request(
@@ -79,14 +79,14 @@ describe("GET /auth/oidc/callback - race condition", () => {
     expect(res.headers.get("location")).toBe("/");
 
     // Verify user was created in DB
-    const user = getUserByProviderSubject("oidc", "oidc-sub-123");
+    const user = await getUserByProviderSubject("oidc", "oidc-sub-123");
     expect(user).not.toBeNull();
     expect(user!.username).toBe("oidcuser");
   });
 
   it("appends _oidc suffix when username is taken by a local user", async () => {
     // Create a local user with the same username
-    createUser("oidcuser", "hash", "Local User");
+    await createUser("oidcuser", "hash", "Local User");
 
     const res = await app.request(
       "/auth/oidc/callback?code=test-code&state=valid-state",
@@ -95,7 +95,7 @@ describe("GET /auth/oidc/callback - race condition", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
 
-    const user = getUserByProviderSubject("oidc", "oidc-sub-123");
+    const user = await getUserByProviderSubject("oidc", "oidc-sub-123");
     expect(user).not.toBeNull();
     expect(user!.username).toBe("oidcuser_oidc");
   });

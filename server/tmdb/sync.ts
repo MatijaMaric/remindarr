@@ -41,7 +41,7 @@ export async function syncEpisodesForShow(
 
   // Skip ended/canceled shows that already have episodes synced
   if (details.status === "Ended" || details.status === "Canceled") {
-    const existing = db
+    const existing = await db
       .select({ count: count() })
       .from(episodes)
       .where(eq(episodes.titleId, titleId))
@@ -76,7 +76,7 @@ export async function syncEpisodesForShow(
   }
 
   if (allEpisodes.length > 0) {
-    upsertEpisodes(allEpisodes);
+    await upsertEpisodes(allEpisodes);
   }
 
   log.info("Synced episodes", { episodes: allEpisodes.length, seasons: details.number_of_seasons, title });
@@ -87,7 +87,7 @@ export async function syncEpisodes(): Promise<{ synced: number; shows: number }>
   const db = getDb();
 
   // Get all tracked shows with tmdb_id
-  const trackedShows = db
+  const trackedShows = await db
     .select({
       id: titles.id,
       tmdb_id: titles.tmdbId,

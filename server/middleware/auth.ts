@@ -8,7 +8,7 @@ import type { AppEnv } from "../types";
 export const optionalAuth = createMiddleware<AppEnv>(async (c, next) => {
   const token = getCookie(c, CONFIG.SESSION_COOKIE_NAME);
   if (token) {
-    const user = getSessionWithUser(token);
+    const user = await getSessionWithUser(token);
     if (user) {
       c.set("user", user);
     }
@@ -22,7 +22,7 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   if (!token) {
     return c.json({ error: "Authentication required" }, 401);
   }
-  const user = getSessionWithUser(token);
+  const user = await getSessionWithUser(token);
   if (!user) {
     return c.json({ error: "Session expired" }, 401);
   }

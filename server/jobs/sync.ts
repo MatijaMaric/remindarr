@@ -14,7 +14,7 @@ export function registerSyncJobs() {
 
   registerHandler("sync-titles", async () => {
     const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });
-    const count = upsertTitles(titles);
+    const count = await upsertTitles(titles);
     log.info("Synced titles from TMDB", { count });
   });
 

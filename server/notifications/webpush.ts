@@ -37,7 +37,7 @@ export class WebPushProvider implements NotificationProvider {
     const { episodes, movies } = content;
     if (episodes.length === 0 && movies.length === 0) return;
 
-    const vapid = getVapidKeys();
+    const vapid = await getVapidKeys();
     webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
     const payload = this.buildPayload(content);

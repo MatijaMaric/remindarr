@@ -61,9 +61,9 @@ describe("GET /search", () => {
 
   it("returns isTracked=true for tracked titles when user is authenticated", async () => {
     // Set up real DB data for tracking
-    upsertTitles([makeParsedTitle({ id: "movie-42" })]);
-    const userId = createUser("testuser", "hash");
-    trackTitle("movie-42", userId);
+    await upsertTitles([makeParsedTitle({ id: "movie-42" })]);
+    const userId = await createUser("testuser", "hash");
+    await trackTitle("movie-42", userId);
 
     const movie = makeTmdbSearchMultiMovie({ id: 42 });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({

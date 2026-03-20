@@ -40,17 +40,18 @@ app.post("/login", async (c) => {
     return c.json({ error: "Username and password required" }, 400);
   }
 
-  const user = getUserByUsername(username);
+  const user = await getUserByUsername(username);
   if (!user || !user.password_hash) {
     return c.json({ error: "Invalid credentials" }, 401);
   }
 
-  const valid = await Bun.password.verify(password, user.password_hash);
+  const platform = c.get("platform")!;
+  const valid = await platform.verifyPassword(password, user.password_hash);
   if (!valid) {
     return c.json({ error: "Invalid credentials" }, 401);
   }
 
-  const token = createSession(user.id);
+  const token = await createSession(user.id);
   setSessionCookie(c, token);
 
   return c.json({
@@ -64,29 +65,29 @@ app.post("/login", async (c) => {
 });
 
 // POST /api/auth/logout
-app.post("/logout", (c) => {
+app.post("/logout", async (c) => {
   const token = getCookie(c, CONFIG.SESSION_COOKIE_NAME);
   if (token) {
-    deleteSession(token);
+    await deleteSession(token);
   }
   deleteCookie(c, CONFIG.SESSION_COOKIE_NAME, { path: "/" });
   return c.json({ success: true });
 });
 
 // GET /api/auth/me
-app.get("/me", (c) => {
+app.get("/me", async (c) => {
   const token = getCookie(c, CONFIG.SESSION_COOKIE_NAME);
   if (!token) return c.json({ user: null });
 
-  const user = getSessionWithUser(token);
+  const user = await getSessionWithUser(token);
   if (!user) return c.json({ user: null });
 
   return c.json({ user });
 });
 
 // GET /api/auth/providers
-app.get("/providers", (c) => {
-  const oidcConfigured = isOidcConfigured();
+app.get("/providers", async (c) => {
+  const oidcConfigured = await isOidcConfigured();
   return c.json({
     local: true,
     oidc: oidcConfigured ? { name: "OpenID Connect" } : null,
@@ -98,7 +99,7 @@ app.post("/change-password", async (c) => {
   const token = getCookie(c, CONFIG.SESSION_COOKIE_NAME);
   if (!token) return c.json({ error: "Authentication required" }, 401);
 
-  const user = getSessionWithUser(token);
+  const user = await getSessionWithUser(token);
   if (!user) return c.json({ error: "Session expired" }, 401);
   if (user.auth_provider !== "local") {
     return c.json({ error: "Password change not available for OIDC users" }, 400);
@@ -114,16 +115,17 @@ app.post("/change-password", async (c) => {
     return c.json({ error: "Password must be at least 6 characters" }, 400);
   }
 
-  const fullUser = getUserByUsername(user.username);
+  const fullUser = await getUserByUsername(user.username);
   if (!fullUser) return c.json({ error: "User not found" }, 404);
 
-  const valid = fullUser.password_hash ? await Bun.password.verify(currentPassword, fullUser.password_hash) : false;
+  const platform = c.get("platform")!;
+  const valid = fullUser.password_hash ? await platform.verifyPassword(currentPassword, fullUser.password_hash) : false;
   if (!valid) {
     return c.json({ error: "Current password is incorrect" }, 401);
   }
 
-  const hash = await Bun.password.hash(newPassword);
-  updateUserPassword(user.id, hash);
+  const hash = await platform.hashPassword(newPassword);
+  await updateUserPassword(user.id, hash);
 
   return c.json({ success: true });
 });
@@ -132,14 +134,14 @@ app.post("/change-password", async (c) => {
 
 // GET /api/auth/oidc/authorize
 app.get("/oidc/authorize", async (c) => {
-  if (!isOidcConfigured()) {
+  if (!await isOidcConfigured()) {
     return c.json({ error: "OIDC not configured" }, 400);
   }
 
   try {
     const discovery = await getDiscovery();
-    const { clientId, redirectUri } = getOidcConfig();
-    const state = generateState();
+    const { clientId, redirectUri } = await getOidcConfig();
+    const state = await generateState();
 
     const params = new URLSearchParams({
       response_type: "code",
@@ -167,41 +169,41 @@ app.get("/oidc/callback", async (c) => {
   if (!code || !state) {
     return c.redirect("/login?error=missing_params");
   }
-  if (!validateState(state)) {
+  if (!await validateState(state)) {
     return c.redirect("/login?error=invalid_state");
   }
 
   try {
-    const { redirectUri, adminClaim, adminValue } = getOidcConfig();
+    const { redirectUri, adminClaim, adminValue } = await getOidcConfig();
     const userInfo = await exchangeCode(code, redirectUri);
 
     // Determine admin status from claims
     const isAdmin = checkAdminClaim(userInfo.claims, adminClaim, adminValue);
 
     // Find or create user (with retry to handle concurrent OIDC logins)
-    let user = getUserByProviderSubject("oidc", userInfo.sub);
+    let user = await getUserByProviderSubject("oidc", userInfo.sub);
     if (!user) {
       try {
         // Ensure unique username
         let username = userInfo.username;
-        if (getUserByUsername(username)) {
+        if (await getUserByUsername(username)) {
           username = `${username}_oidc`;
         }
-        createUser(username, null, userInfo.displayName || undefined, "oidc", userInfo.sub, isAdmin);
+        await createUser(username, null, userInfo.displayName || undefined, "oidc", userInfo.sub, isAdmin);
       } catch (err) {
         // Another concurrent request may have created the user — retry lookup
-        user = getUserByProviderSubject("oidc", userInfo.sub);
+        user = await getUserByProviderSubject("oidc", userInfo.sub);
         if (!user) throw err; // Re-throw if it's a different error
       }
       if (!user) {
-        user = getUserByProviderSubject("oidc", userInfo.sub);
+        user = await getUserByProviderSubject("oidc", userInfo.sub);
       }
     } else {
       // Sync admin status on every login
-      updateUserAdmin(user.id, isAdmin);
+      await updateUserAdmin(user.id, isAdmin);
     }
 
-    const token = createSession(user!.id);
+    const token = await createSession(user!.id);
     setSessionCookie(c, token);
 
     return c.redirect("/");

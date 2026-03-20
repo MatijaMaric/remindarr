@@ -22,7 +22,7 @@ describe("GET /titles", () => {
   it("returns titles", async () => {
     // Use today's date so titles appear within default daysBack window
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([makeParsedTitle({ releaseDate: today })]);
+    await upsertTitles([makeParsedTitle({ releaseDate: today })]);
 
     const res = await app.request("/titles?daysBack=9999");
     expect(res.status).toBe(200);
@@ -35,7 +35,7 @@ describe("GET /titles", () => {
 
   it("filters by type", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: today }),
       makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: today }),
     ]);
@@ -55,7 +55,7 @@ describe("GET /titles", () => {
 
   it("filters by genre", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", genres: ["Action"], releaseDate: today }),
       makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: today }),
     ]);
@@ -68,7 +68,7 @@ describe("GET /titles", () => {
 
   it("filters by language", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: today }),
       makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: today }),
     ]);
@@ -81,7 +81,7 @@ describe("GET /titles", () => {
 
   it("filters by multiple types (comma-separated)", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: today }),
       makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: today }),
     ]);
@@ -93,7 +93,7 @@ describe("GET /titles", () => {
 
   it("filters by multiple genres (comma-separated)", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", genres: ["Action"], releaseDate: today }),
       makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: today }),
       makeParsedTitle({ id: "movie-3", title: "Drama Film", genres: ["Drama"], releaseDate: today }),
@@ -108,7 +108,7 @@ describe("GET /titles", () => {
 
   it("filters by multiple languages (comma-separated)", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: today }),
       makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: today }),
       makeParsedTitle({ id: "movie-3", title: "French Movie", originalLanguage: "fr", releaseDate: today }),
@@ -121,7 +121,7 @@ describe("GET /titles", () => {
 
   it("clamps daysBack to max 365", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([makeParsedTitle({ releaseDate: today })]);
+    await upsertTitles([makeParsedTitle({ releaseDate: today })]);
 
     const res = await app.request("/titles?daysBack=9999");
     expect(res.status).toBe(200);
@@ -132,7 +132,7 @@ describe("GET /titles", () => {
 
   it("clamps limit to max 1000 and min 1", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([makeParsedTitle({ releaseDate: today })]);
+    await upsertTitles([makeParsedTitle({ releaseDate: today })]);
 
     const res = await app.request("/titles?daysBack=365&limit=999999999");
     expect(res.status).toBe(200);
@@ -143,7 +143,7 @@ describe("GET /titles", () => {
 
   it("clamps negative offset to 0", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([makeParsedTitle({ releaseDate: today })]);
+    await upsertTitles([makeParsedTitle({ releaseDate: today })]);
 
     const res = await app.request("/titles?daysBack=365&offset=-1");
     expect(res.status).toBe(200);
@@ -161,12 +161,12 @@ describe("GET /titles", () => {
 
   it("excludes tracked titles when excludeTracked=1 and user is present", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ id: "movie-1", title: "Tracked", releaseDate: today }),
       makeParsedTitle({ id: "movie-2", title: "Untracked", releaseDate: today }),
     ]);
-    const userId = createUser("testuser", "hash");
-    trackTitle("movie-1", userId);
+    const userId = await createUser("testuser", "hash");
+    await trackTitle("movie-1", userId);
 
     // Create app with user middleware
     const authedApp = new Hono<AppEnv>();
@@ -185,7 +185,7 @@ describe("GET /titles", () => {
 
 describe("GET /titles/genres", () => {
   it("returns available genres", async () => {
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ genres: ["Action", "Drama"] }),
     ]);
 
@@ -200,7 +200,7 @@ describe("GET /titles/genres", () => {
 
 describe("GET /titles/languages", () => {
   it("returns available languages", async () => {
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({ originalLanguage: "en" }),
     ]);
 
@@ -214,7 +214,7 @@ describe("GET /titles/languages", () => {
 
 describe("GET /titles/providers", () => {
   it("returns available providers", async () => {
-    upsertTitles([
+    await upsertTitles([
       makeParsedTitle({
         offers: [makeParsedOffer({ providerId: 8, providerName: "Netflix" })],
       }),

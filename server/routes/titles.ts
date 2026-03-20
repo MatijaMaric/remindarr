@@ -4,7 +4,7 @@ import type { AppEnv } from "../types";
 
 const app = new Hono<AppEnv>();
 
-app.get("/", (c) => {
+app.get("/", async (c) => {
   const user = c.get("user");
   const daysBack = Math.max(1, Math.min(Number(c.req.query("daysBack")) || 30, 365));
   const typeParam = c.req.query("type") || "";
@@ -20,22 +20,22 @@ app.get("/", (c) => {
   const genres = genreParam ? genreParam.split(",").filter(Boolean) : [];
   const languages = languageParam ? languageParam.split(",").filter(Boolean) : [];
 
-  const titles = getRecentTitles({ daysBack, objectTypes, providers, genres, languages, excludeTracked, limit, offset }, user?.id);
+  const titles = await getRecentTitles({ daysBack, objectTypes, providers, genres, languages, excludeTracked, limit, offset }, user?.id);
   return c.json({ titles, count: titles.length });
 });
 
-app.get("/providers", (c) => {
-  const providers = getProviders();
+app.get("/providers", async (c) => {
+  const providers = await getProviders();
   return c.json({ providers });
 });
 
-app.get("/genres", (c) => {
-  const genres = getGenres();
+app.get("/genres", async (c) => {
+  const genres = await getGenres();
   return c.json({ genres });
 });
 
-app.get("/languages", (c) => {
-  const languages = getLanguages();
+app.get("/languages", async (c) => {
+  const languages = await getLanguages();
   return c.json({ languages });
 });
 

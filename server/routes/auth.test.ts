@@ -5,6 +5,7 @@ import { createUser, getUserByUsername, getUserByProviderSubject, setSetting } f
 import { CONFIG } from "../config";
 import authApp, { checkAdminClaim } from "./auth";
 import { generateState, clearDiscoveryCache } from "../auth/oidc";
+import { BunPlatform } from "../platform/bun";
 import type { AppEnv } from "../types";
 
 let app: Hono<AppEnv>;
@@ -15,11 +16,16 @@ beforeEach(async () => {
   clearDiscoveryCache();
   fetchSpy = spyOn(globalThis, "fetch");
   app = new Hono<AppEnv>();
+  const platform = new BunPlatform();
+  app.use("*", async (c, next) => {
+    c.set("platform", platform);
+    await next();
+  });
   app.route("/auth", authApp);
 
   // Create a test user with a hashed password
   const hash = await Bun.password.hash("password123");
-  createUser("testuser", hash, "Test User");
+  await createUser("testuser", hash, "Test User");
 });
 
 afterEach(() => {
@@ -149,11 +155,11 @@ describe("POST /auth/change-password", () => {
   });
 
   it("returns 400 for OIDC users", async () => {
-    createUser("oidcuser", null, "OIDC User", "oidc", "oidc-sub-123");
+    await createUser("oidcuser", null, "OIDC User", "oidc", "oidc-sub-123");
     // Login as OIDC user via a session created directly
     const { createSession } = await import("../db/repository");
-    const user = getUserByProviderSubject("oidc", "oidc-sub-123");
-    const token = createSession(user!.id);
+    const user = await getUserByProviderSubject("oidc", "oidc-sub-123");
+    const token = await createSession(user!.id);
 
     const res = await app.request("/auth/change-password", {
       method: "POST",
@@ -247,13 +253,13 @@ const DISCOVERY = {
   userinfo_endpoint: "https://auth.example.com/userinfo",
 };
 
-function setupOidcConfig() {
-  setSetting("oidc_issuer_url", "https://auth.example.com");
-  setSetting("oidc_client_id", "test-client");
-  setSetting("oidc_client_secret", "test-secret");
-  setSetting("oidc_redirect_uri", "https://app.example.com/auth/oidc/callback");
-  setSetting("oidc_admin_claim", "groups");
-  setSetting("oidc_admin_value", "admin");
+async function setupOidcConfig() {
+  await setSetting("oidc_issuer_url", "https://auth.example.com");
+  await setSetting("oidc_client_id", "test-client");
+  await setSetting("oidc_client_secret", "test-secret");
+  await setSetting("oidc_redirect_uri", "https://app.example.com/auth/oidc/callback");
+  await setSetting("oidc_admin_claim", "groups");
+  await setSetting("oidc_admin_value", "admin");
   clearDiscoveryCache();
 }
 
@@ -291,7 +297,7 @@ describe("GET /auth/oidc/authorize", () => {
   });
 
   it("redirects to authorization endpoint when OIDC is configured", async () => {
-    setupOidcConfig();
+    await setupOidcConfig();
 
     fetchSpy.mockImplementation(async () => {
       return new Response(JSON.stringify(DISCOVERY));
@@ -309,7 +315,7 @@ describe("GET /auth/oidc/authorize", () => {
 
 describe("GET /auth/oidc/callback", () => {
   it("redirects to login with error when error param is present", async () => {
-    setupOidcConfig();
+    await setupOidcConfig();
 
     const res = await app.request("/auth/oidc/callback?error=access_denied");
     expect(res.status).toBe(302);
@@ -317,7 +323,7 @@ describe("GET /auth/oidc/callback", () => {
   });
 
   it("redirects to login when code or state is missing", async () => {
-    setupOidcConfig();
+    await setupOidcConfig();
 
     const res = await app.request("/auth/oidc/callback?code=abc");
     expect(res.status).toBe(302);
@@ -325,7 +331,7 @@ describe("GET /auth/oidc/callback", () => {
   });
 
   it("redirects to login when state is invalid", async () => {
-    setupOidcConfig();
+    await setupOidcConfig();
 
     const res = await app.request("/auth/oidc/callback?code=abc&state=invalid-state");
     expect(res.status).toBe(302);
@@ -333,8 +339,8 @@ describe("GET /auth/oidc/callback", () => {
   });
 
   it("creates user and session on successful callback", async () => {
-    setupOidcConfig();
-    const state = generateState();
+    await setupOidcConfig();
+    const state = await generateState();
 
     const userinfo = {
       sub: "oidc-user-1",
@@ -350,14 +356,14 @@ describe("GET /auth/oidc/callback", () => {
     expect(res.headers.get("set-cookie")).toContain(CONFIG.SESSION_COOKIE_NAME);
 
     // Verify user was created in DB
-    const user = getUserByProviderSubject("oidc", "oidc-user-1");
+    const user = await getUserByProviderSubject("oidc", "oidc-user-1");
     expect(user).not.toBeNull();
     expect(user!.username).toBe("oidcnewuser");
   });
 
   it("creates user with admin flag from claims", async () => {
-    setupOidcConfig();
-    const state = generateState();
+    await setupOidcConfig();
+    const state = await generateState();
 
     const userinfo = {
       sub: "oidc-admin-1",
@@ -370,16 +376,16 @@ describe("GET /auth/oidc/callback", () => {
     const res = await app.request(`/auth/oidc/callback?code=valid-code&state=${state}`);
     expect(res.status).toBe(302);
 
-    const user = getUserByProviderSubject("oidc", "oidc-admin-1");
+    const user = await getUserByProviderSubject("oidc", "oidc-admin-1");
     expect(user).not.toBeNull();
     expect(user!.is_admin).toBeTruthy();
   });
 
   it("deduplicates username when it already exists", async () => {
-    setupOidcConfig();
+    await setupOidcConfig();
 
     // "testuser" already exists from beforeEach
-    const state = generateState();
+    const state = await generateState();
     const userinfo = {
       sub: "oidc-dup-1",
       preferred_username: "testuser",
@@ -390,20 +396,20 @@ describe("GET /auth/oidc/callback", () => {
     const res = await app.request(`/auth/oidc/callback?code=valid-code&state=${state}`);
     expect(res.status).toBe(302);
 
-    const user = getUserByProviderSubject("oidc", "oidc-dup-1");
+    const user = await getUserByProviderSubject("oidc", "oidc-dup-1");
     expect(user).not.toBeNull();
     expect(user!.username).toBe("testuser_oidc");
   });
 
   it("syncs admin status on returning user login", async () => {
-    setupOidcConfig();
+    await setupOidcConfig();
 
     // Create an existing OIDC user without admin
-    createUser("existingoidc", null, "Existing OIDC", "oidc", "oidc-existing-1", false);
-    const userBefore = getUserByProviderSubject("oidc", "oidc-existing-1");
+    await createUser("existingoidc", null, "Existing OIDC", "oidc", "oidc-existing-1", false);
+    const userBefore = await getUserByProviderSubject("oidc", "oidc-existing-1");
     expect(userBefore!.is_admin).toBeFalsy();
 
-    const state = generateState();
+    const state = await generateState();
     const userinfo = {
       sub: "oidc-existing-1",
       preferred_username: "existingoidc",
@@ -414,13 +420,13 @@ describe("GET /auth/oidc/callback", () => {
     const res = await app.request(`/auth/oidc/callback?code=valid-code&state=${state}`);
     expect(res.status).toBe(302);
 
-    const userAfter = getUserByProviderSubject("oidc", "oidc-existing-1");
+    const userAfter = await getUserByProviderSubject("oidc", "oidc-existing-1");
     expect(userAfter!.is_admin).toBeTruthy();
   });
 
   it("redirects to login with error when token exchange fails", async () => {
-    setupOidcConfig();
-    const state = generateState();
+    await setupOidcConfig();
+    const state = await generateState();
 
     fetchSpy.mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;

@@ -84,8 +84,8 @@ export function convertToLocalTime(
  * could be due, based on all enabled notifiers' configured times and timezones.
  * Includes ±1 hour buffer around each computed hour to handle DST transitions.
  */
-export function computeNotificationCron(): string | null {
-  const schedules = getEnabledNotifierSchedules();
+export async function computeNotificationCron(): Promise<string | null> {
+  const schedules = await getEnabledNotifierSchedules();
   if (schedules.length === 0) return null;
 
   const hours = new Set<number>();
@@ -114,10 +114,10 @@ export function computeNotificationCron(): string | null {
 
 let handlerRegistered = false;
 
-export function registerNotificationJobs() {
+export async function registerNotificationJobs() {
   if (!handlerRegistered) {
     registerHandler("send-notifications", async () => {
-      const timezones = getDistinctNotifierTimezones();
+      const timezones = await getDistinctNotifierTimezones();
       if (timezones.length === 0) return;
 
       // Compute current time for each timezone
@@ -130,7 +130,7 @@ export function registerNotificationJobs() {
         }
       }
 
-      const dueNotifiers = getDueNotifiers(timesByTimezone);
+      const dueNotifiers = await getDueNotifiers(timesByTimezone);
       if (dueNotifiers.length === 0) return;
 
       log.info("Processing due notifiers", { count: dueNotifiers.length });
@@ -143,24 +143,24 @@ export function registerNotificationJobs() {
             continue;
           }
 
-          const content = buildNotificationContent(
+          const content = await buildNotificationContent(
             notifier.user_id,
             notifier.todayDate
           );
 
           // Skip if nothing to notify about
           if (content.episodes.length === 0 && content.movies.length === 0) {
-            markNotifierSent(notifier.id, notifier.todayDate);
+            await markNotifierSent(notifier.id, notifier.todayDate);
             continue;
           }
 
           await provider.send(notifier.config, content);
-          markNotifierSent(notifier.id, notifier.todayDate);
+          await markNotifierSent(notifier.id, notifier.todayDate);
           log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
         } catch (err) {
           if (err instanceof SubscriptionExpiredError) {
             log.warn("Push subscription expired, disabling notifier", { notifierId: notifier.id });
-            disableNotifier(notifier.id);
+            await disableNotifier(notifier.id);
             continue;
           }
           const message = err instanceof Error ? err.message : String(err);
@@ -171,7 +171,7 @@ export function registerNotificationJobs() {
     handlerRegistered = true;
   }
 
-  refreshNotificationSchedule();
+  await refreshNotificationSchedule();
 }
 
 /**
@@ -179,8 +179,8 @@ export function registerNotificationJobs() {
  * currently enabled notifiers. Call this when notifiers are created,
  * updated, or deleted.
  */
-export function refreshNotificationSchedule() {
-  const cron = computeNotificationCron();
+export async function refreshNotificationSchedule() {
+  const cron = await computeNotificationCron();
   if (cron) {
     registerCron("send-notifications", cron);
   } else {

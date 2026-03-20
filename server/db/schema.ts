@@ -10,8 +10,10 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { CONFIG } from "../config";
 import { logger } from "../logger";
+import type { DrizzleDb } from "../platform/types";
 
 const log = logger.child({ module: "migration" });
 
@@ -257,18 +259,41 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
 
 // ─── Database Instance ──────────────────────────────────────────────────────
 
-const schemaExports = {
+export const schemaExports = {
   titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, notifiers, oidcStates, schemaVersion,
   titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
   usersRelations, sessionsRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
 };
 
-export type DrizzleDb = BunSQLiteDatabase<typeof schemaExports>;
+// Re-export the union type from platform for convenience
+export type { DrizzleDb } from "../platform/types";
 
-let drizzleDb: DrizzleDb;
+/**
+ * AsyncLocalStorage allows the CF Workers entry point to set a D1-backed
+ * Drizzle instance per-request. The Bun entry point ignores ALS and uses
+ * the module-level singleton.
+ */
+const dbStorage = new AsyncLocalStorage<DrizzleDb>();
+
+/** Run a callback with a specific DrizzleDb bound to ALS (used by CF Workers). */
+export function runWithDb<T>(db: DrizzleDb, fn: () => T): T {
+  return dbStorage.run(db, fn);
+}
+
+let drizzleDb: BunSQLiteDatabase<typeof schemaExports>;
 let rawDb: Database;
 
+/**
+ * Get the current DrizzleDb instance.
+ * - In CF Workers: returns the D1-backed instance from AsyncLocalStorage.
+ * - In Bun: returns the bun:sqlite singleton (initializes on first call).
+ */
 export function getDb(): DrizzleDb {
+  // Check ALS first (CF Workers path)
+  const alsDb = dbStorage.getStore();
+  if (alsDb) return alsDb;
+
+  // Fall back to Bun singleton
   if (!drizzleDb) {
     rawDb = new Database(CONFIG.DB_PATH, { create: true });
     rawDb.run("PRAGMA journal_mode = WAL");
@@ -277,10 +302,10 @@ export function getDb(): DrizzleDb {
     migrateSchema(rawDb);
     drizzleDb = drizzle(rawDb, { schema: schemaExports });
   }
-  return drizzleDb;
+  return drizzleDb as DrizzleDb;
 }
 
-/** Get the raw bun:sqlite Database for edge cases */
+/** Get the raw bun:sqlite Database for edge cases (Bun only). */
 export function getRawDb(): Database {
   if (!rawDb) getDb();
   return rawDb;

@@ -1,5 +1,5 @@
 import { eq, and, or, like, sql, gte, lt, desc, asc, exists, notExists, inArray } from "drizzle-orm";
-import { getDb, getRawDb } from "../schema";
+import { getDb } from "../schema";
 import { titles, providers, offers, scores, tracked } from "../schema";
 import type { ParsedTitle } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
@@ -8,113 +8,108 @@ import { getOffersForTitle, getOffersForTitles } from "./offers";
 
 // ─── Title / Offer / Score upserts ───────────────────────────────────────────
 
-export function upsertTitles(parsedTitles: ParsedTitle[]) {
-  return traceDbQuery("upsertTitles", () => {
+export async function upsertTitles(parsedTitles: ParsedTitle[]) {
+  return traceDbQuery("upsertTitles", async () => {
     const db = getDb();
-    const raw = getRawDb();
 
     // Extract and upsert providers first
     const providerList = extractProviders(parsedTitles);
 
-    raw.transaction(() => {
-      for (const p of providerList) {
-        db.insert(providers)
-          .values({
-            id: p.id,
-            name: p.name,
-            technicalName: p.technicalName,
-            iconUrl: p.iconUrl,
-          })
-          .onConflictDoUpdate({
-            target: providers.id,
-            set: {
-              name: sql`excluded.name`,
-              technicalName: sql`excluded.technical_name`,
-              iconUrl: sql`excluded.icon_url`,
-            },
-          })
-          .run();
-      }
-    })();
+    for (const p of providerList) {
+      await db.insert(providers)
+        .values({
+          id: p.id,
+          name: p.name,
+          technicalName: p.technicalName,
+          iconUrl: p.iconUrl,
+        })
+        .onConflictDoUpdate({
+          target: providers.id,
+          set: {
+            name: sql`excluded.name`,
+            technicalName: sql`excluded.technical_name`,
+            iconUrl: sql`excluded.icon_url`,
+          },
+        })
+        .run();
+    }
 
-    raw.transaction(() => {
-      for (const t of parsedTitles) {
-        db.insert(titles)
-          .values({
-            id: t.id,
-            objectType: t.objectType,
-            title: t.title,
-            originalTitle: t.originalTitle,
-            releaseYear: t.releaseYear,
-            releaseDate: t.releaseDate,
-            runtimeMinutes: t.runtimeMinutes,
-            shortDescription: t.shortDescription,
-            genres: JSON.stringify(t.genres),
-            originalLanguage: t.originalLanguage,
-            imdbId: t.imdbId,
-            tmdbId: t.tmdbId,
-            posterUrl: t.posterUrl,
-            ageCertification: t.ageCertification,
-            tmdbUrl: t.tmdbUrl,
+    for (const t of parsedTitles) {
+      await db.insert(titles)
+        .values({
+          id: t.id,
+          objectType: t.objectType,
+          title: t.title,
+          originalTitle: t.originalTitle,
+          releaseYear: t.releaseYear,
+          releaseDate: t.releaseDate,
+          runtimeMinutes: t.runtimeMinutes,
+          shortDescription: t.shortDescription,
+          genres: JSON.stringify(t.genres),
+          originalLanguage: t.originalLanguage,
+          imdbId: t.imdbId,
+          tmdbId: t.tmdbId,
+          posterUrl: t.posterUrl,
+          ageCertification: t.ageCertification,
+          tmdbUrl: t.tmdbUrl,
+          updatedAt: sql`datetime('now')`,
+        })
+        .onConflictDoUpdate({
+          target: titles.id,
+          set: {
+            title: sql`excluded.title`,
+            originalTitle: sql`excluded.original_title`,
+            releaseYear: sql`excluded.release_year`,
+            releaseDate: sql`excluded.release_date`,
+            runtimeMinutes: sql`excluded.runtime_minutes`,
+            shortDescription: sql`excluded.short_description`,
+            genres: sql`excluded.genres`,
+            originalLanguage: sql`excluded.original_language`,
+            imdbId: sql`excluded.imdb_id`,
+            tmdbId: sql`excluded.tmdb_id`,
+            posterUrl: sql`excluded.poster_url`,
+            ageCertification: sql`excluded.age_certification`,
+            tmdbUrl: sql`excluded.tmdb_url`,
             updatedAt: sql`datetime('now')`,
-          })
-          .onConflictDoUpdate({
-            target: titles.id,
-            set: {
-              title: sql`excluded.title`,
-              originalTitle: sql`excluded.original_title`,
-              releaseYear: sql`excluded.release_year`,
-              releaseDate: sql`excluded.release_date`,
-              runtimeMinutes: sql`excluded.runtime_minutes`,
-              shortDescription: sql`excluded.short_description`,
-              genres: sql`excluded.genres`,
-              originalLanguage: sql`excluded.original_language`,
-              imdbId: sql`excluded.imdb_id`,
-              tmdbId: sql`excluded.tmdb_id`,
-              posterUrl: sql`excluded.poster_url`,
-              ageCertification: sql`excluded.age_certification`,
-              tmdbUrl: sql`excluded.tmdb_url`,
-              updatedAt: sql`datetime('now')`,
-            },
-          })
-          .run();
+          },
+        })
+        .run();
 
-        // Replace offers
-        db.delete(offers).where(eq(offers.titleId, t.id)).run();
-        for (const o of t.offers) {
-          db.insert(offers)
-            .values({
-              titleId: o.titleId,
-              providerId: o.providerId,
-              monetizationType: o.monetizationType,
-              presentationType: o.presentationType,
-              priceValue: o.priceValue,
-              priceCurrency: o.priceCurrency,
-              url: o.url,
-              availableTo: o.availableTo,
-            })
-            .run();
-        }
-
-        // Upsert scores
-        db.insert(scores)
+      // Replace offers
+      await db.delete(offers).where(eq(offers.titleId, t.id)).run();
+      for (const o of t.offers) {
+        await db.insert(offers)
           .values({
-            titleId: t.id,
-            imdbScore: t.scores.imdbScore,
-            imdbVotes: t.scores.imdbVotes,
-            tmdbScore: t.scores.tmdbScore,
-          })
-          .onConflictDoUpdate({
-            target: scores.titleId,
-            set: {
-              imdbScore: sql`excluded.imdb_score`,
-              imdbVotes: sql`excluded.imdb_votes`,
-              tmdbScore: sql`excluded.tmdb_score`,
-            },
+            titleId: o.titleId,
+            providerId: o.providerId,
+            monetizationType: o.monetizationType,
+            presentationType: o.presentationType,
+            priceValue: o.priceValue,
+            priceCurrency: o.priceCurrency,
+            url: o.url,
+            availableTo: o.availableTo,
           })
           .run();
       }
-    })();
+
+      // Upsert scores
+      await db.insert(scores)
+        .values({
+          titleId: t.id,
+          imdbScore: t.scores.imdbScore,
+          imdbVotes: t.scores.imdbVotes,
+          tmdbScore: t.scores.tmdbScore,
+        })
+        .onConflictDoUpdate({
+          target: scores.titleId,
+          set: {
+            imdbScore: sql`excluded.imdb_score`,
+            imdbVotes: sql`excluded.imdb_votes`,
+            tmdbScore: sql`excluded.tmdb_score`,
+          },
+        })
+        .run();
+    }
 
     return parsedTitles.length;
   });
@@ -122,15 +117,15 @@ export function upsertTitles(parsedTitles: ParsedTitle[]) {
 
 // ─── Single title lookup ─────────────────────────────────────────────────────
 
-export function getTitleById(titleId: string, userId?: string) {
-  return traceDbQuery("getTitleById", () => {
+export async function getTitleById(titleId: string, userId?: string) {
+  return traceDbQuery("getTitleById", async () => {
     const db = getDb();
 
     const trackedSubquery = userId
       ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
       : sql<number>`0`;
 
-    const row = db
+    const row = await db
       .select({
         id: titles.id,
         object_type: titles.objectType,
@@ -164,7 +159,7 @@ export function getTitleById(titleId: string, userId?: string) {
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
       is_tracked: Boolean(row.is_tracked),
-      offers: getOffersForTitle(row.id),
+      offers: await getOffersForTitle(row.id),
     };
   });
 }
@@ -182,8 +177,8 @@ export interface TitleFilters {
   offset?: number;
 }
 
-export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
-  return traceDbQuery("getRecentTitles", () => {
+export async function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
+  return traceDbQuery("getRecentTitles", async () => {
     const db = getDb();
     const { daysBack = 30, objectTypes, providers: filterProviders, genres, languages, excludeTracked, limit = 100, offset = 0 } = filters;
 
@@ -239,7 +234,7 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
       : sql<number>`0`;
 
-    const rows = db
+    const rows = await db
       .select({
         id: titles.id,
         object_type: titles.objectType,
@@ -270,7 +265,7 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
       .offset(offset)
       .all();
 
-    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
+    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
@@ -280,15 +275,15 @@ export function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
   });
 }
 
-export function searchLocalTitles(query: string, limit = 50, userId?: string) {
-  return traceDbQuery("searchLocalTitles", () => {
+export async function searchLocalTitles(query: string, limit = 50, userId?: string) {
+  return traceDbQuery("searchLocalTitles", async () => {
     const db = getDb();
 
     const trackedSubquery = userId
       ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
       : sql<number>`0`;
 
-    const rows = db
+    const rows = await db
       .select({
         id: titles.id,
         object_type: titles.objectType,
@@ -318,7 +313,7 @@ export function searchLocalTitles(query: string, limit = 50, userId?: string) {
       .limit(limit)
       .all();
 
-    const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
+    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
     return rows.map((row) => ({
       ...row,
       genres: row.genres ? JSON.parse(row.genres) : [],
@@ -336,8 +331,8 @@ export interface MonthFilters {
   provider?: string;
 }
 
-export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
-  return traceDbQuery("getTitlesByMonth", () => {
+export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
+  return traceDbQuery("getTitlesByMonth", async () => {
   const db = getDb();
   const { month, objectType, provider } = filters;
 
@@ -397,7 +392,7 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     }
   }
 
-  const rows = db
+  const rows = await db
     .select({
       id: titles.id,
       object_type: titles.objectType,
@@ -426,7 +421,7 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     .orderBy(asc(titles.releaseDate))
     .all();
 
-  const offersByTitle = getOffersForTitles(rows.map((r) => r.id));
+  const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
   return rows.map((row) => ({
     ...row,
     genres: row.genres ? JSON.parse(row.genres) : [],
@@ -436,10 +431,10 @@ export function getTitlesByMonth(filters: MonthFilters, userId?: string) {
   });
 }
 
-export function getProviders() {
-  return traceDbQuery("getProviders", () => {
+export async function getProviders() {
+  return traceDbQuery("getProviders", async () => {
     const db = getDb();
-    return db
+    return await db
       .select({
         id: providers.id,
         name: providers.name,
@@ -452,28 +447,38 @@ export function getProviders() {
   });
 }
 
-export function getGenres(): string[] {
-  return traceDbQuery("getGenres", () => {
-    const raw = getRawDb();
-    const rows = raw.prepare(
-      "SELECT DISTINCT genres FROM titles WHERE genres IS NOT NULL AND genres != '[]'"
-    ).all() as { genres: string }[];
+export async function getGenres(): Promise<string[]> {
+  return traceDbQuery("getGenres", async () => {
+    const db = getDb();
+    const rows = await db
+      .selectDistinct({ genres: titles.genres })
+      .from(titles)
+      .where(and(
+        sql`${titles.genres} IS NOT NULL`,
+        sql`${titles.genres} != '[]'`
+      ))
+      .all();
 
     const genreSet = new Set<string>();
     for (const row of rows) {
-      const parsed = JSON.parse(row.genres) as string[];
-      for (const g of parsed) genreSet.add(g);
+      if (row.genres) {
+        const parsed = JSON.parse(row.genres) as string[];
+        for (const g of parsed) genreSet.add(g);
+      }
     }
     return Array.from(genreSet).sort();
   });
 }
 
-export function getLanguages(): string[] {
-  return traceDbQuery("getLanguages", () => {
-    const raw = getRawDb();
-    const rows = raw.prepare(
-      "SELECT DISTINCT original_language FROM titles WHERE original_language IS NOT NULL ORDER BY original_language"
-    ).all() as { original_language: string }[];
-    return rows.map((r) => r.original_language);
+export async function getLanguages(): Promise<string[]> {
+  return traceDbQuery("getLanguages", async () => {
+    const db = getDb();
+    const rows = await db
+      .selectDistinct({ original_language: titles.originalLanguage })
+      .from(titles)
+      .where(sql`${titles.originalLanguage} IS NOT NULL`)
+      .orderBy(asc(titles.originalLanguage))
+      .all();
+    return rows.map((r) => r.original_language!);
   });
 }

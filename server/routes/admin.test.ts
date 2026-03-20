@@ -20,8 +20,8 @@ beforeEach(async () => {
 
   // Create admin user
   const hash = await Bun.password.hash("admin123");
-  const adminId = createUser("admin", hash, "Admin", "local", undefined, true);
-  const token = createSession(adminId);
+  const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
+  const token = await createSession(adminId);
   adminCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
 
   app = new Hono<AppEnv>();
@@ -55,8 +55,8 @@ describe("GET /admin/settings", () => {
   });
 
   it("returns 403 for non-admin user", async () => {
-    const userId = createUser("regular", "hash");
-    const token = createSession(userId);
+    const userId = await createUser("regular", "hash");
+    const token = await createSession(userId);
     const userCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
 
     const res = await app.request("/admin/settings", {
@@ -66,8 +66,8 @@ describe("GET /admin/settings", () => {
   });
 
   it("reflects DB-stored OIDC values", async () => {
-    setSetting("oidc_issuer_url", "https://auth.example.com");
-    setSetting("oidc_client_id", "my-client");
+    await setSetting("oidc_issuer_url", "https://auth.example.com");
+    await setSetting("oidc_client_id", "my-client");
 
     const res = await app.request("/admin/settings", {
       headers: { Cookie: adminCookie },
@@ -93,12 +93,12 @@ describe("PUT /admin/settings", () => {
     expect(body.success).toBe(true);
 
     // Verify settings persisted
-    expect(getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
-    expect(getSetting("oidc_client_id")).toBe("test-client");
+    expect(await getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
+    expect(await getSetting("oidc_client_id")).toBe("test-client");
   });
 
   it("deletes settings when value is empty string", async () => {
-    setSetting("oidc_issuer_url", "https://auth.example.com");
+    await setSetting("oidc_issuer_url", "https://auth.example.com");
 
     const res = await app.request("/admin/settings", {
       method: "PUT",
@@ -106,11 +106,11 @@ describe("PUT /admin/settings", () => {
       body: JSON.stringify({ oidc_issuer_url: "" }),
     });
     expect(res.status).toBe(200);
-    expect(getSetting("oidc_issuer_url")).toBeNull();
+    expect(await getSetting("oidc_issuer_url")).toBeNull();
   });
 
   it("deletes settings when value is null", async () => {
-    setSetting("oidc_client_id", "old-client");
+    await setSetting("oidc_client_id", "old-client");
 
     const res = await app.request("/admin/settings", {
       method: "PUT",
@@ -118,7 +118,7 @@ describe("PUT /admin/settings", () => {
       body: JSON.stringify({ oidc_client_id: null }),
     });
     expect(res.status).toBe(200);
-    expect(getSetting("oidc_client_id")).toBeNull();
+    expect(await getSetting("oidc_client_id")).toBeNull();
   });
 
   it("ignores unknown keys", async () => {
@@ -128,8 +128,8 @@ describe("PUT /admin/settings", () => {
       body: JSON.stringify({ unknown_key: "value", oidc_issuer_url: "https://auth.example.com" }),
     });
     expect(res.status).toBe(200);
-    expect(getSetting("unknown_key")).toBeNull();
-    expect(getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
+    expect(await getSetting("unknown_key")).toBeNull();
+    expect(await getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
   });
 
   it("returns 401 without auth", async () => {
@@ -142,8 +142,8 @@ describe("PUT /admin/settings", () => {
   });
 
   it("returns 403 for non-admin user", async () => {
-    const userId = createUser("regular", "hash");
-    const token = createSession(userId);
+    const userId = await createUser("regular", "hash");
+    const token = await createSession(userId);
     const userCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
 
     const res = await app.request("/admin/settings", {

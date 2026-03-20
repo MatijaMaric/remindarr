@@ -20,33 +20,33 @@ app.post("/bulk", async (c) => {
   }
 
   if (watched) {
-    const releasedIds = getReleasedEpisodeIds(episodeIds);
+    const releasedIds = await getReleasedEpisodeIds(episodeIds);
     if (releasedIds.length === 0) {
       return c.json({ error: "Cannot mark unreleased episodes as watched" }, 400);
     }
-    watchEpisodesBulk(releasedIds, user.id);
+    await watchEpisodesBulk(releasedIds, user.id);
   } else {
-    unwatchEpisodesBulk(episodeIds, user.id);
+    await unwatchEpisodesBulk(episodeIds, user.id);
   }
 
   return c.json({ success: true });
 });
 
-app.post("/:episodeId", (c) => {
+app.post("/:episodeId", async (c) => {
   const user = c.get("user")!;
   const episodeId = Number(c.req.param("episodeId"));
-  const airDate = getEpisodeAirDate(episodeId);
+  const airDate = await getEpisodeAirDate(episodeId);
   if (!isReleased(airDate)) {
     return c.json({ error: "Cannot mark an unreleased episode as watched" }, 400);
   }
-  watchEpisode(episodeId, user.id);
+  await watchEpisode(episodeId, user.id);
   return c.json({ success: true });
 });
 
-app.delete("/:episodeId", (c) => {
+app.delete("/:episodeId", async (c) => {
   const user = c.get("user")!;
   const episodeId = Number(c.req.param("episodeId"));
-  unwatchEpisode(episodeId, user.id);
+  await unwatchEpisode(episodeId, user.id);
   return c.json({ success: true });
 });
 

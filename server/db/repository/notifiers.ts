@@ -1,23 +1,23 @@
 import { eq, and, sql, asc } from "drizzle-orm";
-import { getDb, getRawDb } from "../schema";
+import { getDb } from "../schema";
 import { notifiers } from "../schema";
 import { logger } from "../../logger";
 import { traceDbQuery } from "../../tracing";
 
 const log = logger.child({ module: "repository" });
 
-export function createNotifier(
+export async function createNotifier(
   userId: string,
   provider: string,
   name: string,
   config: Record<string, string>,
   notifyTime: string,
   timezone: string
-): string {
-  return traceDbQuery("createNotifier", () => {
+): Promise<string> {
+  return traceDbQuery("createNotifier", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
-    db.insert(notifiers)
+    await db.insert(notifiers)
       .values({
         id,
         userId,
@@ -32,7 +32,7 @@ export function createNotifier(
   });
 }
 
-export function updateNotifier(
+export async function updateNotifier(
   id: string,
   userId: string,
   updates: {
@@ -43,7 +43,7 @@ export function updateNotifier(
     enabled?: boolean;
   }
 ) {
-  return traceDbQuery("updateNotifier", () => {
+  return traceDbQuery("updateNotifier", async () => {
     const db = getDb();
     const set: Record<string, any> = { updatedAt: sql`datetime('now')` };
     if (updates.name !== undefined) set.name = updates.name;
@@ -52,26 +52,26 @@ export function updateNotifier(
     if (updates.timezone !== undefined) set.timezone = updates.timezone;
     if (updates.enabled !== undefined) set.enabled = updates.enabled ? 1 : 0;
 
-    db.update(notifiers)
+    await db.update(notifiers)
       .set(set)
       .where(and(eq(notifiers.id, id), eq(notifiers.userId, userId)))
       .run();
   });
 }
 
-export function deleteNotifier(id: string, userId: string) {
-  return traceDbQuery("deleteNotifier", () => {
+export async function deleteNotifier(id: string, userId: string) {
+  return traceDbQuery("deleteNotifier", async () => {
     const db = getDb();
-    db.delete(notifiers)
+    await db.delete(notifiers)
       .where(and(eq(notifiers.id, id), eq(notifiers.userId, userId)))
       .run();
   });
 }
 
-export function getNotifiersByUser(userId: string) {
-  return traceDbQuery("getNotifiersByUser", () => {
+export async function getNotifiersByUser(userId: string) {
+  return traceDbQuery("getNotifiersByUser", async () => {
     const db = getDb();
-    return db
+    const rows = await db
       .select({
         id: notifiers.id,
         user_id: notifiers.userId,
@@ -88,28 +88,29 @@ export function getNotifiersByUser(userId: string) {
       .from(notifiers)
       .where(eq(notifiers.userId, userId))
       .orderBy(asc(notifiers.createdAt))
-      .all()
-      .map((row) => {
-        let config: Record<string, string>;
-        try {
-          config = JSON.parse(row.config);
-        } catch {
-          log.warn("Failed to parse notifier config", { id: row.id });
-          config = {};
-        }
-        return {
-          ...row,
-          config,
-          enabled: Boolean(row.enabled),
-        };
-      });
+      .all();
+
+    return rows.map((row) => {
+      let config: Record<string, string>;
+      try {
+        config = JSON.parse(row.config);
+      } catch {
+        log.warn("Failed to parse notifier config", { id: row.id });
+        config = {};
+      }
+      return {
+        ...row,
+        config,
+        enabled: Boolean(row.enabled),
+      };
+    });
   });
 }
 
-export function getNotifierById(id: string, userId: string) {
-  return traceDbQuery("getNotifierById", () => {
+export async function getNotifierById(id: string, userId: string) {
+  return traceDbQuery("getNotifierById", async () => {
     const db = getDb();
-    const row = db
+    const row = await db
       .select({
         id: notifiers.id,
         user_id: notifiers.userId,
@@ -143,14 +144,14 @@ export function getNotifierById(id: string, userId: string) {
   });
 }
 
-export function getDueNotifiers(
+export async function getDueNotifiers(
   timesByTimezone: Map<string, { time: string; date: string }>
 ) {
-  return traceDbQuery("getDueNotifiers", () => {
+  return traceDbQuery("getDueNotifiers", async () => {
     const db = getDb();
 
     // Get all enabled notifiers
-    const allEnabled = db
+    const allEnabled = await db
       .select({
         id: notifiers.id,
         user_id: notifiers.userId,
@@ -190,41 +191,49 @@ export function getDueNotifiers(
   });
 }
 
-export function disableNotifier(id: string) {
-  return traceDbQuery("disableNotifier", () => {
+export async function disableNotifier(id: string) {
+  return traceDbQuery("disableNotifier", async () => {
     const db = getDb();
-    db.update(notifiers)
+    await db.update(notifiers)
       .set({ enabled: 0, updatedAt: sql`datetime('now')` })
       .where(eq(notifiers.id, id))
       .run();
   });
 }
 
-export function markNotifierSent(id: string, date: string) {
-  return traceDbQuery("markNotifierSent", () => {
+export async function markNotifierSent(id: string, date: string) {
+  return traceDbQuery("markNotifierSent", async () => {
     const db = getDb();
-    db.update(notifiers)
+    await db.update(notifiers)
       .set({ lastSentDate: date, updatedAt: sql`datetime('now')` })
       .where(eq(notifiers.id, id))
       .run();
   });
 }
 
-export function getDistinctNotifierTimezones(): string[] {
-  return traceDbQuery("getDistinctNotifierTimezones", () => {
-    const raw = getRawDb();
-    const rows = raw
-      .prepare("SELECT DISTINCT timezone FROM notifiers WHERE enabled = 1")
-      .all() as { timezone: string }[];
+export async function getDistinctNotifierTimezones(): Promise<string[]> {
+  return traceDbQuery("getDistinctNotifierTimezones", async () => {
+    const db = getDb();
+    const rows = await db
+      .selectDistinct({ timezone: notifiers.timezone })
+      .from(notifiers)
+      .where(eq(notifiers.enabled, 1))
+      .all();
     return rows.map((r) => r.timezone);
   });
 }
 
-export function getEnabledNotifierSchedules(): { notify_time: string; timezone: string }[] {
-  return traceDbQuery("getEnabledNotifierSchedules", () => {
-    const raw = getRawDb();
-    return raw
-      .prepare("SELECT DISTINCT notify_time, timezone FROM notifiers WHERE enabled = 1")
-      .all() as { notify_time: string; timezone: string }[];
+export async function getEnabledNotifierSchedules(): Promise<{ notify_time: string; timezone: string }[]> {
+  return traceDbQuery("getEnabledNotifierSchedules", async () => {
+    const db = getDb();
+    const rows = await db
+      .selectDistinct({
+        notify_time: notifiers.notifyTime,
+        timezone: notifiers.timezone,
+      })
+      .from(notifiers)
+      .where(eq(notifiers.enabled, 1))
+      .all();
+    return rows;
   });
 }

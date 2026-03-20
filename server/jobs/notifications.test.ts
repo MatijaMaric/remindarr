@@ -13,9 +13,9 @@ import { convertToLocalTime, computeNotificationCron } from "./notifications";
 
 let userId: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   setupTestDb();
-  userId = createUser("testuser", "hash");
+  userId = await createUser("testuser", "hash");
 });
 
 afterAll(() => {
@@ -23,112 +23,112 @@ afterAll(() => {
 });
 
 describe("getDueNotifiers", () => {
-  it("returns notifiers matching current time in their timezone", () => {
-    createNotifier(userId, "discord", "Morning", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+  it("returns notifiers matching current time in their timezone", async () => {
+    await createNotifier(userId, "discord", "Morning", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
 
     const timesByTimezone = new Map([
       ["UTC", { time: "09:00", date: "2026-03-12" }],
     ]);
 
-    const due = getDueNotifiers(timesByTimezone);
+    const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(1);
     expect(due[0].name).toBe("Morning");
     expect(due[0].todayDate).toBe("2026-03-12");
   });
 
-  it("excludes notifiers with non-matching time", () => {
-    createNotifier(userId, "discord", "Evening", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "18:00", "UTC");
+  it("excludes notifiers with non-matching time", async () => {
+    await createNotifier(userId, "discord", "Evening", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "18:00", "UTC");
 
     const timesByTimezone = new Map([
       ["UTC", { time: "09:00", date: "2026-03-12" }],
     ]);
 
-    const due = getDueNotifiers(timesByTimezone);
+    const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(0);
   });
 
-  it("excludes already-sent notifiers", () => {
-    const id = createNotifier(userId, "discord", "Sent", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
-    markNotifierSent(id, "2026-03-12");
+  it("excludes already-sent notifiers", async () => {
+    const id = await createNotifier(userId, "discord", "Sent", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await markNotifierSent(id, "2026-03-12");
 
     const timesByTimezone = new Map([
       ["UTC", { time: "09:00", date: "2026-03-12" }],
     ]);
 
-    const due = getDueNotifiers(timesByTimezone);
+    const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(0);
   });
 
-  it("includes notifier sent on a different day", () => {
-    const id = createNotifier(userId, "discord", "Yesterday", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
-    markNotifierSent(id, "2026-03-11");
+  it("includes notifier sent on a different day", async () => {
+    const id = await createNotifier(userId, "discord", "Yesterday", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await markNotifierSent(id, "2026-03-11");
 
     const timesByTimezone = new Map([
       ["UTC", { time: "09:00", date: "2026-03-12" }],
     ]);
 
-    const due = getDueNotifiers(timesByTimezone);
+    const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(1);
   });
 
-  it("excludes disabled notifiers", () => {
-    const id = createNotifier(userId, "discord", "Disabled", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+  it("excludes disabled notifiers", async () => {
+    const id = await createNotifier(userId, "discord", "Disabled", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
     // Disable it using updateNotifier
     const { updateNotifier } = require("../db/repository");
-    updateNotifier(id, userId, { enabled: false });
+    await updateNotifier(id, userId, { enabled: false });
 
     const timesByTimezone = new Map([
       ["UTC", { time: "09:00", date: "2026-03-12" }],
     ]);
 
-    const due = getDueNotifiers(timesByTimezone);
+    const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(0);
   });
 });
 
 describe("getDistinctNotifierTimezones", () => {
-  it("returns unique timezones of enabled notifiers", () => {
-    createNotifier(userId, "discord", "UTC1", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
-    createNotifier(userId, "discord", "UTC2", { webhookUrl: "https://discord.com/api/webhooks/2/b" }, "10:00", "UTC");
-    createNotifier(userId, "discord", "NY", { webhookUrl: "https://discord.com/api/webhooks/3/c" }, "09:00", "America/New_York");
+  it("returns unique timezones of enabled notifiers", async () => {
+    await createNotifier(userId, "discord", "UTC1", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await createNotifier(userId, "discord", "UTC2", { webhookUrl: "https://discord.com/api/webhooks/2/b" }, "10:00", "UTC");
+    await createNotifier(userId, "discord", "NY", { webhookUrl: "https://discord.com/api/webhooks/3/c" }, "09:00", "America/New_York");
 
-    const tzs = getDistinctNotifierTimezones();
+    const tzs = await getDistinctNotifierTimezones();
     expect(tzs).toContain("UTC");
     expect(tzs).toContain("America/New_York");
     expect(tzs).toHaveLength(2);
   });
 
-  it("returns empty when no notifiers exist", () => {
-    const tzs = getDistinctNotifierTimezones();
+  it("returns empty when no notifiers exist", async () => {
+    const tzs = await getDistinctNotifierTimezones();
     expect(tzs).toHaveLength(0);
   });
 });
 
 describe("markNotifierSent", () => {
-  it("updates last_sent_date", () => {
-    const id = createNotifier(userId, "discord", "Test", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+  it("updates last_sent_date", async () => {
+    const id = await createNotifier(userId, "discord", "Test", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
 
-    markNotifierSent(id, "2026-03-12");
+    await markNotifierSent(id, "2026-03-12");
 
-    const notifier = getNotifierById(id, userId);
+    const notifier = await getNotifierById(id, userId);
     expect(notifier!.last_sent_date).toBe("2026-03-12");
   });
 });
 
 describe("getEnabledNotifierSchedules", () => {
-  it("returns distinct time+timezone pairs for enabled notifiers", () => {
-    createNotifier(userId, "discord", "N1", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
-    createNotifier(userId, "discord", "N2", { webhookUrl: "https://discord.com/api/webhooks/2/b" }, "09:00", "UTC");
-    createNotifier(userId, "discord", "N3", { webhookUrl: "https://discord.com/api/webhooks/3/c" }, "18:00", "America/New_York");
+  it("returns distinct time+timezone pairs for enabled notifiers", async () => {
+    await createNotifier(userId, "discord", "N1", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await createNotifier(userId, "discord", "N2", { webhookUrl: "https://discord.com/api/webhooks/2/b" }, "09:00", "UTC");
+    await createNotifier(userId, "discord", "N3", { webhookUrl: "https://discord.com/api/webhooks/3/c" }, "18:00", "America/New_York");
 
-    const schedules = getEnabledNotifierSchedules();
+    const schedules = await getEnabledNotifierSchedules();
     expect(schedules).toHaveLength(2);
     expect(schedules).toContainEqual({ notify_time: "09:00", timezone: "UTC" });
     expect(schedules).toContainEqual({ notify_time: "18:00", timezone: "America/New_York" });
   });
 
-  it("returns empty when no notifiers exist", () => {
-    const schedules = getEnabledNotifierSchedules();
+  it("returns empty when no notifiers exist", async () => {
+    const schedules = await getEnabledNotifierSchedules();
     expect(schedules).toHaveLength(0);
   });
 });
@@ -163,15 +163,15 @@ describe("convertToLocalTime", () => {
 });
 
 describe("computeNotificationCron", () => {
-  it("returns null when no notifiers exist", () => {
-    const cron = computeNotificationCron();
+  it("returns null when no notifiers exist", async () => {
+    const cron = await computeNotificationCron();
     expect(cron).toBeNull();
   });
 
-  it("returns a cron expression with specific minutes and hours", () => {
-    createNotifier(userId, "discord", "Test", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+  it("returns a cron expression with specific minutes and hours", async () => {
+    await createNotifier(userId, "discord", "Test", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
 
-    const cron = computeNotificationCron();
+    const cron = await computeNotificationCron();
     expect(cron).not.toBeNull();
 
     // Should have format: "minutes hours * * *"
@@ -187,11 +187,11 @@ describe("computeNotificationCron", () => {
     expect(hours).toHaveLength(3);
   });
 
-  it("combines multiple notifier times into one cron", () => {
-    createNotifier(userId, "discord", "Morning", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
-    createNotifier(userId, "discord", "Evening", { webhookUrl: "https://discord.com/api/webhooks/2/b" }, "18:30", "UTC");
+  it("combines multiple notifier times into one cron", async () => {
+    await createNotifier(userId, "discord", "Morning", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await createNotifier(userId, "discord", "Evening", { webhookUrl: "https://discord.com/api/webhooks/2/b" }, "18:30", "UTC");
 
-    const cron = computeNotificationCron();
+    const cron = await computeNotificationCron();
     expect(cron).not.toBeNull();
 
     const parts = cron!.split(" ");
@@ -201,12 +201,12 @@ describe("computeNotificationCron", () => {
     expect(minutes).toContain(30);
   });
 
-  it("does not include disabled notifiers", () => {
+  it("does not include disabled notifiers", async () => {
     const { updateNotifier } = require("../db/repository");
-    const id = createNotifier(userId, "discord", "Disabled", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
-    updateNotifier(id, userId, { enabled: false });
+    const id = await createNotifier(userId, "discord", "Disabled", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await updateNotifier(id, userId, { enabled: false });
 
-    const cron = computeNotificationCron();
+    const cron = await computeNotificationCron();
     expect(cron).toBeNull();
   });
 });

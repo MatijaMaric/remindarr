@@ -3,10 +3,10 @@ import { getDb } from "../schema";
 import { offers, providers } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
-export function getOffersForTitle(titleId: string) {
-  return traceDbQuery("getOffersForTitle", () => {
+export async function getOffersForTitle(titleId: string) {
+  return traceDbQuery("getOffersForTitle", async () => {
     const db = getDb();
-    return db
+    return await db
       .select({
         id: offers.id,
         title_id: offers.titleId,
@@ -28,11 +28,11 @@ export function getOffersForTitle(titleId: string) {
   });
 }
 
-export function getOffersForTitles(titleIds: string[]) {
-  return traceDbQuery("getOffersForTitles", () => {
-    if (titleIds.length === 0) return new Map<string, ReturnType<typeof getOffersForTitle>>();
+export async function getOffersForTitles(titleIds: string[]) {
+  return traceDbQuery("getOffersForTitles", async () => {
+    if (titleIds.length === 0) return new Map<string, Awaited<ReturnType<typeof getOffersForTitle>>>();
     const db = getDb();
-    const allOffers = db
+    const allOffers = await db
       .select({
         id: offers.id,
         title_id: offers.titleId,
