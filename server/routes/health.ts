@@ -3,10 +3,10 @@ import { getDb } from "../db/schema";
 
 const app = new Hono();
 
-app.get("/", (c) => {
+app.get("/", async (c) => {
   try {
     const db = getDb();
-    db.run(/* sql */ `SELECT 1`);
+    await db.run(/* sql */ `SELECT 1`);
     return c.json({ status: "ok" });
   } catch {
     return c.json({ status: "error" }, 503);
