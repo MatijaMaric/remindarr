@@ -1,6 +1,6 @@
-import { eq, and, or, like, sql, gte, lt, desc, asc, exists, notExists, inArray } from "drizzle-orm";
+import { eq, and, or, sql, gte, lt, desc, asc, exists, notExists, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, providers, offers, scores, tracked } from "../schema";
+import { titles, providers, offers, scores, tracked, titleGenres } from "../schema";
 import type { ParsedTitle } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
@@ -62,7 +62,6 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
           releaseDate: t.releaseDate,
           runtimeMinutes: t.runtimeMinutes,
           shortDescription: t.shortDescription,
-          genres: JSON.stringify(t.genres),
           originalLanguage: t.originalLanguage,
           imdbId: t.imdbId,
           tmdbId: t.tmdbId,
@@ -80,7 +79,6 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
             releaseDate: sql`excluded.release_date`,
             runtimeMinutes: sql`excluded.runtime_minutes`,
             shortDescription: sql`excluded.short_description`,
-            genres: sql`excluded.genres`,
             originalLanguage: sql`excluded.original_language`,
             imdbId: sql`excluded.imdb_id`,
             tmdbId: sql`excluded.tmdb_id`,
@@ -91,6 +89,12 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
           },
         })
         .run();
+
+      // Replace genres
+      await db.delete(titleGenres).where(eq(titleGenres.titleId, t.id)).run();
+      for (const genre of (t.genres ?? [])) {
+        await db.insert(titleGenres).values({ titleId: t.id, genre }).onConflictDoNothing().run();
+      }
 
       // Replace offers
       await db.delete(offers).where(eq(offers.titleId, t.id)).run();
@@ -133,6 +137,25 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
   });
 }
 
+// ─── Genre helpers ───────────────────────────────────────────────────────────
+
+async function getGenresForTitles(titleIds: string[]): Promise<Map<string, string[]>> {
+  if (titleIds.length === 0) return new Map();
+  const db = getDb();
+  const rows = await db
+    .select({ titleId: titleGenres.titleId, genre: titleGenres.genre })
+    .from(titleGenres)
+    .where(inArray(titleGenres.titleId, titleIds))
+    .all();
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    const list = map.get(row.titleId) ?? [];
+    list.push(row.genre);
+    map.set(row.titleId, list);
+  }
+  return map;
+}
+
 // ─── Single title lookup ─────────────────────────────────────────────────────
 
 export async function getTitleById(titleId: string, userId?: string) {
@@ -149,7 +172,6 @@ export async function getTitleById(titleId: string, userId?: string) {
         release_date: titles.releaseDate,
         runtime_minutes: titles.runtimeMinutes,
         short_description: titles.shortDescription,
-        genres: titles.genres,
         imdb_id: titles.imdbId,
         tmdb_id: titles.tmdbId,
         poster_url: titles.posterUrl,
@@ -175,9 +197,10 @@ export async function getTitleById(titleId: string, userId?: string) {
 
     if (!row) return null;
 
+    const genreMap = await getGenresForTitles([row.id]);
     return {
       ...row,
-      genres: row.genres ? JSON.parse(row.genres) : [],
+      genres: genreMap.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
       offers: await getOffersForTitle(row.id),
     };
@@ -236,7 +259,14 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
       conditions.push(providerConditions.length === 1 ? providerConditions[0] : or(...providerConditions)!);
     }
     if (genres && genres.length > 0) {
-      const genreConditions = genres.map((g) => like(titles.genres, `%"${g}"%`));
+      const genreConditions = genres.map((g) =>
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(titleGenres)
+            .where(and(eq(titleGenres.titleId, titles.id), eq(titleGenres.genre, g)))
+        )
+      );
       conditions.push(genreConditions.length === 1 ? genreConditions[0] : or(...genreConditions)!);
     }
     if (languages && languages.length > 0) {
@@ -263,7 +293,6 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
         release_date: titles.releaseDate,
         runtime_minutes: titles.runtimeMinutes,
         short_description: titles.shortDescription,
-        genres: titles.genres,
         imdb_id: titles.imdbId,
         tmdb_id: titles.tmdbId,
         poster_url: titles.posterUrl,
@@ -292,10 +321,14 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
       .offset(offset)
       .all();
 
-    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
+    const titleIds = rows.map((r) => r.id);
+    const [offersByTitle, genresByTitle] = await Promise.all([
+      getOffersForTitles(titleIds),
+      getGenresForTitles(titleIds),
+    ]);
     return rows.map((row) => ({
       ...row,
-      genres: row.genres ? JSON.parse(row.genres) : [],
+      genres: genresByTitle.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
       offers: offersByTitle.get(row.id) ?? [],
     }));
@@ -316,7 +349,6 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
         release_date: titles.releaseDate,
         runtime_minutes: titles.runtimeMinutes,
         short_description: titles.shortDescription,
-        genres: titles.genres,
         imdb_id: titles.imdbId,
         tmdb_id: titles.tmdbId,
         poster_url: titles.posterUrl,
@@ -344,10 +376,14 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
       .limit(limit)
       .all();
 
-    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
+    const titleIds = rows.map((r) => r.id);
+    const [offersByTitle, genresByTitle] = await Promise.all([
+      getOffersForTitles(titleIds),
+      getGenresForTitles(titleIds),
+    ]);
     return rows.map((row) => ({
       ...row,
-      genres: row.genres ? JSON.parse(row.genres) : [],
+      genres: genresByTitle.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
       offers: offersByTitle.get(row.id) ?? [],
     }));
@@ -433,7 +469,6 @@ export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
       release_date: titles.releaseDate,
       runtime_minutes: titles.runtimeMinutes,
       short_description: titles.shortDescription,
-      genres: titles.genres,
       imdb_id: titles.imdbId,
       tmdb_id: titles.tmdbId,
       poster_url: titles.posterUrl,
@@ -452,10 +487,14 @@ export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     .orderBy(asc(titles.releaseDate))
     .all();
 
-  const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
+  const titleIds = rows.map((r) => r.id);
+  const [offersByTitle, genresByTitle] = await Promise.all([
+    getOffersForTitles(titleIds),
+    getGenresForTitles(titleIds),
+  ]);
   return rows.map((row) => ({
     ...row,
-    genres: row.genres ? JSON.parse(row.genres) : [],
+    genres: genresByTitle.get(row.id) ?? [],
     is_tracked: Boolean(row.is_tracked),
     offers: offersByTitle.get(row.id) ?? [],
   }));
@@ -487,22 +526,11 @@ export async function getGenres(): Promise<string[]> {
   const result = await traceDbQuery("getGenres", async () => {
     const db = getDb();
     const rows = await db
-      .selectDistinct({ genres: titles.genres })
-      .from(titles)
-      .where(and(
-        sql`${titles.genres} IS NOT NULL`,
-        sql`${titles.genres} != '[]'`
-      ))
+      .selectDistinct({ genre: titleGenres.genre })
+      .from(titleGenres)
+      .orderBy(asc(titleGenres.genre))
       .all();
-
-    const genreSet = new Set<string>();
-    for (const row of rows) {
-      if (row.genres) {
-        const parsed = JSON.parse(row.genres) as string[];
-        for (const g of parsed) genreSet.add(g);
-      }
-    }
-    return Array.from(genreSet).sort();
+    return rows.map((r) => r.genre);
   });
 
   genresCache = { value: result, expiresAt: now + CACHE_TTL_MS };
