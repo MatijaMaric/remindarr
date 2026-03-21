@@ -147,6 +147,9 @@ function createApp(env: Env) {
   // Health check
   app.route("/api/health", healthRoutes);
 
+  // Custom auth routes (providers endpoint) — must be before better-auth catch-all
+  app.route("/api/auth/custom", authCustomRoutes);
+
   // better-auth handler (handles /api/auth/* — sign-in, sign-up, session, etc.)
   app.on(["POST", "GET"], "/api/auth/*", async (c) => {
     const authInstance = c.get("auth");
@@ -155,9 +158,6 @@ function createApp(env: Env) {
     }
     return authInstance.handler(c.req.raw);
   });
-
-  // Custom auth routes (providers endpoint)
-  app.route("/api/auth/custom", authCustomRoutes);
 
   // Public API routes (optionalAuth for is_tracked)
   app.use("/api/titles/*", optionalAuth);

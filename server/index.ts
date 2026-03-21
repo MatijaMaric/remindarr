@@ -108,13 +108,13 @@ app.use("/api/*", requestLogger());
 // Health check (public — used by Sentry uptime monitoring)
 app.route("/api/health", healthRoutes);
 
+// Custom auth routes (providers endpoint) — must be before better-auth catch-all
+app.route("/api/auth/custom", authCustomRoutes);
+
 // better-auth handler (handles /api/auth/* — sign-in, sign-up, session, etc.)
 app.on(["POST", "GET"], "/api/auth/*", async (c) => {
   return auth.handler(c.req.raw);
 });
-
-// Custom auth routes (providers endpoint)
-app.route("/api/auth/custom", authCustomRoutes);
 
 // Public API routes (optionalAuth for is_tracked)
 app.use("/api/titles/*", optionalAuth);
