@@ -2,11 +2,34 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, createUser, createSession } from "../db/repository";
+import { upsertTitles, createUser, createSession, getSessionWithUser } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
-import { CONFIG } from "../config";
 import trackApp from "./track";
 import type { AppEnv } from "../types";
+
+function createMockAuth() {
+  return {
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const cookieHeader = headers.get("cookie") || "";
+        const match = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
+        const token = match?.[1];
+        if (!token) return null;
+        const user = await getSessionWithUser(token);
+        if (!user) return null;
+        return {
+          session: { id: "session-id", userId: user.id },
+          user: {
+            id: user.id,
+            name: user.display_name,
+            username: user.username,
+            role: user.role || (user.is_admin ? "admin" : "user"),
+          },
+        };
+      },
+    },
+  };
+}
 
 let app: Hono<AppEnv>;
 let userToken: string;
@@ -18,6 +41,10 @@ beforeEach(async () => {
   userToken = await createSession(userId);
 
   app = new Hono<AppEnv>();
+  app.use("*", async (c, next) => {
+    c.set("auth", createMockAuth() as any);
+    await next();
+  });
   app.use("/track/*", requireAuth);
   app.route("/track", trackApp);
 });
@@ -27,7 +54,7 @@ afterAll(() => {
 });
 
 function headers() {
-  return { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${userToken}` };
+  return { Cookie: `better-auth.session_token=${userToken}` };
 }
 
 describe("GET /track", () => {

@@ -7,7 +7,6 @@ import {
   isOidcConfigured,
   getOidcConfig,
 } from "../db/repository";
-import { clearDiscoveryCache } from "../auth/oidc";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 
@@ -69,8 +68,13 @@ app.put("/settings", async (c) => {
     }
   }
 
-  // Clear OIDC discovery cache when settings change
-  clearDiscoveryCache();
+  // On Bun, recreate auth instance to pick up new OIDC config
+  try {
+    const { recreateAuth } = await import("../index");
+    await recreateAuth();
+  } catch {
+    // On CF Workers, auth is per-request so no recreation needed
+  }
 
   return c.json({ success: true, oidc_configured: await isOidcConfigured() });
 });

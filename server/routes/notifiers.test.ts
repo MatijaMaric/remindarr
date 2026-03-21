@@ -1,11 +1,34 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession } from "../db/repository";
+import { createUser, createSession, getSessionWithUser } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
-import { CONFIG } from "../config";
 import notifierApp from "./notifiers";
 import type { AppEnv } from "../types";
+
+function createMockAuth() {
+  return {
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const cookieHeader = headers.get("cookie") || "";
+        const match = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
+        const token = match?.[1];
+        if (!token) return null;
+        const user = await getSessionWithUser(token);
+        if (!user) return null;
+        return {
+          session: { id: "session-id", userId: user.id },
+          user: {
+            id: user.id,
+            name: user.display_name,
+            username: user.username,
+            role: user.role || (user.is_admin ? "admin" : "user"),
+          },
+        };
+      },
+    },
+  };
+}
 import * as registry from "../notifications/registry";
 import Sentry from "../sentry";
 import { SubscriptionExpiredError } from "../notifications/webpush";
@@ -22,6 +45,10 @@ beforeEach(async () => {
   userToken = await createSession(userId);
 
   app = new Hono<AppEnv>();
+  app.use("*", async (c, next) => {
+    c.set("auth", createMockAuth() as any);
+    await next();
+  });
   app.use("/notifiers/*", requireAuth);
   app.use("/notifiers", requireAuth);
   app.route("/notifiers", notifierApp);
@@ -37,7 +64,7 @@ afterAll(() => {
 });
 
 function headers() {
-  return { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${userToken}` };
+  return { Cookie: `better-auth.session_token=${userToken}` };
 }
 
 function jsonHeaders() {
@@ -307,7 +334,7 @@ describe("ownership enforcement", () => {
     const user2Id = await createUser("other", "hash");
     const user2Token = await createSession(user2Id);
     const user2Headers = {
-      Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${user2Token}`,
+      Cookie: `better-auth.session_token=${user2Token}`,
     };
 
     // User 2 shouldn't see user 1's notifiers

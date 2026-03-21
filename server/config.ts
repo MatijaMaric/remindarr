@@ -24,8 +24,7 @@ export const CONFIG = {
   SYNC_EPISODES_CRON: process.env.SYNC_EPISODES_CRON || "30 3 * * *",
 
   // Auth
-  SESSION_DURATION_HOURS: Number(process.env.SESSION_DURATION_HOURS) || 24 * 7,
-  SESSION_COOKIE_NAME: "remindarr_session",
+  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || "",
 
   // OIDC (env vars take precedence over DB settings)
   OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || "",

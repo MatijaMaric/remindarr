@@ -1,17 +1,42 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession } from "../db/repository";
+import { createUser, createSession, getSessionWithUser } from "../db/repository";
 import { getDb } from "../db/schema";
 import { sessions } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { optionalAuth, requireAuth, requireAdmin } from "./auth";
-import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
+
+const COOKIE_NAME = "better-auth.session_token";
 
 let app: Hono<AppEnv>;
 let validToken: string;
 let adminToken: string;
+
+function createMockAuth() {
+  return {
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const cookieHeader = headers.get("cookie") || "";
+        const match = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
+        const token = match?.[1];
+        if (!token) return null;
+        const user = await getSessionWithUser(token);
+        if (!user) return null;
+        return {
+          session: { id: "session-id", userId: user.id },
+          user: {
+            id: user.id,
+            name: user.display_name,
+            username: user.username,
+            role: user.role || (user.is_admin ? "admin" : "user"),
+          },
+        };
+      },
+    },
+  };
+}
 
 beforeEach(async () => {
   setupTestDb();
@@ -23,6 +48,12 @@ beforeEach(async () => {
   adminToken = await createSession(adminId);
 
   app = new Hono<AppEnv>();
+
+  // Inject mock auth into context for all routes
+  app.use("*", async (c, next) => {
+    c.set("auth", createMockAuth() as any);
+    await next();
+  });
 
   app.use("/optional/*", optionalAuth);
   app.get("/optional/test", (c) => {
@@ -48,7 +79,7 @@ afterAll(() => {
 describe("optionalAuth", () => {
   it("sets user when valid cookie present", async () => {
     const res = await app.request("/optional/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${validToken}` },
+      headers: { Cookie: `${COOKIE_NAME}=${validToken}` },
     });
     const body = await res.json();
     expect(body.user).not.toBeNull();
@@ -63,7 +94,7 @@ describe("optionalAuth", () => {
 
   it("passes through with invalid cookie", async () => {
     const res = await app.request("/optional/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=invalid` },
+      headers: { Cookie: `${COOKIE_NAME}=invalid` },
     });
     const body = await res.json();
     expect(body.user).toBeNull();
@@ -73,7 +104,7 @@ describe("optionalAuth", () => {
 describe("requireAuth", () => {
   it("allows request with valid session", async () => {
     const res = await app.request("/protected/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${validToken}` },
+      headers: { Cookie: `${COOKIE_NAME}=${validToken}` },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -87,7 +118,7 @@ describe("requireAuth", () => {
 
   it("returns 401 with invalid cookie", async () => {
     const res = await app.request("/protected/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=invalid` },
+      headers: { Cookie: `${COOKIE_NAME}=invalid` },
     });
     expect(res.status).toBe(401);
   });
@@ -96,14 +127,14 @@ describe("requireAuth", () => {
 describe("requireAdmin", () => {
   it("allows admin users", async () => {
     const res = await app.request("/admin/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${adminToken}` },
+      headers: { Cookie: `${COOKIE_NAME}=${adminToken}` },
     });
     expect(res.status).toBe(200);
   });
 
   it("returns 403 for non-admin users", async () => {
     const res = await app.request("/admin/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${validToken}` },
+      headers: { Cookie: `${COOKIE_NAME}=${validToken}` },
     });
     expect(res.status).toBe(403);
   });
@@ -118,11 +149,11 @@ describe("session expiration", () => {
     const db = getDb();
     db.update(sessions)
       .set({ expiresAt: "2000-01-01T00:00:00.000Z" })
-      .where(eq(sessions.id, expiredToken))
+      .where(eq(sessions.token, expiredToken))
       .run();
 
     const res = await app.request("/protected/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${expiredToken}` },
+      headers: { Cookie: `${COOKIE_NAME}=${expiredToken}` },
     });
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -136,11 +167,11 @@ describe("session expiration", () => {
     const db = getDb();
     db.update(sessions)
       .set({ expiresAt: "2000-01-01T00:00:00.000Z" })
-      .where(eq(sessions.id, expiredToken))
+      .where(eq(sessions.token, expiredToken))
       .run();
 
     const res = await app.request("/optional/test", {
-      headers: { Cookie: `${CONFIG.SESSION_COOKIE_NAME}=${expiredToken}` },
+      headers: { Cookie: `${COOKIE_NAME}=${expiredToken}` },
     });
     expect(res.status).toBe(200);
     const body = await res.json();

@@ -191,7 +191,7 @@ describe("GET /titles", () => {
     // Create app with user middleware
     const authedApp = new Hono<AppEnv>();
     authedApp.use("*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", display_name: null, auth_provider: "local", is_admin: false });
+      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
       await next();
     });
     authedApp.route("/titles", titlesApp);

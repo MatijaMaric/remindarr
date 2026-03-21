@@ -1,12 +1,35 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession } from "../db/repository";
-import { CONFIG } from "../config";
+import { createUser, createSession, getSessionWithUser } from "../db/repository";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { registerCron, enqueueJob, claimNextJob, completeJob } from "../jobs/queue";
 import jobsApp from "./jobs";
 import type { AppEnv } from "../types";
+
+function createMockAuth() {
+  return {
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const cookieHeader = headers.get("cookie") || "";
+        const match = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
+        const token = match?.[1];
+        if (!token) return null;
+        const user = await getSessionWithUser(token);
+        if (!user) return null;
+        return {
+          session: { id: "session-id", userId: user.id },
+          user: {
+            id: user.id,
+            name: user.display_name,
+            username: user.username,
+            role: user.role || (user.is_admin ? "admin" : "user"),
+          },
+        };
+      },
+    },
+  };
+}
 
 let app: Hono<AppEnv>;
 let adminCookie: string;
@@ -14,6 +37,10 @@ let adminCookie: string;
 beforeEach(async () => {
   setupTestDb();
   app = new Hono<AppEnv>();
+  app.use("*", async (c, next) => {
+    c.set("auth", createMockAuth() as any);
+    await next();
+  });
   app.use("/jobs/*", requireAuth, requireAdmin);
   app.use("/jobs", requireAuth, requireAdmin);
   app.route("/jobs", jobsApp);
@@ -21,7 +48,7 @@ beforeEach(async () => {
   const hash = await Bun.password.hash("admin123");
   const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
   const token = await createSession(adminId);
-  adminCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
+  adminCookie = `better-auth.session_token=${token}`;
 });
 
 afterAll(() => {
@@ -57,7 +84,7 @@ describe("GET /jobs", () => {
     const hash = await Bun.password.hash("user123");
     const userId = await createUser("regularuser", hash, "User");
     const token = await createSession(userId);
-    const userCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
+    const userCookie = `better-auth.session_token=${token}`;
 
     const res = await app.request("/jobs", {
       headers: { Cookie: userCookie },

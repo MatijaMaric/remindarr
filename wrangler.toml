@@ -23,6 +23,7 @@ LOG_LEVEL = "info"
 
 # Secrets (set via `wrangler secret put <NAME>`):
 # TMDB_API_KEY
+# BETTER_AUTH_SECRET
 # OIDC_CLIENT_SECRET
 # SENTRY_DSN
 # VAPID_PUBLIC_KEY

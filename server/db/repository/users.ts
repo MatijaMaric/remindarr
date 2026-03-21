@@ -1,8 +1,7 @@
 import { eq, and, sql, count } from "drizzle-orm";
 import { getDb } from "../schema";
-import { users, sessions } from "../schema";
+import { users, sessions, account } from "../schema";
 import { logger } from "../../logger";
-import { CONFIG } from "../../config";
 import { traceDbQuery } from "../../tracing";
 
 export async function createUser(
@@ -20,13 +19,36 @@ export async function createUser(
       .values({
         id,
         username,
+        name: displayName || null,
+        email: null,
+        emailVerified: false,
+        role: isAdmin ? "admin" : "user",
+        // Legacy columns (for backward compat during migration)
         passwordHash,
-        displayName: displayName || null,
         authProvider,
         providerSubject: providerSubject || null,
         isAdmin: isAdmin ? 1 : 0,
       })
       .run();
+
+    // Create corresponding account record for better-auth
+    if (authProvider === "local" && passwordHash) {
+      await db.insert(account).values({
+        id: crypto.randomUUID(),
+        userId: id,
+        accountId: username,
+        providerId: "credential",
+        password: passwordHash,
+      }).run();
+    } else if (authProvider === "oidc" && providerSubject) {
+      await db.insert(account).values({
+        id: crypto.randomUUID(),
+        userId: id,
+        accountId: providerSubject,
+        providerId: "pocketid",
+      }).run();
+    }
+
     return id;
   });
 }
@@ -35,10 +57,11 @@ const userColumns = {
   id: users.id,
   username: users.username,
   password_hash: users.passwordHash,
-  display_name: users.displayName,
+  display_name: users.name,
   auth_provider: users.authProvider,
   provider_subject: users.providerSubject,
   is_admin: users.isAdmin,
+  role: users.role,
   created_at: users.createdAt,
 };
 
@@ -88,9 +111,20 @@ export async function getUserCount(): Promise<number> {
 export async function updateUserPassword(userId: string, passwordHash: string) {
   return traceDbQuery("updateUserPassword", async () => {
     const db = getDb();
+    // Update legacy column
     await db.update(users)
       .set({ passwordHash })
       .where(eq(users.id, userId))
+      .run();
+    // Update better-auth account
+    await db.update(account)
+      .set({ password: passwordHash })
+      .where(
+        and(
+          eq(account.userId, userId),
+          eq(account.providerId, "credential")
+        )
+      )
       .run();
   });
 }
@@ -99,7 +133,10 @@ export async function updateUserAdmin(userId: string, isAdmin: boolean) {
   return traceDbQuery("updateUserAdmin", async () => {
     const db = getDb();
     await db.update(users)
-      .set({ isAdmin: isAdmin ? 1 : 0 })
+      .set({
+        isAdmin: isAdmin ? 1 : 0,
+        role: isAdmin ? "admin" : "user",
+      })
       .where(eq(users.id, userId))
       .run();
   });
@@ -111,11 +148,12 @@ export async function createSession(userId: string): Promise<string> {
   return traceDbQuery("createSession", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
+    const token = crypto.randomUUID();
     const expiresAt = new Date(
-      Date.now() + CONFIG.SESSION_DURATION_HOURS * 3600 * 1000
+      Date.now() + 7 * 24 * 3600 * 1000
     ).toISOString();
-    await db.insert(sessions).values({ id, userId, expiresAt }).run();
-    return id;
+    await db.insert(sessions).values({ id, userId, token, expiresAt }).run();
+    return token;
   });
 }
 
@@ -126,14 +164,15 @@ export async function getSessionWithUser(token: string) {
       .select({
         id: users.id,
         username: users.username,
-        display_name: users.displayName,
+        display_name: users.name,
         auth_provider: users.authProvider,
         is_admin: users.isAdmin,
+        role: users.role,
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
       .where(
-        and(eq(sessions.id, token), sql`${sessions.expiresAt} > datetime('now')`)
+        and(eq(sessions.token, token), sql`${sessions.expiresAt} > datetime('now')`)
       )
       .get();
 
@@ -143,7 +182,8 @@ export async function getSessionWithUser(token: string) {
       username: row.username,
       display_name: row.display_name,
       auth_provider: row.auth_provider,
-      is_admin: Boolean(row.is_admin),
+      is_admin: row.role === "admin" || Boolean(row.is_admin),
+      role: row.role,
     };
   });
 }
@@ -151,7 +191,7 @@ export async function getSessionWithUser(token: string) {
 export async function deleteSession(token: string) {
   return traceDbQuery("deleteSession", async () => {
     const db = getDb();
-    await db.delete(sessions).where(eq(sessions.id, token)).run();
+    await db.delete(sessions).where(eq(sessions.token, token)).run();
   });
 }
 
@@ -161,7 +201,6 @@ export async function deleteExpiredSessions() {
     const result = await db.delete(sessions)
       .where(sql`${sessions.expiresAt} <= datetime('now')`)
       .run();
-    // D1 returns { changes } in meta, bun:sqlite returns it directly
     const changes = typeof result === "object" && result !== null && "changes" in result
       ? (result as any).changes
       : 0;

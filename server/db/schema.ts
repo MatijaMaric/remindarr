@@ -105,12 +105,21 @@ export const users = sqliteTable(
   {
     id: text("id").primaryKey(),
     username: text("username").notNull().unique(),
+    email: text("email"),
+    emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+    name: text("name"),
+    image: text("image"),
+    role: text("role"),
+    banned: integer("banned", { mode: "boolean" }).default(false),
+    banReason: text("ban_reason"),
+    banExpires: integer("ban_expires"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+    // Legacy columns — kept for migration, will be removed after verification
     passwordHash: text("password_hash"),
-    displayName: text("display_name"),
     authProvider: text("auth_provider").notNull().default("local"),
     providerSubject: text("provider_subject"),
     isAdmin: integer("is_admin").notNull().default(0),
-    createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(
@@ -127,11 +136,47 @@ export const sessions = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
     expiresAt: text("expires_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    impersonatedBy: text("impersonated_by"),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [index("idx_sessions_expires_at").on(table.expiresAt)]
 );
+
+export const account = sqliteTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    accessTokenExpiresAt: text("access_token_expires_at"),
+    refreshTokenExpiresAt: text("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    idToken: text("id_token"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [index("idx_account_user_id").on(table.userId)]
+);
+
+export const verification = sqliteTable("verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+});
 
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
@@ -255,11 +300,16 @@ export const episodesRelations = relations(episodes, ({ one }) => ({
 
 export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
+  accounts: many(account),
   tracked: many(tracked),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),
+}));
+
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(users, { fields: [account.userId], references: [users.id] }),
 }));
 
 export const trackedRelations = relations(tracked, ({ one }) => ({
@@ -279,9 +329,9 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 export const schemaExports = {
-  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
+  titles, providers, offers, scores, episodes, users, sessions, account, verification, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
   titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
-  usersRelations, sessionsRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
+  usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
 };
 
 // Re-export the union type from platform for convenience

@@ -49,8 +49,8 @@ describe("GET /episodes/upcoming", () => {
       c.set("user", {
         id: userId,
         username: "testuser",
-        display_name: null,
-        auth_provider: "local",
+        name: null,
+        role: null,
         is_admin: false,
       });
       await next();

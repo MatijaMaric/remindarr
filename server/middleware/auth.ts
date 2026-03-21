@@ -1,16 +1,26 @@
 import { createMiddleware } from "hono/factory";
-import { getCookie } from "hono/cookie";
-import { CONFIG } from "../config";
-import { getSessionWithUser } from "../db/repository";
-import type { AppEnv } from "../types";
+import type { AppEnv, AuthUser } from "../types";
 
 /** Sets c.get("user") if a valid session exists. Does not block. */
 export const optionalAuth = createMiddleware<AppEnv>(async (c, next) => {
-  const token = getCookie(c, CONFIG.SESSION_COOKIE_NAME);
-  if (token) {
-    const user = await getSessionWithUser(token);
-    if (user) {
-      c.set("user", user);
+  const auth = c.get("auth");
+  if (auth) {
+    try {
+      const session = await auth.api.getSession({
+        headers: c.req.raw.headers,
+      });
+      if (session?.user) {
+        const user: AuthUser = {
+          id: session.user.id,
+          username: (session.user as any).username || session.user.name || "",
+          name: session.user.name,
+          role: (session.user as any).role || null,
+          is_admin: (session.user as any).role === "admin",
+        };
+        c.set("user", user);
+      }
+    } catch {
+      // Invalid session — continue without user
     }
   }
   await next();
@@ -18,15 +28,30 @@ export const optionalAuth = createMiddleware<AppEnv>(async (c, next) => {
 
 /** Returns 401 if no valid session. */
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
-  const token = getCookie(c, CONFIG.SESSION_COOKIE_NAME);
-  if (!token) {
+  const auth = c.get("auth");
+  if (!auth) {
     return c.json({ error: "Authentication required" }, 401);
   }
-  const user = await getSessionWithUser(token);
-  if (!user) {
-    return c.json({ error: "Session expired" }, 401);
+
+  try {
+    const session = await auth.api.getSession({
+      headers: c.req.raw.headers,
+    });
+    if (!session?.user) {
+      return c.json({ error: "Session expired" }, 401);
+    }
+    const user: AuthUser = {
+      id: session.user.id,
+      username: (session.user as any).username || session.user.name || "",
+      name: session.user.name,
+      role: (session.user as any).role || null,
+      is_admin: (session.user as any).role === "admin",
+    };
+    c.set("user", user);
+  } catch {
+    return c.json({ error: "Authentication required" }, 401);
   }
-  c.set("user", user);
+
   await next();
 });
 

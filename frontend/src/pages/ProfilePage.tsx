@@ -4,6 +4,7 @@ import * as api from "../api";
 import type { JobsResponse, Notifier } from "../api";
 import type { AdminSettings } from "../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../lib/push";
+import { authClient } from "../lib/auth-client";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -36,7 +37,13 @@ function UserSection() {
     setPasswordErr("");
     setLoading(true);
     try {
-      await api.changePassword(currentPassword, newPassword);
+      const result = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+      });
+      if (result.error) {
+        throw new Error(result.error.message || "Password change failed");
+      }
       setPasswordMsg("Password changed successfully");
       setCurrentPassword("");
       setNewPassword("");
@@ -60,16 +67,12 @@ function UserSection() {
           <span className="text-white">{user?.display_name || "—"}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-400">Auth Provider</span>
-          <span className="text-white capitalize">{user?.auth_provider}</span>
-        </div>
-        <div className="flex justify-between">
           <span className="text-gray-400">Role</span>
           <span className="text-white">{user?.is_admin ? "Admin" : "User"}</span>
         </div>
       </div>
 
-      {user?.auth_provider === "local" && (
+      {user && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold text-white mb-3">Change Password</h3>
           <form onSubmit={handleChangePassword} className="bg-gray-900 rounded-lg p-5 space-y-4">

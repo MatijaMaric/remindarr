@@ -39,8 +39,8 @@ export const cfAccessAuth = createMiddleware<AppEnv>(async (c, next) => {
     c.set("user", {
       id: payload.sub || payload.email,
       username: payload.email,
-      display_name: payload.name || payload.email.split("@")[0],
-      auth_provider: "cloudflare-access",
+      name: payload.name || payload.email.split("@")[0],
+      role: null,
       is_admin: false, // Configure admin via Cloudflare Access groups
     });
 

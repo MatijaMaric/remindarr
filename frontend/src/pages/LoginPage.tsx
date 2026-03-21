@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { authClient } from "../lib/auth-client";
 
 export default function LoginPage() {
   const { user, providers, login } = useAuth();
@@ -40,6 +41,13 @@ export default function LoginPage() {
     }
   }
 
+  function handleOidcLogin() {
+    authClient.signIn.social({
+      provider: "pocketid",
+      callbackURL: "/",
+    });
+  }
+
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="w-full max-w-sm">
@@ -53,12 +61,13 @@ export default function LoginPage() {
 
         {oidcConfigured && (
           <>
-            <a
-              href="/api/auth/oidc/authorize"
-              className="block w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors text-center"
+            <button
+              type="button"
+              onClick={handleOidcLogin}
+              className="block w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors text-center cursor-pointer"
             >
               Sign in with {providers.oidc!.name}
-            </a>
+            </button>
 
             {!showLocalLogin && (
               <button
