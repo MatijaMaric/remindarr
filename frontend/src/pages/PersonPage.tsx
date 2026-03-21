@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, Link } from "react-router";
 import * as api from "../api";
 import type { PersonDetailsResponse, PersonCastCredit, PersonCrewCredit } from "../types";
 import ExternalLinks from "../components/ExternalLinks";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
+import { useApiCall } from "../hooks/useApiCall";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 const BIO_TRUNCATE_LENGTH = 600;
@@ -80,31 +81,12 @@ function CreditCard({ credit, subtitle }: { credit: PersonCastCredit | PersonCre
 
 export default function PersonPage() {
   const { personId } = useParams<{ personId: string }>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<PersonDetailsResponse | null>(null);
   const [bioExpanded, setBioExpanded] = useState(false);
 
-  useEffect(() => {
-    if (!personId) return;
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const resp = await api.getPersonDetails(Number(personId));
-        if (!cancelled) setData(resp);
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || "Failed to load person details");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [personId]);
+  const { data, loading, error } = useApiCall<PersonDetailsResponse>(
+    () => api.getPersonDetails(Number(personId)),
+    [personId],
+  );
 
   if (loading) {
     return <DetailPageSkeleton />;
