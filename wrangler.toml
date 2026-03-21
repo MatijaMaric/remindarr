@@ -19,7 +19,7 @@ not_found_handling = "none"
 [[d1_databases]]
 binding = "DB"
 database_name = "remindarr"
-database_id = "8f163b45-2cc6-4b29-a188-3f624af17802"
+database_id = "b15b2224-6af6-4962-b1a8-7e51f771635c"
 migrations_dir = "drizzle"
 
 # Non-secret config (override via wrangler.toml or dashboard)
