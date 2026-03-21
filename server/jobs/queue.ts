@@ -31,41 +31,6 @@ export interface CronJob {
 
 export type JobHandler = (job: Job) => Promise<void>;
 
-// ─── Schema ─────────────────────────────────────────────────────────────────
-
-export function initJobsSchema() {
-  const db = getRawDb();
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS jobs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      data TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      attempts INTEGER NOT NULL DEFAULT 0,
-      max_attempts INTEGER NOT NULL DEFAULT 3,
-      error TEXT,
-      run_at TEXT NOT NULL DEFAULT (datetime('now')),
-      started_at TEXT,
-      completed_at TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
-
-  db.run("CREATE INDEX IF NOT EXISTS idx_jobs_status_run_at ON jobs(status, run_at)");
-  db.run("CREATE INDEX IF NOT EXISTS idx_jobs_name ON jobs(name)");
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS cron_jobs (
-      name TEXT PRIMARY KEY,
-      cron TEXT NOT NULL,
-      last_run TEXT,
-      next_run TEXT NOT NULL,
-      enabled INTEGER NOT NULL DEFAULT 1
-    )
-  `);
-}
-
 // ─── Cron Expression Parser ─────────────────────────────────────────────────
 
 // Supports: * , - / and standard 5-field cron (minute hour day month weekday)

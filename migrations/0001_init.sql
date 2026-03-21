@@ -117,21 +117,6 @@ CREATE TABLE IF NOT EXISTS oidc_states (
   created_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS schema_version (
-  version INTEGER PRIMARY KEY
-);
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_titles_release_date ON titles(release_date);
-CREATE INDEX IF NOT EXISTS idx_titles_object_type ON titles(object_type);
-CREATE INDEX IF NOT EXISTS idx_offers_title_id ON offers(title_id);
-CREATE INDEX IF NOT EXISTS idx_offers_provider_id ON offers(provider_id);
-CREATE INDEX IF NOT EXISTS idx_episodes_air_date ON episodes(air_date);
-CREATE INDEX IF NOT EXISTS idx_episodes_title_id ON episodes(title_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
-CREATE INDEX IF NOT EXISTS idx_notifiers_user_id ON notifiers(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifiers_enabled_time ON notifiers(enabled, notify_time);
-
 -- Jobs tables (used by the in-app job queue)
 CREATE TABLE IF NOT EXISTS jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,9 +132,6 @@ CREATE TABLE IF NOT EXISTS jobs (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_jobs_status_run_at ON jobs(status, run_at);
-CREATE INDEX IF NOT EXISTS idx_jobs_name ON jobs(name);
-
 CREATE TABLE IF NOT EXISTS cron_jobs (
   name TEXT PRIMARY KEY,
   cron TEXT NOT NULL,
@@ -158,5 +140,18 @@ CREATE TABLE IF NOT EXISTS cron_jobs (
   enabled INTEGER NOT NULL DEFAULT 1
 );
 
--- Set initial schema version
-INSERT OR REPLACE INTO schema_version (version) VALUES (7);
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_titles_release_date ON titles(release_date);
+CREATE INDEX IF NOT EXISTS idx_titles_object_type ON titles(object_type);
+CREATE INDEX IF NOT EXISTS idx_offers_title_id ON offers(title_id);
+CREATE INDEX IF NOT EXISTS idx_offers_provider_id ON offers(provider_id);
+CREATE INDEX IF NOT EXISTS idx_episodes_air_date ON episodes(air_date);
+CREATE INDEX IF NOT EXISTS idx_episodes_title_id ON episodes(title_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_notifiers_user_id ON notifiers(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifiers_enabled_time ON notifiers(enabled, notify_time);
+CREATE INDEX IF NOT EXISTS idx_jobs_status_run_at ON jobs(status, run_at);
+CREATE INDEX IF NOT EXISTS idx_jobs_name ON jobs(name);
+
+-- Clean up legacy schema_version table
+DROP TABLE IF EXISTS schema_version;

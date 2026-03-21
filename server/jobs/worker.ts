@@ -4,7 +4,6 @@ import { logger } from "../logger";
 const log = logger.child({ module: "jobs" });
 
 import {
-  initJobsSchema,
   claimNextJob,
   completeJob,
   failJob,
@@ -65,7 +64,6 @@ export async function processJobs() {
 }
 
 export function startWorker() {
-  initJobsSchema();
   recoverStaleJobs();
 
   // Poll for pending jobs

@@ -29,7 +29,7 @@ import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { startWorker, stopWorker } from "./jobs/worker";
-import { initJobsSchema, registerCron } from "./jobs/queue";
+import { registerCron } from "./jobs/queue";
 import { setScheduleCallback } from "./jobs/schedule";
 import { BunPlatform } from "./platform/bun";
 
@@ -157,7 +157,6 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 // Start background job queue
-initJobsSchema();
 setScheduleCallback(registerCron);
 registerSyncJobs();
 await registerNotificationJobs();
