@@ -18,13 +18,14 @@ const MIGRATION_FLAG = "better_auth_migrated";
  * 5. Sets the migration flag in settings
  */
 export async function migrateAuthData(): Promise<void> {
-  const alreadyMigrated = await getSetting(MIGRATION_FLAG);
-  if (alreadyMigrated === "1") return;
-
   const db = getDb();
 
-  // Apply schema changes first (needed for D1 which doesn't run Drizzle migrations)
+  // Always apply schema changes (needed for D1 which doesn't run Drizzle migrations).
+  // Each ALTER TABLE is individually try/caught so already-applied changes are skipped.
   await applySchemaChanges(db);
+
+  const alreadyMigrated = await getSetting(MIGRATION_FLAG);
+  if (alreadyMigrated === "1") return;
 
   log.info("Starting better-auth migration");
 
@@ -122,24 +123,6 @@ export async function migrateAuthData(): Promise<void> {
  * On Bun, Drizzle migrations handle this; on D1, this is the migration path.
  */
 async function applySchemaChanges(db: DrizzleDb): Promise<void> {
-  // Check if account table already exists
-  const tableCheck = await db.run(
-    sql.raw(`SELECT name FROM sqlite_master WHERE type='table' AND name='account'`)
-  );
-  const exists = Array.isArray(tableCheck?.rows)
-    ? tableCheck.rows.length > 0
-    : !!(tableCheck as any)?.changes !== undefined
-      ? false // D1 run() returns { changes, ... } for non-SELECT
-      : true; // fallback: assume exists
-
-  // Use a more reliable check for D1
-  try {
-    await db.run(sql.raw(`SELECT 1 FROM account LIMIT 0`));
-    return; // Table exists, schema changes already applied
-  } catch {
-    // Table doesn't exist, apply schema changes
-  }
-
   log.info("Applying better-auth schema changes");
 
   const statements = [
