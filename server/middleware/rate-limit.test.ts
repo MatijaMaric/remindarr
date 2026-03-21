@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { rateLimiter } from "./rate-limit";
 import type { AppEnv } from "../types";
@@ -70,6 +70,60 @@ describe("rateLimiter", () => {
 
     const res3 = await app.request("/test/hello");
     expect(res3.status).toBe(200);
+  });
+
+  it("sets up a periodic cleanup interval on initialization", () => {
+    let capturedCallback: (() => void) | null = null;
+    const originalSetInterval = globalThis.setInterval;
+    const spy = spyOn(globalThis, "setInterval").mockImplementation(
+      (fn: TimerHandler, ms?: number, ...args: unknown[]) => {
+        if (typeof fn === "function") capturedCallback = fn as () => void;
+        return originalSetInterval(fn, ms, ...args);
+      }
+    );
+
+    createApp(3, 60_000);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(capturedCallback).not.toBeNull();
+
+    spy.mockRestore();
+  });
+
+  it("periodic cleanup removes stale buckets", async () => {
+    let capturedCallback: (() => void) | null = null;
+    const originalSetInterval = globalThis.setInterval;
+    const spy = spyOn(globalThis, "setInterval").mockImplementation(
+      (fn: TimerHandler, ms?: number, ...args: unknown[]) => {
+        if (typeof fn === "function") capturedCallback = fn as () => void;
+        return originalSetInterval(fn, ms, ...args);
+      }
+    );
+
+    const app = new Hono<AppEnv>();
+    app.use(
+      "/test/*",
+      rateLimiter({ limit: 1, windowMs: 10, cleanupIntervalMs: 50 })
+    );
+    app.get("/test/hello", (c) => c.json({ ok: true }));
+
+    spy.mockRestore();
+
+    // Consume all tokens for a specific IP
+    await app.request("/test/hello", { headers: { "x-forwarded-for": "5.5.5.5" } });
+    const limited = await app.request("/test/hello", { headers: { "x-forwarded-for": "5.5.5.5" } });
+    expect(limited.status).toBe(429);
+
+    // Simulate time passing beyond the stale threshold (windowMs * 2 = 20ms)
+    await new Promise((resolve) => setTimeout(resolve, 25));
+
+    // Manually invoke the cleanup callback (simulating the interval firing)
+    expect(capturedCallback).not.toBeNull();
+    capturedCallback!();
+
+    // After cleanup, the IP should get a fresh bucket and be allowed again
+    const res = await app.request("/test/hello", { headers: { "x-forwarded-for": "5.5.5.5" } });
+    expect(res.status).toBe(200);
   });
 
   it("supports custom keyGenerator", async () => {
