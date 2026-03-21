@@ -38,3 +38,8 @@ skills-lock.json
 
 # Cloudflare
 .wrangler/
+
+# Playwright
+playwright-report/
+test-results/
+.playwright/

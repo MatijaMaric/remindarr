@@ -13,6 +13,7 @@
     "test": "bun test",
     "test:server": "bun test server/",
     "test:frontend": "bun test frontend/src/",
+    "test:e2e": "playwright test",
     "db:generate": "bunx drizzle-kit generate",
     "db:push": "bunx drizzle-kit push",
     "db:studio": "bunx drizzle-kit studio",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.8.4",
+    "@playwright/test": "^1.54.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
