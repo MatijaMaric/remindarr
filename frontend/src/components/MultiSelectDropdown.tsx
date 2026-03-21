@@ -27,9 +27,16 @@ export default function MultiSelectDropdown({
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     if (open) {
       document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
+      document.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.removeEventListener("mousedown", handleClick);
+        document.removeEventListener("keydown", handleKeyDown);
+      };
     }
   }, [open]);
 
@@ -55,6 +62,8 @@ export default function MultiSelectDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
         className="bg-gray-800 text-gray-300 text-xs rounded-lg px-3 py-1.5 border-0 outline-none cursor-pointer hover:text-white focus:ring-1 focus:ring-gray-600 flex items-center gap-1"
       >
         {summary}
@@ -63,6 +72,7 @@ export default function MultiSelectDropdown({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>

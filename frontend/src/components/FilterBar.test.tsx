@@ -168,4 +168,53 @@ describe("FilterBar", () => {
 
     expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
+
+  it("type toggle buttons have correct aria-pressed when nothing selected", () => {
+    render(<FilterBar {...defaultProps} type={[]} />);
+
+    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Movies" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "Shows" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("type toggle buttons have correct aria-pressed when Movies selected", () => {
+    render(<FilterBar {...defaultProps} type={["MOVIE"]} />);
+
+    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "Movies" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Shows" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("days buttons have correct aria-pressed for selected day", () => {
+    const onDaysBackChange = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        showDaysFilter={true}
+        daysBack={30}
+        onDaysBackChange={onDaysBackChange}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "30d" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "7d" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("type toggle group has accessible group label", () => {
+    render(<FilterBar {...defaultProps} />);
+    expect(screen.getByRole("group", { name: "Content type" })).toBeDefined();
+  });
+
+  it("days filter group has accessible group label", () => {
+    const onDaysBackChange = mock(() => {});
+    render(
+      <FilterBar
+        {...defaultProps}
+        showDaysFilter={true}
+        daysBack={30}
+        onDaysBackChange={onDaysBackChange}
+      />
+    );
+    expect(screen.getByRole("group", { name: "Time period" })).toBeDefined();
+  });
 });

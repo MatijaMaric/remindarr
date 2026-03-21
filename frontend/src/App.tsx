@@ -34,8 +34,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
+      {/* Skip to main content link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
+      >
+        Skip to main content
+      </a>
       {/* Hide top nav on reels page for mobile */}
-      <nav className={`bg-gray-900 border-b border-gray-800 sticky top-0 z-50 ${isReelsPage ? "hidden sm:block" : ""}`}>
+      <nav aria-label="Main navigation" className={`bg-gray-900 border-b border-gray-800 sticky top-0 z-50 ${isReelsPage ? "hidden sm:block" : ""}`}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
           <Link to="/" className="flex items-center gap-2 text-lg font-bold text-white tracking-tight hover:text-indigo-400 transition-colors">
             <img src="/favicon.png" alt="" className="w-7 h-7 rounded" />
@@ -101,7 +108,7 @@ export default function App() {
           </div>
         </div>
       </nav>
-      <main className={isReelsPage ? "" : "max-w-7xl mx-auto px-4 py-6 pb-20 sm:pb-6"}>
+      <main id="main-content" className={isReelsPage ? "" : "max-w-7xl mx-auto px-4 py-6 pb-20 sm:pb-6"}>
         <Routes>
           <Route path="/" element={<MobileHomeRedirect />} />
           <Route path="/browse" element={<BrowsePage />} />

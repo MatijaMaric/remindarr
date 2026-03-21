@@ -88,8 +88,9 @@ export default function FilterBar({
     (language && language.length > 0);
   return (
     <div className="flex flex-wrap gap-4 items-center">
-      <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
+      <div role="group" aria-label="Content type" className="flex gap-1 bg-gray-800 rounded-lg p-1">
         <button
+          aria-pressed={type.length === 0}
           onClick={() => onTypeChange([])}
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
             type.length === 0
@@ -102,6 +103,7 @@ export default function FilterBar({
         {TYPES.map((t) => (
           <button
             key={t.value}
+            aria-pressed={type.includes(t.value)}
             onClick={() => onTypeChange(toggleType(type, t.value))}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
               type.includes(t.value)
@@ -114,10 +116,11 @@ export default function FilterBar({
         ))}
       </div>
       {showDaysFilter && onDaysBackChange && (
-        <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
+        <div role="group" aria-label="Time period" className="flex gap-1 bg-gray-800 rounded-lg p-1">
           {DAYS.map((d) => (
             <button
               key={d.value}
+              aria-pressed={daysBack === d.value}
               onClick={() => onDaysBackChange(d.value)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                 daysBack === d.value
