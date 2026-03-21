@@ -17,8 +17,43 @@ app.get("/", async (c) => {
   return ok(c, { titles, count: titles.length });
 });
 
+interface FrontendOffer {
+  provider_id: number;
+  provider_name: string;
+  provider_technical_name: string;
+  provider_icon_url: string;
+  monetization_type: string;
+  presentation_type: string;
+  price_value: number | null;
+  price_currency: string | null;
+  url: string;
+  available_to: string | null;
+}
+
+interface FrontendTitle {
+  id: string;
+  object_type: string;
+  title: string;
+  original_title?: string | null;
+  release_year?: number | null;
+  release_date?: string | null;
+  runtime_minutes?: number | null;
+  short_description?: string | null;
+  genres?: string[];
+  original_language?: string | null;
+  imdb_id?: string | null;
+  tmdb_id?: string | null;
+  poster_url?: string | null;
+  age_certification?: string | null;
+  tmdb_url?: string | null;
+  imdb_score?: number | null;
+  imdb_votes?: number | null;
+  tmdb_score?: number | null;
+  offers?: FrontendOffer[];
+}
+
 // Convert frontend Title (snake_case) to ParsedTitle (camelCase) for upsert
-function toParsedTitle(t: any): ParsedTitle {
+function toParsedTitle(t: FrontendTitle): ParsedTitle {
   return {
     id: t.id,
     objectType: t.object_type,
@@ -35,7 +70,7 @@ function toParsedTitle(t: any): ParsedTitle {
     posterUrl: t.poster_url,
     ageCertification: t.age_certification,
     tmdbUrl: t.tmdb_url,
-    offers: (t.offers || []).map((o: any) => ({
+    offers: (t.offers || []).map((o: FrontendOffer) => ({
       titleId: t.id,
       providerId: o.provider_id,
       providerName: o.provider_name,

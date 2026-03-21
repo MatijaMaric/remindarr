@@ -29,8 +29,9 @@ app.post("/", async (c) => {
     await trackTitle(title.id, user.id);
 
     return ok(c, { title });
-  } catch (e: any) {
-    return err(c, e.message, 500);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "An unexpected error occurred";
+    return err(c, message, 500);
   }
 });
 
