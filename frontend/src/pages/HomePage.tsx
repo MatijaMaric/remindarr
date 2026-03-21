@@ -12,6 +12,7 @@ import {
   WatchedIcon,
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
+import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 
 export function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<number, Episode[]>> {
   const map = new Map<string, Map<number, Episode[]>>();
@@ -324,7 +325,7 @@ export default function HomePage() {
   };
 
   if (authLoading || loading) {
-    return <div className="text-gray-500 text-center py-12">Loading...</div>;
+    return <EpisodeListSkeleton />;
   }
 
   if (!user) {

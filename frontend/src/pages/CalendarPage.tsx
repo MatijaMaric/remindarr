@@ -5,6 +5,7 @@ import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } fr
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleList from "../components/TitleList";
 import type { Title, Episode, Offer } from "../types";
+import { CalendarSkeleton } from "../components/SkeletonComponents";
 
 function formatMonth(date: Date): string {
   const y = date.getFullYear();
@@ -387,7 +388,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
       </div>
 
       {initialLoading ? (
-        <div className="text-center py-8 text-gray-500">Loading...</div>
+        <CalendarSkeleton />
       ) : (
         <>
           {/* Load more top sentinel */}

@@ -5,6 +5,7 @@ import * as api from "../api";
 import type { Episode } from "../types";
 import ReelsCard from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
+import { ReelsSkeleton } from "../components/SkeletonComponents";
 
 interface ShowCard {
   titleId: string;
@@ -277,11 +278,7 @@ export default function ReelsPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center" style={{ minHeight: "calc(100dvh - 5rem)" }}>
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
+    return <ReelsSkeleton />;
   }
 
   if (error) {

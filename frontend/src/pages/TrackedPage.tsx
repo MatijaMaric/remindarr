@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import * as api from "../api";
 import type { Title } from "../types";
 import TitleList from "../components/TitleList";
+import { TitleGridSkeleton } from "../components/SkeletonComponents";
 
 export default function TrackedPage() {
   const [titles, setTitles] = useState<Title[]>([]);
@@ -27,7 +28,7 @@ export default function TrackedPage() {
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Tracked Titles ({titles.length})</h2>
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading...</div>
+        <TitleGridSkeleton />
       ) : (
         <TitleList
           titles={titles}
