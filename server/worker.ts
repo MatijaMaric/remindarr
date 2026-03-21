@@ -5,6 +5,9 @@
  * - Uses D1 database binding instead of bun:sqlite
  * - Uses cron triggers instead of setInterval-based job polling
  * - Uses Web Crypto PBKDF2 for password hashing
+ *
+ * Schema migrations are applied via `wrangler d1 migrations apply` before
+ * deploying. Data migrations run once on first request per isolate.
  */
 
 // CF Workers types — these are provided by @cloudflare/workers-types at deploy time.
@@ -29,8 +32,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { drizzle } from "drizzle-orm/d1";
-import { runWithDb, schemaExports } from "./db/schema";
-import { getUserCount, createUser, deleteExpiredSessions } from "./db/repository";
+import { getDb, runWithDb, schemaExports } from "./db/schema";
+import { getUserCount, createUser, deleteExpiredSessions, isOidcConfigured, getOidcConfig } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -42,7 +45,7 @@ import imdbRoutes from "./routes/imdb";
 import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
 import authCustomRoutes from "./routes/auth-custom";
-import adminRoutes from "./routes/admin";
+import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
 // jobsRoutes excluded: uses Bun-only in-memory job queue (bun:sqlite).
 // CF Workers uses cron triggers instead (see scheduled handler below).
 import browseRoutes from "./routes/browse";
@@ -54,7 +57,7 @@ import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig } from "./config";
 import Sentry from "./sentry";
 import { CloudflarePlatform } from "./platform/cloudflare";
-import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth";
+import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
 import type { DrizzleDb } from "./platform/types";
 
@@ -116,14 +119,73 @@ function patchConfigFromEnv(env: Env): void {
   }
 }
 
+// ─── Per-isolate state (survives across requests within the same Worker instance) ──
+
+let adminChecked = false;
+let oidcConfigLoaded = false;
+let cachedOidcConfig: Parameters<typeof createAuth>[2] | undefined;
+
+/** Invalidate cached OIDC config (called when admin updates settings). */
+function invalidateOidcConfig(): void {
+  oidcConfigLoaded = false;
+  cachedOidcConfig = undefined;
+}
+
+/** Resolve OIDC config once per isolate, caching the result. */
+async function resolveOidcConfig(): Promise<typeof cachedOidcConfig> {
+  if (oidcConfigLoaded) return cachedOidcConfig;
+  oidcConfigLoaded = true;
+
+  if (await isOidcConfigured()) {
+    const config = await getOidcConfig();
+    cachedOidcConfig = {
+      issuerUrl: config.issuerUrl,
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
+      redirectUri: config.redirectUri,
+      adminClaim: config.adminClaim,
+      adminValue: config.adminValue,
+    };
+  }
+  return cachedOidcConfig;
+}
+
 function createApp(env: Env) {
   const app = new Hono<AppEnv>();
 
-  // Inject platform into context for route handlers
-  // Auth is injected per-request in the fetch handler
+  // Per-request setup: inject platform and auth into context.
+  // One-time initialization (migration, admin creation, OIDC config) is
+  // guarded by module-level flags so it only runs on the first request.
   app.use("*", async (c, next) => {
     c.set("platform", platform);
+
+    // One-time data migration (skipped after first successful check)
+    await migrateAuthData();
+
+    // Create admin on first request if no users exist
+    if (!adminChecked) {
+      adminChecked = true;
+      const userCount = await getUserCount();
+      if (userCount === 0) {
+        const password = crypto.randomUUID().slice(0, 16);
+        const hash = await platform.hashPassword(password);
+        await createUser("admin", hash, "Admin", "local", undefined, true);
+        logger.info("Admin account created", { username: "admin", password });
+      }
+    }
+
+    // Create auth instance per-request (D1 binding is per-request),
+    // but reuse cached OIDC config to avoid DB queries every time.
+    const oidcConfig = await resolveOidcConfig();
+    const db = getDb();
+    c.set("auth", createAuth(db, platform, oidcConfig));
+
     await next();
+  });
+
+  // Wire up OIDC settings invalidation so admin changes take effect
+  setOnOidcSettingsChanged(async () => {
+    invalidateOidcConfig();
   });
 
   app.onError((err, c) => {
@@ -254,7 +316,6 @@ function createApp(env: Env) {
 }
 
 let app: Hono<AppEnv> | null = null;
-let adminChecked = false;
 
 function getApp(env: Env): Hono<AppEnv> {
   if (!app) {
@@ -263,90 +324,15 @@ function getApp(env: Env): Hono<AppEnv> {
   return app;
 }
 
-/** Temporary: wrap D1 binding to log actual errors from queries */
-function wrapD1WithLogging(d1: any): any {
-  return new Proxy(d1, {
-    get(target: any, prop: string) {
-      if (prop === "prepare") {
-        return (sql: string) => {
-          const stmt = target.prepare(sql);
-          return new Proxy(stmt, {
-            get(s: any, p: string) {
-              if (p === "bind") {
-                return (...args: any[]) => {
-                  const bound = s.bind(...args);
-                  return new Proxy(bound, {
-                    get(b: any, bp: string) {
-                      if (bp === "all" || bp === "run" || bp === "raw" || bp === "first") {
-                        return async (...a: any[]) => {
-                          try {
-                            return await b[bp](...a);
-                          } catch (e: any) {
-                            logger.error("D1 query failed", {
-                              method: bp,
-                              sql: sql.slice(0, 200),
-                              error: e?.message,
-                              cause: e?.cause?.message,
-                            });
-                            throw e;
-                          }
-                        };
-                      }
-                      return b[bp];
-                    },
-                  });
-                };
-              }
-              return s[p];
-            },
-          });
-        };
-      }
-      return target[prop];
-    },
-  });
-}
-
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     ctx.passThroughOnException();
     patchConfigFromEnv(env);
     try {
-      // Wrap D1 to log actual errors (better-auth hides the cause)
-      const wrappedDB = wrapD1WithLogging(env.DB);
-      const db = drizzle(wrappedDB, { schema: schemaExports }) as unknown as DrizzleDb;
+      const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
       const honoApp = getApp(env);
 
-      return await runWithDb(db, async () => {
-        // Run auth migration on first request
-        await migrateAuthData();
-
-        // Create admin on first request if no users exist
-        if (!adminChecked) {
-          adminChecked = true;
-          const userCount = await getUserCount();
-          if (userCount === 0) {
-            const password = crypto.randomUUID().slice(0, 16);
-            const hash = await platform.hashPassword(password);
-            await createUser("admin", hash, "Admin", "local", undefined, true);
-            logger.info("Admin account created", { username: "admin", password });
-          }
-        }
-
-        // Create auth instance per-request (D1 binding is per-request)
-        const authInstance = await createAuthWithOidc(db, platform);
-
-        // Inject auth into the request context via a middleware-like approach
-        const origFetch = honoApp.fetch.bind(honoApp);
-        const appWithAuth = new Hono<AppEnv>();
-        appWithAuth.use("*", async (c, next) => {
-          c.set("auth", authInstance);
-          await next();
-        });
-        appWithAuth.route("/", honoApp);
-
-        return appWithAuth.fetch(request, env, ctx as any);
-      });
+      return await runWithDb(db, () => honoApp.fetch(request, env, ctx as any));
     } catch (err) {
       Sentry.captureException(err);
       logger.error("Worker fetch error", {
