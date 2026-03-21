@@ -36,28 +36,30 @@ let rawDb: Database;
  * 4. Seeds __drizzle_migrations so migration 0000 is skipped
  */
 function migrateLegacyDb(db: Database, migrationsFolder: string): void {
-  // Check if sessions table exists and has the old schema (no token column).
-  // This is the definitive signal of a legacy DB that needs transformation.
-  // We can't just check for __drizzle_migrations table existence because
-  // Drizzle creates it (empty) before running migrations — so after a failed
-  // first attempt the table exists but has no records.
+  // Check what needs fixing. We look at concrete schema details rather than
+  // __drizzle_migrations (Drizzle creates that table before running any SQL,
+  // so after a failed attempt it exists but is empty/stale).
   const sessionsInfo = db.prepare("PRAGMA table_info(sessions)").all() as Array<{
     name: string;
   }>;
-  if (sessionsInfo.length === 0) return; // no sessions table = fresh DB
-  if (sessionsInfo.some((c) => c.name === "token")) return; // already new schema
-
-  log.info("Legacy database detected — transforming schema");
-
-  // Drop old sessions table (different schema, no token column)
-  db.exec("DROP TABLE IF EXISTS sessions");
-  log.info("Dropped legacy sessions table (users will need to re-login)");
-
-  // Add missing columns to users table
   const usersInfo = db.prepare("PRAGMA table_info(users)").all() as Array<{
     name: string;
   }>;
   const existingCols = new Set(usersInfo.map((c) => c.name));
+
+  const needsSessionsFix =
+    sessionsInfo.length > 0 && !sessionsInfo.some((c) => c.name === "token");
+  const needsUsersFix = existingCols.size > 0 && !existingCols.has("updated_at");
+
+  if (!needsSessionsFix && !needsUsersFix) return; // nothing to do
+
+  log.info("Legacy/partial database detected — transforming schema");
+
+  // Drop old sessions table if it has wrong schema (no token column)
+  if (needsSessionsFix) {
+    db.exec("DROP TABLE IF EXISTS sessions");
+    log.info("Dropped legacy sessions table (users will need to re-login)");
+  }
 
   const missingColumns: [string, string][] = [
     ["email", "TEXT"],
@@ -68,7 +70,7 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
     ["banned", "INTEGER DEFAULT 0"],
     ["ban_reason", "TEXT"],
     ["ban_expires", "INTEGER"],
-    ["updated_at", "TEXT DEFAULT (datetime('now'))"],
+    ["updated_at", "TEXT"],
   ];
 
   for (const [col, type] of missingColumns) {
