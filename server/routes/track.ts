@@ -5,6 +5,7 @@ import { CONFIG } from "../config";
 import { syncEpisodesForShow } from "../tmdb/sync";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
+import { ok } from "./response";
 
 const log = logger.child({ module: "track" });
 
@@ -13,7 +14,7 @@ const app = new Hono<AppEnv>();
 app.get("/", async (c) => {
   const user = c.get("user")!;
   const titles = await getTrackedTitles(user.id);
-  return c.json({ titles, count: titles.length });
+  return ok(c, { titles, count: titles.length });
 });
 
 // Convert frontend Title (snake_case) to ParsedTitle (camelCase) for upsert
@@ -77,7 +78,7 @@ app.post("/:id", async (c) => {
     }
   }
 
-  return c.json({ success: true, message: `Tracking ${titleId}` });
+  return ok(c, { message: `Tracking ${titleId}` });
 });
 
 app.delete("/:id", async (c) => {
@@ -85,7 +86,7 @@ app.delete("/:id", async (c) => {
   const titleId = c.req.param("id");
   await untrackTitle(titleId, user.id);
   await deleteEpisodesForTitle(titleId);
-  return c.json({ success: true, message: `Untracked ${titleId}` });
+  return ok(c, { message: `Untracked ${titleId}` });
 });
 
 export default app;

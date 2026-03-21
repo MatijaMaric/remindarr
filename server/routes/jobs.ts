@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import { getJobStats, getCronJobs, getRecentJobs, enqueueJob } from "../jobs/queue";
 import type { AppEnv } from "../types";
+import { ok } from "./response";
 
 const app = new Hono<AppEnv>();
 
 // GET /api/jobs — job stats, cron schedules, and recent history
 app.get("/", (c) => {
-  return c.json({
+  return ok(c, {
     stats: getJobStats(),
     crons: getCronJobs(),
     recentJobs: getRecentJobs(),
@@ -17,7 +18,7 @@ app.get("/", (c) => {
 app.post("/:name", (c) => {
   const name = c.req.param("name");
   const id = enqueueJob(name);
-  return c.json({ success: true, jobId: id });
+  return ok(c, { jobId: id });
 });
 
 export default app;

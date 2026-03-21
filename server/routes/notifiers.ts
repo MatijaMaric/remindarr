@@ -13,6 +13,7 @@ import { refreshNotificationSchedule } from "../jobs/schedule";
 import { getVapidPublicKey } from "../notifications/vapid";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import Sentry from "../sentry";
+import { ok, err } from "./response";
 
 const app = new Hono<AppEnv>();
 
@@ -37,21 +38,21 @@ function isValidTimezone(tz: string): boolean {
 app.get("/", async (c) => {
   const user = c.get("user")!;
   const notifiers = await getNotifiersByUser(user.id);
-  return c.json({ notifiers });
+  return ok(c, { notifiers });
 });
 
 // GET /providers — available provider types
 app.get("/providers", (c) => {
-  return c.json({ providers: getAvailableProviders() });
+  return ok(c, { providers: getAvailableProviders() });
 });
 
 // GET /vapid-public-key — VAPID public key for push subscriptions
 app.get("/vapid-public-key", async (c) => {
   try {
     const publicKey = await getVapidPublicKey();
-    return c.json({ publicKey });
+    return ok(c, { publicKey });
   } catch {
-    return c.json({ error: "VAPID keys not configured" }, 500);
+    return err(c, "VAPID keys not configured", 500);
   }
 });
 
@@ -63,32 +64,29 @@ app.post("/", async (c) => {
   const { provider, config, notify_time, timezone } = body;
 
   if (!provider || !config) {
-    return c.json({ error: "provider and config are required" }, 400);
+    return err(c, "provider and config are required");
   }
 
   const name = provider.charAt(0).toUpperCase() + provider.slice(1);
 
   const providerImpl = getProvider(provider);
   if (!providerImpl) {
-    return c.json(
-      { error: `Unknown provider: ${provider}. Available: ${getAvailableProviders().join(", ")}` },
-      400
-    );
+    return err(c, `Unknown provider: ${provider}. Available: ${getAvailableProviders().join(", ")}`);
   }
 
   const validation = providerImpl.validateConfig(config);
   if (!validation.valid) {
-    return c.json({ error: validation.error }, 400);
+    return err(c, validation.error ?? "Invalid config");
   }
 
   const time = notify_time || "09:00";
   if (!isValidTime(time)) {
-    return c.json({ error: "Invalid time format. Use HH:MM (24h)" }, 400);
+    return err(c, "Invalid time format. Use HH:MM (24h)");
   }
 
   const tz = timezone || "UTC";
   if (!isValidTimezone(tz)) {
-    return c.json({ error: "Invalid timezone" }, 400);
+    return err(c, "Invalid timezone");
   }
 
   const id = await createNotifier(user.id, provider, name, config, time, tz);
@@ -105,7 +103,7 @@ app.put("/:id", async (c) => {
 
   const existing = await getNotifierById(id, user.id);
   if (!existing) {
-    return c.json({ error: "Notifier not found" }, 404);
+    return err(c, "Notifier not found", 404);
   }
 
   // Validate config if provided
@@ -114,17 +112,17 @@ app.put("/:id", async (c) => {
     if (provider) {
       const validation = provider.validateConfig(body.config);
       if (!validation.valid) {
-        return c.json({ error: validation.error }, 400);
+        return err(c, validation.error ?? "Invalid config");
       }
     }
   }
 
   if (body.notify_time && !isValidTime(body.notify_time)) {
-    return c.json({ error: "Invalid time format. Use HH:MM (24h)" }, 400);
+    return err(c, "Invalid time format. Use HH:MM (24h)");
   }
 
   if (body.timezone && !isValidTimezone(body.timezone)) {
-    return c.json({ error: "Invalid timezone" }, 400);
+    return err(c, "Invalid timezone");
   }
 
   await updateNotifier(id, user.id, {
@@ -136,7 +134,7 @@ app.put("/:id", async (c) => {
   await refreshNotificationSchedule();
 
   const notifier = await getNotifierById(id, user.id);
-  return c.json({ notifier });
+  return ok(c, { notifier });
 });
 
 // DELETE /:id — delete notifier
@@ -146,12 +144,12 @@ app.delete("/:id", async (c) => {
 
   const existing = await getNotifierById(id, user.id);
   if (!existing) {
-    return c.json({ error: "Notifier not found" }, 404);
+    return err(c, "Notifier not found", 404);
   }
 
   await deleteNotifier(id, user.id);
   await refreshNotificationSchedule();
-  return c.json({ ok: true });
+  return ok(c, {});
 });
 
 // POST /:id/test — send test notification
@@ -161,12 +159,12 @@ app.post("/:id/test", async (c) => {
 
   const notifier = await getNotifierById(id, user.id);
   if (!notifier) {
-    return c.json({ error: "Notifier not found" }, 404);
+    return err(c, "Notifier not found", 404);
   }
 
   const providerImpl = getProvider(notifier.provider);
   if (!providerImpl) {
-    return c.json({ error: "Unknown provider" }, 400);
+    return err(c, "Unknown provider");
   }
 
   const today = new Date().toISOString().slice(0, 10);

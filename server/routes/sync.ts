@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import * as syncTitles from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
+import { ok, err } from "./response";
 
 const app = new Hono();
 
@@ -9,7 +10,7 @@ app.post("/", async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: "Invalid JSON in request body" }, 400);
+    return err(c, "Invalid JSON in request body");
   }
   const daysBack = (body.daysBack as number) || 30;
   const objectType = body.type as "MOVIE" | "SHOW" | undefined;
@@ -18,9 +19,9 @@ app.post("/", async (c) => {
   try {
     const titles = await syncTitles.fetchNewReleases({ daysBack, objectType, maxPages });
     const count = await upsertTitles(titles);
-    return c.json({ success: true, count, message: `Synced ${count} titles` });
-  } catch (err: any) {
-    return c.json({ success: false, error: err.message }, 500);
+    return ok(c, { count, message: `Synced ${count} titles` });
+  } catch (e: any) {
+    return err(c, e.message, 500);
   }
 });
 

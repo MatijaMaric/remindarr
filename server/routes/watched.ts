@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk, getEpisodeAirDate, getReleasedEpisodeIds } from "../db/repository";
 import type { AppEnv } from "../types";
+import { ok, err } from "./response";
 
 const app = new Hono<AppEnv>();
 
@@ -16,20 +17,20 @@ app.post("/bulk", async (c) => {
   const { episodeIds, watched } = body as { episodeIds: number[]; watched: boolean };
 
   if (!Array.isArray(episodeIds) || episodeIds.length === 0) {
-    return c.json({ error: "episodeIds must be a non-empty array" }, 400);
+    return err(c, "episodeIds must be a non-empty array");
   }
 
   if (watched) {
     const releasedIds = await getReleasedEpisodeIds(episodeIds);
     if (releasedIds.length === 0) {
-      return c.json({ error: "Cannot mark unreleased episodes as watched" }, 400);
+      return err(c, "Cannot mark unreleased episodes as watched");
     }
     await watchEpisodesBulk(releasedIds, user.id);
   } else {
     await unwatchEpisodesBulk(episodeIds, user.id);
   }
 
-  return c.json({ success: true });
+  return ok(c, {});
 });
 
 app.post("/:episodeId", async (c) => {
@@ -37,17 +38,17 @@ app.post("/:episodeId", async (c) => {
   const episodeId = Number(c.req.param("episodeId"));
   const airDate = await getEpisodeAirDate(episodeId);
   if (!isReleased(airDate)) {
-    return c.json({ error: "Cannot mark an unreleased episode as watched" }, 400);
+    return err(c, "Cannot mark an unreleased episode as watched");
   }
   await watchEpisode(episodeId, user.id);
-  return c.json({ success: true });
+  return ok(c, {});
 });
 
 app.delete("/:episodeId", async (c) => {
   const user = c.get("user")!;
   const episodeId = Number(c.req.param("episodeId"));
   await unwatchEpisode(episodeId, user.id);
-  return c.json({ success: true });
+  return ok(c, {});
 });
 
 export default app;

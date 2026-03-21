@@ -82,7 +82,7 @@ describe("POST /track/:id", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
+    expect(body.message).toContain("Tracking");
 
     // Verify it's tracked
     const listRes = await app.request("/track", { headers: headers() });
