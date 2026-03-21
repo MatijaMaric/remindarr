@@ -263,12 +263,58 @@ function getApp(env: Env): Hono<AppEnv> {
   return app;
 }
 
+/** Temporary: wrap D1 binding to log actual errors from queries */
+function wrapD1WithLogging(d1: any): any {
+  return new Proxy(d1, {
+    get(target: any, prop: string) {
+      if (prop === "prepare") {
+        return (sql: string) => {
+          const stmt = target.prepare(sql);
+          return new Proxy(stmt, {
+            get(s: any, p: string) {
+              if (p === "bind") {
+                return (...args: any[]) => {
+                  const bound = s.bind(...args);
+                  return new Proxy(bound, {
+                    get(b: any, bp: string) {
+                      if (bp === "all" || bp === "run" || bp === "raw" || bp === "first") {
+                        return async (...a: any[]) => {
+                          try {
+                            return await b[bp](...a);
+                          } catch (e: any) {
+                            logger.error("D1 query failed", {
+                              method: bp,
+                              sql: sql.slice(0, 200),
+                              error: e?.message,
+                              cause: e?.cause?.message,
+                            });
+                            throw e;
+                          }
+                        };
+                      }
+                      return b[bp];
+                    },
+                  });
+                };
+              }
+              return s[p];
+            },
+          });
+        };
+      }
+      return target[prop];
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     ctx.passThroughOnException();
     patchConfigFromEnv(env);
     try {
-      const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
+      // Wrap D1 to log actual errors (better-auth hides the cause)
+      const wrappedDB = wrapD1WithLogging(env.DB);
+      const db = drizzle(wrappedDB, { schema: schemaExports }) as unknown as DrizzleDb;
       const honoApp = getApp(env);
 
       return await runWithDb(db, async () => {
