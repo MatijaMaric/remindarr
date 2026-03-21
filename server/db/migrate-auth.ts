@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb, users, account, sessions, settings } from "./schema";
+import type { DrizzleDb } from "../platform/types";
 import { getSetting, setSetting } from "./repository";
 import { logger } from "../logger";
 
@@ -21,6 +22,10 @@ export async function migrateAuthData(): Promise<void> {
   if (alreadyMigrated === "1") return;
 
   const db = getDb();
+
+  // Apply schema changes first (needed for D1 which doesn't run Drizzle migrations)
+  await applySchemaChanges(db);
+
   log.info("Starting better-auth migration");
 
   // 1. Migrate local users → credential accounts
@@ -109,4 +114,96 @@ export async function migrateAuthData(): Promise<void> {
   });
 
   await setSetting(MIGRATION_FLAG, "1");
+}
+
+/**
+ * Apply schema changes needed for better-auth.
+ * Uses IF NOT EXISTS / try-catch so it's safe to run repeatedly.
+ * On Bun, Drizzle migrations handle this; on D1, this is the migration path.
+ */
+async function applySchemaChanges(db: DrizzleDb): Promise<void> {
+  // Check if account table already exists
+  const tableCheck = await db.run(
+    sql.raw(`SELECT name FROM sqlite_master WHERE type='table' AND name='account'`)
+  );
+  const exists = Array.isArray(tableCheck?.rows)
+    ? tableCheck.rows.length > 0
+    : !!(tableCheck as any)?.changes !== undefined
+      ? false // D1 run() returns { changes, ... } for non-SELECT
+      : true; // fallback: assume exists
+
+  // Use a more reliable check for D1
+  try {
+    await db.run(sql.raw(`SELECT 1 FROM account LIMIT 0`));
+    return; // Table exists, schema changes already applied
+  } catch {
+    // Table doesn't exist, apply schema changes
+  }
+
+  log.info("Applying better-auth schema changes");
+
+  const statements = [
+    // New tables
+    `CREATE TABLE IF NOT EXISTS "account" (
+      "id" text PRIMARY KEY NOT NULL,
+      "user_id" text NOT NULL,
+      "account_id" text NOT NULL,
+      "provider_id" text NOT NULL,
+      "access_token" text,
+      "refresh_token" text,
+      "access_token_expires_at" text,
+      "refresh_token_expires_at" text,
+      "scope" text,
+      "password" text,
+      "id_token" text,
+      "created_at" text DEFAULT (datetime('now')),
+      "updated_at" text DEFAULT (datetime('now')),
+      FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS "idx_account_user_id" ON "account" ("user_id")`,
+    `CREATE TABLE IF NOT EXISTS "verification" (
+      "id" text PRIMARY KEY NOT NULL,
+      "identifier" text NOT NULL,
+      "value" text NOT NULL,
+      "expires_at" text NOT NULL,
+      "created_at" text DEFAULT (datetime('now')),
+      "updated_at" text DEFAULT (datetime('now'))
+    )`,
+    // New columns on users (SQLite ADD COLUMN is safe if column already exists — it errors, which we catch)
+    `ALTER TABLE "users" ADD COLUMN "email" text`,
+    `ALTER TABLE "users" ADD COLUMN "email_verified" integer NOT NULL DEFAULT 0`,
+    `ALTER TABLE "users" ADD COLUMN "name" text`,
+    `ALTER TABLE "users" ADD COLUMN "image" text`,
+    `ALTER TABLE "users" ADD COLUMN "role" text`,
+    `ALTER TABLE "users" ADD COLUMN "banned" integer DEFAULT 0`,
+    `ALTER TABLE "users" ADD COLUMN "ban_reason" text`,
+    `ALTER TABLE "users" ADD COLUMN "ban_expires" integer`,
+    `ALTER TABLE "users" ADD COLUMN "updated_at" text DEFAULT (datetime('now'))`,
+    // New columns on sessions
+    `ALTER TABLE "sessions" ADD COLUMN "token" text`,
+    `ALTER TABLE "sessions" ADD COLUMN "ip_address" text`,
+    `ALTER TABLE "sessions" ADD COLUMN "user_agent" text`,
+    `ALTER TABLE "sessions" ADD COLUMN "impersonated_by" text`,
+    `ALTER TABLE "sessions" ADD COLUMN "updated_at" text DEFAULT (datetime('now'))`,
+    // Set token for existing sessions
+    `UPDATE "sessions" SET "token" = "id" WHERE "token" IS NULL`,
+    // Unique index on token
+    `CREATE UNIQUE INDEX IF NOT EXISTS "sessions_token_unique" ON "sessions" ("token")`,
+    // Copy display_name to name where name is null
+    `UPDATE "users" SET "name" = "display_name" WHERE "name" IS NULL AND "display_name" IS NOT NULL`,
+  ];
+
+  for (const stmt of statements) {
+    try {
+      await db.run(sql.raw(stmt));
+    } catch (e: any) {
+      // Ignore "duplicate column" errors (column already exists)
+      if (e?.message?.includes?.("duplicate column") || e?.message?.includes?.("already exists")) {
+        continue;
+      }
+      log.warn("Schema change warning", { statement: stmt.slice(0, 80), error: e?.message });
+    }
+  }
+
+  log.info("Schema changes applied");
 }
