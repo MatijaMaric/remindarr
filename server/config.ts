@@ -23,6 +23,11 @@ export const CONFIG = {
   SYNC_TITLES_CRON: process.env.SYNC_TITLES_CRON || "0 3 * * *",
   SYNC_EPISODES_CRON: process.env.SYNC_EPISODES_CRON || "30 3 * * *",
 
+  // Backup
+  BACKUP_DIR: process.env.BACKUP_DIR || "",
+  BACKUP_CRON: process.env.BACKUP_CRON || "0 2 * * *",
+  BACKUP_RETAIN: Number(process.env.BACKUP_RETAIN) || 7,
+
   // Auth
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || "",
 
