@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 import type { ReactNode } from "react";
 import TrackButton from "./TrackButton";
 import * as api from "../api";
+import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 
 const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
@@ -26,6 +27,8 @@ beforeEach(() => {
   spies = [
     spyOn(api, "trackTitle").mockResolvedValue(undefined as any),
     spyOn(api, "untrackTitle").mockResolvedValue(undefined as any),
+    spyOn(sonner.toast, "success").mockImplementation(() => "1" as any),
+    spyOn(sonner.toast, "error").mockImplementation(() => "1" as any),
   ];
 });
 
@@ -94,6 +97,40 @@ describe("TrackButton", () => {
   it("has aria-pressed=true when tracked", () => {
     render(<TrackButton titleId="123" isTracked={true} />, { wrapper: Wrapper });
     expect(screen.getByRole("button", { name: "Tracked" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("shows success toast when tracking", async () => {
+    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByRole("button", { name: "Track" }));
+    await waitFor(() => {
+      expect(sonner.toast.success).toHaveBeenCalledWith("Added to watchlist");
+    });
+  });
+
+  it("shows success toast when untracking", async () => {
+    render(<TrackButton titleId="456" isTracked={true} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+    await waitFor(() => {
+      expect(sonner.toast.success).toHaveBeenCalledWith("Removed from watchlist");
+    });
+  });
+
+  it("shows error toast when track fails", async () => {
+    (api.trackTitle as any).mockRejectedValueOnce(new Error("Network error"));
+    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByRole("button", { name: "Track" }));
+    await waitFor(() => {
+      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update watchlist");
+    });
+  });
+
+  it("shows error toast when untrack fails", async () => {
+    (api.untrackTitle as any).mockRejectedValueOnce(new Error("Network error"));
+    render(<TrackButton titleId="456" isTracked={true} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+    await waitFor(() => {
+      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update watchlist");
+    });
   });
 
   it("shows loading indicator while toggling", async () => {

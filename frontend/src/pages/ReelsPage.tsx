@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router";
 import { Undo2 } from "lucide-react";
+import { toast } from "sonner";
 import * as api from "../api";
 import type { Episode } from "../types";
 import ReelsCard from "../components/ReelsCard";
@@ -223,6 +224,7 @@ export default function ReelsPage() {
         })
       );
       setUndoAction(null);
+      toast.error("Failed to mark episode as watched");
       console.error("Failed to mark watched:", err);
     }
   }, []);
@@ -247,6 +249,7 @@ export default function ReelsPage() {
     try {
       await api.unwatchEpisode(undoAction.episodeId);
     } catch (err) {
+      toast.error("Failed to undo");
       console.error("Failed to undo:", err);
     }
   }, [undoAction]);
@@ -260,6 +263,7 @@ export default function ReelsPage() {
       setCards(getFirstUnwatchedPerShow(data.unwatched));
       setSeasonPanel(null);
     } catch (err) {
+      toast.error("Failed to mark episodes as watched");
       console.error("Failed to bulk mark watched:", err);
     }
   }, []);
@@ -276,6 +280,7 @@ export default function ReelsPage() {
       const data = await api.getUpcomingEpisodes();
       setCards(getFirstUnwatchedPerShow(data.unwatched));
     } catch (err) {
+      toast.error("Failed to update watched status");
       console.error("Failed to toggle watched:", err);
     }
   }, []);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import * as api from "../api";
 import type { Title } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -24,13 +25,16 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
         await api.untrackTitle(titleId);
         setTracked(false);
         onToggle?.(false);
+        toast.success("Removed from watchlist");
       } else {
         await api.trackTitle(titleId, undefined, titleData);
         setTracked(true);
         onToggle?.(true);
+        toast.success("Added to watchlist");
       }
     } catch (err) {
       console.error("Track toggle failed:", err);
+      toast.error("Failed to update watchlist");
     } finally {
       setLoading(false);
     }

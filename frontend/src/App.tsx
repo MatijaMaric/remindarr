@@ -1,4 +1,5 @@
 import { Routes, Route, NavLink, Link, Navigate, useLocation } from "react-router";
+import { Toaster } from "sonner";
 import { useAuth } from "./context/AuthContext";
 import { useIsMobile } from "./hooks/useIsMobile";
 import HomePage from "./pages/HomePage";
@@ -128,6 +129,7 @@ export default function App() {
       </main>
       <BottomTabBar />
       <OfflineIndicator />
+      <Toaster theme="dark" position="bottom-center" richColors />
     </div>
   );
 }
