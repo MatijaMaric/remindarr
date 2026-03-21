@@ -1,4 +1,4 @@
-CREATE TABLE `account` (
+CREATE TABLE IF NOT EXISTS `account` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
 	`account_id` text NOT NULL,
@@ -15,8 +15,8 @@ CREATE TABLE `account` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `idx_account_user_id` ON `account` (`user_id`);--> statement-breakpoint
-CREATE TABLE `cron_jobs` (
+CREATE INDEX IF NOT EXISTS `idx_account_user_id` ON `account` (`user_id`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `cron_jobs` (
 	`name` text PRIMARY KEY NOT NULL,
 	`cron` text NOT NULL,
 	`last_run` text,
@@ -24,7 +24,7 @@ CREATE TABLE `cron_jobs` (
 	`enabled` integer DEFAULT 1 NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `episodes` (
+CREATE TABLE IF NOT EXISTS `episodes` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`title_id` text NOT NULL,
 	`season_number` integer NOT NULL,
@@ -37,10 +37,10 @@ CREATE TABLE `episodes` (
 	FOREIGN KEY (`title_id`) REFERENCES `titles`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `episodes_title_season_episode` ON `episodes` (`title_id`,`season_number`,`episode_number`);--> statement-breakpoint
-CREATE INDEX `idx_episodes_air_date` ON `episodes` (`air_date`);--> statement-breakpoint
-CREATE INDEX `idx_episodes_title_id` ON `episodes` (`title_id`);--> statement-breakpoint
-CREATE TABLE `jobs` (
+CREATE UNIQUE INDEX IF NOT EXISTS `episodes_title_season_episode` ON `episodes` (`title_id`,`season_number`,`episode_number`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_episodes_air_date` ON `episodes` (`air_date`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_episodes_title_id` ON `episodes` (`title_id`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `jobs` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`data` text,
@@ -54,9 +54,9 @@ CREATE TABLE `jobs` (
 	`created_at` text DEFAULT (datetime('now')) NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `idx_jobs_status_run_at` ON `jobs` (`status`,`run_at`);--> statement-breakpoint
-CREATE INDEX `idx_jobs_name` ON `jobs` (`name`);--> statement-breakpoint
-CREATE TABLE `notifiers` (
+CREATE INDEX IF NOT EXISTS `idx_jobs_status_run_at` ON `jobs` (`status`,`run_at`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_jobs_name` ON `jobs` (`name`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `notifiers` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
 	`provider` text NOT NULL,
@@ -71,9 +71,9 @@ CREATE TABLE `notifiers` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `idx_notifiers_user_id` ON `notifiers` (`user_id`);--> statement-breakpoint
-CREATE INDEX `idx_notifiers_enabled_time` ON `notifiers` (`enabled`,`notify_time`);--> statement-breakpoint
-CREATE TABLE `offers` (
+CREATE INDEX IF NOT EXISTS `idx_notifiers_user_id` ON `notifiers` (`user_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_notifiers_enabled_time` ON `notifiers` (`enabled`,`notify_time`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `offers` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`title_id` text,
 	`provider_id` integer,
@@ -87,21 +87,21 @@ CREATE TABLE `offers` (
 	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE INDEX `idx_offers_title_id` ON `offers` (`title_id`);--> statement-breakpoint
-CREATE INDEX `idx_offers_provider_id` ON `offers` (`provider_id`);--> statement-breakpoint
-CREATE TABLE `oidc_states` (
+CREATE INDEX IF NOT EXISTS `idx_offers_title_id` ON `offers` (`title_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_offers_provider_id` ON `offers` (`provider_id`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `oidc_states` (
 	`state` text PRIMARY KEY NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `providers` (
+CREATE TABLE IF NOT EXISTS `providers` (
 	`id` integer PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`technical_name` text,
 	`icon_url` text
 );
 --> statement-breakpoint
-CREATE TABLE `scores` (
+CREATE TABLE IF NOT EXISTS `scores` (
 	`title_id` text PRIMARY KEY NOT NULL,
 	`imdb_score` real,
 	`imdb_votes` integer,
@@ -109,7 +109,7 @@ CREATE TABLE `scores` (
 	FOREIGN KEY (`title_id`) REFERENCES `titles`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `sessions` (
+CREATE TABLE IF NOT EXISTS `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
 	`token` text NOT NULL,
@@ -122,14 +122,14 @@ CREATE TABLE `sessions` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `sessions_token_unique` ON `sessions` (`token`);--> statement-breakpoint
-CREATE INDEX `idx_sessions_expires_at` ON `sessions` (`expires_at`);--> statement-breakpoint
-CREATE TABLE `settings` (
+CREATE UNIQUE INDEX IF NOT EXISTS `sessions_token_unique` ON `sessions` (`token`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_sessions_expires_at` ON `sessions` (`expires_at`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `settings` (
 	`key` text PRIMARY KEY NOT NULL,
 	`value` text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `titles` (
+CREATE TABLE IF NOT EXISTS `titles` (
 	`id` text PRIMARY KEY NOT NULL,
 	`object_type` text NOT NULL,
 	`title` text NOT NULL,
@@ -148,9 +148,9 @@ CREATE TABLE `titles` (
 	`updated_at` text DEFAULT (datetime('now'))
 );
 --> statement-breakpoint
-CREATE INDEX `idx_titles_release_date` ON `titles` (`release_date`);--> statement-breakpoint
-CREATE INDEX `idx_titles_object_type` ON `titles` (`object_type`);--> statement-breakpoint
-CREATE TABLE `tracked` (
+CREATE INDEX IF NOT EXISTS `idx_titles_release_date` ON `titles` (`release_date`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_titles_object_type` ON `titles` (`object_type`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `tracked` (
 	`title_id` text NOT NULL,
 	`user_id` text NOT NULL,
 	`tracked_at` text DEFAULT (datetime('now')),
@@ -160,7 +160,7 @@ CREATE TABLE `tracked` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `users` (
+CREATE TABLE IF NOT EXISTS `users` (
 	`id` text PRIMARY KEY NOT NULL,
 	`username` text NOT NULL,
 	`email` text,
@@ -179,9 +179,9 @@ CREATE TABLE `users` (
 	`is_admin` integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);--> statement-breakpoint
-CREATE UNIQUE INDEX `users_auth_provider_subject` ON `users` (`auth_provider`,`provider_subject`);--> statement-breakpoint
-CREATE TABLE `verification` (
+CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`);--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS `users_auth_provider_subject` ON `users` (`auth_provider`,`provider_subject`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `verification` (
 	`id` text PRIMARY KEY NOT NULL,
 	`identifier` text NOT NULL,
 	`value` text NOT NULL,
@@ -190,7 +190,7 @@ CREATE TABLE `verification` (
 	`updated_at` text DEFAULT (datetime('now'))
 );
 --> statement-breakpoint
-CREATE TABLE `watched_episodes` (
+CREATE TABLE IF NOT EXISTS `watched_episodes` (
 	`episode_id` integer NOT NULL,
 	`user_id` text NOT NULL,
 	`watched_at` text DEFAULT (datetime('now')),
