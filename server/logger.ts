@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { CONFIG } from "./config";
+import { httpRequestsTotal, httpRequestDurationSeconds } from "./metrics";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -110,10 +111,17 @@ export function requestLogger(): MiddlewareHandler {
   return async (c, next) => {
     const start = performance.now();
     await next();
-    const duration = Math.round(performance.now() - start);
+    const durationMs = performance.now() - start;
     const status = c.res.status;
+    const method = c.req.method;
+    const route = c.req.path;
+
     const level: LogLevel =
       status >= 500 ? "error" : status >= 400 ? "warn" : "info";
-    log[level](`${c.req.method} ${c.req.path}`, { status, duration });
+    log[level](`${method} ${c.req.path}`, { status, duration: Math.round(durationMs) });
+
+    const statusStr = String(status);
+    httpRequestsTotal.inc({ method, route, status: statusStr });
+    httpRequestDurationSeconds.observe({ method, route, status: statusStr }, durationMs / 1000);
   };
 }
