@@ -36,19 +36,16 @@ let rawDb: Database;
  * 4. Seeds __drizzle_migrations so migration 0000 is skipped
  */
 function migrateLegacyDb(db: Database, migrationsFolder: string): void {
-  const hasDrizzle = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'"
-    )
-    .get();
-  if (hasDrizzle) return;
-
-  const hasSessions = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'"
-    )
-    .get();
-  if (!hasSessions) return; // fresh DB, nothing to migrate
+  // Check if sessions table exists and has the old schema (no token column).
+  // This is the definitive signal of a legacy DB that needs transformation.
+  // We can't just check for __drizzle_migrations table existence because
+  // Drizzle creates it (empty) before running migrations — so after a failed
+  // first attempt the table exists but has no records.
+  const sessionsInfo = db.prepare("PRAGMA table_info(sessions)").all() as Array<{
+    name: string;
+  }>;
+  if (sessionsInfo.length === 0) return; // no sessions table = fresh DB
+  if (sessionsInfo.some((c) => c.name === "token")) return; // already new schema
 
   log.info("Legacy database detected — transforming schema");
 
@@ -161,9 +158,17 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
       created_at NUMERIC
     )
   `);
-  db.prepare(
-    `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`
-  ).run(hash, firstEntry.when);
+  // Only insert if not already seeded (e.g. from a previous partial run)
+  const existing = db
+    .prepare(
+      `SELECT id FROM "__drizzle_migrations" WHERE created_at = ?`
+    )
+    .get(firstEntry.when);
+  if (!existing) {
+    db.prepare(
+      `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`
+    ).run(hash, firstEntry.when);
+  }
 
   log.info("Legacy database transformation complete");
 }
