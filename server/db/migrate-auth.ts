@@ -189,6 +189,8 @@ async function applySchemaChanges(db: DrizzleDb): Promise<void> {
     `UPDATE "sessions" SET "token" = "id" WHERE "token" IS NULL`,
     // Unique index on token
     `CREATE UNIQUE INDEX IF NOT EXISTS "sessions_token_unique" ON "sessions" ("token")`,
+    // Username plugin requires display_username column
+    `ALTER TABLE "users" ADD COLUMN "display_username" text`,
     // Copy display_name to name where name is null
     `UPDATE "users" SET "name" = "display_name" WHERE "name" IS NULL AND "display_name" IS NOT NULL`,
   ];

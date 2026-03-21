@@ -105,6 +105,7 @@ export const users = sqliteTable(
   {
     id: text("id").primaryKey(),
     username: text("username").notNull().unique(),
+    displayUsername: text("display_username"),
     email: text("email"),
     emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
     name: text("name"),
