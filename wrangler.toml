@@ -15,10 +15,12 @@ binding = "ASSETS"
 not_found_handling = "none"
 
 # D1 SQLite database
+# Apply migrations before deploying: wrangler d1 migrations apply remindarr --remote
 [[d1_databases]]
 binding = "DB"
 database_name = "remindarr"
 database_id = "" # Set per-environment: wrangler d1 create remindarr
+migrations_dir = "drizzle"
 
 # Non-secret config (override via wrangler.toml or dashboard)
 [vars]
