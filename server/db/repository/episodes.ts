@@ -3,6 +3,7 @@ import { getDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles } from "./offers";
+import { localDateForTimezone } from "../../utils/timezone";
 import type { MonthFilters } from "./titles";
 
 export async function upsertEpisodes(
@@ -151,10 +152,10 @@ export async function deleteEpisodesForTitle(titleId: string) {
   });
 }
 
-export async function getUnwatchedEpisodes(userId: string) {
+export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
   return traceDbQuery("getUnwatchedEpisodes", async () => {
     const db = getDb();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateForTimezone(timezone);
 
     const rows = await db
       .select({
@@ -212,9 +213,9 @@ export async function getEpisodeAirDate(episodeId: number): Promise<string | nul
   });
 }
 
-export async function getReleasedEpisodeIds(episodeIds: number[]): Promise<number[]> {
+export async function getReleasedEpisodeIds(episodeIds: number[], timezone = "UTC"): Promise<number[]> {
   return traceDbQuery("getReleasedEpisodeIds", async () => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateForTimezone(timezone);
     const db = getDb();
     const rows = await db
       .select({ id: episodes.id })
