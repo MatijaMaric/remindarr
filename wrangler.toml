@@ -40,6 +40,11 @@ head_sampling_rate = 1
 persist = true
 invocation_logs = true
 
+# Custom domain
+routes = [
+  { pattern = "remindarr.app", custom_domain = true }
+]
+
 # Cron triggers for background jobs
 [triggers]
 crons = [
