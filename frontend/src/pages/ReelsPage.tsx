@@ -51,7 +51,10 @@ export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
 export default function ReelsPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<ShowCard[]>([]);
-  const cardsRef = useRef<ShowCard[]>([]);
+  // Ref is always derived from state — never updated independently.
+  // Callbacks read from this ref to access the latest value without
+  // needing to be recreated whenever `cards` changes.
+  const cardsRef = useRef(cards);
   cardsRef.current = cards;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
