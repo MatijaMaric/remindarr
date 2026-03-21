@@ -34,6 +34,10 @@ import { setScheduleCallback } from "./jobs/schedule";
 import { BunPlatform } from "./platform/bun";
 import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
+import { validateStartup } from "./startup-validation";
+
+// Validate required configuration before anything else
+validateStartup();
 
 // Initialize DB on startup
 initBunDb();
