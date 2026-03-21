@@ -25,4 +25,6 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 EXPOSE 3000
 VOLUME /app/data
 ENV DB_PATH=/app/data/remindarr.db
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD bun -e "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 CMD ["bun", "run", "server/index.ts"]
