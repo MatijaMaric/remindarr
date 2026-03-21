@@ -4,7 +4,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { serveStatic } from "hono/bun";
 import { CONFIG } from "./config";
-import { initBunDb, migrateTrackedData } from "./db/bun-db";
+import { initBunDb, migrateTrackedData, getRawDb } from "./db/bun-db";
 import { getUserCount, createUser } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rate-limit";
@@ -31,6 +31,7 @@ import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { registerBackupJob } from "./jobs/backup";
 import { startWorker, stopWorker } from "./jobs/worker";
+import { createShutdownHandler } from "./graceful-shutdown";
 import { registerCron } from "./jobs/queue";
 import { setScheduleCallback } from "./jobs/schedule";
 import { BunPlatform } from "./platform/bun";
@@ -197,15 +198,18 @@ await registerNotificationJobs();
 registerBackupJob();
 startWorker();
 
-process.on("SIGTERM", async () => {
-  stopWorker();
-  await Sentry.flush(2000);
-  process.exit(0);
+const server = Bun.serve({
+  port: CONFIG.PORT,
+  fetch: app.fetch,
 });
 
 logger.info("Server started", { port: CONFIG.PORT });
 
-export default {
-  port: CONFIG.PORT,
-  fetch: app.fetch,
-};
+const shutdown = createShutdownHandler({
+  server,
+  stopWorker,
+  closeDb: () => getRawDb().close(),
+});
+
+process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
+process.on("SIGINT", () => { void shutdown("SIGINT"); });
