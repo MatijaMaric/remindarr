@@ -6,8 +6,22 @@ import {
   index,
   primaryKey,
   uniqueIndex,
+  customType,
 } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
+
+/**
+ * Custom text column that accepts Date objects (auto-converted to ISO strings).
+ * Needed because better-auth passes `new Date()` for createdAt/updatedAt,
+ * but SQLite text columns only accept string bindings.
+ */
+const dateText = customType<{ data: string; driverData: string }>({
+  dataType() { return "text"; },
+  toDriver(value: unknown): string {
+    if (value instanceof Date) return value.toISOString();
+    return String(value ?? "");
+  },
+});
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { DrizzleDb } from "../platform/types";
 
@@ -114,8 +128,8 @@ export const users = sqliteTable(
     banned: integer("banned", { mode: "boolean" }).default(false),
     banReason: text("ban_reason"),
     banExpires: integer("ban_expires"),
-    createdAt: text("created_at").default(sql`(datetime('now'))`),
-    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+    createdAt: dateText("created_at").default(sql`(datetime('now'))`),
+    updatedAt: dateText("updated_at").default(sql`(datetime('now'))`),
     // Legacy columns — kept for migration, will be removed after verification
     passwordHash: text("password_hash"),
     authProvider: text("auth_provider").notNull().default("local"),
@@ -138,12 +152,12 @@ export const sessions = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     token: text("token").notNull().unique(),
-    expiresAt: text("expires_at").notNull(),
+    expiresAt: dateText("expires_at").notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     impersonatedBy: text("impersonated_by"),
-    createdAt: text("created_at").default(sql`(datetime('now'))`),
-    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+    createdAt: dateText("created_at").default(sql`(datetime('now'))`),
+    updatedAt: dateText("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [index("idx_sessions_expires_at").on(table.expiresAt)]
 );
@@ -164,8 +178,8 @@ export const account = sqliteTable(
     scope: text("scope"),
     password: text("password"),
     idToken: text("id_token"),
-    createdAt: text("created_at").default(sql`(datetime('now'))`),
-    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+    createdAt: dateText("created_at").default(sql`(datetime('now'))`),
+    updatedAt: dateText("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [index("idx_account_user_id").on(table.userId)]
 );
@@ -174,9 +188,9 @@ export const verification = sqliteTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
-  expiresAt: text("expires_at").notNull(),
-  createdAt: text("created_at").default(sql`(datetime('now'))`),
-  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+  expiresAt: dateText("expires_at").notNull(),
+  createdAt: dateText("created_at").default(sql`(datetime('now'))`),
+  updatedAt: dateText("updated_at").default(sql`(datetime('now'))`),
 });
 
 export const settings = sqliteTable("settings", {
