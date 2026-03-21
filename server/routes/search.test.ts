@@ -73,7 +73,7 @@ describe("GET /search", () => {
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/search/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", display_name: null, auth_provider: "test", is_admin: false });
+      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
       await next();
     });
     authedApp.route("/search", searchApp);

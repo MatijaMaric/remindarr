@@ -7,9 +7,18 @@ import {
   isOidcConfigured,
   getOidcConfig,
 } from "../db/repository";
-import { clearDiscoveryCache } from "../auth/oidc";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
+
+/**
+ * Callback to recreate the auth instance after OIDC settings change.
+ * Registered by the entry point (index.ts on Bun, no-op on CF Workers).
+ */
+let _onOidcSettingsChanged: (() => Promise<void>) | null = null;
+
+export function setOnOidcSettingsChanged(cb: () => Promise<void>) {
+  _onOidcSettingsChanged = cb;
+}
 
 const app = new Hono<AppEnv>();
 
@@ -69,8 +78,10 @@ app.put("/settings", async (c) => {
     }
   }
 
-  // Clear OIDC discovery cache when settings change
-  clearDiscoveryCache();
+  // On Bun, recreate auth instance to pick up new OIDC config
+  if (_onOidcSettingsChanged) {
+    await _onOidcSettingsChanged();
+  }
 
   return c.json({ success: true, oidc_configured: await isOidcConfigured() });
 });

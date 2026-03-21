@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
+import { authClient } from "../lib/auth-client";
 
 interface User {
   id: string;
@@ -11,7 +12,7 @@ interface User {
 
 interface AuthProviders {
   local: boolean;
-  oidc: { name: string } | null;
+  oidc: { name: string; providerId: string } | null;
 }
 
 interface AuthContextType {
@@ -29,6 +30,18 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function mapSessionToUser(session: any): User | null {
+  if (!session?.user) return null;
+  const u = session.user;
+  return {
+    id: u.id,
+    username: u.username || u.name || "",
+    display_name: u.name || null,
+    auth_provider: "local", // better-auth doesn't expose this directly
+    is_admin: u.role === "admin",
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [providers, setProviders] = useState<AuthProviders | null>(null);
@@ -36,9 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me");
-      const data = await res.json();
-      setUser(data.user ?? null);
+      const session = await authClient.getSession();
+      setUser(mapSessionToUser(session.data));
     } catch {
       setUser(null);
     }
@@ -46,11 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/auth/providers").then((r) => r.json()),
+      authClient.getSession().then((r) => r.data),
+      fetch("/api/auth/custom/providers").then((r) => r.json()),
     ])
-      .then(([meData, provData]) => {
-        setUser(meData.user ?? null);
+      .then(([sessionData, provData]) => {
+        setUser(mapSessionToUser(sessionData));
         setProviders(provData);
       })
       .catch(() => {
@@ -67,27 +79,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+    const result = await authClient.signIn.username({
+      username,
+      password,
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Login failed");
+    if (result.error) {
+      throw new Error(result.error.message || "Login failed");
     }
-    const data = await res.json();
-    setUser(data.user);
+    const session = await authClient.getSession();
+    setUser(mapSessionToUser(session.data));
 
     // Refresh providers in case OIDC was configured
-    fetch("/api/auth/providers")
+    fetch("/api/auth/custom/providers")
       .then((r) => r.json())
       .then(setProviders)
       .catch(() => {});
   };
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await authClient.signOut();
     setUser(null);
   };
 

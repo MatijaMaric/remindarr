@@ -2,11 +2,34 @@ import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bu
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { createUser, createSession } from "../db/repository";
+import { createUser, createSession, getSessionWithUser } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
-import { CONFIG } from "../config";
 import * as resolver from "../imdb/resolver";
 import type { AppEnv } from "../types";
+
+function createMockAuth() {
+  return {
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const cookieHeader = headers.get("cookie") || "";
+        const match = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
+        const token = match?.[1];
+        if (!token) return null;
+        const user = await getSessionWithUser(token);
+        if (!user) return null;
+        return {
+          session: { id: "session-id", userId: user.id },
+          user: {
+            id: user.id,
+            name: user.display_name,
+            username: user.username,
+            role: user.role || (user.is_admin ? "admin" : "user"),
+          },
+        };
+      },
+    },
+  };
+}
 
 let app: Hono<AppEnv>;
 let userCookie: string;
@@ -21,10 +44,14 @@ beforeEach(async () => {
 
   const userId = await createUser("testuser", "hash");
   const token = await createSession(userId);
-  userCookie = `${CONFIG.SESSION_COOKIE_NAME}=${token}`;
+  userCookie = `better-auth.session_token=${token}`;
 
   const imdbApp = (await import("./imdb")).default;
   app = new Hono<AppEnv>();
+  app.use("*", async (c, next) => {
+    c.set("auth", createMockAuth() as any);
+    await next();
+  });
   app.use("/imdb/*", requireAuth);
   app.use("/imdb", requireAuth);
   app.route("/imdb", imdbApp);

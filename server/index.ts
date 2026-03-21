@@ -5,7 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import { serveStatic } from "hono/bun";
 import { CONFIG } from "./config";
 import { initBunDb, migrateTrackedData } from "./db/bun-db";
-import { getUserCount, createUser, deleteExpiredSessions } from "./db/repository";
+import { getUserCount, createUser } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -16,8 +16,8 @@ import watchedRoutes from "./routes/watched";
 import imdbRoutes from "./routes/imdb";
 import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
-import authRoutes from "./routes/auth";
-import adminRoutes from "./routes/admin";
+import authCustomRoutes from "./routes/auth-custom";
+import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
 import jobsRoutes from "./routes/jobs";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
@@ -32,11 +32,16 @@ import { startWorker, stopWorker } from "./jobs/worker";
 import { registerCron } from "./jobs/queue";
 import { setScheduleCallback } from "./jobs/schedule";
 import { BunPlatform } from "./platform/bun";
+import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth";
+import { migrateAuthData } from "./db/migrate-auth";
 
 // Initialize DB on startup
 initBunDb();
 
 const platform = new BunPlatform();
+
+// Run auth migration
+await migrateAuthData();
 
 // Create admin account on first launch
 if (await getUserCount() === 0) {
@@ -48,11 +53,31 @@ if (await getUserCount() === 0) {
   console.log(`\n  Default admin password: ${password}\n  Change it after first login.\n`);
 }
 
+// Create auth instance (singleton for Bun)
+let auth: BetterAuthInstance;
+async function getAuth() {
+  if (!auth) {
+    const { getDb } = await import("./db/schema");
+    auth = await createAuthWithOidc(getDb(), platform);
+  }
+  return auth;
+}
+
+// Eagerly initialize auth
+auth = await getAuth();
+
+// Register callback so admin routes can recreate auth on OIDC settings change
+setOnOidcSettingsChanged(async () => {
+  const { getDb } = await import("./db/schema");
+  auth = await createAuthWithOidc(getDb(), platform);
+});
+
 const app = new Hono<AppEnv>();
 
-// Inject platform into context for route handlers
+// Inject platform and auth into context for route handlers
 app.use("*", async (c, next) => {
   c.set("platform", platform);
+  c.set("auth", auth);
   await next();
 });
 
@@ -83,8 +108,13 @@ app.use("/api/*", requestLogger());
 // Health check (public — used by Sentry uptime monitoring)
 app.route("/api/health", healthRoutes);
 
-// Auth routes (public)
-app.route("/api/auth", authRoutes);
+// better-auth handler (handles /api/auth/* — sign-in, sign-up, session, etc.)
+app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+  return auth.handler(c.req.raw);
+});
+
+// Custom auth routes (providers endpoint)
+app.route("/api/auth/custom", authCustomRoutes);
 
 // Public API routes (optionalAuth for is_tracked)
 app.use("/api/titles/*", optionalAuth);
@@ -150,11 +180,6 @@ app.route("/api/episodes", episodesRoutes);
 // Serve frontend static files in production
 app.use("/*", serveStatic({ root: "./frontend/dist" }));
 app.use("/*", serveStatic({ root: "./frontend/dist", path: "/index.html" }));
-
-// Clean expired sessions every hour
-setInterval(() => {
-  deleteExpiredSessions();
-}, 60 * 60 * 1000);
 
 // Start background job queue
 setScheduleCallback(registerCron);

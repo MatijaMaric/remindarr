@@ -3,6 +3,11 @@ main = "server/worker.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Custom domain
+routes = [
+  { pattern = "remindarr.app", custom_domain = true }
+]
+
 # Static frontend assets — binding required for SPA fallback in worker
 [assets]
 directory = "./frontend/dist"
@@ -23,6 +28,7 @@ LOG_LEVEL = "info"
 
 # Secrets (set via `wrangler secret put <NAME>`):
 # TMDB_API_KEY
+# BETTER_AUTH_SECRET
 # OIDC_CLIENT_SECRET
 # SENTRY_DSN
 # VAPID_PUBLIC_KEY
@@ -39,11 +45,6 @@ enabled = true
 head_sampling_rate = 1
 persist = true
 invocation_logs = true
-
-# Custom domain
-routes = [
-  { pattern = "remindarr.app", custom_domain = true }
-]
 
 # Cron triggers for background jobs
 [triggers]

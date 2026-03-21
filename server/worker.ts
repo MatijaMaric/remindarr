@@ -3,7 +3,6 @@
  *
  * This file mirrors server/index.ts but targets the CF Workers runtime:
  * - Uses D1 database binding instead of bun:sqlite
- * - Uses Cloudflare Access for auth (optional, falls back to OIDC)
  * - Uses cron triggers instead of setInterval-based job polling
  * - Uses Web Crypto PBKDF2 for password hashing
  */
@@ -42,7 +41,7 @@ import watchedRoutes from "./routes/watched";
 import imdbRoutes from "./routes/imdb";
 import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
-import authRoutes from "./routes/auth";
+import authCustomRoutes from "./routes/auth-custom";
 import adminRoutes from "./routes/admin";
 // jobsRoutes excluded: uses Bun-only in-memory job queue (bun:sqlite).
 // CF Workers uses cron triggers instead (see scheduled handler below).
@@ -55,6 +54,8 @@ import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig } from "./config";
 import Sentry from "./sentry";
 import { CloudflarePlatform } from "./platform/cloudflare";
+import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth";
+import { migrateAuthData } from "./db/migrate-auth";
 import type { DrizzleDb } from "./platform/types";
 
 interface Env {
@@ -75,6 +76,7 @@ interface Env {
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
+  BETTER_AUTH_SECRET?: string;
 }
 
 const platform = new CloudflarePlatform();
@@ -105,6 +107,7 @@ function patchConfigFromEnv(env: Env): void {
     VAPID_PUBLIC_KEY: env.VAPID_PUBLIC_KEY || "",
     VAPID_PRIVATE_KEY: env.VAPID_PRIVATE_KEY || "",
     VAPID_SUBJECT: env.VAPID_SUBJECT || "",
+    BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET || "",
   });
 
   // Reinitialize logger in case LOG_LEVEL changed
@@ -117,6 +120,7 @@ function createApp(env: Env) {
   const app = new Hono<AppEnv>();
 
   // Inject platform into context for route handlers
+  // Auth is injected per-request in the fetch handler
   app.use("*", async (c, next) => {
     c.set("platform", platform);
     await next();
@@ -143,8 +147,17 @@ function createApp(env: Env) {
   // Health check
   app.route("/api/health", healthRoutes);
 
-  // Auth routes (public)
-  app.route("/api/auth", authRoutes);
+  // better-auth handler (handles /api/auth/* — sign-in, sign-up, session, etc.)
+  app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+    const authInstance = c.get("auth");
+    if (!authInstance) {
+      return c.json({ error: "Auth not initialized" }, 500);
+    }
+    return authInstance.handler(c.req.raw);
+  });
+
+  // Custom auth routes (providers endpoint)
+  app.route("/api/auth/custom", authCustomRoutes);
 
   // Public API routes (optionalAuth for is_tracked)
   app.use("/api/titles/*", optionalAuth);
@@ -254,6 +267,9 @@ export default {
       const honoApp = getApp(env);
 
       return await runWithDb(db, async () => {
+        // Run auth migration on first request
+        await migrateAuthData();
+
         // Create admin on first request if no users exist
         if (!adminChecked) {
           adminChecked = true;
@@ -266,7 +282,19 @@ export default {
           }
         }
 
-        return honoApp.fetch(request, env, ctx as any);
+        // Create auth instance per-request (D1 binding is per-request)
+        const authInstance = await createAuthWithOidc(db, platform);
+
+        // Inject auth into the request context via a middleware-like approach
+        const origFetch = honoApp.fetch.bind(honoApp);
+        const appWithAuth = new Hono<AppEnv>();
+        appWithAuth.use("*", async (c, next) => {
+          c.set("auth", authInstance);
+          await next();
+        });
+        appWithAuth.route("/", honoApp);
+
+        return appWithAuth.fetch(request, env, ctx as any);
       });
     } catch (err) {
       Sentry.captureException(err);
