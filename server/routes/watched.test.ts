@@ -21,7 +21,7 @@ beforeEach(async () => {
     release_date: "2024-01-01",
     runtime_minutes: null,
     short_description: null,
-    genres: null,
+    genres: [],
     imdb_id: null,
     tmdb_id: "1",
     poster_url: null,
