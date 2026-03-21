@@ -16,7 +16,7 @@ getDb();
 
 try {
   const titles = await fetchNewReleases({ daysBack, objectType: type });
-  const count = upsertTitles(titles);
+  const count = await upsertTitles(titles);
   log.info("Sync complete", { count });
 } catch (err) {
   log.error("Sync failed", { err });
