@@ -156,7 +156,12 @@ function createApp(env: Env) {
     if (!authInstance) {
       return c.json({ error: "Auth not initialized" }, 500);
     }
-    return authInstance.handler(c.req.raw);
+    try {
+      return await authInstance.handler(c.req.raw);
+    } catch (e: any) {
+      logger.error("Auth handler error", { message: e?.message, cause: e?.cause?.message ?? e?.cause });
+      throw e;
+    }
   });
 
   // Public API routes (optionalAuth for is_tracked)

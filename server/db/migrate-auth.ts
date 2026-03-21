@@ -161,13 +161,14 @@ async function applySchemaChanges(db: DrizzleDb): Promise<void> {
     `ALTER TABLE "users" ADD COLUMN "banned" integer DEFAULT 0`,
     `ALTER TABLE "users" ADD COLUMN "ban_reason" text`,
     `ALTER TABLE "users" ADD COLUMN "ban_expires" integer`,
-    `ALTER TABLE "users" ADD COLUMN "updated_at" text DEFAULT (datetime('now'))`,
+    // D1 doesn't support expression defaults in ALTER TABLE ADD COLUMN
+    `ALTER TABLE "users" ADD COLUMN "updated_at" text`,
     // New columns on sessions
     `ALTER TABLE "sessions" ADD COLUMN "token" text`,
     `ALTER TABLE "sessions" ADD COLUMN "ip_address" text`,
     `ALTER TABLE "sessions" ADD COLUMN "user_agent" text`,
     `ALTER TABLE "sessions" ADD COLUMN "impersonated_by" text`,
-    `ALTER TABLE "sessions" ADD COLUMN "updated_at" text DEFAULT (datetime('now'))`,
+    `ALTER TABLE "sessions" ADD COLUMN "updated_at" text`,
     // Set token for existing sessions
     `UPDATE "sessions" SET "token" = "id" WHERE "token" IS NULL`,
     // Unique index on token
