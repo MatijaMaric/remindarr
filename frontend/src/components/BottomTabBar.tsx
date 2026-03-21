@@ -11,44 +11,44 @@ export default function BottomTabBar() {
   if (loading) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-800 sm:hidden safe-bottom">
+    <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-800 sm:hidden safe-bottom">
       <div className="flex justify-around">
         {user ? (
           <>
             <NavLink to="/reels" className={({ isActive }) => bottomTabClass(isActive)}>
-              <Clapperboard size={ICON_SIZE} />
+              <Clapperboard size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">Watch</span>
             </NavLink>
 
             <NavLink to="/upcoming" className={({ isActive }) => bottomTabClass(isActive)}>
-              <Clock size={ICON_SIZE} />
+              <Clock size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">Upcoming</span>
             </NavLink>
 
             <NavLink to="/browse" className={({ isActive }) => bottomTabClass(isActive)}>
-              <Search size={ICON_SIZE} />
+              <Search size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">Browse</span>
             </NavLink>
 
             <NavLink to="/calendar" className={({ isActive }) => bottomTabClass(isActive)}>
-              <CalendarDays size={ICON_SIZE} />
+              <CalendarDays size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">Calendar</span>
             </NavLink>
 
             <NavLink to="/profile" className={({ isActive }) => bottomTabClass(isActive)}>
-              <User size={ICON_SIZE} />
+              <User size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">Profile</span>
             </NavLink>
           </>
         ) : (
           <>
             <NavLink to="/browse" className={({ isActive }) => bottomTabClass(isActive)}>
-              <Search size={ICON_SIZE} />
+              <Search size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">Browse</span>
             </NavLink>
 
             <NavLink to="/login" className={({ isActive }) => bottomTabClass(isActive)}>
-              <LogIn size={ICON_SIZE} />
+              <LogIn size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">Sign In</span>
             </NavLink>
           </>

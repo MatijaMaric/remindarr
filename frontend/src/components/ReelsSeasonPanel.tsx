@@ -59,11 +59,15 @@ export default function ReelsSeasonPanel({
       <div
         className="fixed inset-0 z-[70] bg-black/50"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${showTitle} — Season ${seasonNumber}`}
         className="fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-sm bg-gray-900 border-l border-gray-800 overflow-y-auto animate-slide-in-right"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -74,9 +78,10 @@ export default function ReelsSeasonPanel({
             <h3 className="text-lg font-bold text-white truncate pr-2">{showTitle}</h3>
             <button
               onClick={onClose}
+              aria-label="Close season panel"
               className="text-gray-400 hover:text-white transition-colors cursor-pointer flex-shrink-0"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
           <p className="text-sm text-gray-400">Season {seasonNumber}</p>
@@ -103,13 +108,15 @@ export default function ReelsSeasonPanel({
             >
               <button
                 onClick={() => onToggleWatched(ep.id, !!ep.is_watched)}
+                aria-pressed={!!ep.is_watched}
+                aria-label={ep.is_watched ? `Mark E${String(ep.episode_number).padStart(2, "0")} as unwatched` : `Mark E${String(ep.episode_number).padStart(2, "0")} as watched`}
                 className={`flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
                   ep.is_watched
                     ? "text-emerald-400 hover:text-gray-400"
                     : "text-gray-600 hover:text-emerald-400"
                 }`}
               >
-                {ep.is_watched ? <CheckCircle size={18} /> : <Circle size={18} />}
+                {ep.is_watched ? <CheckCircle size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}
               </button>
               <div className="flex-1 min-w-0">
                 <Link

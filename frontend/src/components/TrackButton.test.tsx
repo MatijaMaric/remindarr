@@ -86,6 +86,16 @@ describe("TrackButton", () => {
     expect(onToggle).toHaveBeenCalledWith(false);
   });
 
+  it("has aria-pressed=false when not tracked", () => {
+    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
+    expect(screen.getByRole("button", { name: "Track" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("has aria-pressed=true when tracked", () => {
+    render(<TrackButton titleId="123" isTracked={true} />, { wrapper: Wrapper });
+    expect(screen.getByRole("button", { name: "Tracked" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("shows loading indicator while toggling", async () => {
     // Make trackTitle hang to observe loading state
     let resolveTrack: () => void;
