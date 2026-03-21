@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { Episode } from "../types";
@@ -305,6 +306,7 @@ export default function HomePage() {
         } catch {}
       }
       console.error("Failed to toggle watched:", err);
+      toast.error("Failed to update watched status — please try again");
     }
   }, []);
 
@@ -321,6 +323,7 @@ export default function HomePage() {
         setUnwatched(data.unwatched);
       } catch {}
       console.error("Failed to bulk mark watched:", err);
+      toast.error("Failed to mark season as watched — please try again");
     }
   }, []);
 
