@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { authClient } from "../lib/auth-client";
 
@@ -131,6 +131,13 @@ export default function LoginPage() {
                 {loading ? "Signing in..." : "Sign In"}
               </button>
             </form>
+
+            <p className="mt-6 text-center text-sm text-gray-500">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                Sign up
+              </Link>
+            </p>
           </>
         )}
       </div>

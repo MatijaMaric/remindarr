@@ -20,6 +20,7 @@ interface AuthContextType {
   providers: AuthProviders | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  signup: (username: string, email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -96,13 +97,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
   };
 
+  const signup = async (username: string, email: string, password: string, name: string) => {
+    const result = await authClient.signUp.email({
+      username,
+      email,
+      password,
+      name,
+    });
+    if (result.error) {
+      throw new Error(result.error.message || "Signup failed");
+    }
+    const session = await authClient.getSession();
+    setUser(mapSessionToUser(session.data));
+  };
+
   const logout = async () => {
     await authClient.signOut();
     setUser(null);
   };
 
   return (
-    <AuthContext value={{ user, providers, loading, login, logout, refresh }}>
+    <AuthContext value={{ user, providers, loading, login, signup, logout, refresh }}>
       {children}
     </AuthContext>
   );

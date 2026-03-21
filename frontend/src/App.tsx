@@ -6,6 +6,7 @@ import BrowsePage from "./pages/BrowsePage";
 import TrackedPage from "./pages/TrackedPage";
 import CalendarPage from "./pages/CalendarPage";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import ProfilePage from "./pages/ProfilePage";
 import TitleDetailPage from "./pages/TitleDetailPage";
 import SeasonDetailPage from "./pages/SeasonDetailPage";
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="/" element={<MobileHomeRedirect />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/tracked" element={<RequireAuth><TrackedPage /></RequireAuth>} />
           <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
           <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
