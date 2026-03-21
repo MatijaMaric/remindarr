@@ -195,8 +195,33 @@ export const oidcStates = sqliteTable("oidc_states", {
   createdAt: integer("created_at").notNull(),
 });
 
-export const schemaVersion = sqliteTable("schema_version", {
-  version: integer("version").primaryKey(),
+export const jobs = sqliteTable(
+  "jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    data: text("data"),
+    status: text("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(3),
+    error: text("error"),
+    runAt: text("run_at").notNull().default(sql`(datetime('now'))`),
+    startedAt: text("started_at"),
+    completedAt: text("completed_at"),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    index("idx_jobs_status_run_at").on(table.status, table.runAt),
+    index("idx_jobs_name").on(table.name),
+  ]
+);
+
+export const cronJobs = sqliteTable("cron_jobs", {
+  name: text("name").primaryKey(),
+  cron: text("cron").notNull(),
+  lastRun: text("last_run"),
+  nextRun: text("next_run").notNull(),
+  enabled: integer("enabled").notNull().default(1),
 });
 
 // ─── Relations ──────────────────────────────────────────────────────────────
@@ -254,7 +279,7 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 export const schemaExports = {
-  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, notifiers, oidcStates, schemaVersion,
+  titles, providers, offers, scores, episodes, users, sessions, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
   titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
   usersRelations, sessionsRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
 };

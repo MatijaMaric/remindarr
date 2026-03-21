@@ -14,6 +14,7 @@ COPY package.json bun.lock ./
 COPY frontend/package.json ./frontend/
 RUN bun install --frozen-lockfile --production
 COPY server/ ./server/
+COPY drizzle/ ./drizzle/
 COPY tsconfig.json ./
 
 # Stage 3: Production
