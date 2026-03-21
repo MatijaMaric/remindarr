@@ -4,6 +4,8 @@ import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
 import { upsertTitles, createUser, createSession, getSessionWithUser } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
+import { getRawDb } from "../db/bun-db";
+import { CONFIG } from "../config";
 import trackApp from "./track";
 import type { AppEnv } from "../types";
 
@@ -88,6 +90,63 @@ describe("POST /track/:id", () => {
     const listRes = await app.request("/track", { headers: headers() });
     const listBody = await listRes.json();
     expect(listBody.titles).toHaveLength(1);
+  });
+
+  it("enqueues sync-show-episodes job when tracking a SHOW with tmdb_id", async () => {
+    const showTitle = makeParsedTitle({ id: "tv-456", objectType: "SHOW", tmdbId: "456", title: "Test Show" });
+    await upsertTitles([showTitle]);
+
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const titleData = {
+      id: "tv-456",
+      object_type: "SHOW",
+      tmdb_id: "456",
+      title: "Test Show",
+    };
+
+    const res = await app.request("/track/tv-456", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleData }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' LIMIT 1").get() as any;
+    expect(job).toBeTruthy();
+    expect(JSON.parse(job.data)).toMatchObject({ titleId: "tv-456", tmdbId: "456", title: "Test Show" });
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("does not enqueue sync-show-episodes job when TMDB_API_KEY is not set", async () => {
+    const showTitle = makeParsedTitle({ id: "tv-789", objectType: "SHOW", tmdbId: "789", title: "Another Show" });
+    await upsertTitles([showTitle]);
+
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "";
+
+    const titleData = {
+      id: "tv-789",
+      object_type: "SHOW",
+      tmdb_id: "789",
+      title: "Another Show",
+    };
+
+    const res = await app.request("/track/tv-789", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleData }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-789' LIMIT 1").get();
+    expect(job).toBeNull();
+
+    CONFIG.TMDB_API_KEY = originalKey;
   });
 });
 
