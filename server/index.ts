@@ -17,7 +17,7 @@ import imdbRoutes from "./routes/imdb";
 import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
 import authCustomRoutes from "./routes/auth-custom";
-import adminRoutes from "./routes/admin";
+import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
 import jobsRoutes from "./routes/jobs";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
@@ -66,11 +66,11 @@ async function getAuth() {
 // Eagerly initialize auth
 auth = await getAuth();
 
-/** Recreate auth instance (e.g., after OIDC settings change) */
-export async function recreateAuth() {
+// Register callback so admin routes can recreate auth on OIDC settings change
+setOnOidcSettingsChanged(async () => {
   const { getDb } = await import("./db/schema");
   auth = await createAuthWithOidc(getDb(), platform);
-}
+});
 
 const app = new Hono<AppEnv>();
 

@@ -10,6 +10,16 @@ import {
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 
+/**
+ * Callback to recreate the auth instance after OIDC settings change.
+ * Registered by the entry point (index.ts on Bun, no-op on CF Workers).
+ */
+let _onOidcSettingsChanged: (() => Promise<void>) | null = null;
+
+export function setOnOidcSettingsChanged(cb: () => Promise<void>) {
+  _onOidcSettingsChanged = cb;
+}
+
 const app = new Hono<AppEnv>();
 
 const OIDC_SETTING_KEYS = ["oidc_issuer_url", "oidc_client_id", "oidc_client_secret", "oidc_redirect_uri", "oidc_admin_claim", "oidc_admin_value"];
@@ -69,11 +79,8 @@ app.put("/settings", async (c) => {
   }
 
   // On Bun, recreate auth instance to pick up new OIDC config
-  try {
-    const { recreateAuth } = await import("../index");
-    await recreateAuth();
-  } catch {
-    // On CF Workers, auth is per-request so no recreation needed
+  if (_onOidcSettingsChanged) {
+    await _onOidcSettingsChanged();
   }
 
   return c.json({ success: true, oidc_configured: await isOidcConfigured() });
