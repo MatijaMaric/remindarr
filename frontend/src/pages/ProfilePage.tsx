@@ -14,6 +14,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <UserSection />
+      <WatchlistSection />
       {isPushSupported() && <PushNotificationsSection />}
       <NotificationsSection />
       {user.is_admin && <BackgroundJobsSection />}
@@ -117,6 +118,89 @@ function UserSection() {
           </form>
         </div>
       )}
+    </section>
+  );
+}
+
+function WatchlistSection() {
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  async function handleExport() {
+    setMsg("");
+    setErr("");
+    setExporting(true);
+    try {
+      await api.exportWatchlist();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMsg("");
+    setErr("");
+    setImporting(true);
+    try {
+      const result = await api.importWatchlist(file);
+      setMsg(`Import complete: ${result.imported} titles added${result.skipped > 0 ? `, ${result.skipped} skipped` : ""}.`);
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">Watchlist</h2>
+
+      {msg && (
+        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+          {err}
+        </div>
+      )}
+
+      <div className="bg-gray-900 rounded-lg p-5 space-y-4">
+        <div>
+          <p className="text-white font-medium mb-1">Export Watchlist</p>
+          <p className="text-sm text-gray-400 mb-3">Download your tracked titles and watched episode history as a JSON file.</p>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {exporting ? "Exporting..." : "Export"}
+          </button>
+        </div>
+
+        <div className="border-t border-gray-800 pt-4">
+          <p className="text-white font-medium mb-1">Import Watchlist</p>
+          <p className="text-sm text-gray-400 mb-3">Restore a previously exported watchlist. Existing tracked titles will not be removed.</p>
+          <label className={`px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
+            {importing ? "Importing..." : "Import"}
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleImport}
+              className="hidden"
+              disabled={importing}
+            />
+          </label>
+        </div>
+      </div>
     </section>
   );
 }
