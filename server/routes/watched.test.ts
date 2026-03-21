@@ -2,55 +2,34 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
+import { upsertTitles, upsertEpisodes, createUser } from "../db/repository";
+import { getRawDb } from "../db/bun-db";
+import watchedApp from "./watched";
 import type { AppEnv } from "../types";
 
-let app: Hono<AppEnv>;
 let userId: string;
 
-beforeEach(async () => {
-  setupTestDb();
-
-  const { createUser, upsertEpisodes, upsertTitles } = await import("../db/repository");
-  userId = await createUser("testuser", "hash");
-
-  await upsertTitles([makeParsedTitle({
-    id: "show-1",
-    objectType: "SHOW",
-    title: "Test Show",
-    originalTitle: "Test Show",
-    releaseYear: 2024,
-    releaseDate: "2024-01-01",
-  })]);
-
-  // Insert episodes: one in the past, one today (UTC), one in the future
-  await upsertEpisodes([
-    {
-      title_id: "show-1",
-      season_number: 1,
-      episode_number: 1,
-      name: "Past Episode",
-      overview: null,
-      air_date: "2000-01-01",
-      still_path: null,
-    },
-    {
-      title_id: "show-1",
-      season_number: 1,
-      episode_number: 2,
-      name: "Future Episode",
-      overview: null,
-      air_date: "2099-12-31",
-      still_path: null,
-    },
-  ]);
-
-  const watchedApp = (await import("./watched")).default;
-  app = new Hono<AppEnv>();
-  app.use("/watched/*", async (c, next) => {
+function makeAuthedApp() {
+  const a = new Hono<AppEnv>();
+  a.use("*", async (c, next) => {
     c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
     await next();
   });
-  app.route("/watched", watchedApp);
+  a.route("/watched", watchedApp);
+  return a;
+}
+
+async function getEpisodeId(titleId: string, season: number, episode: number): Promise<number> {
+  const db = getRawDb();
+  const row = db
+    .prepare("SELECT id FROM episodes WHERE title_id = ? AND season_number = ? AND episode_number = ?")
+    .get(titleId, season, episode) as { id: number } | undefined;
+  return row!.id;
+}
+
+beforeEach(async () => {
+  setupTestDb();
+  userId = await createUser("testuser", "hash");
 });
 
 afterAll(() => {
@@ -59,38 +38,68 @@ afterAll(() => {
 
 describe("POST /watched/:episodeId", () => {
   it("allows marking a past episode as watched", async () => {
-    const { getDb } = await import("../db/schema");
-    const { episodes } = await import("../db/schema");
-    const db = getDb();
-    const ep = await db.select({ id: episodes.id }).from(episodes)
-      .where((await import("drizzle-orm")).eq(episodes.name, "Past Episode")).get();
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: today, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-1", 1, 1);
 
-    const res = await app.request(`/watched/${ep!.id}`, { method: "POST" });
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/${episodeId}`, { method: "POST" });
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
+  it("marking the same episode twice does not error (idempotent)", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-1b", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-1b", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-1b", 1, 1);
+
+    const app = makeAuthedApp();
+    await app.request(`/watched/${episodeId}`, { method: "POST" });
+    const res = await app.request(`/watched/${episodeId}`, { method: "POST" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
   });
 
   it("rejects marking a future episode as watched", async () => {
-    const { getDb } = await import("../db/schema");
-    const { episodes } = await import("../db/schema");
-    const db = getDb();
-    const ep = await db.select({ id: episodes.id }).from(episodes)
-      .where((await import("drizzle-orm")).eq(episodes.name, "Future Episode")).get();
+    const future = new Date();
+    future.setDate(future.getDate() + 7);
+    const futureStr = future.toISOString().slice(0, 10);
 
-    const res = await app.request(`/watched/${ep!.id}`, { method: "POST" });
+    await upsertTitles([makeParsedTitle({ id: "show-2", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-2", season_number: 1, episode_number: 1, name: "Future Ep", overview: null, air_date: futureStr, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-2", 1, 1);
+
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/${episodeId}`, { method: "POST" });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain("unreleased");
   });
 
   it("respects X-Timezone header when checking release status", async () => {
-    const { getDb } = await import("../db/schema");
-    const { episodes } = await import("../db/schema");
-    const db = getDb();
-    const ep = await db.select({ id: episodes.id }).from(episodes)
-      .where((await import("drizzle-orm")).eq(episodes.name, "Future Episode")).get();
+    const future = new Date();
+    future.setDate(future.getDate() + 7);
+    const futureStr = future.toISOString().slice(0, 10);
 
+    await upsertTitles([makeParsedTitle({ id: "show-tz", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-tz", season_number: 1, episode_number: 1, name: "Future Ep", overview: null, air_date: futureStr, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-tz", 1, 1);
+
+    const app = makeAuthedApp();
     // Even with a far-ahead timezone, future episode is still in the future
-    const res = await app.request(`/watched/${ep!.id}`, {
+    const res = await app.request(`/watched/${episodeId}`, {
       method: "POST",
       headers: { "X-Timezone": "Pacific/Auckland" },
     });
@@ -98,15 +107,57 @@ describe("POST /watched/:episodeId", () => {
   });
 
   it("returns 400 for non-numeric episodeId", async () => {
+    const app = makeAuthedApp();
     const res = await app.request("/watched/abc", { method: "POST" });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid episodeId");
   });
+
+  it("returns 400 when episode does not exist", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/99999", { method: "POST" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("unreleased");
+  });
 });
 
 describe("DELETE /watched/:episodeId", () => {
+  it("unmarks a watched episode", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-3", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-3", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-3", 1, 1);
+
+    const app = makeAuthedApp();
+    await app.request(`/watched/${episodeId}`, { method: "POST" });
+
+    const res = await app.request(`/watched/${episodeId}`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
+  it("unwatch on an unwatched episode is a no-op", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-3b", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-3b", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-3b", 1, 1);
+
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/${episodeId}`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
   it("returns 400 for non-numeric episodeId", async () => {
+    const app = makeAuthedApp();
     const res = await app.request("/watched/abc", { method: "DELETE" });
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -115,37 +166,131 @@ describe("DELETE /watched/:episodeId", () => {
 });
 
 describe("POST /watched/bulk", () => {
+  it("marks multiple released episodes as watched", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-4", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-4", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: yesterdayStr, still_path: null },
+      { title_id: "show-4", season_number: 1, episode_number: 2, name: "Ep2", overview: null, air_date: yesterdayStr, still_path: null },
+    ]);
+    const ep1Id = await getEpisodeId("show-4", 1, 1);
+    const ep2Id = await getEpisodeId("show-4", 1, 2);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [ep1Id, ep2Id], watched: true }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
+  it("only marks released episodes as watched in bulk", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    const future = new Date();
+    future.setDate(future.getDate() + 7);
+    const futureStr = future.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-4b", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-4b", season_number: 1, episode_number: 1, name: "Aired", overview: null, air_date: yesterdayStr, still_path: null },
+      { title_id: "show-4b", season_number: 1, episode_number: 2, name: "Future", overview: null, air_date: futureStr, still_path: null },
+    ]);
+    const releasedId = await getEpisodeId("show-4b", 1, 1);
+    const futureId = await getEpisodeId("show-4b", 1, 2);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [releasedId, futureId], watched: true }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
+  it("returns 400 when all episodeIds are unreleased", async () => {
+    const future = new Date();
+    future.setDate(future.getDate() + 7);
+    const futureStr = future.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-5", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-5", season_number: 1, episode_number: 1, name: "Future Ep", overview: null, air_date: futureStr, still_path: null },
+    ]);
+    const ep1Id = await getEpisodeId("show-5", 1, 1);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [ep1Id], watched: true }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("unreleased");
+  });
+
+  it("bulk unwatch succeeds for released and unreleased episodes", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-6", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-6", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: yesterdayStr, still_path: null },
+    ]);
+    const ep1Id = await getEpisodeId("show-6", 1, 1);
+
+    const app = makeAuthedApp();
+    // Watch first
+    await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [ep1Id], watched: true }),
+    });
+
+    // Now unwatch
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [ep1Id], watched: false }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
   it("returns 400 for empty episodeIds", async () => {
+    const app = makeAuthedApp();
     const res = await app.request("/watched/bulk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ episodeIds: [], watched: true }),
     });
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("episodeIds");
   });
 
-  it("only marks released episodes as watched in bulk", async () => {
-    const { getDb } = await import("../db/schema");
-    const { episodes } = await import("../db/schema");
-    const db = getDb();
-    const pastEp = await db.select({ id: episodes.id }).from(episodes)
-      .where((await import("drizzle-orm")).eq(episodes.name, "Past Episode")).get();
-    const futureEp = await db.select({ id: episodes.id }).from(episodes)
-      .where((await import("drizzle-orm")).eq(episodes.name, "Future Episode")).get();
-
+  it("returns 400 when episodeIds is missing", async () => {
+    const app = makeAuthedApp();
     const res = await app.request("/watched/bulk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ episodeIds: [futureEp!.id], watched: true }),
+      body: JSON.stringify({ watched: true }),
     });
-    // Future-only batch returns 400 (no released IDs)
     expect(res.status).toBe(400);
-
-    const res2 = await app.request("/watched/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ episodeIds: [pastEp!.id], watched: true }),
-    });
-    expect(res2.status).toBe(200);
+    const body = await res.json();
+    expect(body.error).toContain("episodeIds");
   });
 });
