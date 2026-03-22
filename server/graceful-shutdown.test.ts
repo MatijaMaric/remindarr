@@ -33,7 +33,7 @@ describe("createShutdownHandler", () => {
     expect(stopWorker).toHaveBeenCalledTimes(1);
     expect(flushSpy).toHaveBeenCalledTimes(1);
     expect(closeDb).toHaveBeenCalledTimes(1);
-    expect(capturedExitCode).toBe(0);
+    expect(capturedExitCode ?? -1).toBe(0);
   });
 
   it("works for SIGINT as well", async () => {
@@ -47,7 +47,7 @@ describe("createShutdownHandler", () => {
     });
     await shutdown("SIGINT");
 
-    expect(capturedExitCode).toBe(0);
+    expect(capturedExitCode ?? -1).toBe(0);
   });
 
   it("calls server.stop before closeDb", async () => {
