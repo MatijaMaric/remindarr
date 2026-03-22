@@ -53,7 +53,6 @@ describe("POST /sync", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
     expect(body.count).toBe(1);
     expect(body.message).toContain("Synced");
 
@@ -74,7 +73,6 @@ describe("POST /sync", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
     expect(body.count).toBe(0);
 
     expect(syncTitles.fetchNewReleases).toHaveBeenCalledWith({
@@ -94,7 +92,6 @@ describe("POST /sync", () => {
     });
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.success).toBe(false);
     expect(body.error).toBe("TMDB API down");
   });
 });

@@ -77,7 +77,6 @@ describe("POST /episodes/sync", () => {
     const res = await app.request("/episodes/sync", { method: "POST" });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
     expect(body.synced).toBe(5);
     expect(body.shows).toBe(2);
     expect(body.message).toContain("Synced 5 episodes from 2 shows");

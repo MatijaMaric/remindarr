@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getDb } from "../db/schema";
+import { ok, err } from "./response";
 
 const app = new Hono();
 
@@ -7,9 +8,9 @@ app.get("/", async (c) => {
   try {
     const db = getDb();
     await db.run(/* sql */ `SELECT 1`);
-    return c.json({ status: "ok" });
+    return ok(c, { status: "ok" });
   } catch {
-    return c.json({ status: "error" }, 503);
+    return err(c, "Database unavailable", 503);
   }
 });
 

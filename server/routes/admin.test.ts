@@ -118,7 +118,7 @@ describe("PUT /admin/settings", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
+    expect(body.oidc_configured).toBeDefined();
 
     // Verify settings persisted
     expect(await getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
@@ -190,6 +190,6 @@ describe("PUT /admin/settings", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
+    expect(body.oidc_configured).toBeDefined();
   });
 });

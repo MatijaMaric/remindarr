@@ -21,6 +21,7 @@ import {
 import { getTrackedTitleIds } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
+import { ok, err } from "./response";
 
 const log = logger.child({ module: "browse" });
 
@@ -109,7 +110,7 @@ app.get("/", async (c) => {
   const typeValues = type ? type.split(",").filter(Boolean) : [];
 
   if (!category || !VALID_CATEGORIES.includes(category as Category)) {
-    return c.json({ error: "Invalid category. Must be one of: popular, upcoming, top_rated" }, 400);
+    return err(c, "Invalid category. Must be one of: popular, upcoming, top_rated");
   }
 
   try {
@@ -199,10 +200,10 @@ app.get("/", async (c) => {
 
     const availableLanguages = tmdbLanguages;
 
-    return c.json({ titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages });
-  } catch (err: any) {
-    log.error("Browse error", { error: err.message, stack: err.stack });
-    return c.json({ error: err.message }, 500);
+    return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages });
+  } catch (e: any) {
+    log.error("Browse error", { error: e.message, stack: e.stack });
+    return err(c, e.message, 500);
   }
 });
 
