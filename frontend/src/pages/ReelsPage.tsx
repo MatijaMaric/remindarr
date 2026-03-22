@@ -59,6 +59,8 @@ export default function ReelsPage() {
   cardsRef.current = cards;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const actionErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Undo state
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
@@ -211,7 +213,7 @@ export default function ReelsPage() {
 
     try {
       await api.watchEpisode(episode.id);
-    } catch (err) {
+    } catch (err: any) {
       // Revert on failure
       setCards((prev) =>
         prev.map((c) => {
@@ -223,7 +225,9 @@ export default function ReelsPage() {
         })
       );
       setUndoAction(null);
-      console.error("Failed to mark watched:", err);
+      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
+      setActionError(err.message || "Failed to mark episode as watched");
+      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, []);
 
@@ -246,8 +250,10 @@ export default function ReelsPage() {
 
     try {
       await api.unwatchEpisode(undoAction.episodeId);
-    } catch (err) {
-      console.error("Failed to undo:", err);
+    } catch (err: any) {
+      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
+      setActionError(err.message || "Failed to undo");
+      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, [undoAction]);
 
@@ -259,8 +265,10 @@ export default function ReelsPage() {
       const data = await api.getUpcomingEpisodes();
       setCards(getFirstUnwatchedPerShow(data.unwatched));
       setSeasonPanel(null);
-    } catch (err) {
-      console.error("Failed to bulk mark watched:", err);
+    } catch (err: any) {
+      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
+      setActionError(err.message || "Failed to mark episodes as watched");
+      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, []);
 
@@ -275,8 +283,10 @@ export default function ReelsPage() {
       // Reload data
       const data = await api.getUpcomingEpisodes();
       setCards(getFirstUnwatchedPerShow(data.unwatched));
-    } catch (err) {
-      console.error("Failed to toggle watched:", err);
+    } catch (err: any) {
+      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
+      setActionError(err.message || "Failed to update watched status");
+      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, []);
 
@@ -355,6 +365,15 @@ export default function ReelsPage() {
             <Undo2 size={16} />
             <span className="text-sm font-medium">Undo</span>
           </button>
+        </div>
+      )}
+
+      {/* Action error banner */}
+      {actionError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] max-w-sm w-full px-4">
+          <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm text-center">
+            {actionError}
+          </div>
         </div>
       )}
 
