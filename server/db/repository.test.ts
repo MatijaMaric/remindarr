@@ -311,6 +311,27 @@ describe("getRecentTitles", () => {
     const results = await getRecentTitles({ daysBack: 0, excludeTracked: true });
     expect(results).toHaveLength(2);
   });
+
+  it("returns is_tracked=false without userId", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" })]);
+    const results = await getRecentTitles({ daysBack: 0 });
+    expect(results[0].is_tracked).toBe(false);
+  });
+
+  it("returns correct is_tracked via LEFT JOIN when userId is provided", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Tracked", releaseDate: "2025-01-01" }),
+      makeParsedTitle({ id: "movie-2", title: "Untracked", releaseDate: "2025-01-02" }),
+    ]);
+    const userId = await createUser("testuser2", "hash");
+    await trackTitle("movie-1", userId);
+
+    const results = await getRecentTitles({ daysBack: 0 }, userId);
+    const trackedResult = results.find((r) => r.id === "movie-1")!;
+    const untrackedResult = results.find((r) => r.id === "movie-2")!;
+    expect(trackedResult.is_tracked).toBe(true);
+    expect(untrackedResult.is_tracked).toBe(false);
+  });
 });
 
 describe("getGenres", () => {
@@ -392,6 +413,27 @@ describe("searchLocalTitles", () => {
   it("returns empty for no matches", async () => {
     await upsertTitles([makeParsedTitle()]);
     expect(await searchLocalTitles("NonExistent")).toHaveLength(0);
+  });
+
+  it("returns is_tracked=false without userId", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Test Movie" })]);
+    const results = await searchLocalTitles("Test");
+    expect(results[0].is_tracked).toBe(false);
+  });
+
+  it("returns correct is_tracked via LEFT JOIN when userId is provided", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Tracked Film" }),
+      makeParsedTitle({ id: "movie-2", title: "Untracked Film" }),
+    ]);
+    const userId = await createUser("searchuser", "hash");
+    await trackTitle("movie-1", userId);
+
+    const results = await searchLocalTitles("Film", 50, userId);
+    const trackedResult = results.find((r) => r.id === "movie-1")!;
+    const untrackedResult = results.find((r) => r.id === "movie-2")!;
+    expect(trackedResult.is_tracked).toBe(true);
+    expect(untrackedResult.is_tracked).toBe(false);
   });
 });
 

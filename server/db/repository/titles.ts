@@ -139,11 +139,7 @@ export async function getTitleById(titleId: string, userId?: string) {
   return traceDbQuery("getTitleById", async () => {
     const db = getDb();
 
-    const trackedSubquery = userId
-      ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
-      : sql<number>`0`;
-
-    const row = await db
+    const queryBuilder = db
       .select({
         id: titles.id,
         object_type: titles.objectType,
@@ -164,12 +160,18 @@ export async function getTitleById(titleId: string, userId?: string) {
         imdb_score: scores.imdbScore,
         imdb_votes: scores.imdbVotes,
         tmdb_score: scores.tmdbScore,
-        is_tracked: trackedSubquery,
+        is_tracked: userId
+          ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
+          : sql<number>`0`,
       })
       .from(titles)
       .leftJoin(scores, eq(scores.titleId, titles.id))
-      .where(eq(titles.id, titleId))
-      .get();
+      .$dynamic();
+
+    const row = await (userId
+      ? queryBuilder.leftJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+      : queryBuilder
+    ).where(eq(titles.id, titleId)).get();
 
     if (!row) return null;
 
@@ -251,11 +253,7 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
       );
     }
 
-    const trackedSubquery = userId
-      ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
-      : sql<number>`0`;
-
-    const rows = await db
+    const queryBuilder = db
       .select({
         id: titles.id,
         object_type: titles.objectType,
@@ -276,10 +274,18 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
         imdb_score: scores.imdbScore,
         imdb_votes: scores.imdbVotes,
         tmdb_score: scores.tmdbScore,
-        is_tracked: trackedSubquery,
+        is_tracked: userId
+          ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
+          : sql<number>`0`,
       })
       .from(titles)
       .leftJoin(scores, eq(scores.titleId, titles.id))
+      .$dynamic();
+
+    const rows = await (userId
+      ? queryBuilder.leftJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+      : queryBuilder
+    )
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(titles.releaseDate))
       .limit(limit)
@@ -300,11 +306,7 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
   return traceDbQuery("searchLocalTitles", async () => {
     const db = getDb();
 
-    const trackedSubquery = userId
-      ? sql<number>`(SELECT EXISTS(SELECT 1 FROM tracked tr WHERE tr.title_id = ${titles.id} AND tr.user_id = ${userId}))`
-      : sql<number>`0`;
-
-    const rows = await db
+    const queryBuilder = db
       .select({
         id: titles.id,
         object_type: titles.objectType,
@@ -325,10 +327,18 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
         imdb_score: scores.imdbScore,
         imdb_votes: scores.imdbVotes,
         tmdb_score: scores.tmdbScore,
-        is_tracked: trackedSubquery,
+        is_tracked: userId
+          ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
+          : sql<number>`0`,
       })
       .from(titles)
       .leftJoin(scores, eq(scores.titleId, titles.id))
+      .$dynamic();
+
+    const rows = await (userId
+      ? queryBuilder.leftJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+      : queryBuilder
+    )
       .where(like(titles.title, `%${query}%`))
       .orderBy(desc(titles.releaseDate))
       .limit(limit)
