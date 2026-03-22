@@ -6,7 +6,7 @@ import { registerCron, enqueueJob } from "./queue";
 import { CONFIG } from "../config";
 import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
-import { syncEpisodes } from "../tmdb/sync";
+import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
 import { migrateTitles } from "./migrate-titles";
 
 export function registerSyncJobs() {
@@ -25,6 +25,19 @@ export function registerSyncJobs() {
     }
     const result = await syncEpisodes();
     log.info("Synced episodes", { synced: result.synced, shows: result.shows });
+  });
+
+  registerHandler("sync-show-episodes", async (job) => {
+    if (!CONFIG.TMDB_API_KEY) {
+      log.info("Skipping show episode sync", { reason: "TMDB_API_KEY not configured" });
+      return;
+    }
+    const data = job.data ? JSON.parse(job.data) : null;
+    if (!data?.titleId || !data?.tmdbId || !data?.title) {
+      throw new Error("sync-show-episodes job missing required data fields");
+    }
+    const count = await syncEpisodesForShow(data.titleId, data.tmdbId, data.title);
+    log.info("Synced show episodes via job", { title: data.title, episodes: count });
   });
 
   registerHandler("migrate-titles", async () => {
