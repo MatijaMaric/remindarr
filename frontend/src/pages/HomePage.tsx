@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { Episode } from "../types";
@@ -37,6 +38,7 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
   onMarkSeasonWatched: (episodeIds: number[]) => void;
 }) {
   const [showAllEpisodes, setShowAllEpisodes] = useState(false);
+  const { t } = useTranslation();
   const providers = getUniqueProviders(episodes[0]?.offers);
   const visibleEpisodes = showAllEpisodes ? episodes : episodes.slice(0, EPISODES_PER_PAGE);
   const hiddenCount = episodes.length - EPISODES_PER_PAGE;
@@ -59,11 +61,11 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
                 onClick={() => onMarkSeasonWatched(episodes.map((ep) => ep.id))}
                 className="text-xs text-gray-400 hover:text-emerald-400 transition-colors flex-shrink-0 cursor-pointer"
               >
-                Mark season watched
+                {t("home.markSeasonWatched")}
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">Season {seasonNumber}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t("home.season", { number: seasonNumber })}</p>
           <div className="mt-2 space-y-1">
             {visibleEpisodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
@@ -80,7 +82,7 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
               onClick={() => setShowAllEpisodes(true)}
               className="text-xs text-gray-400 hover:text-indigo-400 transition-colors mt-2 cursor-pointer"
             >
-              Show all ({episodes.length} episodes)
+              {t("home.showAll", { count: episodes.length })}
             </button>
           )}
           {showAllEpisodes && episodes.length > EPISODES_PER_PAGE && (
@@ -88,7 +90,7 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
               onClick={() => setShowAllEpisodes(false)}
               className="text-xs text-gray-400 hover:text-indigo-400 transition-colors mt-2 cursor-pointer"
             >
-              Show less
+              {t("home.showLess")}
             </button>
           )}
           {providers.length > 0 && (
@@ -114,6 +116,7 @@ const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, 
   onToggleWatched: (id: number, current: boolean) => void;
   onMarkSeasonWatched: (episodeIds: number[]) => void;
 }) {
+  const { t } = useTranslation();
   const sortedSeasons = Array.from(seasonMap.entries()).sort(([a], [b]) => a - b);
   const extraSeasons = sortedSeasons.length - 1;
 
@@ -136,7 +139,7 @@ const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, 
             onClick={() => onToggleExpand(titleId)}
             className="text-xs text-gray-400 hover:text-indigo-400 transition-colors cursor-pointer w-full text-center"
           >
-            Collapse seasons
+            {t("home.collapseSeasons")}
           </button>
         )}
       </div>
@@ -170,7 +173,7 @@ const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, 
             onClick={() => onToggleExpand(titleId)}
             className="w-full text-center text-xs text-gray-400 hover:text-indigo-400 transition-colors py-2 cursor-pointer"
           >
-            +{extraSeasons} more season{extraSeasons > 1 ? "s" : ""}
+            {t("home.moreSeasons", { count: extraSeasons })}
           </button>
         )}
       </div>
@@ -245,6 +248,7 @@ function UnwatchedCarousel({ children }: { children: React.ReactNode }) {
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const [today, setToday] = useState<Episode[]>([]);
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const [unwatched, setUnwatched] = useState<Episode[]>([]);
@@ -343,8 +347,8 @@ export default function HomePage() {
   if (!user) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-white mb-2">Welcome to Remindarr</h2>
-        <p className="text-gray-400">Sign in to see your upcoming episodes.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">{t("home.welcomeTitle")}</h2>
+        <p className="text-gray-400">{t("home.welcomeMessage")}</p>
       </div>
     );
   }
@@ -374,14 +378,14 @@ export default function HomePage() {
       {unwatched.length > 0 && (
         <section>
           <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-xl font-bold text-white">Unwatched</h2>
+            <h2 className="text-xl font-bold text-white">{t("home.unwatched")}</h2>
             <Link
               to="/reels"
               className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-400 transition-colors"
               title="Full-screen reels view"
             >
               <Maximize2 size={14} />
-              Reels
+              {t("home.reels")}
             </Link>
           </div>
           <UnwatchedCarousel>
@@ -403,10 +407,10 @@ export default function HomePage() {
 
       {/* Today's Episodes */}
       <section>
-        <h2 className="text-xl font-bold text-white mb-4">Today</h2>
+        <h2 className="text-xl font-bold text-white mb-4">{t("home.today")}</h2>
         {today.length === 0 ? (
           <p className="text-gray-500 text-sm">
-            {noEpisodes ? "No upcoming episodes for your tracked shows." : "No episodes airing today."}
+            {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -426,13 +430,14 @@ export default function HomePage() {
       {/* Upcoming Episodes */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-300 mb-4">Coming Up</h2>
+          <h2 className="text-lg font-semibold text-gray-300 mb-4">{t("home.comingUp")}</h2>
           <div className="space-y-4">
             {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
               const byShow = groupByShow(eps);
+              const dateLabel = formatUpcomingDate(date);
               return (
                 <div key={date}>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">{formatUpcomingDate(date)}</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
                   <div className="space-y-2">
                     {Array.from(byShow.entries()).map(([titleId, showEps]) => (
                       <ShowEpisodeGroup

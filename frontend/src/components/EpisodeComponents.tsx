@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import type { Episode, Offer } from "../types";
 
 export function formatEpisodeCode(ep: Episode): string {
@@ -35,7 +36,7 @@ export function formatUpcomingDate(dateStr: string): string {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  if (date.getTime() === tomorrow.getTime()) return "Tomorrow";
+  if (date.getTime() === tomorrow.getTime()) return "__TOMORROW__";
 
   return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
@@ -47,11 +48,12 @@ export function isEpisodeReleased(ep: Episode): boolean {
 }
 
 export function WatchedIcon({ watched, onClick, disabled }: { watched: boolean; onClick: () => void; disabled?: boolean }) {
+  const { t } = useTranslation();
   if (disabled) {
     return (
       <span
         className="flex-shrink-0 text-gray-700 cursor-not-allowed"
-        aria-label="Not yet released"
+        aria-label={t("episodes.notYetReleased")}
         role="img"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} aria-hidden="true">
@@ -65,7 +67,7 @@ export function WatchedIcon({ watched, onClick, disabled }: { watched: boolean; 
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       aria-pressed={watched}
-      aria-label={watched ? "Mark as unwatched" : "Mark as watched"}
+      aria-label={watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")}
       className={`flex-shrink-0 cursor-pointer transition-colors ${
         watched ? "text-emerald-500 hover:text-gray-500" : "text-gray-600 hover:text-emerald-500"
       }`}

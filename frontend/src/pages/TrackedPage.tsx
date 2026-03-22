@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type { Title } from "../types";
 import TitleList from "../components/TitleList";
@@ -7,6 +8,7 @@ import { TitleGridSkeleton } from "../components/SkeletonComponents";
 export default function TrackedPage() {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   const fetchTracked = useCallback(async () => {
     setLoading(true);
@@ -26,14 +28,14 @@ export default function TrackedPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Tracked Titles ({titles.length})</h2>
+      <h2 className="text-lg font-semibold">{t("tracked.title", { count: titles.length })}</h2>
       {loading ? (
         <TitleGridSkeleton />
       ) : (
         <TitleList
           titles={titles}
           onTrackToggle={fetchTracked}
-          emptyMessage="No tracked titles yet. Search for titles and click 'Track' to add them here."
+          emptyMessage={t("tracked.empty")}
         />
       )}
     </div>

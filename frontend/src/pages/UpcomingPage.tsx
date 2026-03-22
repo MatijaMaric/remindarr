@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type { Episode } from "../types";
 import {
@@ -14,6 +15,7 @@ export default function UpcomingPage() {
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { t } = useTranslation();
 
   useEffect(() => {
     async function load() {
@@ -79,10 +81,10 @@ export default function UpcomingPage() {
     <div className="space-y-8">
       {/* Today's Episodes */}
       <section>
-        <h2 className="text-xl font-bold text-white mb-4">Today</h2>
+        <h2 className="text-xl font-bold text-white mb-4">{t("upcoming.today")}</h2>
         {today.length === 0 ? (
           <p className="text-gray-500 text-sm">
-            {noEpisodes ? "No upcoming episodes for your tracked shows." : "No episodes airing today."}
+            {noEpisodes ? t("upcoming.noEpisodes") : t("upcoming.noEpisodesToday")}
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -102,13 +104,14 @@ export default function UpcomingPage() {
       {/* Upcoming Episodes */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-300 mb-4">Coming Up</h2>
+          <h2 className="text-lg font-semibold text-gray-300 mb-4">{t("upcoming.comingUp")}</h2>
           <div className="space-y-4">
             {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
               const byShow = groupByShow(eps);
+              const dateLabel = formatUpcomingDate(date);
               return (
                 <div key={date}>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">{formatUpcomingDate(date)}</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
                   <div className="space-y-2">
                     {Array.from(byShow.entries()).map(([titleId, showEps]) => (
                       <ShowEpisodeGroup

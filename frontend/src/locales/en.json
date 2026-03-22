@@ -1,0 +1,160 @@
+{
+  "nav": {
+    "skipToMain": "Skip to main content",
+    "home": "Home",
+    "browse": "Browse",
+    "tracked": "Tracked",
+    "calendar": "Calendar",
+    "logout": "Logout",
+    "signIn": "Sign In"
+  },
+  "bottomNav": {
+    "watch": "Watch",
+    "upcoming": "Upcoming",
+    "browse": "Browse",
+    "calendar": "Calendar",
+    "profile": "Profile",
+    "signIn": "Sign In"
+  },
+  "home": {
+    "welcomeTitle": "Welcome to Remindarr",
+    "welcomeMessage": "Sign in to see your upcoming episodes.",
+    "unwatched": "Unwatched",
+    "reels": "Reels",
+    "markSeasonWatched": "Mark season watched",
+    "season": "Season {{number}}",
+    "showAll": "Show all ({{count}} episodes)",
+    "showLess": "Show less",
+    "collapseSeasons": "Collapse seasons",
+    "moreSeasons_one": "+{{count}} more season",
+    "moreSeasons_other": "+{{count}} more seasons",
+    "today": "Today",
+    "noEpisodes": "No upcoming episodes for your tracked shows.",
+    "noEpisodesToday": "No episodes airing today.",
+    "comingUp": "Coming Up"
+  },
+  "tracked": {
+    "title": "Tracked Titles ({{count}})",
+    "empty": "No tracked titles yet. Search for titles and click 'Track' to add them here."
+  },
+  "upcoming": {
+    "today": "Today",
+    "comingUp": "Coming Up",
+    "noEpisodes": "No upcoming episodes for your tracked shows.",
+    "noEpisodesToday": "No episodes airing today."
+  },
+  "browse": {
+    "searchResults": "Search Results ({{count}})",
+    "clear": "Clear",
+    "noResults": "No results found",
+    "categories": {
+      "new_releases": "New Releases",
+      "popular": "Popular",
+      "upcoming": "Upcoming",
+      "top_rated": "Top Rated"
+    }
+  },
+  "signup": {
+    "title": "Create an account",
+    "username": "Username",
+    "email": "Email",
+    "displayName": "Display Name",
+    "password": "Password",
+    "creating": "Creating account...",
+    "signUp": "Sign Up",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "login": {
+    "title": "Sign in to Remindarr",
+    "signInWith": "Sign in with {{provider}}",
+    "signInWithUsername": "Sign in with username instead",
+    "or": "or",
+    "username": "Username",
+    "password": "Password",
+    "signingIn": "Signing in...",
+    "signIn": "Sign In",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "loginFailed": "Login failed: {{error}}"
+  },
+  "profile": {
+    "title": "Profile",
+    "username": "Username",
+    "displayName": "Display Name",
+    "role": "Role",
+    "admin": "Admin",
+    "user": "User",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "changing": "Changing...",
+    "passwordChanged": "Password changed successfully",
+    "watchlist": "Watchlist",
+    "exportWatchlist": "Export Watchlist",
+    "exportDescription": "Download your tracked titles and watched episode history as a JSON file.",
+    "exporting": "Exporting...",
+    "export": "Export",
+    "importWatchlist": "Import Watchlist",
+    "importDescription": "Restore a previously exported watchlist. Existing tracked titles will not be removed.",
+    "importing": "Importing...",
+    "import": "Import",
+    "importComplete": "Import complete: {{imported}} titles added{{skippedText}}.",
+    "importSkipped": ", {{count}} skipped",
+    "pushNotifications": "Push Notifications",
+    "loadingPushStatus": "Loading push notification status...",
+    "enablePush": "Enable",
+    "enabling": "Enabling...",
+    "disablePush": "Disable",
+    "disabling": "Disabling...",
+    "testPush": "Test",
+    "testing": "Testing...",
+    "pushEnabled": "Push notifications enabled",
+    "pushDisabled": "Push notifications disabled",
+    "notificationDenied": "Notification permission denied. Please enable it in your browser settings.",
+    "language": "Language"
+  },
+  "filter": {
+    "all": "All",
+    "movies": "Movies",
+    "shows": "Shows",
+    "allGenres": "All Genres",
+    "allPlatforms": "All Platforms",
+    "allLanguages": "All Languages",
+    "hideTracked": "Hide Tracked",
+    "clearFilters": "Clear filters"
+  },
+  "search": {
+    "placeholder": "Search titles or paste IMDB link...",
+    "button": "Search"
+  },
+  "releases": {
+    "syncing": "Syncing...",
+    "sync": "Sync New Releases",
+    "loading": "Loading...",
+    "empty": "No releases found. Click 'Sync New Releases' to fetch data from TMDB."
+  },
+  "track": {
+    "track": "Track",
+    "tracked": "Tracked"
+  },
+  "episodes": {
+    "tomorrow": "Tomorrow",
+    "notYetReleased": "Not yet released",
+    "markAsWatched": "Mark as watched",
+    "markAsUnwatched": "Mark as unwatched"
+  },
+  "calendar": {
+    "all": "All",
+    "movies": "Movies",
+    "shows": "Shows",
+    "hideWatched": "Hide watched",
+    "showWatched": "Show watched",
+    "gridView": "Grid view",
+    "agendaView": "Agenda view"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred"
+  }
+}

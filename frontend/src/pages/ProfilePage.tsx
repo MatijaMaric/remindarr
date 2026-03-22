@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { SUPPORTED_LANGUAGES, setLanguage } from "../i18n";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { JobsResponse, Notifier } from "../api";
@@ -25,6 +27,7 @@ export default function ProfilePage() {
 
 function UserSection() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -45,7 +48,7 @@ function UserSection() {
       if (result.error) {
         throw new Error(result.error.message || "Password change failed");
       }
-      setPasswordMsg("Password changed successfully");
+      setPasswordMsg(t("profile.passwordChanged"));
       setCurrentPassword("");
       setNewPassword("");
     } catch (err: any) {
@@ -57,25 +60,25 @@ function UserSection() {
 
   return (
     <section>
-      <h2 className="text-xl font-bold text-white mb-4">Profile</h2>
+      <h2 className="text-xl font-bold text-white mb-4">{t("profile.title")}</h2>
       <div className="bg-gray-900 rounded-lg p-5 space-y-3">
         <div className="flex justify-between">
-          <span className="text-gray-400">Username</span>
+          <span className="text-gray-400">{t("profile.username")}</span>
           <span className="text-white">{user?.username}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-400">Display Name</span>
+          <span className="text-gray-400">{t("profile.displayName")}</span>
           <span className="text-white">{user?.display_name || "—"}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-400">Role</span>
-          <span className="text-white">{user?.is_admin ? "Admin" : "User"}</span>
+          <span className="text-gray-400">{t("profile.role")}</span>
+          <span className="text-white">{user?.is_admin ? t("profile.admin") : t("profile.user")}</span>
         </div>
       </div>
 
       {user && (
         <div className="mt-6">
-          <h3 className="text-lg font-semibold text-white mb-3">Change Password</h3>
+          <h3 className="text-lg font-semibold text-white mb-3">{t("profile.changePassword")}</h3>
           <form onSubmit={handleChangePassword} className="bg-gray-900 rounded-lg p-5 space-y-4">
             {passwordMsg && (
               <div className="p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
@@ -88,7 +91,7 @@ function UserSection() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Current Password</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">{t("profile.currentPassword")}</label>
               <input
                 type="password"
                 value={currentPassword}
@@ -98,7 +101,7 @@ function UserSection() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">New Password</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">{t("profile.newPassword")}</label>
               <input
                 type="password"
                 value={newPassword}
@@ -113,9 +116,28 @@ function UserSection() {
               disabled={loading}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
             >
-              {loading ? "Changing..." : "Change Password"}
+              {loading ? t("profile.changing") : t("profile.changePassword")}
             </button>
           </form>
+        </div>
+      )}
+
+      {SUPPORTED_LANGUAGES.length > 1 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-white mb-3">{t("profile.language")}</h3>
+          <div className="bg-gray-900 rounded-lg p-5">
+            <div className="flex gap-2 flex-wrap">
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => setLanguage(lang.code)}
+                  className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer bg-gray-700 text-white hover:bg-indigo-600"
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </section>
@@ -127,6 +149,7 @@ function WatchlistSection() {
   const [importing, setImporting] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const { t } = useTranslation();
 
   async function handleExport() {
     setMsg("");
@@ -149,7 +172,10 @@ function WatchlistSection() {
     setImporting(true);
     try {
       const result = await api.importWatchlist(file);
-      setMsg(`Import complete: ${result.imported} titles added${result.skipped > 0 ? `, ${result.skipped} skipped` : ""}.`);
+      setMsg(t("profile.importComplete", {
+        imported: result.imported,
+        skippedText: result.skipped > 0 ? t("profile.importSkipped", { count: result.skipped }) : "",
+      }));
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -160,7 +186,7 @@ function WatchlistSection() {
 
   return (
     <section>
-      <h2 className="text-xl font-bold text-white mb-4">Watchlist</h2>
+      <h2 className="text-xl font-bold text-white mb-4">{t("profile.watchlist")}</h2>
 
       {msg && (
         <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
@@ -175,22 +201,22 @@ function WatchlistSection() {
 
       <div className="bg-gray-900 rounded-lg p-5 space-y-4">
         <div>
-          <p className="text-white font-medium mb-1">Export Watchlist</p>
-          <p className="text-sm text-gray-400 mb-3">Download your tracked titles and watched episode history as a JSON file.</p>
+          <p className="text-white font-medium mb-1">{t("profile.exportWatchlist")}</p>
+          <p className="text-sm text-gray-400 mb-3">{t("profile.exportDescription")}</p>
           <button
             onClick={handleExport}
             disabled={exporting}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? t("profile.exporting") : t("profile.export")}
           </button>
         </div>
 
         <div className="border-t border-gray-800 pt-4">
-          <p className="text-white font-medium mb-1">Import Watchlist</p>
-          <p className="text-sm text-gray-400 mb-3">Restore a previously exported watchlist. Existing tracked titles will not be removed.</p>
+          <p className="text-white font-medium mb-1">{t("profile.importWatchlist")}</p>
+          <p className="text-sm text-gray-400 mb-3">{t("profile.importDescription")}</p>
           <label className={`px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
-            {importing ? "Importing..." : "Import"}
+            {importing ? t("profile.importing") : t("profile.import")}
             <input
               type="file"
               accept=".json,application/json"
@@ -339,14 +365,16 @@ function PushNotificationsSection() {
     }
   }
 
-  if (loading) return <div className="text-gray-500">Loading push notification status...</div>;
+  const { t } = useTranslation();
+
+  if (loading) return <div className="text-gray-500">{t("profile.loadingPushStatus")}</div>;
 
   const isEnabled = !!pushNotifier && pushNotifier.enabled && hasSubscription;
   const isDenied = permissionState === "denied";
 
   return (
     <section>
-      <h2 className="text-xl font-bold text-white mb-4">Push Notifications</h2>
+      <h2 className="text-xl font-bold text-white mb-4">{t("profile.pushNotifications")}</h2>
 
       {msg && (
         <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
@@ -381,14 +409,14 @@ function PushNotificationsSection() {
                   disabled={testing}
                   className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {testing ? "Sending..." : "Test"}
+                  {testing ? t("profile.testing") : t("profile.testPush")}
                 </button>
                 <button
                   onClick={handleDisable}
                   disabled={disabling}
                   className="px-3 py-1.5 text-sm bg-red-900/50 hover:bg-red-800/50 text-red-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {disabling ? "Disabling..." : "Disable"}
+                  {disabling ? t("profile.disabling") : t("profile.disablePush")}
                 </button>
               </>
             ) : (
@@ -397,7 +425,7 @@ function PushNotificationsSection() {
                 disabled={enabling || isDenied}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
-                {enabling ? "Enabling..." : "Enable"}
+                {enabling ? t("profile.enabling") : t("profile.enablePush")}
               </button>
             )}
           </div>

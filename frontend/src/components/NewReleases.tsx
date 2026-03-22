@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type { Title, Provider } from "../types";
 import TitleList from "./TitleList";
@@ -41,6 +42,7 @@ export default function NewReleases({
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
 
+  const { t } = useTranslation();
   const [genres, setGenres] = useState<string[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
@@ -116,7 +118,7 @@ export default function NewReleases({
           disabled={syncing}
           className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
         >
-          {syncing ? "Syncing..." : "Sync New Releases"}
+          {syncing ? t("releases.syncing") : t("releases.sync")}
         </button>
       </div>
 
@@ -127,12 +129,12 @@ export default function NewReleases({
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading...</div>
+        <div className="text-center py-12 text-gray-500">{t("releases.loading")}</div>
       ) : (
         <TitleList
           titles={titles}
           onTrackToggle={fetchTitles}
-          emptyMessage="No releases found. Click 'Sync New Releases' to fetch data from TMDB."
+          emptyMessage={t("releases.empty")}
         />
       )}
     </div>

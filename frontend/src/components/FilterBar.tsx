@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
 interface ProviderOption {
@@ -31,10 +32,10 @@ interface Props {
   onHideTrackedChange?: (value: boolean) => void;
 }
 
-const TYPES = [
-  { value: "MOVIE", label: "Movies" },
-  { value: "SHOW", label: "Shows" },
-];
+const TYPE_VALUES = [
+  { value: "MOVIE", labelKey: "filter.movies" },
+  { value: "SHOW", labelKey: "filter.shows" },
+] as const;
 
 const DAYS = [
   { value: 7, label: "7d" },
@@ -58,7 +59,7 @@ function toggleType(current: string[], value: string): string[] {
   }
   const next = [...current, value];
   // If all types selected, normalize to empty (= all)
-  if (TYPES.every((t) => next.includes(t.value))) return [];
+  if (TYPE_VALUES.every((t) => next.includes(t.value))) return [];
   return next;
 }
 
@@ -81,6 +82,7 @@ const FilterBar = memo(function FilterBar({
   hideTracked,
   onHideTrackedChange,
 }: Props) {
+  const { t } = useTranslation();
   const hasActiveFilters =
     type.length > 0 ||
     (daysBack !== undefined && daysBack !== 30 && showDaysFilter) ||
@@ -99,20 +101,20 @@ const FilterBar = memo(function FilterBar({
               : "text-gray-400 hover:text-white"
           }`}
         >
-          All
+          {t("filter.all")}
         </button>
-        {TYPES.map((t) => (
+        {TYPE_VALUES.map((tv) => (
           <button
-            key={t.value}
-            aria-pressed={type.includes(t.value)}
-            onClick={() => onTypeChange(toggleType(type, t.value))}
+            key={tv.value}
+            aria-pressed={type.includes(tv.value)}
+            onClick={() => onTypeChange(toggleType(type, tv.value))}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              type.includes(t.value)
+              type.includes(tv.value)
                 ? "bg-gray-700 text-white"
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            {t.label}
+            {t(tv.labelKey)}
           </button>
         ))}
       </div>
@@ -136,7 +138,7 @@ const FilterBar = memo(function FilterBar({
       )}
       {genres && genres.length > 0 && onGenreChange && (
         <MultiSelectDropdown
-          label="All Genres"
+          label={t("filter.allGenres")}
           options={genres.map((g) => ({ value: g, label: g }))}
           selected={genre || []}
           onChange={onGenreChange}
@@ -144,7 +146,7 @@ const FilterBar = memo(function FilterBar({
       )}
       {providers && providers.length > 0 && onProviderChange && (
         <MultiSelectDropdown
-          label="All Platforms"
+          label={t("filter.allPlatforms")}
           options={providers.map((p) => ({ value: String(p.id), label: p.name }))}
           selected={provider || []}
           onChange={onProviderChange}
@@ -152,7 +154,7 @@ const FilterBar = memo(function FilterBar({
       )}
       {languages && languages.length > 0 && onLanguageChange && (
         <MultiSelectDropdown
-          label="All Languages"
+          label={t("filter.allLanguages")}
           options={(languages as (string | LanguageOption)[]).map((l) =>
             typeof l === "string"
               ? { value: l, label: languageLabel(l) }
@@ -172,7 +174,7 @@ const FilterBar = memo(function FilterBar({
               : "bg-gray-800 text-gray-400 hover:text-white"
           }`}
         >
-          Hide Tracked
+          {t("filter.hideTracked")}
         </button>
       )}
       {onClearFilters && hasActiveFilters && (
@@ -180,7 +182,7 @@ const FilterBar = memo(function FilterBar({
           onClick={onClearFilters}
           className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-colors cursor-pointer"
         >
-          Clear filters
+          {t("filter.clearFilters")}
         </button>
       )}
     </div>
