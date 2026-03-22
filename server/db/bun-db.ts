@@ -176,6 +176,66 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
 }
 
 /**
+ * Fix databases where migrations 0002/0003 were skipped because their
+ * `when` timestamps in _journal.json were smaller than the already-applied
+ * migrations 0000/0001. Drizzle only applies migrations with
+ * created_at > max(applied), so the misordered timestamps caused skips.
+ *
+ * We apply the skipped SQL directly and record them in __drizzle_migrations
+ * so Drizzle won't re-run them. Migrations 0001/0002 aren't idempotent
+ * (ALTER TABLE ADD COLUMN, CREATE INDEX without IF NOT EXISTS), so we
+ * can't simply clear the tracker and let Drizzle re-run everything.
+ */
+function fixSkippedMigrations(db: Database, migrationsFolder: string): void {
+  const migrationsTable = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'")
+    .get() as { name: string } | null;
+  if (!migrationsTable) return;
+
+  const titleGenresTable = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='title_genres'")
+    .get() as { name: string } | null;
+  if (titleGenresTable) return; // already migrated, nothing to fix
+
+  const count = db
+    .prepare("SELECT COUNT(*) as cnt FROM __drizzle_migrations")
+    .get() as { cnt: number };
+  if (count.cnt === 0) return;
+
+  log.info("Detected skipped migrations (title_genres missing) — applying manually");
+
+  const journal = JSON.parse(
+    fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf-8")
+  );
+
+  // Apply migration 0002 (indexes) — use IF NOT EXISTS to be safe
+  db.exec("CREATE INDEX IF NOT EXISTS `idx_providers_technical_name` ON `providers` (`technical_name`)");
+  db.exec("CREATE INDEX IF NOT EXISTS `idx_watched_episodes_user_id` ON `watched_episodes` (`user_id`)");
+  const m0002 = journal.entries[2];
+  const hash0002 = crypto.createHash("sha256").update(
+    fs.readFileSync(path.join(migrationsFolder, `${m0002.tag}.sql`), "utf-8")
+  ).digest("hex");
+  db.prepare(
+    `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`
+  ).run(hash0002, m0002.when);
+
+  // Apply migration 0003 (title_genres)
+  const m0003sql = fs.readFileSync(
+    path.join(migrationsFolder, `${journal.entries[3].tag}.sql`), "utf-8"
+  );
+  const statements = m0003sql.split("--> statement-breakpoint").map(s => s.trim()).filter(Boolean);
+  for (const stmt of statements) {
+    db.exec(stmt);
+  }
+  const hash0003 = crypto.createHash("sha256").update(m0003sql).digest("hex");
+  db.prepare(
+    `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`
+  ).run(hash0003, journal.entries[3].when);
+
+  log.info("Skipped migrations applied successfully");
+}
+
+/**
  * Initialize the Bun SQLite database singleton.
  * Sets up WAL mode, foreign keys, and runs Drizzle migrations,
  * then registers the Drizzle instance as the global singleton.
@@ -189,6 +249,11 @@ export function initBunDb(): DrizzleDb {
     // Transform legacy schema before Drizzle migrations run
     const migrationsFolder = path.resolve(import.meta.dir, "../../drizzle");
     migrateLegacyDb(rawDb, migrationsFolder);
+
+    // Fix: migrations 0002/0003 had timestamps earlier than 0000/0001,
+    // causing Drizzle to skip them (it only applies migrations with
+    // created_at > last applied). Apply them manually if missing.
+    fixSkippedMigrations(rawDb, migrationsFolder);
 
     drizzleDb = drizzle(rawDb, { schema: schemaExports });
 
