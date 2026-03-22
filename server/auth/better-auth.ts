@@ -117,6 +117,7 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
             name: profile.name,
             email: profile.email || undefined,
             image: profile.image,
+            username: profile.email?.split("@")[0] || profile.name?.replace(/\s+/g, "_").toLowerCase() || profile.id,
           }),
         }],
       })

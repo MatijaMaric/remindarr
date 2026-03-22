@@ -178,13 +178,13 @@ describe("OIDC authorize endpoint", () => {
   beforeEach(() => {
     setupTestDb();
     fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-      async (input: RequestInfo | URL) => {
+      (async (input: RequestInfo | URL) => {
         const url = input instanceof Request ? input.url : String(input);
         if (url.includes(".well-known/openid-configuration")) {
           return jsonResponse(MOCK_DISCOVERY);
         }
         throw new Error(`Unexpected fetch: ${url}`);
-      }
+      }) as typeof fetch
     );
   });
 
@@ -212,7 +212,7 @@ describe("OIDC authorize endpoint", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          providerId: "pocketid",
+          provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
       })
@@ -243,7 +243,7 @@ describe("OIDC authorize endpoint", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          providerId: "pocketid",
+          provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
       })
@@ -270,7 +270,7 @@ describe("OIDC authorize endpoint", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          providerId: "pocketid",
+          provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
       })
@@ -296,7 +296,7 @@ describe("OIDC authorize endpoint", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          providerId: "nonexistent-provider",
+          provider: "nonexistent-provider",
           callbackURL: "http://localhost:3000/",
         }),
       })
@@ -367,7 +367,7 @@ describe("OIDC callback flow", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          providerId: "pocketid",
+          provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
       })
@@ -383,11 +383,18 @@ describe("OIDC callback flow", () => {
     }
     expect(state).toBeTruthy();
 
+    // Forward cookies from authorize response to callback request
+    const setCookies = authorizeRes.headers.getSetCookie?.() ?? [];
+    const cookieHeader = setCookies.map((c) => c.split(";")[0]).join("; ");
+
     // Step 2: simulate the provider redirecting back with code + state
     const callbackRes = await auth.handler(
       new Request(
         `http://localhost:3000/api/auth/callback/pocketid?code=test-auth-code&state=${state}`,
-        { method: "GET" }
+        {
+          method: "GET",
+          headers: cookieHeader ? { Cookie: cookieHeader } : {},
+        }
       )
     );
 
@@ -411,6 +418,7 @@ describe("OIDC callback flow", () => {
     await runOidcFlow({
       sub: "oidc-user-002",
       name: "Bob OIDC",
+      email: "bob@example.com",
     });
 
     const db = getDb();
@@ -424,6 +432,7 @@ describe("OIDC callback flow", () => {
     const { callbackRes } = await runOidcFlow({
       sub: "oidc-user-session",
       name: "Session User",
+      email: "session@example.com",
     });
 
     // On success, better-auth sets a session cookie and redirects (302)
@@ -439,6 +448,7 @@ describe("OIDC callback flow", () => {
       {
         sub: "oidc-admin-001",
         name: "Admin User Array",
+        email: "admin-array@example.com",
         groups: ["users", "admins"],
       },
       { adminClaim: "groups", adminValue: "admins" }
@@ -456,6 +466,7 @@ describe("OIDC callback flow", () => {
       {
         sub: "oidc-regular-001",
         name: "Regular User",
+        email: "regular@example.com",
         groups: ["users"],
       },
       { adminClaim: "groups", adminValue: "admins" }
@@ -473,6 +484,7 @@ describe("OIDC callback flow", () => {
       {
         sub: "oidc-scalar-admin",
         name: "Scalar Admin User",
+        email: "scalar-admin@example.com",
         role: "superadmin",
       },
       { adminClaim: "role", adminValue: "superadmin" }
@@ -488,6 +500,7 @@ describe("OIDC callback flow", () => {
     await runOidcFlow({
       sub: "oidc-default-role",
       name: "Default Role User",
+      email: "default-role@example.com",
       role: "superadmin", // claim present but no claim config
     });
 
@@ -505,6 +518,7 @@ describe("OIDC callback flow", () => {
       {
         sub: "returning-user",
         name: "Returning User",
+        email: "returning@example.com",
         groups: ["users"],
       },
       { adminClaim: "groups", adminValue: "admins" }
@@ -521,6 +535,7 @@ describe("OIDC callback flow", () => {
       {
         sub: "returning-user",
         name: "Returning User",
+        email: "returning@example.com",
         groups: ["users", "admins"],
       },
       { adminClaim: "groups", adminValue: "admins" }
@@ -606,13 +621,15 @@ describe("OIDC callback flow", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          providerId: "pocketid",
+          provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
       })
     );
 
     let state: string;
+    const setCookies = authorizeRes.headers.getSetCookie?.() ?? [];
+    const cookieHeader = setCookies.map((c) => c.split(";")[0]).join("; ");
     if (authorizeRes.status === 302) {
       state = new URL(authorizeRes.headers.get("location") ?? "").searchParams.get("state") ?? "";
     } else {
@@ -624,7 +641,10 @@ describe("OIDC callback flow", () => {
     const res = await auth.handler(
       new Request(
         `http://localhost:3000/api/auth/callback/pocketid?state=${state}`,
-        { method: "GET" }
+        {
+          method: "GET",
+          headers: cookieHeader ? { Cookie: cookieHeader } : {},
+        }
       )
     );
 
