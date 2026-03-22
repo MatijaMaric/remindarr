@@ -21,6 +21,7 @@
   "dependencies": {
     "@sentry/bun": "^10.43.0",
     "better-auth": "^1.5.5",
+    "cron-parser": "^4.9.0",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.4.0",
     "web-push": "^3.6.7"
