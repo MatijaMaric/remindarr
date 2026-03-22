@@ -76,10 +76,10 @@ describe("rateLimiter", () => {
     let capturedCallback: (() => void) | null = null;
     const originalSetInterval = globalThis.setInterval;
     const spy = spyOn(globalThis, "setInterval").mockImplementation(
-      (fn: TimerHandler, ms?: number, ...args: unknown[]) => {
+      ((fn: TimerHandler, ms?: number) => {
         if (typeof fn === "function") capturedCallback = fn as () => void;
-        return originalSetInterval(fn, ms, ...args);
-      }
+        return originalSetInterval(fn, ms);
+      }) as typeof setInterval
     );
 
     createApp(3, 60_000);
@@ -94,10 +94,10 @@ describe("rateLimiter", () => {
     let capturedCallback: (() => void) | null = null;
     const originalSetInterval = globalThis.setInterval;
     const spy = spyOn(globalThis, "setInterval").mockImplementation(
-      (fn: TimerHandler, ms?: number, ...args: unknown[]) => {
+      ((fn: TimerHandler, ms?: number) => {
         if (typeof fn === "function") capturedCallback = fn as () => void;
-        return originalSetInterval(fn, ms, ...args);
-      }
+        return originalSetInterval(fn, ms);
+      }) as typeof setInterval
     );
 
     const app = new Hono<AppEnv>();
