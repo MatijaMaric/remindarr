@@ -31,8 +31,9 @@ afterEach(() => {
 describe("UpcomingPage", () => {
   it("shows loading state initially", () => {
     mockGetUpcomingEpisodes.mockImplementation(() => new Promise(() => {}));
-    render(<UpcomingPage />, { wrapper: Wrapper });
-    expect(screen.getByText("Loading...")).toBeDefined();
+    const { container } = render(<UpcomingPage />, { wrapper: Wrapper });
+    // Skeleton loading UI uses animate-pulse divs instead of text
+    expect(container.querySelector(".animate-pulse")).toBeDefined();
   });
 
   it("shows error UI when initial fetch fails", async () => {
