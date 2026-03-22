@@ -1,7 +1,8 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import * as sonner from "sonner";
 
 const mockGetUpcomingEpisodes = mock(() =>
   Promise.resolve({ today: [], upcoming: [], unwatched: [] })
@@ -52,7 +53,9 @@ describe("UpcomingPage", () => {
     await waitFor(() => expect(screen.getByText("Today")).toBeDefined());
   });
 
-  it("shows action error when toggleWatched fails", async () => {
+  it("shows toast error when toggleWatched fails", async () => {
+    const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(() => "1" as any);
+
     const episode = {
       id: 1,
       title_id: "tt1",
@@ -88,7 +91,11 @@ describe("UpcomingPage", () => {
       await act(async () => {
         fireEvent.click(watchedIcon);
       });
-      await waitFor(() => expect(screen.getByText("Failed to update")).toBeDefined());
+      await waitFor(() => {
+        expect(toastErrorSpy).toHaveBeenCalledWith("Failed to update watched status — please try again");
+      });
     }
+
+    toastErrorSpy.mockRestore();
   });
 });
