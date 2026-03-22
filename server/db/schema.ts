@@ -38,7 +38,6 @@ export const titles = sqliteTable(
     releaseDate: text("release_date"),
     runtimeMinutes: integer("runtime_minutes"),
     shortDescription: text("short_description"),
-    genres: text("genres"),
     imdbId: text("imdb_id"),
     tmdbId: text("tmdb_id"),
     posterUrl: text("poster_url"),
@@ -91,6 +90,20 @@ export const scores = sqliteTable("scores", {
   imdbVotes: integer("imdb_votes"),
   tmdbScore: real("tmdb_score"),
 });
+
+export const titleGenres = sqliteTable(
+  "title_genres",
+  {
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    genre: text("genre").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.titleId, table.genre] }),
+    index("idx_title_genres_genre").on(table.genre),
+  ]
+);
 
 export const episodes = sqliteTable(
   "episodes",
@@ -298,6 +311,11 @@ export const titlesRelations = relations(titles, ({ many, one }) => ({
   scores: one(scores),
   episodes: many(episodes),
   tracked: many(tracked),
+  genres: many(titleGenres),
+}));
+
+export const titleGenresRelations = relations(titleGenres, ({ one }) => ({
+  title: one(titles, { fields: [titleGenres.titleId], references: [titles.id] }),
 }));
 
 export const providersRelations = relations(providers, ({ many }) => ({
@@ -351,8 +369,8 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 export const schemaExports = {
-  titles, providers, offers, scores, episodes, users, sessions, account, verification, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
-  titlesRelations, providersRelations, offersRelations, scoresRelations, episodesRelations,
+  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
+  titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
 };
 

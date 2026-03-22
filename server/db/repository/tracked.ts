@@ -1,8 +1,25 @@
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, offers, providers, scores, tracked } from "../schema";
+import { titles, scores, tracked, titleGenres } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles } from "./offers";
+
+async function getGenresForTitles(titleIds: string[]): Promise<Map<string, string[]>> {
+  if (titleIds.length === 0) return new Map();
+  const db = getDb();
+  const rows = await db
+    .select({ titleId: titleGenres.titleId, genre: titleGenres.genre })
+    .from(titleGenres)
+    .where(inArray(titleGenres.titleId, titleIds))
+    .all();
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    const list = map.get(row.titleId) ?? [];
+    list.push(row.genre);
+    map.set(row.titleId, list);
+  }
+  return map;
+}
 
 export async function trackTitle(titleId: string, userId: string, notes?: string) {
   return traceDbQuery("trackTitle", async () => {
@@ -51,7 +68,6 @@ export async function getTrackedTitles(userId: string) {
         release_date: titles.releaseDate,
         runtime_minutes: titles.runtimeMinutes,
         short_description: titles.shortDescription,
-        genres: titles.genres,
         imdb_id: titles.imdbId,
         tmdb_id: titles.tmdbId,
         poster_url: titles.posterUrl,
@@ -73,10 +89,14 @@ export async function getTrackedTitles(userId: string) {
       .orderBy(desc(tracked.trackedAt))
       .all();
 
-    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
+    const titleIds = rows.map((r) => r.id);
+    const [offersByTitle, genresByTitle] = await Promise.all([
+      getOffersForTitles(titleIds),
+      getGenresForTitles(titleIds),
+    ]);
     return rows.map((row) => ({
       ...row,
-      genres: row.genres ? JSON.parse(row.genres) : [],
+      genres: genresByTitle.get(row.id) ?? [],
       is_tracked: true,
       offers: offersByTitle.get(row.id) ?? [],
     }));
