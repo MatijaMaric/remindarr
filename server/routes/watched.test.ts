@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { makeParsedTitle } from "../test-utils/fixtures";
 import type { AppEnv } from "../types";
 
 let app: Hono<AppEnv>;
@@ -12,23 +13,14 @@ beforeEach(async () => {
   const { createUser, upsertEpisodes, upsertTitles } = await import("../db/repository");
   userId = await createUser("testuser", "hash");
 
-  await upsertTitles([{
+  await upsertTitles([makeParsedTitle({
     id: "show-1",
-    object_type: "SHOW",
+    objectType: "SHOW",
     title: "Test Show",
-    original_title: "Test Show",
-    release_year: 2024,
-    release_date: "2024-01-01",
-    runtime_minutes: null,
-    short_description: null,
-    genres: [],
-    imdb_id: null,
-    tmdb_id: "1",
-    poster_url: null,
-    age_certification: null,
-    original_language: "en",
-    tmdb_url: null,
-  }]);
+    originalTitle: "Test Show",
+    releaseYear: 2024,
+    releaseDate: "2024-01-01",
+  })]);
 
   // Insert episodes: one in the past, one today (UTC), one in the future
   await upsertEpisodes([

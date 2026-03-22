@@ -273,3 +273,44 @@ export async function unwatchEpisodesBulk(episodeIds: number[], userId: string) 
     }
   });
 }
+
+export async function getWatchedEpisodesForExport(userId: string): Promise<Map<string, Array<{ season: number; episode: number }>>> {
+  return traceDbQuery("getWatchedEpisodesForExport", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        titleId: episodes.titleId,
+        season: episodes.seasonNumber,
+        episode: episodes.episodeNumber,
+      })
+      .from(watchedEpisodes)
+      .innerJoin(episodes, eq(watchedEpisodes.episodeId, episodes.id))
+      .where(eq(watchedEpisodes.userId, userId))
+      .all();
+
+    const map = new Map<string, Array<{ season: number; episode: number }>>();
+    for (const row of rows) {
+      if (!map.has(row.titleId)) map.set(row.titleId, []);
+      map.get(row.titleId)!.push({ season: row.season, episode: row.episode });
+    }
+    return map;
+  });
+}
+
+export async function getEpisodeIdsBySE(
+  titleId: string,
+  sePairs: Array<{ season: number; episode: number }>
+): Promise<number[]> {
+  return traceDbQuery("getEpisodeIdsBySE", async () => {
+    if (sePairs.length === 0) return [];
+    const db = getDb();
+    const rows = await db
+      .select({ id: episodes.id, season: episodes.seasonNumber, episode: episodes.episodeNumber })
+      .from(episodes)
+      .where(eq(episodes.titleId, titleId))
+      .all();
+
+    const wanted = new Set(sePairs.map((p) => `${p.season}:${p.episode}`));
+    return rows.filter((r) => wanted.has(`${r.season}:${r.episode}`)).map((r) => r.id);
+  });
+}
