@@ -17,25 +17,60 @@ app.get("/", async (c) => {
   return ok(c, { titles, count: titles.length });
 });
 
+interface FrontendOffer {
+  provider_id: number;
+  provider_name: string;
+  provider_technical_name: string;
+  provider_icon_url: string;
+  monetization_type: string;
+  presentation_type: string;
+  price_value: number | null;
+  price_currency: string | null;
+  url: string;
+  available_to: string | null;
+}
+
+interface FrontendTitle {
+  id: string;
+  object_type: string;
+  title: string;
+  original_title?: string | null;
+  release_year?: number | null;
+  release_date?: string | null;
+  runtime_minutes?: number | null;
+  short_description?: string | null;
+  genres?: string[];
+  original_language?: string | null;
+  imdb_id?: string | null;
+  tmdb_id?: string | null;
+  poster_url?: string | null;
+  age_certification?: string | null;
+  tmdb_url?: string | null;
+  imdb_score?: number | null;
+  imdb_votes?: number | null;
+  tmdb_score?: number | null;
+  offers?: FrontendOffer[];
+}
+
 // Convert frontend Title (snake_case) to ParsedTitle (camelCase) for upsert
-function toParsedTitle(t: any): ParsedTitle {
+function toParsedTitle(t: FrontendTitle): ParsedTitle {
   return {
     id: t.id,
-    objectType: t.object_type,
+    objectType: t.object_type as "MOVIE" | "SHOW",
     title: t.title,
-    originalTitle: t.original_title || null,
-    releaseYear: t.release_year,
-    releaseDate: t.release_date,
-    runtimeMinutes: t.runtime_minutes,
-    shortDescription: t.short_description,
+    originalTitle: t.original_title ?? null,
+    releaseYear: t.release_year ?? null,
+    releaseDate: t.release_date ?? null,
+    runtimeMinutes: t.runtime_minutes ?? null,
+    shortDescription: t.short_description ?? null,
     genres: t.genres || [],
-    originalLanguage: t.original_language || null,
-    imdbId: t.imdb_id,
-    tmdbId: t.tmdb_id,
-    posterUrl: t.poster_url,
-    ageCertification: t.age_certification,
-    tmdbUrl: t.tmdb_url,
-    offers: (t.offers || []).map((o: any) => ({
+    originalLanguage: t.original_language ?? null,
+    imdbId: t.imdb_id ?? null,
+    tmdbId: t.tmdb_id ?? null,
+    posterUrl: t.poster_url ?? null,
+    ageCertification: t.age_certification ?? null,
+    tmdbUrl: t.tmdb_url ?? null,
+    offers: (t.offers || []).map((o: FrontendOffer) => ({
       titleId: t.id,
       providerId: o.provider_id,
       providerName: o.provider_name,
@@ -49,9 +84,9 @@ function toParsedTitle(t: any): ParsedTitle {
       availableTo: o.available_to,
     })),
     scores: {
-      imdbScore: t.imdb_score,
-      imdbVotes: t.imdb_votes,
-      tmdbScore: t.tmdb_score,
+      imdbScore: t.imdb_score ?? null,
+      imdbVotes: t.imdb_votes ?? null,
+      tmdbScore: t.tmdb_score ?? null,
     },
   };
 }

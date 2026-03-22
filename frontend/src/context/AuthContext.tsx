@@ -31,7 +31,16 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-function mapSessionToUser(session: any): User | null {
+interface BetterAuthSessionData {
+  user?: {
+    id: string;
+    name?: string | null;
+    username?: string | null;
+    role?: string | null;
+  } | null;
+}
+
+function mapSessionToUser(session: BetterAuthSessionData | null): User | null {
   if (!session?.user) return null;
   const u = session.user;
   return {
