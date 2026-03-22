@@ -1,4 +1,4 @@
-import { eq, and, sql, gte, lt, asc } from "drizzle-orm";
+import { eq, and, sql, gte, lt, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -252,24 +252,22 @@ export async function unwatchEpisode(episodeId: number, userId: string) {
 
 export async function watchEpisodesBulk(episodeIds: number[], userId: string) {
   return traceDbQuery("watchEpisodesBulk", async () => {
+    if (episodeIds.length === 0) return;
     const db = getDb();
-    for (const episodeId of episodeIds) {
-      await db.insert(watchedEpisodes)
-        .values({ episodeId, userId })
-        .onConflictDoNothing()
-        .run();
-    }
+    await db.insert(watchedEpisodes)
+      .values(episodeIds.map((episodeId) => ({ episodeId, userId })))
+      .onConflictDoNothing()
+      .run();
   });
 }
 
 export async function unwatchEpisodesBulk(episodeIds: number[], userId: string) {
   return traceDbQuery("unwatchEpisodesBulk", async () => {
+    if (episodeIds.length === 0) return;
     const db = getDb();
-    for (const episodeId of episodeIds) {
-      await db.delete(watchedEpisodes)
-        .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
-        .run();
-    }
+    await db.delete(watchedEpisodes)
+      .where(and(eq(watchedEpisodes.userId, userId), inArray(watchedEpisodes.episodeId, episodeIds)))
+      .run();
   });
 }
 
