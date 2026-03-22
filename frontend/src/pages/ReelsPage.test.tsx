@@ -25,7 +25,10 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   cleanup();
-  mock.restore();
+  mockGetUpcomingEpisodes.mockReset();
+  mockWatchEpisode.mockReset();
+  mockUnwatchEpisode.mockReset();
+  mockWatchEpisodesBulk.mockReset();
 });
 
 const sampleEpisode = {
@@ -35,7 +38,9 @@ const sampleEpisode = {
   season_number: 1,
   episode_number: 1,
   name: "Pilot",
+  overview: null,
   air_date: null,
+  still_path: null,
   poster_url: null,
   is_watched: false,
   offers: [],
@@ -78,8 +83,8 @@ describe("ReelsPage", () => {
 
     await waitFor(() => expect(screen.getByText("Test Show")).toBeDefined());
 
-    // Click "Mark watched" button
-    const markWatchedBtn = screen.queryByText("Mark watched");
+    // Click "Mark as Watched" button
+    const markWatchedBtn = screen.queryByText("Mark as Watched");
     if (markWatchedBtn) {
       await act(async () => {
         markWatchedBtn.click();

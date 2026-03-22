@@ -23,7 +23,9 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   cleanup();
-  mock.restore();
+  mockGetUpcomingEpisodes.mockReset();
+  mockWatchEpisode.mockReset();
+  mockUnwatchEpisode.mockReset();
 });
 
 describe("UpcomingPage", () => {
@@ -57,7 +59,9 @@ describe("UpcomingPage", () => {
       season_number: 1,
       episode_number: 1,
       name: "Pilot",
-      air_date: null,
+      overview: null,
+      air_date: "2024-01-01",
+      still_path: null,
       poster_url: null,
       is_watched: false,
       offers: [],
