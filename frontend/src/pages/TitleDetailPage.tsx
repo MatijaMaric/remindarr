@@ -13,6 +13,7 @@ import type {
 } from "../types";
 import TrackButton from "../components/TrackButton";
 import PersonCard from "../components/PersonCard";
+import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
@@ -174,11 +175,7 @@ export default function TitleDetailPage() {
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-gray-400">Loading details...</div>
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (error) {

@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router";
 import * as api from "../api";
 import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
 import PersonCard from "../components/PersonCard";
+import { DetailPageSkeleton } from "../components/SkeletonComponents";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -41,11 +42,7 @@ export default function EpisodeDetailPage() {
   }, [id, season, episode]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-gray-400">Loading episode details...</div>
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (error || !data) {
