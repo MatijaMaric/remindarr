@@ -16,6 +16,7 @@ import ReelsPage from "./pages/ReelsPage";
 import UpcomingPage from "./pages/UpcomingPage";
 import RequireAuth from "./components/RequireAuth";
 import BottomTabBar from "./components/BottomTabBar";
+import OfflineIndicator from "./components/OfflineIndicator";
 import { navLinkClass } from "./nav-utils";
 
 function MobileHomeRedirect() {
@@ -126,6 +127,7 @@ export default function App() {
         </Routes>
       </main>
       <BottomTabBar />
+      <OfflineIndicator />
     </div>
   );
 }
