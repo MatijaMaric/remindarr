@@ -2,7 +2,11 @@ import { Hono } from "hono";
 import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, deleteEpisodesForTitle, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
-import { enqueueJob } from "../jobs/queue";
+// Dynamic import to avoid pulling bun:sqlite into CF Workers bundle
+async function enqueueJobDynamic(name: string, data?: Record<string, unknown>) {
+  const { enqueueJob } = await import("../jobs/queue");
+  enqueueJob(name, data);
+}
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok } from "./response";
@@ -204,7 +208,7 @@ app.post("/:id", async (c) => {
   if (CONFIG.TMDB_API_KEY) {
     const titleData = body.titleData;
     if (titleData?.object_type === "SHOW" && titleData?.tmdb_id) {
-      enqueueJob("sync-show-episodes", { titleId, tmdbId: titleData.tmdb_id, title: titleData.title });
+      await enqueueJobDynamic("sync-show-episodes", { titleId, tmdbId: titleData.tmdb_id, title: titleData.title });
       log.info("Queued episode sync", { title: titleData.title, titleId });
     }
   }
