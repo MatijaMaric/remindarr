@@ -1,3 +1,4 @@
+import { memo } from "react";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
 interface ProviderOption {
@@ -61,7 +62,7 @@ function toggleType(current: string[], value: string): string[] {
   return next;
 }
 
-export default function FilterBar({
+const FilterBar = memo(function FilterBar({
   type,
   onTypeChange,
   daysBack,
@@ -184,4 +185,6 @@ export default function FilterBar({
       )}
     </div>
   );
-}
+});
+
+export default FilterBar;

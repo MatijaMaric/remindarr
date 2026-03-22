@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router";
 import type { Title } from "../types";
 import TrackButton from "./TrackButton";
@@ -7,7 +8,7 @@ interface Props {
   onTrackToggle?: () => void;
 }
 
-export default function TitleCard({ title, onTrackToggle }: Props) {
+const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
   // Deduplicate offers by provider (keep best quality)
   const uniqueProviders = new Map<number, Title["offers"][0]>();
   for (const offer of title.offers) {
@@ -88,11 +89,14 @@ export default function TitleCard({ title, onTrackToggle }: Props) {
           <TrackButton
             titleId={title.id}
             isTracked={title.is_tracked}
-            onToggle={onTrackToggle ? () => onTrackToggle() : undefined}
+            onToggle={onTrackToggle}
             titleData={title}
           />
         </div>
       </div>
     </div>
   );
-}
+});
+
+export default TitleCard;
+
