@@ -3,10 +3,6 @@ main = "server/worker.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Exclude Bun-specific modules from the bundle (used only in local dev, not CF Workers)
-[build]
-external = ["bun:sqlite"]
-
 # Custom domain
 routes = [
   { pattern = "remindarr.app", custom_domain = true }
