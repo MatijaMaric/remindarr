@@ -35,7 +35,7 @@ export function rateLimiter(options: RateLimitOptions) {
   const buckets = new Map<string, TokenBucket>();
 
   // Periodic cleanup so stale entries are removed even on low-traffic instances.
-  // unref() ensures the timer doesn't prevent the process from exiting.
+  // unref() ensures the timer doesn't prevent the process from exiting (Node/Bun only).
   const cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const [k, bucket] of buckets) {
@@ -44,7 +44,9 @@ export function rateLimiter(options: RateLimitOptions) {
       }
     }
   }, cleanupIntervalMs);
-  cleanupTimer.unref();
+  if (typeof cleanupTimer === "object" && "unref" in cleanupTimer) {
+    cleanupTimer.unref();
+  }
 
   return createMiddleware<AppEnv>(async (c, next) => {
     const key = keyGenerator(c);
