@@ -53,12 +53,16 @@ export const titles = sqliteTable(
   ]
 );
 
-export const providers = sqliteTable("providers", {
-  id: integer("id").primaryKey(),
-  name: text("name").notNull(),
-  technicalName: text("technical_name"),
-  iconUrl: text("icon_url"),
-});
+export const providers = sqliteTable(
+  "providers",
+  {
+    id: integer("id").primaryKey(),
+    name: text("name").notNull(),
+    technicalName: text("technical_name"),
+    iconUrl: text("icon_url"),
+  },
+  (table) => [index("idx_providers_technical_name").on(table.technicalName)]
+);
 
 export const offers = sqliteTable(
   "offers",
@@ -224,7 +228,10 @@ export const watchedEpisodes = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     watchedAt: text("watched_at").default(sql`(datetime('now'))`),
   },
-  (table) => [primaryKey({ columns: [table.episodeId, table.userId] })]
+  (table) => [
+    primaryKey({ columns: [table.episodeId, table.userId] }),
+    index("idx_watched_episodes_user_id").on(table.userId),
+  ]
 );
 
 export const notifiers = sqliteTable(
