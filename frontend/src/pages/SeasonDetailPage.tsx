@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import * as api from "../api";
 import type { SeasonDetailsResponse } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
+import { useApiCall } from "../hooks/useApiCall";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -16,30 +16,11 @@ function formatDate(dateStr: string | null | undefined): string {
 
 export default function SeasonDetailPage() {
   const { id, season } = useParams<{ id: string; season: string }>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<SeasonDetailsResponse | null>(null);
 
-  useEffect(() => {
-    if (!id || !season) return;
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await api.getSeasonDetails(id!, Number(season));
-        if (!cancelled) setData(result);
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || "Failed to load season details");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [id, season]);
+  const { data, loading, error } = useApiCall<SeasonDetailsResponse>(
+    () => api.getSeasonDetails(id!, Number(season)),
+    [id, season],
+  );
 
   if (loading) {
     return <DetailPageSkeleton />;

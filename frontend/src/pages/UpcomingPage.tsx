@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
@@ -9,28 +9,23 @@ import {
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
+import { useApiCall } from "../hooks/useApiCall";
 
 export default function UpcomingPage() {
   const [today, setToday] = useState<Episode[]>([]);
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const { t } = useTranslation();
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await api.getUpcomingEpisodes();
+  const { loading, error } = useApiCall(
+    () => api.getUpcomingEpisodes(),
+    [],
+    {
+      onSuccess: (data) => {
         setToday(data.today);
         setUpcoming(data.upcoming);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+      },
+    },
+  );
 
   const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
     const updateAll = (eps: Episode[]) =>

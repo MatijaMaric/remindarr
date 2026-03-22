@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import * as api from "../api";
 import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
+import { useApiCall } from "../hooks/useApiCall";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -16,30 +16,11 @@ function formatDate(dateStr: string | null | undefined): string {
 
 export default function EpisodeDetailPage() {
   const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<EpisodeDetailsResponse | null>(null);
 
-  useEffect(() => {
-    if (!id || !season || !episode) return;
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await api.getEpisodeDetails(id!, Number(season), Number(episode));
-        if (!cancelled) setData(result);
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || "Failed to load episode details");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [id, season, episode]);
+  const { data, loading, error } = useApiCall<EpisodeDetailsResponse>(
+    () => api.getEpisodeDetails(id!, Number(season), Number(episode)),
+    [id, season, episode],
+  );
 
   if (loading) {
     return <DetailPageSkeleton />;
