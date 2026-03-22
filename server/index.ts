@@ -23,6 +23,7 @@ import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import healthRoutes from "./routes/health";
+import metricsRoutes from "./routes/metrics";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -112,6 +113,9 @@ app.use("/api/*", requestLogger());
 
 // Health check (public — used by Sentry uptime monitoring)
 app.route("/api/health", healthRoutes);
+
+// Prometheus metrics (public — protect via reverse proxy if needed)
+app.route("/metrics", metricsRoutes);
 
 // Custom auth routes (providers endpoint) — must be before better-auth catch-all
 app.route("/api/auth/custom", authCustomRoutes);

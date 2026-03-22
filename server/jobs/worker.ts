@@ -1,5 +1,6 @@
 import Sentry from "../sentry";
 import { logger } from "../logger";
+import { jobsTotal, jobDurationSeconds } from "../metrics";
 
 const log = logger.child({ module: "jobs" });
 
@@ -40,6 +41,7 @@ export async function processJobs() {
         }
       : undefined;
 
+    const jobStart = performance.now();
     try {
       if (cronExpr) {
         await Sentry.withMonitor(
@@ -53,11 +55,17 @@ export async function processJobs() {
         await handler(job);
       }
       completeJob(job.id);
+      const duration = (performance.now() - jobStart) / 1000;
+      jobsTotal.inc({ name, status: "completed" });
+      jobDurationSeconds.observe({ name }, duration);
       log.info("Completed job", { name, jobId: job.id });
     } catch (err) {
       Sentry.captureException(err);
       const message = err instanceof Error ? err.message : String(err);
       failJob(job.id, message);
+      const duration = (performance.now() - jobStart) / 1000;
+      jobsTotal.inc({ name, status: "failed" });
+      jobDurationSeconds.observe({ name }, duration);
       log.error("Failed job", { name, jobId: job.id, attempt: job.attempts, maxAttempts: job.max_attempts, error: message });
     }
   }
