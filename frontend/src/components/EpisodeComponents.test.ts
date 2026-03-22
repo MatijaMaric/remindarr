@@ -101,18 +101,18 @@ describe("groupByShow", () => {
 });
 
 describe("formatUpcomingDate", () => {
-  it("returns 'Tomorrow' for tomorrow's date", () => {
+  it("returns '__TOMORROW__' sentinel for tomorrow's date", () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateStr = tomorrow.toISOString().slice(0, 10);
-    expect(formatUpcomingDate(dateStr)).toBe("Tomorrow");
+    expect(formatUpcomingDate(dateStr)).toBe("__TOMORROW__");
   });
 
   it("returns formatted date for other dates", () => {
-    // A date far in the future won't be "Tomorrow"
+    // A date far in the future won't be tomorrow
     const result = formatUpcomingDate("2030-06-15");
     expect(typeof result).toBe("string");
-    expect(result).not.toBe("Tomorrow");
+    expect(result).not.toBe("__TOMORROW__");
   });
 });
 

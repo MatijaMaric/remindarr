@@ -1,5 +1,6 @@
 import { Routes, Route, NavLink, Link, Navigate, useLocation } from "react-router";
 import { Toaster } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
 import { useIsMobile } from "./hooks/useIsMobile";
 import HomePage from "./pages/HomePage";
@@ -32,6 +33,7 @@ function MobileHomeRedirect() {
 export default function App() {
   const { user, loading, logout } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
   const isReelsPage = location.pathname === "/reels";
 
   return (
@@ -41,7 +43,7 @@ export default function App() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
       >
-        Skip to main content
+        {t("nav.skipToMain")}
       </a>
       {/* Hide top nav on reels page for mobile */}
       <nav aria-label="Main navigation" className={`bg-gray-900 border-b border-gray-800 sticky top-0 z-50 ${isReelsPage ? "hidden sm:block" : ""}`}>
@@ -57,13 +59,13 @@ export default function App() {
               end
               className={({ isActive }) => navLinkClass(isActive)}
             >
-              Home
+              {t("nav.home")}
             </NavLink>
             <NavLink
               to="/browse"
               className={({ isActive }) => navLinkClass(isActive)}
             >
-              Browse
+              {t("nav.browse")}
             </NavLink>
             {user && (
               <>
@@ -71,13 +73,13 @@ export default function App() {
                   to="/tracked"
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
-                  Tracked
+                  {t("nav.tracked")}
                 </NavLink>
                 <NavLink
                   to="/calendar"
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
-                  Calendar
+                  {t("nav.calendar")}
                 </NavLink>
               </>
             )}
@@ -96,7 +98,7 @@ export default function App() {
                   onClick={logout}
                   className="text-sm text-gray-500 hover:text-white transition-colors cursor-pointer"
                 >
-                  Logout
+                  {t("nav.logout")}
                 </button>
               </>
             ) : (
@@ -104,7 +106,7 @@ export default function App() {
                 to="/login"
                 className="text-sm text-gray-400 hover:text-white transition-colors"
               >
-                Sign In
+                {t("nav.signIn")}
               </NavLink>
             )}
           </div>

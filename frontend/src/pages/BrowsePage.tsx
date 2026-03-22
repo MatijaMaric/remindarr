@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useSearchParams } from "react-router";
+import { useTranslation } from "react-i18next";
 import SearchBar from "../components/SearchBar";
 import NewReleases from "../components/NewReleases";
 import CategoryBar, { type BrowseCategory } from "../components/CategoryBar";
@@ -12,11 +13,11 @@ import { useState } from "react";
 
 const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
 
-const CATEGORY_LABELS: Record<BrowseCategory, string> = {
-  new_releases: "New Releases",
-  popular: "Popular",
-  upcoming: "Upcoming",
-  top_rated: "Top Rated",
+const CATEGORY_LABEL_KEYS: Record<BrowseCategory, string> = {
+  new_releases: "browse.categories.new_releases",
+  popular: "browse.categories.popular",
+  upcoming: "browse.categories.upcoming",
+  top_rated: "browse.categories.top_rated",
 };
 
 function useQueryParam(
@@ -90,6 +91,7 @@ export default function BrowsePage() {
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const { t } = useTranslation();
 
   const rawCategory = searchParams.get("category") || "popular";
   const category: BrowseCategory = VALID_CATEGORIES.includes(rawCategory as BrowseCategory)
@@ -181,19 +183,19 @@ export default function BrowsePage() {
       {searchResults !== null ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Search Results ({searchResults.length})</h2>
+            <h2 className="text-lg font-semibold">{t("browse.searchResults", { count: searchResults.length })}</h2>
             <button
               onClick={clearSearch}
               className="text-sm text-gray-400 hover:text-white cursor-pointer"
             >
-              Clear
+              {t("browse.clear")}
             </button>
           </div>
-          <TitleList titles={searchResults} emptyMessage="No results found" />
+          <TitleList titles={searchResults} emptyMessage={t("browse.noResults")} />
         </div>
       ) : (
         <div>
-          <h2 className="text-lg font-semibold mb-4">{CATEGORY_LABELS[category]}</h2>
+          <h2 className="text-lg font-semibold mb-4">{t(CATEGORY_LABEL_KEYS[category])}</h2>
           {category === "new_releases" ? (
             <NewReleases
               type={type}

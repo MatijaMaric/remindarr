@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { authClient } from "../lib/auth-client";
 
@@ -7,6 +8,7 @@ export default function LoginPage() {
   const { user, providers, login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +26,7 @@ export default function LoginPage() {
   // Show OIDC callback errors
   useEffect(() => {
     const oidcError = searchParams.get("error");
-    if (oidcError) setError(`Login failed: ${oidcError}`);
+    if (oidcError) setError(t("login.loginFailed", { error: oidcError }));
   }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,7 +53,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-white text-center mb-8">Sign in to Remindarr</h2>
+        <h2 className="text-2xl font-bold text-white text-center mb-8">{t("login.title")}</h2>
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
@@ -66,7 +68,7 @@ export default function LoginPage() {
               onClick={handleOidcLogin}
               className="block w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors text-center cursor-pointer"
             >
-              Sign in with {providers.oidc!.name}
+              {t("login.signInWith", { provider: providers.oidc!.name })}
             </button>
 
             {!showLocalLogin && (
@@ -75,7 +77,7 @@ export default function LoginPage() {
                 onClick={() => setShowLocalLogin(true)}
                 className="mt-4 w-full text-center text-sm text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
               >
-                Sign in with username instead
+                {t("login.signInWithUsername")}
               </button>
             )}
           </>
@@ -86,7 +88,7 @@ export default function LoginPage() {
             {oidcConfigured && (
               <div className="my-6 flex items-center gap-3">
                 <div className="flex-1 h-px bg-gray-700" />
-                <span className="text-xs text-gray-500 uppercase">or</span>
+                <span className="text-xs text-gray-500 uppercase">{t("login.or")}</span>
                 <div className="flex-1 h-px bg-gray-700" />
               </div>
             )}
@@ -94,7 +96,7 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1">
-                  Username
+                  {t("login.username")}
                 </label>
                 <input
                   id="username"
@@ -110,7 +112,7 @@ export default function LoginPage() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
-                  Password
+                  {t("login.password")}
                 </label>
                 <input
                   id="password"
@@ -128,14 +130,14 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? t("login.signingIn") : t("login.signIn")}
               </button>
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-500">
-              Don't have an account?{" "}
+              {t("login.noAccount")}{" "}
               <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 transition-colors">
-                Sign up
+                {t("login.signUp")}
               </Link>
             </p>
           </>

@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
+    "i18next": "^24.0.0",
+    "i18next-browser-languagedetector": "^8.0.0",
+    "react-i18next": "^15.0.0",
     "@fontsource-variable/geist": "^5.2.8",
     "@sentry/react": "^10.43.0",
     "better-auth": "^1.5.5",
