@@ -7,7 +7,7 @@ CREATE TABLE `title_genres` (
 CREATE INDEX `idx_title_genres_genre` ON `title_genres` (`genre`);
 --> statement-breakpoint
 INSERT INTO `title_genres` (`title_id`, `genre`)
-SELECT `id`, json_each.value
+SELECT `titles`.`id`, json_each.value
 FROM `titles`, json_each(`titles`.`genres`)
 WHERE `titles`.`genres` IS NOT NULL AND `titles`.`genres` != '[]';
 --> statement-breakpoint
