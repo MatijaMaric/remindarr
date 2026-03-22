@@ -33,7 +33,7 @@ jobs:
         run: cd frontend && bunx tsc --noEmit
 
       - name: Run tests
-        run: bun test
+        run: bun test server/ frontend/src/
 
       - name: Build frontend
         run: cd frontend && bun run build
