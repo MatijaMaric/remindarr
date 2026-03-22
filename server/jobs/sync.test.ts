@@ -12,29 +12,21 @@ spyOn(Sentry, "withMonitor").mockImplementation(
 );
 const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id");
 
-// Mock TMDB sync-titles
-const mockFetchNewReleases = mock(async () => []);
-mock.module("../tmdb/sync-titles", () => ({
-  fetchNewReleases: mockFetchNewReleases,
-}));
+// Mock TMDB sync-titles — use spyOn to avoid clobbering the module
+import * as syncTitlesModule from "../tmdb/sync-titles";
+const mockFetchNewReleases = spyOn(syncTitlesModule, "fetchNewReleases").mockResolvedValue([]);
 
-// Mock DB repository upsertTitles
-const mockUpsertTitles = mock(async () => 0);
-mock.module("../db/repository", () => ({
-  upsertTitles: mockUpsertTitles,
-}));
+// Mock upsertTitles via spyOn to avoid clobbering the entire repository module
+import * as repository from "../db/repository";
+const mockUpsertTitles = spyOn(repository, "upsertTitles").mockResolvedValue(0);
 
-// Mock tmdb/sync syncEpisodes
-const mockSyncEpisodes = mock(async () => ({ synced: 0, shows: 0 }));
-mock.module("../tmdb/sync", () => ({
-  syncEpisodes: mockSyncEpisodes,
-}));
+// Mock tmdb/sync syncEpisodes — use spyOn
+import * as syncModule from "../tmdb/sync";
+const mockSyncEpisodes = spyOn(syncModule, "syncEpisodes").mockResolvedValue({ synced: 0, shows: 0 });
 
-// Mock migrate-titles
-const mockMigrateTitles = mock(async () => ({ updated: 0, failed: 0 }));
-mock.module("./migrate-titles", () => ({
-  migrateTitles: mockMigrateTitles,
-}));
+// Mock migrate-titles — use spyOn
+import * as migrateTitlesModule from "./migrate-titles";
+const mockMigrateTitles = spyOn(migrateTitlesModule, "migrateTitles").mockResolvedValue({ updated: 0, failed: 0 });
 
 import { CONFIG } from "../config";
 
@@ -55,6 +47,11 @@ beforeEach(() => {
 afterAll(() => {
   stopWorker();
   teardownTestDb();
+  // Restore all spies so they don't leak into other test files
+  mockFetchNewReleases.mockRestore();
+  mockUpsertTitles.mockRestore();
+  mockSyncEpisodes.mockRestore();
+  mockMigrateTitles.mockRestore();
 });
 
 // ─── registerSyncJobs ────────────────────────────────────────────────────────

@@ -5,20 +5,17 @@ import { CONFIG } from "../config";
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
-const mockFetchMovieDetails = mock(async (_id: number) => ({
+import * as tmdbClient from "../tmdb/client";
+
+const mockFetchMovieDetails = spyOn(tmdbClient, "fetchMovieDetails" as any).mockResolvedValue({
   title: "English Movie Title",
   original_title: "Original Movie Title",
-}));
+});
 
-const mockFetchTvDetails = mock(async (_id: number) => ({
+const mockFetchTvDetails = spyOn(tmdbClient, "fetchTvDetails" as any).mockResolvedValue({
   name: "English Show Name",
   original_name: "Original Show Name",
-}));
-
-mock.module("../tmdb/client", () => ({
-  fetchMovieDetails: mockFetchMovieDetails,
-  fetchTvDetails: mockFetchTvDetails,
-}));
+});
 
 // ─── Import after mocks ───────────────────────────────────────────────────────
 import { migrateTitles } from "./migrate-titles";
@@ -52,6 +49,8 @@ beforeEach(() => {
 
 afterAll(() => {
   CONFIG.TMDB_API_KEY = originalApiKey;
+  mockFetchMovieDetails.mockRestore();
+  mockFetchTvDetails.mockRestore();
   teardownTestDb();
 });
 
