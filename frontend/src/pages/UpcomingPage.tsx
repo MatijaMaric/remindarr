@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import * as api from "../api";
 import type { Episode } from "../types";
 import {
@@ -48,6 +49,7 @@ export default function UpcomingPage() {
       setToday((prev) => revertAll(prev));
       setUpcoming((prev) => revertAll(prev));
       console.error("Failed to toggle watched:", err);
+      toast.error("Failed to update watched status — please try again");
     }
   };
 

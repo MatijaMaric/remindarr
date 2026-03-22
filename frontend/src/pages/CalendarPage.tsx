@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link } from "react-router";
 import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon, LayoutGridIcon, ListIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { toast } from "sonner";
 import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleList from "../components/TitleList";
@@ -330,6 +331,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
           ),
         }))
       );
+      toast.error("Failed to update watched status — please try again");
     }
   };
 
@@ -633,6 +635,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
         prev.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep))
       );
       console.error("Failed to toggle watched:", err);
+      toast.error("Failed to update watched status — please try again");
     }
   };
 
@@ -663,6 +666,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
         prev.map((ep) => (idSet.has(ep.id) ? { ...ep, is_watched: !markWatched } : ep))
       );
       console.error("Failed to bulk toggle watched:", err);
+      toast.error("Failed to update watched status — please try again");
     }
   };
 
