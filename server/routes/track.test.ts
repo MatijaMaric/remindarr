@@ -82,7 +82,7 @@ describe("POST /track/:id", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
+    expect(body.message).toContain("Tracking");
 
     // Verify it's tracked
     const listRes = await app.request("/track", { headers: headers() });
@@ -113,5 +113,133 @@ describe("DELETE /track/:id", () => {
     const listRes = await app.request("/track", { headers: headers() });
     const listBody = await listRes.json();
     expect(listBody.titles).toHaveLength(0);
+  });
+});
+
+describe("GET /track/export", () => {
+  it("returns empty export when nothing tracked", async () => {
+    const res = await app.request("/track/export", { headers: headers() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.version).toBe(1);
+    expect(body.titles).toHaveLength(0);
+    expect(body.exported_at).toBeTruthy();
+  });
+
+  it("returns tracked titles in export", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/export", { headers: headers() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].id).toBe("movie-123");
+    expect(body.titles[0].tmdb_id).toBe("123");
+    expect(body.titles[0].title).toBe("Test Movie");
+    expect(body.titles[0].watched_episodes).toEqual([]);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/export");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("POST /track/import", () => {
+  it("imports titles from export data", async () => {
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "movie-123",
+          tmdb_id: "123",
+          object_type: "MOVIE",
+          title: "Test Movie",
+          original_title: null,
+          release_year: 2024,
+          release_date: "2024-06-15",
+          runtime_minutes: 120,
+          short_description: "A test movie",
+          genres: ["Action"],
+          original_language: "en",
+          imdb_id: "tt1234567",
+          poster_url: null,
+          age_certification: null,
+          tmdb_url: null,
+          tracked_at: "2026-01-01T00:00:00Z",
+          notes: null,
+          watched_episodes: [],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.imported).toBe(1);
+    expect(body.skipped).toBe(0);
+
+    // Verify tracked
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles).toHaveLength(1);
+    expect(listBody.titles[0].id).toBe("movie-123");
+  });
+
+  it("skips items with missing required fields", async () => {
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        { id: "movie-123" }, // missing title and object_type
+        {
+          id: "movie-456",
+          tmdb_id: "456",
+          object_type: "MOVIE",
+          title: "Another Movie",
+          genres: [],
+          watched_episodes: [],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.imported).toBe(1);
+    expect(body.skipped).toBe(1);
+  });
+
+  it("returns 400 for invalid JSON structure", async () => {
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ invalid: true }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titles: [] }),
+    });
+    expect(res.status).toBe(401);
   });
 });

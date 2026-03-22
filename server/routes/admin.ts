@@ -9,6 +9,7 @@ import {
 } from "../db/repository";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
+import { ok } from "./response";
 
 /**
  * Callback to recreate the auth instance after OIDC settings change.
@@ -57,7 +58,7 @@ app.get("/settings", async (c) => {
     },
   };
 
-  return c.json({
+  return ok(c, {
     oidc,
     oidc_configured: await isOidcConfigured(),
   });
@@ -83,7 +84,7 @@ app.put("/settings", async (c) => {
     await _onOidcSettingsChanged();
   }
 
-  return c.json({ success: true, oidc_configured: await isOidcConfigured() });
+  return ok(c, { oidc_configured: await isOidcConfigured() });
 });
 
 export default app;

@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router";
 import * as api from "../api";
 import type { PersonDetailsResponse, PersonCastCredit, PersonCrewCredit } from "../types";
 import ExternalLinks from "../components/ExternalLinks";
+import { DetailPageSkeleton } from "../components/SkeletonComponents";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 const BIO_TRUNCATE_LENGTH = 600;
@@ -106,11 +107,7 @@ export default function PersonPage() {
   }, [personId]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (error || !data) {

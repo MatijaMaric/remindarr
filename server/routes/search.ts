@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGenres } from "../tmdb/client";
 import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
 import { getTrackedTitleIds } from "../db/repository";
+import { ok, err } from "./response";
 
 import type { AppEnv } from "../types";
 
@@ -10,7 +11,7 @@ const app = new Hono<AppEnv>();
 app.get("/", async (c) => {
   const query = c.req.query("q");
   if (!query) {
-    return c.json({ error: "Query parameter 'q' is required" }, 400);
+    return err(c, "Query parameter 'q' is required");
   }
 
   try {
@@ -51,9 +52,9 @@ app.get("/", async (c) => {
       isTracked: trackedIds.has(t.id),
     }));
 
-    return c.json({ titles: titlesWithTracked, count: titlesWithTracked.length });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
+    return ok(c, { titles: titlesWithTracked, count: titlesWithTracked.length });
+  } catch (e: any) {
+    return err(c, e.message, 500);
   }
 });
 

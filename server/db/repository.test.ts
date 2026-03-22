@@ -16,6 +16,7 @@ import {
   getProviders,
   getGenres,
   getLanguages,
+  invalidateFilterCaches,
   upsertEpisodes,
   deleteEpisodesForTitle,
   watchEpisode,
@@ -47,6 +48,7 @@ import { CONFIG } from "../config";
 
 beforeEach(() => {
   setupTestDb();
+  invalidateFilterCaches();
 });
 
 afterAll(() => {
@@ -324,6 +326,21 @@ describe("getGenres", () => {
   it("returns empty array when no titles exist", async () => {
     expect(await getGenres()).toEqual([]);
   });
+
+  it("returns cached value on subsequent calls without upsert", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", genres: ["Drama"] })]);
+    const first = await getGenres();
+    // Cache is populated; result should be identical reference
+    const second = await getGenres();
+    expect(second).toBe(first);
+  });
+
+  it("reflects new genres after upsertTitles invalidates cache", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", genres: ["Drama"] })]);
+    expect(await getGenres()).toEqual(["Drama"]);
+    await upsertTitles([makeParsedTitle({ id: "movie-2", genres: ["Comedy"] })]);
+    expect(await getGenres()).toEqual(["Comedy", "Drama"]);
+  });
 });
 
 describe("getLanguages", () => {
@@ -344,6 +361,20 @@ describe("getLanguages", () => {
     ]);
     const languages = await getLanguages();
     expect(languages).toEqual(["en"]);
+  });
+
+  it("returns cached value on subsequent calls without upsert", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", originalLanguage: "en" })]);
+    const first = await getLanguages();
+    const second = await getLanguages();
+    expect(second).toBe(first);
+  });
+
+  it("reflects new languages after upsertTitles invalidates cache", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", originalLanguage: "en" })]);
+    expect(await getLanguages()).toEqual(["en"]);
+    await upsertTitles([makeParsedTitle({ id: "movie-2", originalLanguage: "ja" })]);
+    expect(await getLanguages()).toEqual(["en", "ja"]);
   });
 });
 

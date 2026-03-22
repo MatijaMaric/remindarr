@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ import {
   WatchedIcon,
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
+import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 
 export function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<number, Episode[]>> {
   const map = new Map<string, Map<number, Episode[]>>();
@@ -26,7 +27,7 @@ export function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<numbe
 
 export const EPISODES_PER_PAGE = 5;
 
-function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onToggleWatched, onMarkSeasonWatched }: {
+const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onToggleWatched, onMarkSeasonWatched }: {
   showTitle: string;
   seasonNumber: number;
   episodes: Episode[];
@@ -102,13 +103,13 @@ function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onTo
       </div>
     </div>
   );
-}
+});
 
-function UnwatchedShowCard({ titleId, seasonMap, expanded, onToggleExpand, onToggleWatched, onMarkSeasonWatched }: {
+const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, expanded, onToggleExpand, onToggleWatched, onMarkSeasonWatched }: {
   titleId: string;
   seasonMap: Map<number, Episode[]>;
   expanded: boolean;
-  onToggleExpand: () => void;
+  onToggleExpand: (titleId: string) => void;
   onToggleWatched: (id: number, current: boolean) => void;
   onMarkSeasonWatched: (episodeIds: number[]) => void;
 }) {
@@ -131,7 +132,7 @@ function UnwatchedShowCard({ titleId, seasonMap, expanded, onToggleExpand, onTog
         ))}
         {sortedSeasons.length > 1 && (
           <button
-            onClick={onToggleExpand}
+            onClick={() => onToggleExpand(titleId)}
             className="text-xs text-gray-400 hover:text-indigo-400 transition-colors cursor-pointer w-full text-center"
           >
             Collapse seasons
@@ -165,7 +166,7 @@ function UnwatchedShowCard({ titleId, seasonMap, expanded, onToggleExpand, onTog
         />
         {extraSeasons > 0 && (
           <button
-            onClick={onToggleExpand}
+            onClick={() => onToggleExpand(titleId)}
             className="w-full text-center text-xs text-gray-400 hover:text-indigo-400 transition-colors py-2 cursor-pointer"
           >
             +{extraSeasons} more season{extraSeasons > 1 ? "s" : ""}
@@ -174,7 +175,7 @@ function UnwatchedShowCard({ titleId, seasonMap, expanded, onToggleExpand, onTog
       </div>
     </div>
   );
-}
+});
 
 function UnwatchedCarousel({ children }: { children: React.ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -272,7 +273,7 @@ export default function HomePage() {
     load();
   }, [user, authLoading]);
 
-  const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
+  const toggleWatched = useCallback(async (episodeId: number, currentlyWatched: boolean) => {
     const updateAll = (eps: Episode[]) =>
       eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
     const revertAll = (eps: Episode[]) =>
@@ -305,9 +306,9 @@ export default function HomePage() {
       }
       console.error("Failed to toggle watched:", err);
     }
-  };
+  }, []);
 
-  const markSeasonWatched = async (episodeIds: number[]) => {
+  const markSeasonWatched = useCallback(async (episodeIds: number[]) => {
     const idSet = new Set(episodeIds);
     setUnwatched((prev) => prev.filter((ep) => !idSet.has(ep.id)));
 
@@ -321,10 +322,19 @@ export default function HomePage() {
       } catch {}
       console.error("Failed to bulk mark watched:", err);
     }
-  };
+  }, []);
+
+  const handleToggleExpand = useCallback((titleId: string) => {
+    setExpandedShows((prev) => {
+      const next = new Set(prev);
+      if (next.has(titleId)) next.delete(titleId);
+      else next.add(titleId);
+      return next;
+    });
+  }, []);
 
   if (authLoading || loading) {
-    return <div className="text-gray-500 text-center py-12">Loading...</div>;
+    return <EpisodeListSkeleton />;
   }
 
   if (!user) {
@@ -378,12 +388,7 @@ export default function HomePage() {
                   titleId={titleId}
                   seasonMap={seasonMap}
                   expanded={expandedShows.has(titleId)}
-                  onToggleExpand={() => setExpandedShows((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(titleId)) next.delete(titleId);
-                    else next.add(titleId);
-                    return next;
-                  })}
+                  onToggleExpand={handleToggleExpand}
                   onToggleWatched={toggleWatched}
                   onMarkSeasonWatched={markSeasonWatched}
                 />

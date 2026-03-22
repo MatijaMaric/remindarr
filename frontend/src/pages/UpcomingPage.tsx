@@ -6,6 +6,7 @@ import {
   formatUpcomingDate,
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
+import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 
 export default function UpcomingPage() {
   const [today, setToday] = useState<Episode[]>([]);
@@ -51,7 +52,7 @@ export default function UpcomingPage() {
   };
 
   if (loading) {
-    return <div className="text-gray-500 text-center py-12">Loading...</div>;
+    return <EpisodeListSkeleton />;
   }
 
   if (error) {

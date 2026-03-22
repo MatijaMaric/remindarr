@@ -103,4 +103,9 @@ describe("BottomTabBar", () => {
     expect(hrefs).toContain("/browse");
     expect(hrefs).toContain("/login");
   });
+
+  it("nav has accessible label", () => {
+    render(<BottomTabBar />, { wrapper: Wrapper });
+    expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toBeDefined();
+  });
 });

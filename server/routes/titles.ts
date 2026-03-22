@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { getRecentTitles, getProviders, getGenres, getLanguages } from "../db/repository";
 import type { AppEnv } from "../types";
+import { ok } from "./response";
 
 const app = new Hono<AppEnv>();
 
@@ -21,22 +22,22 @@ app.get("/", async (c) => {
   const languages = languageParam ? languageParam.split(",").filter(Boolean) : [];
 
   const titles = await getRecentTitles({ daysBack, objectTypes, providers, genres, languages, excludeTracked, limit, offset }, user?.id);
-  return c.json({ titles, count: titles.length });
+  return ok(c, { titles, count: titles.length });
 });
 
 app.get("/providers", async (c) => {
   const providers = await getProviders();
-  return c.json({ providers });
+  return ok(c, { providers });
 });
 
 app.get("/genres", async (c) => {
   const genres = await getGenres();
-  return c.json({ genres });
+  return ok(c, { genres });
 });
 
 app.get("/languages", async (c) => {
   const languages = await getLanguages();
-  return c.json({ languages });
+  return ok(c, { languages });
 });
 
 export default app;

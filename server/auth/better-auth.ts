@@ -13,9 +13,6 @@ import type { DrizzleDb } from "../platform/types";
 
 const log = logger.child({ module: "auth" });
 
-// Cache for OIDC admin status (sub → isAdmin) during OAuth callback flow
-const _pendingOidcAdminStatus = new Map<string, boolean>();
-
 /** Check if OIDC claims grant admin status based on configured claim/value. */
 export function checkAdminClaim(
   claims: Record<string, unknown>,
@@ -41,6 +38,12 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
   adminClaim: string;
   adminValue: string;
 }) {
+  // Per-request nonce → isAdmin mapping to avoid race conditions when the same
+  // sub logs in concurrently. Each getUserInfo call generates a unique nonce,
+  // and the corresponding database hook dequeues it in FIFO order.
+  const pendingOidcAdminStatus = new Map<string, boolean>(); // nonce → isAdmin
+  const pendingNoncesByAccountId = new Map<string, string[]>(); // sub → nonce queue
+
   const plugins: any[] = [
     username({
       minUsernameLength: 1,
@@ -91,10 +94,15 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
 
             if (!claims.sub) return null;
 
-            // Cache admin status for the database hooks to pick up
+            // Enqueue admin status keyed by a per-request nonce so that
+            // concurrent logins for the same sub don't overwrite each other.
             if (oidcConfig.adminClaim && oidcConfig.adminValue) {
               const isAdmin = checkAdminClaim(claims, oidcConfig.adminClaim, oidcConfig.adminValue);
-              _pendingOidcAdminStatus.set(String(claims.sub), isAdmin);
+              const nonce = crypto.randomUUID();
+              pendingOidcAdminStatus.set(nonce, isAdmin);
+              const queue = pendingNoncesByAccountId.get(String(claims.sub)) ?? [];
+              queue.push(nonce);
+              pendingNoncesByAccountId.set(String(claims.sub), queue);
             }
 
             return {
@@ -170,13 +178,18 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
           after: async (acc) => {
             // Sync admin role for new OIDC users
             if (acc.providerId === "pocketid") {
-              const isAdmin = _pendingOidcAdminStatus.get(acc.accountId);
-              if (isAdmin !== undefined) {
-                _pendingOidcAdminStatus.delete(acc.accountId);
-                const role = isAdmin ? "admin" : "user";
-                const currentDb = getDb();
-                await currentDb.update(users).set({ role }).where(eq(users.id, acc.userId)).run();
-                log.info("Set OIDC user role", { userId: acc.userId, role });
+              const queue = pendingNoncesByAccountId.get(acc.accountId);
+              if (queue && queue.length > 0) {
+                const nonce = queue.shift()!;
+                if (queue.length === 0) pendingNoncesByAccountId.delete(acc.accountId);
+                const isAdmin = pendingOidcAdminStatus.get(nonce);
+                if (isAdmin !== undefined) {
+                  pendingOidcAdminStatus.delete(nonce);
+                  const role = isAdmin ? "admin" : "user";
+                  const currentDb = getDb();
+                  await currentDb.update(users).set({ role }).where(eq(users.id, acc.userId)).run();
+                  log.info("Set OIDC user role", { userId: acc.userId, role });
+                }
               }
             }
           },
@@ -186,7 +199,7 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
         create: {
           after: async (sess) => {
             // Sync admin role for returning OIDC users
-            if (_pendingOidcAdminStatus.size === 0) return;
+            if (pendingNoncesByAccountId.size === 0) return;
 
             const currentDb = getDb();
             const acc = await currentDb
@@ -201,12 +214,17 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
               .get();
 
             if (acc) {
-              const isAdmin = _pendingOidcAdminStatus.get(acc.accountId);
-              if (isAdmin !== undefined) {
-                _pendingOidcAdminStatus.delete(acc.accountId);
-                const role = isAdmin ? "admin" : "user";
-                await currentDb.update(users).set({ role }).where(eq(users.id, sess.userId)).run();
-                log.info("Synced OIDC user role", { userId: sess.userId, role });
+              const queue = pendingNoncesByAccountId.get(acc.accountId);
+              if (queue && queue.length > 0) {
+                const nonce = queue.shift()!;
+                if (queue.length === 0) pendingNoncesByAccountId.delete(acc.accountId);
+                const isAdmin = pendingOidcAdminStatus.get(nonce);
+                if (isAdmin !== undefined) {
+                  pendingOidcAdminStatus.delete(nonce);
+                  const role = isAdmin ? "admin" : "user";
+                  await currentDb.update(users).set({ role }).where(eq(users.id, sess.userId)).run();
+                  log.info("Synced OIDC user role", { userId: sess.userId, role });
+                }
               }
             }
           },

@@ -134,6 +134,35 @@ describe("GET /details/show/:id/season/:season", () => {
     expect(body.seasonNumber).toBe(1);
     expect(tmdbClient.fetchTvDetails).toHaveBeenCalledWith(555);
   });
+
+  it("returns 400 for non-numeric season param", async () => {
+    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+
+    const res = await app.request("/details/show/tv-555/season/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid season number");
+  });
+});
+
+describe("GET /details/show/:id/season/:season/episode/:episode", () => {
+  it("returns 400 for non-numeric season param", async () => {
+    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+
+    const res = await app.request("/details/show/tv-555/season/abc/episode/1");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid season or episode number");
+  });
+
+  it("returns 400 for non-numeric episode param", async () => {
+    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+
+    const res = await app.request("/details/show/tv-555/season/1/episode/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid season or episode number");
+  });
 });
 
 describe("GET /details/person/:personId", () => {

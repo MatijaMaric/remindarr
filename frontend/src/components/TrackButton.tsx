@@ -40,6 +40,7 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
     <button
       onClick={toggle}
       disabled={loading}
+      aria-pressed={tracked}
       className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
         tracked
           ? "bg-indigo-600 text-white hover:bg-red-600"

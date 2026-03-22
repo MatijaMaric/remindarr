@@ -4,6 +4,7 @@ import { getEpisodesByDateRange, getUnwatchedEpisodes } from "../db/repository";
 import { localDateForTimezone, addDays } from "../utils/timezone";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
+import { ok, err } from "./response";
 
 const app = new Hono<AppEnv>();
 
@@ -23,17 +24,16 @@ app.get("/upcoming", async (c) => {
 
   const unwatchedEpisodes = await getUnwatchedEpisodes(user.id, timezone);
 
-  return c.json({ today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
+  return ok(c, { today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
 });
 
 app.post("/sync", async (c) => {
   if (!CONFIG.TMDB_API_KEY) {
-    return c.json({ error: "TMDB_API_KEY not configured" }, 500);
+    return err(c, "TMDB_API_KEY not configured", 500);
   }
 
   const result = await sync.syncEpisodes();
-  return c.json({
-    success: true,
+  return ok(c, {
     ...result,
     message: `Synced ${result.synced} episodes from ${result.shows} shows`,
   });

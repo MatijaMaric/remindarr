@@ -59,7 +59,6 @@ afterAll(() => {
 
 describe("POST /watched/:episodeId", () => {
   it("allows marking a past episode as watched", async () => {
-    // Get episode id for past episode
     const { getDb } = await import("../db/schema");
     const { episodes } = await import("../db/schema");
     const db = getDb();
@@ -96,6 +95,22 @@ describe("POST /watched/:episodeId", () => {
       headers: { "X-Timezone": "Pacific/Auckland" },
     });
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for non-numeric episodeId", async () => {
+    const res = await app.request("/watched/abc", { method: "POST" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid episodeId");
+  });
+});
+
+describe("DELETE /watched/:episodeId", () => {
+  it("returns 400 for non-numeric episodeId", async () => {
+    const res = await app.request("/watched/abc", { method: "DELETE" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid episodeId");
   });
 });
 

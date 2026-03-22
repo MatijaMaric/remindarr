@@ -12,6 +12,7 @@ export {
   getProviders,
   getGenres,
   getLanguages,
+  invalidateFilterCaches,
 } from "./titles";
 export type { TitleFilters, MonthFilters } from "./titles";
 
@@ -27,6 +28,8 @@ export {
   unwatchEpisode,
   watchEpisodesBulk,
   unwatchEpisodesBulk,
+  getWatchedEpisodesForExport,
+  getEpisodeIdsBySE,
 } from "./episodes";
 
 export {

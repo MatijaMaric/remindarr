@@ -107,6 +107,28 @@ export async function getTrackedTitles(): Promise<{ titles: Title[]; count: numb
   return fetchJson("/track");
 }
 
+export async function exportWatchlist(): Promise<void> {
+  const res = await fetch(`${BASE}/track/export`, { credentials: "include" });
+  if (!res.ok) throw new Error("Export failed");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="([^"]+)"/);
+  a.href = url;
+  a.download = match ? match[1] : "watchlist.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function importWatchlist(file: File): Promise<{ success: boolean; imported: number; skipped: number }> {
+  const text = await file.text();
+  return fetchJson("/track/import", {
+    method: "POST",
+    body: text,
+  });
+}
+
 export async function resolveImdb(url: string): Promise<{ success: boolean; title: SearchTitle }> {
   return fetchJson("/imdb", {
     method: "POST",

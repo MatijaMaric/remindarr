@@ -13,6 +13,7 @@ import {
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
+import { ok, err } from "./response";
 
 const log = logger.child({ module: "details" });
 
@@ -56,7 +57,7 @@ async function getOrFetchTitle(titleId: string, userId?: string) {
 app.get("/movie/:id", async (c) => {
   const user = c.get("user");
   const title = await getOrFetchTitle(c.req.param("id"), user?.id);
-  if (!title) return c.json({ error: "Title not found" }, 404);
+  if (!title) return err(c, "Title not found", 404);
 
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
@@ -67,17 +68,13 @@ app.get("/movie/:id", async (c) => {
     }
   }
 
-  return c.json({
-    title,
-    tmdb,
-    country,
-  });
+  return ok(c, { title, tmdb, country });
 });
 
 app.get("/show/:id", async (c) => {
   const user = c.get("user");
   const title = await getOrFetchTitle(c.req.param("id"), user?.id);
-  if (!title) return c.json({ error: "Title not found" }, 404);
+  if (!title) return err(c, "Title not found", 404);
 
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
@@ -88,19 +85,16 @@ app.get("/show/:id", async (c) => {
     }
   }
 
-  return c.json({
-    title,
-    tmdb,
-    country,
-  });
+  return ok(c, { title, tmdb, country });
 });
 
 app.get("/show/:id/season/:season", async (c) => {
   const user = c.get("user");
   const title = await getOrFetchTitle(c.req.param("id"), user?.id);
-  if (!title) return c.json({ error: "Title not found" }, 404);
+  if (!title) return err(c, "Title not found", 404);
 
   const seasonNumber = Number(c.req.param("season"));
+  if (isNaN(seasonNumber)) return c.json({ error: "Invalid season number" }, 400);
 
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
@@ -111,21 +105,17 @@ app.get("/show/:id/season/:season", async (c) => {
     }
   }
 
-  return c.json({
-    title,
-    tmdb,
-    seasonNumber,
-    country,
-  });
+  return ok(c, { title, tmdb, seasonNumber, country });
 });
 
 app.get("/show/:id/season/:season/episode/:episode", async (c) => {
   const user = c.get("user");
   const title = await getOrFetchTitle(c.req.param("id"), user?.id);
-  if (!title) return c.json({ error: "Title not found" }, 404);
+  if (!title) return err(c, "Title not found", 404);
 
   const seasonNumber = Number(c.req.param("season"));
   const episodeNumber = Number(c.req.param("episode"));
+  if (isNaN(seasonNumber) || isNaN(episodeNumber)) return c.json({ error: "Invalid season or episode number" }, 400);
 
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
@@ -136,31 +126,25 @@ app.get("/show/:id/season/:season/episode/:episode", async (c) => {
     }
   }
 
-  return c.json({
-    title,
-    tmdb,
-    seasonNumber,
-    episodeNumber,
-    country,
-  });
+  return ok(c, { title, tmdb, seasonNumber, episodeNumber, country });
 });
 
 app.get("/person/:personId", async (c) => {
   const personId = Number(c.req.param("personId"));
   if (!personId || isNaN(personId)) {
-    return c.json({ error: "Invalid person ID" }, 400);
+    return err(c, "Invalid person ID");
   }
 
   if (!CONFIG.TMDB_API_KEY) {
-    return c.json({ error: "TMDB not configured" }, 503);
+    return err(c, "TMDB not configured", 503);
   }
 
   try {
     const person = await fetchPersonDetails(personId);
-    return c.json({ person });
+    return ok(c, { person });
   } catch (e) {
     log.error("TMDB person fetch failed", { personId, err: e });
-    return c.json({ error: "Person not found" }, 404);
+    return err(c, "Person not found", 404);
   }
 });
 

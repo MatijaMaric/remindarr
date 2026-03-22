@@ -5,6 +5,7 @@ import * as api from "../api";
 import type { Episode } from "../types";
 import ReelsCard from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
+import { ReelsSkeleton } from "../components/SkeletonComponents";
 
 interface ShowCard {
   titleId: string;
@@ -51,7 +52,10 @@ export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
 export default function ReelsPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<ShowCard[]>([]);
-  const cardsRef = useRef<ShowCard[]>([]);
+  // Ref is always derived from state — never updated independently.
+  // Callbacks read from this ref to access the latest value without
+  // needing to be recreated whenever `cards` changes.
+  const cardsRef = useRef(cards);
   cardsRef.current = cards;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -277,11 +281,7 @@ export default function ReelsPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center" style={{ minHeight: "calc(100dvh - 5rem)" }}>
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
+    return <ReelsSkeleton />;
   }
 
   if (error) {
