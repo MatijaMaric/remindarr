@@ -28,6 +28,7 @@ import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
+import { registerBackupJob } from "./jobs/backup";
 import { startWorker, stopWorker } from "./jobs/worker";
 import { registerCron } from "./jobs/queue";
 import { setScheduleCallback } from "./jobs/schedule";
@@ -189,6 +190,7 @@ app.use("/*", serveStatic({ root: "./frontend/dist", path: "/index.html" }));
 setScheduleCallback(registerCron);
 registerSyncJobs();
 await registerNotificationJobs();
+registerBackupJob();
 startWorker();
 
 process.on("SIGTERM", async () => {
