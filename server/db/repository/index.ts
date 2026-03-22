@@ -12,6 +12,7 @@ export {
   getProviders,
   getGenres,
   getLanguages,
+  invalidateFilterCaches,
 } from "./titles";
 export type { TitleFilters, MonthFilters } from "./titles";
 

@@ -6,6 +6,23 @@ import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitle, getOffersForTitles } from "./offers";
 
+// ─── Filter caches (genres & languages change only on sync) ──────────────────
+
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+interface FilterCache<T> {
+  value: T;
+  expiresAt: number;
+}
+
+let genresCache: FilterCache<string[]> | null = null;
+let languagesCache: FilterCache<string[]> | null = null;
+
+export function invalidateFilterCaches(): void {
+  genresCache = null;
+  languagesCache = null;
+}
+
 // ─── Title / Offer / Score upserts ───────────────────────────────────────────
 
 export async function upsertTitles(parsedTitles: ParsedTitle[]) {
@@ -111,6 +128,7 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
         .run();
     }
 
+    invalidateFilterCaches();
     return parsedTitles.length;
   });
 }
@@ -451,7 +469,12 @@ export async function getProviders() {
 }
 
 export async function getGenres(): Promise<string[]> {
-  return traceDbQuery("getGenres", async () => {
+  const now = Date.now();
+  if (genresCache && now < genresCache.expiresAt) {
+    return genresCache.value;
+  }
+
+  const result = await traceDbQuery("getGenres", async () => {
     const db = getDb();
     const rows = await db
       .selectDistinct({ genres: titles.genres })
@@ -471,10 +494,18 @@ export async function getGenres(): Promise<string[]> {
     }
     return Array.from(genreSet).sort();
   });
+
+  genresCache = { value: result, expiresAt: now + CACHE_TTL_MS };
+  return result;
 }
 
 export async function getLanguages(): Promise<string[]> {
-  return traceDbQuery("getLanguages", async () => {
+  const now = Date.now();
+  if (languagesCache && now < languagesCache.expiresAt) {
+    return languagesCache.value;
+  }
+
+  const result = await traceDbQuery("getLanguages", async () => {
     const db = getDb();
     const rows = await db
       .selectDistinct({ original_language: titles.originalLanguage })
@@ -484,4 +515,7 @@ export async function getLanguages(): Promise<string[]> {
       .all();
     return rows.map((r) => r.original_language!);
   });
+
+  languagesCache = { value: result, expiresAt: now + CACHE_TTL_MS };
+  return result;
 }
