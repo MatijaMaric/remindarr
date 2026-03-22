@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import * as sync from "../tmdb/sync";
 import { getEpisodesByDateRange, getUnwatchedEpisodes } from "../db/repository";
+import { localDateForTimezone, addDays } from "../utils/timezone";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
@@ -13,19 +14,15 @@ app.get("/upcoming", async (c) => {
     return c.json({ today: [], upcoming: [] });
   }
 
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-  const nextWeek = new Date(now);
-  nextWeek.setDate(nextWeek.getDate() + 8);
-  const nextWeekStr = nextWeek.toISOString().slice(0, 10);
+  const timezone = c.req.header("X-Timezone") || "UTC";
+  const today = localDateForTimezone(timezone);
+  const tomorrowStr = addDays(today, 1);
+  const nextWeekStr = addDays(today, 8);
 
   const todayEpisodes = await getEpisodesByDateRange(today, tomorrowStr, user.id);
   const upcomingEpisodes = await getEpisodesByDateRange(tomorrowStr, nextWeekStr, user.id);
 
-  const unwatchedEpisodes = await getUnwatchedEpisodes(user.id);
+  const unwatchedEpisodes = await getUnwatchedEpisodes(user.id, timezone);
 
   return ok(c, { today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
 });
