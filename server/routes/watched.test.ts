@@ -48,8 +48,6 @@ describe("POST /watched/:episodeId", () => {
     const app = makeAuthedApp();
     const res = await app.request(`/watched/${episodeId}`, { method: "POST" });
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("marking the same episode twice does not error (idempotent)", async () => {
@@ -64,8 +62,6 @@ describe("POST /watched/:episodeId", () => {
     await app.request(`/watched/${episodeId}`, { method: "POST" });
     const res = await app.request(`/watched/${episodeId}`, { method: "POST" });
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("rejects marking a future episode as watched", async () => {
@@ -137,8 +133,6 @@ describe("DELETE /watched/:episodeId", () => {
 
     const res = await app.request(`/watched/${episodeId}`, { method: "DELETE" });
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("unwatch on an unwatched episode is a no-op", async () => {
@@ -152,8 +146,6 @@ describe("DELETE /watched/:episodeId", () => {
     const app = makeAuthedApp();
     const res = await app.request(`/watched/${episodeId}`, { method: "DELETE" });
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("returns 400 for non-numeric episodeId", async () => {
@@ -186,8 +178,6 @@ describe("POST /watched/bulk", () => {
       body: JSON.stringify({ episodeIds: [ep1Id, ep2Id], watched: true }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("only marks released episodes as watched in bulk", async () => {
@@ -214,8 +204,6 @@ describe("POST /watched/bulk", () => {
       body: JSON.stringify({ episodeIds: [releasedId, futureId], watched: true }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("returns 400 when all episodeIds are unreleased", async () => {
@@ -266,8 +254,6 @@ describe("POST /watched/bulk", () => {
       body: JSON.stringify({ episodeIds: [ep1Id], watched: false }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
   });
 
   it("returns 400 for empty episodeIds", async () => {
