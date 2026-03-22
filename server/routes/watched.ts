@@ -36,6 +36,7 @@ app.post("/bulk", async (c) => {
 app.post("/:episodeId", async (c) => {
   const user = c.get("user")!;
   const episodeId = Number(c.req.param("episodeId"));
+  if (isNaN(episodeId)) return c.json({ error: "Invalid episodeId" }, 400);
   const airDate = await getEpisodeAirDate(episodeId);
   if (!isReleased(airDate)) {
     return err(c, "Cannot mark an unreleased episode as watched");
@@ -47,6 +48,7 @@ app.post("/:episodeId", async (c) => {
 app.delete("/:episodeId", async (c) => {
   const user = c.get("user")!;
   const episodeId = Number(c.req.param("episodeId"));
+  if (isNaN(episodeId)) return c.json({ error: "Invalid episodeId" }, 400);
   await unwatchEpisode(episodeId, user.id);
   return ok(c, {});
 });

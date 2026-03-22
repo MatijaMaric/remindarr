@@ -94,6 +94,7 @@ app.get("/show/:id/season/:season", async (c) => {
   if (!title) return err(c, "Title not found", 404);
 
   const seasonNumber = Number(c.req.param("season"));
+  if (isNaN(seasonNumber)) return c.json({ error: "Invalid season number" }, 400);
 
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
@@ -114,6 +115,7 @@ app.get("/show/:id/season/:season/episode/:episode", async (c) => {
 
   const seasonNumber = Number(c.req.param("season"));
   const episodeNumber = Number(c.req.param("episode"));
+  if (isNaN(seasonNumber) || isNaN(episodeNumber)) return c.json({ error: "Invalid season or episode number" }, 400);
 
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
