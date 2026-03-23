@@ -67,18 +67,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      authClient.getSession().then((r) => r.data),
-      fetch("/api/auth/custom/providers").then((r) => r.json()),
-    ])
-      .then(([sessionData, provData]) => {
-        setUser(mapSessionToUser(sessionData));
-        setProviders(provData);
-      })
-      .catch(() => {
+    async function init() {
+      try {
+        const [sessionResult, provData] = await Promise.allSettled([
+          authClient.getSession().then((r) => r.data),
+          fetch("/api/auth/custom/providers").then((r) => r.json()),
+        ]);
+        setUser(
+          sessionResult.status === "fulfilled"
+            ? mapSessionToUser(sessionResult.value)
+            : null
+        );
+        if (provData.status === "fulfilled") {
+          setProviders(provData.value);
+        }
+      } catch {
         setUser(null);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
   }, []);
 
   // Listen for 401 events from api.ts
