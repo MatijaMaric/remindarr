@@ -1,0 +1,267 @@
+/**
+ * Portable job processor that uses Drizzle ORM (no bun:sqlite dependency).
+ *
+ * Used by the CF Workers scheduled handler to claim and execute pending jobs
+ * from the `jobs` table. The Bun server uses its own polling worker instead.
+ */
+import { eq, and, lte, asc, sql, inArray } from "drizzle-orm";
+import { getDb, jobs } from "../db/schema";
+import { CONFIG } from "../config";
+import { logger } from "../logger";
+import { upsertTitles, deleteExpiredSessions } from "../db/repository";
+import {
+  getDueNotifiers,
+  getDistinctNotifierTimezones,
+  markNotifierSent,
+  disableNotifier,
+} from "../db/repository";
+import { fetchNewReleases } from "../tmdb/sync-titles";
+import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
+import { getProvider } from "../notifications/registry";
+import { buildNotificationContent } from "../notifications/content";
+import { SubscriptionExpiredError } from "../notifications/webpush";
+
+const log = logger.child({ module: "job-processor" });
+
+// ─── Job Handlers ──────────────────────────────────────────────────────────
+
+async function handleSyncTitles(): Promise<void> {
+  const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });
+  const count = await upsertTitles(titles);
+  log.info("Synced titles from TMDB", { count });
+}
+
+async function handleSyncEpisodes(): Promise<void> {
+  if (!CONFIG.TMDB_API_KEY) {
+    log.info("Skipping episode sync", { reason: "TMDB_API_KEY not configured" });
+    return;
+  }
+  const result = await syncEpisodes();
+  log.info("Synced episodes", { synced: result.synced, shows: result.shows });
+}
+
+async function handleSyncShowEpisodes(data: string | null): Promise<void> {
+  if (!CONFIG.TMDB_API_KEY) {
+    log.info("Skipping show episode sync", { reason: "TMDB_API_KEY not configured" });
+    return;
+  }
+  const parsed = data ? JSON.parse(data) : null;
+  if (!parsed?.titleId || !parsed?.tmdbId || !parsed?.title) {
+    throw new Error("sync-show-episodes job missing required data fields");
+  }
+  const count = await syncEpisodesForShow(parsed.titleId, parsed.tmdbId, parsed.title);
+  log.info("Synced show episodes via job", { title: parsed.title, episodes: count });
+}
+
+function getCurrentTimeInTimezone(tz: string): { time: string; date: string } {
+  const now = new Date();
+  const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return {
+    time: timeFormatter.format(now),
+    date: dateFormatter.format(now),
+  };
+}
+
+async function handleSendNotifications(): Promise<void> {
+  const timezones = await getDistinctNotifierTimezones();
+  if (timezones.length === 0) return;
+
+  const timesByTimezone = new Map<string, { time: string; date: string }>();
+  for (const tz of timezones) {
+    try {
+      timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
+    } catch {
+      log.warn("Invalid timezone", { timezone: tz });
+    }
+  }
+
+  const dueNotifiers = await getDueNotifiers(timesByTimezone);
+  if (dueNotifiers.length === 0) return;
+
+  log.info("Processing due notifiers", { count: dueNotifiers.length });
+
+  for (const notifier of dueNotifiers) {
+    try {
+      const provider = getProvider(notifier.provider);
+      if (!provider) {
+        log.warn("Unknown provider", { provider: notifier.provider, notifierId: notifier.id });
+        continue;
+      }
+
+      const content = await buildNotificationContent(notifier.user_id, notifier.todayDate);
+
+      if (content.episodes.length === 0 && content.movies.length === 0) {
+        await markNotifierSent(notifier.id, notifier.todayDate);
+        continue;
+      }
+
+      await provider.send(notifier.config, content);
+      await markNotifierSent(notifier.id, notifier.todayDate);
+      log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
+    } catch (err) {
+      if (err instanceof SubscriptionExpiredError) {
+        log.warn("Push subscription expired, disabling notifier", { notifierId: notifier.id });
+        await disableNotifier(notifier.id);
+        continue;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      log.error("Failed to send notification", {
+        provider: notifier.provider,
+        notifierId: notifier.id,
+        error: message,
+      });
+    }
+  }
+}
+
+// ─── Job Dispatcher ────────────────────────────────────────────────────────
+
+const handlers: Record<string, (data: string | null) => Promise<void>> = {
+  "sync-titles": () => handleSyncTitles(),
+  "sync-episodes": () => handleSyncEpisodes(),
+  "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
+  "send-notifications": () => handleSendNotifications(),
+};
+
+interface JobRow {
+  id: number;
+  name: string;
+  data: string | null;
+  status: string;
+  attempts: number;
+  maxAttempts: number;
+}
+
+/**
+ * Process all pending jobs from the `jobs` table.
+ * Each job is claimed (set to running), executed, then marked completed or failed.
+ */
+export async function processPendingJobs(): Promise<number> {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  const pendingJobs = await db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.status, "pending"), lte(jobs.runAt, now)))
+    .orderBy(asc(jobs.runAt))
+    .all();
+
+  if (pendingJobs.length === 0) return 0;
+
+  log.info("Processing pending jobs", { count: pendingJobs.length });
+  let processed = 0;
+
+  for (const job of pendingJobs) {
+    const handler = handlers[job.name];
+    if (!handler) {
+      log.warn("Unknown job type, marking failed", { name: job.name, jobId: job.id });
+      await db
+        .update(jobs)
+        .set({ status: "failed", error: `Unknown job type: ${job.name}`, completedAt: now })
+        .where(eq(jobs.id, job.id));
+      continue;
+    }
+
+    // Claim the job
+    await db
+      .update(jobs)
+      .set({ status: "running", startedAt: now, attempts: job.attempts + 1 })
+      .where(eq(jobs.id, job.id));
+
+    try {
+      await handler(job.data);
+      await db
+        .update(jobs)
+        .set({ status: "completed", completedAt: new Date().toISOString() })
+        .where(eq(jobs.id, job.id));
+      log.info("Completed job", { name: job.name, jobId: job.id });
+      processed++;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const newAttempts = job.attempts + 1;
+
+      if (newAttempts < job.maxAttempts) {
+        // Re-queue with exponential backoff: 2^attempts * 30 seconds
+        const delaySec = Math.pow(2, newAttempts) * 30;
+        const retryAt = new Date(Date.now() + delaySec * 1000).toISOString();
+        await db
+          .update(jobs)
+          .set({ status: "pending", error: message, runAt: retryAt })
+          .where(eq(jobs.id, job.id));
+        log.warn("Job failed, will retry", {
+          name: job.name,
+          jobId: job.id,
+          attempt: newAttempts,
+          maxAttempts: job.maxAttempts,
+          retryAt,
+          error: message,
+        });
+      } else {
+        await db
+          .update(jobs)
+          .set({ status: "failed", error: message, completedAt: new Date().toISOString() })
+          .where(eq(jobs.id, job.id));
+        log.error("Job failed permanently", {
+          name: job.name,
+          jobId: job.id,
+          attempts: newAttempts,
+          error: message,
+        });
+      }
+    }
+  }
+
+  return processed;
+}
+
+/**
+ * Enqueue a cron-triggered job if one isn't already pending for that name.
+ */
+export async function enqueueCronJob(name: string): Promise<void> {
+  const db = getDb();
+  const existing = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(and(eq(jobs.name, name), inArray(jobs.status, ["pending", "running"])))
+    .get();
+
+  if (existing) {
+    log.debug("Cron job already pending/running, skipping", { name });
+    return;
+  }
+
+  await db.insert(jobs).values({
+    name,
+    runAt: new Date().toISOString(),
+  });
+  log.info("Enqueued cron job", { name });
+}
+
+/**
+ * Clean up old completed/failed jobs.
+ */
+export async function cleanupOldJobs(retentionDays: number = 30): Promise<number> {
+  const db = getDb();
+  const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  const result = await db
+    .delete(jobs)
+    .where(
+      and(
+        inArray(jobs.status, ["completed", "failed"]),
+        lte(jobs.completedAt, cutoff)
+      )
+    );
+  return result.rowsAffected ?? 0;
+}

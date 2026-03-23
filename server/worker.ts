@@ -57,6 +57,7 @@ import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig } from "./config";
 import Sentry from "./sentry";
 import { CloudflarePlatform } from "./platform/cloudflare";
+import { processPendingJobs, enqueueCronJob, cleanupOldJobs } from "./jobs/processor";
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
 import type { DrizzleDb } from "./platform/types";
@@ -327,7 +328,20 @@ export default {
       const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
       const honoApp = getApp(env);
 
-      return await runWithDb(db, () => honoApp.fetch(request, env, ctx as any));
+      const response = await runWithDb(db, () => honoApp.fetch(request, env, ctx as any));
+
+      // Process pending jobs in the background after each request.
+      // This ensures ad-hoc jobs (e.g. sync-show-episodes queued on track)
+      // are picked up promptly without waiting for the next cron trigger.
+      ctx.waitUntil(
+        runWithDb(db, () => processPendingJobs()).catch((err) => {
+          logger.error("Background job processing error", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        })
+      );
+
+      return response;
     } catch (err) {
       Sentry.captureException(err);
       logger.error("Worker fetch error", {
@@ -352,23 +366,32 @@ export default {
         const cron = event.cron;
         logger.info("Scheduled event", { cron });
 
+        // Map cron triggers to job names and enqueue if not already pending
         switch (cron) {
           case "0 3 * * *":
-            logger.info("Running sync-titles cron");
+            await enqueueCronJob("sync-titles");
             break;
           case "30 3 * * *":
-            logger.info("Running sync-episodes cron");
+            await enqueueCronJob("sync-episodes");
             break;
           case "*/5 * * * *":
-            logger.info("Running send-notifications cron");
+            await enqueueCronJob("send-notifications");
             break;
           case "0 0 * * *":
             await deleteExpiredSessions();
+            await cleanupOldJobs(30);
             logger.info("Cleanup complete");
             break;
         }
+
+        // Process all pending jobs (cron-triggered + ad-hoc like sync-show-episodes)
+        const processed = await processPendingJobs();
+        if (processed > 0) {
+          logger.info("Processed jobs", { count: processed, cron });
+        }
       });
     } catch (err) {
+      Sentry.captureException(err);
       logger.error("Worker scheduled error", {
         cron: event.cron,
         error: err instanceof Error ? err.message : String(err),
