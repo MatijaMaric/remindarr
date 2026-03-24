@@ -78,6 +78,7 @@ export async function getEpisodesByMonth(filters: MonthFilters, userId?: string)
         show_title: titles.title,
         show_original_title: titles.originalTitle,
         poster_url: titles.posterUrl,
+        backdrop_url: titles.backdropUrl,
         is_watched: sql<boolean>`EXISTS(
           SELECT 1 FROM watched_episodes we
           WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
@@ -121,6 +122,7 @@ export async function getEpisodesByDateRange(startDate: string, endDate: string,
         show_title: titles.title,
         show_original_title: titles.originalTitle,
         poster_url: titles.posterUrl,
+        backdrop_url: titles.backdropUrl,
         is_watched: sql<boolean>`EXISTS(
           SELECT 1 FROM watched_episodes we
           WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
@@ -171,6 +173,7 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
         show_title: titles.title,
         show_original_title: titles.originalTitle,
         poster_url: titles.posterUrl,
+        backdrop_url: titles.backdropUrl,
       })
       .from(episodes)
       .innerJoin(titles, eq(titles.id, episodes.titleId))

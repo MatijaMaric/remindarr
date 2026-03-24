@@ -15,6 +15,7 @@ import {
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
+import HeroBanner from "../components/HeroBanner";
 
 export function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<number, Episode[]>> {
   const map = new Map<string, Map<number, Episode[]>>();
@@ -374,6 +375,9 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      {/* Hero Banner (desktop only) */}
+      {unwatched.length > 0 && <HeroBanner episodes={unwatched} />}
+
       {/* Unwatched Episodes */}
       {unwatched.length > 0 && (
         <section>

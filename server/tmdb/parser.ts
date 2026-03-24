@@ -25,6 +25,7 @@ export interface ParsedTitle {
   imdbId: string | null;
   tmdbId: string | null;
   posterUrl: string | null;
+  backdropUrl: string | null;
   ageCertification: string | null;
   tmdbUrl: string | null;
   offers: ParsedOffer[];
@@ -63,6 +64,11 @@ export interface ParsedProvider {
 function posterUrl(path: string | null): string | null {
   if (!path) return null;
   return `${CONFIG.TMDB_IMAGE_BASE_URL}/w342${path}`;
+}
+
+function backdropUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return `${CONFIG.TMDB_IMAGE_BASE_URL}/w1280${path}`;
 }
 
 function providerIconUrl(path: string): string {
@@ -148,6 +154,7 @@ export function parseMovieDetails(movie: TmdbMovieDetails): ParsedTitle {
     imdbId: movie.external_ids?.imdb_id || null,
     tmdbId: String(movie.id),
     posterUrl: posterUrl(movie.poster_path),
+    backdropUrl: backdropUrl(movie.backdrop_path),
     ageCertification: null,
     tmdbUrl,
     offers: parseWatchProviders(movie["watch/providers"], id, tmdbUrl),
@@ -178,6 +185,7 @@ export function parseTvDetails(tv: TmdbTvDetails): ParsedTitle {
     imdbId: tv.external_ids?.imdb_id || null,
     tmdbId: String(tv.id),
     posterUrl: posterUrl(tv.poster_path),
+    backdropUrl: backdropUrl(tv.backdrop_path),
     ageCertification: null,
     tmdbUrl,
     offers: parseWatchProviders(tv["watch/providers"], id, tmdbUrl),
@@ -210,6 +218,7 @@ export function parseDiscoverMovie(
     imdbId: null,
     tmdbId: String(movie.id),
     posterUrl: posterUrl(movie.poster_path),
+    backdropUrl: null,
     ageCertification: null,
     tmdbUrl: `https://www.themoviedb.org/movie/${movie.id}`,
     offers: [],
@@ -240,6 +249,7 @@ export function parseDiscoverTv(
     imdbId: null,
     tmdbId: String(tv.id),
     posterUrl: posterUrl(tv.poster_path),
+    backdropUrl: null,
     ageCertification: null,
     tmdbUrl: `https://www.themoviedb.org/tv/${tv.id}`,
     offers: [],
@@ -273,6 +283,7 @@ export function parseSearchResult(
       imdbId: null,
       tmdbId: String(result.id),
       posterUrl: posterUrl(result.poster_path || null),
+      backdropUrl: null,
       ageCertification: null,
       tmdbUrl: `https://www.themoviedb.org/movie/${result.id}`,
       offers: [],
@@ -300,6 +311,7 @@ export function parseSearchResult(
     imdbId: null,
     tmdbId: String(result.id),
     posterUrl: posterUrl(result.poster_path || null),
+    backdropUrl: null,
     ageCertification: null,
     tmdbUrl: `https://www.themoviedb.org/tv/${result.id}`,
     offers: [],

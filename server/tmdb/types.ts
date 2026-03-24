@@ -70,6 +70,7 @@ export interface TmdbMovieDetails {
   runtime: number | null;
   genres: TmdbGenre[];
   poster_path: string | null;
+  backdrop_path?: string | null;
   adult: boolean;
   vote_average: number;
   vote_count: number;
@@ -89,6 +90,7 @@ export interface TmdbTvDetails {
   episode_run_time: number[];
   genres: TmdbGenre[];
   poster_path: string | null;
+  backdrop_path?: string | null;
   vote_average: number;
   vote_count: number;
   popularity: number;

@@ -41,6 +41,7 @@ export const titles = sqliteTable(
     imdbId: text("imdb_id"),
     tmdbId: text("tmdb_id"),
     posterUrl: text("poster_url"),
+    backdropUrl: text("backdrop_url"),
     ageCertification: text("age_certification"),
     originalLanguage: text("original_language"),
     tmdbUrl: text("tmdb_url"),
