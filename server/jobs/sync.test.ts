@@ -20,9 +20,14 @@ const mockFetchNewReleases = spyOn(syncTitlesModule, "fetchNewReleases").mockRes
 import * as repository from "../db/repository";
 const mockUpsertTitles = spyOn(repository, "upsertTitles").mockResolvedValue(0);
 
-// Mock tmdb/sync syncEpisodes — use spyOn
+// Mock tmdb/sync syncEpisodes and syncEpisodesForShow — use spyOn
 import * as syncModule from "../tmdb/sync";
 const mockSyncEpisodes = spyOn(syncModule, "syncEpisodes").mockResolvedValue({ synced: 0, shows: 0 });
+const mockSyncEpisodesForShow = spyOn(syncModule, "syncEpisodesForShow").mockResolvedValue(0);
+
+// Mock episode repository functions for watched episode restoration
+const mockGetEpisodeIdsBySE = spyOn(repository, "getEpisodeIdsBySE").mockResolvedValue([]);
+const mockWatchEpisodesBulk = spyOn(repository, "watchEpisodesBulk").mockResolvedValue(undefined);
 
 // Mock migrate-titles — use spyOn
 import * as migrateTitlesModule from "./migrate-titles";
@@ -40,6 +45,9 @@ beforeEach(() => {
   mockFetchNewReleases.mockClear();
   mockUpsertTitles.mockClear();
   mockSyncEpisodes.mockClear();
+  mockSyncEpisodesForShow.mockClear();
+  mockGetEpisodeIdsBySE.mockClear();
+  mockWatchEpisodesBulk.mockClear();
   mockMigrateTitles.mockClear();
   captureExceptionSpy.mockClear();
 });
@@ -51,6 +59,9 @@ afterAll(() => {
   mockFetchNewReleases.mockRestore();
   mockUpsertTitles.mockRestore();
   mockSyncEpisodes.mockRestore();
+  mockSyncEpisodesForShow.mockRestore();
+  mockGetEpisodeIdsBySE.mockRestore();
+  mockWatchEpisodesBulk.mockRestore();
   mockMigrateTitles.mockRestore();
 });
 
@@ -214,5 +225,88 @@ describe("migrate-titles handler", () => {
     await processJobs();
 
     expect(captureExceptionSpy).toHaveBeenCalledWith(error);
+  });
+});
+
+// ─── sync-show-episodes handler ─────────────────────────────────────────────
+
+describe("sync-show-episodes handler", () => {
+  const originalApiKey = CONFIG.TMDB_API_KEY;
+
+  beforeEach(() => {
+    registerSyncJobs();
+    claimNextJob("migrate-titles");
+    CONFIG.TMDB_API_KEY = "test-api-key";
+  });
+
+  afterAll(() => {
+    CONFIG.TMDB_API_KEY = originalApiKey;
+  });
+
+  it("restores watched episodes after syncing when watchedEpisodes and userId are in job data", async () => {
+    mockSyncEpisodesForShow.mockResolvedValueOnce(10);
+    mockGetEpisodeIdsBySE.mockResolvedValueOnce([1, 2, 3]);
+
+    enqueueJob("sync-show-episodes", {
+      titleId: "tv-100",
+      tmdbId: "100",
+      title: "Test Show",
+      watchedEpisodes: [{ season: 1, episode: 1 }, { season: 1, episode: 2 }, { season: 1, episode: 3 }],
+      userId: "user-abc",
+    });
+    await processJobs();
+
+    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith("tv-100", "100", "Test Show");
+    expect(mockGetEpisodeIdsBySE).toHaveBeenCalledWith("tv-100", [
+      { season: 1, episode: 1 },
+      { season: 1, episode: 2 },
+      { season: 1, episode: 3 },
+    ]);
+    expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([1, 2, 3], "user-abc");
+  });
+
+  it("does not attempt watched restoration when watchedEpisodes is not in job data", async () => {
+    mockSyncEpisodesForShow.mockResolvedValueOnce(5);
+
+    enqueueJob("sync-show-episodes", {
+      titleId: "tv-200",
+      tmdbId: "200",
+      title: "Another Show",
+    });
+    await processJobs();
+
+    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith("tv-200", "200", "Another Show");
+    expect(mockGetEpisodeIdsBySE).not.toHaveBeenCalled();
+    expect(mockWatchEpisodesBulk).not.toHaveBeenCalled();
+  });
+
+  it("does not call watchEpisodesBulk when no episode IDs are resolved", async () => {
+    mockSyncEpisodesForShow.mockResolvedValueOnce(10);
+    mockGetEpisodeIdsBySE.mockResolvedValueOnce([]);
+
+    enqueueJob("sync-show-episodes", {
+      titleId: "tv-300",
+      tmdbId: "300",
+      title: "No Match Show",
+      watchedEpisodes: [{ season: 99, episode: 99 }],
+      userId: "user-xyz",
+    });
+    await processJobs();
+
+    expect(mockGetEpisodeIdsBySE).toHaveBeenCalled();
+    expect(mockWatchEpisodesBulk).not.toHaveBeenCalled();
+  });
+
+  it("skips sync when TMDB_API_KEY is not set", async () => {
+    CONFIG.TMDB_API_KEY = "";
+
+    enqueueJob("sync-show-episodes", {
+      titleId: "tv-400",
+      tmdbId: "400",
+      title: "Skip Show",
+    });
+    await processJobs();
+
+    expect(mockSyncEpisodesForShow).not.toHaveBeenCalled();
   });
 });

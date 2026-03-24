@@ -182,7 +182,21 @@ app.post("/import", async (c) => {
 
       await trackTitle(item.id, user.id, item.notes ?? undefined);
 
-      if (Array.isArray(item.watched_episodes) && item.watched_episodes.length > 0) {
+      const hasWatched = Array.isArray(item.watched_episodes) && item.watched_episodes.length > 0;
+      const canSyncEpisodes = item.object_type === "SHOW" && item.tmdb_id && CONFIG.TMDB_API_KEY;
+
+      if (canSyncEpisodes) {
+        const jobData: Record<string, unknown> = {
+          titleId: item.id,
+          tmdbId: item.tmdb_id,
+          title: item.title,
+        };
+        if (hasWatched) {
+          jobData.watchedEpisodes = item.watched_episodes;
+          jobData.userId = user.id;
+        }
+        await enqueueJobDrizzle("sync-show-episodes", jobData);
+      } else if (hasWatched) {
         const episodeIds = await getEpisodeIdsBySE(item.id, item.watched_episodes);
         if (episodeIds.length > 0) {
           await watchEpisodesBulk(episodeIds, user.id);

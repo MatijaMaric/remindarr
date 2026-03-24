@@ -5,7 +5,7 @@ const log = logger.child({ module: "sync" });
 import { registerCron, enqueueJob } from "./queue";
 import { CONFIG } from "../config";
 import { fetchNewReleases } from "../tmdb/sync-titles";
-import { upsertTitles } from "../db/repository";
+import { upsertTitles, getEpisodeIdsBySE, watchEpisodesBulk } from "../db/repository";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
 import { migrateTitles } from "./migrate-titles";
 
@@ -38,6 +38,19 @@ export function registerSyncJobs() {
     }
     const count = await syncEpisodesForShow(data.titleId, data.tmdbId, data.title);
     log.info("Synced show episodes via job", { title: data.title, episodes: count });
+
+    // Restore watched episodes if provided (from watchlist import)
+    if (Array.isArray(data.watchedEpisodes) && data.watchedEpisodes.length > 0 && data.userId) {
+      const episodeIds = await getEpisodeIdsBySE(data.titleId, data.watchedEpisodes);
+      if (episodeIds.length > 0) {
+        await watchEpisodesBulk(episodeIds, data.userId);
+        log.info("Restored watched episodes from import", {
+          title: data.title,
+          watched: episodeIds.length,
+          requested: data.watchedEpisodes.length,
+        });
+      }
+    }
   });
 
   registerHandler("migrate-titles", async () => {
