@@ -54,6 +54,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-router": ["react-router"],
+          "vendor-ui": ["lucide-react", "sonner", "tailwind-merge", "clsx", "class-variance-authority"],
+          "vendor-sentry": ["@sentry/react"],
+          "vendor-i18n": ["i18next", "react-i18next"],
+          "vendor-auth": ["better-auth"],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

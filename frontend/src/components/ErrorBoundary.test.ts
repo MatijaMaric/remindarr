@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from "bun:test";
 import * as Sentry from "@sentry/react";
 import ErrorBoundary from "./ErrorBoundary";
 
@@ -41,7 +41,7 @@ describe("ErrorBoundary", () => {
     expect(instance.state.error).toBeNull();
   });
 
-  it("componentDidCatch reports to Sentry", () => {
+  it("componentDidCatch reports to Sentry", async () => {
     const instance = new ErrorBoundary({ children: null });
     const error = new Error("render crash");
     const info = { componentStack: "<App>\n<ErrorBoundary>", digest: undefined };
@@ -51,6 +51,9 @@ describe("ErrorBoundary", () => {
     console.error = () => {};
     instance.componentDidCatch(error, info);
     console.error = origError;
+
+    // Wait for the dynamic import to resolve
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(Sentry.captureException).toHaveBeenCalledWith(error, {
       contexts: { react: { componentStack: info.componentStack } },
