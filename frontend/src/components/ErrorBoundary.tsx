@@ -1,5 +1,4 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import * as Sentry from "@sentry/react";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "error-boundary" });
@@ -25,9 +24,13 @@ export default class ErrorBoundary extends Component<Props, State> {
       error,
       componentStack: info.componentStack,
     });
-    Sentry.captureException(error, {
-      contexts: { react: { componentStack: info.componentStack } },
-    });
+    import("@sentry/react")
+      .then((Sentry) => {
+        Sentry.captureException(error, {
+          contexts: { react: { componentStack: info.componentStack } },
+        });
+      })
+      .catch(() => {});
   }
 
   handleReset = () => {

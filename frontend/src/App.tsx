@@ -1,25 +1,27 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, NavLink, Link, Navigate, useLocation } from "react-router";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
 import { useIsMobile } from "./hooks/useIsMobile";
-import HomePage from "./pages/HomePage";
-import BrowsePage from "./pages/BrowsePage";
-import TrackedPage from "./pages/TrackedPage";
-import CalendarPage from "./pages/CalendarPage";
-import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
-import ProfilePage from "./pages/ProfilePage";
-import TitleDetailPage from "./pages/TitleDetailPage";
-import SeasonDetailPage from "./pages/SeasonDetailPage";
-import EpisodeDetailPage from "./pages/EpisodeDetailPage";
-import PersonPage from "./pages/PersonPage";
-import ReelsPage from "./pages/ReelsPage";
-import UpcomingPage from "./pages/UpcomingPage";
 import RequireAuth from "./components/RequireAuth";
 import BottomTabBar from "./components/BottomTabBar";
 import OfflineIndicator from "./components/OfflineIndicator";
 import { navLinkClass } from "./nav-utils";
+
+const HomePage = lazy(() => import("./pages/HomePage"));
+const BrowsePage = lazy(() => import("./pages/BrowsePage"));
+const TrackedPage = lazy(() => import("./pages/TrackedPage"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignupPage = lazy(() => import("./pages/SignupPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const TitleDetailPage = lazy(() => import("./pages/TitleDetailPage"));
+const SeasonDetailPage = lazy(() => import("./pages/SeasonDetailPage"));
+const EpisodeDetailPage = lazy(() => import("./pages/EpisodeDetailPage"));
+const PersonPage = lazy(() => import("./pages/PersonPage"));
+const ReelsPage = lazy(() => import("./pages/ReelsPage"));
+const UpcomingPage = lazy(() => import("./pages/UpcomingPage"));
 
 function MobileHomeRedirect() {
   const { user, loading } = useAuth();
@@ -112,21 +114,23 @@ export default function App() {
         </div>
       </nav>
       <main id="main-content" className={isReelsPage ? "" : "max-w-7xl mx-auto px-4 py-6 pb-20 sm:pb-6"}>
-        <Routes>
-          <Route path="/" element={<MobileHomeRedirect />} />
-          <Route path="/browse" element={<BrowsePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/tracked" element={<RequireAuth><TrackedPage /></RequireAuth>} />
-          <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
-          <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
-          <Route path="/upcoming" element={<RequireAuth><UpcomingPage /></RequireAuth>} />
-          <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-          <Route path="/title/:id" element={<TitleDetailPage />} />
-          <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
-          <Route path="/title/:id/season/:season/episode/:episode" element={<EpisodeDetailPage />} />
-          <Route path="/person/:personId" element={<PersonPage />} />
-        </Routes>
+        <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
+          <Routes>
+            <Route path="/" element={<MobileHomeRedirect />} />
+            <Route path="/browse" element={<BrowsePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/tracked" element={<RequireAuth><TrackedPage /></RequireAuth>} />
+            <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
+            <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
+            <Route path="/upcoming" element={<RequireAuth><UpcomingPage /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+            <Route path="/title/:id" element={<TitleDetailPage />} />
+            <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
+            <Route path="/title/:id/season/:season/episode/:episode" element={<EpisodeDetailPage />} />
+            <Route path="/person/:personId" element={<PersonPage />} />
+          </Routes>
+        </Suspense>
       </main>
       <BottomTabBar />
       <OfflineIndicator />
