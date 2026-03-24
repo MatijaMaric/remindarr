@@ -8,6 +8,7 @@ import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles, getEpisodeIdsBySE, watchEpisodesBulk } from "../db/repository";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
 import { migrateTitles } from "./migrate-titles";
+import { migrateBackdrops } from "./migrate-backdrops";
 
 export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -57,6 +58,10 @@ export function registerSyncJobs() {
     await migrateTitles();
   });
 
+  registerHandler("migrate-backdrops", async () => {
+    await migrateBackdrops();
+  });
+
   // ─── Cron Schedules ────────────────────────────────────────────────────
 
   registerCron("sync-titles", CONFIG.SYNC_TITLES_CRON);
@@ -64,4 +69,7 @@ export function registerSyncJobs() {
 
   // Enqueue one-time title migration (will no-op if all titles already have original_title)
   enqueueJob("migrate-titles", undefined, { maxAttempts: 1 });
+
+  // Enqueue one-time backdrop backfill (will no-op if all titles already have backdrop_url)
+  enqueueJob("migrate-backdrops", undefined, { maxAttempts: 1 });
 }
