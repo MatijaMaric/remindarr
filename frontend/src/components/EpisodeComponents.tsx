@@ -52,7 +52,7 @@ export function WatchedIcon({ watched, onClick, disabled }: { watched: boolean; 
   if (disabled) {
     return (
       <span
-        className="flex-shrink-0 text-gray-700 cursor-not-allowed"
+        className="flex-shrink-0 text-zinc-700 cursor-not-allowed"
         aria-label={t("episodes.notYetReleased")}
         role="img"
       >
@@ -69,7 +69,7 @@ export function WatchedIcon({ watched, onClick, disabled }: { watched: boolean; 
       aria-pressed={watched}
       aria-label={watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")}
       className={`flex-shrink-0 cursor-pointer transition-colors ${
-        watched ? "text-emerald-500 hover:text-gray-500" : "text-gray-600 hover:text-emerald-500"
+        watched ? "text-emerald-500 hover:text-zinc-500" : "text-zinc-600 hover:text-emerald-500"
       }`}
     >
       {watched ? (
@@ -91,7 +91,7 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 bg-gray-900 rounded-lg border border-gray-800 p-3">
+      <div className="flex items-center gap-3 bg-zinc-900 rounded-lg p-3">
         <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} />
         {episode.poster_url && (
           <Link to={`/title/${episode.title_id}`} className="flex-shrink-0">
@@ -104,11 +104,11 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
           </Link>
         )}
         <div className="flex-1 min-w-0">
-          <Link to={`/title/${episode.title_id}`} className="hover:text-indigo-400 transition-colors">
+          <Link to={`/title/${episode.title_id}`} className="hover:text-amber-400 transition-colors">
             <p className="text-sm font-medium text-white truncate">{episode.show_title}</p>
           </Link>
-          <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-indigo-400 transition-colors">
-            <p className="text-xs text-gray-400">
+          <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-amber-400 transition-colors">
+            <p className="text-xs text-zinc-400">
               {formatEpisodeCode(episode)}
               {episode.name && ` · ${episode.name}`}
             </p>
@@ -128,7 +128,7 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
   }
 
   return (
-    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+    <div className="bg-zinc-900 rounded-xl overflow-hidden">
       <div className="flex gap-4 p-4">
         <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} />
         {episode.poster_url && (
@@ -142,17 +142,17 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
           </Link>
         )}
         <div className="flex-1 min-w-0">
-          <Link to={`/title/${episode.title_id}`} className="hover:text-indigo-400 transition-colors">
+          <Link to={`/title/${episode.title_id}`} className="hover:text-amber-400 transition-colors">
             <h3 className="font-semibold text-white">{episode.show_title}</h3>
           </Link>
-          <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-indigo-400 transition-colors">
-            <p className="text-sm text-indigo-400 font-medium mt-0.5">
+          <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-amber-400 transition-colors">
+            <p className="text-sm text-amber-400 font-medium mt-0.5">
               {formatEpisodeCode(episode)}
               {episode.name && ` · ${episode.name}`}
             </p>
           </Link>
           {episode.overview && (
-            <p className="text-sm text-gray-400 mt-2 line-clamp-2">{episode.overview}</p>
+            <p className="text-sm text-zinc-400 mt-2 line-clamp-2">{episode.overview}</p>
           )}
           {providers.length > 0 && (
             <div className="flex gap-1.5 mt-3">
@@ -184,22 +184,22 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 bg-gray-900 rounded-lg border border-gray-800 p-3">
+      <div className="flex items-center gap-3 bg-zinc-900 rounded-lg p-3">
         {posterUrl && (
           <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
             <img src={posterUrl} alt={showTitle} className="w-10 h-15 rounded object-cover" loading="lazy" />
           </Link>
         )}
         <div className="flex-1 min-w-0">
-          <Link to={`/title/${episodes[0].title_id}`} className="hover:text-indigo-400 transition-colors">
+          <Link to={`/title/${episodes[0].title_id}`} className="hover:text-amber-400 transition-colors">
             <p className="text-sm font-medium text-white truncate">{showTitle}</p>
           </Link>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-1">
                 <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
-                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors">
-                  <span className="text-xs text-gray-400">{formatEpisodeCode(ep)}</span>
+                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors">
+                  <span className="text-xs text-zinc-400">{formatEpisodeCode(ep)}</span>
                 </Link>
               </div>
             ))}
@@ -219,7 +219,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
   }
 
   return (
-    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+    <div className="bg-zinc-900 rounded-xl overflow-hidden">
       <div className="flex gap-4 p-4">
         {posterUrl && (
           <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
@@ -227,16 +227,16 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
           </Link>
         )}
         <div className="flex-1 min-w-0">
-          <Link to={`/title/${episodes[0].title_id}`} className="hover:text-indigo-400 transition-colors">
+          <Link to={`/title/${episodes[0].title_id}`} className="hover:text-amber-400 transition-colors">
             <h3 className="font-semibold text-white">{showTitle}</h3>
           </Link>
           <div className="mt-2 space-y-1">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
                 <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
-                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors">
-                  <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
-                  {ep.name && <span className="text-gray-400"> · {ep.name}</span>}
+                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors">
+                  <span className="text-amber-400 font-medium">{formatEpisodeCode(ep)}</span>
+                  {ep.name && <span className="text-zinc-400"> · {ep.name}</span>}
                 </Link>
               </div>
             ))}

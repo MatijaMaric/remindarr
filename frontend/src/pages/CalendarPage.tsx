@@ -78,13 +78,13 @@ type ViewMode = "grid" | "agenda";
 
 function ViewToggle({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
   return (
-    <div className="flex items-center bg-gray-800 rounded-lg p-0.5">
+    <div className="flex items-center bg-zinc-800 rounded-lg p-0.5">
       <button
         onClick={() => onViewModeChange("grid")}
         className={`p-1.5 rounded-md transition-colors cursor-pointer ${
           viewMode === "grid"
-            ? "bg-indigo-600 text-white"
-            : "text-gray-400 hover:text-white"
+            ? "bg-amber-500 text-zinc-950"
+            : "text-zinc-400 hover:text-white"
         }`}
         title="Grid view"
       >
@@ -94,8 +94,8 @@ function ViewToggle({ viewMode, onViewModeChange }: { viewMode: ViewMode; onView
         onClick={() => onViewModeChange("agenda")}
         className={`p-1.5 rounded-md transition-colors cursor-pointer ${
           viewMode === "agenda"
-            ? "bg-indigo-600 text-white"
-            : "text-gray-400 hover:text-white"
+            ? "bg-amber-500 text-zinc-950"
+            : "text-zinc-400 hover:text-white"
         }`}
         title="Agenda view"
       >
@@ -348,7 +348,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
           <select
             value={formatMonth(new Date())}
             onChange={(e) => jumpToMonth(e.target.value)}
-            className={`px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${viewMode ? "flex-1" : "w-full"}`}
+            className={`px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${viewMode ? "flex-1" : "w-full"}`}
           >
             {monthOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -367,8 +367,8 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
               onClick={() => setTypeFilter(f.value)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 typeFilter === f.value
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800"
+                  ? "bg-amber-500 text-zinc-950"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
               }`}
             >
               {f.label}
@@ -378,8 +378,8 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
             onClick={() => setHideWatched((v) => !v)}
             className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
               hideWatched
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-gray-800"
+                ? "bg-amber-500 text-zinc-950"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
             }`}
             title={hideWatched ? "Show watched" : "Hide watched"}
           >
@@ -397,7 +397,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
           <div ref={topRef} className="h-1" />
 
           {agendaItems.size === 0 ? (
-            <div className="text-center py-8 text-gray-500 text-sm">No items for this period.</div>
+            <div className="text-center py-8 text-zinc-500 text-sm">No items for this period.</div>
           ) : (
             <div className="space-y-1">
               {Array.from(agendaItems.entries()).map(([dateKey, items]) => {
@@ -413,8 +413,8 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
                     {/* Date header */}
                     <div className={`sticky top-0 z-10 px-3 py-2 text-sm font-medium ${
                       isDateToday
-                        ? "bg-indigo-900/60 text-indigo-300 border-l-2 border-indigo-500"
-                        : "bg-gray-900/95 text-gray-400"
+                        ? "bg-amber-500/10 text-amber-400 border-l-2 border-amber-500"
+                        : "bg-zinc-900/95 text-zinc-400"
                     }`}>
                       {isDateToday ? `Today — ${dateLabel}` : dateLabel}
                     </div>
@@ -430,8 +430,8 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
                               key={`e-${ep.id}-${idx}`}
                               className={`flex items-center gap-3 p-2.5 rounded-lg ${
                                 ep.is_watched
-                                  ? "bg-gray-900/30 opacity-60"
-                                  : "bg-gray-900/60"
+                                  ? "bg-zinc-900/30 opacity-60"
+                                  : "bg-zinc-900/60"
                               }`}
                             >
                               {released ? (
@@ -440,21 +440,21 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
                                   className={`flex-shrink-0 cursor-pointer transition-colors ${
                                     ep.is_watched
                                       ? "text-emerald-400 hover:text-emerald-300"
-                                      : "text-gray-600 hover:text-gray-400"
+                                      : "text-zinc-600 hover:text-zinc-400"
                                   }`}
                                 >
                                   {ep.is_watched ? <CheckCircleIcon className="size-5" /> : <CircleIcon className="size-5" />}
                                 </button>
                               ) : (
-                                <span className="flex-shrink-0 text-gray-700">
+                                <span className="flex-shrink-0 text-zinc-700">
                                   <CircleIcon className="size-5" />
                                 </span>
                               )}
                               <div className="flex-1 min-w-0">
-                                <Link to={`/title/${ep.title_id}`} className="hover:text-indigo-400 transition-colors">
+                                <Link to={`/title/${ep.title_id}`} className="hover:text-amber-400 transition-colors">
                                   <p className="text-sm font-medium text-white truncate">{ep.show_title}</p>
                                 </Link>
-                                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors">
+                                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors">
                                   <p className="text-xs text-emerald-400">
                                     S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
                                     {ep.name && ` — ${ep.name}`}
@@ -487,7 +487,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
                           <Link
                             key={`t-${t.id}-${idx}`}
                             to={`/title/${t.id}`}
-                            className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-800/60 transition-colors ${
+                            className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-zinc-800/60 transition-colors ${
                               t.object_type === "MOVIE" ? "bg-blue-900/20" : "bg-purple-900/20"
                             }`}
                           >
@@ -521,7 +521,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
           {/* Load more bottom sentinel */}
           <div ref={bottomRef} className="h-1" />
           {loadingMore && (
-            <div className="text-center py-4 text-gray-500 text-sm">Loading more...</div>
+            <div className="text-center py-4 text-zinc-500 text-sm">Loading more...</div>
           )}
         </>
       )}
@@ -675,16 +675,16 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
       {/* Header: month nav + type filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors cursor-pointer">
+          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer">
             <ChevronLeftIcon className="size-5" />
           </button>
           <h2 className="text-lg font-semibold w-44 text-center">
             {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
           </h2>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors cursor-pointer">
+          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer">
             <ChevronRightIcon className="size-5" />
           </button>
-          {loading && <span className="text-sm text-gray-500">Loading...</span>}
+          {loading && <span className="text-sm text-zinc-500">Loading...</span>}
         </div>
         <div className="flex items-center gap-2">
           {typeFilters.map((f) => (
@@ -693,8 +693,8 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
               onClick={() => setTypeFilter(f.value)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 typeFilter === f.value
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800"
+                  ? "bg-amber-500 text-zinc-950"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
               }`}
             >
               {f.label}
@@ -705,11 +705,11 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
       </div>
 
       {/* Calendar grid */}
-      <div className="border border-gray-800 rounded-xl overflow-hidden">
+      <div className="border border-white/[0.06] rounded-xl overflow-hidden">
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 bg-gray-900 border-b border-gray-800">
+        <div className="grid grid-cols-7 bg-zinc-900 border-b border-white/[0.06]">
           {WEEKDAYS.map((d) => (
-            <div key={d} className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+            <div key={d} className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase">
               {d}
             </div>
           ))}
@@ -717,10 +717,10 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
 
         {/* Weeks */}
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 border-b border-gray-800 last:border-b-0">
+          <div key={wi} className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0">
             {week.map((day, di) => {
               if (!day) {
-                return <div key={di} className="min-h-24 bg-gray-950/50" />;
+                return <div key={di} className="min-h-24 bg-zinc-950/50" />;
               }
               const dateKey = formatDateKey(day);
               const dayItems = itemsByDate.get(dateKey) ?? [];
@@ -731,16 +731,16 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
                 <button
                   key={di}
                   onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                  className={`min-h-24 p-1.5 text-left transition-colors cursor-pointer border-r border-gray-800 last:border-r-0 ${
+                  className={`min-h-24 p-1.5 text-left transition-colors cursor-pointer border-r border-white/[0.06] last:border-r-0 ${
                     isSelected
-                      ? "bg-indigo-950/40 ring-1 ring-inset ring-indigo-500"
-                      : "hover:bg-gray-900/60"
+                      ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500"
+                      : "hover:bg-zinc-900/60"
                   }`}
                 >
                   <div className={`text-xs font-medium mb-1 ${
                     isToday
-                      ? "bg-indigo-600 text-white rounded-full size-5 flex items-center justify-center"
-                      : "text-gray-400 pl-0.5"
+                      ? "bg-amber-500 text-zinc-950 rounded-full size-5 flex items-center justify-center"
+                      : "text-zinc-400 pl-0.5"
                   }`}>
                     {day.getDate()}
                   </div>
@@ -786,7 +786,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
                       );
                     })}
                     {dayItems.length > 3 && (
-                      <div className="text-[10px] text-gray-500 pl-1">
+                      <div className="text-[10px] text-zinc-500 pl-1">
                         +{dayItems.length - 3} more
                       </div>
                     )}
@@ -808,7 +808,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
               day: "numeric",
               year: "numeric",
             })}
-            <span className="text-gray-500 text-sm font-normal ml-2">
+            <span className="text-zinc-500 text-sm font-normal ml-2">
               ({selectedItems.length} item{selectedItems.length !== 1 ? "s" : ""})
             </span>
           </h3>
@@ -833,10 +833,10 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
                     <div key={titleId} className="mb-4">
                       {showGroups.size > 1 && showEps.length > 1 && (
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-gray-400">{showEps[0].show_title}</span>
+                          <span className="text-xs font-medium text-zinc-400">{showEps[0].show_title}</span>
                           <button
                             onClick={() => toggleBulkWatched(showEps.map((ep) => ep.id), !allWatched)}
-                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
                           >
                             {allWatched ? "Mark all unwatched" : "Mark all watched"}
                           </button>
@@ -848,8 +848,8 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
                             key={ep.id}
                             className={`flex gap-3 p-3 rounded-lg border transition-colors ${
                               ep.is_watched
-                                ? "bg-gray-900/30 border-gray-800/60 opacity-60"
-                                : "bg-gray-900/60 border-gray-800"
+                                ? "bg-zinc-900/30 border-zinc-800/60 opacity-60"
+                                : "bg-zinc-900/60 border-white/[0.06]"
                             }`}
                           >
                             {ep.poster_url && (
@@ -863,7 +863,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <Link to={`/title/${ep.title_id}`} className="hover:text-indigo-400 transition-colors">
+                                <Link to={`/title/${ep.title_id}`} className="hover:text-amber-400 transition-colors">
                                   <div className="text-sm font-medium text-white">{ep.show_title}</div>
                                 </Link>
                                 {isEpisodeReleased(ep) ? (
@@ -872,7 +872,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
                                     className={`flex-shrink-0 p-1 rounded-md transition-colors cursor-pointer ${
                                       ep.is_watched
                                         ? "text-emerald-400 hover:text-emerald-300"
-                                        : "text-gray-600 hover:text-gray-400"
+                                        : "text-zinc-600 hover:text-zinc-400"
                                     }`}
                                     title={ep.is_watched ? "Mark as unwatched" : "Mark as watched"}
                                   >
@@ -884,21 +884,21 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
                                   </button>
                                 ) : (
                                   <span
-                                    className="flex-shrink-0 p-1 text-gray-700 cursor-not-allowed"
+                                    className="flex-shrink-0 p-1 text-zinc-700 cursor-not-allowed"
                                     title="Not yet released"
                                   >
                                     <CircleIcon className="size-5" />
                                   </span>
                                 )}
                               </div>
-                              <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="block hover:text-indigo-400 transition-colors">
+                              <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="block hover:text-amber-400 transition-colors">
                                 <div className="text-xs text-emerald-400 mt-0.5">
                                   S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
                                   {ep.name && ` — ${ep.name}`}
                                 </div>
                               </Link>
                               {ep.overview && (
-                                <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ep.overview}</p>
+                                <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{ep.overview}</p>
                               )}
                               {(() => {
                                 const providers = getUniqueProviders(ep.offers);

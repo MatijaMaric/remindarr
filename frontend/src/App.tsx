@@ -37,18 +37,18 @@ export default function App() {
   const isReelsPage = location.pathname === "/reels";
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Skip to main content link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-amber-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
       >
         {t("nav.skipToMain")}
       </a>
       {/* Hide top nav on reels page for mobile */}
-      <nav aria-label="Main navigation" className={`bg-gray-900 border-b border-gray-800 sticky top-0 z-50 ${isReelsPage ? "hidden sm:block" : ""}`}>
+      <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 ${isReelsPage ? "hidden sm:block" : ""}`}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
-          <Link to="/" className="text-lg font-bold text-white tracking-tight hover:text-indigo-400 transition-colors">
+          <Link to="/" className="text-lg font-bold text-white tracking-tight hover:text-amber-400 transition-colors">
             Remindarr
           </Link>
           {/* Desktop nav links */}
@@ -89,13 +89,13 @@ export default function App() {
               <>
                 <Link
                   to="/profile"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                  className="text-sm text-zinc-400 hover:text-white transition-colors"
                 >
                   {user.display_name || user.username}
                 </Link>
                 <button
                   onClick={logout}
-                  className="text-sm text-gray-500 hover:text-white transition-colors cursor-pointer"
+                  className="text-sm text-zinc-500 hover:text-white transition-colors cursor-pointer"
                 >
                   {t("nav.logout")}
                 </button>
@@ -103,7 +103,7 @@ export default function App() {
             ) : (
               <NavLink
                 to="/login"
-                className="text-sm text-gray-400 hover:text-white transition-colors"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
                 {t("nav.signIn")}
               </NavLink>

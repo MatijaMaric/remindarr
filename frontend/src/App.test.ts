@@ -5,29 +5,29 @@ describe("navLinkClass", () => {
   it("returns desktop active classes", () => {
     const result = navLinkClass(true);
     expect(result).toContain("px-4 py-2");
-    expect(result).toContain("bg-indigo-600 text-white");
+    expect(result).toContain("bg-amber-500 text-zinc-950");
     expect(result).not.toContain("block w-full");
   });
 
   it("returns desktop inactive classes", () => {
     const result = navLinkClass(false);
     expect(result).toContain("px-4 py-2");
-    expect(result).toContain("text-gray-400 hover:text-white hover:bg-gray-800");
-    expect(result).not.toContain("bg-indigo-600");
+    expect(result).toContain("text-zinc-400 hover:text-white hover:bg-zinc-800");
+    expect(result).not.toContain("bg-amber-500");
   });
 
   it("returns mobile active classes", () => {
     const result = navLinkClass(true, true);
     expect(result).toContain("block w-full px-3 py-2.5");
-    expect(result).toContain("bg-indigo-600 text-white");
+    expect(result).toContain("bg-amber-500 text-zinc-950");
     expect(result).not.toContain("px-4 py-2");
   });
 
   it("returns mobile inactive classes", () => {
     const result = navLinkClass(false, true);
     expect(result).toContain("block w-full px-3 py-2.5");
-    expect(result).toContain("text-gray-400 hover:text-white hover:bg-gray-800");
-    expect(result).not.toContain("bg-indigo-600");
+    expect(result).toContain("text-zinc-400 hover:text-white hover:bg-zinc-800");
+    expect(result).not.toContain("bg-amber-500");
   });
 
   it("always includes common classes", () => {

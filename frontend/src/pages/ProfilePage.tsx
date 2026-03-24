@@ -61,17 +61,17 @@ function UserSection() {
   return (
     <section>
       <h2 className="text-xl font-bold text-white mb-4">{t("profile.title")}</h2>
-      <div className="bg-gray-900 rounded-lg p-5 space-y-3">
+      <div className="bg-zinc-900 rounded-lg p-5 space-y-3">
         <div className="flex justify-between">
-          <span className="text-gray-400">{t("profile.username")}</span>
+          <span className="text-zinc-400">{t("profile.username")}</span>
           <span className="text-white">{user?.username}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-400">{t("profile.displayName")}</span>
+          <span className="text-zinc-400">{t("profile.displayName")}</span>
           <span className="text-white">{user?.display_name || "—"}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-400">{t("profile.role")}</span>
+          <span className="text-zinc-400">{t("profile.role")}</span>
           <span className="text-white">{user?.is_admin ? t("profile.admin") : t("profile.user")}</span>
         </div>
       </div>
@@ -79,7 +79,7 @@ function UserSection() {
       {user && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold text-white mb-3">{t("profile.changePassword")}</h3>
-          <form onSubmit={handleChangePassword} className="bg-gray-900 rounded-lg p-5 space-y-4">
+          <form onSubmit={handleChangePassword} className="bg-zinc-900 rounded-lg p-5 space-y-4">
             {passwordMsg && (
               <div className="p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
                 {passwordMsg}
@@ -91,22 +91,22 @@ function UserSection() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">{t("profile.currentPassword")}</label>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">{t("profile.currentPassword")}</label>
               <input
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">{t("profile.newPassword")}</label>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">{t("profile.newPassword")}</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
                 minLength={6}
                 required
               />
@@ -114,7 +114,7 @@ function UserSection() {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
             >
               {loading ? t("profile.changing") : t("profile.changePassword")}
             </button>
@@ -125,13 +125,13 @@ function UserSection() {
       {SUPPORTED_LANGUAGES.length > 1 && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold text-white mb-3">{t("profile.language")}</h3>
-          <div className="bg-gray-900 rounded-lg p-5">
+          <div className="bg-zinc-900 rounded-lg p-5">
             <div className="flex gap-2 flex-wrap">
               {SUPPORTED_LANGUAGES.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => setLanguage(lang.code)}
-                  className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer bg-gray-700 text-white hover:bg-indigo-600"
+                  className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer bg-zinc-700 text-white hover:bg-amber-500 hover:text-zinc-950"
                 >
                   {lang.label}
                 </button>
@@ -199,23 +199,23 @@ function WatchlistSection() {
         </div>
       )}
 
-      <div className="bg-gray-900 rounded-lg p-5 space-y-4">
+      <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
         <div>
           <p className="text-white font-medium mb-1">{t("profile.exportWatchlist")}</p>
-          <p className="text-sm text-gray-400 mb-3">{t("profile.exportDescription")}</p>
+          <p className="text-sm text-zinc-400 mb-3">{t("profile.exportDescription")}</p>
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {exporting ? t("profile.exporting") : t("profile.export")}
           </button>
         </div>
 
-        <div className="border-t border-gray-800 pt-4">
+        <div className="border-t border-white/[0.06] pt-4">
           <p className="text-white font-medium mb-1">{t("profile.importWatchlist")}</p>
-          <p className="text-sm text-gray-400 mb-3">{t("profile.importDescription")}</p>
-          <label className={`px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
+          <p className="text-sm text-zinc-400 mb-3">{t("profile.importDescription")}</p>
+          <label className={`px-4 py-2 bg-zinc-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
             {importing ? t("profile.importing") : t("profile.import")}
             <input
               type="file"
@@ -367,7 +367,7 @@ function PushNotificationsSection() {
 
   const { t } = useTranslation();
 
-  if (loading) return <div className="text-gray-500">{t("profile.loadingPushStatus")}</div>;
+  if (loading) return <div className="text-zinc-500">{t("profile.loadingPushStatus")}</div>;
 
   const isEnabled = !!pushNotifier && pushNotifier.enabled && hasSubscription;
   const isDenied = permissionState === "denied";
@@ -387,13 +387,13 @@ function PushNotificationsSection() {
         </div>
       )}
 
-      <div className="bg-gray-900 rounded-lg p-5">
+      <div className="bg-zinc-900 rounded-lg p-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-white font-medium">
               {isEnabled ? "Push notifications are enabled" : "Get notified about new releases"}
             </p>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               {isEnabled
                 ? "You'll receive notifications on this device"
                 : isDenied
@@ -407,7 +407,7 @@ function PushNotificationsSection() {
                 <button
                   onClick={handleTest}
                   disabled={testing}
-                  className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {testing ? t("profile.testing") : t("profile.testPush")}
                 </button>
@@ -423,7 +423,7 @@ function PushNotificationsSection() {
               <button
                 onClick={handleEnable}
                 disabled={enabling || isDenied}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 {enabling ? t("profile.enabling") : t("profile.enablePush")}
               </button>
@@ -579,7 +579,7 @@ function NotificationsSection() {
     }
   }
 
-  if (loading) return <div className="text-gray-500">Loading notifications...</div>;
+  if (loading) return <div className="text-zinc-500">Loading notifications...</div>;
 
   return (
     <section>
@@ -602,7 +602,7 @@ function NotificationsSection() {
           {notifiers.map((n) => (
             <div
               key={n.id}
-              className="bg-gray-900 rounded-lg p-4"
+              className="bg-zinc-900 rounded-lg p-4"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -611,7 +611,7 @@ function NotificationsSection() {
                     className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                       n.enabled
                         ? "bg-green-900/50 text-green-300"
-                        : "bg-gray-700 text-gray-400"
+                        : "bg-zinc-700 text-zinc-400"
                     }`}
                   >
                     {n.enabled ? "Enabled" : "Disabled"}
@@ -621,20 +621,20 @@ function NotificationsSection() {
                   <button
                     onClick={() => handleToggle(n)}
                     disabled={toggling === n.id}
-                    className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {toggling === n.id ? "..." : n.enabled ? "Disable" : "Enable"}
                   </button>
                   <button
                     onClick={() => handleTest(n.id)}
                     disabled={testing === n.id}
-                    className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    className="px-2 py-1 text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {testing === n.id ? "Sending..." : "Test"}
                   </button>
                   <button
                     onClick={() => startEdit(n)}
-                    className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors cursor-pointer"
+                    className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors cursor-pointer"
                   >
                     Edit
                   </button>
@@ -646,10 +646,10 @@ function NotificationsSection() {
                   </button>
                 </div>
               </div>
-              <div className="text-xs text-gray-400 space-y-0.5">
+              <div className="text-xs text-zinc-400 space-y-0.5">
                 <div>
-                  Time: <span className="text-gray-300">{n.notify_time}</span>{" "}
-                  <span className="text-gray-500">({n.timezone})</span>
+                  Time: <span className="text-zinc-300">{n.notify_time}</span>{" "}
+                  <span className="text-zinc-500">({n.timezone})</span>
                 </div>
                 {n.last_sent_date && (
                   <div>Last sent: {n.last_sent_date}</div>
@@ -662,18 +662,18 @@ function NotificationsSection() {
 
       {/* Add/Edit form */}
       {showForm ? (
-        <form onSubmit={handleSave} className="bg-gray-900 rounded-lg p-5 space-y-4">
+        <form onSubmit={handleSave} className="bg-zinc-900 rounded-lg p-5 space-y-4">
           <h3 className="text-lg font-semibold text-white">
             {editingId ? "Edit Notifier" : "Add Notifier"}
           </h3>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Provider</label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Provider</label>
             <select
               value={formProvider}
               onChange={(e) => setFormProvider(e.target.value)}
               disabled={!!editingId}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
             >
               {providers.map((p) => (
                 <option key={p} value={p}>
@@ -685,13 +685,13 @@ function NotificationsSection() {
 
           {formProvider === "discord" && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Webhook URL</label>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Webhook URL</label>
               <input
                 type="url"
                 value={formWebhookUrl}
                 onChange={(e) => setFormWebhookUrl(e.target.value)}
                 placeholder="https://discord.com/api/webhooks/..."
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
                 required
               />
             </div>
@@ -699,23 +699,23 @@ function NotificationsSection() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Notification Time</label>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Notification Time</label>
               <input
                 type="time"
                 value={formTime}
                 onChange={(e) => setFormTime(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Timezone</label>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Timezone</label>
               <input
                 type="text"
                 value={formTimezone}
                 onChange={(e) => setFormTimezone(e.target.value)}
                 list="timezone-list"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
                 required
               />
               <datalist id="timezone-list">
@@ -730,14 +730,14 @@ function NotificationsSection() {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
             >
               {saving ? "Saving..." : editingId ? "Update" : "Create"}
             </button>
             <button
               type="button"
               onClick={resetForm}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -746,7 +746,7 @@ function NotificationsSection() {
       ) : (
         <button
           onClick={() => { resetForm(); setShowForm(true); setMsg(""); setErr(""); }}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors cursor-pointer"
+          className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors cursor-pointer"
         >
           Add Notifier
         </button>
@@ -803,7 +803,7 @@ function BackgroundJobsSection() {
     }
   }
 
-  if (loading) return <div className="text-gray-500">Loading jobs...</div>;
+  if (loading) return <div className="text-zinc-500">Loading jobs...</div>;
 
   return (
     <section>
@@ -821,10 +821,10 @@ function BackgroundJobsSection() {
       )}
 
       {/* Cron Schedules */}
-      <div className="bg-gray-900 rounded-lg p-5 mb-4">
+      <div className="bg-zinc-900 rounded-lg p-5 mb-4">
         <h3 className="text-lg font-semibold text-white mb-3">Scheduled Jobs</h3>
         {data?.crons.length === 0 && (
-          <p className="text-gray-500 text-sm">No scheduled jobs configured.</p>
+          <p className="text-zinc-500 text-sm">No scheduled jobs configured.</p>
         )}
         <div className="space-y-3">
           {data?.crons.map((cron) => {
@@ -833,7 +833,7 @@ function BackgroundJobsSection() {
             return (
               <div
                 key={cron.name}
-                className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+                className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -846,14 +846,14 @@ function BackgroundJobsSection() {
                       </span>
                     )}
                     {!cron.enabled && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-700 text-gray-400">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-700 text-zinc-400">
                         Disabled
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-400 mt-1 space-y-0.5">
+                  <div className="text-xs text-zinc-400 mt-1 space-y-0.5">
                     <div>
-                      Schedule: <code className="text-gray-300">{cron.cron}</code>
+                      Schedule: <code className="text-zinc-300">{cron.cron}</code>
                     </div>
                     <div>Last run: {formatDate(cron.last_run)}</div>
                     <div>Next run: {formatDate(cron.next_run)}</div>
@@ -872,7 +872,7 @@ function BackgroundJobsSection() {
                 <button
                   onClick={() => handleTrigger(cron.name)}
                   disabled={triggering === cron.name}
-                  className="ml-3 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer shrink-0"
+                  className="ml-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer shrink-0"
                 >
                   {triggering === cron.name ? "Queuing..." : "Run Now"}
                 </button>
@@ -884,29 +884,29 @@ function BackgroundJobsSection() {
 
       {/* Recent Job History */}
       {data?.recentJobs && data.recentJobs.length > 0 && (
-        <div className="bg-gray-900 rounded-lg p-5">
+        <div className="bg-zinc-900 rounded-lg p-5">
           <h3 className="text-lg font-semibold text-white mb-3">Recent History</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-gray-400 text-left border-b border-gray-800">
+                <tr className="text-zinc-400 text-left border-b border-white/[0.06]">
                   <th className="pb-2 font-medium">Job</th>
                   <th className="pb-2 font-medium">Status</th>
                   <th className="pb-2 font-medium">Started</th>
                   <th className="pb-2 font-medium">Completed</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-white/[0.06]">
                 {data.recentJobs.map((job) => (
                   <tr key={job.id}>
                     <td className="py-2 text-white">{formatJobName(job.name)}</td>
                     <td className="py-2">
                       <JobStatusBadge status={job.status} />
                     </td>
-                    <td className="py-2 text-gray-400 text-xs">
+                    <td className="py-2 text-zinc-400 text-xs">
                       {formatDate(job.started_at)}
                     </td>
-                    <td className="py-2 text-gray-400 text-xs">
+                    <td className="py-2 text-zinc-400 text-xs">
                       {formatDate(job.completed_at)}
                     </td>
                   </tr>
@@ -930,7 +930,7 @@ function JobStatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${styles[status] || "bg-gray-700 text-gray-400"}`}
+      className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${styles[status] || "bg-zinc-700 text-zinc-400"}`}
     >
       {status}
     </span>
@@ -991,20 +991,20 @@ function AdminSection() {
     }
   }
 
-  if (loading) return <div className="text-gray-500">Loading settings...</div>;
+  if (loading) return <div className="text-zinc-500">Loading settings...</div>;
 
   return (
     <section>
       <h2 className="text-xl font-bold text-white mb-4">Admin Settings</h2>
 
-      <div className="bg-gray-900 rounded-lg p-5">
+      <div className="bg-zinc-900 rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">OpenID Connect</h3>
           <span
             className={`px-2 py-1 rounded text-xs font-medium ${
               settings?.oidc_configured
                 ? "bg-green-900/50 text-green-300"
-                : "bg-gray-800 text-gray-400"
+                : "bg-zinc-800 text-zinc-400"
             }`}
           >
             {settings?.oidc_configured ? "Configured" : "Not configured"}
@@ -1060,7 +1060,7 @@ function AdminSection() {
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {saving ? "Saving..." : "Save OIDC Settings"}
           </button>
@@ -1092,7 +1092,7 @@ function SettingField({
   return (
     <div>
       <div className="flex items-center gap-2 mb-1">
-        <label className="block text-sm font-medium text-gray-300">{label}</label>
+        <label className="block text-sm font-medium text-zinc-300">{label}</label>
         {isEnv && (
           <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-900/50 text-amber-300">
             ENV
@@ -1100,8 +1100,8 @@ function SettingField({
         )}
       </div>
       {isEnv ? (
-        <div className="px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-400 text-sm">
-          {envValue} <span className="text-gray-600">(set via environment variable)</span>
+        <div className="px-3 py-2 bg-zinc-800/50 border border-white/[0.08] rounded-lg text-zinc-400 text-sm">
+          {envValue} <span className="text-zinc-600">(set via environment variable)</span>
         </div>
       ) : (
         <input
@@ -1109,7 +1109,7 @@ function SettingField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
         />
       )}
     </div>

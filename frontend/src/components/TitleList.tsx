@@ -10,7 +10,7 @@ interface Props {
 export default function TitleList({ titles, onTrackToggle, emptyMessage = "No titles found" }: Props) {
   if (titles.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-zinc-500">
         {emptyMessage}
       </div>
     );

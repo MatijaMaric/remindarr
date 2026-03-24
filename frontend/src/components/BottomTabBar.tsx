@@ -13,7 +13,7 @@ export default function BottomTabBar() {
   if (loading) return null;
 
   return (
-    <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-800 sm:hidden safe-bottom">
+    <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/90 backdrop-blur-xl border-t border-white/[0.06] sm:hidden safe-bottom">
       <div className="flex justify-around">
         {user ? (
           <>

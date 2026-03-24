@@ -192,11 +192,11 @@ export default function CategoryBrowse({
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading...</div>
+        <div className="text-center py-12 text-zinc-500">Loading...</div>
       ) : (
         <>
           {totalResults > 0 && (
-            <p className="text-sm text-gray-500">{totalResults} result{totalResults !== 1 ? "s" : ""}</p>
+            <p className="text-sm text-zinc-500">{totalResults} result{totalResults !== 1 ? "s" : ""}</p>
           )}
           <TitleList titles={hideTracked ? titles.filter((t) => !t.is_tracked) : titles} emptyMessage="No titles found." />
           {error && (
@@ -213,7 +213,7 @@ export default function CategoryBrowse({
           {!error && page < totalPages && (
             <div ref={sentinelRef} className="text-center py-4">
               {loadingMore && (
-                <div className="text-gray-500 text-sm">Loading...</div>
+                <div className="text-zinc-500 text-sm">Loading...</div>
               )}
             </div>
           )}

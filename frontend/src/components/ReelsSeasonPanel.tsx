@@ -68,27 +68,27 @@ export default function ReelsSeasonPanel({
         role="dialog"
         aria-modal="true"
         aria-label={`${showTitle} — Season ${seasonNumber}`}
-        className="fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-sm bg-gray-900 border-l border-gray-800 overflow-y-auto animate-slide-in-right"
+        className="fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-sm bg-zinc-900/95 backdrop-blur-sm border-l border-white/[0.06] overflow-y-auto animate-slide-in-right"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 p-4 z-10">
+        <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-sm border-b border-white/[0.06] p-4 z-10">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-bold text-white truncate pr-2">{showTitle}</h3>
             <button
               onClick={onClose}
               aria-label="Close season panel"
-              className="text-gray-400 hover:text-white transition-colors cursor-pointer flex-shrink-0"
+              className="text-zinc-400 hover:text-white transition-colors cursor-pointer flex-shrink-0"
             >
               <X size={20} aria-hidden="true" />
             </button>
           </div>
-          <p className="text-sm text-gray-400">Season {seasonNumber}</p>
+          <p className="text-sm text-zinc-400">Season {seasonNumber}</p>
           {!allWatched && (
             <button
               onClick={() => onBulkWatch(unwatchedIds)}
-              className="mt-3 w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+              className="mt-3 w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
             >
               Mark Season Watched ({unwatchedIds.length} episodes)
             </button>
@@ -102,8 +102,8 @@ export default function ReelsSeasonPanel({
               key={ep.id}
               className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
                 ep.is_watched
-                  ? "bg-gray-800/30 border-gray-800/60 opacity-60"
-                  : "bg-gray-800/60 border-gray-800"
+                  ? "bg-zinc-800/30 border-zinc-800/60 opacity-60"
+                  : "bg-zinc-800/60 border-white/[0.06]"
               }`}
             >
               <button
@@ -112,8 +112,8 @@ export default function ReelsSeasonPanel({
                 aria-label={ep.is_watched ? `Mark E${String(ep.episode_number).padStart(2, "0")} as unwatched` : `Mark E${String(ep.episode_number).padStart(2, "0")} as watched`}
                 className={`flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
                   ep.is_watched
-                    ? "text-emerald-400 hover:text-gray-400"
-                    : "text-gray-600 hover:text-emerald-400"
+                    ? "text-emerald-400 hover:text-zinc-400"
+                    : "text-zinc-600 hover:text-emerald-400"
                 }`}
               >
                 {ep.is_watched ? <CheckCircle size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}
@@ -121,7 +121,7 @@ export default function ReelsSeasonPanel({
               <div className="flex-1 min-w-0">
                 <Link
                   to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                  className="hover:text-indigo-400 transition-colors"
+                  className="hover:text-amber-400 transition-colors"
                 >
                   <p className="text-sm font-medium text-white">
                     E{String(ep.episode_number).padStart(2, "0")}
@@ -129,7 +129,7 @@ export default function ReelsSeasonPanel({
                   </p>
                 </Link>
                 {ep.air_date && (
-                  <p className="text-xs text-gray-500 mt-0.5">{ep.air_date}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{ep.air_date}</p>
                 )}
               </div>
             </div>

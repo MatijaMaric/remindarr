@@ -49,8 +49,8 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
       aria-pressed={tracked}
       className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
         tracked
-          ? "bg-indigo-600 text-white hover:bg-red-600"
-          : "bg-gray-700 text-gray-300 hover:bg-indigo-600 hover:text-white"
+          ? "bg-amber-500 text-zinc-950 hover:bg-red-500"
+          : "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950"
       } disabled:opacity-50`}
     >
       {loading ? "..." : tracked ? t("track.tracked") : t("track.track")}

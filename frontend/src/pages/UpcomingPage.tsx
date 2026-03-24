@@ -78,7 +78,7 @@ export default function UpcomingPage() {
       <section>
         <h2 className="text-xl font-bold text-white mb-4">{t("upcoming.today")}</h2>
         {today.length === 0 ? (
-          <p className="text-gray-500 text-sm">
+          <p className="text-zinc-500 text-sm">
             {noEpisodes ? t("upcoming.noEpisodes") : t("upcoming.noEpisodesToday")}
           </p>
         ) : (
@@ -99,14 +99,14 @@ export default function UpcomingPage() {
       {/* Upcoming Episodes */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-300 mb-4">{t("upcoming.comingUp")}</h2>
+          <h2 className="text-lg font-semibold text-zinc-300 mb-4">{t("upcoming.comingUp")}</h2>
           <div className="space-y-4">
             {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
               const byShow = groupByShow(eps);
               const dateLabel = formatUpcomingDate(date);
               return (
                 <div key={date}>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
+                  <h3 className="text-sm font-medium text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
                   <div className="space-y-2">
                     {Array.from(byShow.entries()).map(([titleId, showEps]) => (
                       <ShowEpisodeGroup

@@ -97,7 +97,7 @@ describe("CalendarPage", () => {
     const toggle = screen.getByTitle("Show watched");
     expect(toggle).toBeDefined();
     // Active state = indigo background class
-    expect(toggle.className).toContain("bg-indigo-600");
+    expect(toggle.className).toContain("bg-amber-500");
   });
 
   it("toggles hide watched off when clicked", () => {
@@ -112,7 +112,7 @@ describe("CalendarPage", () => {
     // Now it should show "Hide watched" title (inactive state)
     const toggleOff = screen.getByTitle("Hide watched");
     expect(toggleOff).toBeDefined();
-    expect(toggleOff.className).not.toContain("bg-indigo-600");
+    expect(toggleOff.className).not.toContain("bg-amber-500");
   });
 
   it("shows hide watched toggle on mobile agenda", () => {
@@ -121,6 +121,6 @@ describe("CalendarPage", () => {
 
     const toggle = screen.getByTitle("Show watched");
     expect(toggle).toBeDefined();
-    expect(toggle.className).toContain("bg-indigo-600");
+    expect(toggle.className).toContain("bg-amber-500");
   });
 });

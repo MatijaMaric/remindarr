@@ -66,7 +66,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
           loading="lazy"
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-950" />
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950" />
       )}
 
       {/* Gradient overlay */}
@@ -92,20 +92,20 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
               <Check size={20} />
               All caught up!
             </div>
-            <p className="text-gray-400 text-sm">{episode.show_title}</p>
+            <p className="text-zinc-400 text-sm">{episode.show_title}</p>
           </div>
         ) : (
           <>
             {/* Show title - linked */}
             <Link to={`/title/${episode.title_id}`}>
-              <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-lg hover:text-indigo-300 transition-colors">
+              <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-lg hover:text-amber-300 transition-colors">
                 {episode.show_title}
               </h2>
             </Link>
 
             {/* Episode code + name - linked */}
             <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}>
-              <p className="text-base text-white/90 font-medium mb-1 drop-shadow hover:text-indigo-300 transition-colors">
+              <p className="text-base text-white/90 font-medium mb-1 drop-shadow hover:text-amber-300 transition-colors">
                 {formatEpisodeCode(episode)}
                 {episode.name && ` · ${episode.name}`}
               </p>
@@ -151,7 +151,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
             {/* Mark as watched button */}
             <button
               onClick={onMarkWatched}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white px-6 py-3 rounded-xl text-base font-semibold transition-colors cursor-pointer w-full justify-center"
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 px-6 py-3 rounded-xl text-base font-semibold transition-colors cursor-pointer w-full justify-center"
             >
               <CheckCircle size={20} />
               Mark as Watched
