@@ -18,7 +18,8 @@
     "db:push": "bunx drizzle-kit push",
     "db:studio": "bunx drizzle-kit studio",
     "db:migrate:cf": "npx wrangler d1 migrations apply remindarr --remote",
-    "deploy:cf": "bun run db:migrate:cf && npx wrangler deploy"
+    "deploy:cf": "bun run db:migrate:cf && npx wrangler deploy",
+    "deploy:cf:version": "bun run db:migrate:cf && npx wrangler versions upload"
   },
   "dependencies": {
     "@sentry/bun": "^10.43.0",
