@@ -45,6 +45,24 @@ describe("parseMovieDetails", () => {
     expect(result.posterUrl).toBeNull();
   });
 
+  it("parses backdrop_path", () => {
+    const movie = makeTmdbMovieDetails({ backdrop_path: "/backdrop.jpg" });
+    const result = parseMovieDetails(movie);
+    expect(result.backdropUrl).toContain("/w1280/backdrop.jpg");
+  });
+
+  it("handles null backdrop_path", () => {
+    const movie = makeTmdbMovieDetails({ backdrop_path: null });
+    const result = parseMovieDetails(movie);
+    expect(result.backdropUrl).toBeNull();
+  });
+
+  it("handles missing backdrop_path", () => {
+    const movie = makeTmdbMovieDetails();
+    const result = parseMovieDetails(movie);
+    expect(result.backdropUrl).toBeNull();
+  });
+
   it("handles missing external_ids", () => {
     const movie = makeTmdbMovieDetails({ external_ids: undefined });
     const result = parseMovieDetails(movie);
@@ -114,6 +132,18 @@ describe("parseTvDetails", () => {
     const tv = makeTmdbTvDetails({ episode_run_time: [] });
     const result = parseTvDetails(tv);
     expect(result.runtimeMinutes).toBeNull();
+  });
+
+  it("parses backdrop_path", () => {
+    const tv = makeTmdbTvDetails({ backdrop_path: "/tvbackdrop.jpg" });
+    const result = parseTvDetails(tv);
+    expect(result.backdropUrl).toContain("/w1280/tvbackdrop.jpg");
+  });
+
+  it("handles missing backdrop_path", () => {
+    const tv = makeTmdbTvDetails();
+    const result = parseTvDetails(tv);
+    expect(result.backdropUrl).toBeNull();
   });
 
   it("parses original_name", () => {

@@ -79,6 +79,7 @@ function toParsedTitle(t: FrontendTitle): ParsedTitle {
     imdbId: t.imdb_id ?? null,
     tmdbId: t.tmdb_id ?? null,
     posterUrl: t.poster_url ?? null,
+    backdropUrl: null,
     ageCertification: t.age_certification ?? null,
     tmdbUrl: t.tmdb_url ?? null,
     offers: (t.offers || []).map((o: FrontendOffer) => ({
@@ -174,6 +175,7 @@ app.post("/import", async (c) => {
         imdbId: item.imdb_id ?? null,
         tmdbId: item.tmdb_id ?? null,
         posterUrl: item.poster_url ?? null,
+        backdropUrl: null,
         ageCertification: item.age_certification ?? null,
         tmdbUrl: item.tmdb_url ?? null,
         offers: [],

@@ -16,6 +16,7 @@ export function makeParsedTitle(overrides?: Partial<ParsedTitle>): ParsedTitle {
     imdbId: "tt1234567",
     tmdbId: "123",
     posterUrl: "https://image.tmdb.org/t/p/w342/test.jpg",
+    backdropUrl: null,
     ageCertification: null,
     tmdbUrl: "https://www.themoviedb.org/movie/123",
     offers: [],
