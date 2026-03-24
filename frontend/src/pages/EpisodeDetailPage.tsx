@@ -54,13 +54,13 @@ export default function EpisodeDetailPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400 flex-wrap">
+      <div className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap">
         <Link to={`/title/${title.id}`} className="hover:text-white transition-colors">{title.title}</Link>
-        <span className="text-gray-600">/</span>
+        <span className="text-zinc-600">/</span>
         <Link to={`/title/${title.id}/season/${seasonNumber}`} className="hover:text-white transition-colors">
           Season {seasonNumber}
         </Link>
-        <span className="text-gray-600">/</span>
+        <span className="text-zinc-600">/</span>
         <span className="text-white">Episode {episodeNumber}</span>
       </div>
 
@@ -74,25 +74,25 @@ export default function EpisodeDetailPage() {
       {/* Episode header */}
       <div className="space-y-3">
         <h1 className="text-2xl font-bold text-white">
-          <span className="text-gray-500">S{String(seasonNumber).padStart(2, "0")}E{String(episodeNumber).padStart(2, "0")}</span>
+          <span className="text-zinc-500">S{String(seasonNumber).padStart(2, "0")}E{String(episodeNumber).padStart(2, "0")}</span>
           {" "}
           {tmdb?.name || `Episode ${episodeNumber}`}
         </h1>
 
-        <div className="flex items-center gap-3 text-sm text-gray-400">
+        <div className="flex items-center gap-3 text-sm text-zinc-400">
           {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}
           {tmdb?.runtime && (
             <>
-              <span className="text-gray-600">·</span>
+              <span className="text-zinc-600">·</span>
               <span>{tmdb.runtime}m</span>
             </>
           )}
           {tmdb?.vote_average ? (
             <>
-              <span className="text-gray-600">·</span>
+              <span className="text-zinc-600">·</span>
               <span className="text-yellow-500 font-medium">{tmdb.vote_average.toFixed(1)}</span>
               {tmdb.vote_count > 0 && (
-                <span className="text-gray-600 text-xs">({tmdb.vote_count} votes)</span>
+                <span className="text-zinc-600 text-xs">({tmdb.vote_count} votes)</span>
               )}
             </>
           ) : null}
@@ -103,7 +103,7 @@ export default function EpisodeDetailPage() {
       {tmdb?.overview && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-white">Overview</h2>
-          <p className="text-gray-300 leading-relaxed">{tmdb.overview}</p>
+          <p className="text-zinc-300 leading-relaxed">{tmdb.overview}</p>
         </section>
       )}
 
@@ -114,13 +114,13 @@ export default function EpisodeDetailPage() {
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
             {directors.length > 0 && (
               <div>
-                <span className="text-gray-400">Directed by: </span>
+                <span className="text-zinc-400">Directed by: </span>
                 <span className="text-white">{directors.map(d => d.name).join(", ")}</span>
               </div>
             )}
             {writers.length > 0 && (
               <div>
-                <span className="text-gray-400">Written by: </span>
+                <span className="text-zinc-400">Written by: </span>
                 <span className="text-white">{writers.map(w => w.name).join(", ")}</span>
               </div>
             )}

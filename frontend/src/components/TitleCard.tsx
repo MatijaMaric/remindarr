@@ -21,9 +21,9 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
   const streamingOffers = Array.from(uniqueProviders.values());
 
   return (
-    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors flex flex-col">
+    <div className="bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col">
       {/* Poster — clickable link to detail page */}
-      <Link to={`/title/${title.id}`} className="aspect-[2/3] bg-gray-800 relative block">
+      <Link to={`/title/${title.id}`} className="aspect-[2/3] bg-zinc-800 relative block">
         {title.poster_url ? (
           <img
             src={title.poster_url}
@@ -32,12 +32,12 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">
+          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
             No poster
           </div>
         )}
         {title.object_type === "SHOW" && (
-          <span className="absolute top-2 left-2 bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+          <span className="absolute top-2 left-2 bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
             TV
           </span>
         )}
@@ -51,13 +51,13 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
       {/* Info */}
       <div className="p-3 flex-1 flex flex-col gap-2">
         <div>
-          <Link to={`/title/${title.id}`} className="hover:text-indigo-400 transition-colors">
+          <Link to={`/title/${title.id}`} className="hover:text-amber-400 transition-colors">
             <h3 className="font-semibold text-sm leading-tight line-clamp-2">{title.title}</h3>
           </Link>
           {title.original_title && title.original_title !== title.title && (
-            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1 italic">{title.original_title}</p>
+            <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1 italic">{title.original_title}</p>
           )}
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-zinc-500 mt-0.5">
             {title.release_year}
             {title.runtime_minutes ? ` \u00B7 ${title.runtime_minutes}m` : ""}
           </p>

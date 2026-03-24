@@ -129,7 +129,7 @@ export default function NewReleases({
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">{t("releases.loading")}</div>
+        <div className="text-center py-12 text-zinc-500">{t("releases.loading")}</div>
       ) : (
         <TitleList
           titles={titles}

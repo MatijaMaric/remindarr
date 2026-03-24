@@ -3,7 +3,7 @@ import { Skeleton } from "./ui/skeleton";
 /** Single title card skeleton matching TitleCard layout */
 export function TitleCardSkeleton() {
   return (
-    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 flex flex-col">
+    <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col">
       {/* Poster */}
       <Skeleton className="aspect-[2/3] w-full rounded-none" />
       {/* Title + meta */}
@@ -29,7 +29,7 @@ export function TitleGridSkeleton({ count = 12 }: { count?: number }) {
 /** Single episode row skeleton */
 function EpisodeRowSkeleton({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`bg-gray-900 rounded-xl border border-gray-800 ${compact ? "p-3" : "p-4"}`}>
+    <div className={`bg-zinc-900 rounded-xl ${compact ? "p-3" : "p-4"}`}>
       <div className="flex gap-4">
         <Skeleton className="w-16 h-24 rounded-lg flex-shrink-0" />
         <div className="flex-1 space-y-2 pt-1">
@@ -98,7 +98,7 @@ export function DetailPageSkeleton() {
         <Skeleton className="h-5 w-24" />
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-4 bg-gray-900 rounded-xl border border-gray-800 p-3">
+            <div key={i} className="flex gap-4 bg-zinc-900 rounded-xl p-3">
               <Skeleton className="w-36 aspect-video rounded-lg shrink-0" />
               <div className="flex-1 space-y-2 pt-1">
                 <Skeleton className="h-4 w-3/4" />
@@ -122,7 +122,7 @@ export function CalendarSkeleton() {
           <Skeleton className="h-8 w-full rounded-none mb-1" />
           <div className="space-y-1 px-2 py-1">
             {Array.from({ length: 3 }).map((_, j) => (
-              <div key={j} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-900/60">
+              <div key={j} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900/60">
                 <Skeleton className="w-5 h-5 rounded-full shrink-0" />
                 <Skeleton className="w-12 h-8 rounded shrink-0" />
                 <div className="flex-1 space-y-1">

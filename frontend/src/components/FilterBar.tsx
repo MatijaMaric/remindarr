@@ -91,14 +91,14 @@ const FilterBar = memo(function FilterBar({
     (language && language.length > 0);
   return (
     <div className="flex flex-wrap gap-4 items-center">
-      <div role="group" aria-label="Content type" className="flex gap-1 bg-gray-800 rounded-lg p-1">
+      <div role="group" aria-label="Content type" className="flex gap-1 bg-zinc-800/50 rounded-lg p-1">
         <button
           aria-pressed={type.length === 0}
           onClick={() => onTypeChange([])}
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
             type.length === 0
-              ? "bg-gray-700 text-white"
-              : "text-gray-400 hover:text-white"
+              ? "bg-amber-500/15 text-amber-400"
+              : "text-zinc-400 hover:text-white"
           }`}
         >
           {t("filter.all")}
@@ -110,8 +110,8 @@ const FilterBar = memo(function FilterBar({
             onClick={() => onTypeChange(toggleType(type, tv.value))}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
               type.includes(tv.value)
-                ? "bg-gray-700 text-white"
-                : "text-gray-400 hover:text-white"
+                ? "bg-amber-500/15 text-amber-400"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             {t(tv.labelKey)}
@@ -119,7 +119,7 @@ const FilterBar = memo(function FilterBar({
         ))}
       </div>
       {showDaysFilter && onDaysBackChange && (
-        <div role="group" aria-label="Time period" className="flex gap-1 bg-gray-800 rounded-lg p-1">
+        <div role="group" aria-label="Time period" className="flex gap-1 bg-zinc-800/50 rounded-lg p-1">
           {DAYS.map((d) => (
             <button
               key={d.value}
@@ -127,8 +127,8 @@ const FilterBar = memo(function FilterBar({
               onClick={() => onDaysBackChange(d.value)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                 daysBack === d.value
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-amber-500/15 text-amber-400"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               {d.label}
@@ -171,7 +171,7 @@ const FilterBar = memo(function FilterBar({
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
             hideTracked
               ? "bg-blue-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:text-white"
+              : "bg-zinc-800 text-zinc-400 hover:text-white"
           }`}
         >
           {t("filter.hideTracked")}
@@ -180,7 +180,7 @@ const FilterBar = memo(function FilterBar({
       {onClearFilters && hasActiveFilters && (
         <button
           onClick={onClearFilters}
-          className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-colors cursor-pointer"
+          className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer"
         >
           {t("filter.clearFilters")}
         </button>

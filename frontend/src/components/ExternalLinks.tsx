@@ -69,7 +69,7 @@ export default function ExternalLinks({ externalIds, tmdbId, type }: ExternalLin
           target="_blank"
           rel="noopener noreferrer"
           title={link.label}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="text-zinc-400 hover:text-white transition-colors"
           data-testid={`external-link-${link.label.toLowerCase()}`}
         >
           {link.icon}

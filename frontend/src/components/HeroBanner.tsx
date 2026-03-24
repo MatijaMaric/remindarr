@@ -109,24 +109,24 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
       <div className="relative z-10 flex h-full">
         {/* Left: episode info */}
         <div className="flex-1 flex flex-col justify-center px-10 max-w-[65%]">
-          <p className="text-xs uppercase tracking-widest text-indigo-400 font-medium mb-2">
+          <p className="text-xs uppercase tracking-widest text-amber-400 font-medium mb-2">
             Currently Watching
           </p>
           <Link to={`/title/${current.featured.title_id}`} className="group">
-            <h2 className="text-4xl font-bold text-white group-hover:text-indigo-300 transition-colors">
+            <h2 className="text-4xl font-bold text-white group-hover:text-amber-300 transition-colors">
               {current.featured.show_title}
             </h2>
           </Link>
-          <p className="text-xl text-gray-200 mt-2">
+          <p className="text-xl text-zinc-200 mt-2">
             {formatEpisodeCode(current.featured)}
             {current.featured.name && ` · ${current.featured.name}`}
           </p>
           {current.featured.overview && (
-            <p className="text-gray-300 mt-3 line-clamp-3 max-w-xl">
+            <p className="text-zinc-300 mt-3 line-clamp-3 max-w-xl">
               {current.featured.overview}
             </p>
           )}
-          <p className="text-sm text-indigo-300 mt-4">
+          <p className="text-sm text-amber-300 mt-4">
             {current.remainingCount} episode{current.remainingCount !== 1 ? "s" : ""} remaining
           </p>
         </div>
@@ -134,7 +134,7 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
         {/* Right: sidebar */}
         {current.sidebar.length > 0 && (
           <div className="w-[35%] flex flex-col justify-center pr-10 pl-4">
-            <p className="text-xs uppercase tracking-widest text-gray-400 font-medium mb-3">
+            <p className="text-xs uppercase tracking-widest text-zinc-400 font-medium mb-3">
               Continue Watching
             </p>
             <div className="space-y-2">
@@ -155,7 +155,7 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
                     <p className="font-semibold text-white text-sm truncate">
                       {item.showTitle}
                     </p>
-                    <p className="text-xs text-gray-400 truncate">
+                    <p className="text-xs text-zinc-400 truncate">
                       {item.episodeCode}
                     </p>
                   </button>
@@ -192,7 +192,7 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
               key={i}
               onClick={() => goTo(i)}
               className={`w-2 h-2 rounded-full transition-colors cursor-pointer ${
-                i === activeIndex ? "bg-indigo-400" : "bg-white/30 hover:bg-white/50"
+                i === activeIndex ? "bg-amber-400" : "bg-white/30 hover:bg-white/50"
               }`}
             />
           ))}

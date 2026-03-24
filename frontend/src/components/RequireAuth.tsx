@@ -6,7 +6,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-gray-500">Loading...</div>
+      <div className="text-center py-12 text-zinc-500">Loading...</div>
     );
   }
 

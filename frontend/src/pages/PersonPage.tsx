@@ -54,7 +54,7 @@ function CreditCard({ credit, subtitle }: { credit: PersonCastCredit | PersonCre
       to={`/title/${creditTitleId(credit)}`}
       className="flex-shrink-0 w-32 sm:w-36 group"
     >
-      <div className="aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2">
+      <div className="aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 mb-2">
         {credit.poster_path ? (
           <img
             src={`${TMDB_IMG}/w342${credit.poster_path}`}
@@ -63,17 +63,17 @@ function CreditCard({ credit, subtitle }: { credit: PersonCastCredit | PersonCre
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm px-2 text-center">
+          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm px-2 text-center">
             {creditTitle(credit)}
           </div>
         )}
       </div>
-      <p className="text-sm font-medium text-white truncate group-hover:text-indigo-400 transition-colors">
+      <p className="text-sm font-medium text-white truncate group-hover:text-amber-400 transition-colors">
         {creditTitle(credit)}
       </p>
-      <p className="text-xs text-gray-400 truncate">{subtitle}</p>
+      <p className="text-xs text-zinc-400 truncate">{subtitle}</p>
       {getYear(credit.release_date || credit.first_air_date) && (
-        <p className="text-xs text-gray-500">{getYear(credit.release_date || credit.first_air_date)}</p>
+        <p className="text-xs text-zinc-500">{getYear(credit.release_date || credit.first_air_date)}</p>
       )}
     </Link>
   );
@@ -117,7 +117,7 @@ export default function PersonPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-6">
         <div className="flex-shrink-0">
-          <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden bg-gray-800">
+          <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden bg-zinc-800">
             {person.profile_path ? (
               <img
                 src={`${TMDB_IMG}/w300${person.profile_path}`}
@@ -125,7 +125,7 @@ export default function PersonPage() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-600 text-5xl">
+              <div className="w-full h-full flex items-center justify-center text-zinc-600 text-5xl">
                 {person.name.charAt(0)}
               </div>
             )}
@@ -135,27 +135,27 @@ export default function PersonPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-white">{person.name}</h1>
           <div className="flex flex-wrap gap-2 text-sm">
             {person.known_for_department && (
-              <span className="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded">
+              <span className="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded">
                 {person.known_for_department}
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-400">
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-400">
             {person.birthday && (
               <div>
-                <span className="text-gray-500">Born: </span>
+                <span className="text-zinc-500">Born: </span>
                 <span>{formatDate(person.birthday)}</span>
               </div>
             )}
             {person.deathday && (
               <div>
-                <span className="text-gray-500">Died: </span>
+                <span className="text-zinc-500">Died: </span>
                 <span>{formatDate(person.deathday)}</span>
               </div>
             )}
             {person.place_of_birth && (
               <div>
-                <span className="text-gray-500">From: </span>
+                <span className="text-zinc-500">From: </span>
                 <span>{person.place_of_birth}</span>
               </div>
             )}
@@ -172,11 +172,11 @@ export default function PersonPage() {
       {biography && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-white">Biography</h2>
-          <p className="text-gray-300 leading-relaxed whitespace-pre-line">{displayBio}</p>
+          <p className="text-zinc-300 leading-relaxed whitespace-pre-line">{displayBio}</p>
           {showBioToggle && (
             <button
               onClick={() => setBioExpanded(!bioExpanded)}
-              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+              className="text-sm text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
             >
               {bioExpanded ? "Show less" : "Show more"}
             </button>

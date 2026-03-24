@@ -299,7 +299,7 @@ export default function ReelsPage() {
       <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 5rem)" }}>
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
-          <Link to="/" className="text-indigo-400 hover:text-indigo-300">
+          <Link to="/" className="text-amber-400 hover:text-amber-300">
             Go back
           </Link>
         </div>
@@ -311,9 +311,9 @@ export default function ReelsPage() {
     return (
       <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 5rem)" }}>
         <div className="text-center">
-          <p className="text-gray-400 text-lg mb-2">No unwatched episodes</p>
-          <p className="text-gray-600 text-sm mb-6">You're all caught up!</p>
-          <Link to="/upcoming" className="text-indigo-400 hover:text-indigo-300">
+          <p className="text-zinc-400 text-lg mb-2">No unwatched episodes</p>
+          <p className="text-zinc-600 text-sm mb-6">You're all caught up!</p>
+          <Link to="/upcoming" className="text-amber-400 hover:text-amber-300">
             View Upcoming
           </Link>
         </div>
@@ -360,7 +360,7 @@ export default function ReelsPage() {
         <div className="fixed bottom-22 left-1/2 -translate-x-1/2 z-[60] sm:bottom-8">
           <button
             onClick={handleUndo}
-            className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-full shadow-lg border border-gray-700 transition-colors cursor-pointer"
+            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-full shadow-lg border border-white/[0.08] transition-colors cursor-pointer"
           >
             <Undo2 size={16} />
             <span className="text-sm font-medium">Undo</span>

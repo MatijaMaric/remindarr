@@ -52,9 +52,9 @@ function RatingBadge({ label, score, max = 10 }: { label: string; score: number 
   if (score === null || score === undefined) return null;
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-xs text-gray-400 uppercase tracking-wider">{label}</span>
+      <span className="text-xs text-zinc-400 uppercase tracking-wider">{label}</span>
       <span className="text-xl font-bold text-white">
-        {score.toFixed(1)}<span className="text-sm text-gray-500">/{max}</span>
+        {score.toFixed(1)}<span className="text-sm text-zinc-500">/{max}</span>
       </span>
     </div>
   );
@@ -83,13 +83,13 @@ function NetworkList({ networks }: { networks: { id: number; name: string; logo_
           {n.logo_path && (
             <img src={`${TMDB_IMG}/w92${n.logo_path}`} alt={n.name} className="h-5 object-contain brightness-0 invert opacity-70" />
           )}
-          <span className="text-sm text-gray-400">{n.name}</span>
+          <span className="text-sm text-zinc-400">{n.name}</span>
         </div>
       ))}
       {hasMore && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="text-sm text-amber-400 hover:text-amber-300 transition-colors"
         >
           {expanded ? "Show less" : `+${networks.length - NETWORK_DISPLAY_LIMIT} more`}
         </button>
@@ -105,18 +105,18 @@ function ProviderRow({ label, providers }: { label: string; providers: { logo_pa
   const visible = expanded ? providers : providers.slice(0, PROVIDER_DISPLAY_LIMIT);
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-gray-400 w-20 shrink-0">{label}</span>
+      <span className="text-sm text-zinc-400 w-20 shrink-0">{label}</span>
       <div className="flex flex-wrap gap-2 items-center">
         {visible.map((p) => (
-          <div key={p.provider_name} className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1">
+          <div key={p.provider_name} className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1">
             <img src={`${TMDB_IMG}/w45${p.logo_path}`} alt={p.provider_name} className="w-6 h-6 rounded" />
-            <span className="text-sm text-gray-300">{p.provider_name}</span>
+            <span className="text-sm text-zinc-300">{p.provider_name}</span>
           </div>
         ))}
         {hasMore && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1"
+            className="text-sm text-amber-400 hover:text-amber-300 transition-colors px-2 py-1"
           >
             {expanded ? "Show less" : `+${providers.length - PROVIDER_DISPLAY_LIMIT} more`}
           </button>
@@ -189,7 +189,7 @@ export default function TitleDetailPage() {
   if (movieData) return <MovieDetail data={movieData} />;
   if (showData) return <ShowDetail data={showData} />;
 
-  return <div className="text-gray-400 text-center py-20">Title not found</div>;
+  return <div className="text-zinc-400 text-center py-20">Title not found</div>;
 }
 
 // ─── Movie Detail ────────────────────────────────────────────────────────────
@@ -234,7 +234,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             {posterUrl ? (
               <img src={posterUrl} alt={title.title} className="w-full rounded-xl shadow-2xl" />
             ) : (
-              <div className="aspect-[2/3] bg-gray-800 rounded-xl flex items-center justify-center text-gray-600">No poster</div>
+              <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">No poster</div>
             )}
           </div>
 
@@ -242,35 +242,35 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           <div className="flex-1 space-y-3">
             <div>
               {tmdb?.tagline && (
-                <p className="text-sm text-indigo-400 italic mb-1">{tmdb.tagline}</p>
+                <p className="text-sm text-amber-400 italic mb-1">{tmdb.tagline}</p>
               )}
               <h1 className="text-3xl font-bold text-white">{tmdb?.title || title.title}</h1>
               {(() => {
                 const displayTitle = tmdb?.title || title.title;
                 const originalTitle = tmdb?.original_title || title.original_title;
                 return originalTitle && originalTitle !== displayTitle ? (
-                  <p className="text-sm text-gray-400 mt-1">{originalTitle}</p>
+                  <p className="text-sm text-zinc-400 mt-1">{originalTitle}</p>
                 ) : null;
               })()}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
               {title.release_year && <span>{title.release_year}</span>}
               {(title.runtime_minutes || tmdb?.runtime) && (
                 <>
-                  <span className="text-gray-600">·</span>
+                  <span className="text-zinc-600">·</span>
                   <span>{formatRuntime(tmdb?.runtime || title.runtime_minutes)}</span>
                 </>
               )}
               {certification && (
                 <>
-                  <span className="text-gray-600">·</span>
-                  <span className="border border-gray-600 px-1.5 py-0.5 rounded text-xs">{certification}</span>
+                  <span className="text-zinc-600">·</span>
+                  <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">{certification}</span>
                 </>
               )}
               {tmdb?.status && (
                 <>
-                  <span className="text-gray-600">·</span>
+                  <span className="text-zinc-600">·</span>
                   <span>{tmdb.status}</span>
                 </>
               )}
@@ -279,7 +279,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             {genres.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {genres.map((g) => (
-                  <span key={g} className="bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
+                  <span key={g} className="bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
                 ))}
               </div>
             )}
@@ -300,7 +300,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {/* Overview */}
       {overview && (
         <Section title="Overview">
-          <p className="text-gray-300 leading-relaxed">{overview}</p>
+          <p className="text-zinc-300 leading-relaxed">{overview}</p>
         </Section>
       )}
 
@@ -310,13 +310,13 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
             {directors.length > 0 && (
               <div>
-                <span className="text-gray-400">Director: </span>
+                <span className="text-zinc-400">Director: </span>
                 <span className="text-white">{directors.map(d => d.name).join(", ")}</span>
               </div>
             )}
             {writers.length > 0 && (
               <div>
-                <span className="text-gray-400">Writers: </span>
+                <span className="text-zinc-400">Writers: </span>
                 <span className="text-white">{writers.map(w => w.name).join(", ")}</span>
               </div>
             )}
@@ -337,27 +337,27 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {/* Release Dates */}
       {releaseDates && releaseDates.release_dates.length > 0 && (
         <Section title={`Release Dates (${releaseDates.iso_3166_1})`}>
-          <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div className="bg-zinc-900 rounded-xl border border-white/[0.06] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-2 px-4 text-gray-400 font-medium">Type</th>
-                  <th className="text-left py-2 px-4 text-gray-400 font-medium">Date</th>
-                  <th className="text-left py-2 px-4 text-gray-400 font-medium">Certification</th>
-                  <th className="text-left py-2 px-4 text-gray-400 font-medium">Note</th>
+                <tr className="border-b border-white/[0.06]">
+                  <th className="text-left py-2 px-4 text-zinc-400 font-medium">Type</th>
+                  <th className="text-left py-2 px-4 text-zinc-400 font-medium">Date</th>
+                  <th className="text-left py-2 px-4 text-zinc-400 font-medium">Certification</th>
+                  <th className="text-left py-2 px-4 text-zinc-400 font-medium">Note</th>
                 </tr>
               </thead>
               <tbody>
                 {releaseDates.release_dates.map((rd) => (
-                  <tr key={`${rd.release_date}-${rd.type}`} className="border-b border-gray-800/50 last:border-0">
-                    <td className="py-2 px-4 text-gray-300">{RELEASE_TYPE_LABELS[rd.type] || `Type ${rd.type}`}</td>
-                    <td className="py-2 px-4 text-gray-300">{formatDate(rd.release_date)}</td>
+                  <tr key={`${rd.release_date}-${rd.type}`} className="border-b border-zinc-800/50 last:border-0">
+                    <td className="py-2 px-4 text-zinc-300">{RELEASE_TYPE_LABELS[rd.type] || `Type ${rd.type}`}</td>
+                    <td className="py-2 px-4 text-zinc-300">{formatDate(rd.release_date)}</td>
                     <td className="py-2 px-4">
                       {rd.certification && (
-                        <span className="border border-gray-600 px-1.5 py-0.5 rounded text-xs text-gray-300">{rd.certification}</span>
+                        <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs text-zinc-300">{rd.certification}</span>
                       )}
                     </td>
-                    <td className="py-2 px-4 text-gray-500 text-xs">{rd.note}</td>
+                    <td className="py-2 px-4 text-zinc-500 text-xs">{rd.note}</td>
                   </tr>
                 ))}
               </tbody>
@@ -378,8 +378,8 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           </div>
           {/* Also show existing offers */}
           {title.offers.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-800">
-              <p className="text-xs text-gray-500 mb-2">Direct links</p>
+            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <p className="text-xs text-zinc-500 mb-2">Direct links</p>
               <div className="flex flex-wrap gap-2">
                 {dedupeOffers(title.offers).map((offer) => (
                   <a
@@ -387,11 +387,11 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                     href={offer.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1 hover:bg-gray-700 transition-colors"
+                    className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
                     title={`${offer.provider_name} (${offer.monetization_type})`}
                   >
                     <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                    <span className="text-sm text-gray-300">{offer.provider_name}</span>
+                    <span className="text-sm text-zinc-300">{offer.provider_name}</span>
                   </a>
                 ))}
               </div>
@@ -410,11 +410,11 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                 href={offer.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1 hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
                 title={`${offer.provider_name} (${offer.monetization_type})`}
               >
                 <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                <span className="text-sm text-gray-300">{offer.provider_name}</span>
+                <span className="text-sm text-zinc-300">{offer.provider_name}</span>
               </a>
             ))}
           </div>
@@ -438,38 +438,38 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             {tmdb.original_language && (
               <div>
-                <span className="text-gray-500 block">Original Language</span>
-                <span className="text-gray-300">{tmdb.original_language.toUpperCase()}</span>
+                <span className="text-zinc-500 block">Original Language</span>
+                <span className="text-zinc-300">{tmdb.original_language.toUpperCase()}</span>
               </div>
             )}
             {tmdb.production_countries?.length > 0 && (
               <div>
-                <span className="text-gray-500 block">Country</span>
-                <span className="text-gray-300">{tmdb.production_countries.map(c => c.name).join(", ")}</span>
+                <span className="text-zinc-500 block">Country</span>
+                <span className="text-zinc-300">{tmdb.production_countries.map(c => c.name).join(", ")}</span>
               </div>
             )}
             {tmdb.spoken_languages?.length > 0 && (
               <div>
-                <span className="text-gray-500 block">Languages</span>
-                <span className="text-gray-300">{tmdb.spoken_languages.map(l => l.english_name).join(", ")}</span>
+                <span className="text-zinc-500 block">Languages</span>
+                <span className="text-zinc-300">{tmdb.spoken_languages.map(l => l.english_name).join(", ")}</span>
               </div>
             )}
             {tmdb.budget > 0 && (
               <div>
-                <span className="text-gray-500 block">Budget</span>
-                <span className="text-gray-300">{formatCurrency(tmdb.budget)}</span>
+                <span className="text-zinc-500 block">Budget</span>
+                <span className="text-zinc-300">{formatCurrency(tmdb.budget)}</span>
               </div>
             )}
             {tmdb.revenue > 0 && (
               <div>
-                <span className="text-gray-500 block">Revenue</span>
-                <span className="text-gray-300">{formatCurrency(tmdb.revenue)}</span>
+                <span className="text-zinc-500 block">Revenue</span>
+                <span className="text-zinc-300">{formatCurrency(tmdb.revenue)}</span>
               </div>
             )}
             {tmdb.production_companies?.length > 0 && (
               <div className="col-span-2 sm:col-span-3">
-                <span className="text-gray-500 block">Production</span>
-                <span className="text-gray-300">{tmdb.production_companies.map(c => c.name).join(", ")}</span>
+                <span className="text-zinc-500 block">Production</span>
+                <span className="text-zinc-300">{tmdb.production_companies.map(c => c.name).join(", ")}</span>
               </div>
             )}
           </div>
@@ -512,54 +512,54 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             {posterUrl ? (
               <img src={posterUrl} alt={title.title} className="w-full rounded-xl shadow-2xl" />
             ) : (
-              <div className="aspect-[2/3] bg-gray-800 rounded-xl flex items-center justify-center text-gray-600">No poster</div>
+              <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">No poster</div>
             )}
           </div>
 
           <div className="flex-1 space-y-3">
             <div>
               {tmdb?.tagline && (
-                <p className="text-sm text-indigo-400 italic mb-1">{tmdb.tagline}</p>
+                <p className="text-sm text-amber-400 italic mb-1">{tmdb.tagline}</p>
               )}
               <h1 className="text-3xl font-bold text-white">{tmdb?.name || title.title}</h1>
               {(() => {
                 const displayTitle = tmdb?.name || title.title;
                 const originalTitle = tmdb?.original_name || title.original_title;
                 return originalTitle && originalTitle !== displayTitle ? (
-                  <p className="text-sm text-gray-400 mt-1">{originalTitle}</p>
+                  <p className="text-sm text-zinc-400 mt-1">{originalTitle}</p>
                 ) : null;
               })()}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
-              <span className="bg-indigo-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">TV</span>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+              <span className="bg-amber-500 text-black text-xs font-bold px-1.5 py-0.5 rounded">TV</span>
               {tmdb?.first_air_date && <span>{tmdb.first_air_date.slice(0, 4)}</span>}
               {tmdb?.last_air_date && tmdb.first_air_date?.slice(0, 4) !== tmdb.last_air_date.slice(0, 4) && (
                 <span>– {tmdb.last_air_date.slice(0, 4)}</span>
               )}
               {tmdb?.episode_run_time?.[0] && (
                 <>
-                  <span className="text-gray-600">·</span>
+                  <span className="text-zinc-600">·</span>
                   <span>{tmdb.episode_run_time[0]}m/ep</span>
                 </>
               )}
               {certification && (
                 <>
-                  <span className="text-gray-600">·</span>
-                  <span className="border border-gray-600 px-1.5 py-0.5 rounded text-xs">{certification}</span>
+                  <span className="text-zinc-600">·</span>
+                  <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">{certification}</span>
                 </>
               )}
               {tmdb?.status && (
                 <>
-                  <span className="text-gray-600">·</span>
+                  <span className="text-zinc-600">·</span>
                   <span>{tmdb.status}</span>
                 </>
               )}
               {tmdb && (
                 <>
-                  <span className="text-gray-600">·</span>
+                  <span className="text-zinc-600">·</span>
                   <span>{tmdb.number_of_seasons} season{tmdb.number_of_seasons !== 1 ? "s" : ""}</span>
-                  <span className="text-gray-600">·</span>
+                  <span className="text-zinc-600">·</span>
                   <span>{tmdb.number_of_episodes} episodes</span>
                 </>
               )}
@@ -568,7 +568,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             {genres.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {genres.map((g) => (
-                  <span key={g} className="bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
+                  <span key={g} className="bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
                 ))}
               </div>
             )}
@@ -593,7 +593,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {/* Overview */}
       {overview && (
         <Section title="Overview">
-          <p className="text-gray-300 leading-relaxed">{overview}</p>
+          <p className="text-zinc-300 leading-relaxed">{overview}</p>
         </Section>
       )}
 
@@ -626,9 +626,9 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               <Link
                 key={s.season_number}
                 to={`/title/${title.id}/season/${s.season_number}`}
-                className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-indigo-500 transition-colors group"
+                className="bg-zinc-900 rounded-xl overflow-hidden border border-white/[0.06] hover:border-amber-500/50 transition-colors group"
               >
-                <div className="aspect-[2/3] bg-gray-800">
+                <div className="aspect-[2/3] bg-zinc-800">
                   {s.poster_path ? (
                     <img
                       src={`${TMDB_IMG}/w342${s.poster_path}`}
@@ -637,14 +637,14 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">
+                    <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
                       Season {s.season_number}
                     </div>
                   )}
                 </div>
                 <div className="p-3">
-                  <h3 className="text-sm font-medium text-white group-hover:text-indigo-400 transition-colors truncate">{s.name}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <h3 className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors truncate">{s.name}</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
                     {s.episode_count} episode{s.episode_count !== 1 ? "s" : ""}
                     {s.air_date && ` · ${s.air_date.slice(0, 4)}`}
                   </p>
@@ -666,8 +666,8 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             <ProviderRow label="Buy" providers={watchProviders.buy || []} />
           </div>
           {title.offers.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-800">
-              <p className="text-xs text-gray-500 mb-2">Direct links</p>
+            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <p className="text-xs text-zinc-500 mb-2">Direct links</p>
               <div className="flex flex-wrap gap-2">
                 {dedupeOffers(title.offers).map((offer) => (
                   <a
@@ -675,11 +675,11 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                     href={offer.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1 hover:bg-gray-700 transition-colors"
+                    className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
                     title={`${offer.provider_name} (${offer.monetization_type})`}
                   >
                     <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                    <span className="text-sm text-gray-300">{offer.provider_name}</span>
+                    <span className="text-sm text-zinc-300">{offer.provider_name}</span>
                   </a>
                 ))}
               </div>
@@ -697,11 +697,11 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                 href={offer.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-gray-800 rounded-lg px-2 py-1 hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
                 title={`${offer.provider_name} (${offer.monetization_type})`}
               >
                 <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                <span className="text-sm text-gray-300">{offer.provider_name}</span>
+                <span className="text-sm text-zinc-300">{offer.provider_name}</span>
               </a>
             ))}
           </div>
@@ -725,32 +725,32 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             {tmdb.type && (
               <div>
-                <span className="text-gray-500 block">Type</span>
-                <span className="text-gray-300">{tmdb.type}</span>
+                <span className="text-zinc-500 block">Type</span>
+                <span className="text-zinc-300">{tmdb.type}</span>
               </div>
             )}
             {tmdb.original_language && (
               <div>
-                <span className="text-gray-500 block">Original Language</span>
-                <span className="text-gray-300">{tmdb.original_language.toUpperCase()}</span>
+                <span className="text-zinc-500 block">Original Language</span>
+                <span className="text-zinc-300">{tmdb.original_language.toUpperCase()}</span>
               </div>
             )}
             {tmdb.production_countries?.length > 0 && (
               <div>
-                <span className="text-gray-500 block">Country</span>
-                <span className="text-gray-300">{tmdb.production_countries.map(c => c.name).join(", ")}</span>
+                <span className="text-zinc-500 block">Country</span>
+                <span className="text-zinc-300">{tmdb.production_countries.map(c => c.name).join(", ")}</span>
               </div>
             )}
             {tmdb.spoken_languages?.length > 0 && (
               <div>
-                <span className="text-gray-500 block">Languages</span>
-                <span className="text-gray-300">{tmdb.spoken_languages.map(l => l.english_name).join(", ")}</span>
+                <span className="text-zinc-500 block">Languages</span>
+                <span className="text-zinc-300">{tmdb.spoken_languages.map(l => l.english_name).join(", ")}</span>
               </div>
             )}
             {tmdb.production_companies?.length > 0 && (
               <div className="col-span-2 sm:col-span-3">
-                <span className="text-gray-500 block">Production</span>
-                <span className="text-gray-300">{tmdb.production_companies.map(c => c.name).join(", ")}</span>
+                <span className="text-zinc-500 block">Production</span>
+                <span className="text-zinc-300">{tmdb.production_companies.map(c => c.name).join(", ")}</span>
               </div>
             )}
           </div>

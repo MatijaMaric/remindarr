@@ -186,7 +186,7 @@ export default function BrowsePage() {
             <h2 className="text-lg font-semibold">{t("browse.searchResults", { count: searchResults.length })}</h2>
             <button
               onClick={clearSearch}
-              className="text-sm text-gray-400 hover:text-white cursor-pointer"
+              className="text-sm text-zinc-400 hover:text-white cursor-pointer"
             >
               {t("browse.clear")}
             </button>

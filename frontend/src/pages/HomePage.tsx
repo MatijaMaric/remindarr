@@ -45,7 +45,7 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
   const hiddenCount = episodes.length - EPISODES_PER_PAGE;
 
   return (
-    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+    <div className="bg-zinc-900 rounded-xl overflow-hidden">
       <div className="flex gap-4 p-4">
         {posterUrl && (
           <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
@@ -54,26 +54,26 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <Link to={`/title/${episodes[0].title_id}`} className="hover:text-indigo-400 transition-colors">
+            <Link to={`/title/${episodes[0].title_id}`} className="hover:text-amber-400 transition-colors">
               <h3 className="font-semibold text-white">{showTitle}</h3>
             </Link>
             {episodes.length > 1 && (
               <button
                 onClick={() => onMarkSeasonWatched(episodes.map((ep) => ep.id))}
-                className="text-xs text-gray-400 hover:text-emerald-400 transition-colors flex-shrink-0 cursor-pointer"
+                className="text-xs text-zinc-400 hover:text-emerald-400 transition-colors flex-shrink-0 cursor-pointer"
               >
                 {t("home.markSeasonWatched")}
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">{t("home.season", { number: seasonNumber })}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{t("home.season", { number: seasonNumber })}</p>
           <div className="mt-2 space-y-1">
             {visibleEpisodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
                 <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
-                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-indigo-400 transition-colors truncate">
-                  <span className="text-indigo-400 font-medium">{formatEpisodeCode(ep)}</span>
-                  {ep.name && <span className="text-gray-400"> · {ep.name}</span>}
+                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors truncate">
+                  <span className="text-amber-400 font-medium">{formatEpisodeCode(ep)}</span>
+                  {ep.name && <span className="text-zinc-400"> · {ep.name}</span>}
                 </Link>
               </div>
             ))}
@@ -81,7 +81,7 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
           {!showAllEpisodes && hiddenCount > 0 && (
             <button
               onClick={() => setShowAllEpisodes(true)}
-              className="text-xs text-gray-400 hover:text-indigo-400 transition-colors mt-2 cursor-pointer"
+              className="text-xs text-zinc-400 hover:text-amber-400 transition-colors mt-2 cursor-pointer"
             >
               {t("home.showAll", { count: episodes.length })}
             </button>
@@ -89,7 +89,7 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
           {showAllEpisodes && episodes.length > EPISODES_PER_PAGE && (
             <button
               onClick={() => setShowAllEpisodes(false)}
-              className="text-xs text-gray-400 hover:text-indigo-400 transition-colors mt-2 cursor-pointer"
+              className="text-xs text-zinc-400 hover:text-amber-400 transition-colors mt-2 cursor-pointer"
             >
               {t("home.showLess")}
             </button>
@@ -138,7 +138,7 @@ const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, 
         {sortedSeasons.length > 1 && (
           <button
             onClick={() => onToggleExpand(titleId)}
-            className="text-xs text-gray-400 hover:text-indigo-400 transition-colors cursor-pointer w-full text-center"
+            className="text-xs text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer w-full text-center"
           >
             {t("home.collapseSeasons")}
           </button>
@@ -154,10 +154,10 @@ const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, 
     <div className="relative">
       {/* Shadow cards for deck effect */}
       {extraSeasons >= 2 && (
-        <div className="absolute inset-0 translate-y-2 translate-x-2 scale-[0.94] bg-gray-900 rounded-xl border border-gray-800 opacity-30" />
+        <div className="absolute inset-0 translate-y-2 translate-x-2 scale-[0.94] bg-zinc-900 rounded-xl border border-zinc-800/30 opacity-30" />
       )}
       {extraSeasons >= 1 && (
-        <div className="absolute inset-0 translate-y-1 translate-x-1 scale-[0.97] bg-gray-900 rounded-xl border border-gray-800 opacity-60" />
+        <div className="absolute inset-0 translate-y-1 translate-x-1 scale-[0.97] bg-zinc-900 rounded-xl border border-zinc-800/30 opacity-60" />
       )}
       {/* Main card */}
       <div className="relative z-10">
@@ -172,7 +172,7 @@ const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, 
         {extraSeasons > 0 && (
           <button
             onClick={() => onToggleExpand(titleId)}
-            className="w-full text-center text-xs text-gray-400 hover:text-indigo-400 transition-colors py-2 cursor-pointer"
+            className="w-full text-center text-xs text-zinc-400 hover:text-amber-400 transition-colors py-2 cursor-pointer"
           >
             {t("home.moreSeasons", { count: extraSeasons })}
           </button>
@@ -219,7 +219,7 @@ function UnwatchedCarousel({ children }: { children: React.ReactNode }) {
       {canScrollLeft && (
         <button
           onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 bg-gray-800/90 hover:bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -236,7 +236,7 @@ function UnwatchedCarousel({ children }: { children: React.ReactNode }) {
       {canScrollRight && (
         <button
           onClick={() => scroll("right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20 bg-gray-800/90 hover:bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -349,7 +349,7 @@ export default function HomePage() {
     return (
       <div className="text-center py-20">
         <h2 className="text-2xl font-bold text-white mb-2">{t("home.welcomeTitle")}</h2>
-        <p className="text-gray-400">{t("home.welcomeMessage")}</p>
+        <p className="text-zinc-400">{t("home.welcomeMessage")}</p>
       </div>
     );
   }
@@ -385,7 +385,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-white">{t("home.unwatched")}</h2>
             <Link
               to="/reels"
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-400 transition-colors"
+              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors"
               title="Full-screen reels view"
             >
               <Maximize2 size={14} />
@@ -413,7 +413,7 @@ export default function HomePage() {
       <section>
         <h2 className="text-xl font-bold text-white mb-4">{t("home.today")}</h2>
         {today.length === 0 ? (
-          <p className="text-gray-500 text-sm">
+          <p className="text-zinc-500 text-sm">
             {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
           </p>
         ) : (
@@ -434,14 +434,14 @@ export default function HomePage() {
       {/* Upcoming Episodes */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-300 mb-4">{t("home.comingUp")}</h2>
+          <h2 className="text-lg font-semibold text-zinc-300 mb-4">{t("home.comingUp")}</h2>
           <div className="space-y-4">
             {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
               const byShow = groupByShow(eps);
               const dateLabel = formatUpcomingDate(date);
               return (
                 <div key={date}>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
+                  <h3 className="text-sm font-medium text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
                   <div className="space-y-2">
                     {Array.from(byShow.entries()).map(([titleId, showEps]) => (
                       <ShowEpisodeGroup

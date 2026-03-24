@@ -64,7 +64,7 @@ export default function MultiSelectDropdown({
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="bg-gray-800 text-gray-300 text-xs rounded-lg px-3 py-1.5 border-0 outline-none cursor-pointer hover:text-white focus:ring-1 focus:ring-gray-600 flex items-center gap-1"
+        className="bg-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-1.5 border-0 outline-none cursor-pointer hover:text-white focus:ring-1 focus:ring-zinc-600 flex items-center gap-1"
       >
         {summary}
         <svg
@@ -78,12 +78,12 @@ export default function MultiSelectDropdown({
         </svg>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg py-1 max-h-60 overflow-y-auto min-w-[160px]">
+        <div className="absolute z-50 mt-1 bg-zinc-800 border border-white/[0.08] rounded-lg shadow-lg py-1 max-h-60 overflow-y-auto min-w-[160px]">
           {selected.length > 0 && (
             <button
               type="button"
               onClick={() => onChange([])}
-              className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700 cursor-pointer"
+              className="w-full text-left px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-700 cursor-pointer"
             >
               Clear all
             </button>
@@ -91,13 +91,13 @@ export default function MultiSelectDropdown({
           {options.map((opt) => (
             <label
               key={opt.value}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-700 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 cursor-pointer"
             >
               <input
                 type="checkbox"
                 checked={selected.includes(opt.value)}
                 onChange={() => toggle(opt.value)}
-                className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-0 cursor-pointer"
+                className="rounded border-white/[0.10] bg-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
               />
               {opt.label}
             </label>

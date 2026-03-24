@@ -41,9 +41,9 @@ export default function SeasonDetailPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-zinc-400">
         <Link to={`/title/${title.id}`} className="hover:text-white transition-colors">{title.title}</Link>
-        <span className="text-gray-600">/</span>
+        <span className="text-zinc-600">/</span>
         <span className="text-white">{tmdb?.name || `Season ${seasonNumber}`}</span>
       </div>
 
@@ -53,7 +53,7 @@ export default function SeasonDetailPage() {
           {posterUrl ? (
             <img src={posterUrl} alt={tmdb?.name || `Season ${seasonNumber}`} className="w-full rounded-xl shadow-xl" />
           ) : (
-            <div className="aspect-[2/3] bg-gray-800 rounded-xl flex items-center justify-center text-gray-600">
+            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">
               Season {seasonNumber}
             </div>
           )}
@@ -61,24 +61,24 @@ export default function SeasonDetailPage() {
 
         <div className="flex-1 space-y-3">
           <h1 className="text-2xl font-bold text-white">{tmdb?.name || `Season ${seasonNumber}`}</h1>
-          <div className="flex items-center gap-2 text-sm text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-zinc-400">
             {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}
             {episodes.length > 0 && (
               <>
-                <span className="text-gray-600">·</span>
+                <span className="text-zinc-600">·</span>
                 <span>{episodes.length} episode{episodes.length !== 1 ? "s" : ""}</span>
               </>
             )}
             {tmdb?.vote_average ? (
               <>
-                <span className="text-gray-600">·</span>
+                <span className="text-zinc-600">·</span>
                 <span className="text-yellow-500">{tmdb.vote_average.toFixed(1)}</span>
               </>
             ) : null}
           </div>
 
           {tmdb?.overview && (
-            <p className="text-gray-300 leading-relaxed">{tmdb.overview}</p>
+            <p className="text-zinc-300 leading-relaxed">{tmdb.overview}</p>
           )}
         </div>
       </div>
@@ -92,10 +92,10 @@ export default function SeasonDetailPage() {
               <Link
                 key={ep.episode_number}
                 to={`/title/${title.id}/season/${seasonNumber}/episode/${ep.episode_number}`}
-                className="flex gap-4 bg-gray-900 rounded-xl border border-gray-800 hover:border-indigo-500 transition-colors p-3 group"
+                className="flex gap-4 bg-zinc-900 rounded-xl border border-white/[0.06] hover:border-amber-500/50 transition-colors p-3 group"
               >
                 {/* Episode still */}
-                <div className="w-36 shrink-0 aspect-video bg-gray-800 rounded-lg overflow-hidden">
+                <div className="w-36 shrink-0 aspect-video bg-zinc-800 rounded-lg overflow-hidden">
                   {ep.still_path ? (
                     <img
                       src={`${TMDB_IMG}/w300${ep.still_path}`}
@@ -104,7 +104,7 @@ export default function SeasonDetailPage() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
+                    <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
                       E{String(ep.episode_number).padStart(2, "0")}
                     </div>
                   )}
@@ -114,21 +114,21 @@ export default function SeasonDetailPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-medium text-white group-hover:text-indigo-400 transition-colors">
-                        <span className="text-gray-500 mr-1">{ep.episode_number}.</span>
+                      <h3 className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors">
+                        <span className="text-zinc-500 mr-1">{ep.episode_number}.</span>
                         {ep.name}
                       </h3>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
                         {ep.air_date && <span>{formatDate(ep.air_date)}</span>}
                         {ep.runtime && (
                           <>
-                            <span className="text-gray-700">·</span>
+                            <span className="text-zinc-700">·</span>
                             <span>{ep.runtime}m</span>
                           </>
                         )}
                         {ep.vote_average > 0 && (
                           <>
-                            <span className="text-gray-700">·</span>
+                            <span className="text-zinc-700">·</span>
                             <span className="text-yellow-500">{ep.vote_average.toFixed(1)}</span>
                           </>
                         )}
@@ -136,7 +136,7 @@ export default function SeasonDetailPage() {
                     </div>
                   </div>
                   {ep.overview && (
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ep.overview}</p>
+                    <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{ep.overview}</p>
                   )}
                 </div>
               </Link>
