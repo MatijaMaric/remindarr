@@ -79,7 +79,6 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
   if (slides.length === 0) return null;
 
   const current = slides[activeIndex];
-  const imageUrl = getHeroImageUrl(current.featured);
 
   return (
     <div
@@ -139,7 +138,7 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
               Continue Watching
             </p>
             <div className="space-y-2">
-              {current.sidebar.map((item, idx) => {
+              {current.sidebar.map((item) => {
                 const slideIdx = slides.findIndex(
                   (s) => s.featured.title_id === item.titleId
                 );
