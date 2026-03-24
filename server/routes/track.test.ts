@@ -301,4 +301,145 @@ describe("POST /track/import", () => {
     });
     expect(res.status).toBe(401);
   });
+
+  it("enqueues sync-show-episodes job for SHOW titles with tmdb_id and watched_episodes", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "tv-999",
+          tmdb_id: "999",
+          object_type: "SHOW",
+          title: "Test Show",
+          genres: [],
+          watched_episodes: [{ season: 1, episode: 1 }, { season: 1, episode: 2 }],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.imported).toBe(1);
+
+    const db = getRawDb();
+    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-999' LIMIT 1").get() as any;
+    expect(job).toBeTruthy();
+    const jobData = JSON.parse(job.data);
+    expect(jobData).toMatchObject({ titleId: "tv-999", tmdbId: "999", title: "Test Show" });
+    expect(jobData.watchedEpisodes).toEqual([{ season: 1, episode: 1 }, { season: 1, episode: 2 }]);
+    expect(jobData.userId).toBeTruthy();
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("enqueues sync-show-episodes job without watchedEpisodes when show has no watched data", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "tv-888",
+          tmdb_id: "888",
+          object_type: "SHOW",
+          title: "Unwatched Show",
+          genres: [],
+          watched_episodes: [],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-888' LIMIT 1").get() as any;
+    expect(job).toBeTruthy();
+    const jobData = JSON.parse(job.data);
+    expect(jobData.watchedEpisodes).toBeUndefined();
+    expect(jobData.userId).toBeUndefined();
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("does not enqueue sync-show-episodes when TMDB_API_KEY is not set", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "";
+
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "tv-777",
+          tmdb_id: "777",
+          object_type: "SHOW",
+          title: "No Key Show",
+          genres: [],
+          watched_episodes: [],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-777' LIMIT 1").get();
+    expect(job).toBeNull();
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("does not enqueue sync-show-episodes for MOVIE titles", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "movie-555",
+          tmdb_id: "555",
+          object_type: "MOVIE",
+          title: "Test Movie",
+          genres: [],
+          watched_episodes: [],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'movie-555' LIMIT 1").get();
+    expect(job).toBeNull();
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
 });
