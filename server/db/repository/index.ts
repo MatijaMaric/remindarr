@@ -67,6 +67,12 @@ export {
 } from "./settings";
 
 export {
+  watchTitle,
+  unwatchTitle,
+  getWatchedTitleIds,
+} from "./watched-titles";
+
+export {
   createNotifier,
   updateNotifier,
   deleteNotifier,

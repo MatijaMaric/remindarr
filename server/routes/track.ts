@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, deleteEpisodesForTitle, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, deleteEpisodesForTitle, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { getDb } from "../db/schema";
@@ -107,6 +107,7 @@ app.get("/export", async (c) => {
   const user = c.get("user")!;
   const tracked = await getTrackedTitles(user.id);
   const watchedByTitle = await getWatchedEpisodesForExport(user.id);
+  const watchedTitleIds = await getWatchedTitleIds(user.id);
 
   const exportData = {
     version: 1,
@@ -129,6 +130,7 @@ app.get("/export", async (c) => {
       tmdb_url: t.tmdb_url,
       tracked_at: t.tracked_at,
       notes: t.notes,
+      is_watched: watchedTitleIds.has(t.id),
       watched_episodes: watchedByTitle.get(t.id) ?? [],
     })),
   };
@@ -183,6 +185,11 @@ app.post("/import", async (c) => {
       }]);
 
       await trackTitle(item.id, user.id, item.notes ?? undefined);
+
+      // Restore movie watched status
+      if (item.is_watched) {
+        await watchTitle(item.id, user.id);
+      }
 
       const hasWatched = Array.isArray(item.watched_episodes) && item.watched_episodes.length > 0;
       const canSyncEpisodes = item.object_type === "SHOW" && item.tmdb_id && CONFIG.TMDB_API_KEY;

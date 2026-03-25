@@ -185,6 +185,16 @@ export async function watchEpisodesBulk(episodeIds: number[], watched: boolean):
   });
 }
 
+// ─── Watched Movies ──────────────────────────────────────────────────────────
+
+export async function watchMovie(titleId: string): Promise<void> {
+  await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, { method: "POST" });
+}
+
+export async function unwatchMovie(titleId: string): Promise<void> {
+  await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, { method: "DELETE" });
+}
+
 // ─── Details ────────────────────────────────────────────────────────────────
 
 export async function getMovieDetails(titleId: string): Promise<MovieDetailsResponse> {

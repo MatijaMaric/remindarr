@@ -1,6 +1,6 @@
 import { eq, and, or, sql, gte, lt, desc, asc, exists, notExists, inArray, like } from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, providers, offers, scores, tracked, titleGenres } from "../schema";
+import { titles, providers, offers, scores, tracked, titleGenres, watchedTitles } from "../schema";
 import type { ParsedTitle } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
@@ -187,6 +187,9 @@ export async function getTitleById(titleId: string, userId?: string) {
         is_tracked: userId
           ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
           : sql<number>`0`,
+        is_watched: userId
+          ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
+          : sql<number>`0`,
       })
       .from(titles)
       .leftJoin(scores, eq(scores.titleId, titles.id))
@@ -204,6 +207,7 @@ export async function getTitleById(titleId: string, userId?: string) {
       ...row,
       genres: genreMap.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
+      is_watched: Boolean(row.is_watched),
       offers: await getOffersForTitle(row.id),
     };
   });
@@ -308,6 +312,9 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
         is_tracked: userId
           ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
           : sql<number>`0`,
+        is_watched: userId
+          ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
+          : sql<number>`0`,
       })
       .from(titles)
       .leftJoin(scores, eq(scores.titleId, titles.id))
@@ -332,6 +339,7 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
       ...row,
       genres: genresByTitle.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
+      is_watched: Boolean(row.is_watched),
       offers: offersByTitle.get(row.id) ?? [],
     }));
   });
@@ -364,6 +372,9 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
         is_tracked: userId
           ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
           : sql<number>`0`,
+        is_watched: userId
+          ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
+          : sql<number>`0`,
       })
       .from(titles)
       .leftJoin(scores, eq(scores.titleId, titles.id))
@@ -387,6 +398,7 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
       ...row,
       genres: genresByTitle.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
+      is_watched: Boolean(row.is_watched),
       offers: offersByTitle.get(row.id) ?? [],
     }));
   });
@@ -482,6 +494,9 @@ export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
       imdb_votes: scores.imdbVotes,
       tmdb_score: scores.tmdbScore,
       is_tracked: sql<number>`1`,
+      is_watched: userId
+        ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
+        : sql<number>`0`,
     })
     .from(titles)
     .leftJoin(scores, eq(scores.titleId, titles.id))
@@ -498,6 +513,7 @@ export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     ...row,
     genres: genresByTitle.get(row.id) ?? [],
     is_tracked: Boolean(row.is_tracked),
+    is_watched: Boolean(row.is_watched),
     offers: offersByTitle.get(row.id) ?? [],
   }));
   });
