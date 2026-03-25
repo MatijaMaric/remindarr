@@ -41,6 +41,13 @@ export function formatUpcomingDate(dateStr: string): string {
   return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
 
+export function getEpisodeCardImageUrl(episode: Episode): string | null {
+  if (episode.still_path) return `https://image.tmdb.org/t/p/w780${episode.still_path}`;
+  if (episode.backdrop_url) return episode.backdrop_url;
+  if (episode.poster_url) return episode.poster_url;
+  return null;
+}
+
 export function isEpisodeReleased(ep: Episode): boolean {
   if (!ep.air_date) return false;
   const today = new Date().toISOString().slice(0, 10);

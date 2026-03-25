@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { groupByShowAndSeason, EPISODES_PER_PAGE } from "./HomePage";
+import { groupByShowAndSeason, buildUnwatchedCards, MAX_CARDS_PER_SEASON } from "./HomePage";
 import type { Episode } from "../types";
 
 function makeEpisode(overrides: Partial<Episode> & { id: number; title_id: string; season_number: number; episode_number: number }): Episode {
@@ -50,45 +50,103 @@ describe("groupByShowAndSeason", () => {
   });
 });
 
-describe("EPISODES_PER_PAGE", () => {
-  it("is set to 5", () => {
-    expect(EPISODES_PER_PAGE).toBe(5);
+describe("MAX_CARDS_PER_SEASON", () => {
+  it("is set to 3", () => {
+    expect(MAX_CARDS_PER_SEASON).toBe(3);
   });
 });
 
-describe("progressive reveal logic", () => {
-  it("slice(0, EPISODES_PER_PAGE) shows first 5 of a longer list", () => {
-    const episodes = Array.from({ length: 10 }, (_, i) =>
-      makeEpisode({ id: i + 1, title_id: "show-1", season_number: 1, episode_number: i + 1 })
-    );
+describe("buildUnwatchedCards", () => {
+  it("produces one card per episode when under the limit", () => {
+    const episodes: Episode[] = [
+      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
+      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2 }),
+    ];
+    const grouped = groupByShowAndSeason(episodes);
+    const cards = buildUnwatchedCards(grouped);
 
-    const visible = episodes.slice(0, EPISODES_PER_PAGE);
-    expect(visible.length).toBe(5);
-    expect(visible[0].episode_number).toBe(1);
-    expect(visible[4].episode_number).toBe(5);
+    expect(cards.length).toBe(2);
+    expect(cards[0].episode.id).toBe(1);
+    expect(cards[1].episode.id).toBe(2);
+    expect(cards.every((c) => !c.isOverflow)).toBe(true);
   });
 
-  it("removing a watched episode reveals the next one in the window", () => {
-    const episodes = Array.from({ length: 8 }, (_, i) =>
+  it("caps at MAX_CARDS_PER_SEASON and adds overflow card", () => {
+    const episodes = Array.from({ length: 7 }, (_, i) =>
       makeEpisode({ id: i + 1, title_id: "show-1", season_number: 1, episode_number: i + 1 })
     );
+    const grouped = groupByShowAndSeason(episodes);
+    const cards = buildUnwatchedCards(grouped);
 
-    // Simulate marking episode 1 as watched (removed from array)
-    const afterWatch = episodes.filter((ep) => ep.id !== 1);
-    const visible = afterWatch.slice(0, EPISODES_PER_PAGE);
-
-    expect(visible.length).toBe(5);
-    expect(visible[0].episode_number).toBe(2);
-    expect(visible[4].episode_number).toBe(6); // episode 6 is now visible
+    // 3 regular + 1 overflow
+    expect(cards.length).toBe(4);
+    expect(cards[0].isOverflow).toBeFalsy();
+    expect(cards[1].isOverflow).toBeFalsy();
+    expect(cards[2].isOverflow).toBeFalsy();
+    expect(cards[3].isOverflow).toBe(true);
   });
 
-  it("shows all episodes when list is shorter than limit", () => {
-    const episodes = Array.from({ length: 3 }, (_, i) =>
+  it("sets correct seasonEpisodeCount on each card", () => {
+    const episodes = Array.from({ length: 5 }, (_, i) =>
       makeEpisode({ id: i + 1, title_id: "show-1", season_number: 1, episode_number: i + 1 })
     );
+    const grouped = groupByShowAndSeason(episodes);
+    const cards = buildUnwatchedCards(grouped);
 
-    const visible = episodes.slice(0, EPISODES_PER_PAGE);
-    expect(visible.length).toBe(3);
+    // All cards should know total season count is 5
+    for (const card of cards) {
+      expect(card.seasonEpisodeCount).toBe(5);
+    }
+  });
+
+  it("sets correct seasonEpisodeIds on each card", () => {
+    const episodes: Episode[] = [
+      makeEpisode({ id: 10, title_id: "show-1", season_number: 1, episode_number: 1 }),
+      makeEpisode({ id: 20, title_id: "show-1", season_number: 1, episode_number: 2 }),
+    ];
+    const grouped = groupByShowAndSeason(episodes);
+    const cards = buildUnwatchedCards(grouped);
+
+    expect(cards[0].seasonEpisodeIds).toEqual([10, 20]);
+    expect(cards[1].seasonEpisodeIds).toEqual([10, 20]);
+  });
+
+  it("orders by show then season", () => {
+    const episodes: Episode[] = [
+      makeEpisode({ id: 1, title_id: "show-1", season_number: 2, episode_number: 1 }),
+      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 1 }),
+      makeEpisode({ id: 3, title_id: "show-2", season_number: 1, episode_number: 1 }),
+    ];
+    const grouped = groupByShowAndSeason(episodes);
+    const cards = buildUnwatchedCards(grouped);
+
+    // show-1 season 1 first, then show-1 season 2, then show-2
+    expect(cards[0].episode.id).toBe(2); // show-1 s1
+    expect(cards[1].episode.id).toBe(1); // show-1 s2
+    expect(cards[2].episode.id).toBe(3); // show-2 s1
+  });
+
+  it("handles multiple shows with multiple seasons", () => {
+    const episodes: Episode[] = [
+      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1, show_title: "Show 1" }),
+      makeEpisode({ id: 2, title_id: "show-1", season_number: 2, episode_number: 1, show_title: "Show 1" }),
+      makeEpisode({ id: 3, title_id: "show-2", season_number: 1, episode_number: 1, show_title: "Show 2" }),
+    ];
+    const grouped = groupByShowAndSeason(episodes);
+    const cards = buildUnwatchedCards(grouped);
+
+    expect(cards.length).toBe(3);
+    expect(cards[0].titleId).toBe("show-1");
+    expect(cards[0].seasonNumber).toBe(1);
+    expect(cards[1].titleId).toBe("show-1");
+    expect(cards[1].seasonNumber).toBe(2);
+    expect(cards[2].titleId).toBe("show-2");
+  });
+
+  it("returns empty array for empty input", () => {
+    const grouped = groupByShowAndSeason([]);
+    const cards = buildUnwatchedCards(grouped);
+    expect(cards.length).toBe(0);
   });
 });
 
@@ -157,8 +215,8 @@ describe("episode toggle updater functions", () => {
   });
 });
 
-describe("season ordering for deck-of-cards", () => {
-  it("earliest season appears first when sorting season map entries", () => {
+describe("season ordering in buildUnwatchedCards", () => {
+  it("earliest season appears first", () => {
     const episodes: Episode[] = [
       makeEpisode({ id: 1, title_id: "show-1", season_number: 3, episode_number: 1 }),
       makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 1 }),
@@ -166,28 +224,11 @@ describe("season ordering for deck-of-cards", () => {
     ];
 
     const grouped = groupByShowAndSeason(episodes);
-    const seasonMap = grouped.get("show-1")!;
-    const sortedSeasons = Array.from(seasonMap.entries()).sort(([a], [b]) => a - b);
+    const cards = buildUnwatchedCards(grouped);
 
-    expect(sortedSeasons[0][0]).toBe(1);
-    expect(sortedSeasons[1][0]).toBe(2);
-    expect(sortedSeasons[2][0]).toBe(3);
-  });
-
-  it("counts extra seasons correctly for deck effect", () => {
-    const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 2, episode_number: 1 }),
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 3, episode_number: 1 }),
-      makeEpisode({ id: 4, title_id: "show-1", season_number: 4, episode_number: 1 }),
-    ];
-
-    const grouped = groupByShowAndSeason(episodes);
-    const seasonMap = grouped.get("show-1")!;
-    const sortedSeasons = Array.from(seasonMap.entries()).sort(([a], [b]) => a - b);
-    const extraSeasons = sortedSeasons.length - 1;
-
-    expect(extraSeasons).toBe(3);
+    expect(cards[0].seasonNumber).toBe(1);
+    expect(cards[1].seasonNumber).toBe(2);
+    expect(cards[2].seasonNumber).toBe(3);
   });
 
   it("when all episodes of first season are removed, second season becomes first", () => {
@@ -201,10 +242,9 @@ describe("season ordering for deck-of-cards", () => {
     // Simulate watching all of season 1
     const afterWatch = episodes.filter((ep) => ep.season_number !== 1);
     const regrouped = groupByShowAndSeason(afterWatch);
-    const seasonMap = regrouped.get("show-1")!;
-    const sortedSeasons = Array.from(seasonMap.entries()).sort(([a], [b]) => a - b);
+    const cards = buildUnwatchedCards(regrouped);
 
-    expect(sortedSeasons.length).toBe(1);
-    expect(sortedSeasons[0][0]).toBe(2); // Season 2 is now earliest
+    expect(cards.length).toBe(2);
+    expect(cards[0].seasonNumber).toBe(2);
   });
 });
