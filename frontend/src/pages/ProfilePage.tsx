@@ -52,8 +52,8 @@ function UserSection() {
       setPasswordMsg(t("profile.passwordChanged"));
       setCurrentPassword("");
       setNewPassword("");
-    } catch (err: any) {
-      setPasswordErr(err.message);
+    } catch (err: unknown) {
+      setPasswordErr(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -201,9 +201,9 @@ function PasskeySection() {
       setMsg(t("profile.passkeyAdded"));
       setPasskeyName("");
       await loadPasskeys();
-    } catch (e: any) {
-      if (e.name !== "NotAllowedError") {
-        setErr(e.message);
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || e.name !== "NotAllowedError") {
+        setErr(e instanceof Error ? e.message : String(e));
       }
     } finally {
       setAdding(false);
@@ -221,8 +221,8 @@ function PasskeySection() {
       }
       setMsg(t("profile.passkeyDeleted"));
       await loadPasskeys();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setDeleting(null);
     }
@@ -241,8 +241,8 @@ function PasskeySection() {
       setEditing(null);
       setEditName("");
       await loadPasskeys();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -372,8 +372,8 @@ function WatchlistSection() {
     setExporting(true);
     try {
       await api.exportWatchlist();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setExporting(false);
     }
@@ -391,8 +391,8 @@ function WatchlistSection() {
         imported: result.imported,
         skippedText: result.skipped > 0 ? t("profile.importSkipped", { count: result.skipped }) : "",
       }));
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -529,8 +529,8 @@ function PushNotificationsSection() {
 
       setMsg("Push notifications enabled");
       await refresh();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setEnabling(false);
     }
@@ -547,8 +547,8 @@ function PushNotificationsSection() {
       }
       setMsg("Push notifications disabled");
       await refresh();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setDisabling(false);
     }
@@ -573,8 +573,8 @@ function PushNotificationsSection() {
       } else {
         setErr(result.message);
       }
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setTesting(false);
     }
@@ -743,8 +743,8 @@ function NotificationsSection() {
       }
       resetForm();
       refresh();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -757,8 +757,8 @@ function NotificationsSection() {
       await api.deleteNotifier(id);
       setMsg("Notifier deleted");
       refresh();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -773,8 +773,8 @@ function NotificationsSection() {
       } else {
         setErr(result.message);
       }
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setTesting(null);
     }
@@ -787,8 +787,8 @@ function NotificationsSection() {
     try {
       await api.updateNotifier(n.id, { enabled: !n.enabled });
       refresh();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setToggling(null);
     }
@@ -1011,8 +1011,8 @@ function BackgroundJobsSection() {
       await api.triggerJob(name);
       setMsg(`Job "${formatJobName(name)}" queued successfully`);
       refresh();
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setTriggering(null);
     }
@@ -1199,8 +1199,8 @@ function AdminSection() {
       // Refresh settings
       const data = await api.getAdminSettings();
       setSettings(data);
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }

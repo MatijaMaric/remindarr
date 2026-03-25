@@ -141,8 +141,8 @@ export default function BrowsePage() {
     try {
       const res = await api.searchTitles(query);
       setSearchResults(res.titles.map(normalizeSearchTitle));
-    } catch (err: any) {
-      setSearchError(err.message);
+    } catch (err: unknown) {
+      setSearchError(err instanceof Error ? err.message : String(err));
     } finally {
       setSearchLoading(false);
     }
@@ -156,8 +156,8 @@ export default function BrowsePage() {
       if (res.title) {
         setSearchResults([normalizeSearchTitle(res.title)]);
       }
-    } catch (err: any) {
-      setSearchError(err.message);
+    } catch (err: unknown) {
+      setSearchError(err instanceof Error ? err.message : String(err));
     } finally {
       setSearchLoading(false);
     }

@@ -172,7 +172,7 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
   // Initial load: current month ± 1
   useEffect(() => {
     loadedMonthsRef.current.clear();
-    setMonths([]);
+    setMonths([]); // eslint-disable-line react-hooks/set-state-in-effect -- reset before async load
     setInitialLoading(true);
 
     const now = new Date();
@@ -543,7 +543,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
   const month = currentMonth.getMonth();
 
   useEffect(() => {
-    setLoading(true);
+    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect -- reset before async load
     getCalendarTitles({
       month: formatMonth(currentMonth),
       type: typeFilter || undefined,

@@ -164,8 +164,8 @@ export default function TitleDetailPage() {
           const data = await api.getShowDetails(titleId);
           if (!cancelled) setShowData(data);
         }
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || "Failed to load details");
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load details");
       } finally {
         if (!cancelled) setLoading(false);
       }

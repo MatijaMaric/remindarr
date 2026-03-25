@@ -26,8 +26,8 @@ export default function SignupPage() {
     try {
       await signup(username, email, password, name || username);
       navigate("/", { replace: true });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
