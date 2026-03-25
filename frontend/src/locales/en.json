@@ -125,6 +125,9 @@
     "deletePasskey": "Delete",
     "deletingPasskey": "Deleting...",
     "passkeyDeleted": "Passkey deleted",
+    "passkeyRenamed": "Passkey renamed",
+    "renamePasskey": "Rename",
+    "renamingPasskey": "Renaming...",
     "noPasskeys": "No passkeys registered. Add one to enable passwordless sign-in.",
     "passkeyUnnamed": "Unnamed passkey"
   },
@@ -169,6 +172,8 @@
   },
   "common": {
     "loading": "Loading...",
-    "error": "An error occurred"
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel"
   }
 }

@@ -38,6 +38,29 @@ export default function LoginPage() {
     if (oidcError) setError(t("login.loginFailed", { error: oidcError }));
   }, [searchParams]);
 
+  // Enable passkey autofill (conditional UI)
+  useEffect(() => {
+    if (!passkeyAvailable) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const available = typeof PublicKeyCredential.isConditionalMediationAvailable === "function"
+          && await PublicKeyCredential.isConditionalMediationAvailable();
+        if (!available || cancelled) return;
+        const result = await authClient.signIn.passkey({ autoFill: true });
+        if (cancelled) return;
+        if (result?.error) return;
+        const session = await authClient.getSession();
+        if (session.data?.user && !cancelled) {
+          window.location.href = "/";
+        }
+      } catch {
+        // Autofill silently fails if user doesn't select a passkey
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [passkeyAvailable]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -147,7 +170,7 @@ export default function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
                   placeholder={usernamePlaceholder}
-                  autoComplete="username"
+                  autoComplete="username webauthn"
                   required
                 />
               </div>
@@ -176,14 +199,15 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-zinc-500">
-              {t("login.noAccount")}{" "}
-              <Link to="/signup" className="text-amber-400 hover:text-amber-300 transition-colors">
-                {t("login.signUp")}
-              </Link>
-            </p>
           </>
         )}
+
+        <p className="mt-6 text-center text-sm text-zinc-500">
+          {t("login.noAccount")}{" "}
+          <Link to="/signup" className="text-amber-400 hover:text-amber-300 transition-colors">
+            {t("login.signUp")}
+          </Link>
+        </p>
       </div>
     </div>
   );
