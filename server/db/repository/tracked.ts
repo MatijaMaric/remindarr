@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, scores, tracked, titleGenres } from "../schema";
+import { titles, scores, tracked, titleGenres, watchedTitles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles } from "./offers";
 
@@ -81,6 +81,7 @@ export async function getTrackedTitles(userId: string) {
         tracked_at: tracked.trackedAt,
         notes: tracked.notes,
         is_tracked: sql<number>`1`,
+        is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))
@@ -98,6 +99,7 @@ export async function getTrackedTitles(userId: string) {
       ...row,
       genres: genresByTitle.get(row.id) ?? [],
       is_tracked: true,
+      is_watched: Boolean(row.is_watched),
       offers: offersByTitle.get(row.id) ?? [],
     }));
   });

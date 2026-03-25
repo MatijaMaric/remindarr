@@ -40,6 +40,7 @@ export interface Title {
   imdb_votes: number | null;
   tmdb_score: number | null;
   is_tracked: boolean;
+  is_watched?: boolean;
   offers: Offer[];
   tracked_at?: string;
   notes?: string;
@@ -413,6 +414,7 @@ export function normalizeSearchTitle(t: SearchTitle): Title {
     imdb_votes: t.scores.imdbVotes,
     tmdb_score: t.scores.tmdbScore,
     is_tracked: t.isTracked ?? false,
+    is_watched: false,
     offers: t.offers.map((o, i) => ({
       id: i,
       title_id: t.id,

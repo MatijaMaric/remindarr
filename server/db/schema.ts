@@ -248,6 +248,23 @@ export const watchedEpisodes = sqliteTable(
   ]
 );
 
+export const watchedTitles = sqliteTable(
+  "watched_titles",
+  {
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    watchedAt: text("watched_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.titleId, table.userId] }),
+    index("idx_watched_titles_user_id").on(table.userId),
+  ]
+);
+
 export const notifiers = sqliteTable(
   "notifiers",
   {
@@ -363,6 +380,11 @@ export const watchedEpisodesRelations = relations(watchedEpisodes, ({ one }) => 
   user: one(users, { fields: [watchedEpisodes.userId], references: [users.id] }),
 }));
 
+export const watchedTitlesRelations = relations(watchedTitles, ({ one }) => ({
+  title: one(titles, { fields: [watchedTitles.titleId], references: [titles.id] }),
+  user: one(users, { fields: [watchedTitles.userId], references: [users.id] }),
+}));
+
 export const notifiersRelations = relations(notifiers, ({ one }) => ({
   user: one(users, { fields: [notifiers.userId], references: [users.id] }),
 }));
@@ -370,9 +392,9 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 export const schemaExports = {
-  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
+  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
-  usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
+  usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
 };
 
 // Re-export the union type from platform for convenience

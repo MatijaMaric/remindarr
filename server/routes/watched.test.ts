@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, upsertEpisodes, createUser } from "../db/repository";
+import { upsertTitles, upsertEpisodes, createUser, getTitleById } from "../db/repository";
 import { getRawDb } from "../db/bun-db";
 import watchedApp from "./watched";
 import type { AppEnv } from "../types";
@@ -278,5 +278,49 @@ describe("POST /watched/bulk", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain("episodeIds");
+  });
+});
+
+describe("POST /watched/movies/:titleId", () => {
+  it("marks a movie as watched", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-w1", objectType: "MOVIE" })]);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/movies/movie-w1", { method: "POST" });
+    expect(res.status).toBe(200);
+
+    const title = await getTitleById("movie-w1", userId);
+    expect(title!.is_watched).toBe(true);
+  });
+
+  it("is idempotent — marking twice does not error", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-w2", objectType: "MOVIE" })]);
+
+    const app = makeAuthedApp();
+    await app.request("/watched/movies/movie-w2", { method: "POST" });
+    const res = await app.request("/watched/movies/movie-w2", { method: "POST" });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("DELETE /watched/movies/:titleId", () => {
+  it("unmarks a watched movie", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-w3", objectType: "MOVIE" })]);
+
+    const app = makeAuthedApp();
+    await app.request("/watched/movies/movie-w3", { method: "POST" });
+    const res = await app.request("/watched/movies/movie-w3", { method: "DELETE" });
+    expect(res.status).toBe(200);
+
+    const title = await getTitleById("movie-w3", userId);
+    expect(title!.is_watched).toBe(false);
+  });
+
+  it("unwatch on an unwatched movie is a no-op", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-w4", objectType: "MOVIE" })]);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/movies/movie-w4", { method: "DELETE" });
+    expect(res.status).toBe(200);
   });
 });
