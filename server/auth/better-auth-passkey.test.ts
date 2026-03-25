@@ -68,6 +68,37 @@ describe("passkey support", () => {
     expect(row!.transports).toBe(JSON.stringify(["internal"]));
   });
 
+  it("passkey can be inserted with null webauthnUserID", async () => {
+    const db = getDb();
+    await db.insert(users).values({
+      id: "user-2",
+      username: "testuser2",
+      email: "test2@example.com",
+      emailVerified: false,
+      authProvider: "local",
+      isAdmin: 0,
+    }).run();
+
+    await db.insert(passkeyTable)
+      .values({
+        id: "pk-2",
+        publicKey: "test-public-key-2",
+        userId: "user-2",
+        webauthnUserID: null,
+        counter: 0,
+        credentialID: "cred-2",
+      })
+      .run();
+
+    const row = await db
+      .select()
+      .from(passkeyTable)
+      .get();
+
+    expect(row).toBeDefined();
+    expect(row!.webauthnUserID).toBeNull();
+  });
+
   it("createAuth includes passkey plugin", () => {
     const db = getDb();
     const auth = createAuth(db, new BunPlatform());
