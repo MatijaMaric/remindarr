@@ -74,6 +74,7 @@ export default function ReelsPage() {
 
   // Track visible card index for swipe context
   const [visibleCardIndex, setVisibleCardIndex] = useState(0);
+  const visibleCardIndexRef = useRef(0);
 
   useEffect(() => {
     async function load() {
@@ -99,6 +100,7 @@ export default function ReelsPage() {
       const cardHeight = container.clientHeight;
       if (cardHeight === 0) return;
       const index = Math.round(container.scrollTop / cardHeight);
+      visibleCardIndexRef.current = index;
       setVisibleCardIndex(index);
     }
 
@@ -143,12 +145,15 @@ export default function ReelsPage() {
     function handleKeyDown(e: KeyboardEvent) {
       if (!container) return;
       const cardHeight = container.clientHeight;
+      const maxIndex = cardsRef.current.length; // clone card is at this index
       if (e.key === "ArrowDown" || e.key === "j") {
         e.preventDefault();
-        container.scrollBy({ top: cardHeight, behavior: "smooth" });
+        const nextIndex = Math.min(visibleCardIndexRef.current + 1, maxIndex);
+        container.scrollTo({ top: nextIndex * cardHeight, behavior: "smooth" });
       } else if (e.key === "ArrowUp" || e.key === "k") {
         e.preventDefault();
-        container.scrollBy({ top: -cardHeight, behavior: "smooth" });
+        const nextIndex = Math.max(visibleCardIndexRef.current - 1, 0);
+        container.scrollTo({ top: nextIndex * cardHeight, behavior: "smooth" });
       }
     }
 
@@ -325,7 +330,7 @@ export default function ReelsPage() {
     <>
       <div
         ref={scrollRef}
-        className="overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         style={{ height: "calc(100dvh - 5rem)" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
