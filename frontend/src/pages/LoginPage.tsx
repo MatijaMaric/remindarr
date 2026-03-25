@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { authClient } from "../lib/auth-client";
+import { getDailyPlaceholder } from "../data/movie-characters";
 
 export default function LoginPage() {
   const { user, providers, login } = useAuth();
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [showLocalLogin, setShowLocalLogin] = useState(false);
 
   const oidcConfigured = !!providers?.oidc;
+  const usernamePlaceholder = useMemo(() => getDailyPlaceholder(), []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -104,7 +106,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                  placeholder="admin"
+                  placeholder={usernamePlaceholder}
                   autoComplete="username"
                   required
                 />
