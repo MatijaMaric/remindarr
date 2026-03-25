@@ -271,6 +271,22 @@ export const notifiers = sqliteTable(
   ]
 );
 
+export const passkey = sqliteTable("passkey", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  publicKey: text("public_key").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  webauthnUserID: text("webauthn_user_id").notNull(),
+  counter: integer("counter").notNull().default(0),
+  deviceType: text("device_type"),
+  backedUp: integer("backed_up", { mode: "boolean" }).default(false),
+  transports: text("transports"),
+  credentialID: text("credential_id").notNull(),
+  createdAt: dateText("created_at").default(sql`(datetime('now'))`),
+});
+
 export const oidcStates = sqliteTable("oidc_states", {
   state: text("state").primaryKey(),
   createdAt: integer("created_at").notNull(),
@@ -369,9 +385,14 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
 
 // ─── Database Instance ──────────────────────────────────────────────────────
 
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+  user: one(users, { fields: [passkey.userId], references: [users.id] }),
+}));
+
 export const schemaExports = {
-  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
+  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, notifiers, oidcStates, jobs, cronJobs,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
+  passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, notifiersRelations,
 };
 

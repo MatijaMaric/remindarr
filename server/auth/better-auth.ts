@@ -2,10 +2,11 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins/username";
 import { admin } from "better-auth/plugins/admin";
+import { passkey as passkeyPlugin } from "@better-auth/passkey";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { CONFIG } from "../config";
 import { getOidcConfig, isOidcConfigured } from "../db/repository";
-import { users, account, sessions, verification, getDb } from "../db/schema";
+import { users, account, sessions, verification, passkey as passkeyTable, getDb } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../logger";
 import type { Platform } from "../platform/types";
@@ -50,6 +51,11 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
       maxUsernameLength: 100,
     }),
     admin(),
+    passkeyPlugin({
+      rpID: CONFIG.PASSKEY_RP_ID || undefined,
+      rpName: CONFIG.PASSKEY_RP_NAME || "Remindarr",
+      origin: CONFIG.PASSKEY_ORIGIN || null,
+    }),
   ];
 
   if (oidcConfig?.issuerUrl && oidcConfig?.clientId && oidcConfig?.clientSecret) {
@@ -137,6 +143,7 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
         session: sessions,
         account,
         verification,
+        passkey: passkeyTable,
       },
     }),
     secret,

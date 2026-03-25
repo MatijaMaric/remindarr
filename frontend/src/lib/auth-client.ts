@@ -1,6 +1,7 @@
 import { createAuthClient } from "better-auth/client";
 import { usernameClient } from "better-auth/client/plugins";
 import { adminClient } from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
 
 function getBaseURL(): string {
   if (typeof window !== "undefined") {
@@ -13,5 +14,5 @@ function getBaseURL(): string {
 export const authClient = createAuthClient({
   baseURL: getBaseURL(),
   basePath: "/api/auth",
-  plugins: [usernameClient(), adminClient()],
+  plugins: [usernameClient(), adminClient(), passkeyClient()],
 });

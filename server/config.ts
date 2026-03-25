@@ -31,6 +31,11 @@ export const CONFIG = {
   // Auth
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || "",
 
+  // Passkeys (WebAuthn)
+  PASSKEY_RP_ID: process.env.PASSKEY_RP_ID || "",
+  PASSKEY_RP_NAME: process.env.PASSKEY_RP_NAME || "",
+  PASSKEY_ORIGIN: process.env.PASSKEY_ORIGIN || "",
+
   // OIDC (env vars take precedence over DB settings)
   OIDC_ISSUER_URL: process.env.OIDC_ISSUER_URL || "",
   OIDC_CLIENT_ID: process.env.OIDC_CLIENT_ID || "",
