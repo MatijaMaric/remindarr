@@ -295,7 +295,7 @@ export const passkey = sqliteTable("passkey", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  webauthnUserID: text("webauthn_user_id").notNull(),
+  webauthnUserID: text("webauthn_user_id"),
   counter: integer("counter").notNull().default(0),
   deviceType: text("device_type"),
   backedUp: integer("backed_up", { mode: "boolean" }).default(false),
