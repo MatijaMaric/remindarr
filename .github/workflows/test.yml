@@ -32,6 +32,9 @@ jobs:
       - name: Type check (frontend)
         run: cd frontend && bunx tsc --noEmit
 
+      - name: Lint (frontend)
+        run: cd frontend && bun run lint
+
       - name: Run tests
         run: bun test server/ frontend/src/
 

@@ -10,12 +10,12 @@ describe("useIsMobile", () => {
   it("MOBILE_QUERY matches Tailwind sm breakpoint (max-width: 639px)", async () => {
     // The hook uses "(max-width: 639px)" which aligns with Tailwind's sm: (640px+)
     // We verify this by checking the module exports the correct behavior
-    let listenerCallback: ((e: any) => void) | null = null;
+    let _listenerCallback: ((e: any) => void) | null = null;
 
     globalThis.matchMedia = mock((query: string) => ({
       matches: true,
       media: query,
-      addEventListener: (_: string, cb: any) => { listenerCallback = cb; },
+      addEventListener: (_: string, cb: any) => { _listenerCallback = cb; },
       removeEventListener: mock(() => {}),
     })) as any;
 

@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, setSystemTime } from "bun:test";
+import { describe, expect, test, afterEach, setSystemTime } from "bun:test";
 import { movieCharacterUsernames, getDailyPlaceholder } from "./movie-characters";
 
 describe("movieCharacterUsernames", () => {

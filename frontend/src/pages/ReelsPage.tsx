@@ -81,8 +81,8 @@ export default function ReelsPage() {
       try {
         const data = await api.getUpcomingEpisodes();
         setCards(getFirstUnwatchedPerShow(data.unwatched));
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
@@ -218,7 +218,7 @@ export default function ReelsPage() {
 
     try {
       await api.watchEpisode(episode.id);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Revert on failure
       setCards((prev) =>
         prev.map((c) => {
@@ -231,7 +231,7 @@ export default function ReelsPage() {
       );
       setUndoAction(null);
       if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err.message || "Failed to mark episode as watched");
+      setActionError(err instanceof Error ? err.message : "Failed to mark episode as watched");
       actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, []);
@@ -255,9 +255,9 @@ export default function ReelsPage() {
 
     try {
       await api.unwatchEpisode(undoAction.episodeId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err.message || "Failed to undo");
+      setActionError(err instanceof Error ? err.message : "Failed to undo");
       actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, [undoAction]);
@@ -270,9 +270,9 @@ export default function ReelsPage() {
       const data = await api.getUpcomingEpisodes();
       setCards(getFirstUnwatchedPerShow(data.unwatched));
       setSeasonPanel(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err.message || "Failed to mark episodes as watched");
+      setActionError(err instanceof Error ? err.message : "Failed to mark episodes as watched");
       actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, []);
@@ -288,9 +288,9 @@ export default function ReelsPage() {
       // Reload data
       const data = await api.getUpcomingEpisodes();
       setCards(getFirstUnwatchedPerShow(data.unwatched));
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err.message || "Failed to update watched status");
+      setActionError(err instanceof Error ? err.message : "Failed to update watched status");
       actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, []);

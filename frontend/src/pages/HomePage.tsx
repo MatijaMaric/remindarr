@@ -270,8 +270,8 @@ export default function HomePage() {
         setToday(data.today);
         setUpcoming(data.upcoming);
         setUnwatched(data.unwatched);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
@@ -308,7 +308,7 @@ export default function HomePage() {
         try {
           const data = await api.getUpcomingEpisodes();
           setUnwatched(data.unwatched);
-        } catch {}
+        } catch { /* ignore refetch failure */ }
       }
       console.error("Failed to toggle watched:", err);
       toast.error("Failed to update watched status — please try again");
@@ -326,7 +326,7 @@ export default function HomePage() {
       try {
         const data = await api.getUpcomingEpisodes();
         setUnwatched(data.unwatched);
-      } catch {}
+      } catch { /* ignore refetch failure */ }
       console.error("Failed to bulk mark watched:", err);
       toast.error("Failed to mark season as watched — please try again");
     }

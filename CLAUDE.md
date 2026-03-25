@@ -22,8 +22,12 @@ bun run start            # Runs production server
 bun run sync                              # Default sync
 bun run server/cli/sync.ts [daysBack] [type]  # CLI with args
 
-# CI check (type check + tests — run before committing)
-bun run check                # Full CI pipeline: server tsc + frontend tsc + tests
+# CI check (type check + lint + tests — run before committing)
+bun run check                # Full CI pipeline: server tsc + frontend tsc + lint + tests
+
+# Linting
+bun run lint                 # Run ESLint on frontend
+cd frontend && bun run lint  # Same, from frontend dir
 
 # Testing
 bun test                     # Run all tests (no type check)
@@ -49,7 +53,9 @@ docker compose up --build
 - DB tests use in-memory SQLite via `server/test-utils/setup.ts` (`setupTestDb()` / `teardownTestDb()`)
 - Frontend tests use `@testing-library/react` with `happy-dom`
 - External APIs (TMDB, OIDC, Discord) must be mocked — never make real HTTP calls in tests
-- **Run `bun run check` before committing** — this runs the full CI pipeline locally (server type check, frontend type check, and all tests). Do not use `bun test` alone as it skips type checking.
+- **Run `bun run check` before committing** — this runs the full CI pipeline locally (server type check, frontend type check, ESLint, and all tests). Do not use `bun test` alone as it skips type checking and linting.
+- Frontend code must pass ESLint with zero errors. Warnings (e.g., `react-refresh/only-export-components` for multi-component files) are acceptable.
+- Avoid `any` types in source files — use `unknown` for catch blocks and proper types elsewhere. Test files are exempt from `no-explicit-any`.
 
 ## Architecture
 
