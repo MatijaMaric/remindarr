@@ -72,6 +72,27 @@ describe("getHeroBannerSlides", () => {
     expect(slides).toHaveLength(1);
     expect(slides[0].sidebar).toHaveLength(0);
   });
+
+  it("includes posterUrl in sidebar items", () => {
+    const episodes = [
+      makeEpisode({ id: 1, title_id: "tv-1", show_title: "Show A", poster_url: "https://img/a.jpg" }),
+      makeEpisode({ id: 2, title_id: "tv-2", show_title: "Show B", poster_url: "https://img/b.jpg" }),
+    ];
+
+    const slides = getHeroBannerSlides(episodes);
+    expect(slides[0].sidebar[0].posterUrl).toBe("https://img/b.jpg");
+    expect(slides[1].sidebar[0].posterUrl).toBe("https://img/a.jpg");
+  });
+
+  it("sets posterUrl to null when poster_url is missing", () => {
+    const episodes = [
+      makeEpisode({ id: 1, title_id: "tv-1", show_title: "Show A" }),
+      makeEpisode({ id: 2, title_id: "tv-2", show_title: "Show B" }),
+    ];
+
+    const slides = getHeroBannerSlides(episodes);
+    expect(slides[0].sidebar[0].posterUrl).toBeNull();
+  });
 });
 
 describe("getHeroImageUrl", () => {
