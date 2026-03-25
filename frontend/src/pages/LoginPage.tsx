@@ -63,7 +63,7 @@ export default function LoginPage() {
     try {
       const result = await authClient.signIn.passkey();
       if (result?.error) {
-        throw new Error(result.error.message || t("login.passkeyFailed"));
+        throw new Error(String(result.error.message || t("login.passkeyFailed")));
       }
       const session = await authClient.getSession();
       if (session.data?.user) {

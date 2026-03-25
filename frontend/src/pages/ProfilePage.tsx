@@ -165,7 +165,7 @@ function PasskeySection() {
 
   const loadPasskeys = useCallback(async () => {
     try {
-      const result = await authClient.passkey.listPasskeys();
+      const result = await authClient.passkey.listUserPasskeys();
       if (result.data) {
         setPasskeys(result.data as PasskeyItem[]);
       }
@@ -193,7 +193,7 @@ function PasskeySection() {
         name: passkeyName || undefined,
       });
       if (result?.error) {
-        throw new Error(result.error.message || t("profile.passkeyAddFailed"));
+        throw new Error(String(result.error.message || t("profile.passkeyAddFailed")));
       }
       setMsg(t("profile.passkeyAdded"));
       setPasskeyName("");
@@ -214,7 +214,7 @@ function PasskeySection() {
     try {
       const result = await authClient.passkey.deletePasskey({ id });
       if (result?.error) {
-        throw new Error(result.error.message || "Failed to delete passkey");
+        throw new Error(String(result.error.message || "Failed to delete passkey"));
       }
       setMsg(t("profile.passkeyDeleted"));
       await loadPasskeys();
