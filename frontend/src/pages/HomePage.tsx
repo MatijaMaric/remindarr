@@ -436,8 +436,12 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      {/* Hero Banner (desktop only) */}
-      {unwatched.length > 0 && <HeroBanner episodes={unwatched} />}
+      {/* Hero Banner (desktop only, full-width) */}
+      {unwatched.length > 0 && (
+        <div className="-mt-6">
+          <HeroBanner episodes={unwatched} />
+        </div>
+      )}
 
       {/* Unwatched Episodes */}
       {unwatched.length > 0 && (
@@ -446,7 +450,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-white">{t("home.unwatched")}</h2>
             <Link
               to="/reels"
-              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors"
+              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
               title="Full-screen reels view"
             >
               <Maximize2 size={14} />
