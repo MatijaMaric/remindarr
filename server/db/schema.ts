@@ -301,6 +301,7 @@ export const passkey = sqliteTable("passkey", {
   backedUp: integer("backed_up", { mode: "boolean" }).default(false),
   transports: text("transports"),
   credentialID: text("credential_id").notNull(),
+  aaguid: text("aaguid"),
   createdAt: dateText("created_at").default(sql`(datetime('now'))`),
 });
 
