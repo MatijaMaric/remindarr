@@ -1,5 +1,8 @@
 import { describe, it, expect, mock } from "bun:test";
-import { urlBase64ToUint8Array, subscribeToPush } from "./push";
+
+// Use dynamic import to avoid module resolution races when Bun runs
+// test files in parallel (same pattern as ReelsPage.test.tsx).
+const { urlBase64ToUint8Array, subscribeToPush } = await import("./push");
 
 describe("urlBase64ToUint8Array", () => {
   it("converts a base64url string to Uint8Array", () => {
