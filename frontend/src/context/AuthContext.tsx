@@ -13,6 +13,7 @@ interface User {
 interface AuthProviders {
   local: boolean;
   oidc: { name: string; providerId: string } | null;
+  passkey?: boolean;
 }
 
 interface AuthContextType {

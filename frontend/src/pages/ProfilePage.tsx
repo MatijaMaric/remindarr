@@ -16,6 +16,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <UserSection />
+      <PasskeySection />
       <WatchlistSection />
       {isPushSupported() && <PushNotificationsSection />}
       <NotificationsSection />
@@ -140,6 +141,161 @@ function UserSection() {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+interface PasskeyItem {
+  id: string;
+  name: string | null;
+  createdAt: string | Date | null;
+}
+
+function PasskeySection() {
+  const { t } = useTranslation();
+  const [passkeys, setPasskeys] = useState<PasskeyItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [passkeyName, setPasskeyName] = useState("");
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const webauthnSupported = typeof window !== "undefined" && !!window.PublicKeyCredential;
+
+  const loadPasskeys = useCallback(async () => {
+    try {
+      const result = await authClient.passkey.listUserPasskeys();
+      if (result.data) {
+        setPasskeys(result.data as PasskeyItem[]);
+      }
+    } catch {
+      // Passkeys may not be available
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (webauthnSupported) {
+      loadPasskeys();
+    } else {
+      setLoading(false);
+    }
+  }, [webauthnSupported, loadPasskeys]);
+
+  async function handleAddPasskey() {
+    setMsg("");
+    setErr("");
+    setAdding(true);
+    try {
+      const result = await authClient.passkey.addPasskey({
+        name: passkeyName || undefined,
+      });
+      if (result?.error) {
+        throw new Error(String(result.error.message || t("profile.passkeyAddFailed")));
+      }
+      setMsg(t("profile.passkeyAdded"));
+      setPasskeyName("");
+      await loadPasskeys();
+    } catch (e: any) {
+      if (e.name !== "NotAllowedError") {
+        setErr(e.message);
+      }
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleDeletePasskey(id: string) {
+    setMsg("");
+    setErr("");
+    setDeleting(id);
+    try {
+      const result = await authClient.passkey.deletePasskey({ id });
+      if (result?.error) {
+        throw new Error(String(result.error.message || "Failed to delete passkey"));
+      }
+      setMsg(t("profile.passkeyDeleted"));
+      await loadPasskeys();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  if (!webauthnSupported) return null;
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">{t("profile.passkeys")}</h2>
+      <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
+        {msg && (
+          <div className="p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+            {msg}
+          </div>
+        )}
+        {err && (
+          <div className="p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+            {err}
+          </div>
+        )}
+
+        {loading ? (
+          <p className="text-zinc-400 text-sm">{t("common.loading")}</p>
+        ) : (
+          <>
+            {passkeys.length === 0 ? (
+              <p className="text-zinc-400 text-sm">{t("profile.noPasskeys")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {passkeys.map((pk) => (
+                  <li key={pk.id} className="flex items-center justify-between bg-zinc-800 rounded-lg px-4 py-3">
+                    <div>
+                      <span className="text-white text-sm font-medium">
+                        {pk.name || t("profile.passkeyUnnamed")}
+                      </span>
+                      {pk.createdAt && (
+                        <span className="text-zinc-500 text-xs ml-2">
+                          {new Date(pk.createdAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDeletePasskey(pk.id)}
+                      disabled={deleting === pk.id}
+                      className="text-red-400 hover:text-red-300 text-sm transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {deleting === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex gap-2 items-end pt-2">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-zinc-300 mb-1">{t("profile.passkeyName")}</label>
+                <input
+                  type="text"
+                  value={passkeyName}
+                  onChange={(e) => setPasskeyName(e.target.value)}
+                  placeholder={t("profile.passkeyNamePlaceholder")}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={handleAddPasskey}
+                disabled={adding}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
+              >
+                {adding ? t("profile.addingPasskey") : t("profile.addPasskey")}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </section>
   );
 }

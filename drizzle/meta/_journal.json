@@ -43,6 +43,13 @@
       "when": 1774752000000,
       "tag": "0005_watched_titles",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1774752100000,
+      "tag": "0006_add_passkey",
+      "breakpoints": true
     }
   ]
 }

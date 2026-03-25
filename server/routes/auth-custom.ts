@@ -10,6 +10,7 @@ app.get("/providers", async (c) => {
   return c.json({
     local: true,
     oidc: oidcConfigured ? { name: "OpenID Connect", providerId: "pocketid" } : null,
+    passkey: true,
   });
 });
 

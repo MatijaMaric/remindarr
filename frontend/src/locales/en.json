@@ -76,7 +76,9 @@
     "signIn": "Sign In",
     "noAccount": "Don't have an account?",
     "signUp": "Sign up",
-    "loginFailed": "Login failed: {{error}}"
+    "loginFailed": "Login failed: {{error}}",
+    "signInWithPasskey": "Sign in with Passkey",
+    "passkeyFailed": "Passkey sign-in failed"
   },
   "profile": {
     "title": "Profile",
@@ -112,7 +114,19 @@
     "pushEnabled": "Push notifications enabled",
     "pushDisabled": "Push notifications disabled",
     "notificationDenied": "Notification permission denied. Please enable it in your browser settings.",
-    "language": "Language"
+    "language": "Language",
+    "passkeys": "Passkeys",
+    "addPasskey": "Add Passkey",
+    "addingPasskey": "Adding...",
+    "passkeyName": "Passkey Name",
+    "passkeyNamePlaceholder": "e.g. MacBook, iPhone",
+    "passkeyAdded": "Passkey added successfully",
+    "passkeyAddFailed": "Failed to add passkey",
+    "deletePasskey": "Delete",
+    "deletingPasskey": "Deleting...",
+    "passkeyDeleted": "Passkey deleted",
+    "noPasskeys": "No passkeys registered. Add one to enable passwordless sign-in.",
+    "passkeyUnnamed": "Unnamed passkey"
   },
   "filter": {
     "all": "All",

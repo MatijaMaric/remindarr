@@ -22,7 +22,9 @@
     "deploy:cf:version": "bun run db:migrate:cf && bunx wrangler versions upload"
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.5.6",
     "@sentry/bun": "^10.43.0",
+    "@simplewebauthn/server": "^13.3.0",
     "better-auth": "^1.5.5",
     "cron-parser": "^4.9.0",
     "drizzle-orm": "^0.45.1",
