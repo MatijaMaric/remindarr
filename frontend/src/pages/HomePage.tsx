@@ -5,7 +5,10 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
-import type { Episode } from "../types";
+import type { Episode, Title } from "../types";
+import { normalizeSearchTitle } from "../types";
+import TitleList from "../components/TitleList";
+import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import {
   formatEpisodeCode,
   getUniqueProviders,
@@ -254,13 +257,17 @@ export default function HomePage() {
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const [unwatched, setUnwatched] = useState<Episode[]>([]);
   const [expandedShows, setExpandedShows] = useState<Set<string>>(new Set());
+  const [popularTitles, setPopularTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      setLoading(false);
+      api.browseTitles({ category: "popular", page: 1 })
+        .then((res) => setPopularTitles(res.titles.map(normalizeSearchTitle)))
+        .catch(() => {})
+        .finally(() => setLoading(false));
       return;
     }
 
@@ -347,9 +354,41 @@ export default function HomePage() {
 
   if (!user) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-white mb-2">{t("home.welcomeTitle")}</h2>
-        <p className="text-zinc-400">{t("home.welcomeMessage")}</p>
+      <div className="space-y-10">
+        {/* Hero */}
+        <div className="text-center py-12">
+          <h1 className="text-4xl font-extrabold text-white mb-3">{t("landing.tagline")}</h1>
+          <p className="text-zinc-400 text-lg max-w-xl mx-auto mb-8">{t("landing.subtitle")}</p>
+          <div className="flex justify-center gap-4">
+            <Link
+              to="/login"
+              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg transition-colors"
+            >
+              {t("landing.signIn")}
+            </Link>
+            <Link
+              to="/signup"
+              className="px-6 py-2.5 border border-zinc-600 hover:border-zinc-400 text-white font-semibold rounded-lg transition-colors"
+            >
+              {t("landing.signUp")}
+            </Link>
+          </div>
+        </div>
+
+        {/* Popular titles */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white">{t("landing.popularNow")}</h2>
+            <Link to="/browse" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
+              {t("landing.discoverMore")} →
+            </Link>
+          </div>
+          {loading ? (
+            <TitleGridSkeleton count={12} />
+          ) : (
+            <TitleList titles={popularTitles.slice(0, 12)} />
+          )}
+        </section>
       </div>
     );
   }

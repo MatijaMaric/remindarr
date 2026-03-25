@@ -170,6 +170,14 @@
     "gridView": "Grid view",
     "agendaView": "Agenda view"
   },
+  "landing": {
+    "tagline": "Track movies & TV shows you love",
+    "subtitle": "Get notified about new episodes, track what you've watched, and discover what's streaming.",
+    "signIn": "Sign In",
+    "signUp": "Create Account",
+    "popularNow": "Popular Right Now",
+    "discoverMore": "Discover More"
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
