@@ -1,4 +1,4 @@
-import { describe, it, expect, mock } from "bun:test";
+import { describe, it, expect, mock, afterEach } from "bun:test";
 import { urlBase64ToUint8Array, subscribeToPush } from "./push";
 
 describe("urlBase64ToUint8Array", () => {
@@ -25,6 +25,8 @@ describe("urlBase64ToUint8Array", () => {
     expect(result[0]).toBe(0);
   });
 });
+
+const savedServiceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
 
 function setupServiceWorkerMock(opts: {
   existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
@@ -56,6 +58,15 @@ const VALID_SUBSCRIPTION = {
 };
 
 describe("subscribeToPush", () => {
+  afterEach(() => {
+    // Restore navigator.serviceWorker to avoid leaked state between tests
+    if (savedServiceWorkerDescriptor) {
+      Object.defineProperty(navigator, "serviceWorker", savedServiceWorkerDescriptor);
+    } else {
+      delete (navigator as any).serviceWorker;
+    }
+  });
+
   it("unsubscribes existing subscription before creating new one", async () => {
     const mockUnsubscribe = mock(() => Promise.resolve(true));
     const { mockSubscribe, mockGetSubscription } = setupServiceWorkerMock({
