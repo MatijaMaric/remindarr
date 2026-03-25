@@ -68,8 +68,8 @@ export default function NewReleases({
         excludeTracked: hideTracked || undefined,
       });
       setTitles(res.titles);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -85,8 +85,8 @@ export default function NewReleases({
     try {
       await api.syncReleases(daysBack, type.length === 1 ? type[0] : undefined);
       await fetchTitles();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSyncing(false);
     }

@@ -36,7 +36,7 @@ export default function LoginPage() {
   useEffect(() => {
     const oidcError = searchParams.get("error");
     if (oidcError) setError(t("login.loginFailed", { error: oidcError }));
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   // Enable passkey autofill (conditional UI)
   useEffect(() => {
@@ -68,8 +68,8 @@ export default function LoginPage() {
     try {
       await login(username, password);
       navigate("/", { replace: true });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -96,10 +96,12 @@ export default function LoginPage() {
         // Force a page reload to refresh auth context
         window.location.href = "/";
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Don't show error if user cancelled the WebAuthn prompt
-      if (err.name !== "NotAllowedError") {
+      if (err instanceof Error && err.name !== "NotAllowedError") {
         setError(err.message || t("login.passkeyFailed"));
+      } else if (!(err instanceof Error)) {
+        setError(t("login.passkeyFailed"));
       }
     } finally {
       setPasskeyLoading(false);
