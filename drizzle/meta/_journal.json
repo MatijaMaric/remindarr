@@ -50,6 +50,13 @@
       "when": 1774752100000,
       "tag": "0006_add_passkey",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1774752200000,
+      "tag": "0007_add_passkey_aaguid",
+      "breakpoints": true
     }
   ]
 }
