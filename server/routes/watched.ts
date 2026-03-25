@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk, getEpisodeAirDate, getReleasedEpisodeIds } from "../db/repository";
+import { watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk, getEpisodeAirDate, getReleasedEpisodeIds, watchTitle, unwatchTitle } from "../db/repository";
 import { localDateForTimezone } from "../utils/timezone";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
@@ -53,6 +53,22 @@ app.delete("/:episodeId", async (c) => {
   const episodeId = Number(c.req.param("episodeId"));
   if (isNaN(episodeId)) return c.json({ error: "Invalid episodeId" }, 400);
   await unwatchEpisode(episodeId, user.id);
+  return ok(c, {});
+});
+
+// ─── Movie Watched ───────────────────────────────────────────────────────────
+
+app.post("/movies/:titleId", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("titleId");
+  await watchTitle(titleId, user.id);
+  return ok(c, {});
+});
+
+app.delete("/movies/:titleId", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("titleId");
+  await unwatchTitle(titleId, user.id);
   return ok(c, {});
 });
 

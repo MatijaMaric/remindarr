@@ -54,6 +54,20 @@ export const CONFIG = {
 
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",
+
+  // Cache
+  CACHE_BACKEND: (process.env.CACHE_BACKEND || "memory") as
+    | "memory"
+    | "redis"
+    | "kv",
+  REDIS_URL: process.env.REDIS_URL || "",
+  CACHE_TTL_GENRES: Number(process.env.CACHE_TTL_GENRES) || 86400,
+  CACHE_TTL_PROVIDERS: Number(process.env.CACHE_TTL_PROVIDERS) || 86400,
+  CACHE_TTL_LANGUAGES: Number(process.env.CACHE_TTL_LANGUAGES) || 86400,
+  CACHE_TTL_SEARCH: Number(process.env.CACHE_TTL_SEARCH) || 300,
+  CACHE_TTL_DETAILS: Number(process.env.CACHE_TTL_DETAILS) || 3600,
+  CACHE_TTL_BROWSE: Number(process.env.CACHE_TTL_BROWSE) || 900,
+  CACHE_MAX_MEMORY_ENTRIES: Number(process.env.CACHE_MAX_MEMORY_ENTRIES) || 1000,
 };
 
 /**

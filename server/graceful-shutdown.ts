@@ -9,6 +9,7 @@ export interface ShutdownDeps {
   server: { stop: () => void };
   stopWorker: () => void;
   closeDb: () => void;
+  closeCache?: () => Promise<void>;
 }
 
 export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => Promise<void> {
@@ -26,6 +27,11 @@ export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => P
 
     // Stop background job worker intervals
     deps.stopWorker();
+
+    // Close cache connections
+    if (deps.closeCache) {
+      await deps.closeCache();
+    }
 
     // Flush Sentry events before exit
     await Sentry.flush(2000);

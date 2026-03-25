@@ -12,6 +12,7 @@ import type {
   SeasonSummary,
 } from "../types";
 import TrackButton from "../components/TrackButton";
+import { WatchedIcon } from "../components/EpisodeComponents";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
@@ -196,6 +197,21 @@ export default function TitleDetailPage() {
 
 function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { title, tmdb, country } = data;
+  const [watched, setWatched] = useState(title.is_watched ?? false);
+
+  async function toggleWatched() {
+    const prev = watched;
+    setWatched(!prev);
+    try {
+      if (prev) {
+        await api.unwatchMovie(title.id);
+      } else {
+        await api.watchMovie(title.id);
+      }
+    } catch {
+      setWatched(prev);
+    }
+  }
   const overview = tmdb?.overview || title.short_description;
   const genres = tmdb?.genres?.map(g => g.name) || title.genres;
   const certification = title.age_certification;
@@ -290,8 +306,9 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 flex items-center gap-3">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+              <WatchedIcon watched={watched} onClick={toggleWatched} />
             </div>
           </div>
         </div>
