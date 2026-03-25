@@ -15,73 +15,85 @@ import {
   getEpisodeCardImageUrl,
   groupByShow,
   formatUpcomingDate,
-  ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
 import { CheckCircle } from "lucide-react";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 import HeroBanner from "../components/HeroBanner";
 
-export function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<number, Episode[]>> {
-  const map = new Map<string, Map<number, Episode[]>>();
-  for (const ep of episodes) {
-    if (!map.has(ep.title_id)) map.set(ep.title_id, new Map());
-    const seasonMap = map.get(ep.title_id)!;
-    if (!seasonMap.has(ep.season_number)) seasonMap.set(ep.season_number, []);
-    seasonMap.get(ep.season_number)!.push(ep);
-  }
-  return map;
-}
-
-export const MAX_CARDS_PER_SEASON = 3;
-
 export interface UnwatchedCardEntry {
   episode: Episode;
-  seasonEpisodeCount: number;
-  seasonEpisodeIds: number[];
-  seasonNumber: number;
+  totalEpisodeCount: number;
+  allEpisodeIds: number[];
   showTitle: string;
   titleId: string;
-  isOverflow?: boolean;
 }
 
-export function buildUnwatchedCards(grouped: Map<string, Map<number, Episode[]>>): UnwatchedCardEntry[] {
-  const cards: UnwatchedCardEntry[] = [];
-  for (const [titleId, seasonMap] of grouped) {
-    for (const [seasonNum, eps] of Array.from(seasonMap.entries()).sort(([a], [b]) => a - b)) {
-      const ids = eps.map((e) => e.id);
-      const visible = eps.slice(0, MAX_CARDS_PER_SEASON);
-      for (const ep of visible) {
-        cards.push({
-          episode: ep,
-          seasonEpisodeCount: eps.length,
-          seasonEpisodeIds: ids,
-          seasonNumber: seasonNum,
-          showTitle: ep.show_title,
-          titleId,
-        });
-      }
-      if (eps.length > MAX_CARDS_PER_SEASON) {
-        cards.push({
-          episode: eps[0],
-          seasonEpisodeCount: eps.length,
-          seasonEpisodeIds: ids,
-          seasonNumber: seasonNum,
-          showTitle: eps[0].show_title,
-          titleId,
-          isOverflow: true,
-        });
-      }
-    }
+export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
+  const showMap = new Map<string, Episode[]>();
+  for (const ep of episodes) {
+    if (!showMap.has(ep.title_id)) showMap.set(ep.title_id, []);
+    showMap.get(ep.title_id)!.push(ep);
   }
-  return cards;
+
+  const entries: UnwatchedCardEntry[] = [];
+  for (const [titleId, eps] of showMap) {
+    // Sort episodes: lowest season first, then lowest episode number
+    const sorted = [...eps].sort((a, b) =>
+      a.season_number !== b.season_number
+        ? a.season_number - b.season_number
+        : a.episode_number - b.episode_number
+    );
+    const firstEpisode = sorted[0];
+    const allIds = sorted.map((e) => e.id);
+
+    // Find most recent air_date across all episodes for ordering
+    let mostRecentDate = "";
+    for (const ep of eps) {
+      if (ep.air_date && ep.air_date > mostRecentDate) mostRecentDate = ep.air_date;
+    }
+
+    entries.push({
+      episode: firstEpisode,
+      totalEpisodeCount: eps.length,
+      allEpisodeIds: allIds,
+      showTitle: firstEpisode.show_title,
+      titleId,
+    });
+  }
+
+  // Sort by most recent air_date descending
+  entries.sort((a, b) => {
+    const aDate = a.allEpisodeIds.reduce((best, id) => {
+      const ep = episodes.find((e) => e.id === id);
+      return ep?.air_date && ep.air_date > best ? ep.air_date : best;
+    }, "");
+    const bDate = b.allEpisodeIds.reduce((best, id) => {
+      const ep = episodes.find((e) => e.id === id);
+      return ep?.air_date && ep.air_date > best ? ep.air_date : best;
+    }, "");
+    return bDate.localeCompare(aDate);
+  });
+
+  return entries;
 }
 
-const UnwatchedEpisodeCard = memo(function UnwatchedEpisodeCard({ episode, seasonEpisodeCount, seasonEpisodeIds, onToggleWatched, onMarkSeasonWatched }: {
+/** Shared card component used across Unwatched, Today, and Coming Up sections */
+const EpisodeShowCard = memo(function EpisodeShowCard({
+  episode,
+  episodeCount,
+  showActions,
+  allEpisodeIds,
+  onToggleWatched,
+  onMarkAllWatched,
+  isConfirming,
+}: {
   episode: Episode;
-  seasonEpisodeCount: number;
-  seasonEpisodeIds: number[];
-  onToggleWatched: (id: number, current: boolean) => void;
-  onMarkSeasonWatched: (episodeIds: number[]) => void;
+  episodeCount: number;
+  showActions?: boolean;
+  allEpisodeIds?: number[];
+  onToggleWatched?: (id: number, current: boolean) => void;
+  onMarkAllWatched?: (episodeIds: number[]) => void;
+  isConfirming?: boolean;
 }) {
   const { t } = useTranslation();
   const imageUrl = getEpisodeCardImageUrl(episode);
@@ -89,8 +101,8 @@ const UnwatchedEpisodeCard = memo(function UnwatchedEpisodeCard({ episode, seaso
 
   return (
     <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col h-full">
-      {/* Episode image */}
-      <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="block">
+      {/* Episode image with badge */}
+      <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="block relative">
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -100,6 +112,11 @@ const UnwatchedEpisodeCard = memo(function UnwatchedEpisodeCard({ episode, seaso
           />
         ) : (
           <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
+        )}
+        {episodeCount > 1 && (
+          <span className="absolute top-2 right-2 bg-black/70 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {episodeCount}
+          </span>
         )}
       </Link>
 
@@ -117,7 +134,7 @@ const UnwatchedEpisodeCard = memo(function UnwatchedEpisodeCard({ episode, seaso
 
         {/* Season + progress */}
         <p className="text-xs text-zinc-500 mt-1.5">
-          {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: seasonEpisodeCount })}
+          {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: episodeCount })}
         </p>
 
         {/* Provider icons */}
@@ -131,73 +148,53 @@ const UnwatchedEpisodeCard = memo(function UnwatchedEpisodeCard({ episode, seaso
           </div>
         )}
 
-        {/* Actions */}
-        <div className="mt-auto pt-3 space-y-1.5">
-          <button
-            onClick={() => onToggleWatched(episode.id, !!episode.is_watched)}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-          >
-            <CheckCircle size={14} />
-            {t("home.markWatched")}
-          </button>
-          {seasonEpisodeCount > 1 && (
+        {/* Actions (only for Unwatched) */}
+        {showActions && onToggleWatched && (
+          <div className="mt-auto pt-3 space-y-1.5">
             <button
-              onClick={() => onMarkSeasonWatched(seasonEpisodeIds)}
-              className="w-full text-center text-xs text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer"
+              onClick={() => onToggleWatched(episode.id, !!episode.is_watched)}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
             >
-              {t("home.markSeasonWatched")}
+              <CheckCircle size={14} />
+              {t("home.markWatched")}
             </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-const UnwatchedOverflowCard = memo(function UnwatchedOverflowCard({ titleId, showTitle, posterUrl, seasonNumber, overflowCount, seasonEpisodeIds, onMarkSeasonWatched }: {
-  titleId: string;
-  showTitle: string;
-  posterUrl: string | null;
-  seasonNumber: number;
-  overflowCount: number;
-  seasonEpisodeIds: number[];
-  onMarkSeasonWatched: (episodeIds: number[]) => void;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col h-full">
-      <Link to={`/title/${titleId}`} className="block">
-        {posterUrl ? (
-          <div className="w-full aspect-video relative">
-            <img src={posterUrl} alt={showTitle} className="w-full h-full object-cover" loading="lazy" />
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">{t("home.moreEpisodes", { count: overflowCount })}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">{t("home.moreEpisodes", { count: overflowCount })}</span>
+            {episodeCount > 1 && allEpisodeIds && onMarkAllWatched && (
+              <button
+                onClick={() => onMarkAllWatched(allEpisodeIds)}
+                className={`w-full text-center text-xs transition-colors cursor-pointer ${
+                  isConfirming
+                    ? "text-red-400 hover:text-red-300 font-medium"
+                    : "text-zinc-400 hover:text-emerald-400"
+                }`}
+              >
+                {isConfirming
+                  ? t("home.confirmMarkAllWatched", { count: allEpisodeIds.length })
+                  : t("home.markAllWatched")}
+              </button>
+            )}
           </div>
         )}
-      </Link>
-      <div className="p-3 flex flex-col flex-1">
-        <Link to={`/title/${titleId}`} className="hover:text-amber-400 transition-colors">
-          <h3 className="font-semibold text-white text-sm truncate">{showTitle}</h3>
-        </Link>
-        <p className="text-xs text-zinc-500 mt-0.5">{t("home.season", { number: seasonNumber })}</p>
-        <div className="mt-auto pt-3">
-          <button
-            onClick={() => onMarkSeasonWatched(seasonEpisodeIds)}
-            className="w-full text-center text-xs text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer"
-          >
-            {t("home.markSeasonWatched")}
-          </button>
-        </div>
       </div>
     </div>
   );
 });
+
+/** Deck-of-cards visual wrapper */
+function DeckCardWrapper({ episodeCount, children }: { episodeCount: number; children: React.ReactNode }) {
+  return (
+    <div className="relative pb-2">
+      {/* Second offset layer (deepest) */}
+      {episodeCount > 2 && (
+        <div className="absolute inset-0 translate-y-2 scale-[0.97] opacity-40 bg-zinc-900 rounded-xl pointer-events-none" />
+      )}
+      {/* First offset layer */}
+      {episodeCount > 1 && (
+        <div className="absolute inset-0 translate-y-1 scale-[0.985] opacity-60 bg-zinc-900 rounded-xl pointer-events-none" />
+      )}
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
 
 function UnwatchedCarousel({ children }: { children: React.ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -273,6 +270,8 @@ export default function HomePage() {
   const [popularTitles, setPopularTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [confirmingTitleId, setConfirmingTitleId] = useState<string | null>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -299,6 +298,13 @@ export default function HomePage() {
     load();
   }, [user, authLoading]);
 
+  // Cleanup confirmation timer
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
   const toggleWatched = useCallback(async (episodeId: number, currentlyWatched: boolean) => {
     const updateAll = (eps: Episode[]) =>
       eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
@@ -324,7 +330,6 @@ export default function HomePage() {
       setToday((prev) => revertAll(prev));
       setUpcoming((prev) => revertAll(prev));
       if (!currentlyWatched) {
-        // Re-fetch to restore the removed episode
         try {
           const data = await api.getUpcomingEpisodes();
           setUnwatched(data.unwatched);
@@ -335,20 +340,33 @@ export default function HomePage() {
     }
   }, []);
 
-  const markSeasonWatched = useCallback(async (episodeIds: number[]) => {
+  const handleMarkAllWatched = useCallback((titleId: string, episodeIds: number[]) => {
+    if (confirmingTitleId === titleId) {
+      // Second click — execute
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      setConfirmingTitleId(null);
+      markAllWatched(episodeIds);
+    } else {
+      // First click — enter confirmation
+      setConfirmingTitleId(titleId);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = setTimeout(() => setConfirmingTitleId(null), 3000);
+    }
+  }, [confirmingTitleId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const markAllWatched = useCallback(async (episodeIds: number[]) => {
     const idSet = new Set(episodeIds);
     setUnwatched((prev) => prev.filter((ep) => !idSet.has(ep.id)));
 
     try {
       await api.watchEpisodesBulk(episodeIds, true);
     } catch (err) {
-      // Re-fetch to restore
       try {
         const data = await api.getUpcomingEpisodes();
         setUnwatched(data.unwatched);
       } catch { /* ignore refetch failure */ }
       console.error("Failed to bulk mark watched:", err);
-      toast.error("Failed to mark season as watched — please try again");
+      toast.error("Failed to mark episodes as watched — please try again");
     }
   }, []);
 
@@ -405,15 +423,14 @@ export default function HomePage() {
     );
   }
 
-  const todayByShow = groupByShow(today);
+  const unwatchedCards = buildUnwatchedCards(unwatched);
+
   const upcomingByDate = new Map<string, Episode[]>();
   for (const ep of upcoming) {
     if (!ep.air_date) continue;
     if (!upcomingByDate.has(ep.air_date)) upcomingByDate.set(ep.air_date, []);
     upcomingByDate.get(ep.air_date)!.push(ep);
   }
-  const unwatchedByShowAndSeason = groupByShowAndSeason(unwatched);
-  const unwatchedCards = buildUnwatchedCards(unwatchedByShowAndSeason);
 
   const noEpisodes = today.length === 0 && upcoming.length === 0 && unwatched.length === 0;
 
@@ -437,35 +454,21 @@ export default function HomePage() {
             </Link>
           </div>
           <UnwatchedCarousel>
-            {unwatchedCards.map((card) => {
-              if (card.isOverflow) {
-                return (
-                  <div key={`overflow-${card.titleId}-s${card.seasonNumber}`} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-                    <UnwatchedOverflowCard
-                      titleId={card.titleId}
-                      showTitle={card.showTitle}
-                      posterUrl={card.episode.poster_url}
-                      seasonNumber={card.seasonNumber}
-                      overflowCount={card.seasonEpisodeCount - MAX_CARDS_PER_SEASON}
-                      seasonEpisodeIds={card.seasonEpisodeIds}
-                      onMarkSeasonWatched={markSeasonWatched}
-                    />
-                  </div>
-                );
-              }
-
-              return (
-                <div key={card.episode.id} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-                  <UnwatchedEpisodeCard
+            {unwatchedCards.map((card) => (
+              <div key={card.titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                <DeckCardWrapper episodeCount={card.totalEpisodeCount}>
+                  <EpisodeShowCard
                     episode={card.episode}
-                    seasonEpisodeCount={card.seasonEpisodeCount}
-                    seasonEpisodeIds={card.seasonEpisodeIds}
+                    episodeCount={card.totalEpisodeCount}
+                    showActions
+                    allEpisodeIds={card.allEpisodeIds}
                     onToggleWatched={toggleWatched}
-                    onMarkSeasonWatched={markSeasonWatched}
+                    onMarkAllWatched={(ids) => handleMarkAllWatched(card.titleId, ids)}
+                    isConfirming={confirmingTitleId === card.titleId}
                   />
-                </div>
-              );
-            })}
+                </DeckCardWrapper>
+              </div>
+            ))}
           </UnwatchedCarousel>
         </section>
       )}
@@ -478,17 +481,18 @@ export default function HomePage() {
             {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
           </p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from(todayByShow.entries()).map(([titleId, eps]) => (
-              <ShowEpisodeGroup
-                key={titleId}
-                showTitle={eps[0].show_title}
-                episodes={eps}
-                posterUrl={eps[0].poster_url}
-                onToggleWatched={toggleWatched}
-              />
+          <UnwatchedCarousel>
+            {Array.from(groupByShow(today).entries()).map(([titleId, eps]) => (
+              <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                <DeckCardWrapper episodeCount={eps.length}>
+                  <EpisodeShowCard
+                    episode={eps[0]}
+                    episodeCount={eps.length}
+                  />
+                </DeckCardWrapper>
+              </div>
             ))}
-          </div>
+          </UnwatchedCarousel>
         )}
       </section>
 
@@ -503,18 +507,18 @@ export default function HomePage() {
               return (
                 <div key={date}>
                   <h3 className="text-sm font-medium text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
-                  <div className="space-y-2">
+                  <UnwatchedCarousel>
                     {Array.from(byShow.entries()).map(([titleId, showEps]) => (
-                      <ShowEpisodeGroup
-                        key={titleId}
-                        showTitle={showEps[0].show_title}
-                        episodes={showEps}
-                        posterUrl={showEps[0].poster_url}
-                        compact
-                        onToggleWatched={toggleWatched}
-                      />
+                      <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                        <DeckCardWrapper episodeCount={showEps.length}>
+                          <EpisodeShowCard
+                            episode={showEps[0]}
+                            episodeCount={showEps.length}
+                          />
+                        </DeckCardWrapper>
+                      </div>
                     ))}
-                  </div>
+                  </UnwatchedCarousel>
                 </div>
               );
             })}
