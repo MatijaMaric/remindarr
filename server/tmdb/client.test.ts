@@ -1,5 +1,10 @@
 import { describe, it, test, expect, spyOn, afterEach, beforeEach } from "bun:test";
 import Sentry from "../sentry";
+import { MemoryCache } from "../cache/memory";
+import { initCache } from "../cache";
+
+// Initialize in-memory cache for tests
+initCache(new MemoryCache(100, 60_000));
 
 // ─── Mock tracing to pass through ───────────────────────────────────────────
 let sentrySpy: ReturnType<typeof spyOn>;

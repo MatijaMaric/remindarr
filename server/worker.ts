@@ -27,6 +27,12 @@ declare global {
     type: string;
     scheduledTime: number;
   }
+  interface KVNamespace {
+    get(key: string, type: "text"): Promise<string | null>;
+    get(key: string, type: "json"): Promise<any>;
+    put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+    delete(key: string): Promise<void>;
+  }
 }
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -61,9 +67,13 @@ import { processPendingJobs, enqueueCronJob, cleanupOldJobs } from "./jobs/proce
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
 import type { DrizzleDb } from "./platform/types";
+import { runWithCache } from "./cache";
+import { CloudflareKvCache } from "./cache/cloudflare-kv";
+import { MemoryCache } from "./cache/memory";
 
 interface Env {
   DB: D1Database;
+  CACHE_KV?: KVNamespace;
   ASSETS?: { fetch: typeof fetch };
   TMDB_API_KEY?: string;
   TMDB_COUNTRY?: string;
@@ -327,14 +337,21 @@ export default {
     try {
       const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
       const honoApp = getApp(env);
+      const cache = env.CACHE_KV
+        ? new CloudflareKvCache(env.CACHE_KV)
+        : new MemoryCache();
 
-      const response = await runWithDb(db, () => honoApp.fetch(request, env, ctx as any));
+      const response = await runWithCache(cache, () =>
+        runWithDb(db, () => honoApp.fetch(request, env, ctx as any))
+      );
 
       // Process pending jobs in the background after each request.
       // This ensures ad-hoc jobs (e.g. sync-show-episodes queued on track)
       // are picked up promptly without waiting for the next cron trigger.
       ctx.waitUntil(
-        runWithDb(db, () => processPendingJobs()).catch((err) => {
+        runWithCache(cache, () =>
+          runWithDb(db, () => processPendingJobs())
+        ).catch((err) => {
           logger.error("Background job processing error", {
             error: err instanceof Error ? err.message : String(err),
           });
@@ -361,8 +378,11 @@ export default {
     patchConfigFromEnv(env);
     try {
       const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
+      const cache = env.CACHE_KV
+        ? new CloudflareKvCache(env.CACHE_KV)
+        : new MemoryCache();
 
-      await runWithDb(db, async () => {
+      await runWithCache(cache, () => runWithDb(db, async () => {
         const cron = event.cron;
         logger.info("Scheduled event", { cron });
 
@@ -389,7 +409,7 @@ export default {
         if (processed > 0) {
           logger.info("Processed jobs", { count: processed, cron });
         }
-      });
+      }));
     } catch (err) {
       Sentry.captureException(err);
       logger.error("Worker scheduled error", {
