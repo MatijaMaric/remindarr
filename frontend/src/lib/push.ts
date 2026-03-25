@@ -37,7 +37,7 @@ export async function subscribeToPush(
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-  } as PushSubscriptionOptionsInit);
+  });
 
   const json = subscription.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
