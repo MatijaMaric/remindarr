@@ -152,11 +152,14 @@ interface PasskeyItem {
 }
 
 function PasskeySection() {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const [passkeys, setPasskeys] = useState<PasskeyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const [passkeyName, setPasskeyName] = useState("");
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -190,7 +193,7 @@ function PasskeySection() {
     setAdding(true);
     try {
       const result = await authClient.passkey.addPasskey({
-        name: passkeyName || undefined,
+        name: passkeyName || user?.username || undefined,
       });
       if (result?.error) {
         throw new Error(String(result.error.message || t("profile.passkeyAddFailed")));
@@ -225,6 +228,24 @@ function PasskeySection() {
     }
   }
 
+  async function handleRenamePasskey(id: string) {
+    if (!editName.trim()) return;
+    setMsg("");
+    setErr("");
+    try {
+      const result = await authClient.passkey.updatePasskey({ id, name: editName.trim() });
+      if (result?.error) {
+        throw new Error(String(result.error.message || "Failed to rename passkey"));
+      }
+      setMsg(t("profile.passkeyRenamed"));
+      setEditing(null);
+      setEditName("");
+      await loadPasskeys();
+    } catch (e: any) {
+      setErr(e.message);
+    }
+  }
+
   if (!webauthnSupported) return null;
 
   return (
@@ -252,23 +273,61 @@ function PasskeySection() {
               <ul className="space-y-2">
                 {passkeys.map((pk) => (
                   <li key={pk.id} className="flex items-center justify-between bg-zinc-800 rounded-lg px-4 py-3">
-                    <div>
-                      <span className="text-white text-sm font-medium">
-                        {pk.name || t("profile.passkeyUnnamed")}
-                      </span>
-                      {pk.createdAt && (
-                        <span className="text-zinc-500 text-xs ml-2">
-                          {new Date(pk.createdAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleDeletePasskey(pk.id)}
-                      disabled={deleting === pk.id}
-                      className="text-red-400 hover:text-red-300 text-sm transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      {deleting === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
-                    </button>
+                    {editing === pk.id ? (
+                      <form
+                        className="flex items-center gap-2 flex-1 mr-2"
+                        onSubmit={(e) => { e.preventDefault(); handleRenamePasskey(pk.id); }}
+                      >
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1 px-2 py-1 bg-zinc-700 border border-white/[0.08] rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          className="text-amber-400 hover:text-amber-300 text-sm cursor-pointer"
+                        >
+                          {t("common.save")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setEditing(null); setEditName(""); }}
+                          className="text-zinc-400 hover:text-zinc-300 text-sm cursor-pointer"
+                        >
+                          {t("common.cancel")}
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <div>
+                          <span className="text-white text-sm font-medium">
+                            {pk.name || t("profile.passkeyUnnamed")}
+                          </span>
+                          {pk.createdAt && (
+                            <span className="text-zinc-500 text-xs ml-2">
+                              {new Date(pk.createdAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => { setEditing(pk.id); setEditName(pk.name || ""); }}
+                            className="text-zinc-400 hover:text-zinc-300 text-sm transition-colors cursor-pointer"
+                          >
+                            {t("profile.renamePasskey")}
+                          </button>
+                          <button
+                            onClick={() => handleDeletePasskey(pk.id)}
+                            disabled={deleting === pk.id}
+                            className="text-red-400 hover:text-red-300 text-sm transition-colors disabled:opacity-50 cursor-pointer"
+                          >
+                            {deleting === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
