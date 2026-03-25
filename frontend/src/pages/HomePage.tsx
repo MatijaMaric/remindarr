@@ -12,11 +12,12 @@ import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import {
   formatEpisodeCode,
   getUniqueProviders,
+  getEpisodeCardImageUrl,
   groupByShow,
   formatUpcomingDate,
-  WatchedIcon,
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
+import { CheckCircle } from "lucide-react";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 import HeroBanner from "../components/HeroBanner";
 
@@ -31,80 +32,121 @@ export function groupByShowAndSeason(episodes: Episode[]): Map<string, Map<numbe
   return map;
 }
 
-export const EPISODES_PER_PAGE = 5;
+export const MAX_CARDS_PER_SEASON = 3;
 
-const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonNumber, episodes, posterUrl, onToggleWatched, onMarkSeasonWatched }: {
-  showTitle: string;
+export interface UnwatchedCardEntry {
+  episode: Episode;
+  seasonEpisodeCount: number;
+  seasonEpisodeIds: number[];
   seasonNumber: number;
-  episodes: Episode[];
-  posterUrl: string | null;
+  showTitle: string;
+  titleId: string;
+  isOverflow?: boolean;
+}
+
+export function buildUnwatchedCards(grouped: Map<string, Map<number, Episode[]>>): UnwatchedCardEntry[] {
+  const cards: UnwatchedCardEntry[] = [];
+  for (const [titleId, seasonMap] of grouped) {
+    for (const [seasonNum, eps] of Array.from(seasonMap.entries()).sort(([a], [b]) => a - b)) {
+      const ids = eps.map((e) => e.id);
+      const visible = eps.slice(0, MAX_CARDS_PER_SEASON);
+      for (const ep of visible) {
+        cards.push({
+          episode: ep,
+          seasonEpisodeCount: eps.length,
+          seasonEpisodeIds: ids,
+          seasonNumber: seasonNum,
+          showTitle: ep.show_title,
+          titleId,
+        });
+      }
+      if (eps.length > MAX_CARDS_PER_SEASON) {
+        cards.push({
+          episode: eps[0],
+          seasonEpisodeCount: eps.length,
+          seasonEpisodeIds: ids,
+          seasonNumber: seasonNum,
+          showTitle: eps[0].show_title,
+          titleId,
+          isOverflow: true,
+        });
+      }
+    }
+  }
+  return cards;
+}
+
+const UnwatchedEpisodeCard = memo(function UnwatchedEpisodeCard({ episode, seasonEpisodeCount, seasonEpisodeIds, onToggleWatched, onMarkSeasonWatched }: {
+  episode: Episode;
+  seasonEpisodeCount: number;
+  seasonEpisodeIds: number[];
   onToggleWatched: (id: number, current: boolean) => void;
   onMarkSeasonWatched: (episodeIds: number[]) => void;
 }) {
-  const [showAllEpisodes, setShowAllEpisodes] = useState(false);
   const { t } = useTranslation();
-  const providers = getUniqueProviders(episodes[0]?.offers);
-  const visibleEpisodes = showAllEpisodes ? episodes : episodes.slice(0, EPISODES_PER_PAGE);
-  const hiddenCount = episodes.length - EPISODES_PER_PAGE;
+  const imageUrl = getEpisodeCardImageUrl(episode);
+  const providers = getUniqueProviders(episode.offers);
 
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden">
-      <div className="flex gap-4 p-4">
-        {posterUrl && (
-          <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
-            <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover" loading="lazy" />
-          </Link>
+    <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col h-full">
+      {/* Episode image */}
+      <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="block">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={episode.name || formatEpisodeCode(episode)}
+            className="w-full aspect-video object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
         )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <Link to={`/title/${episodes[0].title_id}`} className="hover:text-amber-400 transition-colors">
-              <h3 className="font-semibold text-white">{showTitle}</h3>
-            </Link>
-            {episodes.length > 1 && (
-              <button
-                onClick={() => onMarkSeasonWatched(episodes.map((ep) => ep.id))}
-                className="text-xs text-zinc-400 hover:text-emerald-400 transition-colors flex-shrink-0 cursor-pointer"
-              >
-                {t("home.markSeasonWatched")}
-              </button>
-            )}
-          </div>
-          <p className="text-xs text-zinc-500 mt-0.5">{t("home.season", { number: seasonNumber })}</p>
-          <div className="mt-2 space-y-1">
-            {visibleEpisodes.map((ep) => (
-              <div key={ep.id} className="flex items-center gap-2 text-sm">
-                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} />
-                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors truncate">
-                  <span className="text-amber-400 font-medium">{formatEpisodeCode(ep)}</span>
-                  {ep.name && <span className="text-zinc-400"> · {ep.name}</span>}
-                </Link>
-              </div>
+      </Link>
+
+      {/* Content */}
+      <div className="p-3 flex flex-col flex-1">
+        <Link to={`/title/${episode.title_id}`} className="hover:text-amber-400 transition-colors">
+          <h3 className="font-semibold text-white text-sm truncate">{episode.show_title}</h3>
+        </Link>
+        <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-amber-400 transition-colors">
+          <p className="text-xs mt-0.5">
+            <span className="text-amber-400 font-medium">{formatEpisodeCode(episode)}</span>
+            {episode.name && <span className="text-zinc-400"> · {episode.name}</span>}
+          </p>
+        </Link>
+
+        {/* Season + progress */}
+        <p className="text-xs text-zinc-500 mt-1.5">
+          {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: seasonEpisodeCount })}
+        </p>
+
+        {/* Provider icons */}
+        {providers.length > 0 && (
+          <div className="flex gap-1.5 mt-2">
+            {providers.slice(0, 4).map((o) => (
+              <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
+                <img src={o.provider_icon_url} alt={o.provider_name} className="w-6 h-6 rounded" loading="lazy" />
+              </a>
             ))}
           </div>
-          {!showAllEpisodes && hiddenCount > 0 && (
+        )}
+
+        {/* Actions */}
+        <div className="mt-auto pt-3 space-y-1.5">
+          <button
+            onClick={() => onToggleWatched(episode.id, !!episode.is_watched)}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+          >
+            <CheckCircle size={14} />
+            {t("home.markWatched")}
+          </button>
+          {seasonEpisodeCount > 1 && (
             <button
-              onClick={() => setShowAllEpisodes(true)}
-              className="text-xs text-zinc-400 hover:text-amber-400 transition-colors mt-2 cursor-pointer"
+              onClick={() => onMarkSeasonWatched(seasonEpisodeIds)}
+              className="w-full text-center text-xs text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              {t("home.showAll", { count: episodes.length })}
+              {t("home.markSeasonWatched")}
             </button>
-          )}
-          {showAllEpisodes && episodes.length > EPISODES_PER_PAGE && (
-            <button
-              onClick={() => setShowAllEpisodes(false)}
-              className="text-xs text-zinc-400 hover:text-amber-400 transition-colors mt-2 cursor-pointer"
-            >
-              {t("home.showLess")}
-            </button>
-          )}
-          {providers.length > 0 && (
-            <div className="flex gap-1.5 mt-3">
-              {providers.map((o) => (
-                <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
-                  <img src={o.provider_icon_url} alt={o.provider_name} className="w-7 h-7 rounded-md" loading="lazy" />
-                </a>
-              ))}
-            </div>
           )}
         </div>
       </div>
@@ -112,74 +154,46 @@ const UnwatchedShowGroup = memo(function UnwatchedShowGroup({ showTitle, seasonN
   );
 });
 
-const UnwatchedShowCard = memo(function UnwatchedShowCard({ titleId, seasonMap, expanded, onToggleExpand, onToggleWatched, onMarkSeasonWatched }: {
+const UnwatchedOverflowCard = memo(function UnwatchedOverflowCard({ titleId, showTitle, posterUrl, seasonNumber, overflowCount, seasonEpisodeIds, onMarkSeasonWatched }: {
   titleId: string;
-  seasonMap: Map<number, Episode[]>;
-  expanded: boolean;
-  onToggleExpand: (titleId: string) => void;
-  onToggleWatched: (id: number, current: boolean) => void;
+  showTitle: string;
+  posterUrl: string | null;
+  seasonNumber: number;
+  overflowCount: number;
+  seasonEpisodeIds: number[];
   onMarkSeasonWatched: (episodeIds: number[]) => void;
 }) {
   const { t } = useTranslation();
-  const sortedSeasons = Array.from(seasonMap.entries()).sort(([a], [b]) => a - b);
-  const extraSeasons = sortedSeasons.length - 1;
-
-  if (expanded) {
-    return (
-      <div className="space-y-3">
-        {sortedSeasons.map(([seasonNum, eps]) => (
-          <UnwatchedShowGroup
-            key={`${titleId}-s${seasonNum}`}
-            showTitle={eps[0].show_title}
-            seasonNumber={seasonNum}
-            episodes={eps}
-            posterUrl={eps[0].poster_url}
-            onToggleWatched={onToggleWatched}
-            onMarkSeasonWatched={onMarkSeasonWatched}
-          />
-        ))}
-        {sortedSeasons.length > 1 && (
-          <button
-            onClick={() => onToggleExpand(titleId)}
-            className="text-xs text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer w-full text-center"
-          >
-            {t("home.collapseSeasons")}
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // Collapsed: show only earliest season with deck effect
-  const [seasonNum, eps] = sortedSeasons[0];
 
   return (
-    <div className="relative">
-      {/* Shadow cards for deck effect */}
-      {extraSeasons >= 2 && (
-        <div className="absolute inset-0 translate-y-2 translate-x-2 scale-[0.94] bg-zinc-900 rounded-xl border border-zinc-800/30 opacity-30" />
-      )}
-      {extraSeasons >= 1 && (
-        <div className="absolute inset-0 translate-y-1 translate-x-1 scale-[0.97] bg-zinc-900 rounded-xl border border-zinc-800/30 opacity-60" />
-      )}
-      {/* Main card */}
-      <div className="relative z-10">
-        <UnwatchedShowGroup
-          showTitle={eps[0].show_title}
-          seasonNumber={seasonNum}
-          episodes={eps}
-          posterUrl={eps[0].poster_url}
-          onToggleWatched={onToggleWatched}
-          onMarkSeasonWatched={onMarkSeasonWatched}
-        />
-        {extraSeasons > 0 && (
-          <button
-            onClick={() => onToggleExpand(titleId)}
-            className="w-full text-center text-xs text-zinc-400 hover:text-amber-400 transition-colors py-2 cursor-pointer"
-          >
-            {t("home.moreSeasons", { count: extraSeasons })}
-          </button>
+    <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col h-full">
+      <Link to={`/title/${titleId}`} className="block">
+        {posterUrl ? (
+          <div className="w-full aspect-video relative">
+            <img src={posterUrl} alt={showTitle} className="w-full h-full object-cover" loading="lazy" />
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="text-white font-bold text-lg">{t("home.moreEpisodes", { count: overflowCount })}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">{t("home.moreEpisodes", { count: overflowCount })}</span>
+          </div>
         )}
+      </Link>
+      <div className="p-3 flex flex-col flex-1">
+        <Link to={`/title/${titleId}`} className="hover:text-amber-400 transition-colors">
+          <h3 className="font-semibold text-white text-sm truncate">{showTitle}</h3>
+        </Link>
+        <p className="text-xs text-zinc-500 mt-0.5">{t("home.season", { number: seasonNumber })}</p>
+        <div className="mt-auto pt-3">
+          <button
+            onClick={() => onMarkSeasonWatched(seasonEpisodeIds)}
+            className="w-full text-center text-xs text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer"
+          >
+            {t("home.markSeasonWatched")}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -256,7 +270,6 @@ export default function HomePage() {
   const [today, setToday] = useState<Episode[]>([]);
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const [unwatched, setUnwatched] = useState<Episode[]>([]);
-  const [expandedShows, setExpandedShows] = useState<Set<string>>(new Set());
   const [popularTitles, setPopularTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -339,15 +352,6 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleToggleExpand = useCallback((titleId: string) => {
-    setExpandedShows((prev) => {
-      const next = new Set(prev);
-      if (next.has(titleId)) next.delete(titleId);
-      else next.add(titleId);
-      return next;
-    });
-  }, []);
-
   if (authLoading || loading) {
     return <EpisodeListSkeleton />;
   }
@@ -409,6 +413,7 @@ export default function HomePage() {
     upcomingByDate.get(ep.air_date)!.push(ep);
   }
   const unwatchedByShowAndSeason = groupByShowAndSeason(unwatched);
+  const unwatchedCards = buildUnwatchedCards(unwatchedByShowAndSeason);
 
   const noEpisodes = today.length === 0 && upcoming.length === 0 && unwatched.length === 0;
 
@@ -432,18 +437,35 @@ export default function HomePage() {
             </Link>
           </div>
           <UnwatchedCarousel>
-            {Array.from(unwatchedByShowAndSeason.entries()).map(([titleId, seasonMap]) => (
-              <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-                <UnwatchedShowCard
-                  titleId={titleId}
-                  seasonMap={seasonMap}
-                  expanded={expandedShows.has(titleId)}
-                  onToggleExpand={handleToggleExpand}
-                  onToggleWatched={toggleWatched}
-                  onMarkSeasonWatched={markSeasonWatched}
-                />
-              </div>
-            ))}
+            {unwatchedCards.map((card) => {
+              if (card.isOverflow) {
+                return (
+                  <div key={`overflow-${card.titleId}-s${card.seasonNumber}`} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                    <UnwatchedOverflowCard
+                      titleId={card.titleId}
+                      showTitle={card.showTitle}
+                      posterUrl={card.episode.poster_url}
+                      seasonNumber={card.seasonNumber}
+                      overflowCount={card.seasonEpisodeCount - MAX_CARDS_PER_SEASON}
+                      seasonEpisodeIds={card.seasonEpisodeIds}
+                      onMarkSeasonWatched={markSeasonWatched}
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <div key={card.episode.id} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                  <UnwatchedEpisodeCard
+                    episode={card.episode}
+                    seasonEpisodeCount={card.seasonEpisodeCount}
+                    seasonEpisodeIds={card.seasonEpisodeIds}
+                    onToggleWatched={toggleWatched}
+                    onMarkSeasonWatched={markSeasonWatched}
+                  />
+                </div>
+              );
+            })}
           </UnwatchedCarousel>
         </section>
       )}
