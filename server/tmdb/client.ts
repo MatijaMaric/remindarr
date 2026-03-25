@@ -1,5 +1,6 @@
 import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
+import { getCache } from "../cache";
 import type {
   TmdbShowDetails,
   TmdbSeasonResponse,
@@ -247,72 +248,101 @@ export async function findByImdbId(imdbId: string): Promise<TmdbFindResponse> {
   });
 }
 
+// ─── Cached TMDB helper ─────────────────────────────────────────────────────
+
+async function cachedTmdbRequest<T>(
+  cacheKey: string,
+  ttlSeconds: number,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  const cache = getCache();
+  const cached = await cache.get<T>(cacheKey);
+  if (cached !== null) return cached;
+  const result = await fetcher();
+  await cache.set(cacheKey, result, ttlSeconds);
+  return result;
+}
+
 // ─── Genre lists (for mapping genre_ids to names) ───────────────────────────
 
-let movieGenreCache: Map<number, string> | null = null;
-let tvGenreCache: Map<number, string> | null = null;
-
 export async function getMovieGenres(): Promise<Map<number, string>> {
-  if (movieGenreCache) return movieGenreCache;
-  const data = await tmdbRequest<TmdbGenreListResponse>("/genre/movie/list", {
-    language: tmdbLanguage(),
-  });
-  movieGenreCache = new Map(data.genres.map((g) => [g.id, g.name]));
-  return movieGenreCache;
+  const entries = await cachedTmdbRequest<[number, string][]>(
+    `tmdb:genres:movie:${tmdbLanguage()}`,
+    CONFIG.CACHE_TTL_GENRES,
+    async () => {
+      const data = await tmdbRequest<TmdbGenreListResponse>("/genre/movie/list", {
+        language: tmdbLanguage(),
+      });
+      return data.genres.map((g) => [g.id, g.name]);
+    },
+  );
+  return new Map(entries);
 }
 
 export async function getTvGenres(): Promise<Map<number, string>> {
-  if (tvGenreCache) return tvGenreCache;
-  const data = await tmdbRequest<TmdbGenreListResponse>("/genre/tv/list", {
-    language: tmdbLanguage(),
-  });
-  tvGenreCache = new Map(data.genres.map((g) => [g.id, g.name]));
-  return tvGenreCache;
+  const entries = await cachedTmdbRequest<[number, string][]>(
+    `tmdb:genres:tv:${tmdbLanguage()}`,
+    CONFIG.CACHE_TTL_GENRES,
+    async () => {
+      const data = await tmdbRequest<TmdbGenreListResponse>("/genre/tv/list", {
+        language: tmdbLanguage(),
+      });
+      return data.genres.map((g) => [g.id, g.name]);
+    },
+  );
+  return new Map(entries);
 }
 
 // ─── Watch provider lists (for filter dropdowns) ────────────────────────────
 
-let movieProviderCache: { id: number; name: string; iconUrl: string }[] | null = null;
-let tvProviderCache: { id: number; name: string; iconUrl: string }[] | null = null;
-
 export async function getMovieWatchProviders(): Promise<{ id: number; name: string; iconUrl: string }[]> {
-  if (movieProviderCache) return movieProviderCache;
-  const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/movie", {
-    watch_region: CONFIG.COUNTRY,
-    language: tmdbLanguage(),
-  });
-  movieProviderCache = data.results.map((p) => ({
-    id: p.provider_id,
-    name: p.provider_name,
-    iconUrl: `${CONFIG.TMDB_IMAGE_BASE_URL}/w92${p.logo_path}`,
-  }));
-  return movieProviderCache;
+  return cachedTmdbRequest(
+    `tmdb:providers:movie:${CONFIG.COUNTRY}:${tmdbLanguage()}`,
+    CONFIG.CACHE_TTL_PROVIDERS,
+    async () => {
+      const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/movie", {
+        watch_region: CONFIG.COUNTRY,
+        language: tmdbLanguage(),
+      });
+      return data.results.map((p) => ({
+        id: p.provider_id,
+        name: p.provider_name,
+        iconUrl: `${CONFIG.TMDB_IMAGE_BASE_URL}/w92${p.logo_path}`,
+      }));
+    },
+  );
 }
 
 export async function getTvWatchProviders(): Promise<{ id: number; name: string; iconUrl: string }[]> {
-  if (tvProviderCache) return tvProviderCache;
-  const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/tv", {
-    watch_region: CONFIG.COUNTRY,
-    language: tmdbLanguage(),
-  });
-  tvProviderCache = data.results.map((p) => ({
-    id: p.provider_id,
-    name: p.provider_name,
-    iconUrl: `${CONFIG.TMDB_IMAGE_BASE_URL}/w92${p.logo_path}`,
-  }));
-  return tvProviderCache;
+  return cachedTmdbRequest(
+    `tmdb:providers:tv:${CONFIG.COUNTRY}:${tmdbLanguage()}`,
+    CONFIG.CACHE_TTL_PROVIDERS,
+    async () => {
+      const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/tv", {
+        watch_region: CONFIG.COUNTRY,
+        language: tmdbLanguage(),
+      });
+      return data.results.map((p) => ({
+        id: p.provider_id,
+        name: p.provider_name,
+        iconUrl: `${CONFIG.TMDB_IMAGE_BASE_URL}/w92${p.logo_path}`,
+      }));
+    },
+  );
 }
 
 // ─── Language list ──────────────────────────────────────────────────────────
 
-let languageCache: { code: string; name: string }[] | null = null;
-
 export async function getLanguages(): Promise<{ code: string; name: string }[]> {
-  if (languageCache) return languageCache;
-  const data = await tmdbRequest<TmdbLanguage[]>("/configuration/languages");
-  languageCache = data
-    .map((l) => ({ code: l.iso_639_1, name: l.english_name }))
-    .filter((l) => l.name && l.name !== "No Language")
-    .sort((a, b) => a.name.localeCompare(b.name));
-  return languageCache;
+  return cachedTmdbRequest(
+    "tmdb:languages",
+    CONFIG.CACHE_TTL_LANGUAGES,
+    async () => {
+      const data = await tmdbRequest<TmdbLanguage[]>("/configuration/languages");
+      return data
+        .map((l) => ({ code: l.iso_639_1, name: l.english_name }))
+        .filter((l) => l.name && l.name !== "No Language")
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+  );
 }

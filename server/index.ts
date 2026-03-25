@@ -38,12 +38,17 @@ import { BunPlatform } from "./platform/bun";
 import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
 import { validateStartup } from "./startup-validation";
+import { createCache, initCache } from "./cache";
 
 // Validate required configuration before anything else
 validateStartup();
 
 // Initialize DB on startup
 initBunDb();
+
+// Initialize distributed cache
+const cache = await createCache();
+initCache(cache);
 
 const platform = new BunPlatform();
 
@@ -209,6 +214,7 @@ const shutdown = createShutdownHandler({
   server,
   stopWorker,
   closeDb: () => getRawDb().close(),
+  closeCache: () => cache.close?.() ?? Promise.resolve(),
 });
 
 process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
