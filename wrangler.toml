@@ -23,11 +23,9 @@ database_id = "b15b2224-6af6-4962-b1a8-7e51f771635c"
 migrations_dir = "drizzle"
 
 # KV namespace for distributed cache
-# Create with: wrangler kv namespace create CACHE_KV
-# Then update the id below with the returned namespace ID.
-# [[kv_namespaces]]
-# binding = "CACHE_KV"
-# id = "<your-kv-namespace-id>"
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "c41afddb53d045738dc0ffd1b082b46b"
 
 # Non-secret config (override via wrangler.toml or dashboard)
 [vars]
