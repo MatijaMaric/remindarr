@@ -56,8 +56,8 @@ jobs:
             to accurately reflect the current state of the project. Keep the existing
             style and structure but update any sections that are out of date —
             features, stack, configuration, project structure, API routes, etc.
-            Only make changes if something is actually out of date. Commit any
-            changes with a clear message.
+            Only make changes if something is actually out of date. If you make
+            changes, commit them with a clear message and then push to origin.
           settings: |
             {
               "permissions": {
@@ -68,6 +68,7 @@ jobs:
                   "Bash(git commit:*)",
                   "Bash(git push:*)",
                   "Read",
+                  "Write",
                   "Glob",
                   "Grep",
                   "Edit"
