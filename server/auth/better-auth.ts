@@ -14,6 +14,29 @@ import type { DrizzleDb } from "../platform/types";
 
 const log = logger.child({ module: "auth" });
 
+/**
+ * Given a base URL, return an array of origins for WebAuthn validation.
+ * Includes both www and non-www variants so passkeys work on either domain.
+ */
+export function buildPasskeyOrigins(baseUrl: string): string[] {
+  const normalized = baseUrl.replace(/\/$/, "");
+  if (!normalized) return [];
+  try {
+    const url = new URL(normalized);
+    const origins = [url.origin];
+    if (url.hostname.startsWith("www.")) {
+      url.hostname = url.hostname.slice(4);
+      origins.push(url.origin);
+    } else {
+      url.hostname = `www.${url.hostname}`;
+      origins.push(url.origin);
+    }
+    return origins;
+  } catch {
+    return [normalized];
+  }
+}
+
 /** Check if OIDC claims grant admin status based on configured claim/value. */
 export function checkAdminClaim(
   claims: Record<string, unknown>,
@@ -54,7 +77,9 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
     passkeyPlugin({
       rpID: CONFIG.PASSKEY_RP_ID || (CONFIG.BASE_URL ? new URL(CONFIG.BASE_URL).hostname : undefined),
       rpName: CONFIG.PASSKEY_RP_NAME || "Remindarr",
-      origin: CONFIG.PASSKEY_ORIGIN || (CONFIG.BASE_URL ? CONFIG.BASE_URL.replace(/\/$/, "") : null),
+      origin: CONFIG.PASSKEY_ORIGIN
+        ? CONFIG.PASSKEY_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
+        : (CONFIG.BASE_URL ? buildPasskeyOrigins(CONFIG.BASE_URL) : null),
     }),
   ];
 
@@ -149,9 +174,17 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
     secret,
     baseURL: CONFIG.BASE_URL || `http://localhost:${CONFIG.PORT}`,
     basePath: "/api/auth",
-    trustedOrigins: CONFIG.CORS_ORIGIN
-      ? CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
-      : [],
+    trustedOrigins: [
+      ...(CONFIG.CORS_ORIGIN
+        ? CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
+        : []),
+      ...(CONFIG.BASE_URL ? buildPasskeyOrigins(CONFIG.BASE_URL) : []),
+    ].filter((v, i, a) => a.indexOf(v) === i),
+    advanced: {
+      ipAddress: {
+        ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+      },
+    },
     emailAndPassword: {
       enabled: true,
       password: {

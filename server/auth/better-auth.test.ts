@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { checkAdminClaim } from "./better-auth";
+import { checkAdminClaim, buildPasskeyOrigins } from "./better-auth";
 
 describe("checkAdminClaim", () => {
   test("returns false when claimName is empty", () => {
@@ -40,5 +40,43 @@ describe("checkAdminClaim", () => {
 
   test("coerces array elements to string for comparison", () => {
     expect(checkAdminClaim({ flags: [1, 2, 3] }, "flags", "2")).toBe(true);
+  });
+});
+
+describe("buildPasskeyOrigins", () => {
+  test("returns both non-www and www variants for a non-www URL", () => {
+    expect(buildPasskeyOrigins("https://remindarr.app")).toEqual([
+      "https://remindarr.app",
+      "https://www.remindarr.app",
+    ]);
+  });
+
+  test("returns both www and non-www variants for a www URL", () => {
+    expect(buildPasskeyOrigins("https://www.remindarr.app")).toEqual([
+      "https://www.remindarr.app",
+      "https://remindarr.app",
+    ]);
+  });
+
+  test("strips trailing slash", () => {
+    expect(buildPasskeyOrigins("https://remindarr.app/")).toEqual([
+      "https://remindarr.app",
+      "https://www.remindarr.app",
+    ]);
+  });
+
+  test("returns empty array for empty string", () => {
+    expect(buildPasskeyOrigins("")).toEqual([]);
+  });
+
+  test("returns single-element array for invalid URL", () => {
+    expect(buildPasskeyOrigins("not-a-url")).toEqual(["not-a-url"]);
+  });
+
+  test("preserves port in origins", () => {
+    expect(buildPasskeyOrigins("http://localhost:3000")).toEqual([
+      "http://localhost:3000",
+      "http://www.localhost:3000",
+    ]);
   });
 });
