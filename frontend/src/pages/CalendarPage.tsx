@@ -1,12 +1,32 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Link } from "react-router";
-import { ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, CircleIcon, LayoutGridIcon, ListIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
+import { Link, useSearchParams } from "react-router";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CheckCircleIcon,
+  CircleIcon,
+  LayoutGridIcon,
+  ListIcon,
+  EyeIcon,
+  EyeOffIcon,
+  XIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
-import TitleList from "../components/TitleList";
-import type { Title, Episode, Offer } from "../types";
-import { CalendarSkeleton } from "../components/SkeletonComponents";
+import TitleCard from "../components/TitleCard";
+import { DeckCardWrapper, UnwatchedCarousel } from "../components/EpisodeShowCard";
+import type { Title, Episode } from "../types";
+import { CalendarSkeleton, GridCalendarSkeleton } from "../components/SkeletonComponents";
+import {
+  formatEpisodeCode,
+  getUniqueProviders,
+  getEpisodeCardImageUrl,
+  groupByShow,
+} from "../components/EpisodeComponents";
+import { useDominantColor } from "../components/useDominantColor";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatMonth(date: Date): string {
   const y = date.getFullYear();
@@ -31,23 +51,6 @@ function getDaysInMonth(year: number, month: number): Date[] {
   return days;
 }
 
-function formatEpisodeTag(ep: Episode): string {
-  const s = String(ep.season_number).padStart(2, "0");
-  const e = String(ep.episode_number).padStart(2, "0");
-  return `S${s}E${e} ${ep.show_title}`;
-}
-
-function getUniqueProviders(offers?: Offer[]) {
-  if (!offers?.length) return [];
-  const map = new Map<number, Offer>();
-  for (const o of offers) {
-    if (o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS") {
-      if (!map.has(o.provider_id)) map.set(o.provider_id, o);
-    }
-  }
-  return Array.from(map.values());
-}
-
 type CalendarItem =
   | { type: "title"; data: Title }
   | { type: "episode"; data: Episode };
@@ -60,7 +63,6 @@ const typeFilters = [
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Generate month options for ±24 months
 function getMonthOptions(): { label: string; value: string }[] {
   const options: { label: string; value: string }[] = [];
   const now = new Date();
@@ -76,7 +78,88 @@ function getMonthOptions(): { label: string; value: string }[] {
 
 type ViewMode = "grid" | "agenda";
 
-function ViewToggle({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
+/** Get the best hero image URL for a calendar item */
+function getItemHeroUrl(item: CalendarItem): string | null {
+  if (item.type === "episode") {
+    return getEpisodeCardImageUrl(item.data);
+  }
+  return item.data.poster_url;
+}
+
+/** Pick the featured item from a list (best image, unwatched episodes first) */
+function pickFeaturedItem(items: CalendarItem[]): CalendarItem | null {
+  if (items.length === 0) return null;
+  // Prefer unwatched episode with an image
+  const unwatchedEps = items.filter(
+    (i) => i.type === "episode" && !i.data.is_watched && getItemHeroUrl(i)
+  );
+  if (unwatchedEps.length > 0) return unwatchedEps[0];
+  // Then any item with an image
+  const withImage = items.filter((i) => getItemHeroUrl(i));
+  if (withImage.length > 0) return withImage[0];
+  return items[0];
+}
+
+/** Get poster URL for a calendar item (show poster for episodes, title poster for movies) */
+function getItemPosterUrl(item: CalendarItem): string | null {
+  if (item.type === "episode") return item.data.poster_url;
+  return item.data.poster_url;
+}
+
+/** Determine cell border color based on item types */
+function getCellBorderColor(items: CalendarItem[]): string {
+  const hasEpisodes = items.some((i) => i.type === "episode");
+  const hasMovies = items.some(
+    (i) => i.type === "title" && i.data.object_type === "MOVIE"
+  );
+  const hasShows = items.some(
+    (i) => i.type === "title" && i.data.object_type === "SHOW"
+  );
+  if (hasEpisodes && (hasMovies || hasShows)) return "border-l-amber-500";
+  if (hasEpisodes) return "border-l-emerald-500";
+  if (hasMovies) return "border-l-blue-500";
+  if (hasShows) return "border-l-purple-500";
+  return "";
+}
+
+// ─── URL state helper ───────────────────────────────────────────────────────
+
+function useCalendarParam(
+  searchParams: URLSearchParams,
+  setSearchParams: ReturnType<typeof useSearchParams>[1],
+  key: string,
+  defaultValue = ""
+): [string, (value: string) => void] {
+  const value = searchParams.get(key) || defaultValue;
+  const setValue = useCallback(
+    (newValue: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (newValue && newValue !== defaultValue) {
+            next.set(key, newValue);
+          } else {
+            next.delete(key);
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams, key, defaultValue]
+  );
+  return [value, setValue];
+}
+
+// ─── View Toggle ────────────────────────────────────────────────────────────
+
+function ViewToggle({
+  viewMode,
+  onViewModeChange,
+}: {
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+}) {
   return (
     <div className="flex items-center bg-zinc-800 rounded-lg p-0.5">
       <button
@@ -105,31 +188,404 @@ function ViewToggle({ viewMode, onViewModeChange }: { viewMode: ViewMode; onView
   );
 }
 
+// ─── Month Stats Bar ────────────────────────────────────────────────────────
+
+function MonthStatsBar({
+  episodes,
+  titles,
+}: {
+  episodes: number;
+  titles: number;
+}) {
+  const total = episodes + titles;
+  if (total === 0) return null;
+  return (
+    <div className="flex items-center gap-3 text-xs font-medium">
+      {episodes > 0 && (
+        <span className="bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full">
+          {episodes} Episode{episodes !== 1 ? "s" : ""}
+        </span>
+      )}
+      {titles > 0 && (
+        <span className="bg-blue-500/15 text-blue-400 px-2.5 py-1 rounded-full">
+          {titles} Title{titles !== 1 ? "s" : ""}
+        </span>
+      )}
+      <span className="bg-amber-500/15 text-amber-400 px-2.5 py-1 rounded-full">
+        {total} Total
+      </span>
+    </div>
+  );
+}
+
+// ─── Day Hero (cinematic header for a day) ──────────────────────────────────
+
+const DayHero = memo(function DayHero({
+  items,
+  dateLabel,
+  isToday,
+}: {
+  items: CalendarItem[];
+  dateLabel: string;
+  isToday: boolean;
+}) {
+  const featured = pickFeaturedItem(items);
+  const heroUrl = featured ? getItemHeroUrl(featured) : null;
+  const { color } = useDominantColor(heroUrl);
+
+  return (
+    <div className="relative w-full h-48 sm:h-52 rounded-xl overflow-hidden">
+      {/* Color background */}
+      <div className="absolute inset-0" style={{ backgroundColor: color }} />
+
+      {/* Hero image */}
+      {heroUrl && (
+        <img
+          src={heroUrl}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          style={{
+            maskImage:
+              "linear-gradient(to bottom, black 40%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, black 40%, transparent 100%)",
+          }}
+        />
+      )}
+
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
+
+      {/* Content */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+        <div>
+          {isToday && (
+            <span className="text-[10px] uppercase tracking-widest text-amber-400 font-semibold mb-1 block">
+              Today
+            </span>
+          )}
+          <h3 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">
+            {dateLabel}
+          </h3>
+        </div>
+        <span className="text-xs text-zinc-300 bg-black/40 px-2.5 py-1 rounded-full">
+          {items.length} item{items.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+    </div>
+  );
+});
+
+// ─── Slide-over Panel for Grid View ─────────────────────────────────────────
+
+function SlideOverPanel({
+  selectedDate,
+  items,
+  episodes,
+  titles,
+  onClose,
+  onToggleWatched,
+  onBulkToggle,
+}: {
+  selectedDate: string;
+  items: CalendarItem[];
+  episodes: Episode[];
+  titles: Title[];
+  onClose: () => void;
+  onToggleWatched: (id: number, watched: boolean) => void;
+  onBulkToggle: (ids: number[], watched: boolean) => void;
+}) {
+  const today = formatDateKey(new Date());
+  const isToday = selectedDate === today;
+  const dateLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(
+    undefined,
+    { weekday: "long", month: "long", day: "numeric" }
+  );
+
+  const isEpisodeReleased = (ep: Episode) =>
+    ep.air_date ? ep.air_date <= today : false;
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  // Group episodes by show for the carousel
+  const episodesByShow = useMemo(() => groupByShow(episodes), [episodes]);
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed right-0 top-14 bottom-0 w-full sm:w-[420px] z-50 bg-zinc-950 border-l border-white/[0.06] overflow-y-auto animate-slide-in-right">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-white">{dateLabel}</h3>
+            <p className="text-xs text-zinc-500">
+              {items.length} item{items.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <XIcon className="size-5" />
+          </button>
+        </div>
+
+        {/* Day hero */}
+        <div className="p-4">
+          <DayHero items={items} dateLabel={dateLabel} isToday={isToday} />
+        </div>
+
+        {/* Episodes */}
+        {episodes.length > 0 && (
+          <div className="px-4 pb-4">
+            <h4 className="text-sm font-medium text-emerald-400 mb-3">
+              Episodes
+            </h4>
+            {Array.from(episodesByShow.entries()).map(([titleId, showEps]) => {
+              const allWatched = showEps.every((ep) => ep.is_watched);
+              return (
+                <div key={titleId} className="mb-4">
+                  {episodesByShow.size > 1 && (
+                    <div className="flex items-center justify-between mb-2">
+                      <Link
+                        to={`/title/${titleId}`}
+                        className="text-xs font-medium text-zinc-400 hover:text-amber-400 transition-colors"
+                      >
+                        {showEps[0].show_title}
+                      </Link>
+                      {showEps.length > 1 && (
+                        <button
+                          onClick={() =>
+                            onBulkToggle(
+                              showEps.map((ep) => ep.id),
+                              !allWatched
+                            )
+                          }
+                          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                        >
+                          {allWatched
+                            ? "Mark all unwatched"
+                            : "Mark all watched"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    {showEps.map((ep) => {
+                      const released = isEpisodeReleased(ep);
+                      const providers = getUniqueProviders(ep.offers);
+                      return (
+                        <div
+                          key={ep.id}
+                          className={`flex gap-3 p-3 rounded-lg border transition-colors ${
+                            ep.is_watched
+                              ? "bg-zinc-900/30 border-zinc-800/60 opacity-60"
+                              : "bg-zinc-900/60 border-white/[0.06]"
+                          }`}
+                        >
+                          {ep.poster_url && (
+                            <Link
+                              to={`/title/${ep.title_id}`}
+                              className="flex-shrink-0"
+                            >
+                              <img
+                                src={ep.poster_url}
+                                alt={ep.show_title}
+                                className="w-12 h-18 rounded object-cover"
+                                loading="lazy"
+                              />
+                            </Link>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <Link
+                                to={`/title/${ep.title_id}`}
+                                className="hover:text-amber-400 transition-colors"
+                              >
+                                <div className="text-sm font-medium text-white truncate">
+                                  {ep.show_title}
+                                </div>
+                              </Link>
+                              {released ? (
+                                <button
+                                  onClick={() =>
+                                    onToggleWatched(ep.id, !!ep.is_watched)
+                                  }
+                                  className={`flex-shrink-0 p-1 rounded-md transition-colors cursor-pointer ${
+                                    ep.is_watched
+                                      ? "text-emerald-400 hover:text-emerald-300"
+                                      : "text-zinc-600 hover:text-zinc-400"
+                                  }`}
+                                  title={
+                                    ep.is_watched
+                                      ? "Mark as unwatched"
+                                      : "Mark as watched"
+                                  }
+                                >
+                                  {ep.is_watched ? (
+                                    <CheckCircleIcon className="size-5" />
+                                  ) : (
+                                    <CircleIcon className="size-5" />
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="flex-shrink-0 p-1 text-zinc-700 cursor-not-allowed">
+                                  <CircleIcon className="size-5" />
+                                </span>
+                              )}
+                            </div>
+                            <Link
+                              to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                              className="block hover:text-amber-400 transition-colors"
+                            >
+                              <div className="text-xs text-emerald-400 mt-0.5">
+                                {formatEpisodeCode(ep)}
+                                {ep.name && ` — ${ep.name}`}
+                              </div>
+                            </Link>
+                            {ep.overview && (
+                              <p className="text-xs text-zinc-400 mt-1 line-clamp-2">
+                                {ep.overview}
+                              </p>
+                            )}
+                            {providers.length > 0 && (
+                              <div className="flex gap-1.5 mt-2">
+                                {providers.map((p) => (
+                                  <a
+                                    key={p.provider_id}
+                                    href={p.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={p.provider_name}
+                                  >
+                                    <img
+                                      src={p.provider_icon_url}
+                                      alt={p.provider_name}
+                                      className="w-6 h-6 rounded-md"
+                                      loading="lazy"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Titles */}
+        {titles.length > 0 && (
+          <div className="px-4 pb-6">
+            <h4 className="text-sm font-medium text-blue-400 mb-3">
+              Releases
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              {titles.map((t) => (
+                <TitleCard key={t.id} title={t} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {items.length === 0 && (
+          <div className="px-4 py-8 text-center text-zinc-500 text-sm">
+            No tracked releases on this day
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── Main Export ─────────────────────────────────────────────────────────────
+
 export default function CalendarPage() {
   const isMobile = useIsMobile();
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [viewParam, setViewParam] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "view",
+    "grid"
+  );
+  const viewMode = (viewParam === "agenda" ? "agenda" : "grid") as ViewMode;
+  const setViewMode = (mode: ViewMode) => setViewParam(mode);
 
   if (isMobile) {
-    return <AgendaCalendar />;
+    return (
+      <AgendaCalendar
+        searchParams={searchParams}
+        setSearchParams={setSearchParams}
+      />
+    );
   }
 
   if (viewMode === "agenda") {
-    return <AgendaCalendar viewMode={viewMode} onViewModeChange={setViewMode} />;
+    return (
+      <AgendaCalendar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        searchParams={searchParams}
+        setSearchParams={setSearchParams}
+      />
+    );
   }
 
-  return <GridCalendar viewMode={viewMode} onViewModeChange={setViewMode} />;
+  return (
+    <GridCalendar
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      searchParams={searchParams}
+      setSearchParams={setSearchParams}
+    />
+  );
 }
 
-// ─── Mobile Agenda View ──────────────────────────────────────────────────────
+// ─── Agenda Calendar (Cinematic) ────────────────────────────────────────────
 
 interface AgendaMonth {
-  month: string; // "YYYY-MM"
+  month: string;
   titles: Title[];
   episodes: Episode[];
 }
 
-function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; onViewModeChange?: (mode: ViewMode) => void } = {}) {
-  const [typeFilter, setTypeFilter] = useState("");
+function AgendaCalendar({
+  viewMode,
+  onViewModeChange,
+  searchParams,
+  setSearchParams,
+}: {
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
+  searchParams: URLSearchParams;
+  setSearchParams: ReturnType<typeof useSearchParams>[1];
+}) {
+  const [typeFilter, setTypeFilter] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "type"
+  );
   const [hideWatched, setHideWatched] = useState(true);
   const [months, setMonths] = useState<AgendaMonth[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -140,7 +596,10 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
   const todayRef = useRef<HTMLDivElement>(null);
   const monthOptions = useMemo(() => getMonthOptions(), []);
 
-  // Track which months we've loaded to avoid duplicates
+  // Scroll-spy state for date sidebar
+  const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
+  const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
   const loadedMonthsRef = useRef(new Set<string>());
   const [earliestMonth, setEarliestMonth] = useState(() => {
     const now = new Date();
@@ -153,23 +612,29 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
 
   const today = useMemo(() => formatDateKey(new Date()), []);
 
-  // Load a specific month's data
-  const loadMonth = useCallback(async (monthStr: string): Promise<AgendaMonth | null> => {
-    if (loadedMonthsRef.current.has(monthStr)) return null;
-    loadedMonthsRef.current.add(monthStr);
-    try {
-      const data = await getCalendarTitles({
-        month: monthStr,
-        type: typeFilter || undefined,
-      });
-      return { month: monthStr, titles: data.titles, episodes: data.episodes || [] };
-    } catch {
-      loadedMonthsRef.current.delete(monthStr);
-      return null;
-    }
-  }, [typeFilter]);
+  const loadMonth = useCallback(
+    async (monthStr: string): Promise<AgendaMonth | null> => {
+      if (loadedMonthsRef.current.has(monthStr)) return null;
+      loadedMonthsRef.current.add(monthStr);
+      try {
+        const data = await getCalendarTitles({
+          month: monthStr,
+          type: typeFilter || undefined,
+        });
+        return {
+          month: monthStr,
+          titles: data.titles,
+          episodes: data.episodes || [],
+        };
+      } catch {
+        loadedMonthsRef.current.delete(monthStr);
+        return null;
+      }
+    },
+    [typeFilter]
+  );
 
-  // Initial load: current month ± 1
+  // Initial load
   useEffect(() => {
     loadedMonthsRef.current.clear();
     setMonths([]); // eslint-disable-line react-hooks/set-state-in-effect -- reset before async load
@@ -204,11 +669,15 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
     }
   }, [initialLoading]);
 
-  // Load more months at bottom
+  // Infinite scroll down
   const loadNextMonth = useCallback(async () => {
     if (loadingMore) return;
     setLoadingMore(true);
-    const next = new Date(latestMonth.getFullYear(), latestMonth.getMonth() + 1, 1);
+    const next = new Date(
+      latestMonth.getFullYear(),
+      latestMonth.getMonth() + 1,
+      1
+    );
     const result = await loadMonth(formatMonth(next));
     if (result) {
       setMonths((prev) => [...prev, result]);
@@ -217,11 +686,15 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
     setLoadingMore(false);
   }, [latestMonth, loadMonth, loadingMore]);
 
-  // Load more months at top
+  // Infinite scroll up
   const loadPrevMonth = useCallback(async () => {
     if (loadingMore) return;
     setLoadingMore(true);
-    const prev = new Date(earliestMonth.getFullYear(), earliestMonth.getMonth() - 1, 1);
+    const prev = new Date(
+      earliestMonth.getFullYear(),
+      earliestMonth.getMonth() - 1,
+      1
+    );
     const result = await loadMonth(formatMonth(prev));
     if (result) {
       setMonths((prevMonths) => [result, ...prevMonths]);
@@ -230,7 +703,6 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
     setLoadingMore(false);
   }, [earliestMonth, loadMonth, loadingMore]);
 
-  // IntersectionObserver for infinite scroll down
   useEffect(() => {
     const el = bottomRef.current;
     if (!el) return;
@@ -244,7 +716,6 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
     return () => observer.disconnect();
   }, [loadNextMonth]);
 
-  // IntersectionObserver for infinite scroll up
   useEffect(() => {
     const el = topRef.current;
     if (!el) return;
@@ -258,32 +729,61 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
     return () => observer.disconnect();
   }, [loadPrevMonth]);
 
+  // Scroll-spy for date sidebar
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    const visibleDates = new Set<string>();
+
+    for (const [dateKey, el] of dayRefs.current.entries()) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            visibleDates.add(dateKey);
+          } else {
+            visibleDates.delete(dateKey);
+          }
+          // Set active to the earliest visible date
+          const sorted = [...visibleDates].sort();
+          setActiveDateKey(sorted[0] ?? null);
+        },
+        { threshold: 0.3 }
+      );
+      observer.observe(el);
+      observers.push(observer);
+    }
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, [months, hideWatched]);
+
   // Jump to month
-  const jumpToMonth = useCallback(async (monthStr: string) => {
-    loadedMonthsRef.current.clear();
-    setMonths([]);
-    setInitialLoading(true);
+  const jumpToMonth = useCallback(
+    async (monthStr: string) => {
+      loadedMonthsRef.current.clear();
+      setMonths([]);
+      setInitialLoading(true);
 
-    const [yearStr, monthNum] = monthStr.split("-");
-    const target = new Date(parseInt(yearStr), parseInt(monthNum) - 1, 1);
-    const prev = new Date(target.getFullYear(), target.getMonth() - 1, 1);
-    const next = new Date(target.getFullYear(), target.getMonth() + 1, 1);
+      const [yearStr, monthNum] = monthStr.split("-");
+      const target = new Date(parseInt(yearStr), parseInt(monthNum) - 1, 1);
+      const prev = new Date(target.getFullYear(), target.getMonth() - 1, 1);
+      const next = new Date(target.getFullYear(), target.getMonth() + 1, 1);
 
-    setEarliestMonth(prev);
-    setLatestMonth(next);
+      setEarliestMonth(prev);
+      setLatestMonth(next);
 
-    const results = await Promise.all([
-      loadMonth(formatMonth(prev)),
-      loadMonth(monthStr),
-      loadMonth(formatMonth(next)),
-    ]);
-    const loaded = results.filter((r): r is AgendaMonth => r !== null);
-    loaded.sort((a, b) => a.month.localeCompare(b.month));
-    setMonths(loaded);
-    setInitialLoading(false);
-  }, [loadMonth]);
+      const results = await Promise.all([
+        loadMonth(formatMonth(prev)),
+        loadMonth(monthStr),
+        loadMonth(formatMonth(next)),
+      ]);
+      const loaded = results.filter((r): r is AgendaMonth => r !== null);
+      loaded.sort((a, b) => a.month.localeCompare(b.month));
+      setMonths(loaded);
+      setInitialLoading(false);
+    },
+    [loadMonth]
+  );
 
-  // Build agenda items sorted by date
+  // Build agenda items
   const agendaItems = useMemo(() => {
     const byDate = new Map<string, CalendarItem[]>();
 
@@ -303,16 +803,29 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
       }
     }
 
-    return new Map([...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)));
+    return new Map(
+      [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b))
+    );
   }, [months, hideWatched]);
 
+  // All date keys with content (for sidebar)
+  const contentDates = useMemo(
+    () => [...agendaItems.keys()],
+    [agendaItems]
+  );
+
   // Toggle watched
-  const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
+  const toggleWatched = async (
+    episodeId: number,
+    currentlyWatched: boolean
+  ) => {
     setMonths((prev) =>
       prev.map((m) => ({
         ...m,
         episodes: m.episodes.map((ep) =>
-          ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep
+          ep.id === episodeId
+            ? { ...ep, is_watched: !currentlyWatched }
+            : ep
         ),
       }))
     );
@@ -327,7 +840,9 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
         prev.map((m) => ({
           ...m,
           episodes: m.episodes.map((ep) =>
-            ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep
+            ep.id === episodeId
+              ? { ...ep, is_watched: currentlyWatched }
+              : ep
           ),
         }))
       );
@@ -335,209 +850,411 @@ function AgendaCalendar({ viewMode, onViewModeChange }: { viewMode?: ViewMode; o
     }
   };
 
-  const isEpisodeReleased = (ep: Episode) => {
-    if (!ep.air_date) return false;
-    return ep.air_date <= today;
-  };
+  const isEpisodeReleased = (ep: Episode) =>
+    ep.air_date ? ep.air_date <= today : false;
+
+  // Condense empty day ranges
+  const condensedEntries = useMemo(() => {
+    const entries = Array.from(agendaItems.entries());
+    const result: (
+      | { type: "day"; dateKey: string; items: CalendarItem[] }
+      | { type: "gap"; from: string; to: string }
+    )[] = [];
+
+    for (let i = 0; i < entries.length; i++) {
+      const [dateKey, items] = entries[i];
+      result.push({ type: "day", dateKey, items });
+
+      // Check gap to next entry
+      if (i < entries.length - 1) {
+        const nextDate = entries[i + 1][0];
+        const currentD = new Date(dateKey + "T00:00:00");
+        const nextD = new Date(nextDate + "T00:00:00");
+        const diffDays = Math.round(
+          (nextD.getTime() - currentD.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (diffDays > 3) {
+          const fromLabel = new Date(
+            currentD.getTime() + 86400000
+          ).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          const toLabel = new Date(
+            nextD.getTime() - 86400000
+          ).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          result.push({
+            type: "gap",
+            from: fromLabel,
+            to: toLabel,
+          });
+        }
+      }
+    }
+    return result;
+  }, [agendaItems]);
+
+  const scrollToDate = useCallback((dateKey: string) => {
+    const el = dayRefs.current.get(dateKey);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   return (
-    <div ref={containerRef} className="space-y-4">
-      {/* Header: month picker + type filter */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <select
-            value={formatMonth(new Date())}
-            onChange={(e) => jumpToMonth(e.target.value)}
-            className={`px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${viewMode ? "flex-1" : "w-full"}`}
-          >
-            {monthOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          {viewMode && onViewModeChange && (
-            <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
-          )}
+    <div ref={containerRef} className="flex gap-0 lg:gap-4">
+      {/* Date sidebar (desktop only) */}
+      {viewMode && contentDates.length > 0 && (
+        <div className="hidden lg:flex flex-col items-center gap-1 sticky top-14 self-start pt-16 w-12 shrink-0">
+          {contentDates.map((dateKey) => {
+            const day = new Date(dateKey + "T00:00:00").getDate();
+            const isActive = activeDateKey === dateKey;
+            const isPast = dateKey < today;
+            const isTodayDate = dateKey === today;
+            return (
+              <button
+                key={dateKey}
+                onClick={() => scrollToDate(dateKey)}
+                className={`w-8 h-8 rounded-full text-xs font-medium flex items-center justify-center transition-all cursor-pointer ${
+                  isTodayDate
+                    ? "bg-amber-500 text-zinc-950 font-bold"
+                    : isActive
+                      ? "bg-zinc-700 text-white ring-1 ring-amber-500/50"
+                      : isPast
+                        ? "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
+                        : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                }`}
+                title={dateKey}
+              >
+                {day}
+              </button>
+            );
+          })}
         </div>
-        <div className="flex items-center gap-2">
-          {typeFilters.map((f) => (
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0 space-y-4">
+        {/* Header */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <select
+              value={formatMonth(new Date())}
+              onChange={(e) => jumpToMonth(e.target.value)}
+              className={`px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${viewMode ? "flex-1" : "w-full"}`}
+            >
+              {monthOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {viewMode && onViewModeChange && (
+              <ViewToggle
+                viewMode={viewMode}
+                onViewModeChange={onViewModeChange}
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {typeFilters.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setTypeFilter(f.value)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  typeFilter === f.value
+                    ? "bg-amber-500 text-zinc-950"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
             <button
-              key={f.value}
-              onClick={() => setTypeFilter(f.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                typeFilter === f.value
+              onClick={() => setHideWatched((v) => !v)}
+              className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                hideWatched
                   ? "bg-amber-500 text-zinc-950"
                   : "text-zinc-400 hover:text-white hover:bg-zinc-800"
               }`}
+              title={hideWatched ? "Show watched" : "Hide watched"}
             >
-              {f.label}
+              {hideWatched ? (
+                <EyeOffIcon className="size-4" />
+              ) : (
+                <EyeIcon className="size-4" />
+              )}
+              <span className="hidden sm:inline">Hide watched</span>
             </button>
-          ))}
-          <button
-            onClick={() => setHideWatched((v) => !v)}
-            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              hideWatched
-                ? "bg-amber-500 text-zinc-950"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-            }`}
-            title={hideWatched ? "Show watched" : "Hide watched"}
-          >
-            {hideWatched ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-            <span className="hidden sm:inline">Hide watched</span>
-          </button>
+          </div>
         </div>
-      </div>
 
-      {initialLoading ? (
-        <CalendarSkeleton />
-      ) : (
-        <>
-          {/* Load more top sentinel */}
-          <div ref={topRef} className="h-1" />
+        {initialLoading ? (
+          <CalendarSkeleton />
+        ) : (
+          <>
+            <div ref={topRef} className="h-1" />
 
-          {agendaItems.size === 0 ? (
-            <div className="text-center py-8 text-zinc-500 text-sm">No items for this period.</div>
-          ) : (
-            <div className="space-y-1">
-              {Array.from(agendaItems.entries()).map(([dateKey, items]) => {
-                const isDateToday = dateKey === today;
-                const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString(undefined, {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                });
+            {condensedEntries.length === 0 ? (
+              <div className="text-center py-8 text-zinc-500 text-sm">
+                No items for this period.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {condensedEntries.map((entry) => {
+                  if (entry.type === "gap") {
+                    return (
+                      <div
+                        key={`gap-${entry.from}-${entry.to}`}
+                        className="flex items-center gap-3 py-2"
+                      >
+                        <div className="flex-1 h-px bg-zinc-800" />
+                        <span className="text-xs text-zinc-600">
+                          {entry.from} – {entry.to}: No releases
+                        </span>
+                        <div className="flex-1 h-px bg-zinc-800" />
+                      </div>
+                    );
+                  }
 
-                return (
-                  <div key={dateKey} ref={isDateToday ? todayRef : undefined}>
-                    {/* Date header */}
-                    <div className={`sticky top-0 z-10 px-3 py-2 text-sm font-medium ${
-                      isDateToday
-                        ? "bg-amber-500/10 text-amber-400 border-l-2 border-amber-500"
-                        : "bg-zinc-900/95 text-zinc-400"
-                    }`}>
-                      {isDateToday ? `Today — ${dateLabel}` : dateLabel}
-                    </div>
+                  const { dateKey, items } = entry;
+                  const isDateToday = dateKey === today;
+                  const dateLabel = new Date(
+                    dateKey + "T00:00:00"
+                  ).toLocaleDateString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  });
 
-                    {/* Items for this date */}
-                    <div className="space-y-1 px-2 py-1">
-                      {items.map((item, idx) => {
-                        if (item.type === "episode") {
-                          const ep = item.data;
-                          const released = isEpisodeReleased(ep);
-                          return (
-                            <div
-                              key={`e-${ep.id}-${idx}`}
-                              className={`flex items-center gap-3 p-2.5 rounded-lg ${
-                                ep.is_watched
-                                  ? "bg-zinc-900/30 opacity-60"
-                                  : "bg-zinc-900/60"
-                              }`}
-                            >
-                              {released ? (
-                                <button
-                                  onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
-                                  className={`flex-shrink-0 cursor-pointer transition-colors ${
-                                    ep.is_watched
-                                      ? "text-emerald-400 hover:text-emerald-300"
-                                      : "text-zinc-600 hover:text-zinc-400"
-                                  }`}
-                                >
-                                  {ep.is_watched ? <CheckCircleIcon className="size-5" /> : <CircleIcon className="size-5" />}
-                                </button>
-                              ) : (
-                                <span className="flex-shrink-0 text-zinc-700">
-                                  <CircleIcon className="size-5" />
-                                </span>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <Link to={`/title/${ep.title_id}`} className="hover:text-amber-400 transition-colors">
-                                  <p className="text-sm font-medium text-white truncate">{ep.show_title}</p>
-                                </Link>
-                                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors">
-                                  <p className="text-xs text-emerald-400">
-                                    S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
-                                    {ep.name && ` — ${ep.name}`}
-                                  </p>
-                                </Link>
-                              </div>
-                              {(() => {
-                                const providers = getUniqueProviders(ep.offers);
-                                return providers.length > 0 ? (
-                                  <div className="flex gap-1 flex-shrink-0">
-                                    {providers.slice(0, 2).map((p) => (
-                                      <img
-                                        key={p.provider_id}
-                                        src={p.provider_icon_url}
-                                        alt={p.provider_name}
-                                        className="w-5 h-5 rounded-sm"
-                                        loading="lazy"
-                                      />
-                                    ))}
-                                  </div>
-                                ) : null;
-                              })()}
-                            </div>
-                          );
+                  const dayEpisodes = items
+                    .filter(
+                      (i): i is CalendarItem & { type: "episode" } =>
+                        i.type === "episode"
+                    )
+                    .map((i) => i.data);
+                  const dayTitles = items
+                    .filter(
+                      (i): i is CalendarItem & { type: "title" } =>
+                        i.type === "title"
+                    )
+                    .map((i) => i.data);
+                  const episodesByShow = groupByShow(dayEpisodes);
+
+                  return (
+                    <div
+                      key={dateKey}
+                      ref={(el) => {
+                        if (el) {
+                          dayRefs.current.set(dateKey, el);
                         }
+                        if (isDateToday && el) {
+                          (todayRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+                        }
+                      }}
+                      className="space-y-3"
+                    >
+                      {/* Cinematic day hero */}
+                      <DayHero
+                        items={items}
+                        dateLabel={dateLabel}
+                        isToday={isDateToday}
+                      />
 
-                        // Title item
-                        const t = item.data;
-                        return (
-                          <Link
-                            key={`t-${t.id}-${idx}`}
-                            to={`/title/${t.id}`}
-                            className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-zinc-800/60 transition-colors ${
-                              t.object_type === "MOVIE" ? "bg-blue-900/20" : "bg-purple-900/20"
-                            }`}
-                          >
-                            {t.poster_url && (
-                              <img
-                                src={t.poster_url}
-                                alt={t.title}
-                                className="w-8 h-12 rounded object-cover flex-shrink-0"
-                                loading="lazy"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{t.title}</p>
-                              <p className={`text-xs ${
-                                t.object_type === "MOVIE" ? "text-blue-400" : "text-purple-400"
-                              }`}>
-                                {t.object_type === "MOVIE" ? "Movie" : "Show"}
-                                {t.release_year && ` · ${t.release_year}`}
-                              </p>
-                            </div>
-                          </Link>
-                        );
-                      })}
+                      {/* Episode carousels grouped by show */}
+                      {episodesByShow.size > 0 && (
+                        <div className="space-y-3">
+                          {Array.from(episodesByShow.entries()).map(
+                            ([titleId, showEps]) => (
+                              <div key={titleId}>
+                                <UnwatchedCarousel>
+                                  {showEps.map((ep) => (
+                                    <div
+                                      key={ep.id}
+                                      className="w-72 sm:w-80 flex-shrink-0"
+                                      style={{ scrollSnapAlign: "start" }}
+                                    >
+                                      <DeckCardWrapper
+                                        episodeCount={
+                                          showEps.length > 1 ? showEps.length : 1
+                                        }
+                                      >
+                                        <div className="bg-zinc-900 rounded-xl overflow-hidden">
+                                          <Link
+                                            to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                                            className="block relative"
+                                          >
+                                            {(() => {
+                                              const imgUrl =
+                                                getEpisodeCardImageUrl(ep);
+                                              return imgUrl ? (
+                                                <img
+                                                  src={imgUrl}
+                                                  alt={
+                                                    ep.name ||
+                                                    formatEpisodeCode(ep)
+                                                  }
+                                                  className="w-full aspect-video object-cover"
+                                                  loading="lazy"
+                                                />
+                                              ) : (
+                                                <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
+                                              );
+                                            })()}
+                                          </Link>
+                                          <div className="p-3">
+                                            <div className="flex items-center justify-between gap-2">
+                                              <Link
+                                                to={`/title/${ep.title_id}`}
+                                                className="hover:text-amber-400 transition-colors min-w-0"
+                                              >
+                                                <h3 className="font-semibold text-white text-sm truncate">
+                                                  {ep.show_title}
+                                                </h3>
+                                              </Link>
+                                              {isEpisodeReleased(ep) ? (
+                                                <button
+                                                  onClick={() =>
+                                                    toggleWatched(
+                                                      ep.id,
+                                                      !!ep.is_watched
+                                                    )
+                                                  }
+                                                  className={`flex-shrink-0 cursor-pointer transition-colors ${
+                                                    ep.is_watched
+                                                      ? "text-emerald-400 hover:text-emerald-300"
+                                                      : "text-zinc-600 hover:text-zinc-400"
+                                                  }`}
+                                                >
+                                                  {ep.is_watched ? (
+                                                    <CheckCircleIcon className="size-5" />
+                                                  ) : (
+                                                    <CircleIcon className="size-5" />
+                                                  )}
+                                                </button>
+                                              ) : (
+                                                <span className="flex-shrink-0 text-zinc-700">
+                                                  <CircleIcon className="size-5" />
+                                                </span>
+                                              )}
+                                            </div>
+                                            <Link
+                                              to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                                              className="hover:text-amber-400 transition-colors"
+                                            >
+                                              <p className="text-xs mt-0.5">
+                                                <span className="text-amber-400 font-medium">
+                                                  {formatEpisodeCode(ep)}
+                                                </span>
+                                                {ep.name && (
+                                                  <span className="text-zinc-400">
+                                                    {" "}
+                                                    · {ep.name}
+                                                  </span>
+                                                )}
+                                              </p>
+                                            </Link>
+                                            {(() => {
+                                              const providers =
+                                                getUniqueProviders(ep.offers);
+                                              return providers.length > 0 ? (
+                                                <div className="flex gap-1.5 mt-2">
+                                                  {providers
+                                                    .slice(0, 4)
+                                                    .map((o) => (
+                                                      <a
+                                                        key={o.provider_id}
+                                                        href={o.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        title={o.provider_name}
+                                                      >
+                                                        <img
+                                                          src={
+                                                            o.provider_icon_url
+                                                          }
+                                                          alt={o.provider_name}
+                                                          className="w-6 h-6 rounded"
+                                                          loading="lazy"
+                                                        />
+                                                      </a>
+                                                    ))}
+                                                </div>
+                                              ) : null;
+                                            })()}
+                                          </div>
+                                        </div>
+                                      </DeckCardWrapper>
+                                    </div>
+                                  ))}
+                                </UnwatchedCarousel>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+
+                      {/* Title cards */}
+                      {dayTitles.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                          {dayTitles.map((t) => (
+                            <TitleCard key={t.id} title={t} />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
 
-          {/* Load more bottom sentinel */}
-          <div ref={bottomRef} className="h-1" />
-          {loadingMore && (
-            <div className="text-center py-4 text-zinc-500 text-sm">Loading more...</div>
-          )}
-        </>
-      )}
+            <div ref={bottomRef} className="h-1" />
+            {loadingMore && (
+              <div className="text-center py-4 text-zinc-500 text-sm">
+                Loading more...
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-// ─── Desktop Grid Calendar ──────────────────────────────────────────────────
+// ─── Grid Calendar (Poster Cells) ───────────────────────────────────────────
 
-function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [typeFilter, setTypeFilter] = useState("");
+function GridCalendar({
+  viewMode,
+  onViewModeChange,
+  searchParams,
+  setSearchParams,
+}: {
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+  searchParams: URLSearchParams;
+  setSearchParams: ReturnType<typeof useSearchParams>[1];
+}) {
+  const [monthParam, setMonthParam] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "month",
+    formatMonth(new Date())
+  );
+  const [typeFilter, setTypeFilter] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "type"
+  );
+  const [selectedDate, setSelectedDate] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "date"
+  );
+  const [hideWatched, setHideWatched] = useState(false);
+
+  const currentMonth = useMemo(() => {
+    const [y, m] = monthParam.split("-").map(Number);
+    return new Date(y, m - 1, 1);
+  }, [monthParam]);
+
   const [titles, setTitles] = useState<Title[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -569,6 +1286,7 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
 
     for (const ep of episodes) {
       if (!ep.air_date) continue;
+      if (hideWatched && ep.is_watched) continue;
       const item: CalendarItem = { type: "episode", data: ep };
       const arr = map.get(ep.air_date);
       if (arr) arr.push(item);
@@ -576,12 +1294,23 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
     }
 
     return map;
-  }, [titles, episodes]);
+  }, [titles, episodes, hideWatched]);
 
-  // Build calendar grid (weeks × 7 days, Monday-start)
+  // Stats
+  const stats = useMemo(() => {
+    let epCount = 0;
+    let titleCount = 0;
+    for (const items of itemsByDate.values()) {
+      for (const item of items) {
+        if (item.type === "episode") epCount++;
+        else titleCount++;
+      }
+    }
+    return { episodes: epCount, titles: titleCount };
+  }, [itemsByDate]);
+
   const weeks = useMemo(() => {
     const days = getDaysInMonth(year, month);
-    // Monday = 0, Sunday = 6
     const firstDayOfWeek = (days[0].getDay() + 6) % 7;
     const grid: (Date | null)[][] = [];
     let week: (Date | null)[] = Array(firstDayOfWeek).fill(null);
@@ -604,24 +1333,43 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
     return itemsByDate.get(selectedDate) ?? [];
   }, [selectedDate, itemsByDate]);
 
-  const selectedTitles = useMemo(() =>
-    selectedItems.filter((i): i is CalendarItem & { type: "title" } => i.type === "title").map((i) => i.data),
+  const selectedTitles = useMemo(
+    () =>
+      selectedItems
+        .filter(
+          (i): i is CalendarItem & { type: "title" } => i.type === "title"
+        )
+        .map((i) => i.data),
     [selectedItems]
   );
 
-  const selectedEpisodes = useMemo(() =>
-    selectedItems.filter((i): i is CalendarItem & { type: "episode" } => i.type === "episode").map((i) => i.data),
+  const selectedEpisodes = useMemo(
+    () =>
+      selectedItems
+        .filter(
+          (i): i is CalendarItem & { type: "episode" } =>
+            i.type === "episode"
+        )
+        .map((i) => i.data),
     [selectedItems]
   );
 
-  const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
-  const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
+  const prevMonth = () =>
+    setMonthParam(formatMonth(new Date(year, month - 1, 1)));
+  const nextMonth = () =>
+    setMonthParam(formatMonth(new Date(year, month + 1, 1)));
   const today = formatDateKey(new Date());
 
-  const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
-    // Optimistic update
+  const toggleWatched = async (
+    episodeId: number,
+    currentlyWatched: boolean
+  ) => {
     setEpisodes((prev) =>
-      prev.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep))
+      prev.map((ep) =>
+        ep.id === episodeId
+          ? { ...ep, is_watched: !currentlyWatched }
+          : ep
+      )
     );
     try {
       if (currentlyWatched) {
@@ -630,22 +1378,25 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
         await watchEpisode(episodeId);
       }
     } catch (err) {
-      // Revert on error
       setEpisodes((prev) =>
-        prev.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep))
+        prev.map((ep) =>
+          ep.id === episodeId
+            ? { ...ep, is_watched: currentlyWatched }
+            : ep
+        )
       );
       console.error("Failed to toggle watched:", err);
       toast.error("Failed to update watched status — please try again");
     }
   };
 
-  const isEpisodeReleased = (ep: Episode) => {
-    if (!ep.air_date) return false;
-    return ep.air_date <= today;
-  };
+  const isEpisodeReleased = (ep: Episode) =>
+    ep.air_date ? ep.air_date <= today : false;
 
-  const toggleBulkWatched = async (episodeIds: number[], markWatched: boolean) => {
-    // When marking as watched, filter to only released episodes
+  const toggleBulkWatched = async (
+    episodeIds: number[],
+    markWatched: boolean
+  ) => {
     const effectiveIds = markWatched
       ? episodeIds.filter((id) => {
           const ep = episodes.find((e) => e.id === id);
@@ -654,16 +1405,19 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
       : episodeIds;
     if (effectiveIds.length === 0) return;
 
-    // Optimistic update
     const idSet = new Set(effectiveIds);
     setEpisodes((prev) =>
-      prev.map((ep) => (idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep))
+      prev.map((ep) =>
+        idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep
+      )
     );
     try {
       await watchEpisodesBulk(effectiveIds, markWatched);
     } catch (err) {
       setEpisodes((prev) =>
-        prev.map((ep) => (idSet.has(ep.id) ? { ...ep, is_watched: !markWatched } : ep))
+        prev.map((ep) =>
+          idSet.has(ep.id) ? { ...ep, is_watched: !markWatched } : ep
+        )
       );
       console.error("Failed to bulk toggle watched:", err);
       toast.error("Failed to update watched status — please try again");
@@ -671,20 +1425,28 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header: month nav + type filter */}
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer">
+          <button
+            onClick={prevMonth}
+            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          >
             <ChevronLeftIcon className="size-5" />
           </button>
           <h2 className="text-lg font-semibold w-44 text-center">
-            {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            {currentMonth.toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            })}
           </h2>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer">
+          <button
+            onClick={nextMonth}
+            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          >
             <ChevronRightIcon className="size-5" />
           </button>
-          {loading && <span className="text-sm text-zinc-500">Loading...</span>}
         </div>
         <div className="flex items-center gap-2">
           {typeFilters.map((f) => (
@@ -700,246 +1462,138 @@ function GridCalendar({ viewMode, onViewModeChange }: { viewMode: ViewMode; onVi
               {f.label}
             </button>
           ))}
+          <button
+            onClick={() => setHideWatched((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              hideWatched
+                ? "bg-amber-500 text-zinc-950"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+            title={hideWatched ? "Show watched" : "Hide watched"}
+          >
+            {hideWatched ? (
+              <EyeOffIcon className="size-4" />
+            ) : (
+              <EyeIcon className="size-4" />
+            )}
+          </button>
           <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
         </div>
       </div>
 
+      {/* Stats bar */}
+      {!loading && <MonthStatsBar episodes={stats.episodes} titles={stats.titles} />}
+
       {/* Calendar grid */}
-      <div className="border border-white/[0.06] rounded-xl overflow-hidden">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 bg-zinc-900 border-b border-white/[0.06]">
-          {WEEKDAYS.map((d) => (
-            <div key={d} className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase">
-              {d}
+      {loading ? (
+        <GridCalendarSkeleton />
+      ) : (
+        <div className="border border-white/[0.06] rounded-xl overflow-hidden">
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 bg-zinc-900 border-b border-white/[0.06]">
+            {WEEKDAYS.map((d) => (
+              <div
+                key={d}
+                className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase"
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Weeks */}
+          {weeks.map((week, wi) => (
+            <div
+              key={wi}
+              className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0"
+            >
+              {week.map((day, di) => {
+                if (!day) {
+                  return (
+                    <div key={di} className="min-h-28 bg-zinc-950/50" />
+                  );
+                }
+                const dateKey = formatDateKey(day);
+                const dayItems = itemsByDate.get(dateKey) ?? [];
+                const isToday = dateKey === today;
+                const isSelected = dateKey === selectedDate;
+                const borderColor = getCellBorderColor(dayItems);
+
+                // Deduplicate posters (same show might have multiple episodes)
+                const posterUrls: string[] = [];
+                const seenPosters = new Set<string>();
+                for (const item of dayItems) {
+                  const url = getItemPosterUrl(item);
+                  if (url && !seenPosters.has(url)) {
+                    seenPosters.add(url);
+                    posterUrls.push(url);
+                  }
+                }
+
+                return (
+                  <button
+                    key={di}
+                    onClick={() =>
+                      setSelectedDate(isSelected ? "" : dateKey)
+                    }
+                    className={`min-h-28 p-1.5 text-left transition-colors cursor-pointer border-r border-white/[0.06] last:border-r-0 ${
+                      borderColor ? `border-l-2 ${borderColor}` : ""
+                    } ${
+                      isSelected
+                        ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500"
+                        : dayItems.length > 0
+                          ? "hover:bg-zinc-900/60"
+                          : "hover:bg-zinc-950/80"
+                    } ${isToday ? "ring-2 ring-inset ring-amber-500/40" : ""}`}
+                  >
+                    <div
+                      className={`text-xs font-medium mb-1.5 ${
+                        isToday
+                          ? "bg-amber-500 text-zinc-950 rounded-full size-5 flex items-center justify-center"
+                          : "text-zinc-400 pl-0.5"
+                      }`}
+                    >
+                      {day.getDate()}
+                    </div>
+
+                    {/* Poster thumbnails */}
+                    {posterUrls.length > 0 && (
+                      <div className="flex gap-0.5 items-end relative">
+                        {posterUrls.slice(0, 3).map((url, idx) => (
+                          <img
+                            key={idx}
+                            src={url}
+                            alt=""
+                            className="w-7 h-[42px] rounded-sm object-cover"
+                            loading="lazy"
+                          />
+                        ))}
+                        {dayItems.length > 3 && (
+                          <span className="absolute -bottom-0.5 -right-0.5 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                            +{dayItems.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>
+      )}
 
-        {/* Weeks */}
-        {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0">
-            {week.map((day, di) => {
-              if (!day) {
-                return <div key={di} className="min-h-24 bg-zinc-950/50" />;
-              }
-              const dateKey = formatDateKey(day);
-              const dayItems = itemsByDate.get(dateKey) ?? [];
-              const isToday = dateKey === today;
-              const isSelected = dateKey === selectedDate;
-
-              return (
-                <button
-                  key={di}
-                  onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                  className={`min-h-24 p-1.5 text-left transition-colors cursor-pointer border-r border-white/[0.06] last:border-r-0 ${
-                    isSelected
-                      ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500"
-                      : "hover:bg-zinc-900/60"
-                  }`}
-                >
-                  <div className={`text-xs font-medium mb-1 ${
-                    isToday
-                      ? "bg-amber-500 text-zinc-950 rounded-full size-5 flex items-center justify-center"
-                      : "text-zinc-400 pl-0.5"
-                  }`}>
-                    {day.getDate()}
-                  </div>
-                  <div className="space-y-0.5">
-                    {dayItems.slice(0, 3).map((item, idx) => {
-                      const providers = getUniqueProviders(
-                        item.type === "title" ? item.data.offers : item.data.offers
-                      );
-                      return (
-                        <div
-                          key={item.type === "title" ? `t-${item.data.id}` : `e-${item.data.id}-${idx}`}
-                          className={`text-[10px] leading-tight rounded px-1 py-0.5 flex items-center gap-1 ${
-                            item.type === "episode"
-                              ? item.data.is_watched
-                                ? "bg-emerald-900/20 text-emerald-600"
-                                : "bg-emerald-900/40 text-emerald-300"
-                              : item.data.object_type === "MOVIE"
-                                ? "bg-blue-900/40 text-blue-300"
-                                : "bg-purple-900/40 text-purple-300"
-                          }`}
-                          title={item.type === "episode" ? formatEpisodeTag(item.data) : item.data.title}
-                        >
-                          {providers.length > 0 && (
-                            <span className="flex items-center gap-0.5 flex-shrink-0">
-                              {providers.slice(0, 2).map((p) => (
-                                <img
-                                  key={p.provider_id}
-                                  src={p.provider_icon_url}
-                                  alt={p.provider_name}
-                                  title={p.provider_name}
-                                  className="w-3.5 h-3.5 rounded-sm"
-                                  loading="lazy"
-                                />
-                              ))}
-                            </span>
-                          )}
-                          <span className="truncate">
-                            {item.type === "episode"
-                              ? formatEpisodeTag(item.data)
-                              : item.data.title}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {dayItems.length > 3 && (
-                      <div className="text-[10px] text-zinc-500 pl-1">
-                        +{dayItems.length - 3} more
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* Selected day detail */}
+      {/* Slide-over panel for selected day */}
       {selectedDate && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">
-            {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-            <span className="text-zinc-500 text-sm font-normal ml-2">
-              ({selectedItems.length} item{selectedItems.length !== 1 ? "s" : ""})
-            </span>
-          </h3>
-
-          {/* Episodes section */}
-          {selectedEpisodes.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-emerald-400 mb-3">Episodes</h4>
-              {(() => {
-                // Group episodes by show
-                const showGroups = new Map<string, typeof selectedEpisodes>();
-                for (const ep of selectedEpisodes) {
-                  const key = ep.title_id;
-                  const group = showGroups.get(key);
-                  if (group) group.push(ep);
-                  else showGroups.set(key, [ep]);
-                }
-
-                return Array.from(showGroups.entries()).map(([titleId, showEps]) => {
-                  const allWatched = showEps.every((ep) => ep.is_watched);
-                  return (
-                    <div key={titleId} className="mb-4">
-                      {showGroups.size > 1 && showEps.length > 1 && (
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-zinc-400">{showEps[0].show_title}</span>
-                          <button
-                            onClick={() => toggleBulkWatched(showEps.map((ep) => ep.id), !allWatched)}
-                            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-                          >
-                            {allWatched ? "Mark all unwatched" : "Mark all watched"}
-                          </button>
-                        </div>
-                      )}
-                      <div className="space-y-3">
-                        {showEps.map((ep) => (
-                          <div
-                            key={ep.id}
-                            className={`flex gap-3 p-3 rounded-lg border transition-colors ${
-                              ep.is_watched
-                                ? "bg-zinc-900/30 border-zinc-800/60 opacity-60"
-                                : "bg-zinc-900/60 border-white/[0.06]"
-                            }`}
-                          >
-                            {ep.poster_url && (
-                              <Link to={`/title/${ep.title_id}`} className="flex-shrink-0">
-                                <img
-                                  src={ep.poster_url}
-                                  alt={ep.show_title}
-                                  className="w-12 h-18 rounded object-cover"
-                                />
-                              </Link>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <Link to={`/title/${ep.title_id}`} className="hover:text-amber-400 transition-colors">
-                                  <div className="text-sm font-medium text-white">{ep.show_title}</div>
-                                </Link>
-                                {isEpisodeReleased(ep) ? (
-                                  <button
-                                    onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
-                                    className={`flex-shrink-0 p-1 rounded-md transition-colors cursor-pointer ${
-                                      ep.is_watched
-                                        ? "text-emerald-400 hover:text-emerald-300"
-                                        : "text-zinc-600 hover:text-zinc-400"
-                                    }`}
-                                    title={ep.is_watched ? "Mark as unwatched" : "Mark as watched"}
-                                  >
-                                    {ep.is_watched ? (
-                                      <CheckCircleIcon className="size-5" />
-                                    ) : (
-                                      <CircleIcon className="size-5" />
-                                    )}
-                                  </button>
-                                ) : (
-                                  <span
-                                    className="flex-shrink-0 p-1 text-zinc-700 cursor-not-allowed"
-                                    title="Not yet released"
-                                  >
-                                    <CircleIcon className="size-5" />
-                                  </span>
-                                )}
-                              </div>
-                              <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="block hover:text-amber-400 transition-colors">
-                                <div className="text-xs text-emerald-400 mt-0.5">
-                                  S{String(ep.season_number).padStart(2, "0")}E{String(ep.episode_number).padStart(2, "0")}
-                                  {ep.name && ` — ${ep.name}`}
-                                </div>
-                              </Link>
-                              {ep.overview && (
-                                <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{ep.overview}</p>
-                              )}
-                              {(() => {
-                                const providers = getUniqueProviders(ep.offers);
-                                return providers.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {providers.map((p) => (
-                                      <a
-                                        key={p.provider_id}
-                                        href={p.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        title={p.provider_name}
-                                      >
-                                        <img
-                                          src={p.provider_icon_url}
-                                          alt={p.provider_name}
-                                          className="w-6 h-6 rounded-md"
-                                          loading="lazy"
-                                        />
-                                      </a>
-                                    ))}
-                                  </div>
-                                ) : null;
-                              })()}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          )}
-
-          {/* Titles section */}
-          <TitleList
-            titles={selectedTitles}
-            emptyMessage={selectedEpisodes.length === 0 ? "No tracked releases on this day" : undefined}
-          />
-        </div>
+        <SlideOverPanel
+          selectedDate={selectedDate}
+          items={selectedItems}
+          episodes={selectedEpisodes}
+          titles={selectedTitles}
+          onClose={() => setSelectedDate("")}
+          onToggleWatched={toggleWatched}
+          onBulkToggle={toggleBulkWatched}
+        />
       )}
     </div>
   );
