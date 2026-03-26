@@ -1479,15 +1479,9 @@ function GridCalendar({
                 const isSelected = dateKey === selectedDate;
                 const borderColor = getCellBorderColor(dayItems);
 
-                // Pick featured item for poster + build remaining list
+                // Pick featured item for card display
                 const featured = dayItems.length > 0 ? pickFeaturedItem(dayItems) : null;
-                const featuredPoster = featured ? getItemPosterUrl(featured) : null;
-                const featuredProviders = featured
-                  ? getUniqueProviders(
-                      featured.type === "episode" ? featured.data.offers : featured.data.offers
-                    )
-                  : [];
-                const remaining = dayItems.filter((item) => item !== featured);
+                const featuredImageUrl = featured ? getItemHeroUrl(featured) : null;
 
                 return (
                   <button
@@ -1495,7 +1489,7 @@ function GridCalendar({
                     onClick={() =>
                       setSelectedDate(isSelected ? "" : dateKey)
                     }
-                    className={`min-h-28 p-1.5 text-left transition-colors cursor-pointer border-r border-white/[0.06] last:border-r-0 ${
+                    className={`min-h-36 p-1.5 text-left transition-colors cursor-pointer border-r border-white/[0.06] last:border-r-0 ${
                       borderColor ? `border-l-2 ${borderColor}` : ""
                     } ${
                       isSelected
@@ -1506,7 +1500,7 @@ function GridCalendar({
                     } ${isToday ? "ring-2 ring-inset ring-amber-500/40" : ""}`}
                   >
                     <div
-                      className={`text-xs font-medium mb-1.5 ${
+                      className={`text-xs font-medium mb-1 ${
                         isToday
                           ? "bg-amber-500 text-zinc-950 rounded-full size-5 flex items-center justify-center"
                           : "text-zinc-400 pl-0.5"
@@ -1515,74 +1509,54 @@ function GridCalendar({
                       {day.getDate()}
                     </div>
 
-                    {/* Featured item card */}
+                    {/* Mini card — episode still + title + code */}
                     {featured && (
-                      <div className="space-y-0.5">
-                        {/* Featured: poster + title + provider */}
-                        <div className="flex gap-1.5">
-                          {featuredPoster && (
+                      <div className="space-y-1">
+                        <div className="relative rounded-sm overflow-hidden">
+                          {featuredImageUrl ? (
                             <img
-                              src={featuredPoster}
+                              src={featuredImageUrl}
                               alt=""
-                              className="w-10 h-[60px] rounded-sm object-cover flex-shrink-0"
+                              className="w-full aspect-video object-cover"
                               loading="lazy"
                             />
+                          ) : (
+                            <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
                           )}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] leading-tight text-white font-medium truncate">
-                              {featured.type === "episode"
-                                ? featured.data.show_title
-                                : featured.data.title}
-                            </p>
-                            <p className={`text-[10px] leading-tight truncate ${
-                              featured.type === "episode"
-                                ? "text-emerald-400"
-                                : featured.data.object_type === "MOVIE"
+                          {dayItems.length > 1 && (
+                            <span className="absolute top-1 right-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              +{dayItems.length - 1}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-white truncate">
+                            {featured.type === "episode"
+                              ? featured.data.show_title
+                              : featured.data.title}
+                          </p>
+                          <p className="text-xs truncate">
+                            {featured.type === "episode" ? (
+                              <>
+                                <span className="text-amber-400 font-medium">
+                                  {formatEpisodeCode(featured.data)}
+                                </span>
+                                {featured.data.name && (
+                                  <span className="text-zinc-400"> · {featured.data.name}</span>
+                                )}
+                              </>
+                            ) : (
+                              <span className={
+                                featured.data.object_type === "MOVIE"
                                   ? "text-blue-400"
                                   : "text-purple-400"
-                            }`}>
-                              {featured.type === "episode"
-                                ? `${formatEpisodeCode(featured.data)} · ${featured.data.name || ""}`
-                                : featured.data.object_type === "MOVIE" ? "Movie" : "Show"}
-                            </p>
-                            {featuredProviders.length > 0 && (
-                              <div className="flex gap-0.5 mt-0.5">
-                                {featuredProviders.slice(0, 2).map((p) => (
-                                  <img
-                                    key={p.provider_id}
-                                    src={p.provider_icon_url}
-                                    alt={p.provider_name}
-                                    className="w-4 h-4 rounded-sm"
-                                    loading="lazy"
-                                  />
-                                ))}
-                              </div>
+                              }>
+                                {featured.data.object_type === "MOVIE" ? "Movie" : "Show"}
+                                {featured.data.release_year && ` · ${featured.data.release_year}`}
+                              </span>
                             )}
-                          </div>
+                          </p>
                         </div>
-
-                        {/* Remaining items as compact text */}
-                        {remaining.slice(0, 2).map((item, idx) => (
-                          <div
-                            key={item.type === "episode" ? `e-${item.data.id}` : `t-${item.data.id}-${idx}`}
-                            className={`text-[10px] leading-tight truncate pl-0.5 ${
-                              item.type === "episode"
-                                ? "text-emerald-400/70"
-                                : item.data.object_type === "MOVIE"
-                                  ? "text-blue-400/70"
-                                  : "text-purple-400/70"
-                            }`}
-                          >
-                            {item.type === "episode"
-                              ? `${formatEpisodeCode(item.data)} · ${item.data.show_title}`
-                              : item.data.title}
-                          </div>
-                        ))}
-                        {remaining.length > 2 && (
-                          <div className="text-[10px] text-zinc-500 pl-0.5">
-                            +{remaining.length - 2} more
-                          </div>
-                        )}
                       </div>
                     )}
                   </button>
