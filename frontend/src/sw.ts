@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
 import { StaleWhileRevalidate, NetworkFirst, NetworkOnly } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
@@ -13,11 +13,7 @@ cleanupOutdatedCaches();
 
 // Navigation fallback — serve index.html for all navigation requests except /api/
 const navigationRoute = new NavigationRoute(
-  async ({ request }) => {
-    const cache = await caches.open("workbox-precache-v2");
-    const cachedResponse = await cache.match("/index.html");
-    return cachedResponse || fetch(request);
-  },
+  createHandlerBoundToURL("/index.html"),
   { denylist: [/^\/api\//] }
 );
 registerRoute(navigationRoute);
