@@ -52,9 +52,9 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
     }),
     admin(),
     passkeyPlugin({
-      rpID: CONFIG.PASSKEY_RP_ID || undefined,
+      rpID: CONFIG.PASSKEY_RP_ID || (CONFIG.BASE_URL ? new URL(CONFIG.BASE_URL).hostname : undefined),
       rpName: CONFIG.PASSKEY_RP_NAME || "Remindarr",
-      origin: CONFIG.PASSKEY_ORIGIN || null,
+      origin: CONFIG.PASSKEY_ORIGIN || (CONFIG.BASE_URL ? CONFIG.BASE_URL.replace(/\/$/, "") : null),
     }),
   ];
 
@@ -147,7 +147,7 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
       },
     }),
     secret,
-    baseURL: `http://localhost:${CONFIG.PORT}`,
+    baseURL: CONFIG.BASE_URL || `http://localhost:${CONFIG.PORT}`,
     basePath: "/api/auth",
     trustedOrigins: CONFIG.CORS_ORIGIN
       ? CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
