@@ -29,6 +29,7 @@ export const CONFIG = {
   BACKUP_RETAIN: Number(process.env.BACKUP_RETAIN) || 7,
 
   // Auth
+  BASE_URL: process.env.BASE_URL || "",
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || "",
 
   // Passkeys (WebAuthn)

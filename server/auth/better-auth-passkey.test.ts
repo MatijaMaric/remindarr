@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, afterEach } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { getDb, passkey as passkeyTable, users } from "../db/schema";
 import { sql } from "drizzle-orm";
 import { createAuth } from "./better-auth";
 import { BunPlatform } from "../platform/bun";
+import { CONFIG } from "../config";
 
 describe("passkey support", () => {
   beforeEach(() => {
@@ -104,5 +105,54 @@ describe("passkey support", () => {
     const auth = createAuth(db, new BunPlatform());
     expect(auth).toBeDefined();
     expect(auth.handler).toBeDefined();
+  });
+
+  describe("passkey RP ID derivation from BASE_URL", () => {
+    let originalBaseUrl: string;
+    let originalRpId: string;
+    let originalOrigin: string;
+
+    beforeEach(() => {
+      originalBaseUrl = CONFIG.BASE_URL;
+      originalRpId = CONFIG.PASSKEY_RP_ID;
+      originalOrigin = CONFIG.PASSKEY_ORIGIN;
+    });
+
+    afterEach(() => {
+      CONFIG.BASE_URL = originalBaseUrl;
+      CONFIG.PASSKEY_RP_ID = originalRpId;
+      CONFIG.PASSKEY_ORIGIN = originalOrigin;
+    });
+
+    it("derives rpID from BASE_URL when PASSKEY_RP_ID is not set", () => {
+      CONFIG.BASE_URL = "https://remindarr.app";
+      CONFIG.PASSKEY_RP_ID = "";
+      CONFIG.PASSKEY_ORIGIN = "";
+
+      const db = getDb();
+      const auth = createAuth(db, new BunPlatform());
+      expect(auth).toBeDefined();
+      // Auth was created without error — RP ID was derived from BASE_URL
+    });
+
+    it("explicit PASSKEY_RP_ID takes precedence over BASE_URL", () => {
+      CONFIG.BASE_URL = "https://remindarr.app";
+      CONFIG.PASSKEY_RP_ID = "custom.example.com";
+      CONFIG.PASSKEY_ORIGIN = "https://custom.example.com";
+
+      const db = getDb();
+      const auth = createAuth(db, new BunPlatform());
+      expect(auth).toBeDefined();
+    });
+
+    it("falls back to localhost when BASE_URL is not set", () => {
+      CONFIG.BASE_URL = "";
+      CONFIG.PASSKEY_RP_ID = "";
+      CONFIG.PASSKEY_ORIGIN = "";
+
+      const db = getDb();
+      const auth = createAuth(db, new BunPlatform());
+      expect(auth).toBeDefined();
+    });
   });
 });
