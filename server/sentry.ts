@@ -1,9 +1,9 @@
 /**
  * Platform-agnostic Sentry wrapper.
  *
- * On Bun, re-exports @sentry/bun. On Cloudflare Workers (where the package
- * isn't available), provides no-op stubs so the rest of the codebase can
- * import Sentry unconditionally without crashing at module-evaluation time.
+ * On Bun, re-exports @sentry/bun. On Cloudflare Workers, re-exports
+ * @sentry/cloudflare. If neither is available, provides no-op stubs so the
+ * rest of the codebase can import Sentry unconditionally without crashing.
  */
 
 interface SentryLike {
@@ -32,7 +32,13 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   sentry = require("@sentry/bun");
 } catch {
-  sentry = noopSentry;
+  try {
+    // Cloudflare Workers: @sentry/bun isn't available, use @sentry/cloudflare
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    sentry = require("@sentry/cloudflare");
+  } catch {
+    sentry = noopSentry;
+  }
 }
 
 export default sentry;
