@@ -9,19 +9,31 @@ import BottomTabBar from "./components/BottomTabBar";
 import OfflineIndicator from "./components/OfflineIndicator";
 import { navLinkClass } from "./nav-utils";
 
-const HomePage = lazy(() => import("./pages/HomePage"));
-const BrowsePage = lazy(() => import("./pages/BrowsePage"));
-const TrackedPage = lazy(() => import("./pages/TrackedPage"));
-const CalendarPage = lazy(() => import("./pages/CalendarPage"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const SignupPage = lazy(() => import("./pages/SignupPage"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage"));
-const TitleDetailPage = lazy(() => import("./pages/TitleDetailPage"));
-const SeasonDetailPage = lazy(() => import("./pages/SeasonDetailPage"));
-const EpisodeDetailPage = lazy(() => import("./pages/EpisodeDetailPage"));
-const PersonPage = lazy(() => import("./pages/PersonPage"));
-const ReelsPage = lazy(() => import("./pages/ReelsPage"));
-const UpcomingPage = lazy(() => import("./pages/UpcomingPage"));
+// Retry dynamic imports once on failure (handles stale chunks after deploy)
+function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>) {
+  return lazy(() =>
+    factory().catch(() => {
+      // Chunk likely changed after a new deploy — reload to get fresh assets
+      window.location.reload();
+      // Return a never-resolving promise so React doesn't render before reload
+      return new Promise(() => {});
+    })
+  );
+}
+
+const HomePage = lazyWithRetry(() => import("./pages/HomePage"));
+const BrowsePage = lazyWithRetry(() => import("./pages/BrowsePage"));
+const TrackedPage = lazyWithRetry(() => import("./pages/TrackedPage"));
+const CalendarPage = lazyWithRetry(() => import("./pages/CalendarPage"));
+const LoginPage = lazyWithRetry(() => import("./pages/LoginPage"));
+const SignupPage = lazyWithRetry(() => import("./pages/SignupPage"));
+const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"));
+const TitleDetailPage = lazyWithRetry(() => import("./pages/TitleDetailPage"));
+const SeasonDetailPage = lazyWithRetry(() => import("./pages/SeasonDetailPage"));
+const EpisodeDetailPage = lazyWithRetry(() => import("./pages/EpisodeDetailPage"));
+const PersonPage = lazyWithRetry(() => import("./pages/PersonPage"));
+const ReelsPage = lazyWithRetry(() => import("./pages/ReelsPage"));
+const UpcomingPage = lazyWithRetry(() => import("./pages/UpcomingPage"));
 
 function MobileHomeRedirect() {
   const { user, loading } = useAuth();
