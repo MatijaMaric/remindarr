@@ -5,7 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 # Custom domain
 routes = [
-  { pattern = "remindarr.app", custom_domain = true }
+  { pattern = "remindarr.app", custom_domain = true },
+  { pattern = "www.remindarr.app", custom_domain = true }
 ]
 
 # Static frontend assets — binding required for SPA fallback in worker
