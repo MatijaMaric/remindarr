@@ -92,6 +92,10 @@ interface Env {
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
   BETTER_AUTH_SECRET?: string;
+  BASE_URL?: string;
+  PASSKEY_RP_ID?: string;
+  PASSKEY_RP_NAME?: string;
+  PASSKEY_ORIGIN?: string;
 }
 
 const platform = new CloudflarePlatform();
@@ -123,6 +127,10 @@ function patchConfigFromEnv(env: Env): void {
     VAPID_PRIVATE_KEY: env.VAPID_PRIVATE_KEY || "",
     VAPID_SUBJECT: env.VAPID_SUBJECT || "",
     BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET || "",
+    BASE_URL: env.BASE_URL || undefined,
+    PASSKEY_RP_ID: env.PASSKEY_RP_ID || undefined,
+    PASSKEY_RP_NAME: env.PASSKEY_RP_NAME || undefined,
+    PASSKEY_ORIGIN: env.PASSKEY_ORIGIN || undefined,
   });
 
   // Reinitialize logger in case LOG_LEVEL changed
