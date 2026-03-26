@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleCard from "../components/TitleCard";
-import { DeckCardWrapper, UnwatchedCarousel } from "../components/EpisodeShowCard";
+import { DeckCardWrapper } from "../components/EpisodeShowCard";
 import type { Title, Episode } from "../types";
 import { CalendarSkeleton, GridCalendarSkeleton } from "../components/SkeletonComponents";
 import {
@@ -24,7 +24,8 @@ import {
   getEpisodeCardImageUrl,
   groupByShow,
 } from "../components/EpisodeComponents";
-import { useDominantColor } from "../components/useDominantColor";
+
+
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -218,9 +219,9 @@ function MonthStatsBar({
   );
 }
 
-// ─── Day Hero (cinematic header for a day) ──────────────────────────────────
+// ─── Compact Day Header ─────────────────────────────────────────────────────
 
-const DayHero = memo(function DayHero({
+const DayHeader = memo(function DayHeader({
   items,
   dateLabel,
   isToday,
@@ -230,49 +231,37 @@ const DayHero = memo(function DayHero({
   isToday: boolean;
 }) {
   const featured = pickFeaturedItem(items);
-  const heroUrl = featured ? getItemHeroUrl(featured) : null;
-  const { color } = useDominantColor(heroUrl);
+  const posterUrl = featured ? getItemPosterUrl(featured) : null;
 
   return (
-    <div className="relative w-full h-48 sm:h-52 rounded-xl overflow-hidden">
-      {/* Color background */}
-      <div className="absolute inset-0" style={{ backgroundColor: color }} />
-
-      {/* Hero image */}
-      {heroUrl && (
+    <div
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${
+        isToday
+          ? "bg-amber-500/10 border-l-2 border-amber-500"
+          : "bg-zinc-900/60 border-l-2 border-zinc-700"
+      }`}
+    >
+      {posterUrl && (
         <img
-          src={heroUrl}
+          src={posterUrl}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          className="w-10 h-15 rounded object-cover flex-shrink-0"
           loading="lazy"
-          style={{
-            maskImage:
-              "linear-gradient(to bottom, black 40%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to bottom, black 40%, transparent 100%)",
-          }}
         />
       )}
-
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
-
-      {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
-        <div>
-          {isToday && (
-            <span className="text-[10px] uppercase tracking-widest text-amber-400 font-semibold mb-1 block">
-              Today
-            </span>
-          )}
-          <h3 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">
-            {dateLabel}
-          </h3>
-        </div>
-        <span className="text-xs text-zinc-300 bg-black/40 px-2.5 py-1 rounded-full">
-          {items.length} item{items.length !== 1 ? "s" : ""}
-        </span>
+      <div className="flex-1 min-w-0">
+        {isToday && (
+          <span className="text-[10px] uppercase tracking-widest text-amber-400 font-semibold">
+            Today
+          </span>
+        )}
+        <h3 className={`text-sm font-semibold ${isToday ? "text-white" : "text-zinc-200"}`}>
+          {dateLabel}
+        </h3>
       </div>
+      <span className="text-xs text-zinc-500 flex-shrink-0">
+        {items.length} item{items.length !== 1 ? "s" : ""}
+      </span>
     </div>
   );
 });
@@ -344,9 +333,9 @@ function SlideOverPanel({
           </button>
         </div>
 
-        {/* Day hero */}
+        {/* Day header */}
         <div className="p-4">
-          <DayHero items={items} dateLabel={dateLabel} isToday={isToday} />
+          <DayHeader items={items} dateLabel={dateLabel} isToday={isToday} />
         </div>
 
         {/* Episodes */}
@@ -1049,143 +1038,114 @@ function AgendaCalendar({
                       }}
                       className="space-y-3"
                     >
-                      {/* Cinematic day hero */}
-                      <DayHero
+                      {/* Compact day header */}
+                      <DayHeader
                         items={items}
                         dateLabel={dateLabel}
                         isToday={isDateToday}
                       />
 
-                      {/* Episode carousels grouped by show */}
-                      {episodesByShow.size > 0 && (
-                        <div className="space-y-3">
-                          {Array.from(episodesByShow.entries()).map(
-                            ([titleId, showEps]) => (
-                              <div key={titleId}>
-                                <UnwatchedCarousel>
-                                  {showEps.map((ep) => (
-                                    <div
-                                      key={ep.id}
-                                      className="w-72 sm:w-80 flex-shrink-0"
-                                      style={{ scrollSnapAlign: "start" }}
+                      {/* All episode cards in a single row */}
+                      {dayEpisodes.length > 0 && (
+                        <div className="flex flex-wrap lg:flex-nowrap lg:overflow-x-auto lg:[&::-webkit-scrollbar]:hidden lg:[-ms-overflow-style:none] lg:[scrollbar-width:none] gap-3">
+                          {dayEpisodes.map((ep) => {
+                            const showEps = episodesByShow.get(ep.title_id) ?? [ep];
+                            const imgUrl = getEpisodeCardImageUrl(ep);
+                            const providers = getUniqueProviders(ep.offers);
+                            return (
+                              <div
+                                key={ep.id}
+                                className="w-full sm:w-72 lg:w-80 flex-shrink-0"
+                              >
+                                <DeckCardWrapper
+                                  episodeCount={showEps.length > 1 ? showEps.length : 1}
+                                >
+                                  <div className="bg-zinc-900 rounded-xl overflow-hidden">
+                                    <Link
+                                      to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                                      className="block relative"
                                     >
-                                      <DeckCardWrapper
-                                        episodeCount={
-                                          showEps.length > 1 ? showEps.length : 1
-                                        }
-                                      >
-                                        <div className="bg-zinc-900 rounded-xl overflow-hidden">
-                                          <Link
-                                            to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                            className="block relative"
+                                      {imgUrl ? (
+                                        <img
+                                          src={imgUrl}
+                                          alt={ep.name || formatEpisodeCode(ep)}
+                                          className="w-full aspect-video object-cover"
+                                          loading="lazy"
+                                        />
+                                      ) : (
+                                        <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
+                                      )}
+                                    </Link>
+                                    <div className="p-3">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <Link
+                                          to={`/title/${ep.title_id}`}
+                                          className="hover:text-amber-400 transition-colors min-w-0"
+                                        >
+                                          <h3 className="font-semibold text-white text-sm truncate">
+                                            {ep.show_title}
+                                          </h3>
+                                        </Link>
+                                        {isEpisodeReleased(ep) ? (
+                                          <button
+                                            onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
+                                            className={`flex-shrink-0 cursor-pointer transition-colors ${
+                                              ep.is_watched
+                                                ? "text-emerald-400 hover:text-emerald-300"
+                                                : "text-zinc-600 hover:text-zinc-400"
+                                            }`}
                                           >
-                                            {(() => {
-                                              const imgUrl =
-                                                getEpisodeCardImageUrl(ep);
-                                              return imgUrl ? (
-                                                <img
-                                                  src={imgUrl}
-                                                  alt={
-                                                    ep.name ||
-                                                    formatEpisodeCode(ep)
-                                                  }
-                                                  className="w-full aspect-video object-cover"
-                                                  loading="lazy"
-                                                />
-                                              ) : (
-                                                <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
-                                              );
-                                            })()}
-                                          </Link>
-                                          <div className="p-3">
-                                            <div className="flex items-center justify-between gap-2">
-                                              <Link
-                                                to={`/title/${ep.title_id}`}
-                                                className="hover:text-amber-400 transition-colors min-w-0"
-                                              >
-                                                <h3 className="font-semibold text-white text-sm truncate">
-                                                  {ep.show_title}
-                                                </h3>
-                                              </Link>
-                                              {isEpisodeReleased(ep) ? (
-                                                <button
-                                                  onClick={() =>
-                                                    toggleWatched(
-                                                      ep.id,
-                                                      !!ep.is_watched
-                                                    )
-                                                  }
-                                                  className={`flex-shrink-0 cursor-pointer transition-colors ${
-                                                    ep.is_watched
-                                                      ? "text-emerald-400 hover:text-emerald-300"
-                                                      : "text-zinc-600 hover:text-zinc-400"
-                                                  }`}
-                                                >
-                                                  {ep.is_watched ? (
-                                                    <CheckCircleIcon className="size-5" />
-                                                  ) : (
-                                                    <CircleIcon className="size-5" />
-                                                  )}
-                                                </button>
-                                              ) : (
-                                                <span className="flex-shrink-0 text-zinc-700">
-                                                  <CircleIcon className="size-5" />
-                                                </span>
-                                              )}
-                                            </div>
-                                            <Link
-                                              to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                              className="hover:text-amber-400 transition-colors"
+                                            {ep.is_watched ? (
+                                              <CheckCircleIcon className="size-5" />
+                                            ) : (
+                                              <CircleIcon className="size-5" />
+                                            )}
+                                          </button>
+                                        ) : (
+                                          <span className="flex-shrink-0 text-zinc-700">
+                                            <CircleIcon className="size-5" />
+                                          </span>
+                                        )}
+                                      </div>
+                                      <Link
+                                        to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                                        className="hover:text-amber-400 transition-colors"
+                                      >
+                                        <p className="text-xs mt-0.5">
+                                          <span className="text-amber-400 font-medium">
+                                            {formatEpisodeCode(ep)}
+                                          </span>
+                                          {ep.name && (
+                                            <span className="text-zinc-400"> · {ep.name}</span>
+                                          )}
+                                        </p>
+                                      </Link>
+                                      {providers.length > 0 && (
+                                        <div className="flex gap-1.5 mt-2">
+                                          {providers.slice(0, 4).map((o) => (
+                                            <a
+                                              key={o.provider_id}
+                                              href={o.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              title={o.provider_name}
                                             >
-                                              <p className="text-xs mt-0.5">
-                                                <span className="text-amber-400 font-medium">
-                                                  {formatEpisodeCode(ep)}
-                                                </span>
-                                                {ep.name && (
-                                                  <span className="text-zinc-400">
-                                                    {" "}
-                                                    · {ep.name}
-                                                  </span>
-                                                )}
-                                              </p>
-                                            </Link>
-                                            {(() => {
-                                              const providers =
-                                                getUniqueProviders(ep.offers);
-                                              return providers.length > 0 ? (
-                                                <div className="flex gap-1.5 mt-2">
-                                                  {providers
-                                                    .slice(0, 4)
-                                                    .map((o) => (
-                                                      <a
-                                                        key={o.provider_id}
-                                                        href={o.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        title={o.provider_name}
-                                                      >
-                                                        <img
-                                                          src={
-                                                            o.provider_icon_url
-                                                          }
-                                                          alt={o.provider_name}
-                                                          className="w-6 h-6 rounded"
-                                                          loading="lazy"
-                                                        />
-                                                      </a>
-                                                    ))}
-                                                </div>
-                                              ) : null;
-                                            })()}
-                                          </div>
+                                              <img
+                                                src={o.provider_icon_url}
+                                                alt={o.provider_name}
+                                                className="w-6 h-6 rounded"
+                                                loading="lazy"
+                                              />
+                                            </a>
+                                          ))}
                                         </div>
-                                      </DeckCardWrapper>
+                                      )}
                                     </div>
-                                  ))}
-                                </UnwatchedCarousel>
+                                  </div>
+                                </DeckCardWrapper>
                               </div>
-                            )
-                          )}
+                            );
+                          })}
                         </div>
                       )}
 
@@ -1519,16 +1479,15 @@ function GridCalendar({
                 const isSelected = dateKey === selectedDate;
                 const borderColor = getCellBorderColor(dayItems);
 
-                // Deduplicate posters (same show might have multiple episodes)
-                const posterUrls: string[] = [];
-                const seenPosters = new Set<string>();
-                for (const item of dayItems) {
-                  const url = getItemPosterUrl(item);
-                  if (url && !seenPosters.has(url)) {
-                    seenPosters.add(url);
-                    posterUrls.push(url);
-                  }
-                }
+                // Pick featured item for poster + build remaining list
+                const featured = dayItems.length > 0 ? pickFeaturedItem(dayItems) : null;
+                const featuredPoster = featured ? getItemPosterUrl(featured) : null;
+                const featuredProviders = featured
+                  ? getUniqueProviders(
+                      featured.type === "episode" ? featured.data.offers : featured.data.offers
+                    )
+                  : [];
+                const remaining = dayItems.filter((item) => item !== featured);
 
                 return (
                   <button
@@ -1556,22 +1515,73 @@ function GridCalendar({
                       {day.getDate()}
                     </div>
 
-                    {/* Poster thumbnails */}
-                    {posterUrls.length > 0 && (
-                      <div className="flex gap-0.5 items-end relative">
-                        {posterUrls.slice(0, 3).map((url, idx) => (
-                          <img
-                            key={idx}
-                            src={url}
-                            alt=""
-                            className="w-7 h-[42px] rounded-sm object-cover"
-                            loading="lazy"
-                          />
+                    {/* Featured item card */}
+                    {featured && (
+                      <div className="space-y-0.5">
+                        {/* Featured: poster + title + provider */}
+                        <div className="flex gap-1.5">
+                          {featuredPoster && (
+                            <img
+                              src={featuredPoster}
+                              alt=""
+                              className="w-10 h-[60px] rounded-sm object-cover flex-shrink-0"
+                              loading="lazy"
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] leading-tight text-white font-medium truncate">
+                              {featured.type === "episode"
+                                ? featured.data.show_title
+                                : featured.data.title}
+                            </p>
+                            <p className={`text-[10px] leading-tight truncate ${
+                              featured.type === "episode"
+                                ? "text-emerald-400"
+                                : featured.data.object_type === "MOVIE"
+                                  ? "text-blue-400"
+                                  : "text-purple-400"
+                            }`}>
+                              {featured.type === "episode"
+                                ? `${formatEpisodeCode(featured.data)} · ${featured.data.name || ""}`
+                                : featured.data.object_type === "MOVIE" ? "Movie" : "Show"}
+                            </p>
+                            {featuredProviders.length > 0 && (
+                              <div className="flex gap-0.5 mt-0.5">
+                                {featuredProviders.slice(0, 2).map((p) => (
+                                  <img
+                                    key={p.provider_id}
+                                    src={p.provider_icon_url}
+                                    alt={p.provider_name}
+                                    className="w-4 h-4 rounded-sm"
+                                    loading="lazy"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Remaining items as compact text */}
+                        {remaining.slice(0, 2).map((item, idx) => (
+                          <div
+                            key={item.type === "episode" ? `e-${item.data.id}` : `t-${item.data.id}-${idx}`}
+                            className={`text-[10px] leading-tight truncate pl-0.5 ${
+                              item.type === "episode"
+                                ? "text-emerald-400/70"
+                                : item.data.object_type === "MOVIE"
+                                  ? "text-blue-400/70"
+                                  : "text-purple-400/70"
+                            }`}
+                          >
+                            {item.type === "episode"
+                              ? `${formatEpisodeCode(item.data)} · ${item.data.show_title}`
+                              : item.data.title}
+                          </div>
                         ))}
-                        {dayItems.length > 3 && (
-                          <span className="absolute -bottom-0.5 -right-0.5 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                            +{dayItems.length - 3}
-                          </span>
+                        {remaining.length > 2 && (
+                          <div className="text-[10px] text-zinc-500 pl-0.5">
+                            +{remaining.length - 2} more
+                          </div>
                         )}
                       </div>
                     )}
