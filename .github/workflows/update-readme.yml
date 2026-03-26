@@ -51,20 +51,26 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          direct_prompt: |
+          prompt: |
             Read the entire codebase and the current README.md. Update the README.md
             to accurately reflect the current state of the project. Keep the existing
             style and structure but update any sections that are out of date —
             features, stack, configuration, project structure, API routes, etc.
             Only make changes if something is actually out of date. Commit any
             changes with a clear message.
-          allowed_tools: |
-            Bash(git diff:*)
-            Bash(git log:*)
-            Bash(git add:*)
-            Bash(git commit:*)
-            Bash(git push:*)
-            Read
-            Glob
-            Grep
-            Edit
+          settings: |
+            {
+              "permissions": {
+                "allow": [
+                  "Bash(git diff:*)",
+                  "Bash(git log:*)",
+                  "Bash(git add:*)",
+                  "Bash(git commit:*)",
+                  "Bash(git push:*)",
+                  "Read",
+                  "Glob",
+                  "Grep",
+                  "Edit"
+                ]
+              }
+            }
