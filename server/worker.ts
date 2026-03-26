@@ -62,6 +62,7 @@ import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig } from "./config";
 import Sentry from "./sentry";
+import { withSentry } from "@sentry/cloudflare";
 import { CloudflarePlatform } from "./platform/cloudflare";
 import { processPendingJobs, enqueueCronJob, cleanupOldJobs } from "./jobs/processor";
 import { createAuth } from "./auth/better-auth";
@@ -330,7 +331,7 @@ function getApp(env: Env): Hono<AppEnv> {
   return app;
 }
 
-export default {
+const handler = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     ctx.passThroughOnException();
     patchConfigFromEnv(env);
@@ -419,3 +420,12 @@ export default {
     }
   },
 };
+
+export default withSentry(
+  (env: Env) => ({
+    dsn: env.SENTRY_DSN,
+    tracesSampleRate: 1.0,
+    sendDefaultPii: true,
+  }),
+  handler,
+);
