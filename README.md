@@ -8,19 +8,21 @@ A full-stack app for tracking streaming media releases using TMDB as the data so
 - **Search** — Live search via TMDB, with IMDB URL auto-detection and resolution
 - **Watchlist** — Track titles and get per-episode watched status for TV shows
 - **Calendar** — Monthly calendar view of releases and upcoming episodes
-- **Notifications** — Discord webhook notifications with configurable schedules and timezone support
-- **Authentication** — Local password auth and OpenID Connect (OIDC) with admin roles
+- **Notifications** — Discord webhook and Web Push notifications with configurable schedules and timezone support
+- **Authentication** — Local password auth, OpenID Connect (OIDC), and WebAuthn/Passkeys with admin roles
 - **Scheduled Sync** — Automatic title and episode syncing via cron jobs
+- **Database Backups** — Automated SQLite backups with configurable retention
+- **Caching** — Multi-backend caching (memory, Redis, Cloudflare KV) for TMDB responses
 - **PWA** — Installable as a progressive web app
 
 ## Stack
 
 - **Runtime**: [Bun](https://bun.sh) (with built-in SQLite)
 - **Server**: [Hono](https://hono.dev) framework, TypeScript strict mode
+- **Auth**: [better-auth](https://www.better-auth.com) with OIDC, passkey, and username plugins
 - **Frontend**: React 19 + Vite + Tailwind CSS 4 + shadcn/ui components
 - **Database**: SQLite via Drizzle ORM (WAL mode, auto-created on startup)
 - **Observability**: Sentry (optional), structured JSON logging
-- **Deployment**: Docker
 
 ## Getting Started
 
@@ -67,7 +69,7 @@ docker compose up --build
 docker compose up
 ```
 
-This uses the image from [GitHub Container Registry](https://github.com/MatijaMaric/jwsync/pkgs/container/jwsync).
+This uses the image from [GitHub Container Registry](https://github.com/MatijaMaric/remindarr/pkgs/container/remindarr).
 
 The app is available at `http://localhost:3000`. Data is persisted in a Docker volume.
 
@@ -92,15 +94,49 @@ The app is available at `http://localhost:3000`. Data is persisted in a Docker v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SESSION_DURATION_HOURS` | `168` (7 days) | Auth session duration |
+| `BASE_URL` | *(empty)* | Base URL of the app (required for auth callbacks) |
+| `BETTER_AUTH_SECRET` | *(empty)* | Secret used to sign sessions |
 | `OIDC_ISSUER_URL` | *(empty)* | OIDC provider issuer URL |
 | `OIDC_CLIENT_ID` | *(empty)* | OIDC client ID |
 | `OIDC_CLIENT_SECRET` | *(empty)* | OIDC client secret |
 | `OIDC_REDIRECT_URI` | *(empty)* | OIDC callback URL |
 | `OIDC_ADMIN_CLAIM` | *(empty)* | OIDC claim used to determine admin role |
 | `OIDC_ADMIN_VALUE` | *(empty)* | Expected value of the admin claim |
+| `PASSKEY_RP_ID` | *(empty)* | WebAuthn Relying Party ID (e.g. `example.com`) |
+| `PASSKEY_RP_NAME` | *(empty)* | WebAuthn Relying Party display name |
+| `PASSKEY_ORIGIN` | *(empty)* | WebAuthn origin (must match deployment URL) |
 
 OIDC settings can also be configured at runtime via the admin settings API.
+
+#### Web Push Notifications
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VAPID_PUBLIC_KEY` | *(empty)* | VAPID public key for Web Push |
+| `VAPID_PRIVATE_KEY` | *(empty)* | VAPID private key for Web Push |
+| `VAPID_SUBJECT` | *(empty)* | VAPID subject (e.g. `mailto:admin@example.com`) |
+
+#### Database Backups
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BACKUP_DIR` | *(empty)* | Directory to store backups (disabled if empty) |
+| `BACKUP_CRON` | `0 2 * * *` | Cron expression for backup schedule |
+| `BACKUP_RETAIN` | `7` | Number of backups to retain |
+
+#### Caching
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CACHE_BACKEND` | `memory` | Cache backend: `memory`, `redis`, or `kv` |
+| `REDIS_URL` | *(empty)* | Redis connection URL (when using redis backend) |
+| `CACHE_MAX_MEMORY_ENTRIES` | `1000` | Max entries in memory cache |
+| `CACHE_TTL_GENRES` | `86400` | Genre cache TTL in seconds |
+| `CACHE_TTL_PROVIDERS` | `86400` | Provider cache TTL in seconds |
+| `CACHE_TTL_LANGUAGES` | `86400` | Language cache TTL in seconds |
+| `CACHE_TTL_SEARCH` | `300` | Search result cache TTL in seconds |
+| `CACHE_TTL_DETAILS` | `3600` | Details cache TTL in seconds |
+| `CACHE_TTL_BROWSE` | `900` | Browse cache TTL in seconds |
 
 ## Syncing Data
 
@@ -122,13 +158,12 @@ server/
   tracing.ts            # DB & HTTP tracing helpers
   types.ts              # Shared server types
   auth/
-    oidc.ts             # OIDC discovery, token exchange, user sync
+    better-auth.ts      # better-auth setup (OIDC, passkeys, username, admin)
   db/
     schema.ts           # SQLite schema (Drizzle ORM)
     repository.ts       # Re-exports from repository/
     repository/         # Database queries by domain
       users.ts          # User CRUD
-      sessions.ts       # Session management (in repository.ts)
       titles.ts         # Title queries & upserts
       episodes.ts       # Episode queries
       offers.ts         # Watch provider offers
@@ -140,17 +175,24 @@ server/
     parser.ts           # API response → internal types
   imdb/
     resolver.ts         # IMDB URL/ID resolution via autocomplete API
+  cache/
+    index.ts            # Cache factory (memory / redis / kv)
+    memory.ts           # In-memory cache
+    redis.ts            # Redis cache
+    cloudflare-kv.ts    # Cloudflare Workers KV cache
   jobs/
     queue.ts            # In-memory job queue with persistence
     worker.ts           # Cron scheduler & job execution
     sync.ts             # Title & episode sync job handlers
     notifications.ts    # Notification dispatch job
+    backup.ts           # Database backup job
     migrate-titles.ts   # Data migration job
   middleware/
     auth.ts             # optionalAuth, requireAuth, requireAdmin
     rate-limit.ts       # Token bucket rate limiter
   notifications/
     discord.ts          # Discord webhook sender
+    webpush.ts          # Web Push sender
     content.ts          # Notification content builder
     registry.ts         # Provider registry
     types.ts            # Notification types
@@ -172,7 +214,8 @@ frontend/src/
     EpisodeDetailPage.tsx # Episode details
     PersonPage.tsx      # Actor/crew details
     ReelsPage.tsx       # Short-form discovery
-    LoginPage.tsx       # Local + OIDC login
+    LoginPage.tsx       # Local + OIDC + passkey login
+    SignupPage.tsx      # User registration
     ProfilePage.tsx     # User profile/settings
   components/
     TitleCard.tsx       # Title display card
@@ -231,15 +274,18 @@ frontend/src/
 
 ### Auth
 
+Authentication is handled by [better-auth](https://www.better-auth.com) at `/api/auth/*`. Common endpoints:
+
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/api/auth/login` | Local password login |
-| `POST` | `/api/auth/logout` | Logout |
-| `GET` | `/api/auth/me` | Current user info |
-| `GET` | `/api/auth/providers` | Available auth providers |
+| `POST` | `/api/auth/sign-in/email` | Local password login |
+| `POST` | `/api/auth/sign-up/email` | Register a new account |
+| `POST` | `/api/auth/sign-out` | Logout |
+| `GET` | `/api/auth/get-session` | Current session / user info |
 | `POST` | `/api/auth/change-password` | Change password |
-| `GET` | `/api/auth/oidc/authorize` | OIDC authorization redirect |
-| `GET` | `/api/auth/oidc/callback` | OIDC callback |
+| `POST` | `/api/auth/sign-in/social` | OIDC authorization redirect |
+| `GET` | `/api/auth/callback/pocketid` | OIDC callback |
+| `GET` | `/api/auth/custom/providers` | Available auth providers (local, OIDC, passkey) |
 
 ### Admin & System
 
@@ -251,6 +297,7 @@ frontend/src/
 | `POST` | `/api/jobs/:name` | Manually trigger a job |
 | `GET/POST/PUT/DELETE` | `/api/notifiers` | Notification config CRUD |
 | `POST` | `/api/notifiers/:id/test` | Send test notification |
+| `GET` | `/api/metrics` | Application metrics |
 | `GET` | `/api/health` | Health check |
 
 ## Testing
@@ -260,5 +307,11 @@ bun test                     # Run all tests
 bun test server/             # Server tests only
 bun test frontend/src/       # Frontend tests only
 bun test --watch             # Watch mode
-bun run check                # Full CI: type check + tests
+bun run check                # Full CI: type check + lint + tests
+```
+
+E2E tests use Playwright:
+
+```bash
+bun run playwright test      # Run E2E tests
 ```
