@@ -25,6 +25,16 @@ import * as syncModule from "../tmdb/sync";
 const mockSyncEpisodes = spyOn(syncModule, "syncEpisodes").mockResolvedValue({ synced: 0, shows: 0 });
 const mockSyncEpisodesForShow = spyOn(syncModule, "syncEpisodesForShow").mockResolvedValue(0);
 
+// Mock TMDB client for backfill-title-offers
+import * as tmdbClient from "../tmdb/client";
+const mockFetchMovieDetails = spyOn(tmdbClient, "fetchMovieDetails").mockResolvedValue({} as any);
+const mockFetchTvDetails = spyOn(tmdbClient, "fetchTvDetails").mockResolvedValue({} as any);
+
+// Mock parser
+import * as parser from "../tmdb/parser";
+const mockParseMovieDetails = spyOn(parser, "parseMovieDetails").mockReturnValue({ id: "movie-1", title: "Test", offers: [], scores: { imdbScore: null, imdbVotes: null, tmdbScore: null } } as any);
+const mockParseTvDetails = spyOn(parser, "parseTvDetails").mockReturnValue({ id: "tv-1", title: "Test", offers: [], scores: { imdbScore: null, imdbVotes: null, tmdbScore: null } } as any);
+
 // Mock episode repository functions for watched episode restoration
 const mockGetEpisodeIdsBySE = spyOn(repository, "getEpisodeIdsBySE").mockResolvedValue([]);
 const mockWatchEpisodesBulk = spyOn(repository, "watchEpisodesBulk").mockResolvedValue(undefined);
@@ -32,6 +42,10 @@ const mockWatchEpisodesBulk = spyOn(repository, "watchEpisodesBulk").mockResolve
 // Mock migrate-titles — use spyOn
 import * as migrateTitlesModule from "./migrate-titles";
 const mockMigrateTitles = spyOn(migrateTitlesModule, "migrateTitles").mockResolvedValue({ updated: 0, failed: 0 });
+
+// Mock migrate-offers — use spyOn
+import * as migrateOffersModule from "./migrate-offers";
+const mockMigrateOffers = spyOn(migrateOffersModule, "migrateOffers").mockResolvedValue({ updated: 0, skipped: 0, failed: 0 });
 
 import { CONFIG } from "../config";
 
@@ -49,6 +63,11 @@ beforeEach(() => {
   mockGetEpisodeIdsBySE.mockClear();
   mockWatchEpisodesBulk.mockClear();
   mockMigrateTitles.mockClear();
+  mockMigrateOffers.mockClear();
+  mockFetchMovieDetails.mockClear();
+  mockFetchTvDetails.mockClear();
+  mockParseMovieDetails.mockClear();
+  mockParseTvDetails.mockClear();
   captureExceptionSpy.mockClear();
 });
 
@@ -63,6 +82,11 @@ afterAll(() => {
   mockGetEpisodeIdsBySE.mockRestore();
   mockWatchEpisodesBulk.mockRestore();
   mockMigrateTitles.mockRestore();
+  mockMigrateOffers.mockRestore();
+  mockFetchMovieDetails.mockRestore();
+  mockFetchTvDetails.mockRestore();
+  mockParseMovieDetails.mockRestore();
+  mockParseTvDetails.mockRestore();
 });
 
 // ─── registerSyncJobs ────────────────────────────────────────────────────────
@@ -97,6 +121,14 @@ describe("registerSyncJobs", () => {
     expect(job).not.toBeNull();
     expect(job!.name).toBe("migrate-titles");
   });
+
+  it("enqueues a one-time migrate-offers job on registration", () => {
+    registerSyncJobs();
+
+    const job = claimNextJob("migrate-offers");
+    expect(job).not.toBeNull();
+    expect(job!.name).toBe("migrate-offers");
+  });
 });
 
 // ─── sync-titles handler ─────────────────────────────────────────────────────
@@ -106,6 +138,8 @@ describe("sync-titles handler", () => {
     registerSyncJobs();
     // Drain the auto-enqueued migrate-titles job to avoid interfering with assertions
     claimNextJob("migrate-titles");
+    claimNextJob("migrate-backdrops");
+    claimNextJob("migrate-offers");
   });
 
   it("fetches new releases and upserts them", async () => {
@@ -162,8 +196,9 @@ describe("sync-episodes handler", () => {
 
   beforeEach(() => {
     registerSyncJobs();
-    // Drain the auto-enqueued migrate-titles job to avoid interfering with assertions
     claimNextJob("migrate-titles");
+    claimNextJob("migrate-backdrops");
+    claimNextJob("migrate-offers");
   });
 
   afterAll(() => {
@@ -236,6 +271,8 @@ describe("sync-show-episodes handler", () => {
   beforeEach(() => {
     registerSyncJobs();
     claimNextJob("migrate-titles");
+    claimNextJob("migrate-backdrops");
+    claimNextJob("migrate-offers");
     CONFIG.TMDB_API_KEY = "test-api-key";
   });
 
@@ -308,5 +345,73 @@ describe("sync-show-episodes handler", () => {
     await processJobs();
 
     expect(mockSyncEpisodesForShow).not.toHaveBeenCalled();
+  });
+});
+
+// ─── backfill-title-offers handler ──────────────────────────────────────────
+
+describe("backfill-title-offers handler", () => {
+  const originalApiKey = CONFIG.TMDB_API_KEY;
+
+  beforeEach(() => {
+    registerSyncJobs();
+    claimNextJob("migrate-titles");
+    claimNextJob("migrate-backdrops");
+    claimNextJob("migrate-offers");
+    CONFIG.TMDB_API_KEY = "test-api-key";
+  });
+
+  afterAll(() => {
+    CONFIG.TMDB_API_KEY = originalApiKey;
+  });
+
+  it("fetches movie details and upserts when offers are found", async () => {
+    const fakeTitle = { id: "movie-50", title: "Backfill Movie", offers: [{ providerId: 1 }] } as any;
+    mockFetchMovieDetails.mockResolvedValueOnce({} as any);
+    mockParseMovieDetails.mockReturnValueOnce(fakeTitle);
+    mockUpsertTitles.mockResolvedValueOnce(1);
+
+    enqueueJob("backfill-title-offers", { tmdbId: "50", objectType: "MOVIE" });
+    await processJobs();
+
+    expect(mockFetchMovieDetails).toHaveBeenCalledWith(50);
+    expect(mockParseMovieDetails).toHaveBeenCalled();
+    expect(mockUpsertTitles).toHaveBeenCalledWith([fakeTitle]);
+  });
+
+  it("fetches TV details for SHOW type", async () => {
+    const fakeTitle = { id: "tv-60", title: "Backfill Show", offers: [{ providerId: 2 }] } as any;
+    mockFetchTvDetails.mockResolvedValueOnce({} as any);
+    mockParseTvDetails.mockReturnValueOnce(fakeTitle);
+    mockUpsertTitles.mockResolvedValueOnce(1);
+
+    enqueueJob("backfill-title-offers", { tmdbId: "60", objectType: "SHOW" });
+    await processJobs();
+
+    expect(mockFetchTvDetails).toHaveBeenCalledWith(60);
+    expect(mockParseTvDetails).toHaveBeenCalled();
+    expect(mockUpsertTitles).toHaveBeenCalledWith([fakeTitle]);
+  });
+
+  it("does not upsert when no offers are found", async () => {
+    const fakeTitle = { id: "movie-70", title: "No Offers Movie", offers: [] } as any;
+    mockFetchMovieDetails.mockResolvedValueOnce({} as any);
+    mockParseMovieDetails.mockReturnValueOnce(fakeTitle);
+
+    enqueueJob("backfill-title-offers", { tmdbId: "70", objectType: "MOVIE" });
+    await processJobs();
+
+    expect(mockFetchMovieDetails).toHaveBeenCalledWith(70);
+    expect(mockUpsertTitles).not.toHaveBeenCalled();
+  });
+
+  it("skips when TMDB_API_KEY is not set", async () => {
+    CONFIG.TMDB_API_KEY = "";
+
+    enqueueJob("backfill-title-offers", { tmdbId: "80", objectType: "MOVIE" });
+    await processJobs();
+
+    expect(mockFetchMovieDetails).not.toHaveBeenCalled();
+    expect(mockFetchTvDetails).not.toHaveBeenCalled();
   });
 });

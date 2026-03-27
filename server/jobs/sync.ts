@@ -7,8 +7,11 @@ import { CONFIG } from "../config";
 import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles, getEpisodeIdsBySE, watchEpisodesBulk } from "../db/repository";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
+import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
+import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { migrateTitles } from "./migrate-titles";
 import { migrateBackdrops } from "./migrate-backdrops";
+import { migrateOffers } from "./migrate-offers";
 
 export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -54,12 +57,37 @@ export function registerSyncJobs() {
     }
   });
 
+  registerHandler("backfill-title-offers", async (job) => {
+    if (!CONFIG.TMDB_API_KEY) {
+      log.info("Skipping offers backfill", { reason: "TMDB_API_KEY not configured" });
+      return;
+    }
+    const data = job.data ? JSON.parse(job.data) : null;
+    if (!data?.tmdbId || !data?.objectType) {
+      throw new Error("backfill-title-offers job missing required data fields");
+    }
+    const tmdbId = Number(data.tmdbId);
+    const title = data.objectType === "MOVIE"
+      ? parseMovieDetails(await fetchMovieDetails(tmdbId))
+      : parseTvDetails(await fetchTvDetails(tmdbId));
+    if (title.offers.length > 0) {
+      await upsertTitles([title]);
+      log.info("Backfilled offers for title", { title: title.title, offers: title.offers.length });
+    } else {
+      log.info("No offers found for title", { title: title.title });
+    }
+  });
+
   registerHandler("migrate-titles", async () => {
     await migrateTitles();
   });
 
   registerHandler("migrate-backdrops", async () => {
     await migrateBackdrops();
+  });
+
+  registerHandler("migrate-offers", async () => {
+    await migrateOffers();
   });
 
   // ─── Cron Schedules ────────────────────────────────────────────────────
@@ -72,4 +100,7 @@ export function registerSyncJobs() {
 
   // Enqueue one-time backdrop backfill (will no-op if all titles already have backdrop_url)
   enqueueJob("migrate-backdrops", undefined, { maxAttempts: 1 });
+
+  // Enqueue one-time offers backfill (will no-op if all titles already have offers)
+  enqueueJob("migrate-offers", undefined, { maxAttempts: 1 });
 }

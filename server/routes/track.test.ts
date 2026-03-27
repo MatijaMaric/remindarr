@@ -410,6 +410,87 @@ describe("POST /track/import", () => {
     CONFIG.TMDB_API_KEY = originalKey;
   });
 
+  it("enqueues backfill-title-offers job for imported titles with tmdb_id", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "movie-600",
+          tmdb_id: "600",
+          object_type: "MOVIE",
+          title: "Backfill Movie",
+          genres: [],
+          watched_episodes: [],
+        },
+        {
+          id: "tv-601",
+          tmdb_id: "601",
+          object_type: "SHOW",
+          title: "Backfill Show",
+          genres: [],
+          watched_episodes: [],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.imported).toBe(2);
+
+    const db = getRawDb();
+    const movieJob = db.prepare("SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '600' LIMIT 1").get() as any;
+    expect(movieJob).toBeTruthy();
+    expect(JSON.parse(movieJob.data)).toMatchObject({ tmdbId: "600", objectType: "MOVIE" });
+
+    const showJob = db.prepare("SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '601' LIMIT 1").get() as any;
+    expect(showJob).toBeTruthy();
+    expect(JSON.parse(showJob.data)).toMatchObject({ tmdbId: "601", objectType: "SHOW" });
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("does not enqueue backfill-title-offers when TMDB_API_KEY is not set", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "";
+
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "movie-602",
+          tmdb_id: "602",
+          object_type: "MOVIE",
+          title: "No Key Movie",
+          genres: [],
+          watched_episodes: [],
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const job = db.prepare("SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '602' LIMIT 1").get();
+    expect(job).toBeNull();
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
   it("does not enqueue sync-show-episodes for MOVIE titles", async () => {
     const originalKey = CONFIG.TMDB_API_KEY;
     CONFIG.TMDB_API_KEY = "test-key";
