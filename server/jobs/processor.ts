@@ -17,6 +17,8 @@ import {
 } from "../db/repository";
 import { fetchNewReleases } from "../tmdb/sync-titles";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
+import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
+import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
@@ -125,6 +127,32 @@ async function handleSendNotifications(): Promise<void> {
   }
 }
 
+async function handleBackfillTitleOffers(data: string | null): Promise<void> {
+  if (!CONFIG.TMDB_API_KEY) {
+    log.info("Skipping offers backfill", { reason: "TMDB_API_KEY not configured" });
+    return;
+  }
+  const parsed = data ? JSON.parse(data) : null;
+  if (!parsed?.tmdbId || !parsed?.objectType) {
+    throw new Error("backfill-title-offers job missing required data fields");
+  }
+  const tmdbId = Number(parsed.tmdbId);
+  const title = parsed.objectType === "MOVIE"
+    ? parseMovieDetails(await fetchMovieDetails(tmdbId))
+    : parseTvDetails(await fetchTvDetails(tmdbId));
+  if (title.offers.length > 0) {
+    await upsertTitles([title]);
+    log.info("Backfilled offers for title", { title: title.title, offers: title.offers.length });
+  } else {
+    log.info("No offers found for title", { title: title.title });
+  }
+}
+
+async function handleMigrateOffers(): Promise<void> {
+  const { migrateOffers } = await import("./migrate-offers");
+  await migrateOffers();
+}
+
 // ─── Job Dispatcher ────────────────────────────────────────────────────────
 
 const handlers: Record<string, (data: string | null) => Promise<void>> = {
@@ -132,6 +160,8 @@ const handlers: Record<string, (data: string | null) => Promise<void>> = {
   "sync-episodes": () => handleSyncEpisodes(),
   "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
   "send-notifications": () => handleSendNotifications(),
+  "backfill-title-offers": (data) => handleBackfillTitleOffers(data),
+  "migrate-offers": () => handleMigrateOffers(),
 };
 
 interface JobRow {
@@ -247,6 +277,28 @@ export async function enqueueCronJob(name: string): Promise<void> {
     runAt: new Date().toISOString(),
   });
   log.info("Enqueued cron job", { name });
+}
+
+/**
+ * Enqueue a one-time migration job if no job with that name exists at all
+ * (regardless of status). This prevents re-running completed migrations.
+ */
+export async function enqueueOneTimeMigration(name: string): Promise<void> {
+  const db = getDb();
+  const existing = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(eq(jobs.name, name))
+    .get();
+
+  if (existing) return;
+
+  await db.insert(jobs).values({
+    name,
+    runAt: new Date().toISOString(),
+    maxAttempts: 1,
+  });
+  log.info("Enqueued one-time migration", { name });
 }
 
 /**
