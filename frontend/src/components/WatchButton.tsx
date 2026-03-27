@@ -8,6 +8,18 @@ interface WatchButtonProps {
   providerName: string;
   providerIconUrl: string;
   variant?: "compact" | "full";
+  monetizationType?: string;
+}
+
+function monetizationLabel(type?: string): string | null {
+  switch (type) {
+    case "FLATRATE": return "Stream";
+    case "FREE": return "Free";
+    case "ADS": return "Ads";
+    case "RENT": return "Rent";
+    case "BUY": return "Buy";
+    default: return null;
+  }
 }
 
 export default function WatchButton({
@@ -16,6 +28,7 @@ export default function WatchButton({
   providerName,
   providerIconUrl,
   variant = "compact",
+  monetizationType,
 }: WatchButtonProps) {
   const color = getProviderColor(providerId);
   const [hovered, setHovered] = useState(false);
@@ -46,6 +59,8 @@ export default function WatchButton({
     );
   }
 
+  const label = monetizationLabel(monetizationType);
+
   return (
     <a
       href={url}
@@ -59,6 +74,7 @@ export default function WatchButton({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {label && <span className="opacity-75">{label}</span>}
       <img
         src={providerIconUrl}
         alt=""
