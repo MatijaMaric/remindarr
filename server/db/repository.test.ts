@@ -170,6 +170,47 @@ describe("upsertTitles", () => {
     expect(offers).toHaveLength(1);
     expect(offers[0].provider_id).toBe(8);
   });
+
+  it("returns deep_link via COALESCE when available", async () => {
+    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" })] })]);
+
+    // Manually set deep_link
+    const db = getRawDb();
+    db.prepare("UPDATE offers SET deep_link = ? WHERE title_id = ?").run(
+      "https://www.netflix.com/watch/123",
+      "movie-123",
+    );
+
+    const offers = await getOffersForTitle("movie-123");
+    expect(offers).toHaveLength(1);
+    expect(offers[0].url).toBe("https://www.netflix.com/watch/123");
+  });
+
+  it("falls back to url when deep_link is null", async () => {
+    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" })] })]);
+
+    const offers = await getOffersForTitle("movie-123");
+    expect(offers).toHaveLength(1);
+    expect(offers[0].url).toBe("https://tmdb.org/movie/123");
+  });
+
+  it("preserves deep_link when re-upserting offers from TMDB", async () => {
+    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" })] })]);
+
+    // Set deep_link
+    const db = getRawDb();
+    db.prepare("UPDATE offers SET deep_link = ? WHERE title_id = ?").run(
+      "https://www.netflix.com/watch/123",
+      "movie-123",
+    );
+
+    // Re-upsert with TMDB data (same provider)
+    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123-updated" })] })]);
+
+    const offers = await getOffersForTitle("movie-123");
+    expect(offers).toHaveLength(1);
+    expect(offers[0].url).toBe("https://www.netflix.com/watch/123");
+  });
 });
 
 // ─── Title Queries ──────────────────────────────────────────────────────────

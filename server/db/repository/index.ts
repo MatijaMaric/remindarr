@@ -1,7 +1,7 @@
 // Re-exports all repository functions for backward compatibility.
 // Individual modules can be imported directly for smaller dependency scope.
 
-export { getOffersForTitle, getOffersForTitles } from "./offers";
+export { getOffersForTitle, getOffersForTitles, getTitlesNeedingSaEnrichment } from "./offers";
 
 export {
   upsertTitles,

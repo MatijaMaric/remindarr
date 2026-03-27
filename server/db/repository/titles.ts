@@ -100,8 +100,22 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
 
       // Replace offers only when new data includes them (prevents sync fallback from wiping existing offers)
       if (t.offers.length > 0) {
+        // Preserve deep links: build a map of (providerId, monetizationType) → deepLink
+        const existingOffers = await db
+          .select({ providerId: offers.providerId, monetizationType: offers.monetizationType, deepLink: offers.deepLink })
+          .from(offers)
+          .where(eq(offers.titleId, t.id))
+          .all();
+        const deepLinkMap = new Map<string, string>();
+        for (const o of existingOffers) {
+          if (o.deepLink) {
+            deepLinkMap.set(`${o.providerId}:${o.monetizationType}`, o.deepLink);
+          }
+        }
+
         await db.delete(offers).where(eq(offers.titleId, t.id)).run();
         for (const o of t.offers) {
+          const preservedDeepLink = deepLinkMap.get(`${o.providerId}:${o.monetizationType}`) ?? null;
           await db.insert(offers)
             .values({
               titleId: o.titleId,
@@ -111,6 +125,7 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
               priceValue: o.priceValue,
               priceCurrency: o.priceCurrency,
               url: o.url,
+              deepLink: preservedDeepLink,
               availableTo: o.availableTo,
             })
             .run();

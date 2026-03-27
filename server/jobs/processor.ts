@@ -153,6 +153,41 @@ async function handleMigrateOffers(): Promise<void> {
   await migrateOffers();
 }
 
+async function handleSyncDeepLinks(): Promise<void> {
+  if (!CONFIG.STREAMING_AVAILABILITY_API_KEY) {
+    log.info("Skipping deep link sync", { reason: "STREAMING_AVAILABILITY_API_KEY not configured" });
+    return;
+  }
+  const { enrichTitleDeepLinks } = await import("../streaming-availability/enrich");
+  const { RateLimitError } = await import("../streaming-availability/types");
+  const { getTitlesNeedingSaEnrichment } = await import("../db/repository");
+
+  const titleRows = await getTitlesNeedingSaEnrichment(CONFIG.SA_DAILY_BUDGET);
+  if (titleRows.length === 0) return;
+
+  let enriched = 0;
+  let processed = 0;
+  for (const t of titleRows) {
+    try {
+      const count = await enrichTitleDeepLinks(
+        t.id,
+        Number(t.tmdbId),
+        t.objectType as "MOVIE" | "SHOW",
+      );
+      enriched += count;
+      processed++;
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        log.warn("SA rate limit hit, stopping early", { processed, enriched });
+        break;
+      }
+      log.error("SA enrichment failed", { titleId: t.id, err });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  log.info("Deep link sync complete", { processed, enriched });
+}
+
 // ─── Job Dispatcher ────────────────────────────────────────────────────────
 
 const handlers: Record<string, (data: string | null) => Promise<void>> = {
@@ -162,6 +197,7 @@ const handlers: Record<string, (data: string | null) => Promise<void>> = {
   "send-notifications": () => handleSendNotifications(),
   "backfill-title-offers": (data) => handleBackfillTitleOffers(data),
   "migrate-offers": () => handleMigrateOffers(),
+  "sync-deep-links": () => handleSyncDeepLinks(),
 };
 
 interface JobRow {
