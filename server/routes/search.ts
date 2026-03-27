@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGenres } from "../tmdb/client";
 import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
-import { getTrackedTitleIds } from "../db/repository";
+import { getTrackedTitleIds, upsertTitles } from "../db/repository";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "search" });
 import { ok, err } from "./response";
 
 import type { AppEnv } from "../types";
@@ -44,6 +47,14 @@ app.get("/", async (c) => {
         }
       })
     );
+
+    // Persist titles with offers to DB so stream buttons appear on subsequent views
+    const titlesWithOffers = titles.filter((t) => t.offers.length > 0);
+    if (titlesWithOffers.length > 0) {
+      upsertTitles(titlesWithOffers).catch((e) => {
+        log.error("Failed to persist search titles", { error: (e as Error).message });
+      });
+    }
 
     const user = c.get("user");
     const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();

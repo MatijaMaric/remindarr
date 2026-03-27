@@ -4,7 +4,7 @@ import type { TmdbDiscoverMovieResult, TmdbDiscoverTvResult } from "../tmdb/type
 import type { AppEnv } from "../types";
 import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { upsertTitles, trackTitle, createUser } from "../db/repository";
+import { upsertTitles, trackTitle, createUser, getOffersForTitle } from "../db/repository";
 import { makeParsedTitle, makeTmdbDiscoverMovie, makeTmdbDiscoverTv, makeTmdbMovieDetails, makeTmdbTvDetails } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
 
@@ -323,6 +323,35 @@ describe("GET /browse", () => {
     const body = await res.json();
 
     expect(body.titles[0].isTracked).toBe(true);
+  });
+
+  it("persists titles with offers to database", async () => {
+    const movie = makeTmdbDiscoverMovie({ id: 900 });
+    (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+      results: [movie], total_pages: 1, total_results: 1, page: 1,
+    });
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({
+      id: 900,
+      "watch/providers": {
+        id: 900,
+        results: {
+          [CONFIG.COUNTRY]: {
+            link: "https://tmdb.org",
+            flatrate: [{ logo_path: "/nf.jpg", provider_id: 8, provider_name: "Netflix", display_priority: 1 }],
+          },
+        },
+      },
+    }));
+
+    const res = await app.request("/browse?category=popular&type=MOVIE");
+    expect(res.status).toBe(200);
+
+    // Wait for fire-and-forget upsert to complete
+    await new Promise((r) => setTimeout(r, 100));
+
+    const offers = await getOffersForTitle("movie-900");
+    expect(offers.length).toBeGreaterThan(0);
+    expect(offers[0].provider_name).toBe("Netflix");
   });
 
   describe("genre filtering", () => {

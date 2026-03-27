@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import type { TmdbSearchMultiResult } from "../tmdb/types";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { upsertTitles, trackTitle, createUser } from "../db/repository";
+import { CONFIG } from "../config";
+import { upsertTitles, trackTitle, createUser, getOffersForTitle } from "../db/repository";
 import { makeParsedTitle, makeTmdbSearchMultiMovie, makeTmdbMovieDetails } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
 
@@ -57,6 +58,35 @@ describe("GET /search", () => {
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].isTracked).toBe(false);
+  });
+
+  it("persists titles with offers to database", async () => {
+    const movie = makeTmdbSearchMultiMovie({ id: 42 });
+    (tmdbClient.searchMulti as any).mockResolvedValueOnce({
+      results: [movie], total_pages: 1, total_results: 1, page: 1,
+    });
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({
+      id: 42,
+      "watch/providers": {
+        id: 42,
+        results: {
+          [CONFIG.COUNTRY]: {
+            link: "https://tmdb.org",
+            flatrate: [{ logo_path: "/nf.jpg", provider_id: 8, provider_name: "Netflix", display_priority: 1 }],
+          },
+        },
+      },
+    }));
+
+    const res = await app.request("/search?q=test");
+    expect(res.status).toBe(200);
+
+    // Wait for fire-and-forget upsert to complete
+    await new Promise((r) => setTimeout(r, 100));
+
+    const offers = await getOffersForTitle("movie-42");
+    expect(offers.length).toBeGreaterThan(0);
+    expect(offers[0].provider_name).toBe("Netflix");
   });
 
   it("returns isTracked=true for tracked titles when user is authenticated", async () => {
