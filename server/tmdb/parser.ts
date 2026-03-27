@@ -125,7 +125,7 @@ function parseWatchProviders(
         presentationType: "",
         priceValue: null,
         priceCurrency: null,
-        url: tmdbLink,
+        url: countryData.link || tmdbLink,
         availableTo: null,
       });
     }

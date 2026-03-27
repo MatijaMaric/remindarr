@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Link } from "react-router";
 import type { Title } from "../types";
 import TrackButton from "./TrackButton";
+import WatchButton from "./WatchButton";
 
 interface Props {
   title: Title;
@@ -75,20 +76,14 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
         {streamingOffers.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {streamingOffers.map((offer) => (
-              <a
+              <WatchButton
                 key={offer.provider_id}
-                href={offer.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={offer.provider_name}
-              >
-                <img
-                  src={offer.provider_icon_url}
-                  alt={offer.provider_name}
-                  className="w-7 h-7 rounded-md"
-                  loading="lazy"
-                />
-              </a>
+                url={offer.url}
+                providerId={offer.provider_id}
+                providerName={offer.provider_name}
+                providerIconUrl={offer.provider_icon_url}
+                variant="compact"
+              />
             ))}
           </div>
         )}
