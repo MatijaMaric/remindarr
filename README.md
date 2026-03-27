@@ -173,6 +173,9 @@ server/
   tmdb/
     client.ts           # TMDB API client (releases, search, providers, details)
     parser.ts           # API response → internal types
+    sync.ts             # TMDB sync orchestration
+    sync-titles.ts      # Title-specific sync logic
+    types.ts            # TMDB type definitions
   imdb/
     resolver.ts         # IMDB URL/ID resolution via autocomplete API
   cache/
@@ -182,17 +185,21 @@ server/
     cloudflare-kv.ts    # Cloudflare Workers KV cache
   jobs/
     queue.ts            # In-memory job queue with persistence
-    worker.ts           # Cron scheduler & job execution
+    processor.ts        # Job execution logic
+    schedule.ts         # Cron scheduling
+    worker.ts           # Job worker loop
     sync.ts             # Title & episode sync job handlers
     notifications.ts    # Notification dispatch job
     backup.ts           # Database backup job
-    migrate-titles.ts   # Data migration job
+    migrate-titles.ts   # Title data migration job
+    migrate-backdrops.ts # Backdrop data migration job
   middleware/
     auth.ts             # optionalAuth, requireAuth, requireAdmin
     rate-limit.ts       # Token bucket rate limiter
   notifications/
     discord.ts          # Discord webhook sender
     webpush.ts          # Web Push sender
+    vapid.ts            # VAPID key management
     content.ts          # Notification content builder
     registry.ts         # Provider registry
     types.ts            # Notification types
@@ -313,5 +320,5 @@ bun run check                # Full CI: type check + lint + tests
 E2E tests use Playwright:
 
 ```bash
-bun run playwright test      # Run E2E tests
+bun run test:e2e             # Run E2E tests
 ```
