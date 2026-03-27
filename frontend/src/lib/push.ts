@@ -6,14 +6,7 @@ export function isPushSupported(): boolean {
   );
 }
 
-export async function subscribeToPush(
-  vapidPublicKey: string
-): Promise<{ endpoint: string; p256dh: string; auth: string }> {
-  const registration = await navigator.serviceWorker.ready;
-  return subscribeToPushWith(vapidPublicKey, registration.pushManager);
-}
-
-/** Core logic, separated for testability without navigator mocking. */
+/** Core subscription logic, separated for testability without navigator mocking. */
 export async function subscribeToPushWith(
   vapidPublicKey: string,
   pm: PushManager
@@ -45,6 +38,13 @@ export async function subscribeToPushWith(
     p256dh: json.keys.p256dh,
     auth: json.keys.auth,
   };
+}
+
+export async function subscribeToPush(
+  vapidPublicKey: string
+): Promise<{ endpoint: string; p256dh: string; auth: string }> {
+  const registration = await navigator.serviceWorker.ready;
+  return subscribeToPushWith(vapidPublicKey, registration.pushManager);
 }
 
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
