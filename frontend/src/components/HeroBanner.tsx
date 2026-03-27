@@ -97,7 +97,7 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
 
   return (
     <div
-      className="hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[450px]"
+      className="group hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[450px]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -241,13 +241,13 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
         <>
           <button
             onClick={() => goTo(activeIndex - 1)}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           >
             <ChevronLeft size={20} />
           </button>
           <button
             onClick={() => goTo(activeIndex + 1)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           >
             <ChevronRight size={20} />
           </button>
