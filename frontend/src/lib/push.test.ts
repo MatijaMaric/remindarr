@@ -1,32 +1,25 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock } from "bun:test";
 import { subscribeToPush } from "./push";
 
-// happy-dom may define serviceWorker on Navigator.prototype (getter) or on the instance.
-// We must override wherever it lives so the mock takes effect across Bun/OS versions.
-const swDefinedOnPrototype = !!Object.getOwnPropertyDescriptor(Navigator.prototype, "serviceWorker");
-const mockTarget = swDefinedOnPrototype ? Navigator.prototype : navigator;
-const savedServiceWorkerDescriptor = Object.getOwnPropertyDescriptor(mockTarget, "serviceWorker");
-
-function setupServiceWorkerMock(opts: {
+function makeServiceWorker(opts: {
   existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
-  newSubscription?: { toJSON: () => Record<string, any> };
+  newSubscription?: { toJSON: () => Record<string, unknown> };
 }) {
   const mockSubscribe = mock(() => Promise.resolve(opts.newSubscription));
-  const mockGetSubscription = mock(() => Promise.resolve(opts.existingSubscription ?? null));
+  const mockGetSubscription = mock(() =>
+    Promise.resolve(opts.existingSubscription ?? null)
+  );
 
-  Object.defineProperty(mockTarget, "serviceWorker", {
-    value: {
-      ready: Promise.resolve({
-        pushManager: {
-          getSubscription: mockGetSubscription,
-          subscribe: mockSubscribe,
-        },
-      }),
-    },
-    configurable: true,
-  });
+  const sw = {
+    ready: Promise.resolve({
+      pushManager: {
+        getSubscription: mockGetSubscription,
+        subscribe: mockSubscribe,
+      },
+    }),
+  } as unknown as Pick<ServiceWorkerContainer, "ready">;
 
-  return { mockSubscribe, mockGetSubscription };
+  return { mockSubscribe, mockGetSubscription, sw };
 }
 
 const VALID_SUBSCRIPTION = {
@@ -37,23 +30,14 @@ const VALID_SUBSCRIPTION = {
 };
 
 describe("subscribeToPush", () => {
-  afterEach(() => {
-    // Restore navigator.serviceWorker to avoid leaked state between tests
-    if (savedServiceWorkerDescriptor) {
-      Object.defineProperty(mockTarget, "serviceWorker", savedServiceWorkerDescriptor);
-    } else {
-      delete (mockTarget as any).serviceWorker;
-    }
-  });
-
   it("unsubscribes existing subscription before creating new one", async () => {
     const mockUnsubscribe = mock(() => Promise.resolve(true));
-    const { mockSubscribe, mockGetSubscription } = setupServiceWorkerMock({
+    const { mockSubscribe, mockGetSubscription, sw } = makeServiceWorker({
       existingSubscription: { unsubscribe: mockUnsubscribe },
       newSubscription: VALID_SUBSCRIPTION,
     });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", sw);
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockUnsubscribe).toHaveBeenCalled();
@@ -64,13 +48,15 @@ describe("subscribeToPush", () => {
   });
 
   it("proceeds even if existing unsubscribe fails", async () => {
-    const mockUnsubscribe = mock(() => Promise.reject(new Error("unsubscribe failed")));
-    const { mockSubscribe } = setupServiceWorkerMock({
+    const mockUnsubscribe = mock(() =>
+      Promise.reject(new Error("unsubscribe failed"))
+    );
+    const { mockSubscribe, sw } = makeServiceWorker({
       existingSubscription: { unsubscribe: mockUnsubscribe },
       newSubscription: VALID_SUBSCRIPTION,
     });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", sw);
 
     expect(mockUnsubscribe).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -78,12 +64,12 @@ describe("subscribeToPush", () => {
   });
 
   it("works when no existing subscription", async () => {
-    const { mockSubscribe, mockGetSubscription } = setupServiceWorkerMock({
+    const { mockSubscribe, mockGetSubscription, sw } = makeServiceWorker({
       existingSubscription: null,
       newSubscription: VALID_SUBSCRIPTION,
     });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", sw);
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -91,12 +77,14 @@ describe("subscribeToPush", () => {
   });
 
   it("throws when subscription has missing keys", async () => {
-    setupServiceWorkerMock({
+    const { sw } = makeServiceWorker({
       newSubscription: {
         toJSON: () => ({ endpoint: "https://fcm.example.com/send/x", keys: {} }),
       },
     });
 
-    await expect(subscribeToPush("test-vapid-key")).rejects.toThrow("Invalid push subscription");
+    await expect(subscribeToPush("test-vapid-key", sw)).rejects.toThrow(
+      "Invalid push subscription"
+    );
   });
 });

@@ -7,9 +7,10 @@ export function isPushSupported(): boolean {
 }
 
 export async function subscribeToPush(
-  vapidPublicKey: string
+  vapidPublicKey: string,
+  sw: Pick<ServiceWorkerContainer, "ready"> = navigator.serviceWorker
 ): Promise<{ endpoint: string; p256dh: string; auth: string }> {
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await sw.ready;
 
   // Force-clear any existing subscription to guarantee a fresh endpoint.
   // Without this, pushManager.subscribe() with the same applicationServerKey
@@ -40,9 +41,11 @@ export async function subscribeToPush(
   };
 }
 
-export async function getExistingSubscription(): Promise<PushSubscription | null> {
+export async function getExistingSubscription(
+  sw: Pick<ServiceWorkerContainer, "ready"> = navigator.serviceWorker
+): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await sw.ready;
   return registration.pushManager.getSubscription();
 }
 
