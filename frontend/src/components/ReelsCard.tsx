@@ -1,6 +1,7 @@
 import { CheckCircle, Check } from "lucide-react";
 import { Link } from "react-router";
 import type { Episode, Offer } from "../types";
+import WatchButton from "./WatchButton";
 
 function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
@@ -136,15 +137,28 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
             {providers.length > 0 && (
               <div className="flex gap-2 mb-4">
                 {providers.map((p) => (
-                  <img
+                  <WatchButton
                     key={p.provider_id}
-                    src={p.provider_icon_url}
-                    alt={p.provider_name}
-                    title={p.provider_name}
-                    className="w-8 h-8 rounded-lg"
-                    loading="lazy"
+                    url={p.url}
+                    providerId={p.provider_id}
+                    providerName={p.provider_name}
+                    providerIconUrl={p.provider_icon_url}
+                    variant="compact"
                   />
                 ))}
+              </div>
+            )}
+
+            {/* Watch on provider button */}
+            {providers.length > 0 && (
+              <div className="mb-2">
+                <WatchButton
+                  url={providers[0].url}
+                  providerId={providers[0].provider_id}
+                  providerName={providers[0].provider_name}
+                  providerIconUrl={providers[0].provider_icon_url}
+                  variant="full"
+                />
               </div>
             )}
 

@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { Episode, Offer } from "../types";
+import WatchButton from "./WatchButton";
 
 export function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
@@ -124,9 +125,7 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
         {providers.length > 0 && (
           <div className="flex gap-1 flex-shrink-0">
             {providers.slice(0, 3).map((o) => (
-              <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
-                <img src={o.provider_icon_url} alt={o.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-              </a>
+              <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
             ))}
           </div>
         )}
@@ -164,9 +163,7 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
           {providers.length > 0 && (
             <div className="flex gap-1.5 mt-3">
               {providers.map((o) => (
-                <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
-                  <img src={o.provider_icon_url} alt={o.provider_name} className="w-7 h-7 rounded-md" loading="lazy" />
-                </a>
+                <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
               ))}
             </div>
           )}
@@ -215,9 +212,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
         {providers.length > 0 && (
           <div className="flex gap-1 flex-shrink-0">
             {providers.slice(0, 3).map((o) => (
-              <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
-                <img src={o.provider_icon_url} alt={o.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-              </a>
+              <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
             ))}
           </div>
         )}
@@ -251,9 +246,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
           {providers.length > 0 && (
             <div className="flex gap-1.5 mt-3">
               {providers.map((o) => (
-                <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
-                  <img src={o.provider_icon_url} alt={o.provider_name} className="w-7 h-7 rounded-md" loading="lazy" />
-                </a>
+                <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
               ))}
             </div>
           )}

@@ -16,6 +16,8 @@ import { WatchedIcon } from "../components/EpisodeComponents";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
+import WatchButton from "../components/WatchButton";
+import { getProviderColor } from "../data/providerColors";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -99,7 +101,7 @@ function NetworkList({ networks }: { networks: { id: number; name: string; logo_
   );
 }
 
-function ProviderRow({ label, providers }: { label: string; providers: { logo_path: string; provider_name: string }[] }) {
+function ProviderRow({ label, providers, watchLink }: { label: string; providers: { logo_path: string; provider_name: string; provider_id: number }[]; watchLink?: string }) {
   const [expanded, setExpanded] = useState(false);
   if (!providers?.length) return null;
   const hasMore = providers.length > PROVIDER_DISPLAY_LIMIT;
@@ -108,12 +110,27 @@ function ProviderRow({ label, providers }: { label: string; providers: { logo_pa
     <div className="flex items-center gap-3">
       <span className="text-sm text-zinc-400 w-20 shrink-0">{label}</span>
       <div className="flex flex-wrap gap-2 items-center">
-        {visible.map((p) => (
-          <div key={p.provider_name} className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1">
-            <img src={`${TMDB_IMG}/w45${p.logo_path}`} alt={p.provider_name} className="w-6 h-6 rounded" />
-            <span className="text-sm text-zinc-300">{p.provider_name}</span>
-          </div>
-        ))}
+        {visible.map((p) => {
+          const color = getProviderColor(p.provider_id);
+          const chip = (
+            <div
+              key={p.provider_name}
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors"
+              style={{ backgroundColor: `${color.bg}20`, borderLeft: `3px solid ${color.bg}` }}
+            >
+              <img src={`${TMDB_IMG}/w45${p.logo_path}`} alt={p.provider_name} className="w-6 h-6 rounded" />
+              <span className="text-sm text-zinc-300">{p.provider_name}</span>
+            </div>
+          );
+          if (watchLink) {
+            return (
+              <a key={p.provider_name} href={watchLink} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                {chip}
+              </a>
+            );
+          }
+          return chip;
+        })}
         {hasMore && (
           <button
             onClick={() => setExpanded(!expanded)}
@@ -306,9 +323,24 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
             </div>
 
-            <div className="pt-2 flex items-center gap-3">
+            <div className="pt-2 flex flex-wrap items-center gap-3">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
               <WatchedIcon watched={watched} onClick={toggleWatched} />
+              {(() => {
+                const streamingOffer = dedupeOffers(title.offers).find(o =>
+                  o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS"
+                );
+                if (!streamingOffer) return null;
+                return (
+                  <WatchButton
+                    url={streamingOffer.url}
+                    providerId={streamingOffer.provider_id}
+                    providerName={streamingOffer.provider_name}
+                    providerIconUrl={streamingOffer.provider_icon_url}
+                    variant="full"
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -387,29 +419,25 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {watchProviders && (
         <Section title="Where to Watch">
           <div className="space-y-3">
-            <ProviderRow label="Stream" providers={watchProviders.flatrate || []} />
-            <ProviderRow label="Free" providers={watchProviders.free || []} />
-            <ProviderRow label="Ads" providers={watchProviders.ads || []} />
-            <ProviderRow label="Rent" providers={watchProviders.rent || []} />
-            <ProviderRow label="Buy" providers={watchProviders.buy || []} />
+            <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
           </div>
-          {/* Also show existing offers */}
           {title.offers.length > 0 && (
             <div className="mt-4 pt-4 border-t border-white/[0.06]">
               <p className="text-xs text-zinc-500 mb-2">Direct links</p>
               <div className="flex flex-wrap gap-2">
                 {dedupeOffers(title.offers).map((offer) => (
-                  <a
+                  <WatchButton
                     key={offer.id}
-                    href={offer.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
-                    title={`${offer.provider_name} (${offer.monetization_type})`}
-                  >
-                    <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                    <span className="text-sm text-zinc-300">{offer.provider_name}</span>
-                  </a>
+                    url={offer.url}
+                    providerId={offer.provider_id}
+                    providerName={offer.provider_name}
+                    providerIconUrl={offer.provider_icon_url}
+                    variant="full"
+                  />
                 ))}
               </div>
             </div>
@@ -417,22 +445,18 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
         </Section>
       )}
 
-      {/* If no TMDB watch providers, still show JW offers */}
       {!watchProviders && title.offers.length > 0 && (
         <Section title="Where to Watch">
           <div className="flex flex-wrap gap-2">
             {dedupeOffers(title.offers).map((offer) => (
-              <a
+              <WatchButton
                 key={offer.id}
-                href={offer.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
-                title={`${offer.provider_name} (${offer.monetization_type})`}
-              >
-                <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                <span className="text-sm text-zinc-300">{offer.provider_name}</span>
-              </a>
+                url={offer.url}
+                providerId={offer.provider_id}
+                providerName={offer.provider_name}
+                providerIconUrl={offer.provider_icon_url}
+                variant="full"
+              />
             ))}
           </div>
         </Section>
@@ -600,8 +624,23 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center gap-3">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+              {(() => {
+                const streamingOffer = dedupeOffers(title.offers).find(o =>
+                  o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS"
+                );
+                if (!streamingOffer) return null;
+                return (
+                  <WatchButton
+                    url={streamingOffer.url}
+                    providerId={streamingOffer.provider_id}
+                    providerName={streamingOffer.provider_name}
+                    providerIconUrl={streamingOffer.provider_icon_url}
+                    variant="full"
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -676,28 +715,25 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {watchProviders && (
         <Section title="Where to Watch">
           <div className="space-y-3">
-            <ProviderRow label="Stream" providers={watchProviders.flatrate || []} />
-            <ProviderRow label="Free" providers={watchProviders.free || []} />
-            <ProviderRow label="Ads" providers={watchProviders.ads || []} />
-            <ProviderRow label="Rent" providers={watchProviders.rent || []} />
-            <ProviderRow label="Buy" providers={watchProviders.buy || []} />
+            <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
+            <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
           </div>
           {title.offers.length > 0 && (
             <div className="mt-4 pt-4 border-t border-white/[0.06]">
               <p className="text-xs text-zinc-500 mb-2">Direct links</p>
               <div className="flex flex-wrap gap-2">
                 {dedupeOffers(title.offers).map((offer) => (
-                  <a
+                  <WatchButton
                     key={offer.id}
-                    href={offer.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
-                    title={`${offer.provider_name} (${offer.monetization_type})`}
-                  >
-                    <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                    <span className="text-sm text-zinc-300">{offer.provider_name}</span>
-                  </a>
+                    url={offer.url}
+                    providerId={offer.provider_id}
+                    providerName={offer.provider_name}
+                    providerIconUrl={offer.provider_icon_url}
+                    variant="full"
+                  />
                 ))}
               </div>
             </div>
@@ -709,17 +745,14 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
         <Section title="Where to Watch">
           <div className="flex flex-wrap gap-2">
             {dedupeOffers(title.offers).map((offer) => (
-              <a
+              <WatchButton
                 key={offer.id}
-                href={offer.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 hover:bg-zinc-700 transition-colors"
-                title={`${offer.provider_name} (${offer.monetization_type})`}
-              >
-                <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-                <span className="text-sm text-zinc-300">{offer.provider_name}</span>
-              </a>
+                url={offer.url}
+                providerId={offer.provider_id}
+                providerName={offer.provider_name}
+                providerIconUrl={offer.provider_icon_url}
+                variant="full"
+              />
             ))}
           </div>
         </Section>

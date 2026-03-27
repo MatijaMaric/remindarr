@@ -8,6 +8,7 @@ import {
   getUniqueProviders,
   getEpisodeCardImageUrl,
 } from "./EpisodeComponents";
+import WatchButton from "./WatchButton";
 
 /** Shared card component used across Unwatched, Today, Coming Up, and Calendar sections */
 export const EpisodeShowCard = memo(function EpisodeShowCard({
@@ -73,9 +74,7 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
         {providers.length > 0 && (
           <div className="flex gap-1.5 mt-2">
             {providers.slice(0, 4).map((o) => (
-              <a key={o.provider_id} href={o.url} target="_blank" rel="noopener noreferrer" title={o.provider_name}>
-                <img src={o.provider_icon_url} alt={o.provider_name} className="w-6 h-6 rounded" loading="lazy" />
-              </a>
+              <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
             ))}
           </div>
         )}

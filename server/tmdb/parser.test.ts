@@ -110,6 +110,7 @@ describe("parseMovieDetails", () => {
     expect(result.offers).toHaveLength(1);
     expect(result.offers[0].providerName).toBe("Netflix");
     expect(result.offers[0].monetizationType).toBe("FLATRATE");
+    expect(result.offers[0].url).toBe("https://tmdb.org");
   });
 });
 
