@@ -1,20 +1,26 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { describe, it, expect, mock, afterAll } from "bun:test";
+import { subscribeToPush, _setRegistrationProvider } from "./push";
 
-const mockGetSubscription = mock();
-const mockSubscribe = mock();
+function makeRegistration(opts: {
+  existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
+  newSubscription?: { toJSON: () => Record<string, unknown> };
+}) {
+  const mockSubscribe = mock(() => Promise.resolve(opts.newSubscription));
+  const mockGetSubscription = mock(() =>
+    Promise.resolve(opts.existingSubscription ?? null)
+  );
 
-mock.module("./push-registration", () => ({
-  getRegistration: () =>
+  _setRegistrationProvider(() =>
     Promise.resolve({
       pushManager: {
         getSubscription: mockGetSubscription,
         subscribe: mockSubscribe,
       },
-    }),
-}));
+    } as unknown as ServiceWorkerRegistration)
+  );
 
-// Must import AFTER mock.module
-const { subscribeToPush } = await import("./push");
+  return { mockSubscribe, mockGetSubscription };
+}
 
 const VALID_SUBSCRIPTION = {
   toJSON: () => ({
@@ -24,19 +30,17 @@ const VALID_SUBSCRIPTION = {
 };
 
 describe("subscribeToPush", () => {
-  beforeEach(() => {
-    mockGetSubscription.mockReset();
-    mockSubscribe.mockReset();
+  afterAll(() => {
+    // Restore default provider
+    _setRegistrationProvider(() => navigator.serviceWorker.ready);
   });
 
   it("unsubscribes existing subscription before creating new one", async () => {
     const mockUnsubscribe = mock(() => Promise.resolve(true));
-    mockGetSubscription.mockImplementation(() =>
-      Promise.resolve({ unsubscribe: mockUnsubscribe })
-    );
-    mockSubscribe.mockImplementation(() =>
-      Promise.resolve(VALID_SUBSCRIPTION)
-    );
+    const { mockSubscribe, mockGetSubscription } = makeRegistration({
+      existingSubscription: { unsubscribe: mockUnsubscribe },
+      newSubscription: VALID_SUBSCRIPTION,
+    });
 
     const result = await subscribeToPush("test-vapid-key");
 
@@ -52,12 +56,10 @@ describe("subscribeToPush", () => {
     const mockUnsubscribe = mock(() =>
       Promise.reject(new Error("unsubscribe failed"))
     );
-    mockGetSubscription.mockImplementation(() =>
-      Promise.resolve({ unsubscribe: mockUnsubscribe })
-    );
-    mockSubscribe.mockImplementation(() =>
-      Promise.resolve(VALID_SUBSCRIPTION)
-    );
+    const { mockSubscribe } = makeRegistration({
+      existingSubscription: { unsubscribe: mockUnsubscribe },
+      newSubscription: VALID_SUBSCRIPTION,
+    });
 
     const result = await subscribeToPush("test-vapid-key");
 
@@ -67,10 +69,10 @@ describe("subscribeToPush", () => {
   });
 
   it("works when no existing subscription", async () => {
-    mockGetSubscription.mockImplementation(() => Promise.resolve(null));
-    mockSubscribe.mockImplementation(() =>
-      Promise.resolve(VALID_SUBSCRIPTION)
-    );
+    const { mockSubscribe, mockGetSubscription } = makeRegistration({
+      existingSubscription: null,
+      newSubscription: VALID_SUBSCRIPTION,
+    });
 
     const result = await subscribeToPush("test-vapid-key");
 
@@ -80,15 +82,14 @@ describe("subscribeToPush", () => {
   });
 
   it("throws when subscription has missing keys", async () => {
-    mockGetSubscription.mockImplementation(() => Promise.resolve(null));
-    mockSubscribe.mockImplementation(() =>
-      Promise.resolve({
+    makeRegistration({
+      newSubscription: {
         toJSON: () => ({
           endpoint: "https://fcm.example.com/send/x",
           keys: {},
         }),
-      })
-    );
+      },
+    });
 
     await expect(subscribeToPush("test-vapid-key")).rejects.toThrow(
       "Invalid push subscription"
