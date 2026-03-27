@@ -18,7 +18,7 @@ import {
   parseTvDetails,
   type ParsedTitle,
 } from "../tmdb/parser";
-import { getTrackedTitleIds } from "../db/repository";
+import { getTrackedTitleIds, upsertTitles } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
@@ -180,6 +180,14 @@ app.get("/", async (c) => {
         }
       })
     );
+
+    // Persist titles with offers to DB so stream buttons appear on subsequent views
+    const titlesWithOffers = titles.filter((t) => t.offers.length > 0);
+    if (titlesWithOffers.length > 0) {
+      upsertTitles(titlesWithOffers).catch((e) => {
+        log.error("Failed to persist browse titles", { error: (e as Error).message });
+      });
+    }
 
     const user = c.get("user");
     const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();

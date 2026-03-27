@@ -161,6 +161,15 @@ describe("upsertTitles", () => {
     expect(offers).toHaveLength(1);
     expect(offers[0].provider_id).toBe(337);
   });
+
+  it("preserves existing offers when re-upserting with empty offers", async () => {
+    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8 })] })]);
+    await upsertTitles([makeParsedTitle({ offers: [] })]);
+
+    const offers = await getOffersForTitle("movie-123");
+    expect(offers).toHaveLength(1);
+    expect(offers[0].provider_id).toBe(8);
+  });
 });
 
 // ─── Title Queries ──────────────────────────────────────────────────────────

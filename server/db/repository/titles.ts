@@ -98,21 +98,23 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
         await db.insert(titleGenres).values({ titleId: t.id, genre }).onConflictDoNothing().run();
       }
 
-      // Replace offers
-      await db.delete(offers).where(eq(offers.titleId, t.id)).run();
-      for (const o of t.offers) {
-        await db.insert(offers)
-          .values({
-            titleId: o.titleId,
-            providerId: o.providerId,
-            monetizationType: o.monetizationType,
-            presentationType: o.presentationType,
-            priceValue: o.priceValue,
-            priceCurrency: o.priceCurrency,
-            url: o.url,
-            availableTo: o.availableTo,
-          })
-          .run();
+      // Replace offers only when new data includes them (prevents sync fallback from wiping existing offers)
+      if (t.offers.length > 0) {
+        await db.delete(offers).where(eq(offers.titleId, t.id)).run();
+        for (const o of t.offers) {
+          await db.insert(offers)
+            .values({
+              titleId: o.titleId,
+              providerId: o.providerId,
+              monetizationType: o.monetizationType,
+              presentationType: o.presentationType,
+              priceValue: o.priceValue,
+              priceCurrency: o.priceCurrency,
+              url: o.url,
+              availableTo: o.availableTo,
+            })
+            .run();
+        }
       }
 
       // Upsert scores
