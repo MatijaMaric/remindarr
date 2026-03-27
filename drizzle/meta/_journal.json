@@ -64,6 +64,13 @@
       "when": 1774752300000,
       "tag": "0008_passkey_nullable_webauthn_user_id",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1774852400000,
+      "tag": "0009_add_deep_link_and_sa_fetched",
+      "breakpoints": true
     }
   ]
 }

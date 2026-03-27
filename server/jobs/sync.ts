@@ -12,6 +12,9 @@ import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { migrateTitles } from "./migrate-titles";
 import { migrateBackdrops } from "./migrate-backdrops";
 import { migrateOffers } from "./migrate-offers";
+import { enrichTitleDeepLinks } from "../streaming-availability/enrich";
+import { RateLimitError } from "../streaming-availability/types";
+import { getTitlesNeedingSaEnrichment } from "../db/repository";
 
 export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -90,10 +93,48 @@ export function registerSyncJobs() {
     await migrateOffers();
   });
 
+  registerHandler("sync-deep-links", async () => {
+    if (!CONFIG.STREAMING_AVAILABILITY_API_KEY) {
+      log.info("Skipping deep link sync", { reason: "STREAMING_AVAILABILITY_API_KEY not configured" });
+      return;
+    }
+    const titleRows = await getTitlesNeedingSaEnrichment(CONFIG.SA_DAILY_BUDGET);
+    if (titleRows.length === 0) {
+      log.info("No titles need deep link enrichment");
+      return;
+    }
+    log.info("Starting deep link sync", { count: titleRows.length });
+    let enriched = 0;
+    let processed = 0;
+    for (const t of titleRows) {
+      try {
+        const count = await enrichTitleDeepLinks(
+          t.id,
+          Number(t.tmdbId),
+          t.objectType as "MOVIE" | "SHOW",
+        );
+        enriched += count;
+        processed++;
+      } catch (err) {
+        if (err instanceof RateLimitError) {
+          log.warn("SA rate limit hit, stopping early", { processed, enriched });
+          break;
+        }
+        log.error("SA enrichment failed", { titleId: t.id, err });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    log.info("Deep link sync complete", { processed, enriched });
+  });
+
   // ─── Cron Schedules ────────────────────────────────────────────────────
 
   registerCron("sync-titles", CONFIG.SYNC_TITLES_CRON);
   registerCron("sync-episodes", CONFIG.SYNC_EPISODES_CRON);
+
+  if (CONFIG.STREAMING_AVAILABILITY_API_KEY) {
+    registerCron("sync-deep-links", CONFIG.SYNC_DEEP_LINKS_CRON);
+  }
 
   // Enqueue one-time title migration (will no-op if all titles already have original_title)
   enqueueJob("migrate-titles", undefined, { maxAttempts: 1 });
@@ -103,4 +144,9 @@ export function registerSyncJobs() {
 
   // Enqueue one-time offers backfill (will no-op if all titles already have offers)
   enqueueJob("migrate-offers", undefined, { maxAttempts: 1 });
+
+  // Enqueue one-time deep link backfill for existing titles
+  if (CONFIG.STREAMING_AVAILABILITY_API_KEY) {
+    enqueueJob("sync-deep-links", undefined, { maxAttempts: 1 });
+  }
 }

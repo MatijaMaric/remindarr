@@ -45,6 +45,7 @@ export const titles = sqliteTable(
     ageCertification: text("age_certification"),
     originalLanguage: text("original_language"),
     tmdbUrl: text("tmdb_url"),
+    saFetchedAt: text("sa_fetched_at"),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [
@@ -75,6 +76,7 @@ export const offers = sqliteTable(
     priceValue: real("price_value"),
     priceCurrency: text("price_currency"),
     url: text("url"),
+    deepLink: text("deep_link"),
     availableTo: text("available_to"),
   },
   (table) => [

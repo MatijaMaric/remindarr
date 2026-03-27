@@ -53,6 +53,11 @@ export const CONFIG = {
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || "",
   VAPID_SUBJECT: process.env.VAPID_SUBJECT || "",
 
+  // Streaming Availability API (deep links)
+  STREAMING_AVAILABILITY_API_KEY: process.env.STREAMING_AVAILABILITY_API_KEY || "",
+  SYNC_DEEP_LINKS_CRON: process.env.SYNC_DEEP_LINKS_CRON || "0 4 * * *",
+  SA_DAILY_BUDGET: Number(process.env.SA_DAILY_BUDGET) || 95,
+
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 
