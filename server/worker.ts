@@ -64,7 +64,7 @@ import { patchConfig } from "./config";
 import Sentry from "./sentry";
 import { withSentry } from "@sentry/cloudflare";
 import { CloudflarePlatform } from "./platform/cloudflare";
-import { processPendingJobs, enqueueCronJob, cleanupOldJobs } from "./jobs/processor";
+import { processPendingJobs, enqueueCronJob, enqueueOneTimeMigration, cleanupOldJobs } from "./jobs/processor";
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
 import type { DrizzleDb } from "./platform/types";
@@ -412,6 +412,9 @@ const handler = {
             logger.info("Cleanup complete");
             break;
         }
+
+        // One-time migrations: enqueue if no job exists at all for this name
+        await enqueueOneTimeMigration("migrate-offers");
 
         // Process all pending jobs (cron-triggered + ad-hoc like sync-show-episodes)
         const processed = await processPendingJobs();
