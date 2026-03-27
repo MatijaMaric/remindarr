@@ -79,11 +79,10 @@ export default function WatchButton({
       {label && <span className="opacity-75">{label}</span>}
       <img
         src={providerIconUrl}
-        alt=""
+        alt={providerName}
         className="w-5 h-5 rounded"
         loading="lazy"
       />
-      {providerName}
       <ExternalLink size={14} className="opacity-60" />
     </a>
   );

@@ -19,12 +19,14 @@ describe("WatchButton", () => {
     expect(link!.getAttribute("title")).toBe("Netflix");
   });
 
-  it("renders full variant with provider name", () => {
+  it("renders full variant with provider icon only (no name text)", () => {
     const { container } = render(<WatchButton {...defaultProps} variant="full" />);
     const link = container.querySelector("a");
     expect(link).toBeTruthy();
-    expect(link!.textContent).toContain("Netflix");
+    expect(link!.textContent).not.toContain("Netflix");
     expect(link!.getAttribute("href")).toBe("https://example.com/watch");
+    const img = link!.querySelector("img");
+    expect(img!.getAttribute("alt")).toBe("Netflix");
   });
 
   it("renders compact variant by default", () => {
@@ -50,7 +52,7 @@ describe("WatchButton", () => {
     );
     const link = container.querySelector("a");
     expect(link!.textContent).toContain("Stream");
-    expect(link!.textContent).toContain("Netflix");
+    expect(link!.textContent).not.toContain("Netflix");
   });
 
   it("renders Rent label for RENT monetization type", () => {

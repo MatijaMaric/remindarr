@@ -47,7 +47,7 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
       onClick={toggle}
       disabled={loading}
       aria-pressed={tracked}
-      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+      className={`w-full px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
         tracked
           ? "bg-amber-500 text-zinc-950 hover:bg-red-500"
           : "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950"
