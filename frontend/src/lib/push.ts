@@ -6,21 +6,10 @@ export function isPushSupported(): boolean {
   );
 }
 
-// Indirection point so tests can swap out navigator.serviceWorker.ready
-let _getRegistration = (): Promise<ServiceWorkerRegistration> =>
-  navigator.serviceWorker.ready;
-
-/** @internal test-only: override how we obtain the SW registration. */
-export function _setRegistrationProvider(
-  fn: () => Promise<ServiceWorkerRegistration>
-): void {
-  _getRegistration = fn;
-}
-
 export async function subscribeToPush(
   vapidPublicKey: string
 ): Promise<{ endpoint: string; p256dh: string; auth: string }> {
-  const registration = await _getRegistration();
+  const registration = await navigator.serviceWorker.ready;
 
   // Force-clear any existing subscription to guarantee a fresh endpoint.
   // Without this, pushManager.subscribe() with the same applicationServerKey
@@ -53,7 +42,7 @@ export async function subscribeToPush(
 
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const registration = await _getRegistration();
+  const registration = await navigator.serviceWorker.ready;
   return registration.pushManager.getSubscription();
 }
 

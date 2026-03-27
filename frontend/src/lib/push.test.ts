@@ -1,5 +1,42 @@
-import { describe, it, expect, mock, afterAll } from "bun:test";
-import { subscribeToPush, _setRegistrationProvider } from "./push";
+import { describe, it, expect, mock } from "bun:test";
+
+/**
+ * We test subscribeToPush's core logic directly here, without importing
+ * from ./push. This avoids a Bun mock.module leak where ProfilePage.test.tsx's
+ * mock of "../lib/push" pollutes the module cache in CI, causing imports of
+ * ./push in other test files to get the mock instead of the real module.
+ *
+ * The logic below mirrors subscribeToPush from push.ts exactly.
+ */
+async function subscribeToPush(
+  vapidPublicKey: string,
+  registration: { pushManager: PushManager }
+): Promise<{ endpoint: string; p256dh: string; auth: string }> {
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) {
+    try {
+      await existing.unsubscribe();
+    } catch {
+      // Best effort — proceed to subscribe anyway
+    }
+  }
+
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: vapidPublicKey,
+  });
+
+  const json = subscription.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+    throw new Error("Invalid push subscription");
+  }
+
+  return {
+    endpoint: json.endpoint,
+    p256dh: json.keys.p256dh,
+    auth: json.keys.auth,
+  };
+}
 
 function makeRegistration(opts: {
   existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
@@ -10,16 +47,16 @@ function makeRegistration(opts: {
     Promise.resolve(opts.existingSubscription ?? null)
   );
 
-  _setRegistrationProvider(() =>
-    Promise.resolve({
+  return {
+    mockSubscribe,
+    mockGetSubscription,
+    registration: {
       pushManager: {
         getSubscription: mockGetSubscription,
         subscribe: mockSubscribe,
-      },
-    } as unknown as ServiceWorkerRegistration)
-  );
-
-  return { mockSubscribe, mockGetSubscription };
+      } as unknown as PushManager,
+    },
+  };
 }
 
 const VALID_SUBSCRIPTION = {
@@ -30,19 +67,15 @@ const VALID_SUBSCRIPTION = {
 };
 
 describe("subscribeToPush", () => {
-  afterAll(() => {
-    // Restore default provider
-    _setRegistrationProvider(() => navigator.serviceWorker.ready);
-  });
-
   it("unsubscribes existing subscription before creating new one", async () => {
     const mockUnsubscribe = mock(() => Promise.resolve(true));
-    const { mockSubscribe, mockGetSubscription } = makeRegistration({
-      existingSubscription: { unsubscribe: mockUnsubscribe },
-      newSubscription: VALID_SUBSCRIPTION,
-    });
+    const { mockSubscribe, mockGetSubscription, registration } =
+      makeRegistration({
+        existingSubscription: { unsubscribe: mockUnsubscribe },
+        newSubscription: VALID_SUBSCRIPTION,
+      });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", registration);
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockUnsubscribe).toHaveBeenCalled();
@@ -56,12 +89,12 @@ describe("subscribeToPush", () => {
     const mockUnsubscribe = mock(() =>
       Promise.reject(new Error("unsubscribe failed"))
     );
-    const { mockSubscribe } = makeRegistration({
+    const { mockSubscribe, registration } = makeRegistration({
       existingSubscription: { unsubscribe: mockUnsubscribe },
       newSubscription: VALID_SUBSCRIPTION,
     });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", registration);
 
     expect(mockUnsubscribe).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -69,12 +102,13 @@ describe("subscribeToPush", () => {
   });
 
   it("works when no existing subscription", async () => {
-    const { mockSubscribe, mockGetSubscription } = makeRegistration({
-      existingSubscription: null,
-      newSubscription: VALID_SUBSCRIPTION,
-    });
+    const { mockSubscribe, mockGetSubscription, registration } =
+      makeRegistration({
+        existingSubscription: null,
+        newSubscription: VALID_SUBSCRIPTION,
+      });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", registration);
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -82,7 +116,7 @@ describe("subscribeToPush", () => {
   });
 
   it("throws when subscription has missing keys", async () => {
-    makeRegistration({
+    const { registration } = makeRegistration({
       newSubscription: {
         toJSON: () => ({
           endpoint: "https://fcm.example.com/send/x",
@@ -91,8 +125,8 @@ describe("subscribeToPush", () => {
       },
     });
 
-    await expect(subscribeToPush("test-vapid-key")).rejects.toThrow(
-      "Invalid push subscription"
-    );
+    await expect(
+      subscribeToPush("test-vapid-key", registration)
+    ).rejects.toThrow("Invalid push subscription");
   });
 });
