@@ -7,6 +7,7 @@ import { useIsMobile } from "./hooks/useIsMobile";
 import RequireAuth from "./components/RequireAuth";
 import BottomTabBar from "./components/BottomTabBar";
 import OfflineIndicator from "./components/OfflineIndicator";
+import { Github } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 
 // Retry dynamic imports once on failure (handles stale chunks after deploy)
@@ -144,6 +145,20 @@ export default function App() {
           </Routes>
         </Suspense>
       </main>
+      <footer className="hidden sm:block border-t border-white/[0.06] py-6 mt-8">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
+          <span>&copy; {new Date().getFullYear()} Remindarr</span>
+          <a
+            href="https://github.com/MatijaMaric/remindarr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors"
+          >
+            <Github className="size-4" />
+            GitHub
+          </a>
+        </div>
+      </footer>
       <BottomTabBar />
       <OfflineIndicator />
       <Toaster theme="dark" position="bottom-center" richColors />
