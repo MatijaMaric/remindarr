@@ -96,6 +96,7 @@ interface Env {
   PASSKEY_RP_ID?: string;
   PASSKEY_RP_NAME?: string;
   PASSKEY_ORIGIN?: string;
+  STREAMING_AVAILABILITY_API_KEY?: string;
 }
 
 const platform = new CloudflarePlatform();
@@ -131,6 +132,7 @@ function patchConfigFromEnv(env: Env): void {
     PASSKEY_RP_ID: env.PASSKEY_RP_ID || undefined,
     PASSKEY_RP_NAME: env.PASSKEY_RP_NAME || undefined,
     PASSKEY_ORIGIN: env.PASSKEY_ORIGIN || undefined,
+    STREAMING_AVAILABILITY_API_KEY: env.STREAMING_AVAILABILITY_API_KEY || "",
   });
 
   // Reinitialize logger in case LOG_LEVEL changed
@@ -403,6 +405,9 @@ const handler = {
           case "30 3 * * *":
             await enqueueCronJob("sync-episodes");
             break;
+          case "0 4 * * *":
+            await enqueueCronJob("sync-deep-links");
+            break;
           case "*/5 * * * *":
             await enqueueCronJob("send-notifications");
             break;
@@ -415,6 +420,7 @@ const handler = {
 
         // One-time migrations: enqueue if no job exists at all for this name
         await enqueueOneTimeMigration("migrate-offers");
+        await enqueueOneTimeMigration("sync-deep-links");
 
         // Process all pending jobs (cron-triggered + ad-hoc like sync-show-episodes)
         const processed = await processPendingJobs();

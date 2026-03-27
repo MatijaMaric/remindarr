@@ -42,6 +42,7 @@ LOG_LEVEL = "info"
 # VAPID_PUBLIC_KEY
 # VAPID_PRIVATE_KEY
 # VAPID_SUBJECT
+# STREAMING_AVAILABILITY_API_KEY  (optional, enables deep links)
 
 # Observability — persist logs and traces for debugging
 [observability]
@@ -59,6 +60,7 @@ invocation_logs = true
 crons = [
   "0 3 * * *",      # sync-titles
   "30 3 * * *",     # sync-episodes
+  "0 4 * * *",      # sync-deep-links (Streaming Availability API)
   "*/5 * * * *",    # send-notifications (check every 5 min)
   "0 0 * * *",      # cleanup (expired sessions, old jobs)
 ]
