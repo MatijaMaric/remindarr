@@ -1,3 +1,5 @@
+import { getRegistration } from "./push-registration";
+
 export function isPushSupported(): boolean {
   return (
     "serviceWorker" in navigator &&
@@ -6,15 +8,15 @@ export function isPushSupported(): boolean {
   );
 }
 
-/** Core subscription logic, separated for testability without navigator mocking. */
-export async function subscribeToPushWith(
-  vapidPublicKey: string,
-  pm: PushManager
+export async function subscribeToPush(
+  vapidPublicKey: string
 ): Promise<{ endpoint: string; p256dh: string; auth: string }> {
+  const registration = await getRegistration();
+
   // Force-clear any existing subscription to guarantee a fresh endpoint.
   // Without this, pushManager.subscribe() with the same applicationServerKey
   // returns the same (potentially expired) subscription.
-  const existing = await pm.getSubscription();
+  const existing = await registration.pushManager.getSubscription();
   if (existing) {
     try {
       await existing.unsubscribe();
@@ -23,7 +25,7 @@ export async function subscribeToPushWith(
     }
   }
 
-  const subscription = await pm.subscribe({
+  const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: vapidPublicKey,
   });
@@ -40,16 +42,9 @@ export async function subscribeToPushWith(
   };
 }
 
-export async function subscribeToPush(
-  vapidPublicKey: string
-): Promise<{ endpoint: string; p256dh: string; auth: string }> {
-  const registration = await navigator.serviceWorker.ready;
-  return subscribeToPushWith(vapidPublicKey, registration.pushManager);
-}
-
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await getRegistration();
   return registration.pushManager.getSubscription();
 }
 

@@ -1,24 +1,20 @@
-import { describe, it, expect, mock } from "bun:test";
-import { subscribeToPushWith } from "./push";
+import { describe, it, expect, mock, beforeEach } from "bun:test";
 
-function makePushManager(opts: {
-  existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
-  newSubscription?: { toJSON: () => Record<string, unknown> };
-}) {
-  const mockSubscribe = mock(() => Promise.resolve(opts.newSubscription));
-  const mockGetSubscription = mock(() =>
-    Promise.resolve(opts.existingSubscription ?? null)
-  );
+const mockGetSubscription = mock();
+const mockSubscribe = mock();
 
-  return {
-    mockSubscribe,
-    mockGetSubscription,
-    pushManager: {
-      getSubscription: mockGetSubscription,
-      subscribe: mockSubscribe,
-    } as unknown as PushManager,
-  };
-}
+mock.module("./push-registration", () => ({
+  getRegistration: () =>
+    Promise.resolve({
+      pushManager: {
+        getSubscription: mockGetSubscription,
+        subscribe: mockSubscribe,
+      },
+    }),
+}));
+
+// Must import AFTER mock.module
+const { subscribeToPush } = await import("./push");
 
 const VALID_SUBSCRIPTION = {
   toJSON: () => ({
@@ -28,15 +24,21 @@ const VALID_SUBSCRIPTION = {
 };
 
 describe("subscribeToPush", () => {
+  beforeEach(() => {
+    mockGetSubscription.mockReset();
+    mockSubscribe.mockReset();
+  });
+
   it("unsubscribes existing subscription before creating new one", async () => {
     const mockUnsubscribe = mock(() => Promise.resolve(true));
-    const { mockSubscribe, mockGetSubscription, pushManager } =
-      makePushManager({
-        existingSubscription: { unsubscribe: mockUnsubscribe },
-        newSubscription: VALID_SUBSCRIPTION,
-      });
+    mockGetSubscription.mockImplementation(() =>
+      Promise.resolve({ unsubscribe: mockUnsubscribe })
+    );
+    mockSubscribe.mockImplementation(() =>
+      Promise.resolve(VALID_SUBSCRIPTION)
+    );
 
-    const result = await subscribeToPushWith("test-vapid-key", pushManager);
+    const result = await subscribeToPush("test-vapid-key");
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockUnsubscribe).toHaveBeenCalled();
@@ -50,12 +52,14 @@ describe("subscribeToPush", () => {
     const mockUnsubscribe = mock(() =>
       Promise.reject(new Error("unsubscribe failed"))
     );
-    const { mockSubscribe, pushManager } = makePushManager({
-      existingSubscription: { unsubscribe: mockUnsubscribe },
-      newSubscription: VALID_SUBSCRIPTION,
-    });
+    mockGetSubscription.mockImplementation(() =>
+      Promise.resolve({ unsubscribe: mockUnsubscribe })
+    );
+    mockSubscribe.mockImplementation(() =>
+      Promise.resolve(VALID_SUBSCRIPTION)
+    );
 
-    const result = await subscribeToPushWith("test-vapid-key", pushManager);
+    const result = await subscribeToPush("test-vapid-key");
 
     expect(mockUnsubscribe).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -63,13 +67,12 @@ describe("subscribeToPush", () => {
   });
 
   it("works when no existing subscription", async () => {
-    const { mockSubscribe, mockGetSubscription, pushManager } =
-      makePushManager({
-        existingSubscription: null,
-        newSubscription: VALID_SUBSCRIPTION,
-      });
+    mockGetSubscription.mockImplementation(() => Promise.resolve(null));
+    mockSubscribe.mockImplementation(() =>
+      Promise.resolve(VALID_SUBSCRIPTION)
+    );
 
-    const result = await subscribeToPushWith("test-vapid-key", pushManager);
+    const result = await subscribeToPush("test-vapid-key");
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -77,17 +80,18 @@ describe("subscribeToPush", () => {
   });
 
   it("throws when subscription has missing keys", async () => {
-    const { pushManager } = makePushManager({
-      newSubscription: {
+    mockGetSubscription.mockImplementation(() => Promise.resolve(null));
+    mockSubscribe.mockImplementation(() =>
+      Promise.resolve({
         toJSON: () => ({
           endpoint: "https://fcm.example.com/send/x",
           keys: {},
         }),
-      },
-    });
+      })
+    );
 
-    await expect(
-      subscribeToPushWith("test-vapid-key", pushManager)
-    ).rejects.toThrow("Invalid push subscription");
+    await expect(subscribeToPush("test-vapid-key")).rejects.toThrow(
+      "Invalid push subscription"
+    );
   });
 });
