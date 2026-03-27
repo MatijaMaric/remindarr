@@ -8,14 +8,14 @@ export function isPushSupported(): boolean {
 
 export async function subscribeToPush(
   vapidPublicKey: string,
-  sw: Pick<ServiceWorkerContainer, "ready"> = navigator.serviceWorker
+  pushManager?: Pick<PushManager, "getSubscription" | "subscribe">
 ): Promise<{ endpoint: string; p256dh: string; auth: string }> {
-  const registration = await sw.ready;
+  const pm = pushManager ?? (await navigator.serviceWorker.ready).pushManager;
 
   // Force-clear any existing subscription to guarantee a fresh endpoint.
   // Without this, pushManager.subscribe() with the same applicationServerKey
   // returns the same (potentially expired) subscription.
-  const existing = await registration.pushManager.getSubscription();
+  const existing = await pm.getSubscription();
   if (existing) {
     try {
       await existing.unsubscribe();
@@ -24,7 +24,7 @@ export async function subscribeToPush(
     }
   }
 
-  const subscription = await registration.pushManager.subscribe({
+  const subscription = await pm.subscribe({
     userVisibleOnly: true,
     applicationServerKey: vapidPublicKey,
   });
@@ -42,11 +42,11 @@ export async function subscribeToPush(
 }
 
 export async function getExistingSubscription(
-  sw: Pick<ServiceWorkerContainer, "ready"> = navigator.serviceWorker
+  pushManager?: Pick<PushManager, "getSubscription">
 ): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const registration = await sw.ready;
-  return registration.pushManager.getSubscription();
+  const pm = pushManager ?? (await navigator.serviceWorker.ready).pushManager;
+  return pm.getSubscription();
 }
 
 export async function unsubscribeFromPush(): Promise<void> {
