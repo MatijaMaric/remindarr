@@ -19,10 +19,10 @@ describe("WatchButton", () => {
   });
 
   it("renders full variant with provider name", () => {
-    render(<WatchButton {...defaultProps} variant="full" />);
-    expect(screen.getByText("Netflix")).toBeTruthy();
-    const link = screen.getByText("Netflix").closest("a");
+    const { container } = render(<WatchButton {...defaultProps} variant="full" />);
+    const link = container.querySelector("a");
     expect(link).toBeTruthy();
+    expect(link!.textContent).toContain("Netflix");
     expect(link!.getAttribute("href")).toBe("https://example.com/watch");
   });
 
