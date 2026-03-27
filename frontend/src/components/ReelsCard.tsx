@@ -141,6 +141,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
                   providerId={providers[0].provider_id}
                   providerName={providers[0].provider_name}
                   providerIconUrl={providers[0].provider_icon_url}
+                  monetizationType={providers[0].monetization_type}
                   variant="full"
                   className="w-full justify-center px-6 py-3 rounded-xl text-base font-semibold"
                 />

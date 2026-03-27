@@ -156,7 +156,7 @@ describe("TitleCard", () => {
     expect(screen.getByText(/142m/)).toBeDefined();
   });
 
-  it("renders streaming provider icons", () => {
+  it("renders streaming provider button", () => {
     const title = makeTitle({
       offers: [
         {
@@ -177,12 +177,12 @@ describe("TitleCard", () => {
     });
     render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
-    const providerImg = screen.getByAltText("Netflix");
-    expect(providerImg).toBeDefined();
-    expect(providerImg.getAttribute("src")).toBe("https://example.com/netflix.png");
+    // Full variant renders provider name as text and "Stream" label
+    expect(screen.getByText("Netflix")).toBeDefined();
+    expect(screen.getByText("Stream")).toBeDefined();
   });
 
-  it("deduplicates providers by provider_id", () => {
+  it("deduplicates providers and shows only first", () => {
     const title = makeTitle({
       offers: [
         {
@@ -205,8 +205,11 @@ describe("TitleCard", () => {
     });
     render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
-    const icons = screen.getAllByAltText("Netflix");
-    expect(icons.length).toBe(1);
+    // Only one provider button should be rendered (deduped + only first shown)
+    const links = screen.getAllByRole("link").filter(
+      (link) => link.getAttribute("href") === "https://netflix.com/hd"
+    );
+    expect(links.length).toBe(1);
   });
 
   it("links to title detail page", () => {

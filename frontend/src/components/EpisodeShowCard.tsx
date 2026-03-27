@@ -70,12 +70,10 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
           {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: episodeCount })}
         </p>
 
-        {/* Provider icons */}
+        {/* Stream button */}
         {providers.length > 0 && (
-          <div className="flex gap-1.5 mt-2">
-            {providers.slice(0, 4).map((o) => (
-              <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
-            ))}
+          <div className="mt-2">
+            <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
           </div>
         )}
 
