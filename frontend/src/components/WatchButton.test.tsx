@@ -82,12 +82,20 @@ describe("WatchButton", () => {
     expect(container.textContent).not.toContain("Stream");
   });
 
-  it("applies custom className to full variant", () => {
+  it("full variant has full width and centered content by default", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" className="w-full justify-center" />
+      <WatchButton {...defaultProps} variant="full" />
     );
     const link = container.querySelector("a");
     expect(link!.className).toContain("w-full");
     expect(link!.className).toContain("justify-center");
+  });
+
+  it("applies custom className to full variant", () => {
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" className="custom-class" />
+    );
+    const link = container.querySelector("a");
+    expect(link!.className).toContain("custom-class");
   });
 });
