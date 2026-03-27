@@ -3,9 +3,11 @@
  *
  * Usage: bun run scripts/generate-icons.ts
  *
- * Reads pwa-512x512.png, extracts the clapperboard logo by scanning
- * for non-dark pixels, and composites it onto new canvases with
- * proper padding for each icon purpose.
+ * Reads pwa-512x512-source.png (the original logo with baked-in rounded
+ * corners), extracts the clapperboard by scanning for non-dark pixels,
+ * and composites it onto new canvases with proper padding.
+ *
+ * The source file is kept separate so re-runs are idempotent.
  */
 import sharp from "sharp";
 import path from "path";
@@ -63,7 +65,7 @@ async function extractLogoBounds(
 }
 
 async function main() {
-  const sourcePath = path.join(PUBLIC_DIR, "pwa-512x512.png");
+  const sourcePath = path.join(PUBLIC_DIR, "pwa-512x512-source.png");
 
   // Get raw pixel data to find the logo bounds
   const { data, info } = await sharp(sourcePath)
