@@ -337,6 +337,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                     providerId={streamingOffer.provider_id}
                     providerName={streamingOffer.provider_name}
                     providerIconUrl={streamingOffer.provider_icon_url}
+                    monetizationType={streamingOffer.monetization_type}
                     variant="full"
                   />
                 );
@@ -416,51 +417,44 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       )}
 
       {/* Streaming Availability */}
-      {watchProviders && (
-        <Section title="Where to Watch">
-          <div className="space-y-3">
-            <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
-          </div>
-          {title.offers.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/[0.06]">
-              <p className="text-xs text-zinc-500 mb-2">Direct links</p>
+      {(() => {
+        const offerGroups = groupOffersByType(title.offers);
+        if (offerGroups.length > 0) {
+          return (
+            <Section title="Where to Watch">
               <div className="flex flex-wrap gap-2">
-                {dedupeOffers(title.offers).map((offer) => (
-                  <WatchButton
-                    key={offer.id}
-                    url={offer.url}
-                    providerId={offer.provider_id}
-                    providerName={offer.provider_name}
-                    providerIconUrl={offer.provider_icon_url}
-                    variant="full"
-                  />
-                ))}
+                {offerGroups.flatMap(({ offers }) =>
+                  offers.map((offer) => (
+                    <WatchButton
+                      key={offer.id}
+                      url={offer.url}
+                      providerId={offer.provider_id}
+                      providerName={offer.provider_name}
+                      providerIconUrl={offer.provider_icon_url}
+                      monetizationType={offer.monetization_type}
+                      variant="full"
+                    />
+                  ))
+                )}
               </div>
-            </div>
-          )}
-        </Section>
-      )}
-
-      {!watchProviders && title.offers.length > 0 && (
-        <Section title="Where to Watch">
-          <div className="flex flex-wrap gap-2">
-            {dedupeOffers(title.offers).map((offer) => (
-              <WatchButton
-                key={offer.id}
-                url={offer.url}
-                providerId={offer.provider_id}
-                providerName={offer.provider_name}
-                providerIconUrl={offer.provider_icon_url}
-                variant="full"
-              />
-            ))}
-          </div>
-        </Section>
-      )}
+            </Section>
+          );
+        }
+        if (watchProviders) {
+          return (
+            <Section title="Where to Watch">
+              <div className="space-y-3">
+                <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
+              </div>
+            </Section>
+          );
+        }
+        return null;
+      })()}
 
       {/* External Links */}
       {tmdb && (
@@ -637,6 +631,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                     providerId={streamingOffer.provider_id}
                     providerName={streamingOffer.provider_name}
                     providerIconUrl={streamingOffer.provider_icon_url}
+                    monetizationType={streamingOffer.monetization_type}
                     variant="full"
                   />
                 );
@@ -712,51 +707,44 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       )}
 
       {/* Streaming Availability */}
-      {watchProviders && (
-        <Section title="Where to Watch">
-          <div className="space-y-3">
-            <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
-            <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
-          </div>
-          {title.offers.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/[0.06]">
-              <p className="text-xs text-zinc-500 mb-2">Direct links</p>
+      {(() => {
+        const offerGroups = groupOffersByType(title.offers);
+        if (offerGroups.length > 0) {
+          return (
+            <Section title="Where to Watch">
               <div className="flex flex-wrap gap-2">
-                {dedupeOffers(title.offers).map((offer) => (
-                  <WatchButton
-                    key={offer.id}
-                    url={offer.url}
-                    providerId={offer.provider_id}
-                    providerName={offer.provider_name}
-                    providerIconUrl={offer.provider_icon_url}
-                    variant="full"
-                  />
-                ))}
+                {offerGroups.flatMap(({ offers }) =>
+                  offers.map((offer) => (
+                    <WatchButton
+                      key={offer.id}
+                      url={offer.url}
+                      providerId={offer.provider_id}
+                      providerName={offer.provider_name}
+                      providerIconUrl={offer.provider_icon_url}
+                      monetizationType={offer.monetization_type}
+                      variant="full"
+                    />
+                  ))
+                )}
               </div>
-            </div>
-          )}
-        </Section>
-      )}
-
-      {!watchProviders && title.offers.length > 0 && (
-        <Section title="Where to Watch">
-          <div className="flex flex-wrap gap-2">
-            {dedupeOffers(title.offers).map((offer) => (
-              <WatchButton
-                key={offer.id}
-                url={offer.url}
-                providerId={offer.provider_id}
-                providerName={offer.provider_name}
-                providerIconUrl={offer.provider_icon_url}
-                variant="full"
-              />
-            ))}
-          </div>
-        </Section>
-      )}
+            </Section>
+          );
+        }
+        if (watchProviders) {
+          return (
+            <Section title="Where to Watch">
+              <div className="space-y-3">
+                <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
+                <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
+              </div>
+            </Section>
+          );
+        }
+        return null;
+      })()}
 
       {/* External Links */}
       {tmdb && (
@@ -826,4 +814,28 @@ function dedupeOffers(offers: Title["offers"]) {
     }
   }
   return Array.from(map.values());
+}
+
+const MONETIZATION_ORDER = [
+  { type: "FLATRATE", label: "Stream" },
+  { type: "FREE", label: "Free" },
+  { type: "ADS", label: "Ads" },
+  { type: "RENT", label: "Rent" },
+  { type: "BUY", label: "Buy" },
+] as const;
+
+function groupOffersByType(offers: Title["offers"]) {
+  const groups: { type: string; label: string; offers: Title["offers"] }[] = [];
+  for (const { type, label } of MONETIZATION_ORDER) {
+    const deduped = new Map<number, Title["offers"][0]>();
+    for (const o of offers) {
+      if (o.monetization_type === type && !deduped.has(o.provider_id)) {
+        deduped.set(o.provider_id, o);
+      }
+    }
+    if (deduped.size > 0) {
+      groups.push({ type, label, offers: Array.from(deduped.values()) });
+    }
+  }
+  return groups;
 }

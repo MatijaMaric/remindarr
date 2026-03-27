@@ -43,4 +43,42 @@ describe("WatchButton", () => {
     expect(img).toBeTruthy();
     expect(img!.getAttribute("src")).toBe("https://example.com/netflix.png");
   });
+
+  it("renders monetization label in full variant when provided", () => {
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" monetizationType="FLATRATE" />
+    );
+    const link = container.querySelector("a");
+    expect(link!.textContent).toContain("Stream");
+    expect(link!.textContent).toContain("Netflix");
+  });
+
+  it("renders Rent label for RENT monetization type", () => {
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" monetizationType="RENT" />
+    );
+    expect(container.querySelector("a")!.textContent).toContain("Rent");
+  });
+
+  it("renders Buy label for BUY monetization type", () => {
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" monetizationType="BUY" />
+    );
+    expect(container.querySelector("a")!.textContent).toContain("Buy");
+  });
+
+  it("omits monetization label in full variant when not provided", () => {
+    const { container } = render(<WatchButton {...defaultProps} variant="full" />);
+    const text = container.querySelector("a")!.textContent!;
+    expect(text).not.toContain("Stream");
+    expect(text).not.toContain("Rent");
+    expect(text).not.toContain("Buy");
+  });
+
+  it("does not render monetization label in compact variant", () => {
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="compact" monetizationType="FLATRATE" />
+    );
+    expect(container.textContent).not.toContain("Stream");
+  });
 });
