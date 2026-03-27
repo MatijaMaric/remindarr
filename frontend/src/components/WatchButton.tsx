@@ -9,6 +9,7 @@ interface WatchButtonProps {
   providerIconUrl: string;
   variant?: "compact" | "full";
   monetizationType?: string;
+  className?: string;
 }
 
 function monetizationLabel(type?: string): string | null {
@@ -29,6 +30,7 @@ export default function WatchButton({
   providerIconUrl,
   variant = "compact",
   monetizationType,
+  className,
 }: WatchButtonProps) {
   const color = getProviderColor(providerId);
   const [hovered, setHovered] = useState(false);
@@ -66,7 +68,7 @@ export default function WatchButton({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200"
+      className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${className ?? ""}`}
       style={{
         backgroundColor: hovered ? color.hover : color.bg,
         color: color.text,
