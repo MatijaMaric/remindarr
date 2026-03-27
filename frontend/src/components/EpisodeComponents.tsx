@@ -123,10 +123,8 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
           </Link>
         </div>
         {providers.length > 0 && (
-          <div className="flex gap-1 flex-shrink-0">
-            {providers.slice(0, 3).map((o) => (
-              <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
-            ))}
+          <div className="flex-shrink-0">
+            <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
           </div>
         )}
       </div>
@@ -161,10 +159,8 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
             <p className="text-sm text-zinc-400 mt-2 line-clamp-2">{episode.overview}</p>
           )}
           {providers.length > 0 && (
-            <div className="flex gap-1.5 mt-3">
-              {providers.map((o) => (
-                <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
-              ))}
+            <div className="mt-3">
+              <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
             </div>
           )}
         </div>
@@ -210,10 +206,8 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
           </div>
         </div>
         {providers.length > 0 && (
-          <div className="flex gap-1 flex-shrink-0">
-            {providers.slice(0, 3).map((o) => (
-              <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
-            ))}
+          <div className="flex-shrink-0">
+            <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
           </div>
         )}
       </div>
@@ -244,10 +238,8 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
             ))}
           </div>
           {providers.length > 0 && (
-            <div className="flex gap-1.5 mt-3">
-              {providers.map((o) => (
-                <WatchButton key={o.provider_id} url={o.url} providerId={o.provider_id} providerName={o.provider_name} providerIconUrl={o.provider_icon_url} variant="compact" />
-              ))}
+            <div className="mt-3">
+              <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
             </div>
           )}
         </div>

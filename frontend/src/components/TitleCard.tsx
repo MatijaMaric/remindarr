@@ -72,19 +72,17 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
           </p>
         </div>
 
-        {/* Streaming providers */}
+        {/* Streaming provider */}
         {streamingOffers.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {streamingOffers.map((offer) => (
-              <WatchButton
-                key={offer.provider_id}
-                url={offer.url}
-                providerId={offer.provider_id}
-                providerName={offer.provider_name}
-                providerIconUrl={offer.provider_icon_url}
-                variant="compact"
-              />
-            ))}
+          <div>
+            <WatchButton
+              url={streamingOffers[0].url}
+              providerId={streamingOffers[0].provider_id}
+              providerName={streamingOffers[0].provider_name}
+              providerIconUrl={streamingOffers[0].provider_icon_url}
+              monetizationType={streamingOffers[0].monetization_type}
+              variant="full"
+            />
           </div>
         )}
 

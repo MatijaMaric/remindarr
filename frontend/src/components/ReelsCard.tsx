@@ -133,22 +133,6 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
               </p>
             )}
 
-            {/* Provider icons */}
-            {providers.length > 0 && (
-              <div className="flex gap-2 mb-4">
-                {providers.map((p) => (
-                  <WatchButton
-                    key={p.provider_id}
-                    url={p.url}
-                    providerId={p.provider_id}
-                    providerName={p.provider_name}
-                    providerIconUrl={p.provider_icon_url}
-                    variant="compact"
-                  />
-                ))}
-              </div>
-            )}
-
             {/* Watch on provider button */}
             {providers.length > 0 && (
               <div className="mb-2">
@@ -157,6 +141,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
                   providerId={providers[0].provider_id}
                   providerName={providers[0].provider_name}
                   providerIconUrl={providers[0].provider_icon_url}
+                  monetizationType={providers[0].monetization_type}
                   variant="full"
                 />
               </div>
