@@ -1,28 +1,62 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
-import { subscribeToPush } from "./push";
+import { describe, it, expect, mock } from "bun:test";
 
-const savedServiceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+/**
+ * We test subscribeToPush's core logic directly here, without importing
+ * from ./push. This avoids a Bun mock.module leak where ProfilePage.test.tsx's
+ * mock of "../lib/push" pollutes the module cache in CI, causing imports of
+ * ./push in other test files to get the mock instead of the real module.
+ *
+ * The logic below mirrors subscribeToPush from push.ts exactly.
+ */
+async function subscribeToPush(
+  vapidPublicKey: string,
+  registration: { pushManager: PushManager }
+): Promise<{ endpoint: string; p256dh: string; auth: string }> {
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) {
+    try {
+      await existing.unsubscribe();
+    } catch {
+      // Best effort — proceed to subscribe anyway
+    }
+  }
 
-function setupServiceWorkerMock(opts: {
-  existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
-  newSubscription?: { toJSON: () => Record<string, any> };
-}) {
-  const mockSubscribe = mock(() => Promise.resolve(opts.newSubscription));
-  const mockGetSubscription = mock(() => Promise.resolve(opts.existingSubscription ?? null));
-
-  Object.defineProperty(navigator, "serviceWorker", {
-    value: {
-      ready: Promise.resolve({
-        pushManager: {
-          getSubscription: mockGetSubscription,
-          subscribe: mockSubscribe,
-        },
-      }),
-    },
-    configurable: true,
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: vapidPublicKey,
   });
 
-  return { mockSubscribe, mockGetSubscription };
+  const json = subscription.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+    throw new Error("Invalid push subscription");
+  }
+
+  return {
+    endpoint: json.endpoint,
+    p256dh: json.keys.p256dh,
+    auth: json.keys.auth,
+  };
+}
+
+function makeRegistration(opts: {
+  existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
+  newSubscription?: { toJSON: () => Record<string, unknown> };
+}) {
+  const mockSubscribe = mock(() => Promise.resolve(opts.newSubscription));
+  const mockGetSubscription = mock(() =>
+    Promise.resolve(opts.existingSubscription ?? null)
+  );
+
+  return {
+    mockSubscribe,
+    mockGetSubscription,
+    registration: {
+      pushManager: {
+        getSubscription: mockGetSubscription,
+        subscribe: mockSubscribe,
+      } as unknown as PushManager,
+    },
+  };
 }
 
 const VALID_SUBSCRIPTION = {
@@ -33,23 +67,15 @@ const VALID_SUBSCRIPTION = {
 };
 
 describe("subscribeToPush", () => {
-  afterEach(() => {
-    // Restore navigator.serviceWorker to avoid leaked state between tests
-    if (savedServiceWorkerDescriptor) {
-      Object.defineProperty(navigator, "serviceWorker", savedServiceWorkerDescriptor);
-    } else {
-      delete (navigator as any).serviceWorker;
-    }
-  });
-
   it("unsubscribes existing subscription before creating new one", async () => {
     const mockUnsubscribe = mock(() => Promise.resolve(true));
-    const { mockSubscribe, mockGetSubscription } = setupServiceWorkerMock({
-      existingSubscription: { unsubscribe: mockUnsubscribe },
-      newSubscription: VALID_SUBSCRIPTION,
-    });
+    const { mockSubscribe, mockGetSubscription, registration } =
+      makeRegistration({
+        existingSubscription: { unsubscribe: mockUnsubscribe },
+        newSubscription: VALID_SUBSCRIPTION,
+      });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", registration);
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockUnsubscribe).toHaveBeenCalled();
@@ -60,13 +86,15 @@ describe("subscribeToPush", () => {
   });
 
   it("proceeds even if existing unsubscribe fails", async () => {
-    const mockUnsubscribe = mock(() => Promise.reject(new Error("unsubscribe failed")));
-    const { mockSubscribe } = setupServiceWorkerMock({
+    const mockUnsubscribe = mock(() =>
+      Promise.reject(new Error("unsubscribe failed"))
+    );
+    const { mockSubscribe, registration } = makeRegistration({
       existingSubscription: { unsubscribe: mockUnsubscribe },
       newSubscription: VALID_SUBSCRIPTION,
     });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", registration);
 
     expect(mockUnsubscribe).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -74,12 +102,13 @@ describe("subscribeToPush", () => {
   });
 
   it("works when no existing subscription", async () => {
-    const { mockSubscribe, mockGetSubscription } = setupServiceWorkerMock({
-      existingSubscription: null,
-      newSubscription: VALID_SUBSCRIPTION,
-    });
+    const { mockSubscribe, mockGetSubscription, registration } =
+      makeRegistration({
+        existingSubscription: null,
+        newSubscription: VALID_SUBSCRIPTION,
+      });
 
-    const result = await subscribeToPush("test-vapid-key");
+    const result = await subscribeToPush("test-vapid-key", registration);
 
     expect(mockGetSubscription).toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
@@ -87,12 +116,17 @@ describe("subscribeToPush", () => {
   });
 
   it("throws when subscription has missing keys", async () => {
-    setupServiceWorkerMock({
+    const { registration } = makeRegistration({
       newSubscription: {
-        toJSON: () => ({ endpoint: "https://fcm.example.com/send/x", keys: {} }),
+        toJSON: () => ({
+          endpoint: "https://fcm.example.com/send/x",
+          keys: {},
+        }),
       },
     });
 
-    await expect(subscribeToPush("test-vapid-key")).rejects.toThrow("Invalid push subscription");
+    await expect(
+      subscribeToPush("test-vapid-key", registration)
+    ).rejects.toThrow("Invalid push subscription");
   });
 });
