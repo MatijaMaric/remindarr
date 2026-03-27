@@ -140,6 +140,15 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
         );
       })}
 
+      {/* Dark scrim gradient for text contrast */}
+      <div
+        className="absolute inset-0 z-[5] pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 70%)",
+        }}
+      />
+
       {/* Content overlay */}
       <div className="relative z-10 h-full max-w-[1920px] mx-auto flex">
         {/* Continue Watching card (left side) */}
@@ -208,7 +217,10 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
           )}
 
           {/* Episode info */}
-          <div className="flex flex-col justify-center max-w-md">
+          <div
+            className="flex flex-col justify-center max-w-md"
+            style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+          >
             <p className="text-xs uppercase tracking-widest text-amber-400 font-medium mb-2">
               Currently Watching
             </p>
