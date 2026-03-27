@@ -191,6 +191,14 @@ app.post("/import", async (c) => {
         await watchTitle(item.id, user.id);
       }
 
+      // Backfill watch provider offers from TMDB
+      if (item.tmdb_id && CONFIG.TMDB_API_KEY) {
+        await enqueueJobDrizzle("backfill-title-offers", {
+          tmdbId: item.tmdb_id,
+          objectType: item.object_type,
+        });
+      }
+
       const hasWatched = Array.isArray(item.watched_episodes) && item.watched_episodes.length > 0;
       const canSyncEpisodes = item.object_type === "SHOW" && item.tmdb_id && CONFIG.TMDB_API_KEY;
 
