@@ -1,7 +1,11 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
 import { subscribeToPush } from "./push";
 
-const savedServiceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+// happy-dom may define serviceWorker on Navigator.prototype (getter) or on the instance.
+// We must override wherever it lives so the mock takes effect across Bun/OS versions.
+const swDefinedOnPrototype = !!Object.getOwnPropertyDescriptor(Navigator.prototype, "serviceWorker");
+const mockTarget = swDefinedOnPrototype ? Navigator.prototype : navigator;
+const savedServiceWorkerDescriptor = Object.getOwnPropertyDescriptor(mockTarget, "serviceWorker");
 
 function setupServiceWorkerMock(opts: {
   existingSubscription?: { unsubscribe: () => Promise<boolean> } | null;
@@ -10,7 +14,7 @@ function setupServiceWorkerMock(opts: {
   const mockSubscribe = mock(() => Promise.resolve(opts.newSubscription));
   const mockGetSubscription = mock(() => Promise.resolve(opts.existingSubscription ?? null));
 
-  Object.defineProperty(navigator, "serviceWorker", {
+  Object.defineProperty(mockTarget, "serviceWorker", {
     value: {
       ready: Promise.resolve({
         pushManager: {
@@ -36,9 +40,9 @@ describe("subscribeToPush", () => {
   afterEach(() => {
     // Restore navigator.serviceWorker to avoid leaked state between tests
     if (savedServiceWorkerDescriptor) {
-      Object.defineProperty(navigator, "serviceWorker", savedServiceWorkerDescriptor);
+      Object.defineProperty(mockTarget, "serviceWorker", savedServiceWorkerDescriptor);
     } else {
-      delete (navigator as any).serviceWorker;
+      delete (mockTarget as any).serviceWorker;
     }
   });
 
