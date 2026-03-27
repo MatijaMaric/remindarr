@@ -72,9 +72,9 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
           </p>
         </div>
 
-        {/* Streaming provider */}
-        {streamingOffers.length > 0 && (
-          <div>
+        {/* Buttons — always anchored at bottom */}
+        <div className="mt-auto flex flex-col gap-2">
+          {streamingOffers.length > 0 && (
             <WatchButton
               url={streamingOffers[0].url}
               providerId={streamingOffers[0].provider_id}
@@ -83,10 +83,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
               monetizationType={streamingOffers[0].monetization_type}
               variant="full"
             />
-          </div>
-        )}
-
-        <div className="mt-auto pt-1">
+          )}
           <TrackButton
             titleId={title.id}
             isTracked={title.is_tracked}
