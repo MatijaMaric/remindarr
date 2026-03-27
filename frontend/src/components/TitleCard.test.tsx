@@ -177,9 +177,10 @@ describe("TitleCard", () => {
     });
     render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
-    // Full variant renders provider name as text and "Stream" label
-    expect(screen.getByText("Netflix")).toBeDefined();
+    // Full variant renders "Stream" label and provider icon (no provider name text)
     expect(screen.getByText("Stream")).toBeDefined();
+    const img = screen.getByAltText("Netflix");
+    expect(img).toBeDefined();
   });
 
   it("deduplicates providers and shows only first", () => {
