@@ -24,10 +24,10 @@ interface IconSpec {
 }
 
 const icons: IconSpec[] = [
-  { filename: "pwa-512x512.png", size: 512, paddingFraction: 0.08 },
-  { filename: "pwa-maskable-512x512.png", size: 512, paddingFraction: 0.15 },
-  { filename: "pwa-192x192.png", size: 192, paddingFraction: 0.08 },
-  { filename: "apple-touch-icon.png", size: 180, paddingFraction: 0.1 },
+  { filename: "pwa-512x512.png", size: 512, paddingFraction: 0.15 },
+  { filename: "pwa-maskable-512x512.png", size: 512, paddingFraction: 0.22 },
+  { filename: "pwa-192x192.png", size: 192, paddingFraction: 0.15 },
+  { filename: "apple-touch-icon.png", size: 180, paddingFraction: 0.15 },
   { filename: "favicon.png", size: 64, paddingFraction: 0.06 },
 ];
 
