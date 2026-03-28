@@ -100,4 +100,21 @@ describe("WatchButton", () => {
     const link = container.querySelector("a");
     expect(link!.className).toContain("custom-class");
   });
+
+  it("uses text-xs by default in full variant", () => {
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" />
+    );
+    const link = container.querySelector("a");
+    expect(link!.className).toContain("text-xs");
+  });
+
+  it("omits text-xs when className includes a font-size class", () => {
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" className="text-base font-semibold" />
+    );
+    const link = container.querySelector("a");
+    expect(link!.className).not.toContain("text-xs");
+    expect(link!.className).toContain("text-base");
+  });
 });
