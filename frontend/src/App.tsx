@@ -63,7 +63,7 @@ export default function App() {
         {t("nav.skipToMain")}
       </a>
       {/* Hide top nav on reels page for mobile */}
-      <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 ${isReelsPage ? "hidden sm:block" : ""}`}>
+      <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isReelsPage ? "hidden sm:block" : ""}`}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
           <Link to="/" className="text-lg font-bold text-white tracking-tight hover:text-amber-400 transition-colors">
             Remindarr
