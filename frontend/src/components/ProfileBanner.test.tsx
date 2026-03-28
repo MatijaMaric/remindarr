@@ -8,6 +8,7 @@ import type { ProfileBackdrop, UserProfileUser, UserProfileStats } from "../type
 afterEach(cleanup);
 
 const mockUser: UserProfileUser = {
+  id: "user-1",
   username: "testuser",
   display_name: "Test User",
   image: null,
