@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser, trackTitle, updateProfilePublic, watchTitle } from "../repository";
+import { upsertTitles, createUser, trackTitle, updateProfilePublic, watchTitle, upsertEpisodes, watchEpisode } from "../repository";
 import { getDb, watchedTitles } from "../schema";
 import { getUserPublicProfile } from "./profile";
 import { sql } from "drizzle-orm";
@@ -96,5 +96,119 @@ describe("getUserPublicProfile movie sort order", () => {
     expect(result).not.toBeNull();
     expect(result!.movies).toHaveLength(2);
     // Both unwatched, so order is stable (original order preserved)
+  });
+});
+
+describe("getUserPublicProfile progress metrics", () => {
+  it("returns zero progress when no shows are tracked", async () => {
+    const result = await getUserPublicProfile("testuser", true);
+    expect(result).not.toBeNull();
+    expect(result!.stats.shows_completed).toBe(0);
+    expect(result!.stats.shows_total).toBe(0);
+    expect(result!.stats.total_watched_episodes).toBe(0);
+    expect(result!.stats.total_released_episodes).toBe(0);
+  });
+
+  it("counts shows_total correctly", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-a", objectType: "SHOW", title: "Show A" }),
+      makeParsedTitle({ id: "show-b", objectType: "SHOW", title: "Show B" }),
+      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", title: "Movie 1" }),
+    ]);
+    await trackTitle("show-a", userId);
+    await trackTitle("show-b", userId);
+    await trackTitle("movie-1", userId);
+
+    const result = await getUserPublicProfile("testuser", true);
+    expect(result).not.toBeNull();
+    expect(result!.stats.shows_total).toBe(2);
+  });
+
+  it("counts shows_completed when all episodes watched and released", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-done", objectType: "SHOW", title: "Completed Show" }),
+    ]);
+    await trackTitle("show-done", userId);
+    await upsertEpisodes([
+      { title_id: "show-done", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      { title_id: "show-done", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+    ]);
+
+    const db = getDb();
+    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-done") });
+    for (const ep of eps) {
+      await watchEpisode(ep.id, userId);
+    }
+
+    const result = await getUserPublicProfile("testuser", true);
+    expect(result).not.toBeNull();
+    expect(result!.stats.shows_completed).toBe(1);
+    expect(result!.stats.shows_total).toBe(1);
+  });
+
+  it("does not count show as completed when not all episodes are watched", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-partial", objectType: "SHOW", title: "Partial Show" }),
+    ]);
+    await trackTitle("show-partial", userId);
+    await upsertEpisodes([
+      { title_id: "show-partial", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      { title_id: "show-partial", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+    ]);
+
+    const db = getDb();
+    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-partial") });
+    await watchEpisode(eps[0].id, userId);
+
+    const result = await getUserPublicProfile("testuser", true);
+    expect(result).not.toBeNull();
+    expect(result!.stats.shows_completed).toBe(0);
+    expect(result!.stats.total_watched_episodes).toBe(1);
+    expect(result!.stats.total_released_episodes).toBe(2);
+  });
+
+  it("aggregates episodes across multiple shows", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-x", objectType: "SHOW", title: "Show X" }),
+      makeParsedTitle({ id: "show-y", objectType: "SHOW", title: "Show Y" }),
+    ]);
+    await trackTitle("show-x", userId);
+    await trackTitle("show-y", userId);
+    await upsertEpisodes([
+      { title_id: "show-x", season_number: 1, episode_number: 1, name: "X Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      { title_id: "show-x", season_number: 1, episode_number: 2, name: "X Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+      { title_id: "show-y", season_number: 1, episode_number: 1, name: "Y Ep 1", overview: null, air_date: "2024-02-01", still_path: null },
+    ]);
+
+    const db = getDb();
+    const xEps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-x") });
+    await watchEpisode(xEps[0].id, userId);
+
+    const result = await getUserPublicProfile("testuser", true);
+    expect(result).not.toBeNull();
+    expect(result!.stats.total_watched_episodes).toBe(1);
+    expect(result!.stats.total_released_episodes).toBe(3);
+  });
+
+  it("does not count show as completed when unreleased episodes exist", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-future", objectType: "SHOW", title: "Future Show" }),
+    ]);
+    await trackTitle("show-future", userId);
+    await upsertEpisodes([
+      { title_id: "show-future", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      { title_id: "show-future", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2099-12-31", still_path: null },
+    ]);
+
+    const db = getDb();
+    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-future") });
+    // Watch the one released episode
+    const releasedEp = eps.find(e => e.airDate === "2024-01-01")!;
+    await watchEpisode(releasedEp.id, userId);
+
+    const result = await getUserPublicProfile("testuser", true);
+    expect(result).not.toBeNull();
+    // total_episodes=2, watched=1, released=1 -> not completed (total != watched)
+    expect(result!.stats.shows_completed).toBe(0);
   });
 });
