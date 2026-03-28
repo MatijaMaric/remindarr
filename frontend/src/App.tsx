@@ -54,7 +54,7 @@ export default function App() {
   const isReelsPage = location.pathname === "/reels";
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className={`bg-zinc-950 text-zinc-100 ${isReelsPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}>
       {/* Skip to main content link */}
       <a
         href="#main-content"
@@ -156,7 +156,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </main>
-      <footer className="hidden sm:block border-t border-white/[0.06] py-6 mt-8">
+      <footer className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage ? "hidden" : "hidden sm:block"}`}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>
           <a
