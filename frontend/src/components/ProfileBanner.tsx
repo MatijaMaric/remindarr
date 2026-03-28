@@ -42,7 +42,7 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
 
   return (
     <div
-      className="w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-80 sm:h-[22rem]"
+      className="w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[28rem] sm:h-[22rem]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -86,7 +86,7 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
 
       {/* Bottom overlay: user info (left) + stats (right) */}
       <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-5 flex items-end justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
           {/* User info */}
           <div className="pointer-events-auto min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-white truncate" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
@@ -110,8 +110,8 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
           </div>
 
           {/* Stats */}
-          <div className="pointer-events-auto shrink-0 flex flex-col items-end gap-2" data-testid="profile-stats">
-            <div className="flex gap-2 sm:gap-3">
+          <div className="pointer-events-auto shrink-0 flex flex-col items-stretch sm:items-end gap-2" data-testid="profile-stats">
+            <div className="flex justify-center sm:justify-end gap-2 sm:gap-3">
               <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center min-w-[4.5rem]">
                 <Bookmark className="size-4 text-zinc-400 mx-auto mb-1" />
                 <p className="text-lg font-bold text-white leading-tight">{stats.tracked_count}</p>
