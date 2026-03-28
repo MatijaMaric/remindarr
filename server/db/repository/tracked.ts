@@ -80,6 +80,7 @@ export async function getTrackedTitles(userId: string) {
         tmdb_score: scores.tmdbScore,
         tracked_at: tracked.trackedAt,
         notes: tracked.notes,
+        public: tracked.public,
         is_tracked: sql<number>`1`,
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
       })
@@ -100,8 +101,88 @@ export async function getTrackedTitles(userId: string) {
       genres: genresByTitle.get(row.id) ?? [],
       is_tracked: true,
       is_watched: Boolean(row.is_watched),
+      public: Boolean(row.public),
       offers: offersByTitle.get(row.id) ?? [],
     }));
+  });
+}
+
+export async function getPublicTrackedTitles(userId: string) {
+  return traceDbQuery("getPublicTrackedTitles", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: titles.id,
+        object_type: titles.objectType,
+        title: titles.title,
+        original_title: titles.originalTitle,
+        release_year: titles.releaseYear,
+        release_date: titles.releaseDate,
+        runtime_minutes: titles.runtimeMinutes,
+        short_description: titles.shortDescription,
+        imdb_id: titles.imdbId,
+        tmdb_id: titles.tmdbId,
+        poster_url: titles.posterUrl,
+        age_certification: titles.ageCertification,
+        original_language: titles.originalLanguage,
+        tmdb_url: titles.tmdbUrl,
+        updated_at: titles.updatedAt,
+        imdb_score: scores.imdbScore,
+        imdb_votes: scores.imdbVotes,
+        tmdb_score: scores.tmdbScore,
+        tracked_at: tracked.trackedAt,
+        is_tracked: sql<number>`1`,
+      })
+      .from(tracked)
+      .innerJoin(titles, eq(titles.id, tracked.titleId))
+      .leftJoin(scores, eq(scores.titleId, titles.id))
+      .where(and(eq(tracked.userId, userId), eq(tracked.public, 1)))
+      .orderBy(desc(tracked.trackedAt))
+      .all();
+
+    const titleIds = rows.map((r) => r.id);
+    const [offersByTitle, genresByTitle] = await Promise.all([
+      getOffersForTitles(titleIds),
+      getGenresForTitles(titleIds),
+    ]);
+    return rows.map((row) => ({
+      ...row,
+      genres: genresByTitle.get(row.id) ?? [],
+      is_tracked: true,
+      offers: offersByTitle.get(row.id) ?? [],
+    }));
+  });
+}
+
+export async function updateTrackedVisibility(titleId: string, userId: string, isPublic: boolean) {
+  return traceDbQuery("updateTrackedVisibility", async () => {
+    const db = getDb();
+    await db.update(tracked)
+      .set({ public: isPublic ? 1 : 0 })
+      .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+      .run();
+  });
+}
+
+export async function updateAllTrackedVisibility(userId: string, isPublic: boolean) {
+  return traceDbQuery("updateAllTrackedVisibility", async () => {
+    const db = getDb();
+    await db.update(tracked)
+      .set({ public: isPublic ? 1 : 0 })
+      .where(eq(tracked.userId, userId))
+      .run();
+  });
+}
+
+export async function getPublicTrackedCount(userId: string): Promise<number> {
+  return traceDbQuery("getPublicTrackedCount", async () => {
+    const db = getDb();
+    const row = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(tracked)
+      .where(and(eq(tracked.userId, userId), eq(tracked.public, 1)))
+      .get();
+    return row?.count ?? 0;
   });
 }
 

@@ -7,7 +7,7 @@ import { useIsMobile } from "./hooks/useIsMobile";
 import RequireAuth from "./components/RequireAuth";
 import BottomTabBar from "./components/BottomTabBar";
 import OfflineIndicator from "./components/OfflineIndicator";
-import { Github } from "lucide-react";
+import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 
 // Retry dynamic imports once on failure (handles stale chunks after deploy)
@@ -29,6 +29,8 @@ const CalendarPage = lazyWithRetry(() => import("./pages/CalendarPage"));
 const LoginPage = lazyWithRetry(() => import("./pages/LoginPage"));
 const SignupPage = lazyWithRetry(() => import("./pages/SignupPage"));
 const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"));
+const UserProfilePage = lazyWithRetry(() => import("./pages/UserProfilePage"));
+const SettingsPage = lazyWithRetry(() => import("./pages/SettingsPage"));
 const TitleDetailPage = lazyWithRetry(() => import("./pages/TitleDetailPage"));
 const SeasonDetailPage = lazyWithRetry(() => import("./pages/SeasonDetailPage"));
 const EpisodeDetailPage = lazyWithRetry(() => import("./pages/EpisodeDetailPage"));
@@ -103,10 +105,17 @@ export default function App() {
             {loading ? null : user ? (
               <>
                 <Link
-                  to="/profile"
+                  to={`/user/${user.username}`}
                   className="text-sm text-zinc-400 hover:text-white transition-colors"
                 >
                   {user.display_name || user.username}
+                </Link>
+                <Link
+                  to="/settings"
+                  className="text-zinc-400 hover:text-white transition-colors"
+                  aria-label={t("nav.settings")}
+                >
+                  <Settings className="size-4" />
                 </Link>
                 <button
                   onClick={logout}
@@ -137,7 +146,9 @@ export default function App() {
             <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
             <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
             <Route path="/upcoming" element={<RequireAuth><UpcomingPage /></RequireAuth>} />
-            <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+            <Route path="/user/:username" element={<UserProfilePage />} />
+            <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/title/:id" element={<TitleDetailPage />} />
             <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
             <Route path="/title/:id/season/:season/episode/:episode" element={<EpisodeDetailPage />} />

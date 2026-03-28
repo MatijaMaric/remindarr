@@ -22,6 +22,7 @@ import jobsRoutes from "./routes/jobs";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
+import profileRoutes from "./routes/profile";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
 import type { AppEnv } from "./types";
@@ -150,6 +151,10 @@ app.route("/api/browse", browseRoutes);
 app.use("/api/calendar/*", optionalAuth);
 app.use("/api/calendar", optionalAuth);
 app.route("/api/calendar", calendarRoutes);
+
+app.use("/api/user/*", optionalAuth);
+app.use("/api/user", optionalAuth);
+app.route("/api/user", profileRoutes);
 
 // Protected routes
 app.use("/api/track/*", requireAuth);

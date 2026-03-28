@@ -85,7 +85,7 @@ describe("BottomTabBar", () => {
     expect(hrefs).toContain("/upcoming");
     expect(hrefs).toContain("/browse");
     expect(hrefs).toContain("/calendar");
-    expect(hrefs).toContain("/profile");
+    expect(hrefs).toContain("/user/test");
   });
 
   it("links to correct routes when not authenticated", () => {
