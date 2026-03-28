@@ -1,12 +1,10 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Settings } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../api";
 import TitleList from "../components/TitleList";
 import ProfileBanner from "../components/ProfileBanner";
-import ShareButton from "../components/ShareButton";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { groupShowsByStatus } from "../lib/groupShows";
@@ -48,7 +46,6 @@ export default function UserProfilePage() {
   }
 
   const { user, stats, movies, is_own_profile, show_watchlist, backdrops } = data;
-  const displayName = user.display_name || user.username;
 
   async function handleVisibilityToggle(titleId: string, isPublic: boolean) {
     try {
@@ -62,56 +59,8 @@ export default function UserProfilePage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
-      {/* Banner */}
-      <ProfileBanner backdrops={backdrops} />
-
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">{displayName}</h1>
-          {user.display_name && (
-            <p className="text-zinc-400 text-sm">@{user.username}</p>
-          )}
-          {user.member_since && (
-            <p className="text-zinc-500 text-sm mt-1">
-              {t("userProfile.memberSince", {
-                date: new Date(user.member_since).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "long",
-                }),
-              })}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <ShareButton title={`${displayName}'s Profile`} />
-          {is_own_profile && (
-            <Link
-              to="/settings"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
-            >
-              <Settings className="size-4" />
-              {t("userProfile.editSettings")}
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-zinc-900 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-white">{stats.tracked_count}</p>
-          <p className="text-xs text-zinc-400 mt-1">{t("userProfile.trackedTitles")}</p>
-        </div>
-        <div className="bg-zinc-900 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-white">{stats.watched_movies}</p>
-          <p className="text-xs text-zinc-400 mt-1">{t("userProfile.watchedMovies")}</p>
-        </div>
-        <div className="bg-zinc-900 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-white">{stats.watched_episodes}</p>
-          <p className="text-xs text-zinc-400 mt-1">{t("userProfile.watchedEpisodes")}</p>
-        </div>
-      </div>
+      {/* Banner with overlaid user info and stats */}
+      <ProfileBanner backdrops={backdrops} user={user} stats={stats} isOwnProfile={is_own_profile} />
 
       {/* Watchlist */}
       {show_watchlist && (movies.length > 0 || shows.length > 0) && (
