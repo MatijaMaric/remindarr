@@ -434,12 +434,15 @@ export interface ProfileBackdrop {
   backdrop_url: string;
 }
 
+export type ProfileVisibility = "public" | "friends_only" | "private";
+
 export interface UserProfileResponse {
   user: UserProfileUser;
   stats: UserProfileStats;
   movies: Title[];
   shows: Title[];
   show_watchlist: boolean;
+  profile_visibility: ProfileVisibility;
   is_own_profile: boolean;
   backdrops: ProfileBackdrop[];
   follower_count: number;

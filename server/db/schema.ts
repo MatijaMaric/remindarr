@@ -156,6 +156,7 @@ export const users = sqliteTable(
     providerSubject: text("provider_subject"),
     isAdmin: integer("is_admin").notNull().default(0),
     profilePublic: integer("profile_public").notNull().default(0),
+    profileVisibility: text("profile_visibility").notNull().default("private"),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(

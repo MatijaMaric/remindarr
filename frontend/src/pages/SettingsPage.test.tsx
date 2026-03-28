@@ -66,6 +66,7 @@ const mockGetTrackedTitles = mock(() =>
     ],
     count: 2,
     profile_public: true,
+    profile_visibility: "public",
   })
 );
 
@@ -113,7 +114,7 @@ afterEach(() => {
 });
 
 describe("ProfileVisibilitySection", () => {
-  it("renders global toggle and bulk buttons without per-title list", async () => {
+  it("renders three visibility options and bulk buttons", async () => {
     render(<SettingsPage />, { wrapper: Wrapper });
 
     // Wait for the profile visibility section to load
@@ -121,8 +122,13 @@ describe("ProfileVisibilitySection", () => {
       expect(screen.getByText("Profile Visibility")).toBeDefined();
     });
 
-    // Global toggle text should be present
-    expect(screen.getByText("Show watchlist on public profile")).toBeDefined();
+    // Three visibility options should be present
+    expect(screen.getByText("Public")).toBeDefined();
+    expect(screen.getByText("Everyone can see your watchlist")).toBeDefined();
+    expect(screen.getByText("Friends Only")).toBeDefined();
+    expect(screen.getByText("Only mutual followers can see your watchlist")).toBeDefined();
+    expect(screen.getByText("Private")).toBeDefined();
+    expect(screen.getByText("Your watchlist is hidden")).toBeDefined();
 
     // Bulk buttons should be present
     expect(screen.getByText("Show All")).toBeDefined();
@@ -139,6 +145,7 @@ describe("ProfileVisibilitySection", () => {
         titles: [],
         count: 0,
         profile_public: false,
+        profile_visibility: "private",
       })
     );
 
@@ -154,5 +161,29 @@ describe("ProfileVisibilitySection", () => {
     // Bulk buttons should NOT be present when no titles
     expect(screen.queryByText("Show All")).toBeNull();
     expect(screen.queryByText("Hide All")).toBeNull();
+  });
+
+  it("selects the correct radio button based on profile_visibility", async () => {
+    mockGetTrackedTitles.mockImplementation(() =>
+      Promise.resolve({
+        titles: [{ id: "m1", title: "Movie", object_type: "movie", poster_url: null, public: true }],
+        count: 1,
+        profile_public: false,
+        profile_visibility: "friends_only",
+      })
+    );
+
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Profile Visibility")).toBeDefined();
+    });
+
+    const radios = screen.getAllByRole("radio");
+    expect(radios).toHaveLength(3);
+    // friends_only should be checked (second option)
+    const friendsRadio = radios.find((r) => (r as HTMLInputElement).value === "friends_only") as HTMLInputElement | undefined;
+    expect(friendsRadio).toBeDefined();
+    expect(friendsRadio!.checked).toBe(true);
   });
 });
