@@ -216,6 +216,12 @@
     "showTitle": "Show on profile",
     "hideTitle": "Hide from profile"
   },
+  "notificationPrompt": {
+    "message": "Enable push notifications to get alerts about new episodes and releases.",
+    "enable": "Enable",
+    "enabling": "Enabling...",
+    "dismiss": "Dismiss notification prompt"
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
