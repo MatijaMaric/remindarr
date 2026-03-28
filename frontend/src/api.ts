@@ -12,6 +12,7 @@ import type {
   AdminSettingsUpdateRequest,
   AdminSettingsUpdateResponse,
   UserProfileResponse,
+  UserSummary,
 } from "./types";
 
 const BASE = "/api";
@@ -155,6 +156,10 @@ export async function updateAllTitleVisibility(isPublic: boolean): Promise<void>
     method: "PATCH",
     body: JSON.stringify({ public: isPublic }),
   });
+}
+
+export async function searchUsers(query: string): Promise<{ users: UserSummary[] }> {
+  return fetchJson(`/user/search?q=${encodeURIComponent(query)}`);
 }
 
 export async function resolveImdb(url: string): Promise<{ success: boolean; title: SearchTitle }> {

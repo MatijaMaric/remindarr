@@ -55,6 +55,7 @@ export {
   getUserCount,
   updateUserPassword,
   updateUserAdmin,
+  searchUsers,
   createSession,
   getSessionWithUser,
   deleteSession,

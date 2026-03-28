@@ -6,6 +6,8 @@ import { upsertTitles, createUser, createSession, getSessionWithUser, trackTitle
 import { watchTitle } from "../db/repository";
 import { upsertEpisodes, watchEpisode } from "../db/repository";
 import { optionalAuth } from "../middleware/auth";
+import { getDb, users } from "../db/schema";
+import { eq } from "drizzle-orm";
 import profileApp from "./profile";
 import type { AppEnv } from "../types";
 
@@ -395,5 +397,80 @@ describe("GET /user/:username", () => {
     expect(body.stats.shows_total).toBe(2);
     expect(body.stats.total_watched_episodes).toBe(3); // 2 from show-1 + 1 from show-2
     expect(body.stats.total_released_episodes).toBe(5); // 2 from show-1 + 3 from show-2
+  });
+});
+
+describe("GET /user/search", () => {
+  it("returns matching users by username", async () => {
+    await createUser("alice", "hash", "Alice Smith");
+    await createUser("bob", "hash", "Bob Jones");
+
+    const res = await app.request("/user/search?q=alice", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.users).toHaveLength(1);
+    expect(body.users[0].username).toBe("alice");
+    expect(body.users[0].name).toBe("Alice Smith");
+  });
+
+  it("returns matching users by display name", async () => {
+    await createUser("user1", "hash", "Alice Smith");
+    await createUser("user2", "hash", "Bob Jones");
+
+    const res = await app.request("/user/search?q=Jones", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.users).toHaveLength(1);
+    expect(body.users[0].username).toBe("user2");
+  });
+
+  it("returns empty array when no users match", async () => {
+    const res = await app.request("/user/search?q=nonexistent", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.users).toHaveLength(0);
+  });
+
+  it("returns 401 without authentication", async () => {
+    const res = await app.request("/user/search?q=test");
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("Authentication required");
+  });
+
+  it("returns 400 without query parameter", async () => {
+    const res = await app.request("/user/search", { headers: authHeaders() });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Query parameter 'q' is required");
+  });
+
+  it("excludes banned users from results", async () => {
+    const bannedId = await createUser("banneduser", "hash", "Banned User");
+    await createUser("normaluser", "hash", "Normal User");
+
+    const db = getDb();
+    await db.update(users).set({ banned: true }).where(eq(users.id, bannedId)).run();
+
+    const res = await app.request("/user/search?q=user", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const usernames = body.users.map((u: { username: string }) => u.username);
+    expect(usernames).toContain("normaluser");
+    expect(usernames).not.toContain("banneduser");
+  });
+
+  it("returns id, username, name, and image fields", async () => {
+    await createUser("searchable", "hash", "Searchable User");
+
+    const res = await app.request("/user/search?q=searchable", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.users).toHaveLength(1);
+    const user = body.users[0];
+    expect(user.id).toBeTruthy();
+    expect(user.username).toBe("searchable");
+    expect(user.name).toBe("Searchable User");
+    expect(user).toHaveProperty("image");
   });
 });
