@@ -135,7 +135,7 @@ export default function SeasonDetailPage() {
   const allReleasedWatched = hasStatus && releasedWithStatus.length > 0 && releasedWithStatus.every((ep) => statusMap.get(ep.episode_number)?.is_watched);
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 overflow-x-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-zinc-400">
         <Link to={`/title/${title.id}`} className="hover:text-white transition-colors">{title.title}</Link>
@@ -222,10 +222,10 @@ export default function SeasonDetailPage() {
                   {/* Episode link */}
                   <Link
                     to={`/title/${title.id}/season/${seasonNumber}/episode/${ep.episode_number}`}
-                    className="flex gap-4 flex-1 min-w-0"
+                    className="flex gap-3 sm:gap-4 flex-1 min-w-0"
                   >
                     {/* Episode still */}
-                    <div className="w-36 shrink-0 aspect-video bg-zinc-800 rounded-lg overflow-hidden">
+                    <div className="w-24 sm:w-36 shrink-0 aspect-video bg-zinc-800 rounded-lg overflow-hidden">
                       {ep.still_path ? (
                         <img
                           src={`${TMDB_IMG}/w300${ep.still_path}`}
