@@ -46,6 +46,7 @@ export {
 } from "./tracked";
 
 export { getUserPublicProfile, updateProfilePublic } from "./profile";
+export type { ProfileVisibility } from "./profile";
 
 export {
   createUser,

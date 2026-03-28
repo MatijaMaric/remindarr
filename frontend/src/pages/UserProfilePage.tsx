@@ -55,7 +55,7 @@ export default function UserProfilePage() {
     );
   }
 
-  const { user, stats, movies, is_own_profile, show_watchlist, backdrops, following_count, is_following } = data;
+  const { user, stats, movies, is_own_profile, show_watchlist, profile_visibility, backdrops, following_count, is_following } = data;
 
   async function handleVisibilityToggle(titleId: string, isPublic: boolean) {
     try {
@@ -120,7 +120,11 @@ export default function UserProfilePage() {
       )}
 
       {!show_watchlist && !is_own_profile && (
-        <p className="text-zinc-500 text-center py-8">{t("userProfile.watchlistHidden")}</p>
+        <p className="text-zinc-500 text-center py-8">
+          {profile_visibility === "friends_only"
+            ? t("userProfile.watchlistFriendsOnly")
+            : t("userProfile.watchlistHidden")}
+        </p>
       )}
 
       {!show_watchlist && is_own_profile && (

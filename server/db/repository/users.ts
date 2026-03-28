@@ -64,6 +64,7 @@ const userColumns = {
   role: users.role,
   created_at: users.createdAt,
   profile_public: users.profilePublic,
+  profile_visibility: users.profileVisibility,
 };
 
 export async function getUserByUsername(username: string) {

@@ -108,7 +108,7 @@ export async function untrackTitle(id: string): Promise<void> {
   });
 }
 
-export async function getTrackedTitles(): Promise<{ titles: (Title & { public: boolean })[]; count: number; profile_public: boolean }> {
+export async function getTrackedTitles(): Promise<{ titles: (Title & { public: boolean })[]; count: number; profile_public: boolean; profile_visibility: string }> {
   return fetchJson("/track");
 }
 
@@ -140,10 +140,10 @@ export async function getUserProfile(username: string): Promise<UserProfileRespo
   return fetchJson(`/user/${encodeURIComponent(username)}`);
 }
 
-export async function updateProfileVisibility(isPublic: boolean): Promise<void> {
+export async function updateProfileVisibility(visibility: string): Promise<void> {
   await fetchJson("/track/profile-visibility", {
     method: "PATCH",
-    body: JSON.stringify({ public: isPublic }),
+    body: JSON.stringify({ visibility }),
   });
 }
 

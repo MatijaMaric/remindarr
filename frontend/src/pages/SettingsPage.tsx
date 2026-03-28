@@ -354,10 +354,12 @@ function PasskeySection() {
   );
 }
 
+const VISIBILITY_OPTIONS = ["public", "friends_only", "private"] as const;
+
 function ProfileVisibilitySection() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [profilePublic, setProfilePublic] = useState(false);
+  const [visibility, setVisibility] = useState<string>("private");
   const [titles, setTitles] = useState<(Title & { public: boolean })[]>([]);
   const [updatingGlobal, setUpdatingGlobal] = useState(false);
   const [updatingAll, setUpdatingAll] = useState(false);
@@ -366,7 +368,7 @@ function ProfileVisibilitySection() {
   const refresh = useCallback(async () => {
     try {
       const data = await api.getTrackedTitles();
-      setProfilePublic(data.profile_public);
+      setVisibility(data.profile_visibility || (data.profile_public ? "public" : "private"));
       setTitles(data.titles);
     } catch {
       // ignore
@@ -379,13 +381,12 @@ function ProfileVisibilitySection() {
     refresh();
   }, [refresh]);
 
-  async function handleGlobalToggle() {
+  async function handleVisibilityChange(newVisibility: string) {
     setErr("");
     setUpdatingGlobal(true);
     try {
-      const newValue = !profilePublic;
-      await api.updateProfileVisibility(newValue);
-      setProfilePublic(newValue);
+      await api.updateProfileVisibility(newVisibility);
+      setVisibility(newVisibility);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -419,25 +420,34 @@ function ProfileVisibilitySection() {
       )}
 
       <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
-        {/* Global toggle */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-white font-medium">{t("settings.showWatchlistOnProfile")}</p>
-            <p className="text-sm text-zinc-400 mt-1">{t("settings.showWatchlistDescription")}</p>
-          </div>
-          <button
-            onClick={handleGlobalToggle}
-            disabled={updatingGlobal}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${
-              profilePublic ? "bg-amber-500" : "bg-zinc-700"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                profilePublic ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
+        {/* Visibility selector */}
+        <div className="space-y-3" data-testid="visibility-selector">
+          {VISIBILITY_OPTIONS.map((option) => (
+            <label
+              key={option}
+              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                visibility === option
+                  ? "bg-amber-500/10 border border-amber-500/30"
+                  : "bg-zinc-800 border border-transparent hover:bg-zinc-700"
+              } ${updatingGlobal ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <input
+                type="radio"
+                name="profile-visibility"
+                value={option}
+                checked={visibility === option}
+                onChange={() => handleVisibilityChange(option)}
+                disabled={updatingGlobal}
+                className="accent-amber-500"
+              />
+              <div>
+                <p className={`font-medium ${visibility === option ? "text-amber-400" : "text-white"}`}>
+                  {t(`settings.visibility_${option}`)}
+                </p>
+                <p className="text-sm text-zinc-400">{t(`settings.visibility_${option}_desc`)}</p>
+              </div>
+            </label>
+          ))}
         </div>
 
         {/* Bulk actions */}

@@ -28,7 +28,12 @@ app.get("/", async (c) => {
     getTrackedTitles(user.id),
     getUserById(user.id),
   ]);
-  return ok(c, { titles, count: titles.length, profile_public: Boolean(fullUser?.profile_public) });
+  return ok(c, {
+    titles,
+    count: titles.length,
+    profile_public: Boolean(fullUser?.profile_public),
+    profile_visibility: fullUser?.profile_visibility ?? (fullUser?.profile_public ? "public" : "private"),
+  });
 });
 
 interface FrontendOffer {
@@ -259,8 +264,12 @@ app.post("/:id", async (c) => {
 
 app.patch("/profile-visibility", async (c) => {
   const user = c.get("user")!;
-  const body = await c.req.json<{ public: boolean }>();
-  await updateProfilePublic(user.id, body.public);
+  const body = await c.req.json<{ public?: boolean; visibility?: string }>();
+  if (body.visibility && ["public", "friends_only", "private"].includes(body.visibility)) {
+    await updateProfilePublic(user.id, body.visibility as "public" | "friends_only" | "private");
+  } else if (body.public !== undefined) {
+    await updateProfilePublic(user.id, body.public);
+  }
   return ok(c, { message: "Profile visibility updated" });
 });
 

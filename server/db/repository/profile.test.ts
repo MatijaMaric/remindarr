@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser, trackTitle, updateProfilePublic, watchTitle, upsertEpisodes, watchEpisode } from "../repository";
+import { upsertTitles, createUser, trackTitle, updateProfilePublic, watchTitle, upsertEpisodes, watchEpisode, follow } from "../repository";
 import { getDb, watchedTitles } from "../schema";
 import { getUserPublicProfile } from "./profile";
 import { sql } from "drizzle-orm";
@@ -210,5 +210,109 @@ describe("getUserPublicProfile progress metrics", () => {
     expect(result).not.toBeNull();
     // total_episodes=2, watched=1, released=1 -> not completed (total != watched)
     expect(result!.stats.shows_completed).toBe(0);
+  });
+});
+
+describe("profile visibility access control", () => {
+  it("public visibility shows watchlist to everyone", async () => {
+    await updateProfilePublic(userId, "public");
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Public Movie" })]);
+    await trackTitle("movie-1", userId);
+
+    const result = await getUserPublicProfile("testuser", false);
+    expect(result).not.toBeNull();
+    expect(result!.show_watchlist).toBe(true);
+    expect(result!.profile_visibility).toBe("public");
+    expect(result!.movies).toHaveLength(1);
+  });
+
+  it("private visibility hides watchlist from everyone", async () => {
+    await updateProfilePublic(userId, "private");
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Private Movie" })]);
+    await trackTitle("movie-1", userId);
+
+    const viewerId = await createUser("viewer", "hash");
+    const result = await getUserPublicProfile("testuser", false, viewerId);
+    expect(result).not.toBeNull();
+    expect(result!.show_watchlist).toBe(false);
+    expect(result!.profile_visibility).toBe("private");
+    expect(result!.movies).toHaveLength(0);
+  });
+
+  it("friends_only shows watchlist to mutual followers", async () => {
+    await updateProfilePublic(userId, "friends_only");
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Friends Movie" })]);
+    await trackTitle("movie-1", userId);
+
+    const friendId = await createUser("friend", "hash");
+    // Create mutual follow
+    await follow(userId, friendId);
+    await follow(friendId, userId);
+
+    const result = await getUserPublicProfile("testuser", false, friendId);
+    expect(result).not.toBeNull();
+    expect(result!.show_watchlist).toBe(true);
+    expect(result!.profile_visibility).toBe("friends_only");
+    expect(result!.movies).toHaveLength(1);
+  });
+
+  it("friends_only hides watchlist from non-mutual followers", async () => {
+    await updateProfilePublic(userId, "friends_only");
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Friends Movie" })]);
+    await trackTitle("movie-1", userId);
+
+    const strangerId = await createUser("stranger", "hash");
+    // Only one-way follow (stranger follows testuser but not mutual)
+    await follow(strangerId, userId);
+
+    const result = await getUserPublicProfile("testuser", false, strangerId);
+    expect(result).not.toBeNull();
+    expect(result!.show_watchlist).toBe(false);
+    expect(result!.movies).toHaveLength(0);
+  });
+
+  it("friends_only hides watchlist from anonymous viewers", async () => {
+    await updateProfilePublic(userId, "friends_only");
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Friends Movie" })]);
+    await trackTitle("movie-1", userId);
+
+    const result = await getUserPublicProfile("testuser", false);
+    expect(result).not.toBeNull();
+    expect(result!.show_watchlist).toBe(false);
+    expect(result!.movies).toHaveLength(0);
+  });
+
+  it("own profile always shows watchlist regardless of visibility", async () => {
+    await updateProfilePublic(userId, "private");
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Own Movie" })]);
+    await trackTitle("movie-1", userId);
+
+    const result = await getUserPublicProfile("testuser", true, userId);
+    expect(result).not.toBeNull();
+    expect(result!.show_watchlist).toBe(true);
+    expect(result!.movies).toHaveLength(1);
+  });
+
+  it("updateProfilePublic sets both legacy and new fields", async () => {
+    await updateProfilePublic(userId, "friends_only");
+    const db = getDb();
+    const row = await db.select().from(
+      (await import("../schema")).users
+    ).where(sql`id = ${userId}`).get();
+    expect(row).not.toBeNull();
+    expect(row!.profileVisibility).toBe("friends_only");
+    // friends_only should set legacy profilePublic to 0
+    expect(row!.profilePublic).toBe(0);
+  });
+
+  it("updateProfilePublic with boolean backward compat", async () => {
+    await updateProfilePublic(userId, true);
+    const db = getDb();
+    const row = await db.select().from(
+      (await import("../schema")).users
+    ).where(sql`id = ${userId}`).get();
+    expect(row).not.toBeNull();
+    expect(row!.profileVisibility).toBe("public");
+    expect(row!.profilePublic).toBe(1);
   });
 });

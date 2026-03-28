@@ -3,7 +3,9 @@ import { getDb } from "../schema";
 import { users, watchedTitles, watchedEpisodes, episodes, titles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getPublicTrackedTitles, getPublicTrackedCount, getTrackedTitles } from "./tracked";
-import { getFollowerCount, getFollowingCount, isFollowing } from "./follows";
+import { getFollowerCount, getFollowingCount, isFollowing, areMutualFollowers } from "./follows";
+
+export type ProfileVisibility = "public" | "friends_only" | "private";
 
 export async function getUserPublicProfile(username: string, isOwnProfile = false, viewerId?: string | null) {
   return traceDbQuery("getUserPublicProfile", async () => {
@@ -17,6 +19,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         image: users.image,
         member_since: users.createdAt,
         profile_public: users.profilePublic,
+        profile_visibility: users.profileVisibility,
       })
       .from(users)
       .where(sql`lower(${users.username}) = lower(${username})`)
@@ -24,7 +27,18 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
 
     if (!user) return null;
 
-    const showWatchlist = isOwnProfile || Boolean(user.profile_public);
+    const visibility = (user.profile_visibility || (user.profile_public ? "public" : "private")) as ProfileVisibility;
+
+    let showWatchlist: boolean;
+    if (isOwnProfile) {
+      showWatchlist = true;
+    } else if (visibility === "public") {
+      showWatchlist = true;
+    } else if (visibility === "friends_only" && viewerId) {
+      showWatchlist = await areMutualFollowers(viewerId, user.id);
+    } else {
+      showWatchlist = false;
+    }
 
     const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles, backdrops, followerCount, followingCount, viewerIsFollowing] = await Promise.all([
       showWatchlist ? getPublicTrackedCount(user.id) : Promise.resolve(0),
@@ -110,6 +124,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         total_released_episodes: totalReleasedEpisodes,
       },
       show_watchlist: showWatchlist,
+      profile_visibility: visibility,
       follower_count: followerCount,
       following_count: followingCount,
       is_following: viewerIsFollowing,
@@ -139,11 +154,20 @@ async function getRecentlyWatchedBackdrops(db: ReturnType<typeof getDb>, userId:
   return rows as { id: string; title: string; backdrop_url: string }[];
 }
 
-export async function updateProfilePublic(userId: string, isPublic: boolean) {
+export async function updateProfilePublic(userId: string, isPublicOrVisibility: boolean | ProfileVisibility) {
   return traceDbQuery("updateProfilePublic", async () => {
     const db = getDb();
+    let visibility: ProfileVisibility;
+    if (typeof isPublicOrVisibility === "boolean") {
+      visibility = isPublicOrVisibility ? "public" : "private";
+    } else {
+      visibility = isPublicOrVisibility;
+    }
     await db.update(users)
-      .set({ profilePublic: isPublic ? 1 : 0 })
+      .set({
+        profilePublic: visibility === "public" ? 1 : 0,
+        profileVisibility: visibility,
+      })
       .where(eq(users.id, userId))
       .run();
   });
