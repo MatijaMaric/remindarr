@@ -2,9 +2,9 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "../schema";
 import { users, watchedTitles, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
-import { getPublicTrackedTitles, getPublicTrackedCount } from "./tracked";
+import { getPublicTrackedTitles, getPublicTrackedCount, getTrackedTitles } from "./tracked";
 
-export async function getUserPublicProfile(username: string) {
+export async function getUserPublicProfile(username: string, isOwnProfile = false) {
   return traceDbQuery("getUserPublicProfile", async () => {
     const db = getDb();
 
@@ -23,7 +23,7 @@ export async function getUserPublicProfile(username: string) {
 
     if (!user) return null;
 
-    const showWatchlist = Boolean(user.profile_public);
+    const showWatchlist = isOwnProfile || Boolean(user.profile_public);
 
     const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles] = await Promise.all([
       showWatchlist ? getPublicTrackedCount(user.id) : Promise.resolve(0),
@@ -37,7 +37,11 @@ export async function getUserPublicProfile(username: string) {
         .from(watchedEpisodes)
         .where(eq(watchedEpisodes.userId, user.id))
         .get(),
-      showWatchlist ? getPublicTrackedTitles(user.id) : Promise.resolve([]),
+      isOwnProfile
+        ? getTrackedTitles(user.id).then(titles => titles.map(t => ({ ...t, is_public: t.public })))
+        : showWatchlist
+          ? getPublicTrackedTitles(user.id).then(titles => titles.map(t => ({ ...t, is_public: true })))
+          : Promise.resolve([]),
     ]);
 
     const movies = allTitles.filter(t => t.object_type === "MOVIE");

@@ -240,6 +240,29 @@ describe("getTitleById", () => {
     const result = await getTitleById("movie-123", userId);
     expect(result!.is_tracked).toBe(true);
   });
+
+  it("returns is_public=undefined without user", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const result = await getTitleById("movie-123");
+    expect(result!.is_public).toBeUndefined();
+  });
+
+  it("returns is_public=true when tracked and public", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const userId = await createUser("testuser", "hash");
+    await trackTitle("movie-123", userId);
+
+    const result = await getTitleById("movie-123", userId);
+    expect(result!.is_public).toBe(true);
+  });
+
+  it("returns is_public=undefined when not tracked", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    const userId = await createUser("testuser", "hash");
+
+    const result = await getTitleById("movie-123", userId);
+    expect(result!.is_public).toBeUndefined();
+  });
 });
 
 describe("getRecentTitles", () => {
