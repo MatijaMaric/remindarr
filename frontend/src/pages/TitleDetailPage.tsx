@@ -13,6 +13,7 @@ import type {
   SeasonSummary,
 } from "../types";
 import TrackButton from "../components/TrackButton";
+import RatingButtons from "../components/RatingButtons";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
@@ -358,6 +359,8 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               })()}
               <ShareButton title={tmdb?.title || title.title} />
             </div>
+
+            <RatingButtons titleId={title.id} />
           </div>
         </div>
       </div>
@@ -654,6 +657,8 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               })()}
               <ShareButton title={tmdb?.name || title.title} />
             </div>
+
+            <RatingButtons titleId={title.id} />
           </div>
         </div>
       </div>
