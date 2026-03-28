@@ -25,7 +25,7 @@ export async function getUserPublicProfile(username: string) {
 
     const showWatchlist = Boolean(user.profile_public);
 
-    const [trackedCount, watchedMoviesRow, watchedEpisodesRow, titles] = await Promise.all([
+    const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles] = await Promise.all([
       showWatchlist ? getPublicTrackedCount(user.id) : Promise.resolve(0),
       db
         .select({ count: sql<number>`COUNT(*)` })
@@ -40,6 +40,9 @@ export async function getUserPublicProfile(username: string) {
       showWatchlist ? getPublicTrackedTitles(user.id) : Promise.resolve([]),
     ]);
 
+    const movies = allTitles.filter(t => t.object_type === "MOVIE");
+    const shows = allTitles.filter(t => t.object_type === "SHOW");
+
     return {
       user: {
         username: user.username,
@@ -53,7 +56,8 @@ export async function getUserPublicProfile(username: string) {
         watched_episodes: watchedEpisodesRow?.count ?? 0,
       },
       show_watchlist: showWatchlist,
-      titles,
+      movies,
+      shows,
     };
   });
 }

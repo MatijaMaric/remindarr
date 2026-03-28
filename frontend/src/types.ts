@@ -41,6 +41,8 @@ export interface Title {
   tmdb_score: number | null;
   is_tracked: boolean;
   is_watched?: boolean;
+  total_episodes?: number;
+  watched_episodes_count?: number;
   offers: Offer[];
   tracked_at?: string;
   notes?: string;
@@ -410,7 +412,8 @@ export interface UserProfileStats {
 export interface UserProfileResponse {
   user: UserProfileUser;
   stats: UserProfileStats;
-  titles: Title[];
+  movies: Title[];
+  shows: Title[];
   show_watchlist: boolean;
   is_own_profile: boolean;
 }

@@ -50,6 +50,11 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle }: Props) {
             Watched
           </span>
         )}
+        {!title.is_watched && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
+          <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            {title.watched_episodes_count ?? 0}/{title.total_episodes} ep
+          </span>
+        )}
         {title.imdb_score && (
           <span className="absolute top-2 right-2 bg-yellow-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded">
             {title.imdb_score.toFixed(1)}
