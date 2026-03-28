@@ -187,6 +187,8 @@
     "trackedTitles": "Tracked",
     "watchedMovies": "Movies Watched",
     "watchedEpisodes": "Episodes Watched",
+    "movies": "Movies",
+    "tvShows": "TV Shows",
     "noTitles": "No titles tracked yet.",
     "userNotFound": "User not found",
     "watchlist": "Watchlist",

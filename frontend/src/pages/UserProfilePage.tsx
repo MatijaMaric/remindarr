@@ -39,7 +39,7 @@ export default function UserProfilePage() {
     );
   }
 
-  const { user, stats, titles, is_own_profile, show_watchlist } = data;
+  const { user, stats, movies, shows, is_own_profile, show_watchlist } = data;
   const displayName = user.display_name || user.username;
 
   return (
@@ -90,18 +90,28 @@ export default function UserProfilePage() {
       </div>
 
       {/* Watchlist */}
-      {show_watchlist && titles.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-4">{t("userProfile.watchlist")}</h2>
-          <TitleList
-            titles={titles}
-            onTrackToggle={refetch}
-            emptyMessage={t("userProfile.noTitles")}
-          />
+      {show_watchlist && (movies.length > 0 || shows.length > 0) && (
+        <div className="space-y-8">
+          {movies.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-white mb-4">
+                {t("userProfile.movies")} <span className="text-zinc-500 font-normal text-base">({movies.length})</span>
+              </h2>
+              <TitleList titles={movies} onTrackToggle={refetch} />
+            </div>
+          )}
+          {shows.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-white mb-4">
+                {t("userProfile.tvShows")} <span className="text-zinc-500 font-normal text-base">({shows.length})</span>
+              </h2>
+              <TitleList titles={shows} onTrackToggle={refetch} />
+            </div>
+          )}
         </div>
       )}
 
-      {show_watchlist && titles.length === 0 && (
+      {show_watchlist && movies.length === 0 && shows.length === 0 && (
         <p className="text-zinc-500 text-center py-8">{t("userProfile.noTitles")}</p>
       )}
 

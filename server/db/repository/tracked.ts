@@ -132,6 +132,9 @@ export async function getPublicTrackedTitles(userId: string) {
         tmdb_score: scores.tmdbScore,
         tracked_at: tracked.trackedAt,
         is_tracked: sql<number>`1`,
+        is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
+        total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
+        watched_episodes_count: sql<number>`(SELECT COUNT(*) FROM watched_episodes we INNER JOIN episodes e ON e.id = we.episode_id WHERE e.title_id = ${titles.id} AND we.user_id = ${userId})`,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))
@@ -149,6 +152,7 @@ export async function getPublicTrackedTitles(userId: string) {
       ...row,
       genres: genresByTitle.get(row.id) ?? [],
       is_tracked: true,
+      is_watched: Boolean(row.is_watched),
       offers: offersByTitle.get(row.id) ?? [],
     }));
   });
