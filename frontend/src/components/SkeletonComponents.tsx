@@ -174,7 +174,7 @@ export function ReelsSkeleton() {
   return (
     <div
       className="flex items-center justify-center safe-top"
-      style={{ minHeight: "calc(100dvh - 5rem - env(safe-area-inset-top, 0px))" }}
+      style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}
     >
       <div className="w-full max-w-sm space-y-4 px-4">
         <Skeleton className="w-full aspect-[2/3] rounded-2xl" />

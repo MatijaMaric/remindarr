@@ -301,7 +301,7 @@ export default function ReelsPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - 5rem - env(safe-area-inset-top, 0px))" }}>
+      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}>
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
           <Link to="/" className="text-amber-400 hover:text-amber-300">
@@ -314,7 +314,7 @@ export default function ReelsPage() {
 
   if (cards.length === 0) {
     return (
-      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - 5rem - env(safe-area-inset-top, 0px))" }}>
+      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}>
         <div className="text-center">
           <p className="text-zinc-400 text-lg mb-2">No unwatched episodes</p>
           <p className="text-zinc-600 text-sm mb-6">You're all caught up!</p>
@@ -331,7 +331,7 @@ export default function ReelsPage() {
       <div
         ref={scrollRef}
         className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-        style={{ height: "calc(100dvh - 5rem - env(safe-area-inset-top, 0px))", marginTop: "env(safe-area-inset-top, 0px)" }}
+        style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))", marginTop: "env(safe-area-inset-top, 0px)" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

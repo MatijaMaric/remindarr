@@ -57,7 +57,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
   const isNew = isToday(episode.air_date);
 
   return (
-    <div className="snap-start snap-always w-full relative flex-shrink-0 overflow-hidden" style={{ height: "calc(100dvh - 5rem)" }}>
+    <div className="snap-start snap-always w-full relative flex-shrink-0 overflow-hidden" style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))" }}>
       {/* Background image */}
       {bgUrl ? (
         <img
@@ -86,7 +86,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
       )}
 
       {/* Bottom content */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 pb-4 z-10">
+      <div className="absolute bottom-0 left-0 right-0 p-6 pb-20 sm:pb-4 z-10">
         {caughtUp ? (
           <div className="text-center py-8">
             <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full text-lg font-semibold mb-2">
