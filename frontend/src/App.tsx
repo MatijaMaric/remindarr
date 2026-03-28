@@ -7,6 +7,7 @@ import { useIsMobile } from "./hooks/useIsMobile";
 import RequireAuth from "./components/RequireAuth";
 import BottomTabBar from "./components/BottomTabBar";
 import OfflineIndicator from "./components/OfflineIndicator";
+import InstallPrompt from "./components/InstallPrompt";
 import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 
@@ -135,6 +136,7 @@ export default function App() {
           </div>
         </div>
       </nav>
+      <InstallPrompt />
       <main id="main-content" className={isReelsPage ? "" : "max-w-7xl mx-auto px-4 py-6 pb-20 sm:pb-6"}>
         <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
           <Routes>
