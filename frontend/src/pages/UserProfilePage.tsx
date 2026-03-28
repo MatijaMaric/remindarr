@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Settings } from "lucide-react";
+import { toast } from "sonner";
 import * as api from "../api";
 import TitleList from "../components/TitleList";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
@@ -41,6 +42,16 @@ export default function UserProfilePage() {
 
   const { user, stats, movies, shows, is_own_profile, show_watchlist } = data;
   const displayName = user.display_name || user.username;
+
+  async function handleVisibilityToggle(titleId: string, isPublic: boolean) {
+    try {
+      await api.updateTitleVisibility(titleId, isPublic);
+      toast.success(isPublic ? "Visible on profile" : "Hidden from profile");
+      refetch();
+    } catch {
+      toast.error("Failed to update visibility");
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -97,7 +108,7 @@ export default function UserProfilePage() {
               <h2 className="text-lg font-semibold text-white mb-4">
                 {t("userProfile.movies")} <span className="text-zinc-500 font-normal text-base">({movies.length})</span>
               </h2>
-              <TitleList titles={movies} onTrackToggle={refetch} />
+              <TitleList titles={movies} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} />
             </div>
           )}
           {shows.length > 0 && (
@@ -105,7 +116,7 @@ export default function UserProfilePage() {
               <h2 className="text-lg font-semibold text-white mb-4">
                 {t("userProfile.tvShows")} <span className="text-zinc-500 font-normal text-base">({shows.length})</span>
               </h2>
-              <TitleList titles={shows} onTrackToggle={refetch} />
+              <TitleList titles={shows} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} />
             </div>
           )}
         </div>

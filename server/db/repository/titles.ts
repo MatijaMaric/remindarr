@@ -204,6 +204,9 @@ export async function getTitleById(titleId: string, userId?: string) {
         is_tracked: userId
           ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
           : sql<number>`0`,
+        is_public: userId
+          ? tracked.public
+          : sql<number | null>`NULL`,
         is_watched: userId
           ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
           : sql<number>`0`,
@@ -224,6 +227,7 @@ export async function getTitleById(titleId: string, userId?: string) {
       ...row,
       genres: genreMap.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
+      is_public: row.is_public != null ? Boolean(row.is_public) : undefined,
       is_watched: Boolean(row.is_watched),
       offers: await getOffersForTitle(row.id),
     };
