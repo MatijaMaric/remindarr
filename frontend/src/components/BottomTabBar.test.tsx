@@ -2,6 +2,15 @@ import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+
+// Initialize i18n
+import "../i18n";
+
+// Mock the API module before importing BottomTabBar
+mock.module("../api", () => ({
+  getUnreadRecommendationCount: mock(() => Promise.resolve({ count: 0 })),
+}));
+
 import BottomTabBar from "./BottomTabBar";
 import { AuthContext } from "../context/AuthContext";
 
@@ -34,8 +43,8 @@ describe("BottomTabBar", () => {
 
     expect(screen.getByText("Watch")).toBeDefined();
     expect(screen.getByText("Upcoming")).toBeDefined();
+    expect(screen.getByText("Discovery")).toBeDefined();
     expect(screen.getByText("Browse")).toBeDefined();
-    expect(screen.getByText("Calendar")).toBeDefined();
     expect(screen.getByText("Profile")).toBeDefined();
   });
 
@@ -53,7 +62,7 @@ describe("BottomTabBar", () => {
     expect(screen.getByText("Sign In")).toBeDefined();
     expect(screen.queryByText("Watch")).toBeNull();
     expect(screen.queryByText("Upcoming")).toBeNull();
-    expect(screen.queryByText("Calendar")).toBeNull();
+    expect(screen.queryByText("Discovery")).toBeNull();
     expect(screen.queryByText("Profile")).toBeNull();
   });
 
@@ -83,8 +92,8 @@ describe("BottomTabBar", () => {
     const hrefs = links.map((link) => link.getAttribute("href"));
     expect(hrefs).toContain("/reels");
     expect(hrefs).toContain("/upcoming");
+    expect(hrefs).toContain("/discovery");
     expect(hrefs).toContain("/browse");
-    expect(hrefs).toContain("/calendar");
     expect(hrefs).toContain("/user/test");
   });
 
