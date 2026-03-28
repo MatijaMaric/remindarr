@@ -3,8 +3,6 @@ import { Link, useSearchParams } from "react-router";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  CheckCircleIcon,
-  CircleIcon,
   LayoutGridIcon,
   ListIcon,
   EyeIcon,
@@ -24,6 +22,7 @@ import {
   getEpisodeCardImageUrl,
   groupByShow,
 } from "../components/EpisodeComponents";
+import WatchedToggleButton from "../components/WatchedToggleButton";
 
 
 
@@ -409,33 +408,12 @@ function SlideOverPanel({
                                   {ep.show_title}
                                 </div>
                               </Link>
-                              {released ? (
-                                <button
-                                  onClick={() =>
-                                    onToggleWatched(ep.id, !!ep.is_watched)
-                                  }
-                                  className={`flex-shrink-0 p-1 rounded-md transition-colors cursor-pointer ${
-                                    ep.is_watched
-                                      ? "text-emerald-400 hover:text-emerald-300"
-                                      : "text-zinc-600 hover:text-zinc-400"
-                                  }`}
-                                  title={
-                                    ep.is_watched
-                                      ? "Mark as unwatched"
-                                      : "Mark as watched"
-                                  }
-                                >
-                                  {ep.is_watched ? (
-                                    <CheckCircleIcon className="size-5" />
-                                  ) : (
-                                    <CircleIcon className="size-5" />
-                                  )}
-                                </button>
-                              ) : (
-                                <span className="flex-shrink-0 p-1 text-zinc-700 cursor-not-allowed">
-                                  <CircleIcon className="size-5" />
-                                </span>
-                              )}
+                              <WatchedToggleButton
+                                watched={!!ep.is_watched}
+                                onClick={() => onToggleWatched(ep.id, !!ep.is_watched)}
+                                disabled={!released}
+                                size="sm"
+                              />
                             </div>
                             <Link
                               to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
@@ -1086,26 +1064,12 @@ function AgendaCalendar({
                                             {ep.show_title}
                                           </h3>
                                         </Link>
-                                        {isEpisodeReleased(ep) ? (
-                                          <button
-                                            onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
-                                            className={`flex-shrink-0 cursor-pointer transition-colors ${
-                                              ep.is_watched
-                                                ? "text-emerald-400 hover:text-emerald-300"
-                                                : "text-zinc-600 hover:text-zinc-400"
-                                            }`}
-                                          >
-                                            {ep.is_watched ? (
-                                              <CheckCircleIcon className="size-5" />
-                                            ) : (
-                                              <CircleIcon className="size-5" />
-                                            )}
-                                          </button>
-                                        ) : (
-                                          <span className="flex-shrink-0 text-zinc-700">
-                                            <CircleIcon className="size-5" />
-                                          </span>
-                                        )}
+                                        <WatchedToggleButton
+                                          watched={!!ep.is_watched}
+                                          onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
+                                          disabled={!isEpisodeReleased(ep)}
+                                          size="sm"
+                                        />
                                       </div>
                                       <Link
                                         to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
