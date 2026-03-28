@@ -434,11 +434,15 @@ export async function getTitleRating(titleId: string): Promise<TitleRatingRespon
 
 // ─── Recommendations ──────────────────────────────────────────────────────────
 
-export async function sendRecommendation(toUserId: string, titleId: string, message?: string): Promise<{ id: string }> {
+export async function sendRecommendation(titleId: string, message?: string): Promise<{ id: string }> {
   return fetchJson("/recommendations", {
     method: "POST",
-    body: JSON.stringify({ toUserId, titleId, message }),
+    body: JSON.stringify({ titleId, message }),
   });
+}
+
+export async function checkRecommendation(titleId: string): Promise<{ recommended: boolean; id: string | null }> {
+  return fetchJson(`/recommendations/check/${encodeURIComponent(titleId)}`);
 }
 
 export async function getRecommendations(limit?: number, offset?: number): Promise<RecommendationsResponse> {
