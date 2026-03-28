@@ -411,6 +411,7 @@ export interface UserSummary {
 // ─── User Profile Types ─────────────────────────────────────────────────────
 
 export interface UserProfileUser {
+  id: string;
   username: string;
   display_name: string | null;
   image: string | null;
@@ -441,6 +442,9 @@ export interface UserProfileResponse {
   show_watchlist: boolean;
   is_own_profile: boolean;
   backdrops: ProfileBackdrop[];
+  follower_count: number;
+  following_count: number;
+  is_following: boolean;
 }
 
 // ─── Rating Types ────────────────────────────────────────────────────────────

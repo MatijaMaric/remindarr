@@ -5,6 +5,7 @@ import { makeParsedTitle } from "../test-utils/fixtures";
 import { upsertTitles, createUser, createSession, getSessionWithUser, trackTitle, updateProfilePublic, updateTrackedVisibility } from "../db/repository";
 import { watchTitle } from "../db/repository";
 import { upsertEpisodes, watchEpisode } from "../db/repository";
+import { follow } from "../db/repository";
 import { optionalAuth } from "../middleware/auth";
 import { getDb, users } from "../db/schema";
 import { eq } from "drizzle-orm";
@@ -81,6 +82,9 @@ describe("GET /user/:username", () => {
     expect(body.shows).toHaveLength(0);
     expect(body.show_watchlist).toBe(false);
     expect(body.is_own_profile).toBe(false);
+    expect(body.follower_count).toBe(0);
+    expect(body.following_count).toBe(0);
+    expect(body.is_following).toBe(false);
   });
 
   it("returns 404 for nonexistent username", async () => {
@@ -124,7 +128,8 @@ describe("GET /user/:username", () => {
     expect(body.user.password_hash).toBeUndefined();
     expect(body.user.is_admin).toBeUndefined();
     expect(body.user.role).toBeUndefined();
-    expect(body.user.id).toBeUndefined();
+    // id is intentionally exposed for the FollowButton
+    expect(body.user.id).toBeTruthy();
   });
 
   it("hides watchlist when profile_public is false (default)", async () => {
@@ -397,6 +402,62 @@ describe("GET /user/:username", () => {
     expect(body.stats.shows_total).toBe(2);
     expect(body.stats.total_watched_episodes).toBe(3); // 2 from show-1 + 1 from show-2
     expect(body.stats.total_released_episodes).toBe(5); // 2 from show-1 + 3 from show-2
+  });
+
+  it("includes follower and following counts", async () => {
+    const otherUserId1 = await createUser("follower1", "hash", "Follower One");
+    const otherUserId2 = await createUser("follower2", "hash", "Follower Two");
+    const followingUserId = await createUser("followee", "hash", "Followee");
+
+    await follow(otherUserId1, userId);
+    await follow(otherUserId2, userId);
+    await follow(userId, followingUserId);
+
+    const res = await app.request("/user/testuser");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.follower_count).toBe(2);
+    expect(body.following_count).toBe(1);
+  });
+
+  it("is_following is true when viewer follows the profile user", async () => {
+    const viewerId = await createUser("viewer", "hash", "Viewer");
+    const viewerToken = await createSession(viewerId);
+
+    await follow(viewerId, userId);
+
+    const res = await app.request("/user/testuser", {
+      headers: { Cookie: `better-auth.session_token=${viewerToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_following).toBe(true);
+  });
+
+  it("is_following is false when viewer does not follow the profile user", async () => {
+    const viewerId = await createUser("viewer", "hash", "Viewer");
+    const viewerToken = await createSession(viewerId);
+
+    const res = await app.request("/user/testuser", {
+      headers: { Cookie: `better-auth.session_token=${viewerToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_following).toBe(false);
+  });
+
+  it("is_following is false on own profile", async () => {
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_following).toBe(false);
+  });
+
+  it("is_following is false when not authenticated", async () => {
+    const res = await app.request("/user/testuser");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_following).toBe(false);
   });
 });
 

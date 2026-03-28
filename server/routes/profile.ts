@@ -25,7 +25,8 @@ app.get("/:username", async (c) => {
   const viewer = c.get("user");
   const isOwnProfile = viewer?.username?.toLowerCase() === username.toLowerCase();
 
-  const profile = await getUserPublicProfile(username, isOwnProfile);
+  const viewerId = viewer?.id ?? null;
+  const profile = await getUserPublicProfile(username, isOwnProfile, viewerId);
 
   if (!profile) {
     return err(c, "User not found", 404);

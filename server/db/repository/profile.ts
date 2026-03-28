@@ -3,8 +3,9 @@ import { getDb } from "../schema";
 import { users, watchedTitles, watchedEpisodes, episodes, titles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getPublicTrackedTitles, getPublicTrackedCount, getTrackedTitles } from "./tracked";
+import { getFollowerCount, getFollowingCount, isFollowing } from "./follows";
 
-export async function getUserPublicProfile(username: string, isOwnProfile = false) {
+export async function getUserPublicProfile(username: string, isOwnProfile = false, viewerId?: string | null) {
   return traceDbQuery("getUserPublicProfile", async () => {
     const db = getDb();
 
@@ -25,7 +26,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
 
     const showWatchlist = isOwnProfile || Boolean(user.profile_public);
 
-    const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles, backdrops] = await Promise.all([
+    const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles, backdrops, followerCount, followingCount, viewerIsFollowing] = await Promise.all([
       showWatchlist ? getPublicTrackedCount(user.id) : Promise.resolve(0),
       db
         .select({ count: sql<number>`COUNT(*)` })
@@ -45,6 +46,9 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       showWatchlist
         ? getRecentlyWatchedBackdrops(db, user.id)
         : Promise.resolve([]),
+      getFollowerCount(user.id),
+      getFollowingCount(user.id),
+      viewerId && !isOwnProfile ? isFollowing(viewerId, user.id) : Promise.resolve(false),
     ]);
 
     const shows = allTitles.filter(t => t.object_type === "SHOW");
@@ -90,6 +94,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
 
     return {
       user: {
+        id: user.id,
         username: user.username,
         display_name: user.display_name,
         image: user.image,
@@ -105,6 +110,9 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         total_released_episodes: totalReleasedEpisodes,
       },
       show_watchlist: showWatchlist,
+      follower_count: followerCount,
+      following_count: followingCount,
+      is_following: viewerIsFollowing,
       movies,
       shows,
       backdrops,

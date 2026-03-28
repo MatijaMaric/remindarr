@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import * as api from "../api";
 import TitleList from "../components/TitleList";
 import ProfileBanner from "../components/ProfileBanner";
+import FollowButton from "../components/FollowButton";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { groupShowsByStatus } from "../lib/groupShows";
@@ -19,6 +20,15 @@ export default function UserProfilePage() {
 
   const shows = useMemo(() => data?.shows ?? [], [data]);
   const showGroups = useMemo(() => groupShowsByStatus(shows), [shows]);
+
+  // Track optimistic adjustment to follower count (resets on refetch)
+  const [followerAdjust, setFollowerAdjust] = useState(0);
+
+  const handleFollowToggle = useCallback((isNowFollowing: boolean) => {
+    setFollowerAdjust((prev) => prev + (isNowFollowing ? 1 : -1));
+  }, []);
+
+  const followerCount = (data?.follower_count ?? 0) + followerAdjust;
 
   if (loading) {
     return (
@@ -45,7 +55,7 @@ export default function UserProfilePage() {
     );
   }
 
-  const { user, stats, movies, is_own_profile, show_watchlist, backdrops } = data;
+  const { user, stats, movies, is_own_profile, show_watchlist, backdrops, following_count, is_following } = data;
 
   async function handleVisibilityToggle(titleId: string, isPublic: boolean) {
     try {
@@ -61,6 +71,20 @@ export default function UserProfilePage() {
     <div className="max-w-7xl mx-auto space-y-8">
       {/* Banner with overlaid user info and stats */}
       <ProfileBanner backdrops={backdrops} user={user} stats={stats} isOwnProfile={is_own_profile} />
+
+      {/* Social bar: follower/following counts + follow button */}
+      <div className="flex items-center gap-3" data-testid="social-bar">
+        <span className="text-zinc-400 text-sm">
+          <span className="text-white font-medium">{followerCount}</span> {t("userProfile.followers")}
+        </span>
+        <span className="text-zinc-600">&middot;</span>
+        <span className="text-zinc-400 text-sm">
+          <span className="text-white font-medium">{following_count}</span> {t("userProfile.following")}
+        </span>
+        {!is_own_profile && (
+          <FollowButton userId={user.id} initialIsFollowing={is_following} onToggle={handleFollowToggle} />
+        )}
+      </div>
 
       {/* Watchlist */}
       {show_watchlist && (movies.length > 0 || shows.length > 0) && (

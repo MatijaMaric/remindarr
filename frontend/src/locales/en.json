@@ -207,7 +207,9 @@
     "watchlistHiddenOwn": "Your watchlist is hidden from your public profile.",
     "enableInSettings": "Enable in settings",
     "showsCompleted": "Shows Completed",
-    "episodesWatched": "Episodes Watched"
+    "episodesWatched": "Episodes Watched",
+    "followers": "followers",
+    "following": "following"
   },
   "settings": {
     "title": "Settings",
