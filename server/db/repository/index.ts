@@ -91,3 +91,40 @@ export {
   getDistinctNotifierTimezones,
   getEnabledNotifierSchedules,
 } from "./notifiers";
+
+export {
+  follow,
+  unfollow,
+  getFollowers,
+  getFollowing,
+  isFollowing,
+  areMutualFollowers,
+  getFollowerCount,
+  getFollowingCount,
+} from "./follows";
+
+export {
+  rateTitle,
+  unrateTitle,
+  getUserRating,
+  getTitleRatings,
+  getFriendsRatings,
+} from "./ratings";
+export type { RatingValue } from "./ratings";
+
+export {
+  createRecommendation,
+  getReceivedRecommendations,
+  getSentRecommendations,
+  markAsRead,
+  deleteRecommendation,
+  getUnreadCount,
+} from "./recommendations";
+
+export {
+  createInvitation,
+  getInvitation,
+  redeemInvitation,
+  getUserInvitations,
+  revokeInvitation,
+} from "./invitations";
