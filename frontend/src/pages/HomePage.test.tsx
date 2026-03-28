@@ -14,6 +14,34 @@ mock.module("../context/AuthContext", () => ({
   AuthContext: { Provider: ({ children }: any) => children },
 }));
 
+// Mock IntersectionObserver
+class MockIntersectionObserver {
+  callback: IntersectionObserverCallback;
+  constructor(callback: IntersectionObserverCallback) {
+    this.callback = callback;
+  }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(globalThis, "IntersectionObserver", {
+  value: MockIntersectionObserver,
+  writable: true,
+  configurable: true,
+});
+
+// Mock ResizeObserver
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(globalThis, "ResizeObserver", {
+  value: MockResizeObserver,
+  writable: true,
+  configurable: true,
+});
+
 function makeSearchTitle(i: number) {
   return {
     id: `t${i}`,
@@ -37,6 +65,29 @@ function makeSearchTitle(i: number) {
   };
 }
 
+function makeRecommendation(id: string, overrides: Record<string, unknown> = {}) {
+  return {
+    id,
+    from_user: {
+      id: "sender1",
+      username: "alice",
+      name: "Alice",
+      display_name: "Alice",
+      image: null,
+    },
+    title: {
+      id: `title-${id}`,
+      title: `Rec Movie ${id}`,
+      object_type: "MOVIE",
+      poster_url: null,
+    },
+    message: null,
+    created_at: new Date().toISOString(),
+    read_at: null,
+    ...overrides,
+  };
+}
+
 const mockBrowseTitles = mock(() =>
   Promise.resolve({
     titles: Array.from({ length: 20 }, (_, i) => makeSearchTitle(i + 1)),
@@ -46,11 +97,18 @@ const mockBrowseTitles = mock(() =>
   })
 );
 
+const mockGetUpcomingEpisodes = mock(() =>
+  Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+);
+
+const mockGetRecommendations = mock(() =>
+  Promise.resolve({ recommendations: [], count: 0 })
+);
+
 mock.module("../api", () => ({
   browseTitles: mockBrowseTitles,
-  getUpcomingEpisodes: mock(() =>
-    Promise.resolve({ today: [], upcoming: [], unwatched: [] })
-  ),
+  getUpcomingEpisodes: mockGetUpcomingEpisodes,
+  getRecommendations: mockGetRecommendations,
 }));
 
 const { default: HomePage } = await import("./HomePage");
@@ -64,6 +122,16 @@ afterEach(() => {
   mockUser = null;
   mockAuthLoading = false;
   mockBrowseTitles.mockClear();
+  mockGetUpcomingEpisodes.mockClear();
+  mockGetRecommendations.mockClear();
+
+  // Reset defaults
+  mockGetUpcomingEpisodes.mockImplementation(() =>
+    Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+  );
+  mockGetRecommendations.mockImplementation(() =>
+    Promise.resolve({ recommendations: [], count: 0 })
+  );
 });
 
 describe("HomePage — unauthenticated landing", () => {
@@ -131,5 +199,119 @@ describe("HomePage — unauthenticated landing", () => {
 
     const link = screen.getByText(/Discover More/).closest("a");
     expect(link?.getAttribute("href")).toBe("/browse");
+  });
+
+  it("does not show recommendations section when unauthenticated", async () => {
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Track movies & TV shows you love")).toBeDefined();
+    });
+
+    expect(screen.queryByText("Recommended for You")).toBeNull();
+    expect(mockGetRecommendations).not.toHaveBeenCalled();
+  });
+});
+
+describe("HomePage — authenticated recommendations", () => {
+  it("shows recommendations section when recommendations exist", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    const recs = [
+      makeRecommendation("r1"),
+      makeRecommendation("r2", {
+        from_user: { id: "s2", username: "bob", name: "Bob", display_name: "Bob", image: null },
+        title: { id: "title-r2", title: "Rec Movie r2", object_type: "SHOW", poster_url: null },
+      }),
+    ];
+    mockGetRecommendations.mockImplementation(() =>
+      Promise.resolve({ recommendations: recs, count: 2 })
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Recommended for You")).toBeDefined();
+    });
+
+    expect(screen.getByText("Rec Movie r1")).toBeDefined();
+    expect(screen.getByText("Rec Movie r2")).toBeDefined();
+    expect(screen.getByText("from @alice")).toBeDefined();
+    expect(screen.getByText("from @bob")).toBeDefined();
+  });
+
+  it("hides recommendations section when no recommendations", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    mockGetRecommendations.mockImplementation(() =>
+      Promise.resolve({ recommendations: [], count: 0 })
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Today")).toBeDefined();
+    });
+
+    expect(screen.queryByText("Recommended for You")).toBeNull();
+  });
+
+  it("fetches recommendations with limit of 6", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(mockGetRecommendations).toHaveBeenCalledWith(6);
+    });
+  });
+
+  it("shows 'See all' link to /discovery", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    const recs = [makeRecommendation("r1")];
+    mockGetRecommendations.mockImplementation(() =>
+      Promise.resolve({ recommendations: recs, count: 1 })
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Recommended for You")).toBeDefined();
+    });
+
+    const seeAllLink = screen.getByText(/See all/).closest("a");
+    expect(seeAllLink?.getAttribute("href")).toBe("/discovery");
+  });
+
+  it("links recommendation cards to title detail page", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    const recs = [makeRecommendation("r1")];
+    mockGetRecommendations.mockImplementation(() =>
+      Promise.resolve({ recommendations: recs, count: 1 })
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Rec Movie r1")).toBeDefined();
+    });
+
+    // The card is a link to the title detail page
+    const titleLink = screen.getByText("Rec Movie r1").closest("a");
+    expect(titleLink?.getAttribute("href")).toBe("/title/title-r1");
+  });
+
+  it("still shows today section even when recommendations API fails", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    mockGetRecommendations.mockImplementation(() =>
+      Promise.reject(new Error("network error"))
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Today")).toBeDefined();
+    });
+
+    // Recommendations section should not appear
+    expect(screen.queryByText("Recommended for You")).toBeNull();
   });
 });
