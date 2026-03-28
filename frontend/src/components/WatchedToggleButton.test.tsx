@@ -84,4 +84,29 @@ describe("WatchedToggleButton", () => {
     const button = screen.getByRole("button");
     expect(button.className).toContain("text-zinc-400");
   });
+
+  it("hides label on mobile when compactOnMobile is true", () => {
+    render(<WatchedToggleButton watched={true} onClick={() => {}} size="md" compactOnMobile />);
+    const button = screen.getByRole("button");
+    const labelSpan = button.querySelector("span.hidden.sm\\:inline");
+    expect(labelSpan).toBeTruthy();
+    expect(labelSpan!.textContent).toBe("Watched");
+  });
+
+  it("hides label on mobile for disabled state when compactOnMobile is true", () => {
+    const { container } = render(
+      <WatchedToggleButton watched={false} onClick={() => {}} disabled compactOnMobile />,
+    );
+    const span = container.querySelector("span");
+    expect(span).toBeTruthy();
+    const labelSpan = span!.querySelector("span.hidden.sm\\:inline");
+    expect(labelSpan).toBeTruthy();
+  });
+
+  it("uses compact padding when compactOnMobile is true (md size)", () => {
+    render(<WatchedToggleButton watched={false} onClick={() => {}} size="md" compactOnMobile />);
+    const button = screen.getByRole("button");
+    expect(button.className).toContain("px-1.5");
+    expect(button.className).toContain("sm:px-2.5");
+  });
 });

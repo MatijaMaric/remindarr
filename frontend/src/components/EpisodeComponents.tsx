@@ -55,8 +55,8 @@ export function isEpisodeReleased(ep: Episode): boolean {
   return ep.air_date <= today;
 }
 
-export function WatchedIcon({ watched, onClick, disabled, size = "sm" }: { watched: boolean; onClick: () => void; disabled?: boolean; size?: "sm" | "md" }) {
-  return <WatchedToggleButton watched={watched} onClick={onClick} disabled={disabled} size={size} />;
+export function WatchedIcon({ watched, onClick, disabled, size = "sm", compactOnMobile }: { watched: boolean; onClick: () => void; disabled?: boolean; size?: "sm" | "md"; compactOnMobile?: boolean }) {
+  return <WatchedToggleButton watched={watched} onClick={onClick} disabled={disabled} size={size} compactOnMobile={compactOnMobile} />;
 }
 
 export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Episode; compact?: boolean; onToggleWatched: (id: number, current: boolean) => void }) {

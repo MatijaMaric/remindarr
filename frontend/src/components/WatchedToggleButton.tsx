@@ -6,6 +6,7 @@ interface WatchedToggleButtonProps {
   onClick: () => void;
   disabled?: boolean;
   size?: "sm" | "md";
+  compactOnMobile?: boolean;
 }
 
 export default function WatchedToggleButton({
@@ -13,6 +14,7 @@ export default function WatchedToggleButton({
   onClick,
   disabled = false,
   size = "sm",
+  compactOnMobile = false,
 }: WatchedToggleButtonProps) {
   const { t } = useTranslation();
 
@@ -30,13 +32,15 @@ export default function WatchedToggleButton({
         className={`inline-flex items-center flex-shrink-0 border cursor-not-allowed opacity-50 bg-zinc-800/50 text-zinc-600 border-zinc-800 ${
           size === "sm"
             ? "px-2 py-0.5 text-xs rounded-full gap-1"
-            : "px-2.5 py-1 text-xs rounded-lg gap-1.5"
+            : compactOnMobile
+              ? "px-1.5 sm:px-2.5 py-1 text-xs rounded-lg gap-1.5"
+              : "px-2.5 py-1 text-xs rounded-lg gap-1.5"
         }`}
         aria-label={t("episodes.notYetReleased")}
         role="img"
       >
         <Circle size={iconSize} aria-hidden="true" />
-        {label}
+        {compactOnMobile ? <span className="hidden sm:inline">{label}</span> : label}
       </span>
     );
   }
@@ -56,7 +60,9 @@ export default function WatchedToggleButton({
       } ${
         size === "sm"
           ? "px-2 py-0.5 text-xs rounded-full gap-1"
-          : "px-2.5 py-1 text-xs rounded-lg gap-1.5"
+          : compactOnMobile
+            ? "px-1.5 sm:px-2.5 py-1 text-xs rounded-lg gap-1.5"
+            : "px-2.5 py-1 text-xs rounded-lg gap-1.5"
       }`}
     >
       {watched ? (
@@ -64,7 +70,7 @@ export default function WatchedToggleButton({
       ) : (
         <Circle size={iconSize} aria-hidden="true" />
       )}
-      {label}
+      {compactOnMobile ? <span className="hidden sm:inline">{label}</span> : label}
     </button>
   );
 }
