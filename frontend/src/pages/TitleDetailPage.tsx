@@ -20,6 +20,7 @@ import ExternalLinks from "../components/ExternalLinks";
 import WatchButton from "../components/WatchButton";
 import VisibilityButton from "../components/VisibilityButton";
 import ShareButton from "../components/ShareButton";
+import RecommendButton from "../components/RecommendButton";
 import { getProviderColor } from "../data/providerColors";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
@@ -358,6 +359,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                 );
               })()}
               <ShareButton title={tmdb?.title || title.title} />
+              <RecommendButton titleId={title.id} />
             </div>
 
             <RatingButtons titleId={title.id} />
@@ -656,6 +658,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                 );
               })()}
               <ShareButton title={tmdb?.name || title.title} />
+              <RecommendButton titleId={title.id} />
             </div>
 
             <RatingButtons titleId={title.id} />
