@@ -71,6 +71,13 @@
       "when": 1774852400000,
       "tag": "0009_add_deep_link_and_sa_fetched",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1774952400000,
+      "tag": "0010_add_profile_visibility",
+      "breakpoints": true
     }
   ]
 }

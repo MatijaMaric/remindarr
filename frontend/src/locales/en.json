@@ -6,7 +6,8 @@
     "tracked": "Tracked",
     "calendar": "Calendar",
     "logout": "Logout",
-    "signIn": "Sign In"
+    "signIn": "Sign In",
+    "settings": "Settings"
   },
   "bottomNav": {
     "watch": "Watch",
@@ -179,6 +180,36 @@
     "signUp": "Create Account",
     "popularNow": "Popular Right Now",
     "discoverMore": "Discover More"
+  },
+  "userProfile": {
+    "memberSince": "Member since {{date}}",
+    "editSettings": "Settings",
+    "trackedTitles": "Tracked",
+    "watchedMovies": "Movies Watched",
+    "watchedEpisodes": "Episodes Watched",
+    "noTitles": "No titles tracked yet.",
+    "userNotFound": "User not found",
+    "watchlist": "Watchlist",
+    "watchlistHidden": "This user's watchlist is private.",
+    "watchlistHiddenOwn": "Your watchlist is hidden from your public profile.",
+    "enableInSettings": "Enable in settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "viewProfile": "View Profile",
+    "profileVisibility": "Profile Visibility",
+    "profileVisibilityDescription": "Control which titles are visible on your public profile.",
+    "showWatchlist": "Show watchlist on public profile",
+    "showWatchlistOnProfile": "Show watchlist on public profile",
+    "showWatchlistDescription": "When enabled, your tracked titles will be visible on your public profile.",
+    "showAll": "Show All",
+    "hideAll": "Hide All",
+    "titleVisible": "Visible on profile",
+    "titleHidden": "Hidden from profile",
+    "noTrackedTitles": "No tracked titles to manage.",
+    "perTitleVisibility": "Choose which titles to show:",
+    "showTitle": "Show on profile",
+    "hideTitle": "Hide from profile"
   },
   "common": {
     "loading": "Loading...",
