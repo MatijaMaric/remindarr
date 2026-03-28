@@ -301,7 +301,7 @@ export default function ReelsPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 5rem)" }}>
+      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - 5rem - env(safe-area-inset-top, 0px))" }}>
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
           <Link to="/" className="text-amber-400 hover:text-amber-300">
@@ -314,7 +314,7 @@ export default function ReelsPage() {
 
   if (cards.length === 0) {
     return (
-      <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - 5rem)" }}>
+      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - 5rem - env(safe-area-inset-top, 0px))" }}>
         <div className="text-center">
           <p className="text-zinc-400 text-lg mb-2">No unwatched episodes</p>
           <p className="text-zinc-600 text-sm mb-6">You're all caught up!</p>
@@ -331,7 +331,7 @@ export default function ReelsPage() {
       <div
         ref={scrollRef}
         className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-        style={{ height: "calc(100dvh - 5rem)" }}
+        style={{ height: "calc(100dvh - 5rem - env(safe-area-inset-top, 0px))", marginTop: "env(safe-area-inset-top, 0px)" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -375,7 +375,7 @@ export default function ReelsPage() {
 
       {/* Action error banner */}
       {actionError && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] max-w-sm w-full px-4">
+        <div className="fixed left-1/2 -translate-x-1/2 z-[70] max-w-sm w-full px-4" style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
           <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm text-center">
             {actionError}
           </div>
