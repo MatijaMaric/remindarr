@@ -25,6 +25,7 @@ import notifierRoutes from "./routes/notifiers";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
+import recommendationsRoutes from "./routes/recommendations";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
 import type { AppEnv } from "./types";
@@ -171,6 +172,11 @@ app.route("/api/social", socialRoutes);
 app.use("/api/ratings/*", optionalAuth);
 app.use("/api/ratings", optionalAuth);
 app.route("/api/ratings", ratingsRoutes);
+
+// Recommendations routes
+app.use("/api/recommendations/*", requireAuth);
+app.use("/api/recommendations", requireAuth);
+app.route("/api/recommendations", recommendationsRoutes);
 
 // Protected routes
 app.use("/api/track/*", requireAuth);

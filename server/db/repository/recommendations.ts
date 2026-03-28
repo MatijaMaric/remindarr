@@ -34,8 +34,10 @@ export async function getReceivedRecommendations(userId: string, limit = 20, off
         fromUserId: recommendations.fromUserId,
         fromUsername: users.username,
         fromDisplayName: users.name,
+        fromImage: users.image,
         titleId: recommendations.titleId,
         titleName: titles.title,
+        titleObjectType: titles.objectType,
         posterUrl: titles.posterUrl,
         message: recommendations.message,
         createdAt: recommendations.createdAt,
@@ -61,8 +63,10 @@ export async function getSentRecommendations(userId: string) {
         toUserId: recommendations.toUserId,
         toUsername: users.username,
         toDisplayName: users.name,
+        toImage: users.image,
         titleId: recommendations.titleId,
         titleName: titles.title,
+        titleObjectType: titles.objectType,
         posterUrl: titles.posterUrl,
         message: recommendations.message,
         createdAt: recommendations.createdAt,
@@ -98,6 +102,18 @@ export async function deleteRecommendation(id: string, userId: string) {
         )
       )
       .run();
+  });
+}
+
+export async function getReceivedCount(userId: string): Promise<number> {
+  return traceDbQuery("getReceivedRecommendationCount", async () => {
+    const db = getDb();
+    const row = await db
+      .select({ count: count() })
+      .from(recommendations)
+      .where(eq(recommendations.toUserId, userId))
+      .get();
+    return row?.count ?? 0;
   });
 }
 

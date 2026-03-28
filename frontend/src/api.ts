@@ -14,6 +14,8 @@ import type {
   UserProfileResponse,
   UserSummary,
   TitleRatingResponse,
+  SentRecommendation,
+  RecommendationsResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -428,4 +430,41 @@ export async function unrateTitle(titleId: string): Promise<void> {
 
 export async function getTitleRating(titleId: string): Promise<TitleRatingResponse> {
   return fetchJson(`/ratings/${encodeURIComponent(titleId)}`);
+}
+
+// ─── Recommendations ──────────────────────────────────────────────────────────
+
+export async function sendRecommendation(toUserId: string, titleId: string, message?: string): Promise<{ id: string }> {
+  return fetchJson("/recommendations", {
+    method: "POST",
+    body: JSON.stringify({ toUserId, titleId, message }),
+  });
+}
+
+export async function getRecommendations(limit?: number, offset?: number): Promise<RecommendationsResponse> {
+  const qs = new URLSearchParams();
+  if (limit != null) qs.set("limit", String(limit));
+  if (offset != null) qs.set("offset", String(offset));
+  const query = qs.toString();
+  return fetchJson(`/recommendations${query ? `?${query}` : ""}`);
+}
+
+export async function getSentRecommendations(): Promise<{ recommendations: SentRecommendation[] }> {
+  return fetchJson("/recommendations/sent");
+}
+
+export async function markRecommendationRead(id: string): Promise<void> {
+  await fetchJson(`/recommendations/${encodeURIComponent(id)}/read`, {
+    method: "POST",
+  });
+}
+
+export async function deleteRecommendation(id: string): Promise<void> {
+  await fetchJson(`/recommendations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getUnreadRecommendationCount(): Promise<{ count: number }> {
+  return fetchJson("/recommendations/count");
 }
