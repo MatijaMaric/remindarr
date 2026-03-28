@@ -392,6 +392,29 @@ export interface AdminSettingsUpdateResponse {
   oidc_configured: boolean;
 }
 
+// ─── User Profile Types ─────────────────────────────────────────────────────
+
+export interface UserProfileUser {
+  username: string;
+  display_name: string | null;
+  image: string | null;
+  member_since: string | null;
+}
+
+export interface UserProfileStats {
+  tracked_count: number;
+  watched_movies: number;
+  watched_episodes: number;
+}
+
+export interface UserProfileResponse {
+  user: UserProfileUser;
+  stats: UserProfileStats;
+  titles: Title[];
+  show_watchlist: boolean;
+  is_own_profile: boolean;
+}
+
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {
   return {
