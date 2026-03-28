@@ -210,6 +210,7 @@ export default function SeasonDetailPage() {
                       watched={status?.is_watched ?? false}
                       onClick={() => toggleWatched(ep.episode_number)}
                       disabled={!released || !status}
+                      size="md"
                     />
                   )}
 

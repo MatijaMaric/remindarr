@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
-import { X, CheckCircle, Circle } from "lucide-react";
+import { X } from "lucide-react";
 import { Link } from "react-router";
 import type { Episode } from "../types";
+import WatchedToggleButton from "./WatchedToggleButton";
 
 interface ReelsSeasonPanelProps {
   showTitle: string;
@@ -106,18 +107,11 @@ export default function ReelsSeasonPanel({
                   : "bg-zinc-800/60 border-white/[0.06]"
               }`}
             >
-              <button
+              <WatchedToggleButton
+                watched={!!ep.is_watched}
                 onClick={() => onToggleWatched(ep.id, !!ep.is_watched)}
-                aria-pressed={!!ep.is_watched}
-                aria-label={ep.is_watched ? `Mark E${String(ep.episode_number).padStart(2, "0")} as unwatched` : `Mark E${String(ep.episode_number).padStart(2, "0")} as watched`}
-                className={`flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                  ep.is_watched
-                    ? "text-emerald-400 hover:text-zinc-400"
-                    : "text-zinc-600 hover:text-emerald-400"
-                }`}
-              >
-                {ep.is_watched ? <CheckCircle size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}
-              </button>
+                size="sm"
+              />
               <div className="flex-1 min-w-0">
                 <Link
                   to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}

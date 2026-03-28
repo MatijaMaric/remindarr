@@ -131,6 +131,7 @@ export default function EpisodeDetailPage() {
               watched={episodeStatus.is_watched}
               onClick={toggleWatched}
               disabled={!released}
+              size="md"
             />
           )}
         </div>
