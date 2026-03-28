@@ -346,15 +346,25 @@ export const recommendations = sqliteTable(
   {
     id: text("id").primaryKey(),
     fromUserId: text("from_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    toUserId: text("to_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     titleId: text("title_id").notNull().references(() => titles.id),
     message: text("message"),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
-    readAt: text("read_at"),
   },
   (table) => [
-    index("idx_recommendations_to_user").on(table.toUserId),
+    uniqueIndex("idx_recommendations_from_title").on(table.fromUserId, table.titleId),
     index("idx_recommendations_from_user").on(table.fromUserId),
+  ]
+);
+
+export const recommendationReads = sqliteTable(
+  "recommendation_reads",
+  {
+    recommendationId: text("recommendation_id").notNull().references(() => recommendations.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    readAt: text("read_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.recommendationId, table.userId] }),
   ]
 );
 
@@ -446,8 +456,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   ratings: many(ratings),
   followers: many(follows, { relationName: "following" }),
   following: many(follows, { relationName: "follower" }),
-  sentRecommendations: many(recommendations, { relationName: "fromUser" }),
-  receivedRecommendations: many(recommendations, { relationName: "toUser" }),
+  sentRecommendations: many(recommendations),
+  recommendationReads: many(recommendationReads),
   createdInvitations: many(invitations, { relationName: "createdBy" }),
 }));
 
@@ -488,10 +498,15 @@ export const ratingsRelations = relations(ratings, ({ one }) => ({
   title: one(titles, { fields: [ratings.titleId], references: [titles.id] }),
 }));
 
-export const recommendationsRelations = relations(recommendations, ({ one }) => ({
-  fromUser: one(users, { fields: [recommendations.fromUserId], references: [users.id], relationName: "fromUser" }),
-  toUser: one(users, { fields: [recommendations.toUserId], references: [users.id], relationName: "toUser" }),
+export const recommendationsRelations = relations(recommendations, ({ one, many }) => ({
+  fromUser: one(users, { fields: [recommendations.fromUserId], references: [users.id] }),
   title: one(titles, { fields: [recommendations.titleId], references: [titles.id] }),
+  reads: many(recommendationReads),
+}));
+
+export const recommendationReadsRelations = relations(recommendationReads, ({ one }) => ({
+  recommendation: one(recommendations, { fields: [recommendationReads.recommendationId], references: [recommendations.id] }),
+  user: one(users, { fields: [recommendationReads.userId], references: [users.id] }),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -507,11 +522,11 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
-  follows, ratings, recommendations, invitations,
+  follows, ratings, recommendations, recommendationReads, invitations,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
-  followsRelations, ratingsRelations, recommendationsRelations, invitationsRelations,
+  followsRelations, ratingsRelations, recommendationsRelations, recommendationReadsRelations, invitationsRelations,
 };
 
 // Re-export the union type from platform for convenience

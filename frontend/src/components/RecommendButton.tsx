@@ -1,10 +1,8 @@
-import { useState } from "react";
-import { Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Check } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../api";
 import { useAuth } from "../context/AuthContext";
-import UserSearchDropdown from "./UserSearchDropdown";
-import type { SelectedUser } from "./UserSearchDropdown";
 import {
   AlertDialog,
   AlertDialogPopup,
@@ -19,27 +17,61 @@ interface Props {
 export default function RecommendButton({ titleId }: Props) {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [recommended, setRecommended] = useState(false);
+  const [recId, setRecId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    api.checkRecommendation(titleId).then((data) => {
+      if (cancelled) return;
+      setRecommended(data.recommended);
+      setRecId(data.id);
+    }).catch(() => {
+      // Silently ignore check failures
+    });
+    return () => { cancelled = true; };
+  }, [user, titleId]);
 
   if (!user) return null;
 
   function handleOpen() {
-    setSelectedUser(null);
+    if (recommended) {
+      // Unrecommend
+      handleUnrecommend();
+      return;
+    }
     setMessage("");
     setDialogOpen(true);
   }
 
-  async function handleSend() {
-    if (!selectedUser) return;
+  async function handleUnrecommend() {
+    if (!recId) return;
     setSending(true);
     try {
-      await api.sendRecommendation(selectedUser.id, titleId, message || undefined);
+      await api.deleteRecommendation(recId);
+      setRecommended(false);
+      setRecId(null);
+      toast.success("Recommendation removed");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to remove recommendation";
+      toast.error(errorMessage);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleSend() {
+    setSending(true);
+    try {
+      const result = await api.sendRecommendation(titleId, message || undefined);
       toast.success("Recommendation sent!");
       setDialogOpen(false);
-      setSelectedUser(null);
       setMessage("");
+      setRecommended(true);
+      setRecId(result.id);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to send recommendation";
       toast.error(errorMessage);
@@ -52,27 +84,23 @@ export default function RecommendButton({ titleId }: Props) {
     <>
       <button
         onClick={handleOpen}
-        className="min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-        title="Recommend"
+        disabled={sending}
+        className={`min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+          recommended
+            ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
+        title={recommended ? "Recommended" : "Recommend"}
       >
-        <Send className="size-3.5" />
-        Recommend
+        {recommended ? <Check className="size-3.5" /> : <Send className="size-3.5" />}
+        {recommended ? "Recommended" : "Recommend"}
       </button>
 
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogPopup>
-          <AlertDialogTitle>Recommend to a friend</AlertDialogTitle>
+          <AlertDialogTitle>Recommend this title</AlertDialogTitle>
 
           <div className="mt-4 space-y-4">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1.5">Send to</label>
-              <UserSearchDropdown
-                onSelect={setSelectedUser}
-                selected={selectedUser}
-                onClear={() => setSelectedUser(null)}
-              />
-            </div>
-
             <div>
               <label className="block text-sm text-zinc-400 mb-1.5">
                 Message <span className="text-zinc-500">(optional)</span>
@@ -80,7 +108,7 @@ export default function RecommendButton({ titleId }: Props) {
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, 280))}
-                placeholder="Why should they watch this?"
+                placeholder="Why should people watch this?"
                 maxLength={280}
                 rows={3}
                 className="w-full bg-zinc-800 text-white rounded-md px-3 py-2 text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500 border border-zinc-700 resize-none"
@@ -100,7 +128,7 @@ export default function RecommendButton({ titleId }: Props) {
             </AlertDialogClose>
             <button
               onClick={handleSend}
-              disabled={!selectedUser || sending}
+              disabled={sending}
               className="inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium bg-amber-500 text-zinc-950 hover:bg-amber-400 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="recommend-send"
             >

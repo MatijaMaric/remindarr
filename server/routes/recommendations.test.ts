@@ -36,6 +36,8 @@ let userAId: string;
 let userAToken: string;
 let userBId: string;
 let userBToken: string;
+let userCId: string;
+let userCToken: string;
 
 beforeEach(async () => {
   setupTestDb();
@@ -44,6 +46,8 @@ beforeEach(async () => {
   userAToken = await createSession(userAId);
   userBId = await createUser("bob", "hash", "Bob");
   userBToken = await createSession(userBId);
+  userCId = await createUser("carol", "hash", "Carol");
+  userCToken = await createSession(userCId);
 
   // Insert test titles for FK constraint
   insertTitle("movie-123", "MOVIE", "Test Movie");
@@ -75,17 +79,14 @@ function insertTitle(id: string, objectType = "MOVIE", name = "Title") {
 }
 
 describe("POST /recommendations", () => {
-  it("sends a recommendation successfully", async () => {
-    // Alice follows Bob
-    await follow(userAId, userBId);
-
+  it("creates a recommendation successfully", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",
       headers: {
         ...authHeaders(userAToken),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123", message: "Great film!" }),
+      body: JSON.stringify({ titleId: "movie-123", message: "Great film!" }),
     });
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -93,37 +94,7 @@ describe("POST /recommendations", () => {
     expect(body.id).toBeDefined();
   });
 
-  it("sends a recommendation without a message", async () => {
-    await follow(userAId, userBId);
-
-    const res = await app.request("/recommendations", {
-      method: "POST",
-      headers: {
-        ...authHeaders(userAToken),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
-    });
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-  });
-
-  it("returns 400 when recommending to self", async () => {
-    const res = await app.request("/recommendations", {
-      method: "POST",
-      headers: {
-        ...authHeaders(userAToken),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ toUserId: userAId, titleId: "movie-123" }),
-    });
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("Cannot recommend to yourself");
-  });
-
-  it("returns 400 when toUserId is missing", async () => {
+  it("creates a recommendation without a message", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",
       headers: {
@@ -132,9 +103,32 @@ describe("POST /recommendations", () => {
       },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.error).toContain("toUserId and titleId are required");
+    expect(body.success).toBe(true);
+  });
+
+  it("returns 409 when duplicate recommendation", async () => {
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ titleId: "movie-123" }),
+    });
+
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ titleId: "movie-123" }),
+    });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain("already recommended");
   });
 
   it("returns 400 when titleId is missing", async () => {
@@ -144,51 +138,39 @@ describe("POST /recommendations", () => {
         ...authHeaders(userAToken),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ toUserId: userBId }),
+      body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("toUserId and titleId are required");
-  });
-
-  it("returns 403 when not following recipient", async () => {
-    const res = await app.request("/recommendations", {
-      method: "POST",
-      headers: {
-        ...authHeaders(userAToken),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
-    });
-    expect(res.status).toBe(403);
-    const body = await res.json();
-    expect(body.error).toContain("You must follow this user to send recommendations");
+    expect(body.error).toContain("titleId is required");
   });
 
   it("returns 401 without auth", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
+      body: JSON.stringify({ titleId: "movie-123" }),
     });
     expect(res.status).toBe(401);
   });
 });
 
 describe("GET /recommendations", () => {
-  it("lists received recommendations with title and user data", async () => {
-    // Alice follows Bob, then sends recommendation to Bob
-    await follow(userAId, userBId);
+  it("lists discovery feed (recommendations from followed users)", async () => {
+    // Bob follows Alice
+    await follow(userBId, userAId);
+
+    // Alice recommends a movie
     await app.request("/recommendations", {
       method: "POST",
       headers: {
         ...authHeaders(userAToken),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123", message: "Watch this!" }),
+      body: JSON.stringify({ titleId: "movie-123", message: "Watch this!" }),
     });
 
-    // Bob retrieves recommendations
+    // Bob retrieves feed
     const res = await app.request("/recommendations", {
       headers: authHeaders(userBToken),
     });
@@ -209,19 +191,39 @@ describe("GET /recommendations", () => {
     expect(rec.read_at).toBeNull();
   });
 
-  it("supports pagination via limit and offset", async () => {
-    await follow(userAId, userBId);
+  it("does not show recommendations from unfollowed users", async () => {
+    // Alice recommends but Bob doesn't follow Alice
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ titleId: "movie-123" }),
+    });
 
-    // Send two recommendations
+    const res = await app.request("/recommendations", {
+      headers: authHeaders(userBToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.recommendations).toHaveLength(0);
+    expect(body.count).toBe(0);
+  });
+
+  it("supports pagination via limit and offset", async () => {
+    await follow(userBId, userAId);
+
+    // Alice recommends two titles
     await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
+      body: JSON.stringify({ titleId: "movie-123" }),
     });
     await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "show-456" }),
+      body: JSON.stringify({ titleId: "show-456" }),
     });
 
     // Get first page (limit 1)
@@ -234,7 +236,7 @@ describe("GET /recommendations", () => {
     expect(body.count).toBe(2);
   });
 
-  it("returns empty list when no recommendations", async () => {
+  it("returns empty list when no recommendations from followed users", async () => {
     const res = await app.request("/recommendations", {
       headers: authHeaders(userAToken),
     });
@@ -251,12 +253,11 @@ describe("GET /recommendations", () => {
 });
 
 describe("GET /recommendations/sent", () => {
-  it("lists sent recommendations", async () => {
-    await follow(userAId, userBId);
+  it("lists user's own recommendations", async () => {
     await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123", message: "Enjoy!" }),
+      body: JSON.stringify({ titleId: "movie-123", message: "Enjoy!" }),
     });
 
     const res = await app.request("/recommendations/sent", {
@@ -267,8 +268,6 @@ describe("GET /recommendations/sent", () => {
     expect(body.recommendations).toHaveLength(1);
 
     const rec = body.recommendations[0];
-    expect(rec.to_user.id).toBe(userBId);
-    expect(rec.to_user.username).toBe("bob");
     expect(rec.title.id).toBe("movie-123");
     expect(rec.message).toBe("Enjoy!");
   });
@@ -279,19 +278,52 @@ describe("GET /recommendations/sent", () => {
   });
 });
 
-describe("POST /recommendations/:id/read", () => {
-  it("marks a recommendation as read", async () => {
-    await follow(userAId, userBId);
+describe("GET /recommendations/check/:titleId", () => {
+  it("returns recommended true if user already recommended", async () => {
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123" }),
+    });
 
-    // Send recommendation
+    const res = await app.request("/recommendations/check/movie-123", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.recommended).toBe(true);
+    expect(body.id).toBeDefined();
+  });
+
+  it("returns recommended false if user has not recommended", async () => {
+    const res = await app.request("/recommendations/check/movie-123", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.recommended).toBe(false);
+    expect(body.id).toBeNull();
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/recommendations/check/movie-123");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("POST /recommendations/:id/read", () => {
+  it("marks a recommendation as read (per-user)", async () => {
+    await follow(userBId, userAId);
+
+    // Alice recommends
     const createRes = await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
+      body: JSON.stringify({ titleId: "movie-123" }),
     });
     const { id } = await createRes.json();
 
-    // Mark as read
+    // Bob marks as read
     const res = await app.request(`/recommendations/${id}/read`, {
       method: "POST",
       headers: authHeaders(userBToken),
@@ -300,7 +332,7 @@ describe("POST /recommendations/:id/read", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
 
-    // Verify it's marked as read
+    // Verify it's marked as read in Bob's feed
     const listRes = await app.request("/recommendations", {
       headers: authHeaders(userBToken),
     });
@@ -317,18 +349,15 @@ describe("POST /recommendations/:id/read", () => {
 });
 
 describe("DELETE /recommendations/:id", () => {
-  it("deletes a recommendation", async () => {
-    await follow(userAId, userBId);
-
-    // Send recommendation
+  it("creator can delete their recommendation", async () => {
     const createRes = await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
+      body: JSON.stringify({ titleId: "movie-123" }),
     });
     const { id } = await createRes.json();
 
-    // Delete it (sender can delete)
+    // Alice (creator) deletes
     const res = await app.request(`/recommendations/${id}`, {
       method: "DELETE",
       headers: authHeaders(userAToken),
@@ -345,29 +374,26 @@ describe("DELETE /recommendations/:id", () => {
     expect(listBody.recommendations).toHaveLength(0);
   });
 
-  it("recipient can also delete", async () => {
-    await follow(userAId, userBId);
-
+  it("non-creator cannot delete", async () => {
     const createRes = await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
+      body: JSON.stringify({ titleId: "movie-123" }),
     });
     const { id } = await createRes.json();
 
-    // Bob (recipient) deletes
-    const res = await app.request(`/recommendations/${id}`, {
+    // Bob tries to delete Alice's recommendation (should not work)
+    await app.request(`/recommendations/${id}`, {
       method: "DELETE",
       headers: authHeaders(userBToken),
     });
-    expect(res.status).toBe(200);
 
-    // Verify it's gone from Bob's inbox
-    const listRes = await app.request("/recommendations", {
-      headers: authHeaders(userBToken),
+    // Verify it's still there
+    const listRes = await app.request("/recommendations/sent", {
+      headers: authHeaders(userAToken),
     });
     const listBody = await listRes.json();
-    expect(listBody.recommendations).toHaveLength(0);
+    expect(listBody.recommendations).toHaveLength(1);
   });
 
   it("returns 401 without auth", async () => {
@@ -379,23 +405,23 @@ describe("DELETE /recommendations/:id", () => {
 });
 
 describe("GET /recommendations/count", () => {
-  it("returns unread count", async () => {
-    await follow(userAId, userBId);
+  it("returns unread count from followed users", async () => {
+    await follow(userBId, userAId);
 
-    // Send two recommendations to Bob
+    // Alice recommends two titles
     await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "movie-123" }),
+      body: JSON.stringify({ titleId: "movie-123" }),
     });
     const createRes = await app.request("/recommendations", {
       method: "POST",
       headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userBId, titleId: "show-456" }),
+      body: JSON.stringify({ titleId: "show-456" }),
     });
     const { id: secondId } = await createRes.json();
 
-    // Check unread count
+    // Check unread count for Bob
     const res = await app.request("/recommendations/count", {
       headers: authHeaders(userBToken),
     });
@@ -417,7 +443,7 @@ describe("GET /recommendations/count", () => {
     expect(body2.count).toBe(1);
   });
 
-  it("returns 0 when no unread recommendations", async () => {
+  it("returns 0 when not following anyone", async () => {
     const res = await app.request("/recommendations/count", {
       headers: authHeaders(userAToken),
     });

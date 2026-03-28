@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import {
   createRecommendation,
-  getReceivedRecommendations,
-  getReceivedCount,
+  getUserRecommendation,
+  getDiscoveryFeed,
+  getDiscoveryFeedCount,
   getSentRecommendations,
   markAsRead,
   deleteRecommendation,
   getUnreadCount,
-  isFollowing,
 } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
@@ -17,30 +17,27 @@ const log = logger.child({ module: "recommendations" });
 
 const app = new Hono<AppEnv>();
 
-// POST / — Send a recommendation
+// POST / — Broadcast a recommendation (no toUserId needed)
 app.post("/", async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const body = await c.req.json<{ toUserId?: string; titleId?: string; message?: string }>();
+  const body = await c.req.json<{ titleId?: string; message?: string }>();
 
-  if (!body.toUserId || !body.titleId) {
-    return err(c, "toUserId and titleId are required", 400);
+  if (!body.titleId) {
+    return err(c, "titleId is required", 400);
   }
 
-  if (body.toUserId === user.id) {
-    return err(c, "Cannot recommend to yourself", 400);
+  // Check for duplicate recommendation
+  const existing = await getUserRecommendation(user.id, body.titleId);
+  if (existing) {
+    return err(c, "You have already recommended this title", 409);
   }
 
-  const following = await isFollowing(user.id, body.toUserId);
-  if (!following) {
-    return err(c, "You must follow this user to send recommendations", 403);
-  }
-
-  const id = await createRecommendation(user.id, body.toUserId, body.titleId, body.message);
-  log.info("Recommendation sent", { fromUserId: user.id, toUserId: body.toUserId, titleId: body.titleId });
+  const id = await createRecommendation(user.id, body.titleId, body.message);
+  log.info("Recommendation created", { fromUserId: user.id, titleId: body.titleId });
   return c.json({ success: true, id }, 201);
 });
 
@@ -55,7 +52,7 @@ app.get("/count", async (c) => {
   return ok(c, { count });
 });
 
-// GET /sent — List sent recommendations
+// GET /sent — List user's own recommendations
 app.get("/sent", async (c) => {
   const user = c.get("user");
   if (!user) {
@@ -65,12 +62,6 @@ app.get("/sent", async (c) => {
   const rows = await getSentRecommendations(user.id);
   const recommendations = rows.map((r) => ({
     id: r.id,
-    to_user: {
-      id: r.toUserId,
-      username: r.toUsername,
-      display_name: r.toDisplayName,
-      image: r.toImage,
-    },
     title: {
       id: r.titleId,
       title: r.titleName,
@@ -79,13 +70,24 @@ app.get("/sent", async (c) => {
     },
     message: r.message,
     created_at: r.createdAt,
-    read_at: r.readAt,
   }));
 
   return ok(c, { recommendations });
 });
 
-// GET / — List received recommendations (paginated)
+// GET /check/:titleId — Check if user already recommended a title
+app.get("/check/:titleId", async (c) => {
+  const user = c.get("user");
+  if (!user) {
+    return err(c, "Authentication required", 401);
+  }
+
+  const titleId = c.req.param("titleId");
+  const existing = await getUserRecommendation(user.id, titleId);
+  return ok(c, { recommended: !!existing, id: existing?.id ?? null });
+});
+
+// GET / — Discovery feed (recommendations from followed users)
 app.get("/", async (c) => {
   const user = c.get("user");
   if (!user) {
@@ -96,8 +98,8 @@ app.get("/", async (c) => {
   const offset = Math.max(parseInt(c.req.query("offset") || "0", 10), 0);
 
   const [rows, count] = await Promise.all([
-    getReceivedRecommendations(user.id, limit, offset),
-    getReceivedCount(user.id),
+    getDiscoveryFeed(user.id, limit, offset),
+    getDiscoveryFeedCount(user.id),
   ]);
 
   const recommendations = rows.map((r) => ({
@@ -122,7 +124,7 @@ app.get("/", async (c) => {
   return ok(c, { recommendations, count });
 });
 
-// POST /:id/read — Mark as read
+// POST /:id/read — Mark as read (per-user tracking)
 app.post("/:id/read", async (c) => {
   const user = c.get("user");
   if (!user) {
@@ -134,7 +136,7 @@ app.post("/:id/read", async (c) => {
   return ok(c, { success: true });
 });
 
-// DELETE /:id — Delete a recommendation
+// DELETE /:id — Delete a recommendation (only creator can delete)
 app.delete("/:id", async (c) => {
   const user = c.get("user");
   if (!user) {
