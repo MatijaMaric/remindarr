@@ -9,6 +9,7 @@ import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { useAuth } from "../context/AuthContext";
 import { WatchedIcon } from "../components/EpisodeComponents";
+import ShareButton from "../components/ShareButton";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -175,6 +176,10 @@ export default function SeasonDetailPage() {
           {tmdb?.overview && (
             <p className="text-zinc-300 leading-relaxed">{tmdb.overview}</p>
           )}
+
+          <div className="pt-2">
+            <ShareButton title={`${title.title} — ${tmdb?.name || `Season ${seasonNumber}`}`} />
+          </div>
         </div>
       </div>
 
