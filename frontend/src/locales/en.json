@@ -203,7 +203,10 @@
     "hideAll": "Hide All",
     "titleVisible": "Visible on profile",
     "titleHidden": "Hidden from profile",
-    "noTrackedTitles": "No tracked titles to manage."
+    "noTrackedTitles": "No tracked titles to manage.",
+    "perTitleVisibility": "Choose which titles to show:",
+    "showTitle": "Show on profile",
+    "hideTitle": "Hide from profile"
   },
   "common": {
     "loading": "Loading...",
