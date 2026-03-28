@@ -28,6 +28,7 @@ export {
   unwatchEpisode,
   watchEpisodesBulk,
   unwatchEpisodesBulk,
+  getSeasonEpisodeStatus,
   getWatchedEpisodesForExport,
   getEpisodeIdsBySE,
 } from "./episodes";

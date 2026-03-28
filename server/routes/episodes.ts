@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import * as sync from "../tmdb/sync";
-import { getEpisodesByDateRange, getUnwatchedEpisodes } from "../db/repository";
+import { getEpisodesByDateRange, getUnwatchedEpisodes, getSeasonEpisodeStatus } from "../db/repository";
 import { localDateForTimezone, addDays } from "../utils/timezone";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
@@ -25,6 +25,18 @@ app.get("/upcoming", async (c) => {
   const unwatchedEpisodes = await getUnwatchedEpisodes(user.id, timezone);
 
   return ok(c, { today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
+});
+
+app.get("/status/:titleId/:season", async (c) => {
+  const user = c.get("user");
+  if (!user) return ok(c, { episodes: [] });
+
+  const titleId = c.req.param("titleId");
+  const seasonNumber = Number(c.req.param("season"));
+  if (isNaN(seasonNumber)) return err(c, "Invalid season number", 400);
+
+  const episodes = await getSeasonEpisodeStatus(titleId, seasonNumber, user.id);
+  return ok(c, { episodes });
 });
 
 app.post("/sync", async (c) => {

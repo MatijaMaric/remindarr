@@ -275,6 +275,34 @@ export async function unwatchEpisodesBulk(episodeIds: number[], userId: string) 
   });
 }
 
+export async function getSeasonEpisodeStatus(
+  titleId: string,
+  seasonNumber: number,
+  userId: string
+): Promise<Array<{ episode_number: number; id: number; is_watched: boolean }>> {
+  return traceDbQuery("getSeasonEpisodeStatus", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: episodes.id,
+        episode_number: episodes.episodeNumber,
+        is_watched: sql<boolean>`EXISTS(
+          SELECT 1 FROM watched_episodes we
+          WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+        )`,
+      })
+      .from(episodes)
+      .where(and(eq(episodes.titleId, titleId), eq(episodes.seasonNumber, seasonNumber)))
+      .orderBy(asc(episodes.episodeNumber))
+      .all();
+
+    return rows.map((row) => ({
+      ...row,
+      is_watched: !!row.is_watched,
+    }));
+  });
+}
+
 export async function getWatchedEpisodesForExport(userId: string): Promise<Map<string, Array<{ season: number; episode: number }>>> {
   return traceDbQuery("getWatchedEpisodesForExport", async () => {
     const db = getDb();
