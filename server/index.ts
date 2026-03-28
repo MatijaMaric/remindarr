@@ -23,6 +23,7 @@ import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import profileRoutes from "./routes/profile";
+import socialRoutes from "./routes/social";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
 import type { AppEnv } from "./types";
@@ -155,6 +156,15 @@ app.route("/api/calendar", calendarRoutes);
 app.use("/api/user/*", optionalAuth);
 app.use("/api/user", optionalAuth);
 app.route("/api/user", profileRoutes);
+
+// Social routes — follow/unfollow (auth), follower/following lists (public)
+app.use("/api/social/follow/*", requireAuth);
+app.use("/api/social/follow", requireAuth);
+app.use("/api/social/followers/*", optionalAuth);
+app.use("/api/social/followers", optionalAuth);
+app.use("/api/social/following/*", optionalAuth);
+app.use("/api/social/following", optionalAuth);
+app.route("/api/social", socialRoutes);
 
 // Protected routes
 app.use("/api/track/*", requireAuth);

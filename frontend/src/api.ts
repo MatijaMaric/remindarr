@@ -381,3 +381,31 @@ export async function testNotifier(
     method: "POST",
   });
 }
+
+// ─── Social (Follow/Unfollow) ────────────────────────────────────────────────
+
+export async function followUser(userId: string): Promise<void> {
+  await fetchJson(`/social/follow/${encodeURIComponent(userId)}`, {
+    method: "POST",
+  });
+}
+
+export async function unfollowUser(userId: string): Promise<void> {
+  await fetchJson(`/social/follow/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getFollowers(userId?: string): Promise<{ followers: UserSummary[]; count: number }> {
+  const path = userId
+    ? `/social/followers/${encodeURIComponent(userId)}`
+    : "/social/followers";
+  return fetchJson(path);
+}
+
+export async function getFollowing(userId?: string): Promise<{ following: UserSummary[]; count: number }> {
+  const path = userId
+    ? `/social/following/${encodeURIComponent(userId)}`
+    : "/social/following";
+  return fetchJson(path);
+}

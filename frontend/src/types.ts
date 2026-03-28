@@ -443,6 +443,15 @@ export interface UserProfileResponse {
   backdrops: ProfileBackdrop[];
 }
 
+// ─── Social Types ────────────────────────────────────────────────────────────
+
+export interface UserSummary {
+  id: string;
+  username: string;
+  display_name: string | null;
+  image: string | null;
+}
+
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {
   return {
