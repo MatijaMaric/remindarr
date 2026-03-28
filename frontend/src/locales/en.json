@@ -153,7 +153,10 @@
   },
   "track": {
     "track": "Track",
-    "tracked": "Tracked"
+    "tracked": "Tracked",
+    "confirmUntrack": "Stop tracking {{title}}?",
+    "confirmUntrackDescription": "This title will be removed from your watchlist.",
+    "confirm": "Confirm"
   },
   "episodes": {
     "tomorrow": "Tomorrow",
