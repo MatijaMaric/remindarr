@@ -159,7 +159,10 @@
     "tomorrow": "Tomorrow",
     "notYetReleased": "Not yet released",
     "markAsWatched": "Mark as watched",
-    "markAsUnwatched": "Mark as unwatched"
+    "markAsUnwatched": "Mark as unwatched",
+    "watched": "Watched",
+    "watch": "Watch",
+    "markWatchedShort": "Mark watched"
   },
   "calendar": {
     "all": "All",
