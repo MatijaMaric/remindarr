@@ -124,6 +124,14 @@ OIDC settings can also be configured at runtime via the admin settings API.
 | `BACKUP_CRON` | `0 2 * * *` | Cron expression for backup schedule |
 | `BACKUP_RETAIN` | `7` | Number of backups to retain |
 
+#### Deep Links (Streaming Availability API)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STREAMING_AVAILABILITY_API_KEY` | *(empty)* | RapidAPI key for Streaming Availability API (enables deep links) |
+| `SYNC_DEEP_LINKS_CRON` | `0 4 * * *` | Cron expression for deep link sync |
+| `SA_DAILY_BUDGET` | `95` | Max API requests per day for deep link enrichment |
+
 #### Caching
 
 | Variable | Default | Description |
@@ -273,10 +281,15 @@ frontend/src/
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `GET/POST/DELETE` | `/api/track/:id` | Watchlist management |
+| `GET` | `/api/track` | Get watchlist |
+| `POST` | `/api/track/:id` | Add title to watchlist |
+| `DELETE` | `/api/track/:id` | Remove title from watchlist |
+| `GET` | `/api/track/export` | Export watchlist as JSON |
+| `POST` | `/api/track/import` | Import watchlist from JSON |
 | `GET` | `/api/episodes/upcoming` | Upcoming & unwatched episodes |
 | `POST` | `/api/episodes/sync` | Manual episode sync |
 | `POST/DELETE` | `/api/watched/:episodeId` | Mark episode watched/unwatched |
+| `POST/DELETE` | `/api/watched/movies/:titleId` | Mark movie watched/unwatched |
 | `POST` | `/api/watched/bulk` | Bulk mark episodes |
 
 ### Auth
@@ -303,8 +316,10 @@ Authentication is handled by [better-auth](https://www.better-auth.com) at `/api
 | `GET` | `/api/jobs` | Job stats, schedules, history |
 | `POST` | `/api/jobs/:name` | Manually trigger a job |
 | `GET/POST/PUT/DELETE` | `/api/notifiers` | Notification config CRUD |
+| `GET` | `/api/notifiers/providers` | Available notification providers |
+| `GET` | `/api/notifiers/vapid-public-key` | VAPID public key for Web Push |
 | `POST` | `/api/notifiers/:id/test` | Send test notification |
-| `GET` | `/api/metrics` | Application metrics |
+| `GET` | `/metrics` | Prometheus metrics |
 | `GET` | `/api/health` | Health check |
 
 ## Testing
