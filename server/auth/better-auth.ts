@@ -15,6 +15,24 @@ import type { DrizzleDb } from "../platform/types";
 const log = logger.child({ module: "auth" });
 
 /**
+ * Derive the WebAuthn Relying Party ID from a base URL.
+ * Strips the "www." prefix so the rpID is the registrable domain,
+ * which is valid for both www and non-www origins per WebAuthn spec.
+ */
+export function getPasskeyRpId(baseUrl: string): string | undefined {
+  if (!baseUrl) return undefined;
+  try {
+    let hostname = new URL(baseUrl).hostname;
+    if (hostname.startsWith("www.")) {
+      hostname = hostname.slice(4);
+    }
+    return hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Given a base URL, return an array of origins for WebAuthn validation.
  * Includes both www and non-www variants so passkeys work on either domain.
  */
@@ -75,7 +93,7 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
     }),
     admin(),
     passkeyPlugin({
-      rpID: CONFIG.PASSKEY_RP_ID || (CONFIG.BASE_URL ? new URL(CONFIG.BASE_URL).hostname : undefined),
+      rpID: CONFIG.PASSKEY_RP_ID || getPasskeyRpId(CONFIG.BASE_URL),
       rpName: CONFIG.PASSKEY_RP_NAME || "Remindarr",
       origin: CONFIG.PASSKEY_ORIGIN
         ? CONFIG.PASSKEY_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
@@ -176,7 +194,7 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
     basePath: "/api/auth",
     trustedOrigins: [
       ...(CONFIG.CORS_ORIGIN
-        ? CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
+        ? CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean).flatMap(buildPasskeyOrigins)
         : []),
       ...(CONFIG.BASE_URL ? buildPasskeyOrigins(CONFIG.BASE_URL) : []),
     ].filter((v, i, a) => a.indexOf(v) === i),
