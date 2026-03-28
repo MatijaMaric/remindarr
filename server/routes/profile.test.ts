@@ -274,6 +274,62 @@ describe("GET /user/:username", () => {
     expect(body.movies[0].id).toBe("movie-1");
   });
 
+  it("includes episode progress for shows on own profile", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show" }),
+    ]);
+    await trackTitle("show-1", userId);
+
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      { title_id: "show-1", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+      { title_id: "show-1", season_number: 1, episode_number: 3, name: "Ep 3", overview: null, air_date: "2024-01-15", still_path: null },
+    ]);
+
+    const { getDb } = await import("../db/schema");
+    const db = getDb();
+    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-1") });
+    await watchEpisode(eps[0].id, userId);
+
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_own_profile).toBe(true);
+    expect(body.shows).toHaveLength(1);
+    expect(body.shows[0].total_episodes).toBe(3);
+    expect(body.shows[0].watched_episodes_count).toBe(1);
+  });
+
+  it("includes backdrops for recently watched shows", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show", backdropUrl: "https://example.com/backdrop.jpg" }),
+    ]);
+    await trackTitle("show-1", userId);
+
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+    ]);
+
+    const { getDb } = await import("../db/schema");
+    const db = getDb();
+    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-1") });
+    await watchEpisode(eps[0].id, userId);
+
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.backdrops).toHaveLength(1);
+    expect(body.backdrops[0].id).toBe("show-1");
+    expect(body.backdrops[0].backdrop_url).toBe("https://example.com/backdrop.jpg");
+  });
+
+  it("returns empty backdrops when no watched shows", async () => {
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.backdrops).toHaveLength(0);
+  });
+
   it("includes episode progress for shows", async () => {
     await updateProfilePublic(userId, true);
     await upsertTitles([

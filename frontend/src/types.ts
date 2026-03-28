@@ -410,6 +410,12 @@ export interface UserProfileStats {
   watched_episodes: number;
 }
 
+export interface ProfileBackdrop {
+  id: string;
+  title: string;
+  backdrop_url: string;
+}
+
 export interface UserProfileResponse {
   user: UserProfileUser;
   stats: UserProfileStats;
@@ -417,6 +423,7 @@ export interface UserProfileResponse {
   shows: Title[];
   show_watchlist: boolean;
   is_own_profile: boolean;
+  backdrops: ProfileBackdrop[];
 }
 
 // Normalize search results to same shape as DB titles

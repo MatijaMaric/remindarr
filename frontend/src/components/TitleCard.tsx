@@ -10,9 +10,11 @@ interface Props {
   onTrackToggle?: () => void;
   showVisibilityToggle?: boolean;
   onVisibilityToggle?: (titleId: string, isPublic: boolean) => void;
+  hideTypeBadge?: boolean;
+  showProgressBar?: boolean;
 }
 
-const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle }: Props) {
+const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar }: Props) {
   // Deduplicate offers by provider (keep best quality)
   const uniqueProviders = new Map<number, Title["offers"][0]>();
   for (const offer of title.offers) {
@@ -42,7 +44,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             </div>
           )}
         </Link>
-        {title.object_type === "SHOW" && (
+        {!hideTypeBadge && title.object_type === "SHOW" && (
           <span className="absolute top-2 left-2 bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
             TV
           </span>
@@ -55,10 +57,18 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             Watched
           </span>
         )}
-        {!title.is_watched && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
+        {!title.is_watched && !showProgressBar && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
           <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
             {title.watched_episodes_count ?? 0}/{title.total_episodes} ep
           </span>
+        )}
+        {!title.is_watched && showProgressBar && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700">
+            <div
+              className="h-full bg-amber-500 transition-all duration-300"
+              style={{ width: `${((title.watched_episodes_count ?? 0) / title.total_episodes) * 100}%` }}
+            />
+          </div>
         )}
         {title.imdb_score && !showVisibilityToggle && (
           <span className="absolute top-2 right-2 bg-yellow-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded">
