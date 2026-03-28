@@ -209,17 +209,6 @@ export default function SeasonDetailPage() {
                   key={ep.episode_number}
                   className="flex items-center gap-3 bg-zinc-900 rounded-xl border border-white/[0.06] hover:border-amber-500/50 transition-colors p-3 group"
                 >
-                  {/* Watched icon */}
-                  {hasStatus && (
-                    <WatchedIcon
-                      watched={status?.is_watched ?? false}
-                      onClick={() => toggleWatched(ep.episode_number)}
-                      disabled={!released || !status}
-                      size="md"
-                      compactOnMobile
-                    />
-                  )}
-
                   {/* Episode link */}
                   <Link
                     to={`/title/${title.id}/season/${seasonNumber}/episode/${ep.episode_number}`}
@@ -271,6 +260,19 @@ export default function SeasonDetailPage() {
                       )}
                     </div>
                   </Link>
+
+                  {/* Watched icon */}
+                  {hasStatus && (
+                    <div className="flex-shrink-0">
+                      <WatchedIcon
+                        watched={status?.is_watched ?? false}
+                        onClick={() => toggleWatched(ep.episode_number)}
+                        disabled={!released || !status}
+                        size="md"
+                        compactOnMobile
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
