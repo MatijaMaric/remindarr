@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import * as api from "../api";
 import TitleList from "../components/TitleList";
 import ProfileBanner from "../components/ProfileBanner";
+import ShareButton from "../components/ShareButton";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 
@@ -77,15 +78,18 @@ export default function UserProfilePage() {
             </p>
           )}
         </div>
-        {is_own_profile && (
-          <Link
-            to="/settings"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
-          >
-            <Settings className="size-4" />
-            {t("userProfile.editSettings")}
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          <ShareButton title={`${displayName}'s Profile`} />
+          {is_own_profile && (
+            <Link
+              to="/settings"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
+            >
+              <Settings className="size-4" />
+              {t("userProfile.editSettings")}
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
