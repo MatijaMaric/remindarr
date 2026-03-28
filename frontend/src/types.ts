@@ -497,6 +497,17 @@ export interface UserSummary {
   image: string | null;
 }
 
+// ─── Invitation Types ─────────────────────────────────────────────────────
+
+export interface InvitationItem {
+  id: string;
+  code: string;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
+  used_by: UserSummary | null;
+}
+
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {
   return {

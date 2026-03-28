@@ -26,6 +26,7 @@ import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
 import recommendationsRoutes from "./routes/recommendations";
+import invitationsRoutes from "./routes/invitations";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
 import type { AppEnv } from "./types";
@@ -177,6 +178,11 @@ app.route("/api/ratings", ratingsRoutes);
 app.use("/api/recommendations/*", requireAuth);
 app.use("/api/recommendations", requireAuth);
 app.route("/api/recommendations", recommendationsRoutes);
+
+// Invitations routes
+app.use("/api/invitations/*", requireAuth);
+app.use("/api/invitations", requireAuth);
+app.route("/api/invitations", invitationsRoutes);
 
 // Protected routes
 app.use("/api/track/*", requireAuth);
