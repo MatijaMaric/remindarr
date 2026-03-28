@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Settings } from "lucide-react";
@@ -8,6 +9,7 @@ import ProfileBanner from "../components/ProfileBanner";
 import ShareButton from "../components/ShareButton";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
+import { groupShowsByStatus } from "../lib/groupShows";
 
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -16,6 +18,9 @@ export default function UserProfilePage() {
     () => api.getUserProfile(username!),
     [username],
   );
+
+  const shows = useMemo(() => data?.shows ?? [], [data]);
+  const showGroups = useMemo(() => groupShowsByStatus(shows), [shows]);
 
   if (loading) {
     return (
@@ -42,7 +47,7 @@ export default function UserProfilePage() {
     );
   }
 
-  const { user, stats, movies, shows, is_own_profile, show_watchlist, backdrops } = data;
+  const { user, stats, movies, is_own_profile, show_watchlist, backdrops } = data;
   const displayName = user.display_name || user.username;
 
   async function handleVisibilityToggle(titleId: string, isPublic: boolean) {
@@ -112,11 +117,18 @@ export default function UserProfilePage() {
       {show_watchlist && (movies.length > 0 || shows.length > 0) && (
         <div className="space-y-8">
           {shows.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-white mb-4">
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white">
                 {t("userProfile.tvShows")} <span className="text-zinc-500 font-normal text-base">({shows.length})</span>
               </h2>
-              <TitleList titles={shows} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} hideTypeBadge showProgressBar />
+              {showGroups.map((group) => (
+                <div key={group.key}>
+                  <h3 className="text-sm font-semibold text-zinc-400 mb-3">
+                    {t(group.labelKey)} ({group.titles.length})
+                  </h3>
+                  <TitleList titles={group.titles} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} hideTypeBadge showProgressBar />
+                </div>
+              ))}
             </div>
           )}
           {movies.length > 0 && (
