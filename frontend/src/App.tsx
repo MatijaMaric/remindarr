@@ -39,6 +39,7 @@ const EpisodeDetailPage = lazyWithRetry(() => import("./pages/EpisodeDetailPage"
 const PersonPage = lazyWithRetry(() => import("./pages/PersonPage"));
 const ReelsPage = lazyWithRetry(() => import("./pages/ReelsPage"));
 const UpcomingPage = lazyWithRetry(() => import("./pages/UpcomingPage"));
+const DiscoveryPage = lazyWithRetry(() => import("./pages/DiscoveryPage"));
 
 function MobileHomeRedirect() {
   const { user, loading } = useAuth();
@@ -150,6 +151,7 @@ export default function App() {
             <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
             <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
             <Route path="/upcoming" element={<RequireAuth><UpcomingPage /></RequireAuth>} />
+            <Route path="/discovery" element={<RequireAuth><DiscoveryPage /></RequireAuth>} />
             <Route path="/user/:username" element={<UserProfilePage />} />
             <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
             <Route path="/profile" element={<ProfilePage />} />

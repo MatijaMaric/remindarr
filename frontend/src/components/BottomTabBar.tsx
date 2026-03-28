@@ -1,14 +1,23 @@
 import { NavLink } from "react-router";
-import { Clapperboard, Clock, Search, CalendarDays, User, LogIn } from "lucide-react";
+import { Clapperboard, Clock, Search, Sparkles, User, LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { bottomTabClass } from "../nav-utils";
+import { useApiCall } from "../hooks/useApiCall";
+import * as api from "../api";
 
 const ICON_SIZE = 20;
 
 export default function BottomTabBar() {
   const { user, loading } = useAuth();
   const { t } = useTranslation();
+
+  const { data: countData } = useApiCall(
+    () => (user ? api.getUnreadRecommendationCount() : Promise.resolve({ count: 0 })),
+    [user?.id],
+  );
+
+  const unreadCount = countData?.count ?? 0;
 
   if (loading) return null;
 
@@ -27,14 +36,24 @@ export default function BottomTabBar() {
               <span className="text-[10px] mt-0.5">{t("bottomNav.upcoming")}</span>
             </NavLink>
 
+            <NavLink to="/discovery" className={({ isActive }) => bottomTabClass(isActive)}>
+              <div className="relative">
+                <Sparkles size={ICON_SIZE} aria-hidden="true" />
+                {unreadCount > 0 && (
+                  <span
+                    data-testid="unread-badge"
+                    className="absolute -top-1 -right-2 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-amber-500 text-zinc-950 text-[9px] font-bold leading-none"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] mt-0.5">{t("bottomNav.discovery")}</span>
+            </NavLink>
+
             <NavLink to="/browse" className={({ isActive }) => bottomTabClass(isActive)}>
               <Search size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">{t("bottomNav.browse")}</span>
-            </NavLink>
-
-            <NavLink to="/calendar" className={({ isActive }) => bottomTabClass(isActive)}>
-              <CalendarDays size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] mt-0.5">{t("bottomNav.calendar")}</span>
             </NavLink>
 
             <NavLink to={`/user/${user.username}`} className={({ isActive }) => bottomTabClass(isActive)}>
