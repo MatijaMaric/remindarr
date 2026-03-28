@@ -7,6 +7,7 @@ import {
   formatEpisodeCode,
   getUniqueProviders,
   getEpisodeCardImageUrl,
+  isEpisodeReleased,
 } from "./EpisodeComponents";
 import WatchButton from "./WatchButton";
 
@@ -70,8 +71,8 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
           {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: episodeCount })}
         </p>
 
-        {/* Stream button */}
-        {providers.length > 0 && (
+        {/* Stream button — only for released episodes */}
+        {isEpisodeReleased(episode) && providers.length > 0 && (
           <div className="mt-2">
             <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
           </div>

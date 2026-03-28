@@ -122,7 +122,7 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
             </p>
           </Link>
         </div>
-        {providers.length > 0 && (
+        {!unreleased && providers.length > 0 && (
           <div className="flex-shrink-0">
             <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
           </div>
@@ -158,7 +158,7 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
           {episode.overview && (
             <p className="text-sm text-zinc-400 mt-2 line-clamp-2">{episode.overview}</p>
           )}
-          {providers.length > 0 && (
+          {!unreleased && providers.length > 0 && (
             <div className="mt-3">
               <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
             </div>
@@ -181,6 +181,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
   }
 
   const providers = getUniqueProviders(episodes[0].offers);
+  const allUnreleased = episodes.every((ep) => !isEpisodeReleased(ep));
 
   if (compact) {
     return (
@@ -205,7 +206,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
             ))}
           </div>
         </div>
-        {providers.length > 0 && (
+        {!allUnreleased && providers.length > 0 && (
           <div className="flex-shrink-0">
             <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
           </div>
@@ -237,7 +238,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
               </div>
             ))}
           </div>
-          {providers.length > 0 && (
+          {!allUnreleased && providers.length > 0 && (
             <div className="mt-3">
               <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
             </div>
