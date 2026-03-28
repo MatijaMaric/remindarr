@@ -14,6 +14,7 @@
     "upcoming": "Upcoming",
     "browse": "Browse",
     "calendar": "Calendar",
+    "discovery": "Discovery",
     "profile": "Profile",
     "signIn": "Sign In"
   },
@@ -233,6 +234,17 @@
     "enable": "Enable",
     "enabling": "Enabling...",
     "dismiss": "Dismiss notification prompt"
+  },
+  "discovery": {
+    "title": "Discovery",
+    "empty": "No recommendations yet. Follow people to get recommendations!",
+    "movie": "Movie",
+    "tv": "TV Show",
+    "track": "Track",
+    "dismiss": "Dismiss",
+    "tracked": "\"{{title}}\" added to your watchlist",
+    "trackFailed": "Failed to track title",
+    "dismissFailed": "Failed to dismiss recommendation"
   },
   "common": {
     "loading": "Loading...",
