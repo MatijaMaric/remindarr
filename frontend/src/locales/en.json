@@ -255,6 +255,27 @@
     "trackFailed": "Failed to track title",
     "dismissFailed": "Failed to dismiss recommendation"
   },
+  "invite": {
+    "title": "Invite Friends",
+    "createLink": "Create Invite Link",
+    "creating": "Creating...",
+    "created": "Invite link created",
+    "empty": "No invitations yet. Create one to invite your friends!",
+    "revoke": "Revoke",
+    "revoking": "Revoking...",
+    "revoked": "Invitation revoked",
+    "redeeming": "Redeeming invitation...",
+    "redeemSuccess": "You and @{{name}} are now following each other!",
+    "statusPending": "Pending",
+    "statusUsed": "Used by @{{username}}",
+    "statusExpired": "Expired",
+    "created_at": "Created",
+    "expires_at": "Expires",
+    "usedBy": "Used by",
+    "shareTitle": "Join me on Remindarr",
+    "shareText": "Use my invite link to join Remindarr!",
+    "settingsLink": "Invite Friends"
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",

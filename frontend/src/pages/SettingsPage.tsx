@@ -8,6 +8,7 @@ import type { JobsResponse, Notifier } from "../api";
 import type { AdminSettings, Title } from "../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../lib/push";
 import { authClient } from "../lib/auth-client";
+import { UserPlus } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export default function SettingsPage() {
       <UserSection />
       <PasskeySection />
       <ProfileVisibilitySection />
+      <SocialSection />
       <WatchlistSection />
       {isPushSupported() && <PushNotificationsSection />}
       <NotificationsSection />
@@ -474,6 +476,25 @@ function ProfileVisibilitySection() {
         {titles.length === 0 && (
           <p className="text-zinc-500 text-sm">{t("settings.noTrackedTitles")}</p>
         )}
+      </div>
+    </section>
+  );
+}
+
+function SocialSection() {
+  const { t } = useTranslation();
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">Social</h2>
+      <div className="bg-zinc-900 rounded-lg p-5">
+        <Link
+          to="/invite"
+          className="flex items-center gap-3 text-amber-500 hover:text-amber-400 transition-colors font-medium"
+        >
+          <UserPlus className="size-5" />
+          {t("invite.settingsLink")}
+        </Link>
       </div>
     </section>
   );
