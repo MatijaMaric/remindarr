@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { checkAdminClaim, buildPasskeyOrigins } from "./better-auth";
+import { checkAdminClaim, buildPasskeyOrigins, getPasskeyRpId } from "./better-auth";
 
 describe("checkAdminClaim", () => {
   test("returns false when claimName is empty", () => {
@@ -40,6 +40,32 @@ describe("checkAdminClaim", () => {
 
   test("coerces array elements to string for comparison", () => {
     expect(checkAdminClaim({ flags: [1, 2, 3] }, "flags", "2")).toBe(true);
+  });
+});
+
+describe("getPasskeyRpId", () => {
+  test("strips www. prefix from hostname", () => {
+    expect(getPasskeyRpId("https://www.remindarr.app")).toBe("remindarr.app");
+  });
+
+  test("returns bare hostname as-is", () => {
+    expect(getPasskeyRpId("https://remindarr.app")).toBe("remindarr.app");
+  });
+
+  test("returns undefined for empty string", () => {
+    expect(getPasskeyRpId("")).toBeUndefined();
+  });
+
+  test("returns undefined for invalid URL", () => {
+    expect(getPasskeyRpId("not-a-url")).toBeUndefined();
+  });
+
+  test("preserves subdomain that is not www", () => {
+    expect(getPasskeyRpId("https://app.remindarr.app")).toBe("app.remindarr.app");
+  });
+
+  test("returns localhost for localhost URL", () => {
+    expect(getPasskeyRpId("http://localhost:3000")).toBe("localhost");
   });
 });
 
