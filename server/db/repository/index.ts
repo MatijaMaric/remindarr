@@ -38,8 +38,14 @@ export {
   untrackTitle,
   getTrackedTitleIds,
   getTrackedTitles,
+  getPublicTrackedTitles,
+  getPublicTrackedCount,
+  updateTrackedVisibility,
+  updateAllTrackedVisibility,
   getTrackedMoviesByReleaseDate,
 } from "./tracked";
+
+export { getUserPublicProfile, updateProfilePublic } from "./profile";
 
 export {
   createUser,

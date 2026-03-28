@@ -155,6 +155,7 @@ export const users = sqliteTable(
     authProvider: text("auth_provider").notNull().default("local"),
     providerSubject: text("provider_subject"),
     isAdmin: integer("is_admin").notNull().default(0),
+    profilePublic: integer("profile_public").notNull().default(0),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(
@@ -229,6 +230,7 @@ export const tracked = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     trackedAt: text("tracked_at").default(sql`(datetime('now'))`),
     notes: text("notes"),
+    public: integer("public").notNull().default(1),
   },
   (table) => [primaryKey({ columns: [table.titleId, table.userId] })]
 );

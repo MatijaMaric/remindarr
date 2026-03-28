@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, deleteEpisodesForTitle, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, deleteEpisodesForTitle, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { getDb } from "../db/schema";
@@ -24,8 +24,11 @@ const app = new Hono<AppEnv>();
 
 app.get("/", async (c) => {
   const user = c.get("user")!;
-  const titles = await getTrackedTitles(user.id);
-  return ok(c, { titles, count: titles.length });
+  const [titles, fullUser] = await Promise.all([
+    getTrackedTitles(user.id),
+    getUserById(user.id),
+  ]);
+  return ok(c, { titles, count: titles.length, profile_public: Boolean(fullUser?.profile_public) });
 });
 
 interface FrontendOffer {
@@ -252,6 +255,28 @@ app.post("/:id", async (c) => {
   }
 
   return ok(c, { message: `Tracking ${titleId}` });
+});
+
+app.patch("/profile-visibility", async (c) => {
+  const user = c.get("user")!;
+  const body = await c.req.json<{ public: boolean }>();
+  await updateProfilePublic(user.id, body.public);
+  return ok(c, { message: "Profile visibility updated" });
+});
+
+app.patch("/visibility", async (c) => {
+  const user = c.get("user")!;
+  const body = await c.req.json<{ public: boolean }>();
+  await updateAllTrackedVisibility(user.id, body.public);
+  return ok(c, { message: "Visibility updated" });
+});
+
+app.patch("/:id/visibility", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("id");
+  const body = await c.req.json<{ public: boolean }>();
+  await updateTrackedVisibility(titleId, user.id, body.public);
+  return ok(c, { message: "Visibility updated" });
 });
 
 app.delete("/:id", async (c) => {

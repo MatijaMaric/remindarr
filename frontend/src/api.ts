@@ -11,6 +11,7 @@ import type {
   AdminSettings,
   AdminSettingsUpdateRequest,
   AdminSettingsUpdateResponse,
+  UserProfileResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -103,7 +104,7 @@ export async function untrackTitle(id: string): Promise<void> {
   });
 }
 
-export async function getTrackedTitles(): Promise<{ titles: Title[]; count: number }> {
+export async function getTrackedTitles(): Promise<{ titles: (Title & { public: boolean })[]; count: number; profile_public: boolean }> {
   return fetchJson("/track");
 }
 
@@ -126,6 +127,33 @@ export async function importWatchlist(file: File): Promise<{ success: boolean; i
   return fetchJson("/track/import", {
     method: "POST",
     body: text,
+  });
+}
+
+// ─── User Profile ──────────────────────────────────────────────────────────
+
+export async function getUserProfile(username: string): Promise<UserProfileResponse> {
+  return fetchJson(`/user/${encodeURIComponent(username)}`);
+}
+
+export async function updateProfileVisibility(isPublic: boolean): Promise<void> {
+  await fetchJson("/track/profile-visibility", {
+    method: "PATCH",
+    body: JSON.stringify({ public: isPublic }),
+  });
+}
+
+export async function updateTitleVisibility(titleId: string, isPublic: boolean): Promise<void> {
+  await fetchJson(`/track/${encodeURIComponent(titleId)}/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ public: isPublic }),
+  });
+}
+
+export async function updateAllTitleVisibility(isPublic: boolean): Promise<void> {
+  await fetchJson("/track/visibility", {
+    method: "PATCH",
+    body: JSON.stringify({ public: isPublic }),
   });
 }
 

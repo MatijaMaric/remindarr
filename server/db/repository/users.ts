@@ -63,6 +63,7 @@ const userColumns = {
   is_admin: users.isAdmin,
   role: users.role,
   created_at: users.createdAt,
+  profile_public: users.profilePublic,
 };
 
 export async function getUserByUsername(username: string) {

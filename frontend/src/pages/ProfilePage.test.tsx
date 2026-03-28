@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router";
 
 // Mock browser Notification API
 Object.defineProperty(globalThis, "Notification", {
@@ -37,6 +38,10 @@ mock.module("../api", () => ({
   getJobs: mock(() => Promise.resolve({ crons: [], stats: {}, recentJobs: [] })),
   getAdminSettings: mock(() => Promise.resolve({ oidc_configured: false, oidc: { issuer_url: { value: "", source: "unset" }, client_id: { value: "", source: "unset" }, client_secret: { value: "", source: "unset" }, redirect_uri: { value: "", source: "unset" } } })),
   changePassword: mock(() => Promise.resolve()),
+  getTrackedTitles: mock(() => Promise.resolve({ titles: [], count: 0, profile_public: false })),
+  updateProfileVisibility: mock(() => Promise.resolve()),
+  updateTitleVisibility: mock(() => Promise.resolve()),
+  updateAllTitleVisibility: mock(() => Promise.resolve()),
 }));
 
 // Mock AuthContext
@@ -47,11 +52,11 @@ mock.module("../context/AuthContext", () => ({
   }),
 }));
 
-// Import after mocks
-const { default: ProfilePage } = await import("./ProfilePage");
+// Import SettingsPage (which now contains the push notification sections)
+const { default: SettingsPage } = await import("./SettingsPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <MemoryRouter>{children}</MemoryRouter>;
 }
 
 afterEach(() => {
@@ -100,7 +105,7 @@ describe("PushNotificationsSection", () => {
     );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(FAKE_SUBSCRIPTION));
 
-    render(<ProfilePage />, { wrapper: Wrapper });
+    render(<SettingsPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText(/subscription expired/i)).toBeDefined();
@@ -121,7 +126,7 @@ describe("PushNotificationsSection", () => {
     );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
 
-    render(<ProfilePage />, { wrapper: Wrapper });
+    render(<SettingsPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(mockDeleteNotifier).toHaveBeenCalledWith("n1");
@@ -143,7 +148,7 @@ describe("PushNotificationsSection", () => {
       Promise.resolve({ success: false, message: "Push subscription expired: https://fcm.example.com/send/abc" })
     );
 
-    render(<ProfilePage />, { wrapper: Wrapper });
+    render(<SettingsPage />, { wrapper: Wrapper });
 
     // Wait for initial load
     await waitFor(() => {
@@ -174,7 +179,7 @@ describe("PushNotificationsSection", () => {
       Promise.resolve({ success: false, message: "Web push failed (500): Internal error" })
     );
 
-    render(<ProfilePage />, { wrapper: Wrapper });
+    render(<SettingsPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText("Test")).toBeDefined();
@@ -200,7 +205,7 @@ describe("PushNotificationsSection", () => {
       Promise.resolve({ success: false, message: "Push subscription expired: https://fcm.example.com/send/new" })
     );
 
-    render(<ProfilePage />, { wrapper: Wrapper });
+    render(<SettingsPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText("Enable")).toBeDefined();
@@ -223,7 +228,7 @@ describe("PushNotificationsSection", () => {
     );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(FAKE_SUBSCRIPTION));
 
-    render(<ProfilePage />, { wrapper: Wrapper });
+    render(<SettingsPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText("Push notifications are enabled")).toBeDefined();

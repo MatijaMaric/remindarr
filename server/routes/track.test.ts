@@ -491,6 +491,31 @@ describe("POST /track/import", () => {
     CONFIG.TMDB_API_KEY = originalKey;
   });
 
+  it("restores movie watched status during import", async () => {
+    const exportData = {
+      version: 1,
+      exported_at: "2026-01-01T00:00:00Z",
+      titles: [
+        {
+          id: "movie-watched",
+          tmdb_id: "111",
+          object_type: "MOVIE",
+          title: "Watched Movie",
+          genres: [],
+          watched_episodes: [],
+          is_watched: true,
+        },
+      ],
+    };
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify(exportData),
+    });
+    expect(res.status).toBe(200);
+  });
+
   it("does not enqueue sync-show-episodes for MOVIE titles", async () => {
     const originalKey = CONFIG.TMDB_API_KEY;
     CONFIG.TMDB_API_KEY = "test-key";
@@ -522,5 +547,75 @@ describe("POST /track/import", () => {
     expect(job).toBeNull();
 
     CONFIG.TMDB_API_KEY = originalKey;
+  });
+});
+
+describe("PATCH /track/profile-visibility", () => {
+  it("toggles profile public setting", async () => {
+    const res = await app.request("/track/profile-visibility", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ public: true }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.profile_public).toBe(true);
+  });
+});
+
+describe("PATCH /track/:id/visibility", () => {
+  it("toggles title visibility", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    // Hide title
+    const res = await app.request("/track/movie-123/visibility", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ public: false }),
+    });
+    expect(res.status).toBe(200);
+
+    // Verify it's hidden
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].public).toBe(false);
+  });
+});
+
+describe("PATCH /track/visibility", () => {
+  it("bulk toggles all title visibility", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+    ]);
+    await app.request("/track/movie-1", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await app.request("/track/movie-2", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    // Hide all
+    const res = await app.request("/track/visibility", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ public: false }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles.every((t: any) => t.public === false)).toBe(true);
   });
 });

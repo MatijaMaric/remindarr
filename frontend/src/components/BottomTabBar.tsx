@@ -37,7 +37,7 @@ export default function BottomTabBar() {
               <span className="text-[10px] mt-0.5">{t("bottomNav.calendar")}</span>
             </NavLink>
 
-            <NavLink to="/profile" className={({ isActive }) => bottomTabClass(isActive)}>
+            <NavLink to={`/user/${user.username}`} className={({ isActive }) => bottomTabClass(isActive)}>
               <User size={ICON_SIZE} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">{t("bottomNav.profile")}</span>
             </NavLink>
