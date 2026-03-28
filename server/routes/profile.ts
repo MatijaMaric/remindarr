@@ -1,9 +1,24 @@
 import { Hono } from "hono";
-import { getUserPublicProfile, updateProfilePublic } from "../db/repository";
+import { getUserPublicProfile, updateProfilePublic, searchUsers } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 
 const app = new Hono<AppEnv>();
+
+app.get("/search", async (c) => {
+  const user = c.get("user");
+  if (!user) {
+    return err(c, "Authentication required", 401);
+  }
+
+  const query = c.req.query("q");
+  if (!query || query.length < 1) {
+    return err(c, "Query parameter 'q' is required");
+  }
+
+  const users = await searchUsers(query, 10);
+  return ok(c, { users });
+});
 
 app.get("/:username", async (c) => {
   const username = c.req.param("username");

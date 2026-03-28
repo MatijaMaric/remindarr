@@ -143,6 +143,29 @@ export async function updateUserAdmin(userId: string, isAdmin: boolean) {
   });
 }
 
+export async function searchUsers(query: string, limit = 10) {
+  return traceDbQuery("searchUsers", async () => {
+    const db = getDb();
+    const pattern = `%${query}%`;
+    return await db
+      .select({
+        id: users.id,
+        username: users.username,
+        name: users.name,
+        image: users.image,
+      })
+      .from(users)
+      .where(
+        and(
+          sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`,
+          sql`COALESCE(${users.banned}, 0) = 0`
+        )
+      )
+      .limit(limit)
+      .all();
+  });
+}
+
 // ─── Sessions ────────────────────────────────────────────────────────────────
 
 export async function createSession(userId: string): Promise<string> {

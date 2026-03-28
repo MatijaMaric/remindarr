@@ -399,6 +399,15 @@ export interface AdminSettingsUpdateResponse {
   oidc_configured: boolean;
 }
 
+// ─── User Summary Type ──────────────────────────────────────────────────────
+
+export interface UserSummary {
+  id: string;
+  username: string;
+  name: string | null;
+  image: string | null;
+}
+
 // ─── User Profile Types ─────────────────────────────────────────────────────
 
 export interface UserProfileUser {
