@@ -197,6 +197,8 @@
     "profileVisibility": "Profile Visibility",
     "profileVisibilityDescription": "Control which titles are visible on your public profile.",
     "showWatchlist": "Show watchlist on public profile",
+    "showWatchlistOnProfile": "Show watchlist on public profile",
+    "showWatchlistDescription": "When enabled, your tracked titles will be visible on your public profile.",
     "showAll": "Show All",
     "hideAll": "Hide All",
     "titleVisible": "Visible on profile",

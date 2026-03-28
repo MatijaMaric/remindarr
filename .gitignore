@@ -43,3 +43,4 @@ skills-lock.json
 playwright-report/
 test-results/
 .playwright/
+.playwright-cli/
