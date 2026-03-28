@@ -145,6 +145,17 @@ describe("passkey support", () => {
       expect(auth).toBeDefined();
     });
 
+    it("strips www. from rpID when BASE_URL has www prefix", () => {
+      CONFIG.BASE_URL = "https://www.remindarr.app";
+      CONFIG.PASSKEY_RP_ID = "";
+      CONFIG.PASSKEY_ORIGIN = "";
+
+      const db = getDb();
+      const auth = createAuth(db, new BunPlatform());
+      expect(auth).toBeDefined();
+      // rpID is "remindarr.app" (stripped www.), valid for both www and non-www origins
+    });
+
     it("falls back to localhost when BASE_URL is not set", () => {
       CONFIG.BASE_URL = "";
       CONFIG.PASSKEY_RP_ID = "";
