@@ -16,7 +16,7 @@ export default function SettingsPage() {
   if (!user) return null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">{t("settings.title")}</h1>
         <Link to={`/user/${user.username}`} className="text-sm text-amber-500 hover:text-amber-400 transition-colors">

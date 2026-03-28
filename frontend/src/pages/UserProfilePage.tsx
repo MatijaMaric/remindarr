@@ -18,7 +18,7 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-zinc-800 rounded" />
           <div className="h-4 w-32 bg-zinc-800 rounded" />
@@ -35,7 +35,7 @@ export default function UserProfilePage() {
 
   if (error || !data) {
     return (
-      <div className="max-w-4xl mx-auto py-12 text-center">
+      <div className="max-w-7xl mx-auto py-12 text-center">
         <p className="text-zinc-400 text-lg">{t("userProfile.userNotFound")}</p>
       </div>
     );
@@ -55,7 +55,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
       {/* Banner */}
       <ProfileBanner backdrops={backdrops} />
 
