@@ -237,7 +237,7 @@
   },
   "discovery": {
     "title": "Discovery",
-    "empty": "No recommendations yet. Follow people to get recommendations!",
+    "empty": "No recommendations yet. Follow people to see their recommendations!",
     "movie": "Movie",
     "tv": "TV Show",
     "track": "Track",

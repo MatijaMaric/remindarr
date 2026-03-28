@@ -22,19 +22,13 @@ function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typ
   return <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>;
 }
 
-const mockSearchResults = {
-  users: [
-    { id: "user-2", username: "alice", name: "Alice", display_name: "Alice", image: null },
-    { id: "user-3", username: "bob", name: "Bob", display_name: "Bob", image: "https://example.com/bob.jpg" },
-  ],
-};
-
 let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(() => {
   spies = [
-    spyOn(api, "searchUsers").mockResolvedValue(mockSearchResults as any),
     spyOn(api, "sendRecommendation").mockResolvedValue({ id: "rec-1" }),
+    spyOn(api, "checkRecommendation").mockResolvedValue({ recommended: false, id: null }),
+    spyOn(api, "deleteRecommendation").mockResolvedValue(undefined as any),
     spyOn(sonner.toast, "success").mockImplementation(() => "1" as any),
     spyOn(sonner.toast, "error").mockImplementation(() => "1" as any),
   ];
@@ -47,11 +41,14 @@ afterEach(() => {
 });
 
 describe("RecommendButton", () => {
-  it("renders Recommend button when authenticated", () => {
+  it("renders Recommend button when authenticated", async () => {
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
-    const button = screen.getByRole("button", { name: /recommend/i });
-    expect(button).toBeDefined();
-    expect(button.textContent).toContain("Recommend");
+
+    await waitFor(() => {
+      const button = screen.getByRole("button", { name: /recommend/i });
+      expect(button).toBeDefined();
+      expect(button.textContent).toContain("Recommend");
+    });
   });
 
   it("returns null when not authenticated", () => {
@@ -64,104 +61,56 @@ describe("RecommendButton", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("has correct styling classes", () => {
+  it("shows Recommended state when already recommended", async () => {
+    (api.checkRecommendation as any).mockResolvedValueOnce({ recommended: true, id: "rec-1" });
+
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
-    const button = screen.getByRole("button", { name: /recommend/i });
-    expect(button.className).toContain("bg-zinc-800");
-    expect(button.className).toContain("text-zinc-400");
+
+    await waitFor(() => {
+      const button = screen.getByRole("button", { name: /recommended/i });
+      expect(button.textContent).toContain("Recommended");
+    });
   });
 
-  it("opens dialog when clicked", async () => {
+  it("opens dialog when clicked and not yet recommended", async () => {
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /recommend/i })).toBeDefined();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Recommend to a friend")).toBeDefined();
+      expect(screen.getByText("Recommend this title")).toBeDefined();
     });
   });
 
-  it("shows user search input in dialog", async () => {
+  it("shows message textarea in dialog (no user picker)", async () => {
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /recommend/i })).toBeDefined();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("user-search-input")).toBeDefined();
-    });
-  });
-
-  it("shows user search results after typing", async () => {
-    render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
-
-    fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("user-search-input")).toBeDefined();
-    });
-
-    const input = screen.getByTestId("user-search-input");
-    fireEvent.change(input, { target: { value: "ali" } });
-
-    await waitFor(() => {
-      expect(api.searchUsers).toHaveBeenCalledWith("ali");
-    });
-
-    await waitFor(() => {
-      const results = screen.getAllByTestId("user-search-result");
-      expect(results.length).toBe(2);
-    });
-  });
-
-  it("selects a user when clicking a result", async () => {
-    render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
-
-    fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("user-search-input")).toBeDefined();
-    });
-
-    const input = screen.getByTestId("user-search-input");
-    fireEvent.change(input, { target: { value: "ali" } });
-
-    await waitFor(() => {
-      const results = screen.getAllByTestId("user-search-result");
-      expect(results.length).toBe(2);
-    });
-
-    const results = screen.getAllByTestId("user-search-result");
-    fireEvent.click(results[0]);
-
-    await waitFor(() => {
-      // Selected user should show with clear button
-      expect(screen.getByRole("button", { name: "Clear selection" })).toBeDefined();
-      // Search input should be gone
+      expect(screen.getByTestId("recommend-message")).toBeDefined();
+      // User search input should NOT exist
       expect(screen.queryByTestId("user-search-input")).toBeNull();
     });
   });
 
-  it("calls sendRecommendation on send", async () => {
+  it("calls sendRecommendation with titleId and message", async () => {
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /recommend/i })).toBeDefined();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("user-search-input")).toBeDefined();
-    });
-
-    // Search and select a user
-    const input = screen.getByTestId("user-search-input");
-    fireEvent.change(input, { target: { value: "ali" } });
-
-    await waitFor(() => {
-      const results = screen.getAllByTestId("user-search-result");
-      expect(results.length).toBe(2);
-    });
-
-    fireEvent.click(screen.getAllByTestId("user-search-result")[0]);
-
-    // Add a message
     await waitFor(() => {
       expect(screen.getByTestId("recommend-message")).toBeDefined();
     });
@@ -169,33 +118,21 @@ describe("RecommendButton", () => {
     const textarea = screen.getByTestId("recommend-message");
     fireEvent.change(textarea, { target: { value: "You should watch this!" } });
 
-    // Click send
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(api.sendRecommendation).toHaveBeenCalledWith("user-2", "movie-123", "You should watch this!");
+      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", "You should watch this!");
     });
   });
 
   it("shows success toast and closes dialog on successful send", async () => {
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
 
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /recommend/i })).toBeDefined();
+    });
+
     fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("user-search-input")).toBeDefined();
-    });
-
-    // Select a user
-    const input = screen.getByTestId("user-search-input");
-    fireEvent.change(input, { target: { value: "ali" } });
-
-    await waitFor(() => {
-      const results = screen.getAllByTestId("user-search-result");
-      expect(results.length).toBe(2);
-    });
-
-    fireEvent.click(screen.getAllByTestId("user-search-result")[0]);
 
     await waitFor(() => {
       expect(screen.getByTestId("recommend-send")).toBeDefined();
@@ -209,26 +146,15 @@ describe("RecommendButton", () => {
   });
 
   it("shows error toast on send failure", async () => {
-    (api.sendRecommendation as any).mockRejectedValueOnce(new Error("You must follow this user"));
+    (api.sendRecommendation as any).mockRejectedValueOnce(new Error("Failed to send"));
 
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
 
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /recommend/i })).toBeDefined();
+    });
+
     fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("user-search-input")).toBeDefined();
-    });
-
-    // Select a user
-    const input = screen.getByTestId("user-search-input");
-    fireEvent.change(input, { target: { value: "ali" } });
-
-    await waitFor(() => {
-      const results = screen.getAllByTestId("user-search-result");
-      expect(results.length).toBe(2);
-    });
-
-    fireEvent.click(screen.getAllByTestId("user-search-result")[0]);
 
     await waitFor(() => {
       expect(screen.getByTestId("recommend-send")).toBeDefined();
@@ -237,50 +163,48 @@ describe("RecommendButton", () => {
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("You must follow this user");
-    });
-  });
-
-  it("send button is disabled when no user is selected", async () => {
-    render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
-
-    fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
-
-    await waitFor(() => {
-      const sendButton = screen.getByTestId("recommend-send");
-      expect(sendButton.hasAttribute("disabled")).toBe(true);
+      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to send");
     });
   });
 
   it("sends recommendation without message when message is empty", async () => {
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
 
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /recommend/i })).toBeDefined();
+    });
+
     fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("user-search-input")).toBeDefined();
-    });
-
-    // Select a user
-    const input = screen.getByTestId("user-search-input");
-    fireEvent.change(input, { target: { value: "ali" } });
-
-    await waitFor(() => {
-      const results = screen.getAllByTestId("user-search-result");
-      expect(results.length).toBe(2);
-    });
-
-    fireEvent.click(screen.getAllByTestId("user-search-result")[0]);
 
     await waitFor(() => {
       expect(screen.getByTestId("recommend-send")).toBeDefined();
     });
 
-    // Send without message
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(api.sendRecommendation).toHaveBeenCalledWith("user-2", "movie-123", undefined);
+      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", undefined);
+    });
+  });
+
+  it("toggles to Recommended state after successful send", async () => {
+    render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /recommend/i })).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /recommend/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("recommend-send")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByTestId("recommend-send"));
+
+    await waitFor(() => {
+      const button = screen.getByRole("button", { name: /recommended/i });
+      expect(button.textContent).toContain("Recommended");
     });
   });
 });

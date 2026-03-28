@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser } from "../repository";
+import { upsertTitles, createUser, follow } from "../repository";
 import {
   createRecommendation,
-  getReceivedRecommendations,
+  getUserRecommendation,
+  getDiscoveryFeed,
+  getDiscoveryFeedCount,
   getSentRecommendations,
   markAsRead,
   deleteRecommendation,
@@ -32,50 +34,106 @@ afterAll(() => {
 
 describe("createRecommendation", () => {
   it("creates a recommendation and returns an id", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1", "You should watch this!");
+    const id = await createRecommendation(userA, "movie-1", "You should watch this!");
     expect(id).toBeDefined();
     expect(typeof id).toBe("string");
   });
 
   it("creates a recommendation without a message", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1");
+    const id = await createRecommendation(userA, "movie-1");
     expect(id).toBeDefined();
   });
 });
 
-describe("getReceivedRecommendations", () => {
-  it("returns received recommendations with user and title info", async () => {
-    await createRecommendation(userA, userB, "movie-1", "Check this out");
-    await createRecommendation(userC, userB, "movie-2");
-
-    const recs = await getReceivedRecommendations(userB);
-    expect(recs).toHaveLength(2);
-    expect(recs[0].fromUsername).toBeDefined();
-    expect(recs[0].titleName).toBeDefined();
+describe("getUserRecommendation", () => {
+  it("returns the recommendation if user already recommended the title", async () => {
+    await createRecommendation(userA, "movie-1");
+    const existing = await getUserRecommendation(userA, "movie-1");
+    expect(existing).not.toBeNull();
+    expect(existing?.id).toBeDefined();
   });
 
-  it("returns empty list when no recommendations", async () => {
-    const recs = await getReceivedRecommendations(userA);
-    expect(recs).toHaveLength(0);
+  it("returns undefined if user has not recommended the title", async () => {
+    const existing = await getUserRecommendation(userA, "movie-1");
+    expect(existing).toBeUndefined();
+  });
+});
+
+describe("getDiscoveryFeed", () => {
+  it("returns recommendations from followed users", async () => {
+    // Bob follows Alice
+    await follow(userB, userA);
+    await createRecommendation(userA, "movie-1", "Check this out");
+
+    const feed = await getDiscoveryFeed(userB);
+    expect(feed).toHaveLength(1);
+    expect(feed[0].fromUsername).toBe("alice");
+    expect(feed[0].titleName).toBe("Test Movie");
+  });
+
+  it("does not return recommendations from unfollowed users", async () => {
+    await createRecommendation(userA, "movie-1");
+
+    // userB does NOT follow userA
+    const feed = await getDiscoveryFeed(userB);
+    expect(feed).toHaveLength(0);
+  });
+
+  it("returns empty list when user follows nobody", async () => {
+    const feed = await getDiscoveryFeed(userA);
+    expect(feed).toHaveLength(0);
+  });
+
+  it("includes read status from recommendation_reads", async () => {
+    await follow(userB, userA);
+    const recId = await createRecommendation(userA, "movie-1");
+
+    // Before marking as read
+    let feed = await getDiscoveryFeed(userB);
+    expect(feed[0].readAt).toBeNull();
+
+    // Mark as read
+    await markAsRead(recId, userB);
+
+    // After marking as read
+    feed = await getDiscoveryFeed(userB);
+    expect(feed[0].readAt).not.toBeNull();
   });
 
   it("supports pagination with limit and offset", async () => {
-    await createRecommendation(userA, userB, "movie-1");
-    await createRecommendation(userC, userB, "movie-2");
+    await follow(userB, userA);
+    await createRecommendation(userA, "movie-1");
+    await createRecommendation(userA, "movie-2");
 
-    const page1 = await getReceivedRecommendations(userB, 1, 0);
+    const page1 = await getDiscoveryFeed(userB, 1, 0);
     expect(page1).toHaveLength(1);
 
-    const page2 = await getReceivedRecommendations(userB, 1, 1);
+    const page2 = await getDiscoveryFeed(userB, 1, 1);
     expect(page2).toHaveLength(1);
     expect(page1[0].id).not.toBe(page2[0].id);
   });
 });
 
+describe("getDiscoveryFeedCount", () => {
+  it("returns the total count of recommendations from followed users", async () => {
+    await follow(userB, userA);
+    await createRecommendation(userA, "movie-1");
+    await createRecommendation(userA, "movie-2");
+
+    const count = await getDiscoveryFeedCount(userB);
+    expect(count).toBe(2);
+  });
+
+  it("returns 0 when no followed users have recommendations", async () => {
+    const count = await getDiscoveryFeedCount(userB);
+    expect(count).toBe(0);
+  });
+});
+
 describe("getSentRecommendations", () => {
-  it("returns sent recommendations", async () => {
-    await createRecommendation(userA, userB, "movie-1");
-    await createRecommendation(userA, userC, "movie-2");
+  it("returns user's own recommendations", async () => {
+    await createRecommendation(userA, "movie-1");
+    await createRecommendation(userA, "movie-2");
 
     const recs = await getSentRecommendations(userA);
     expect(recs).toHaveLength(2);
@@ -88,37 +146,31 @@ describe("getSentRecommendations", () => {
 });
 
 describe("markAsRead", () => {
-  it("sets readAt on a received recommendation", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1");
+  it("inserts a read record into recommendation_reads", async () => {
+    await follow(userB, userA);
+    const id = await createRecommendation(userA, "movie-1");
 
     await markAsRead(id, userB);
 
-    const recs = await getReceivedRecommendations(userB);
-    expect(recs[0].readAt).not.toBeNull();
+    const feed = await getDiscoveryFeed(userB);
+    expect(feed[0].readAt).not.toBeNull();
   });
 
-  it("does not mark if user is not the recipient", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1");
+  it("does not fail if called twice (conflict do nothing)", async () => {
+    await follow(userB, userA);
+    const id = await createRecommendation(userA, "movie-1");
 
-    await markAsRead(id, userC); // userC is not the recipient
+    await markAsRead(id, userB);
+    await markAsRead(id, userB); // should not throw
 
-    const recs = await getReceivedRecommendations(userB);
-    expect(recs[0].readAt).toBeNull();
+    const feed = await getDiscoveryFeed(userB);
+    expect(feed[0].readAt).not.toBeNull();
   });
 });
 
 describe("deleteRecommendation", () => {
-  it("deletes a recommendation the user received", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1");
-
-    await deleteRecommendation(id, userB);
-
-    const recs = await getReceivedRecommendations(userB);
-    expect(recs).toHaveLength(0);
-  });
-
-  it("deletes a recommendation the user sent", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1");
+  it("deletes a recommendation the user created", async () => {
+    const id = await createRecommendation(userA, "movie-1");
 
     await deleteRecommendation(id, userA);
 
@@ -126,34 +178,42 @@ describe("deleteRecommendation", () => {
     expect(recs).toHaveLength(0);
   });
 
-  it("does not delete if user is neither sender nor recipient", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1");
+  it("does not delete if user is not the creator", async () => {
+    const id = await createRecommendation(userA, "movie-1");
 
-    await deleteRecommendation(id, userC);
+    await deleteRecommendation(id, userB); // not the creator
 
-    const recs = await getReceivedRecommendations(userB);
+    const recs = await getSentRecommendations(userA);
     expect(recs).toHaveLength(1);
   });
 });
 
 describe("getUnreadCount", () => {
-  it("returns count of unread recommendations", async () => {
-    await createRecommendation(userA, userB, "movie-1");
-    await createRecommendation(userC, userB, "movie-2");
+  it("returns count of unread recommendations from followed users", async () => {
+    await follow(userB, userA);
+    await follow(userB, userC);
+    await createRecommendation(userA, "movie-1");
+    await createRecommendation(userC, "movie-2");
 
     expect(await getUnreadCount(userB)).toBe(2);
   });
 
   it("decreases after marking as read", async () => {
-    const id = await createRecommendation(userA, userB, "movie-1");
-    await createRecommendation(userC, userB, "movie-2");
+    await follow(userB, userA);
+    const id = await createRecommendation(userA, "movie-1");
+    await createRecommendation(userA, "movie-2");
 
     await markAsRead(id, userB);
 
     expect(await getUnreadCount(userB)).toBe(1);
   });
 
-  it("returns 0 when no unread recommendations", async () => {
+  it("returns 0 when no followed users have recommendations", async () => {
     expect(await getUnreadCount(userA)).toBe(0);
+  });
+
+  it("returns 0 when user follows nobody", async () => {
+    await createRecommendation(userA, "movie-1");
+    expect(await getUnreadCount(userB)).toBe(0);
   });
 });
