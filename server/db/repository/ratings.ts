@@ -67,6 +67,7 @@ export async function getFriendsRatings(userId: string, titleId: string) {
         userId: ratings.userId,
         username: users.username,
         displayName: users.name,
+        image: users.image,
         rating: ratings.rating,
       })
       .from(ratings)

@@ -13,6 +13,7 @@ import type {
   AdminSettingsUpdateResponse,
   UserProfileResponse,
   UserSummary,
+  TitleRatingResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -408,4 +409,23 @@ export async function getFollowing(userId?: string): Promise<{ following: UserSu
     ? `/social/following/${encodeURIComponent(userId)}`
     : "/social/following";
   return fetchJson(path);
+}
+
+// ─── Ratings ─────────────────────────────────────────────────────────────────
+
+export async function rateTitle(titleId: string, rating: string): Promise<void> {
+  await fetchJson(`/ratings/${encodeURIComponent(titleId)}`, {
+    method: "POST",
+    body: JSON.stringify({ rating }),
+  });
+}
+
+export async function unrateTitle(titleId: string): Promise<void> {
+  await fetchJson(`/ratings/${encodeURIComponent(titleId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getTitleRating(titleId: string): Promise<TitleRatingResponse> {
+  return fetchJson(`/ratings/${encodeURIComponent(titleId)}`);
 }

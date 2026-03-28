@@ -443,6 +443,21 @@ export interface UserProfileResponse {
   backdrops: ProfileBackdrop[];
 }
 
+// ─── Rating Types ────────────────────────────────────────────────────────────
+
+export type RatingValue = "HATE" | "DISLIKE" | "LIKE" | "LOVE";
+
+export interface FriendRating {
+  user: UserSummary;
+  rating: RatingValue;
+}
+
+export interface TitleRatingResponse {
+  user_rating: RatingValue | null;
+  aggregated: Record<RatingValue, number>;
+  friends_ratings: FriendRating[];
+}
+
 // ─── Social Types ────────────────────────────────────────────────────────────
 
 export interface UserSummary {
