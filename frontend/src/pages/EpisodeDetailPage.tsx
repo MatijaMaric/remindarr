@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
+import { useAuth } from "../context/AuthContext";
+import { WatchedIcon } from "../components/EpisodeComponents";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -14,13 +19,54 @@ function formatDate(dateStr: string | null | undefined): string {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function isReleased(airDate: string | null | undefined): boolean {
+  if (!airDate) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return airDate <= today;
+}
+
 export default function EpisodeDetailPage() {
   const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>();
+  const { user } = useAuth();
+  const { t } = useTranslation();
 
   const { data, loading, error } = useApiCall<EpisodeDetailsResponse>(
     () => api.getEpisodeDetails(id!, Number(season), Number(episode)),
     [id, season, episode],
   );
+
+  const [episodeStatus, setEpisodeStatus] = useState<{ id: number; is_watched: boolean } | null>(null);
+
+  useApiCall(
+    () => user && id && season
+      ? api.getSeasonEpisodeStatus(id, Number(season))
+      : Promise.resolve({ episodes: [] }),
+    [user, id, season, episode],
+    {
+      onSuccess: (result) => {
+        const match = result.episodes.find((ep) => ep.episode_number === Number(episode));
+        setEpisodeStatus(match ? { id: match.id, is_watched: match.is_watched } : null);
+      },
+    },
+  );
+
+  const toggleWatched = async () => {
+    if (!episodeStatus) return;
+
+    const wasWatched = episodeStatus.is_watched;
+    setEpisodeStatus({ ...episodeStatus, is_watched: !wasWatched });
+
+    try {
+      if (wasWatched) {
+        await api.unwatchEpisode(episodeStatus.id);
+      } else {
+        await api.watchEpisode(episodeStatus.id);
+      }
+    } catch {
+      setEpisodeStatus({ ...episodeStatus, is_watched: wasWatched });
+      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+    }
+  };
 
   if (loading) {
     return <DetailPageSkeleton />;
@@ -36,6 +82,7 @@ export default function EpisodeDetailPage() {
 
   const { title, tmdb, seasonNumber, episodeNumber } = data;
   const stillUrl = tmdb?.still_path ? `${TMDB_IMG}/w780${tmdb.still_path}` : null;
+  const released = isReleased(tmdb?.air_date);
 
   // Merge guest_stars and credits.cast, deduplicating by id
   const allCast: CastMember[] = [];
@@ -73,11 +120,20 @@ export default function EpisodeDetailPage() {
 
       {/* Episode header */}
       <div className="space-y-3">
-        <h1 className="text-2xl font-bold text-white">
-          <span className="text-zinc-500">S{String(seasonNumber).padStart(2, "0")}E{String(episodeNumber).padStart(2, "0")}</span>
-          {" "}
-          {tmdb?.name || `Episode ${episodeNumber}`}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">
+            <span className="text-zinc-500">S{String(seasonNumber).padStart(2, "0")}E{String(episodeNumber).padStart(2, "0")}</span>
+            {" "}
+            {tmdb?.name || `Episode ${episodeNumber}`}
+          </h1>
+          {episodeStatus && (
+            <WatchedIcon
+              watched={episodeStatus.is_watched}
+              onClick={toggleWatched}
+              disabled={!released}
+            />
+          )}
+        </div>
 
         <div className="flex items-center gap-3 text-sm text-zinc-400">
           {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}

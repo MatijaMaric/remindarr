@@ -168,6 +168,13 @@ export async function getUpcomingEpisodes(): Promise<{ today: Episode[]; upcomin
   return fetchJson("/episodes/upcoming");
 }
 
+export async function getSeasonEpisodeStatus(
+  titleId: string,
+  season: number,
+): Promise<{ episodes: Array<{ episode_number: number; id: number; is_watched: boolean }> }> {
+  return fetchJson(`/episodes/status/${encodeURIComponent(titleId)}/${season}`);
+}
+
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
 
 export async function watchEpisode(episodeId: number): Promise<void> {
