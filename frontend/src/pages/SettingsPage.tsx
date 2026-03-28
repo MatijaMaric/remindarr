@@ -360,7 +360,6 @@ function ProfileVisibilitySection() {
   const [profilePublic, setProfilePublic] = useState(false);
   const [titles, setTitles] = useState<(Title & { public: boolean })[]>([]);
   const [updatingGlobal, setUpdatingGlobal] = useState(false);
-  const [updatingTitle, setUpdatingTitle] = useState<string | null>(null);
   const [updatingAll, setUpdatingAll] = useState(false);
   const [err, setErr] = useState("");
 
@@ -391,21 +390,6 @@ function ProfileVisibilitySection() {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setUpdatingGlobal(false);
-    }
-  }
-
-  async function handleTitleToggle(titleId: string, currentPublic: boolean) {
-    setErr("");
-    setUpdatingTitle(titleId);
-    try {
-      await api.updateTitleVisibility(titleId, !currentPublic);
-      setTitles((prev) =>
-        prev.map((t) => (t.id === titleId ? { ...t, public: !currentPublic } : t))
-      );
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setUpdatingTitle(null);
     }
   }
 
@@ -474,49 +458,6 @@ function ProfileVisibilitySection() {
             >
               {t("settings.hideAll")}
             </button>
-          </div>
-        )}
-
-        {/* Per-title list */}
-        {titles.length > 0 && (
-          <div className={`space-y-1 ${!profilePublic ? "opacity-50" : ""}`}>
-            {titles.map((title) => (
-              <div
-                key={title.id}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-800/50 transition-colors"
-              >
-                {title.poster_url ? (
-                  <img
-                    src={title.poster_url}
-                    alt={title.title}
-                    className="w-8 h-12 rounded object-cover shrink-0"
-                  />
-                ) : (
-                  <div className="w-8 h-12 rounded bg-zinc-800 shrink-0" />
-                )}
-                <span className="text-white text-sm flex-1 min-w-0 truncate">{title.title}</span>
-                <button
-                  onClick={() => handleTitleToggle(title.id, title.public)}
-                  disabled={updatingTitle === title.id}
-                  className="shrink-0 p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50 hover:bg-zinc-700"
-                  title={title.public ? t("settings.hideTitle") : t("settings.showTitle")}
-                >
-                  {title.public ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-                      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-                      <line x1="2" x2="22" y1="2" y2="22" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            ))}
           </div>
         )}
 
