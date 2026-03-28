@@ -68,7 +68,7 @@ export default function WatchButton({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`w-full flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 ${className?.match(/\btext-(xs|sm|base|lg|xl|\d)/) ? "" : "text-xs"} font-semibold transition-colors duration-200 ${className ?? ""}`}
+      className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 ${className?.match(/\btext-(xs|sm|base|lg|xl|\d)/) ? "" : "text-xs"} font-semibold transition-colors duration-200 ${className ?? ""}`}
       style={{
         backgroundColor: hovered ? color.hover : color.bg,
         color: color.text,
