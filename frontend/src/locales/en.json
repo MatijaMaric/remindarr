@@ -32,7 +32,9 @@
     "today": "Today",
     "noEpisodes": "No upcoming episodes for your tracked shows.",
     "noEpisodesToday": "No episodes airing today.",
-    "comingUp": "Coming Up"
+    "comingUp": "Coming Up",
+    "recommendedForYou": "Recommended for You",
+    "seeAll": "See all"
   },
   "tracked": {
     "title": "Tracked Titles ({{count}})",

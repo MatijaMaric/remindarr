@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
-import type { Episode, Title } from "../types";
+import type { Episode, Title, Recommendation } from "../types";
 import { normalizeSearchTitle } from "../types";
 import TitleList from "../components/TitleList";
 import { TitleGridSkeleton, EpisodeListSkeleton } from "../components/SkeletonComponents";
@@ -77,6 +77,7 @@ export default function HomePage() {
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const [unwatched, setUnwatched] = useState<Episode[]>([]);
   const [popularTitles, setPopularTitles] = useState<Title[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [confirmingTitleId, setConfirmingTitleId] = useState<string | null>(null);
@@ -94,10 +95,14 @@ export default function HomePage() {
 
     async function load() {
       try {
-        const data = await api.getUpcomingEpisodes();
-        setToday(data.today);
-        setUpcoming(data.upcoming);
-        setUnwatched(data.unwatched);
+        const [episodeData, recData] = await Promise.all([
+          api.getUpcomingEpisodes(),
+          api.getRecommendations(6).catch(() => ({ recommendations: [], count: 0 })),
+        ]);
+        setToday(episodeData.today);
+        setUpcoming(episodeData.upcoming);
+        setUnwatched(episodeData.unwatched);
+        setRecommendations(recData.recommendations);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -282,6 +287,58 @@ export default function HomePage() {
                 </DeckCardWrapper>
               </div>
             ))}
+          </UnwatchedCarousel>
+        </section>
+      )}
+
+      {/* Recommended for You */}
+      {recommendations.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white">{t("home.recommendedForYou")}</h2>
+            <Link to="/discovery" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
+              {t("home.seeAll")} →
+            </Link>
+          </div>
+          <UnwatchedCarousel>
+            {recommendations.map((rec) => {
+              const posterSrc = rec.title.poster_url
+                ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`
+                : null;
+              const isUnread = !rec.read_at;
+              return (
+                <Link
+                  key={rec.id}
+                  to={`/title/${rec.title.id}`}
+                  className="w-32 flex-shrink-0 group"
+                  style={{ scrollSnapAlign: "start" }}
+                >
+                  <div className={`relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 ${isUnread ? "ring-2 ring-amber-500/60" : ""}`}>
+                    {posterSrc ? (
+                      <img
+                        src={posterSrc}
+                        alt={rec.title.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+                        N/A
+                      </div>
+                    )}
+                    {isUnread && (
+                      <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" />
+                    )}
+                  </div>
+                  <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
+                    {rec.title.title}
+                  </p>
+                  <p className="text-xs text-zinc-400 truncate">
+                    from @{rec.from_user.username}
+                  </p>
+                </Link>
+              );
+            })}
           </UnwatchedCarousel>
         </section>
       )}
