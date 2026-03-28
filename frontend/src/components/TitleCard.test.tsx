@@ -231,12 +231,135 @@ describe("TitleCard", () => {
     expect(screen.queryByText("TV")).toBeNull();
   });
 
-  it("shows progress bar when showProgressBar is true for shows with episodes", () => {
+  // ─── show_status visual states ────────────────────────────────────────────
+
+  it("shows green overlay, 'Completed' badge, and reduced opacity for completed shows", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      show_status: "completed",
+      total_episodes: 24,
+      watched_episodes_count: 24,
+      released_episodes_count: 24,
+    });
+    const { container } = render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    // Green overlay
+    const overlay = screen.getByTestId("completed-overlay");
+    expect(overlay).toBeDefined();
+    expect(overlay.className).toContain("bg-emerald-900/40");
+
+    // "Completed" badge text
+    expect(screen.getByText("Completed")).toBeDefined();
+
+    // Reduced opacity on the card wrapper
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).toContain("opacity-75");
+  });
+
+  it("shows 'Caught Up' teal badge for caught_up shows", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      show_status: "caught_up",
+      total_episodes: 20,
+      watched_episodes_count: 15,
+      released_episodes_count: 15,
+    });
+    const { container } = render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    const badge = screen.getByText("Caught Up");
+    expect(badge).toBeDefined();
+    expect(badge.className).toContain("bg-teal-600");
+
+    // No reduced opacity
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).not.toContain("opacity-75");
+  });
+
+  it("shows episode progress text badge for watching shows (no progress bar)", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      show_status: "watching",
+      total_episodes: 24,
+      watched_episodes_count: 5,
+      released_episodes_count: 12,
+    });
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    // Uses released_episodes_count instead of total_episodes
+    expect(screen.getByText("5/12 ep")).toBeDefined();
+  });
+
+  it("shows progress bar for watching shows when showProgressBar is true", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      show_status: "watching",
+      total_episodes: 24,
+      watched_episodes_count: 6,
+      released_episodes_count: 12,
+    });
+    const { container } = render(<TitleCard title={title} showProgressBar />, { wrapper: NoUserWrapper });
+
+    const progressTrack = container.querySelector(".bg-zinc-700");
+    expect(progressTrack).not.toBeNull();
+    const progressFill = progressTrack!.querySelector(".bg-amber-500") as HTMLElement;
+    expect(progressFill).not.toBeNull();
+    // 6/12 = 50%
+    expect(progressFill.style.width).toBe("50%");
+  });
+
+  it("shows no special badge for not_started shows with episodes", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      show_status: "not_started",
+      total_episodes: 10,
+      watched_episodes_count: 0,
+      released_episodes_count: 10,
+    });
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    // No completed/caught_up/watching badge
+    expect(screen.queryByText("Completed")).toBeNull();
+    expect(screen.queryByText("Caught Up")).toBeNull();
+    // No episode count badge either (not_started has no fallback badge)
+    expect(screen.queryByText(/\/.*ep/)).toBeNull();
+  });
+
+  it("shows no special badge for unreleased shows", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      show_status: "unreleased",
+      total_episodes: 0,
+      watched_episodes_count: 0,
+      released_episodes_count: 0,
+    });
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    expect(screen.queryByText("Completed")).toBeNull();
+    expect(screen.queryByText("Caught Up")).toBeNull();
+    expect(screen.queryByText(/\/.*ep/)).toBeNull();
+  });
+
+  it("shows 'Watched' badge for movies with is_watched (no show_status)", () => {
+    const title = makeTitle({
+      object_type: "MOVIE",
+      is_watched: true,
+      show_status: undefined,
+    });
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    expect(screen.getByText("Watched")).toBeDefined();
+    expect(screen.queryByText("Completed")).toBeNull();
+  });
+
+  // ─── Fallback behavior for titles without show_status ─────────────────────
+
+  it("shows progress bar when showProgressBar is true for shows without show_status", () => {
     const title = makeTitle({
       object_type: "SHOW",
       total_episodes: 10,
       watched_episodes_count: 3,
       is_watched: false,
+      show_status: undefined,
     });
     const { container } = render(<TitleCard title={title} showProgressBar />, { wrapper: NoUserWrapper });
 
@@ -246,16 +369,31 @@ describe("TitleCard", () => {
     expect(progressFill).not.toBeNull();
   });
 
-  it("shows text badge instead of progress bar when showProgressBar is false", () => {
+  it("shows text badge instead of progress bar when showProgressBar is false for shows without show_status", () => {
     const title = makeTitle({
       object_type: "SHOW",
       total_episodes: 10,
       watched_episodes_count: 3,
       is_watched: false,
+      show_status: undefined,
     });
     render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText("3/10 ep")).toBeDefined();
+  });
+
+  it("uses released_episodes_count in fallback badge when available", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      total_episodes: 24,
+      watched_episodes_count: 3,
+      released_episodes_count: 12,
+      is_watched: false,
+      show_status: undefined,
+    });
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    expect(screen.getByText("3/12 ep")).toBeDefined();
   });
 
   it("does not show progress bar for movies", () => {

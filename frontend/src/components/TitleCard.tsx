@@ -27,7 +27,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
   const streamingOffers = Array.from(uniqueProviders.values());
 
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col">
+    <div className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>
       {/* Poster — clickable link to detail page */}
       <div className="aspect-[2/3] bg-zinc-800 relative">
         <Link to={`/title/${title.id}`} className="block w-full h-full">
@@ -49,7 +49,39 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             TV
           </span>
         )}
-        {title.is_watched && (
+        {title.show_status === "completed" && (
+          <>
+            <div className="absolute inset-0 bg-emerald-900/40 pointer-events-none" data-testid="completed-overlay" />
+            <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+              </svg>
+              Completed
+            </span>
+          </>
+        )}
+        {title.show_status === "caught_up" && (
+          <span className="absolute bottom-2 left-2 bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            Caught Up
+          </span>
+        )}
+        {title.show_status === "watching" && title.object_type === "SHOW" && (
+          <>
+            {showProgressBar && (title.released_episodes_count ?? title.total_episodes ?? 0) > 0 ? (
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700">
+                <div
+                  className="h-full bg-amber-500 transition-all duration-300"
+                  style={{ width: `${((title.watched_episodes_count ?? 0) / (title.released_episodes_count ?? title.total_episodes ?? 1)) * 100}%` }}
+                />
+              </div>
+            ) : (
+              <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                {title.watched_episodes_count ?? 0}/{title.released_episodes_count ?? title.total_episodes ?? 0} ep
+              </span>
+            )}
+          </>
+        )}
+        {!title.show_status && title.is_watched && (
           <span className="absolute bottom-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
@@ -57,16 +89,16 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             Watched
           </span>
         )}
-        {!title.is_watched && !showProgressBar && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
+        {!title.show_status && !title.is_watched && !showProgressBar && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
           <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            {title.watched_episodes_count ?? 0}/{title.total_episodes} ep
+            {title.watched_episodes_count ?? 0}/{title.released_episodes_count ?? title.total_episodes} ep
           </span>
         )}
-        {!title.is_watched && showProgressBar && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
+        {!title.show_status && !title.is_watched && showProgressBar && title.object_type === "SHOW" && title.total_episodes != null && title.total_episodes > 0 && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700">
             <div
               className="h-full bg-amber-500 transition-all duration-300"
-              style={{ width: `${((title.watched_episodes_count ?? 0) / title.total_episodes) * 100}%` }}
+              style={{ width: `${((title.watched_episodes_count ?? 0) / (title.released_episodes_count ?? title.total_episodes)) * 100}%` }}
             />
           </div>
         )}
