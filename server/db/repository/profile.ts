@@ -47,8 +47,30 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         : Promise.resolve([]),
     ]);
 
-    const movies = allTitles.filter(t => t.object_type === "MOVIE");
     const shows = allTitles.filter(t => t.object_type === "SHOW");
+
+    // Sort movies by most recently watched first, unwatched movies last
+    const movieTitles = allTitles.filter(t => t.object_type === "MOVIE");
+    const movieIds = movieTitles.map(t => t.id);
+    const watchedAtMap = new Map<string, string | null>();
+    if (movieIds.length > 0) {
+      const watchedRows = await db
+        .select({ titleId: watchedTitles.titleId, watchedAt: watchedTitles.watchedAt })
+        .from(watchedTitles)
+        .where(sql`${watchedTitles.titleId} IN (${sql.join(movieIds.map(id => sql`${id}`), sql`, `)}) AND ${watchedTitles.userId} = ${user.id}`)
+        .all();
+      for (const row of watchedRows) {
+        watchedAtMap.set(row.titleId, row.watchedAt);
+      }
+    }
+    const movies = [...movieTitles].sort((a, b) => {
+      const aWatched = watchedAtMap.get(a.id) ?? null;
+      const bWatched = watchedAtMap.get(b.id) ?? null;
+      if (aWatched && bWatched) return bWatched.localeCompare(aWatched);
+      if (aWatched && !bWatched) return -1;
+      if (!aWatched && bWatched) return 1;
+      return 0;
+    });
 
     return {
       user: {
