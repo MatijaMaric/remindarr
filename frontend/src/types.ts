@@ -44,6 +44,10 @@ export interface Title {
   is_watched?: boolean;
   total_episodes?: number;
   watched_episodes_count?: number;
+  released_episodes_count?: number;
+  show_status?: "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
+  latest_released_air_date?: string | null;
+  next_episode_air_date?: string | null;
   offers: Offer[];
   tracked_at?: string;
   notes?: string;

@@ -4,6 +4,23 @@ import { titles, scores, tracked, titleGenres, watchedTitles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles } from "./offers";
 
+type ShowStatus = "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
+
+function computeShowStatus(
+  objectType: string,
+  releasedEpisodesCount: number,
+  watchedEpisodesCount: number,
+  totalEpisodes: number,
+): ShowStatus {
+  if (objectType !== "SHOW") return null;
+  if (releasedEpisodesCount === 0) return "unreleased";
+  if (watchedEpisodesCount === 0) return "not_started";
+  if (totalEpisodes > 0 && totalEpisodes === watchedEpisodesCount && totalEpisodes === releasedEpisodesCount) return "completed";
+  if (releasedEpisodesCount > 0 && releasedEpisodesCount === watchedEpisodesCount && totalEpisodes > releasedEpisodesCount) return "caught_up";
+  if (releasedEpisodesCount > watchedEpisodesCount) return "watching";
+  return null;
+}
+
 async function getGenresForTitles(titleIds: string[]): Promise<Map<string, string[]>> {
   if (titleIds.length === 0) return new Map();
   const db = getDb();
@@ -85,6 +102,9 @@ export async function getTrackedTitles(userId: string) {
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
         watched_episodes_count: sql<number>`(SELECT COUNT(*) FROM watched_episodes we INNER JOIN episodes e ON e.id = we.episode_id WHERE e.title_id = ${titles.id} AND we.user_id = ${userId})`,
+        released_episodes_count: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
+        latest_released_air_date: sql<string | null>`(SELECT MAX(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
+        next_episode_air_date: sql<string | null>`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))
@@ -105,6 +125,7 @@ export async function getTrackedTitles(userId: string) {
       is_watched: Boolean(row.is_watched),
       public: Boolean(row.public),
       offers: offersByTitle.get(row.id) ?? [],
+      show_status: computeShowStatus(row.object_type, row.released_episodes_count, row.watched_episodes_count, row.total_episodes),
     }));
   });
 }
@@ -137,6 +158,9 @@ export async function getPublicTrackedTitles(userId: string) {
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
         watched_episodes_count: sql<number>`(SELECT COUNT(*) FROM watched_episodes we INNER JOIN episodes e ON e.id = we.episode_id WHERE e.title_id = ${titles.id} AND we.user_id = ${userId})`,
+        released_episodes_count: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
+        latest_released_air_date: sql<string | null>`(SELECT MAX(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
+        next_episode_air_date: sql<string | null>`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))
@@ -156,6 +180,7 @@ export async function getPublicTrackedTitles(userId: string) {
       is_tracked: true,
       is_watched: Boolean(row.is_watched),
       offers: offersByTitle.get(row.id) ?? [],
+      show_status: computeShowStatus(row.object_type, row.released_episodes_count, row.watched_episodes_count, row.total_episodes),
     }));
   });
 }
