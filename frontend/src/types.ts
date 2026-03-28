@@ -462,6 +462,31 @@ export interface TitleRatingResponse {
   friends_ratings: FriendRating[];
 }
 
+// ─── Recommendation Types ─────────────────────────────────────────────────────
+
+export interface Recommendation {
+  id: string;
+  from_user: UserSummary;
+  title: { id: string; title: string; object_type: string; poster_url: string | null };
+  message: string | null;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface SentRecommendation {
+  id: string;
+  to_user: UserSummary;
+  title: { id: string; title: string; object_type: string; poster_url: string | null };
+  message: string | null;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface RecommendationsResponse {
+  recommendations: Recommendation[];
+  count: number;
+}
+
 // ─── Social Types ────────────────────────────────────────────────────────────
 
 export interface UserSummary {

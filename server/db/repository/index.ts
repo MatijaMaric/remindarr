@@ -116,6 +116,7 @@ export type { RatingValue } from "./ratings";
 export {
   createRecommendation,
   getReceivedRecommendations,
+  getReceivedCount,
   getSentRecommendations,
   markAsRead,
   deleteRecommendation,
