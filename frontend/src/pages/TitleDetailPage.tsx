@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type {
   Title,
@@ -12,7 +13,6 @@ import type {
   SeasonSummary,
 } from "../types";
 import TrackButton from "../components/TrackButton";
-import { WatchedIcon } from "../components/EpisodeComponents";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
@@ -213,6 +213,7 @@ export default function TitleDetailPage() {
 // ─── Movie Detail ────────────────────────────────────────────────────────────
 
 function MovieDetail({ data }: { data: MovieDetailsResponse }) {
+  const { t } = useTranslation();
   const { title, tmdb, country } = data;
   const [watched, setWatched] = useState(title.is_watched ?? false);
 
@@ -325,7 +326,17 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
-              <WatchedIcon watched={watched} onClick={toggleWatched} />
+              <button
+                onClick={toggleWatched}
+                aria-pressed={watched}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                  watched
+                    ? "bg-emerald-500 text-white hover:bg-red-500"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500 hover:text-white"
+                }`}
+              >
+                {watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")}
+              </button>
               {(() => {
                 const streamingOffer = dedupeOffers(title.offers).find(o =>
                   o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS"
