@@ -4,6 +4,7 @@ import { Settings } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../api";
 import TitleList from "../components/TitleList";
+import ProfileBanner from "../components/ProfileBanner";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 
@@ -40,7 +41,7 @@ export default function UserProfilePage() {
     );
   }
 
-  const { user, stats, movies, shows, is_own_profile, show_watchlist } = data;
+  const { user, stats, movies, shows, is_own_profile, show_watchlist, backdrops } = data;
   const displayName = user.display_name || user.username;
 
   async function handleVisibilityToggle(titleId: string, isPublic: boolean) {
@@ -55,6 +56,9 @@ export default function UserProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
+      {/* Banner */}
+      <ProfileBanner backdrops={backdrops} />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -103,20 +107,20 @@ export default function UserProfilePage() {
       {/* Watchlist */}
       {show_watchlist && (movies.length > 0 || shows.length > 0) && (
         <div className="space-y-8">
+          {shows.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-white mb-4">
+                {t("userProfile.tvShows")} <span className="text-zinc-500 font-normal text-base">({shows.length})</span>
+              </h2>
+              <TitleList titles={shows} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} hideTypeBadge showProgressBar />
+            </div>
+          )}
           {movies.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold text-white mb-4">
                 {t("userProfile.movies")} <span className="text-zinc-500 font-normal text-base">({movies.length})</span>
               </h2>
               <TitleList titles={movies} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} />
-            </div>
-          )}
-          {shows.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-white mb-4">
-                {t("userProfile.tvShows")} <span className="text-zinc-500 font-normal text-base">({shows.length})</span>
-              </h2>
-              <TitleList titles={shows} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} />
             </div>
           )}
         </div>

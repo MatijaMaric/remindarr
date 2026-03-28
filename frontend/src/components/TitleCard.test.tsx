@@ -224,6 +224,51 @@ describe("TitleCard", () => {
     expect(detailLinks.length).toBeGreaterThan(0);
   });
 
+  it("hides TV badge when hideTypeBadge is true", () => {
+    const title = makeTitle({ object_type: "SHOW" });
+    render(<TitleCard title={title} hideTypeBadge />, { wrapper: NoUserWrapper });
+
+    expect(screen.queryByText("TV")).toBeNull();
+  });
+
+  it("shows progress bar when showProgressBar is true for shows with episodes", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      total_episodes: 10,
+      watched_episodes_count: 3,
+      is_watched: false,
+    });
+    const { container } = render(<TitleCard title={title} showProgressBar />, { wrapper: NoUserWrapper });
+
+    const progressTrack = container.querySelector(".bg-zinc-700");
+    expect(progressTrack).not.toBeNull();
+    const progressFill = progressTrack!.querySelector(".bg-amber-500");
+    expect(progressFill).not.toBeNull();
+  });
+
+  it("shows text badge instead of progress bar when showProgressBar is false", () => {
+    const title = makeTitle({
+      object_type: "SHOW",
+      total_episodes: 10,
+      watched_episodes_count: 3,
+      is_watched: false,
+    });
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    expect(screen.getByText("3/10 ep")).toBeDefined();
+  });
+
+  it("does not show progress bar for movies", () => {
+    const title = makeTitle({
+      object_type: "MOVIE",
+      is_watched: false,
+    });
+    const { container } = render(<TitleCard title={title} showProgressBar />, { wrapper: NoUserWrapper });
+
+    const progressBar = container.querySelector(".bg-amber-500");
+    expect(progressBar).toBeNull();
+  });
+
   it("renders track button with correct state", () => {
     const title = makeTitle({ id: "movie-99", is_tracked: true });
     render(<TitleCard title={title} />, { wrapper: Wrapper });

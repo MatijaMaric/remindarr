@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../schema";
-import { users, watchedTitles, watchedEpisodes } from "../schema";
+import { users, watchedTitles, watchedEpisodes, episodes, titles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getPublicTrackedTitles, getPublicTrackedCount, getTrackedTitles } from "./tracked";
 
@@ -25,7 +25,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
 
     const showWatchlist = isOwnProfile || Boolean(user.profile_public);
 
-    const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles] = await Promise.all([
+    const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles, backdrops] = await Promise.all([
       showWatchlist ? getPublicTrackedCount(user.id) : Promise.resolve(0),
       db
         .select({ count: sql<number>`COUNT(*)` })
@@ -38,10 +38,13 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         .where(eq(watchedEpisodes.userId, user.id))
         .get(),
       isOwnProfile
-        ? getTrackedTitles(user.id).then(titles => titles.map(t => ({ ...t, is_public: t.public })))
+        ? getTrackedTitles(user.id).then(t => t.map(r => ({ ...r, is_public: r.public })))
         : showWatchlist
-          ? getPublicTrackedTitles(user.id).then(titles => titles.map(t => ({ ...t, is_public: true })))
+          ? getPublicTrackedTitles(user.id).then(t => t.map(r => ({ ...r, is_public: true })))
           : Promise.resolve([]),
+      showWatchlist
+        ? getRecentlyWatchedBackdrops(db, user.id)
+        : Promise.resolve([]),
     ]);
 
     const movies = allTitles.filter(t => t.object_type === "MOVIE");
@@ -62,8 +65,28 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       show_watchlist: showWatchlist,
       movies,
       shows,
+      backdrops,
     };
   });
+}
+
+async function getRecentlyWatchedBackdrops(db: ReturnType<typeof getDb>, userId: string, limit = 5) {
+  const rows = await db
+    .select({
+      id: titles.id,
+      title: titles.title,
+      backdrop_url: titles.backdropUrl,
+    })
+    .from(watchedEpisodes)
+    .innerJoin(episodes, eq(episodes.id, watchedEpisodes.episodeId))
+    .innerJoin(titles, eq(titles.id, episodes.titleId))
+    .where(sql`${watchedEpisodes.userId} = ${userId} AND ${titles.backdropUrl} IS NOT NULL`)
+    .groupBy(titles.id)
+    .orderBy(sql`MAX(${watchedEpisodes.watchedAt}) DESC`)
+    .limit(limit)
+    .all();
+
+  return rows as { id: string; title: string; backdrop_url: string }[];
 }
 
 export async function updateProfilePublic(userId: string, isPublic: boolean) {
