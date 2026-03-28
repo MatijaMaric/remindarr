@@ -314,6 +314,66 @@ export const oidcStates = sqliteTable("oidc_states", {
   createdAt: integer("created_at").notNull(),
 });
 
+export const follows = sqliteTable(
+  "follows",
+  {
+    followerId: text("follower_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    followingId: text("following_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.followerId, table.followingId] }),
+    index("idx_follows_following").on(table.followingId),
+  ]
+);
+
+export const ratings = sqliteTable(
+  "ratings",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull().references(() => titles.id),
+    rating: text("rating").notNull(), // 'HATE', 'DISLIKE', 'LIKE', 'LOVE'
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.titleId] }),
+    index("idx_ratings_title").on(table.titleId),
+  ]
+);
+
+export const recommendations = sqliteTable(
+  "recommendations",
+  {
+    id: text("id").primaryKey(),
+    fromUserId: text("from_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    toUserId: text("to_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull().references(() => titles.id),
+    message: text("message"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+    readAt: text("read_at"),
+  },
+  (table) => [
+    index("idx_recommendations_to_user").on(table.toUserId),
+    index("idx_recommendations_from_user").on(table.fromUserId),
+  ]
+);
+
+export const invitations = sqliteTable(
+  "invitations",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    createdById: text("created_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    usedById: text("used_by_id").references(() => users.id),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+    usedAt: text("used_at"),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (table) => [
+    index("idx_invitations_code").on(table.code),
+  ]
+);
+
 export const jobs = sqliteTable(
   "jobs",
   {
@@ -351,6 +411,8 @@ export const titlesRelations = relations(titles, ({ many, one }) => ({
   episodes: many(episodes),
   tracked: many(tracked),
   genres: many(titleGenres),
+  ratings: many(ratings),
+  recommendations: many(recommendations),
 }));
 
 export const titleGenresRelations = relations(titleGenres, ({ one }) => ({
@@ -381,6 +443,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(account),
   tracked: many(tracked),
+  ratings: many(ratings),
+  followers: many(follows, { relationName: "following" }),
+  following: many(follows, { relationName: "follower" }),
+  sentRecommendations: many(recommendations, { relationName: "fromUser" }),
+  receivedRecommendations: many(recommendations, { relationName: "toUser" }),
+  createdInvitations: many(invitations, { relationName: "createdBy" }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -410,6 +478,27 @@ export const notifiersRelations = relations(notifiers, ({ one }) => ({
   user: one(users, { fields: [notifiers.userId], references: [users.id] }),
 }));
 
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(users, { fields: [follows.followerId], references: [users.id], relationName: "follower" }),
+  following: one(users, { fields: [follows.followingId], references: [users.id], relationName: "following" }),
+}));
+
+export const ratingsRelations = relations(ratings, ({ one }) => ({
+  user: one(users, { fields: [ratings.userId], references: [users.id] }),
+  title: one(titles, { fields: [ratings.titleId], references: [titles.id] }),
+}));
+
+export const recommendationsRelations = relations(recommendations, ({ one }) => ({
+  fromUser: one(users, { fields: [recommendations.fromUserId], references: [users.id], relationName: "fromUser" }),
+  toUser: one(users, { fields: [recommendations.toUserId], references: [users.id], relationName: "toUser" }),
+  title: one(titles, { fields: [recommendations.titleId], references: [titles.id] }),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  createdBy: one(users, { fields: [invitations.createdById], references: [users.id], relationName: "createdBy" }),
+  usedBy: one(users, { fields: [invitations.usedById], references: [users.id] }),
+}));
+
 // ─── Database Instance ──────────────────────────────────────────────────────
 
 export const passkeyRelations = relations(passkey, ({ one }) => ({
@@ -418,9 +507,11 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
+  follows, ratings, recommendations, invitations,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
+  followsRelations, ratingsRelations, recommendationsRelations, invitationsRelations,
 };
 
 // Re-export the union type from platform for convenience
