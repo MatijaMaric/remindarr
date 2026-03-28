@@ -49,6 +49,22 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
 
     const shows = allTitles.filter(t => t.object_type === "SHOW");
 
+    // Compute show progress metrics
+    let showsCompleted = 0;
+    let showsTotal = shows.length;
+    let totalWatchedEpisodes = 0;
+    let totalReleasedEpisodes = 0;
+    for (const show of shows) {
+      const total = show.total_episodes ?? 0;
+      const watched = show.watched_episodes_count ?? 0;
+      const released = show.released_episodes_count ?? 0;
+      totalWatchedEpisodes += watched;
+      totalReleasedEpisodes += released;
+      if (total > 0 && total === watched && total === released) {
+        showsCompleted++;
+      }
+    }
+
     // Sort movies by most recently watched first, unwatched movies last
     const movieTitles = allTitles.filter(t => t.object_type === "MOVIE");
     const movieIds = movieTitles.map(t => t.id);
@@ -83,6 +99,10 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         tracked_count: trackedCount,
         watched_movies: watchedMoviesRow?.count ?? 0,
         watched_episodes: watchedEpisodesRow?.count ?? 0,
+        shows_completed: showsCompleted,
+        shows_total: showsTotal,
+        total_watched_episodes: totalWatchedEpisodes,
+        total_released_episodes: totalReleasedEpisodes,
       },
       show_watchlist: showWatchlist,
       movies,

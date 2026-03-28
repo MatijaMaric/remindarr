@@ -110,22 +110,56 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
           </div>
 
           {/* Stats */}
-          <div className="pointer-events-auto flex gap-2 sm:gap-3 shrink-0" data-testid="profile-stats">
-            <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center min-w-[4.5rem]">
-              <Bookmark className="size-4 text-zinc-400 mx-auto mb-1" />
-              <p className="text-lg font-bold text-white leading-tight">{stats.tracked_count}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{t("userProfile.trackedTitles")}</p>
+          <div className="pointer-events-auto shrink-0 flex flex-col items-end gap-2" data-testid="profile-stats">
+            <div className="flex gap-2 sm:gap-3">
+              <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center min-w-[4.5rem]">
+                <Bookmark className="size-4 text-zinc-400 mx-auto mb-1" />
+                <p className="text-lg font-bold text-white leading-tight">{stats.tracked_count}</p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">{t("userProfile.trackedTitles")}</p>
+              </div>
+              <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center min-w-[4.5rem]">
+                <Film className="size-4 text-zinc-400 mx-auto mb-1" />
+                <p className="text-lg font-bold text-white leading-tight">{stats.watched_movies}</p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">{t("userProfile.watchedMovies")}</p>
+              </div>
+              <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center min-w-[4.5rem]">
+                <Tv className="size-4 text-zinc-400 mx-auto mb-1" />
+                <p className="text-lg font-bold text-white leading-tight">{stats.watched_episodes}</p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">{t("userProfile.watchedEpisodes")}</p>
+              </div>
             </div>
-            <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center min-w-[4.5rem]">
-              <Film className="size-4 text-zinc-400 mx-auto mb-1" />
-              <p className="text-lg font-bold text-white leading-tight">{stats.watched_movies}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{t("userProfile.watchedMovies")}</p>
-            </div>
-            <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center min-w-[4.5rem]">
-              <Tv className="size-4 text-zinc-400 mx-auto mb-1" />
-              <p className="text-lg font-bold text-white leading-tight">{stats.watched_episodes}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{t("userProfile.watchedEpisodes")}</p>
-            </div>
+            {stats.shows_total > 0 && (
+              <div className="bg-zinc-900/70 backdrop-blur-sm rounded-lg px-3 py-2 w-full space-y-1.5" data-testid="progress-section">
+                <div>
+                  <div className="flex justify-between items-baseline mb-0.5">
+                    <p className="text-[10px] text-zinc-400">{t("userProfile.showsCompleted")}</p>
+                    <p className="text-[10px] text-zinc-300 font-medium">{stats.shows_completed}/{stats.shows_total}</p>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-zinc-700 overflow-hidden" data-testid="shows-progress-bar">
+                    <div
+                      className="h-full rounded-full bg-amber-400 transition-all"
+                      style={{ width: `${Math.round((stats.shows_completed / stats.shows_total) * 100)}%` }}
+                      data-testid="shows-progress-fill"
+                    />
+                  </div>
+                </div>
+                {stats.total_released_episodes > 0 && (
+                  <div>
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <p className="text-[10px] text-zinc-400">{t("userProfile.episodesWatched")}</p>
+                      <p className="text-[10px] text-zinc-300 font-medium">{stats.total_watched_episodes}/{stats.total_released_episodes}</p>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-zinc-700 overflow-hidden" data-testid="episodes-progress-bar">
+                      <div
+                        className="h-full rounded-full bg-amber-400 transition-all"
+                        style={{ width: `${Math.round((stats.total_watched_episodes / stats.total_released_episodes) * 100)}%` }}
+                        data-testid="episodes-progress-fill"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

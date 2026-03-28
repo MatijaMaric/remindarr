@@ -71,6 +71,10 @@ describe("GET /user/:username", () => {
     expect(body.stats.tracked_count).toBe(0);
     expect(body.stats.watched_movies).toBe(0);
     expect(body.stats.watched_episodes).toBe(0);
+    expect(body.stats.shows_completed).toBe(0);
+    expect(body.stats.shows_total).toBe(0);
+    expect(body.stats.total_watched_episodes).toBe(0);
+    expect(body.stats.total_released_episodes).toBe(0);
     expect(body.movies).toHaveLength(0);
     expect(body.shows).toHaveLength(0);
     expect(body.show_watchlist).toBe(false);
@@ -355,5 +359,41 @@ describe("GET /user/:username", () => {
     expect(body.shows).toHaveLength(1);
     expect(body.shows[0].total_episodes).toBe(3);
     expect(body.shows[0].watched_episodes_count).toBe(1);
+  });
+
+  it("includes progress metrics in API response", async () => {
+    await updateProfilePublic(userId, true);
+    await upsertTitles([
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Completed Show" }),
+      makeParsedTitle({ id: "show-2", objectType: "SHOW", title: "Partial Show" }),
+    ]);
+    await trackTitle("show-1", userId);
+    await trackTitle("show-2", userId);
+
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      { title_id: "show-1", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+      { title_id: "show-2", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-02-01", still_path: null },
+      { title_id: "show-2", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-02-08", still_path: null },
+      { title_id: "show-2", season_number: 1, episode_number: 3, name: "Ep 3", overview: null, air_date: "2024-02-15", still_path: null },
+    ]);
+
+    // Watch all episodes of show-1 (completed) and 1 of show-2 (partial)
+    const { getDb } = await import("../db/schema");
+    const db = getDb();
+    const show1Eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-1") });
+    const show2Eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-2") });
+    for (const ep of show1Eps) {
+      await watchEpisode(ep.id, userId);
+    }
+    await watchEpisode(show2Eps[0].id, userId);
+
+    const res = await app.request("/user/testuser");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.stats.shows_completed).toBe(1);
+    expect(body.stats.shows_total).toBe(2);
+    expect(body.stats.total_watched_episodes).toBe(3); // 2 from show-1 + 1 from show-2
+    expect(body.stats.total_released_episodes).toBe(5); // 2 from show-1 + 3 from show-2
   });
 });

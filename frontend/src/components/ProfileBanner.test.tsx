@@ -18,6 +18,10 @@ const mockStats: UserProfileStats = {
   tracked_count: 12,
   watched_movies: 5,
   watched_episodes: 42,
+  shows_completed: 2,
+  shows_total: 5,
+  total_watched_episodes: 30,
+  total_released_episodes: 50,
 };
 
 function renderBanner(
@@ -107,6 +111,72 @@ describe("ProfileBanner", () => {
       renderBanner();
       const statsEl = screen.getByTestId("profile-stats");
       expect(statsEl.textContent).toContain("42");
+    });
+  });
+
+  describe("progress bars", () => {
+    it("renders progress section when shows_total > 0", () => {
+      renderBanner();
+      expect(screen.getByTestId("progress-section")).toBeDefined();
+    });
+
+    it("does not render progress section when shows_total is 0", () => {
+      renderBanner({
+        stats: { ...mockStats, shows_total: 0, shows_completed: 0, total_watched_episodes: 0, total_released_episodes: 0 },
+      });
+      expect(screen.queryByTestId("progress-section")).toBeNull();
+    });
+
+    it("renders show progress bar with correct width", () => {
+      renderBanner();
+      const fill = screen.getByTestId("shows-progress-fill");
+      // 2/5 = 40%
+      expect(fill.style.width).toBe("40%");
+    });
+
+    it("renders episode progress bar with correct width", () => {
+      renderBanner();
+      const fill = screen.getByTestId("episodes-progress-fill");
+      // 30/50 = 60%
+      expect(fill.style.width).toBe("60%");
+    });
+
+    it("shows correct show progress text", () => {
+      renderBanner();
+      const section = screen.getByTestId("progress-section");
+      expect(section.textContent).toContain("2/5");
+    });
+
+    it("shows correct episode progress text", () => {
+      renderBanner();
+      const section = screen.getByTestId("progress-section");
+      expect(section.textContent).toContain("30/50");
+    });
+
+    it("hides episode progress bar when total_released_episodes is 0", () => {
+      renderBanner({
+        stats: { ...mockStats, total_released_episodes: 0, total_watched_episodes: 0 },
+      });
+      expect(screen.getByTestId("progress-section")).toBeDefined();
+      expect(screen.queryByTestId("episodes-progress-bar")).toBeNull();
+    });
+
+    it("renders 0% width when no shows completed", () => {
+      renderBanner({
+        stats: { ...mockStats, shows_completed: 0 },
+      });
+      const fill = screen.getByTestId("shows-progress-fill");
+      expect(fill.style.width).toBe("0%");
+    });
+
+    it("renders 100% width when all shows completed", () => {
+      renderBanner({
+        stats: { ...mockStats, shows_completed: 5, shows_total: 5, total_watched_episodes: 50, total_released_episodes: 50 },
+      });
+      const showFill = screen.getByTestId("shows-progress-fill");
+      expect(showFill.style.width).toBe("100%");
+      const epFill = screen.getByTestId("episodes-progress-fill");
+      expect(epFill.style.width).toBe("100%");
     });
   });
 

@@ -412,6 +412,10 @@ export interface UserProfileStats {
   tracked_count: number;
   watched_movies: number;
   watched_episodes: number;
+  shows_completed: number;
+  shows_total: number;
+  total_watched_episodes: number;
+  total_released_episodes: number;
 }
 
 export interface ProfileBackdrop {
