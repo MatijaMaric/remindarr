@@ -40,6 +40,7 @@ export interface Title {
   imdb_votes: number | null;
   tmdb_score: number | null;
   is_tracked: boolean;
+  is_public?: boolean;
   is_watched?: boolean;
   total_episodes?: number;
   watched_episodes_count?: number;

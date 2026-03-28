@@ -17,6 +17,7 @@ import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
 import WatchButton from "../components/WatchButton";
+import VisibilityButton from "../components/VisibilityButton";
 import { getProviderColor } from "../data/providerColors";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
@@ -326,6 +327,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+              <VisibilityButton titleId={title.id} isPublic={title.is_public ?? true} isTracked={title.is_tracked} />
               <button
                 onClick={toggleWatched}
                 aria-pressed={watched}
@@ -631,6 +633,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+              <VisibilityButton titleId={title.id} isPublic={title.is_public ?? true} isTracked={title.is_tracked} />
               {(() => {
                 const streamingOffer = dedupeOffers(title.offers).find(o =>
                   o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS"

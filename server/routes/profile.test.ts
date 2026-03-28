@@ -216,6 +216,64 @@ describe("GET /user/:username", () => {
     expect(unwatched.is_watched).toBe(false);
   });
 
+  it("own profile shows all titles including hidden ones with is_public field", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Visible Movie" }),
+      makeParsedTitle({ id: "movie-2", title: "Hidden Movie" }),
+    ]);
+    await trackTitle("movie-1", userId);
+    await trackTitle("movie-2", userId);
+    await updateTrackedVisibility("movie-2", userId, false);
+
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_own_profile).toBe(true);
+    expect(body.show_watchlist).toBe(true);
+    expect(body.movies).toHaveLength(2);
+
+    const visible = body.movies.find((m: any) => m.id === "movie-1");
+    const hidden = body.movies.find((m: any) => m.id === "movie-2");
+    expect(visible.is_public).toBe(true);
+    expect(hidden.is_public).toBe(false);
+  });
+
+  it("own profile shows watchlist even when profile_public is false", async () => {
+    // profile_public defaults to false
+    await upsertTitles([makeParsedTitle()]);
+    await trackTitle("movie-123", userId);
+
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_own_profile).toBe(true);
+    expect(body.show_watchlist).toBe(true);
+    expect(body.movies).toHaveLength(1);
+  });
+
+  it("other user does not see hidden titles even when profile is public", async () => {
+    await updateProfilePublic(userId, true);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Visible Movie" }),
+      makeParsedTitle({ id: "movie-2", title: "Hidden Movie" }),
+    ]);
+    await trackTitle("movie-1", userId);
+    await trackTitle("movie-2", userId);
+    await updateTrackedVisibility("movie-2", userId, false);
+
+    const otherUserId = await createUser("otheruser", "hash");
+    const otherToken = await createSession(otherUserId);
+
+    const res = await app.request("/user/testuser", {
+      headers: { Cookie: `better-auth.session_token=${otherToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_own_profile).toBe(false);
+    expect(body.movies).toHaveLength(1);
+    expect(body.movies[0].id).toBe("movie-1");
+  });
+
   it("includes episode progress for shows", async () => {
     await updateProfilePublic(userId, true);
     await upsertTitles([

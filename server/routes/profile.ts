@@ -7,14 +7,14 @@ const app = new Hono<AppEnv>();
 
 app.get("/:username", async (c) => {
   const username = c.req.param("username");
-  const profile = await getUserPublicProfile(username);
+  const viewer = c.get("user");
+  const isOwnProfile = viewer?.username?.toLowerCase() === username.toLowerCase();
+
+  const profile = await getUserPublicProfile(username, isOwnProfile);
 
   if (!profile) {
     return err(c, "User not found", 404);
   }
-
-  const viewer = c.get("user");
-  const isOwnProfile = viewer?.username?.toLowerCase() === username.toLowerCase();
 
   return ok(c, {
     ...profile,
