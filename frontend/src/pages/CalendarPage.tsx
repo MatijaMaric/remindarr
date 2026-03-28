@@ -23,6 +23,7 @@ import {
   groupByShow,
 } from "../components/EpisodeComponents";
 import WatchedToggleButton from "../components/WatchedToggleButton";
+import WatchButton from "../components/WatchButton";
 
 
 
@@ -429,24 +430,16 @@ function SlideOverPanel({
                                 {ep.overview}
                               </p>
                             )}
-                            {providers.length > 0 && (
-                              <div className="flex gap-1.5 mt-2">
-                                {providers.map((p) => (
-                                  <a
-                                    key={p.provider_id}
-                                    href={p.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title={p.provider_name}
-                                  >
-                                    <img
-                                      src={p.provider_icon_url}
-                                      alt={p.provider_name}
-                                      className="w-6 h-6 rounded-md"
-                                      loading="lazy"
-                                    />
-                                  </a>
-                                ))}
+                            {released && providers.length > 0 && (
+                              <div className="mt-2">
+                                <WatchButton
+                                  url={providers[0].url}
+                                  providerId={providers[0].provider_id}
+                                  providerName={providers[0].provider_name}
+                                  providerIconUrl={providers[0].provider_icon_url}
+                                  monetizationType={providers[0].monetization_type}
+                                  variant="full"
+                                />
                               </div>
                             )}
                           </div>
@@ -1084,24 +1077,16 @@ function AgendaCalendar({
                                           )}
                                         </p>
                                       </Link>
-                                      {providers.length > 0 && (
-                                        <div className="flex gap-1.5 mt-2">
-                                          {providers.slice(0, 4).map((o) => (
-                                            <a
-                                              key={o.provider_id}
-                                              href={o.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              title={o.provider_name}
-                                            >
-                                              <img
-                                                src={o.provider_icon_url}
-                                                alt={o.provider_name}
-                                                className="w-6 h-6 rounded"
-                                                loading="lazy"
-                                              />
-                                            </a>
-                                          ))}
+                                      {isEpisodeReleased(ep) && providers.length > 0 && (
+                                        <div className="mt-2">
+                                          <WatchButton
+                                            url={providers[0].url}
+                                            providerId={providers[0].provider_id}
+                                            providerName={providers[0].provider_name}
+                                            providerIconUrl={providers[0].provider_icon_url}
+                                            monetizationType={providers[0].monetization_type}
+                                            variant="full"
+                                          />
                                         </div>
                                       )}
                                     </div>
