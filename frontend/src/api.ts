@@ -16,6 +16,7 @@ import type {
   TitleRatingResponse,
   SentRecommendation,
   RecommendationsResponse,
+  InvitationItem,
 } from "./types";
 
 const BASE = "/api";
@@ -471,4 +472,22 @@ export async function deleteRecommendation(id: string): Promise<void> {
 
 export async function getUnreadRecommendationCount(): Promise<{ count: number }> {
   return fetchJson("/recommendations/count");
+}
+
+// ─── Invitations ──────────────────────────────────────────────────────────
+
+export async function createInvitation(): Promise<{ id: string; code: string; expires_at: string }> {
+  return fetchJson("/invitations", { method: "POST" });
+}
+
+export async function getInvitations(): Promise<{ invitations: InvitationItem[] }> {
+  return fetchJson("/invitations");
+}
+
+export async function redeemInvitation(code: string): Promise<{ success: boolean; inviter: UserSummary }> {
+  return fetchJson(`/invitations/redeem/${encodeURIComponent(code)}`, { method: "POST" });
+}
+
+export async function revokeInvitation(id: string): Promise<void> {
+  await fetchJson(`/invitations/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
