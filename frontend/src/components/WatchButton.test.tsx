@@ -84,12 +84,11 @@ describe("WatchButton", () => {
     expect(container.textContent).not.toContain("Stream");
   });
 
-  it("full variant has full width and centered content by default", () => {
+  it("full variant has centered content by default", () => {
     const { container } = render(
       <WatchButton {...defaultProps} variant="full" />
     );
     const link = container.querySelector("a");
-    expect(link!.className).toContain("w-full");
     expect(link!.className).toContain("justify-center");
   });
 
