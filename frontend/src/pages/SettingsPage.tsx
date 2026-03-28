@@ -436,15 +436,15 @@ function ProfileVisibilitySection() {
 
       <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
         {/* Global toggle */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
             <p className="text-white font-medium">{t("settings.showWatchlistOnProfile")}</p>
             <p className="text-sm text-zinc-400 mt-1">{t("settings.showWatchlistDescription")}</p>
           </div>
           <button
             onClick={handleGlobalToggle}
             disabled={updatingGlobal}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${
               profilePublic ? "bg-amber-500" : "bg-zinc-700"
             }`}
           >
