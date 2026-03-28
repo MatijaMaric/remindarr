@@ -126,7 +126,7 @@ export default function UserProfilePage() {
                   <h3 className="text-sm font-semibold text-zinc-400 mb-3">
                     {t(group.labelKey)} ({group.titles.length})
                   </h3>
-                  <TitleList titles={group.titles} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} hideTypeBadge showProgressBar />
+                  <TitleList titles={group.titles} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} hideTypeBadge showProgressBar maxRows={is_own_profile ? undefined : 1} />
                 </div>
               ))}
             </div>
@@ -136,7 +136,7 @@ export default function UserProfilePage() {
               <h2 className="text-lg font-semibold text-white mb-4">
                 {t("userProfile.movies")} <span className="text-zinc-500 font-normal text-base">({movies.length})</span>
               </h2>
-              <TitleList titles={movies} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} />
+              <TitleList titles={movies} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} maxRows={is_own_profile ? undefined : 1} />
             </div>
           )}
         </div>
