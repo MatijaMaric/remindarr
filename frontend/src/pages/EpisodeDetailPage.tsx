@@ -9,6 +9,7 @@ import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { useAuth } from "../context/AuthContext";
 import { WatchedIcon } from "../components/EpisodeComponents";
+import ShareButton from "../components/ShareButton";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -134,6 +135,7 @@ export default function EpisodeDetailPage() {
               size="md"
             />
           )}
+          <ShareButton title={`${title.title} — ${tmdb?.name || `Episode ${episodeNumber}`}`} />
         </div>
 
         <div className="flex items-center gap-3 text-sm text-zinc-400">
