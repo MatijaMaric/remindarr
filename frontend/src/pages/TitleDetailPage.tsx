@@ -329,7 +329,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               <button
                 onClick={toggleWatched}
                 aria-pressed={watched}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   watched
                     ? "bg-emerald-500 text-white hover:bg-red-500"
                     : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500 hover:text-white"
