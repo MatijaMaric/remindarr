@@ -291,6 +291,7 @@ export interface SeasonDetailsResponse {
   } | null;
   seasonNumber: number;
   country: string;
+  seasons: SeasonSummary[];
 }
 
 export interface EpisodeDetailsResponse {

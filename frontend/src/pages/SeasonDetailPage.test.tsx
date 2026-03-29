@@ -12,6 +12,11 @@ mock.module("../context/AuthContext", () => ({
   AuthContext: { Provider: ({ children }: any) => children },
 }));
 
+const defaultSeasons = [
+  { id: 1, name: "Season 1", overview: "", air_date: "2024-01-01", episode_count: 3, poster_path: null, season_number: 1, vote_average: 8.0 },
+  { id: 2, name: "Season 2", overview: "", air_date: "2024-06-01", episode_count: 5, poster_path: null, season_number: 2, vote_average: 7.5 },
+];
+
 const mockGetSeasonDetails = mock(() => Promise.resolve({
   title: { id: "tv-100", title: "Test Show", is_tracked: true },
   tmdb: {
@@ -31,6 +36,7 @@ const mockGetSeasonDetails = mock(() => Promise.resolve({
   },
   seasonNumber: 1,
   country: "US",
+  seasons: defaultSeasons,
 }));
 
 const mockGetSeasonEpisodeStatus = mock(() => Promise.resolve({
@@ -90,6 +96,7 @@ afterEach(() => {
       credits: { cast: [], crew: [] },
     },
     seasonNumber: 1, country: "US",
+    seasons: defaultSeasons,
   }));
 
   mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({
@@ -228,5 +235,41 @@ describe("SeasonDetailPage", () => {
     await waitFor(() => {
       expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true);
     });
+  });
+
+  it("renders season selector when multiple seasons exist", async () => {
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const selector = screen.getByRole("combobox");
+    expect(selector).toBeDefined();
+
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(2);
+    expect(options[0].textContent).toBe("Season 1");
+    expect(options[1].textContent).toBe("Season 2");
+  });
+
+  it("does not render season selector when only one season", async () => {
+    mockGetSeasonDetails.mockImplementation(() => Promise.resolve({
+      title: { id: "tv-100", title: "Test Show", is_tracked: true },
+      tmdb: {
+        id: 1, name: "Season 1", overview: "Overview", air_date: "2024-01-01", poster_path: null, season_number: 1, vote_average: 8.0,
+        episodes: [
+          { id: 101, name: "Pilot", overview: "First", air_date: "2024-01-01", episode_number: 1, season_number: 1, still_path: null, runtime: 45, vote_average: 8.5, guest_stars: [], crew: [] },
+        ],
+        credits: { cast: [], crew: [] },
+      },
+      seasonNumber: 1, country: "US",
+      seasons: [{ id: 1, name: "Season 1", overview: "", air_date: "2024-01-01", episode_count: 1, poster_path: null, season_number: 1, vote_average: 8.0 }],
+    }));
+
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const selector = screen.queryByRole("combobox");
+    expect(selector).toBeNull();
   });
 });
