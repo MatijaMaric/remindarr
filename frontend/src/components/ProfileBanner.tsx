@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Settings, Bookmark, Film, Tv } from "lucide-react";
@@ -21,14 +21,6 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
 
   const displayName = user.display_name || user.username;
 
-  const goTo = useCallback(
-    (index: number) => {
-      if (backdrops.length === 0) return;
-      setActiveIndex((index + backdrops.length) % backdrops.length);
-    },
-    [backdrops.length],
-  );
-
   // Auto-advance every 8 seconds
   useEffect(() => {
     if (backdrops.length <= 1 || isPaused) return;
@@ -42,7 +34,7 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
 
   return (
     <div
-      className="w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[28rem] sm:h-[22rem]"
+      className="w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[28rem] sm:h-[22rem] -mt-6"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -163,24 +155,6 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
           </div>
         </div>
       </div>
-
-      {/* Navigation dots */}
-      {backdrops.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2" data-testid="nav-dots">
-          {backdrops.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className={`w-2 h-2 rounded-full transition-colors cursor-pointer ${
-                i === activeIndex
-                  ? "bg-amber-400"
-                  : "bg-white/30 hover:bg-white/50"
-              }`}
-              aria-label={`Go to slide ${i + 1}`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
