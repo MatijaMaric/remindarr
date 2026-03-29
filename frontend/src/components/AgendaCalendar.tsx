@@ -608,7 +608,7 @@ export default function AgendaCalendar({
       {/* Main content */}
       <div className="flex-1 min-w-0 space-y-4">
         {/* Header */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sticky top-14 z-30 bg-zinc-950 pb-2">
           <div className="flex items-center gap-3">
             <Popover.Root open={pickerOpen} onOpenChange={setPickerOpen}>
               <Popover.Trigger
@@ -764,7 +764,7 @@ export default function AgendaCalendar({
                           (todayRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
                         }
                       }}
-                      className="space-y-3"
+                      className="space-y-3 scroll-mt-36"
                     >
                       {/* Compact day header */}
                       <DayHeader
