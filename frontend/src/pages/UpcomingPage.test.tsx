@@ -14,6 +14,11 @@ mock.module("../api", () => ({
   getUpcomingEpisodes: mockGetUpcomingEpisodes,
   watchEpisode: mockWatchEpisode,
   unwatchEpisode: mockUnwatchEpisode,
+  getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
+}));
+
+mock.module("../hooks/useIsMobile", () => ({
+  useIsMobile: () => false,
 }));
 
 const { default: UpcomingPage } = await import("./UpcomingPage");

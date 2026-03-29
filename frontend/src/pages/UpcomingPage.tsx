@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
@@ -10,11 +11,15 @@ import {
 } from "../components/EpisodeComponents";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
+import { useIsMobile } from "../hooks/useIsMobile";
+import AgendaCalendar from "../components/AgendaCalendar";
 
 export default function UpcomingPage() {
   const [today, setToday] = useState<Episode[]>([]);
   const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   const { loading, error } = useApiCall(
     () => api.getUpcomingEpisodes(),
@@ -49,6 +54,15 @@ export default function UpcomingPage() {
       toast.error("Failed to update watched status — please try again");
     }
   };
+
+  if (isMobile) {
+    return (
+      <AgendaCalendar
+        searchParams={searchParams}
+        setSearchParams={setSearchParams}
+      />
+    );
+  }
 
   if (loading) {
     return <EpisodeListSkeleton />;
