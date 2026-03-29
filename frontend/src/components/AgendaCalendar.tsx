@@ -625,8 +625,8 @@ export default function AgendaCalendar({
                 </span>
               </Popover.Trigger>
               <Popover.Portal>
-                <Popover.Positioner side="bottom" align="start" sideOffset={4}>
-                  <Popover.Popup className="z-50 rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl p-2">
+                <Popover.Positioner side="bottom" align="start" sideOffset={4} className="z-50">
+                  <Popover.Popup className="rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl p-2">
                     <Calendar
                       mode="single"
                       selected={activeDate}

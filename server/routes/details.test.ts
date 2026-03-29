@@ -143,6 +143,40 @@ describe("GET /details/show/:id/season/:season", () => {
     const body = await res.json();
     expect(body.error).toBe("Invalid season number");
   });
+
+  it("includes seasons array from show details", async () => {
+    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+
+    (tmdbClient.fetchShowFullDetails as any).mockResolvedValueOnce({
+      seasons: [
+        { season_number: 0, name: "Specials", episode_count: 2, air_date: null, poster_path: null },
+        { season_number: 1, name: "Season 1", episode_count: 10, air_date: "2024-01-01", poster_path: "/s1.jpg" },
+        { season_number: 2, name: "Season 2", episode_count: 8, air_date: "2024-06-01", poster_path: "/s2.jpg" },
+      ],
+    });
+
+    const res = await app.request("/details/show/tv-555/season/1");
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.seasons).toHaveLength(2);
+    expect(body.seasons[0].season_number).toBe(1);
+    expect(body.seasons[1].season_number).toBe(2);
+    // Season 0 (Specials) should be filtered out
+    expect(body.seasons.find((s: any) => s.season_number === 0)).toBeUndefined();
+  });
+
+  it("returns empty seasons array when show details fetch fails", async () => {
+    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+
+    (tmdbClient.fetchShowFullDetails as any).mockRejectedValueOnce(new Error("TMDB error"));
+
+    const res = await app.request("/details/show/tv-555/season/1");
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.seasons).toEqual([]);
+  });
 });
 
 describe("GET /details/show/:id/season/:season/episode/:episode", () => {

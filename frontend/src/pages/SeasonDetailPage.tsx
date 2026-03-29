@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import ScrollableRow from "../components/ScrollableRow";
@@ -33,6 +33,7 @@ export default function SeasonDetailPage() {
   const { id, season } = useParams<{ id: string; season: string }>();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const { data, loading, error } = useApiCall<SeasonDetailsResponse>(
     () => api.getSeasonDetails(id!, Number(season)),
@@ -127,7 +128,7 @@ export default function SeasonDetailPage() {
     );
   }
 
-  const { title, tmdb, seasonNumber } = data;
+  const { title, tmdb, seasonNumber, seasons } = data;
   const posterUrl = tmdb?.poster_path ? `${TMDB_IMG}/w500${tmdb.poster_path}` : title.poster_url;
   const episodes = tmdb?.episodes || [];
 
@@ -141,7 +142,21 @@ export default function SeasonDetailPage() {
       <div className="flex items-center gap-2 text-sm text-zinc-400">
         <Link to={`/title/${title.id}`} className="hover:text-white transition-colors">{title.title}</Link>
         <span className="text-zinc-600">/</span>
-        <span className="text-white">{tmdb?.name || `Season ${seasonNumber}`}</span>
+        {seasons && seasons.length > 1 ? (
+          <select
+            value={seasonNumber}
+            onChange={(e) => navigate(`/title/${title.id}/season/${e.target.value}`)}
+            className="bg-zinc-800 text-white text-sm rounded-lg border border-white/[0.06] px-2 py-1 focus:border-amber-500/50 focus:outline-none cursor-pointer"
+          >
+            {seasons.map((s) => (
+              <option key={s.season_number} value={s.season_number} className="bg-zinc-900">
+                {s.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-white">{tmdb?.name || `Season ${seasonNumber}`}</span>
+        )}
       </div>
 
       {/* Header */}
