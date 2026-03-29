@@ -328,7 +328,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
             </div>
 
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            <div className="pt-2 flex flex-wrap items-center gap-2">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
               <VisibilityButton titleId={title.id} isPublic={title.is_public ?? true} isTracked={title.is_tracked} />
               <button
@@ -358,11 +358,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                   />
                 );
               })()}
-              <ShareButton title={tmdb?.title || title.title} />
-              <RecommendButton titleId={title.id} />
             </div>
-
-            <RatingButtons titleId={title.id} />
           </div>
         </div>
       </div>
@@ -373,6 +369,15 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           <p className="text-zinc-300 leading-relaxed">{overview}</p>
         </Section>
       )}
+
+      {/* Rating & Social */}
+      <div className="space-y-3">
+        <RatingButtons titleId={title.id} />
+        <div className="flex items-center gap-2">
+          <ShareButton title={tmdb?.title || title.title} />
+          <RecommendButton titleId={title.id} />
+        </div>
+      </div>
 
       {/* Cast & Crew */}
       {(directors.length > 0 || writers.length > 0) && (
@@ -638,7 +643,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
             </div>
 
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            <div className="pt-2 flex flex-wrap items-center gap-2">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
               <VisibilityButton titleId={title.id} isPublic={title.is_public ?? true} isTracked={title.is_tracked} />
               {(() => {
@@ -657,11 +662,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                   />
                 );
               })()}
-              <ShareButton title={tmdb?.name || title.title} />
-              <RecommendButton titleId={title.id} />
             </div>
-
-            <RatingButtons titleId={title.id} />
           </div>
         </div>
       </div>
@@ -672,6 +673,15 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           <p className="text-zinc-300 leading-relaxed">{overview}</p>
         </Section>
       )}
+
+      {/* Rating & Social */}
+      <div className="space-y-3">
+        <RatingButtons titleId={title.id} />
+        <div className="flex items-center gap-2">
+          <ShareButton title={tmdb?.name || title.title} />
+          <RecommendButton titleId={title.id} />
+        </div>
+      </div>
 
       {/* Creators & Cast */}
       {creators.length > 0 && (
