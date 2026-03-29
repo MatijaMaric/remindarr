@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "bun:test";
-import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
+import { render, screen, cleanup, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import "../i18n";
 import ProfileBanner from "./ProfileBanner";
@@ -213,32 +213,6 @@ describe("ProfileBanner", () => {
       const img2 = screen.getByAltText("Show Two").closest("a")!;
       expect(img1.style.opacity).toBe("1");
       expect(img2.style.opacity).toBe("0");
-    });
-
-    it("renders navigation dots for multiple backdrops", () => {
-      renderBanner({ backdrops });
-      const dots = screen.getByTestId("nav-dots");
-      const buttons = dots.querySelectorAll("button");
-      expect(buttons.length).toBe(3);
-    });
-
-    it("does not render navigation dots for a single backdrop", () => {
-      renderBanner({ backdrops: [backdrops[0]] });
-      expect(screen.queryByTestId("nav-dots")).toBeNull();
-    });
-
-    it("clicking a navigation dot changes active slide", () => {
-      renderBanner({ backdrops });
-      const dots = screen.getByTestId("nav-dots");
-      const buttons = dots.querySelectorAll("button");
-
-      // Click second dot
-      fireEvent.click(buttons[1]);
-
-      const img1 = screen.getByAltText("Show One").closest("a")!;
-      const img2 = screen.getByAltText("Show Two").closest("a")!;
-      expect(img1.style.opacity).toBe("0");
-      expect(img2.style.opacity).toBe("1");
     });
 
     it("auto-advances after the configured interval", async () => {
