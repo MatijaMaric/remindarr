@@ -637,6 +637,7 @@ export default function AgendaCalendar({
                         weekday: "!text-zinc-500",
                         today: "!bg-amber-500/20 !text-amber-400",
                         day: "text-zinc-300",
+                        outside: "!text-zinc-600",
                       }}
                       onSelect={(date) => {
                         if (date) {
