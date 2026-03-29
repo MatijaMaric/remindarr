@@ -42,8 +42,11 @@ export async function subscribeToPush(
 
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const registration = await navigator.serviceWorker.ready;
-  return registration.pushManager.getSubscription();
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+  const getSubscription = navigator.serviceWorker.ready.then(
+    (registration) => registration.pushManager.getSubscription()
+  );
+  return Promise.race([getSubscription, timeout]);
 }
 
 export async function unsubscribeFromPush(): Promise<void> {

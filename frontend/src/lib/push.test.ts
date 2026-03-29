@@ -66,6 +66,53 @@ const VALID_SUBSCRIPTION = {
   }),
 };
 
+/**
+ * Mirror getExistingSubscription logic inline (same reason as subscribeToPush above).
+ */
+async function getExistingSubscription(
+  isPushSupportedFn: () => boolean,
+  serviceWorkerReady: Promise<{ pushManager: { getSubscription: () => Promise<PushSubscription | null> } }>,
+  timeoutMs = 5000
+): Promise<PushSubscription | null> {
+  if (!isPushSupportedFn()) return null;
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
+  const getSubscription = serviceWorkerReady.then(
+    (registration) => registration.pushManager.getSubscription()
+  );
+  return Promise.race([getSubscription, timeout]);
+}
+
+describe("getExistingSubscription", () => {
+  it("returns null immediately when push is not supported", async () => {
+    const result = await getExistingSubscription(
+      () => false,
+      Promise.resolve({ pushManager: { getSubscription: () => Promise.resolve(null) } })
+    );
+    expect(result).toBeNull();
+  });
+
+  it("returns subscription when service worker is ready", async () => {
+    const fakeSubscription = { endpoint: "https://fcm.example.com/send/abc" } as PushSubscription;
+    const mockGetSubscription = mock(() => Promise.resolve(fakeSubscription));
+    const result = await getExistingSubscription(
+      () => true,
+      Promise.resolve({ pushManager: { getSubscription: mockGetSubscription } })
+    );
+    expect(result).toBe(fakeSubscription);
+    expect(mockGetSubscription).toHaveBeenCalled();
+  });
+
+  it("returns null when service worker never becomes ready (timeout)", async () => {
+    const neverResolves = new Promise<never>(() => {});
+    const result = await getExistingSubscription(
+      () => true,
+      neverResolves as unknown as Promise<{ pushManager: { getSubscription: () => Promise<PushSubscription | null> } }>,
+      10 // very short timeout for tests
+    );
+    expect(result).toBeNull();
+  });
+});
+
 describe("subscribeToPush", () => {
   it("unsubscribes existing subscription before creating new one", async () => {
     const mockUnsubscribe = mock(() => Promise.resolve(true));
