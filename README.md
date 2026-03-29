@@ -10,6 +10,8 @@ A full-stack app for tracking streaming media releases using TMDB as the data so
 - **Calendar** — Monthly calendar view of releases and upcoming episodes
 - **Notifications** — Discord webhook and Web Push notifications with configurable schedules and timezone support
 - **Authentication** — Local password auth, OpenID Connect (OIDC), and WebAuthn/Passkeys with admin roles
+- **Social** — Follow other users, send and receive title recommendations, and rate titles (hate/dislike/like/love)
+- **Invitations** — Invite-code system for controlling new user registration
 - **Scheduled Sync** — Automatic title and episode syncing via cron jobs
 - **Database Backups** — Automated SQLite backups with configurable retention
 - **Caching** — Multi-backend caching (memory, Redis, Cloudflare KV) for TMDB responses
@@ -183,24 +185,26 @@ server/
     parser.ts           # API response → internal types
     sync.ts             # TMDB sync orchestration
     sync-titles.ts      # Title-specific sync logic
-    types.ts            # TMDB type definitions
+    types.ts            # TMDB API type definitions
   imdb/
     resolver.ts         # IMDB URL/ID resolution via autocomplete API
   cache/
     index.ts            # Cache factory (memory / redis / kv)
+    types.ts            # Cache interface types
     memory.ts           # In-memory cache
     redis.ts            # Redis cache
     cloudflare-kv.ts    # Cloudflare Workers KV cache
   jobs/
     queue.ts            # In-memory job queue with persistence
-    processor.ts        # Job execution logic
-    schedule.ts         # Cron scheduling
+    processor.ts        # Portable job execution logic (Drizzle-based)
+    schedule.ts         # Notification cron scheduling with timezone support
     worker.ts           # Job worker loop
     sync.ts             # Title & episode sync job handlers
     notifications.ts    # Notification dispatch job
     backup.ts           # Database backup job
     migrate-titles.ts   # Title data migration job
     migrate-backdrops.ts # Backdrop data migration job
+    migrate-offers.ts   # Offers data migration job
   middleware/
     auth.ts             # optionalAuth, requireAuth, requireAdmin
     rate-limit.ts       # Token bucket rate limiter
@@ -211,7 +215,16 @@ server/
     content.ts          # Notification content builder
     registry.ts         # Provider registry
     types.ts            # Notification types
-  routes/               # API route handlers (one file per domain)
+  routes/               # API route handlers (one file per domain):
+    titles.ts / search.ts / browse.ts / calendar.ts / details.ts
+    track.ts / watched.ts / episodes.ts / imdb.ts / sync.ts
+    social.ts           # Follow/unfollow and follower/following lists
+    ratings.ts          # Title ratings (HATE/DISLIKE/LIKE/LOVE)
+    recommendations.ts  # User-to-user title recommendations
+    invitations.ts      # Invite-code generation and redemption
+    profile.ts          # User search and public profile
+    notifiers.ts / admin.ts / jobs.ts / auth-custom.ts
+    health.ts / metrics.ts
   cli/
     sync.ts             # CLI sync script
 
@@ -224,6 +237,7 @@ frontend/src/
     CalendarPage.tsx    # Monthly calendar view
     TrackedPage.tsx     # Watchlist
     UpcomingPage.tsx    # Upcoming releases
+    DiscoveryPage.tsx   # Content discovery
     TitleDetailPage.tsx # Movie/show details
     SeasonDetailPage.tsx # Season details
     EpisodeDetailPage.tsx # Episode details
@@ -231,24 +245,44 @@ frontend/src/
     ReelsPage.tsx       # Short-form discovery
     LoginPage.tsx       # Local + OIDC + passkey login
     SignupPage.tsx      # User registration
-    ProfilePage.tsx     # User profile/settings
+    InvitePage.tsx      # Invitation redemption during signup
+    ProfilePage.tsx     # Redirects to current user's profile
+    UserProfilePage.tsx # Public user profile (tracked, followers, recommendations)
+    SettingsPage.tsx    # User settings (notifications, passkeys, account)
   components/
     TitleCard.tsx       # Title display card
     TitleList.tsx       # Title grid/list
+    HeroBanner.tsx      # Hero image banner with title info
     FilterBar.tsx       # Filter controls
     SearchBar.tsx       # Search with IMDB detection
     TrackButton.tsx     # Watchlist toggle
+    WatchButton.tsx     # Stream button with provider deep links
+    WatchedToggleButton.tsx # Episode/movie watched toggle
+    RatingButtons.tsx   # Title rating (HATE/DISLIKE/LIKE/LOVE)
+    FollowButton.tsx    # Follow/unfollow user
+    RecommendButton.tsx # Send title recommendation
+    ShareButton.tsx     # Share title or profile
+    VisibilityButton.tsx # Toggle content visibility
     NewReleases.tsx     # New releases section
     CategoryBar.tsx     # Category selector
     CategoryBrowse.tsx  # Category browsing grid
     EpisodeComponents.tsx # Episode list/details
+    EpisodeShowCard.tsx # Episode card with backdrop image
     PersonCard.tsx      # Actor/crew card
+    ProfileBanner.tsx   # User profile header
+    UserSearchDropdown.tsx # User search autocomplete
     ReelsCard.tsx       # Reel item card
     ReelsSeasonPanel.tsx # Season panel for reels
     BottomTabBar.tsx    # Mobile navigation
     MultiSelectDropdown.tsx # Multi-select filter
+    ExternalLinks.tsx   # IMDB/TMDB external links
+    SkeletonComponents.tsx # Loading skeleton placeholders
+    InstallPrompt.tsx   # PWA install prompt
+    NotificationPrompt.tsx # Push notification permission prompt
+    OfflineIndicator.tsx # Offline status indicator
     ErrorBoundary.tsx   # Error fallback UI
     RequireAuth.tsx     # Auth guard wrapper
+    loadFilters.ts      # Filter data loading utility
     ui/                 # shadcn/ui primitives
 ```
 
@@ -306,6 +340,37 @@ Authentication is handled by [better-auth](https://www.better-auth.com) at `/api
 | `POST` | `/api/auth/sign-in/social` | OIDC authorization redirect |
 | `GET` | `/api/auth/callback/pocketid` | OIDC callback |
 | `GET` | `/api/auth/custom/providers` | Available auth providers (local, OIDC, passkey) |
+
+### Social, Ratings & Recommendations
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST/DELETE` | `/api/social/follow/:userId` | Follow / unfollow a user |
+| `GET` | `/api/social/followers` | Current user's followers |
+| `GET` | `/api/social/following` | Current user's following |
+| `GET` | `/api/social/followers/:userId` | Public follower list for a user |
+| `GET` | `/api/social/following/:userId` | Public following list for a user |
+| `POST` | `/api/ratings/:titleId` | Rate a title (`HATE`/`DISLIKE`/`LIKE`/`LOVE`) |
+| `DELETE` | `/api/ratings/:titleId` | Remove rating |
+| `GET` | `/api/ratings/:titleId` | Get aggregated ratings + friends' ratings |
+| `POST` | `/api/recommendations` | Send a title recommendation to followers |
+| `GET` | `/api/recommendations` | Recommendation feed |
+| `GET` | `/api/recommendations/count` | Unread recommendation count |
+| `GET` | `/api/recommendations/sent` | Recommendations sent by current user |
+| `GET` | `/api/recommendations/check/:titleId` | Check if already recommended |
+| `PUT` | `/api/recommendations/:id/read` | Mark recommendation as read |
+| `DELETE` | `/api/recommendations/:id` | Delete recommendation |
+
+### User Profiles & Invitations
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/user/search?q=` | Search users |
+| `GET` | `/api/user/:username` | Public user profile |
+| `POST` | `/api/invitations` | Generate an invitation code |
+| `GET` | `/api/invitations` | List own invitations |
+| `POST` | `/api/invitations/redeem/:code` | Redeem an invitation code |
+| `DELETE` | `/api/invitations/:id` | Revoke an invitation |
 
 ### Admin & System
 
