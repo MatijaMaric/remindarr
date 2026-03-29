@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ThumbsDown, ThumbsUp, Heart } from "lucide-react";
+import { HeartCrack, ThumbsDown, ThumbsUp, Heart } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../api";
 import type { RatingValue, TitleRatingResponse } from "../types";
@@ -19,7 +19,7 @@ const RATING_CONFIG: {
 }[] = [
   {
     value: "HATE",
-    Icon: ThumbsDown,
+    Icon: HeartCrack,
     label: "Hate",
     activeColor: "text-white",
     activeBg: "bg-red-500",
