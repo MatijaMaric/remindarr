@@ -60,11 +60,16 @@ describe("CalendarPage", () => {
     // Click agenda toggle
     fireEvent.click(screen.getByTitle("Agenda view"));
 
-    // Grid weekday headers should be gone, month picker (select) should be visible
+    // Grid weekday headers should be gone, date picker trigger should be visible
     expect(screen.queryByText("Mon")).toBeNull();
-    // Agenda mode shows a select dropdown for month jumping
-    const selects = screen.getAllByRole("combobox");
-    expect(selects.length).toBeGreaterThan(0);
+    // Agenda mode shows a date picker trigger button
+    const today = new Date();
+    const dateLabel = today.toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+    expect(screen.getByText(dateLabel)).toBeDefined();
   });
 
   it("switches back to grid view from agenda view", () => {
