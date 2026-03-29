@@ -66,7 +66,6 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
   if (compact) {
     return (
       <div className="flex items-center gap-3 bg-zinc-900 rounded-lg p-3">
-        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} />
         {episode.poster_url && (
           <Link to={`/title/${episode.title_id}`} className="flex-shrink-0">
             <img
@@ -93,6 +92,9 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
             <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
           </div>
         )}
+        <div className="flex-shrink-0">
+          <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} size="md" compactOnMobile />
+        </div>
       </div>
     );
   }
@@ -100,7 +102,6 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
   return (
     <div className="bg-zinc-900 rounded-xl overflow-hidden">
       <div className="flex gap-4 p-4">
-        <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} size="md" />
         {episode.poster_url && (
           <Link to={`/title/${episode.title_id}`} className="flex-shrink-0">
             <img
@@ -129,6 +130,9 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
               <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
             </div>
           )}
+        </div>
+        <div className="flex-shrink-0">
+          <WatchedIcon watched={!!episode.is_watched} onClick={() => onToggleWatched(episode.id, !!episode.is_watched)} disabled={unreleased} size="md" compactOnMobile />
         </div>
       </div>
     </div>
@@ -164,7 +168,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-1">
-                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
+                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} compactOnMobile />
                 <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors">
                   <span className="text-xs text-zinc-400">{formatEpisodeCode(ep)}</span>
                 </Link>
@@ -196,11 +200,13 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
           <div className="mt-2 space-y-1">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
-                <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} />
-                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="hover:text-amber-400 transition-colors">
+                <Link to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`} className="flex-1 min-w-0 hover:text-amber-400 transition-colors">
                   <span className="text-amber-400 font-medium">{formatEpisodeCode(ep)}</span>
                   {ep.name && <span className="text-zinc-400"> · {ep.name}</span>}
                 </Link>
+                <div className="flex-shrink-0">
+                  <WatchedIcon watched={!!ep.is_watched} onClick={() => onToggleWatched(ep.id, !!ep.is_watched)} disabled={!isEpisodeReleased(ep)} size="md" compactOnMobile />
+                </div>
               </div>
             ))}
           </div>
