@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { Link, useSearchParams } from "react-router";
+import ScrollableRow from "./ScrollableRow";
 import {
   CalendarIcon,
   LayoutGridIcon,
@@ -775,7 +776,7 @@ export default function AgendaCalendar({
 
                       {/* All episode cards in a single row */}
                       {dayEpisodes.length > 0 && (
-                        <div className="flex flex-wrap lg:flex-nowrap lg:overflow-x-auto lg:[&::-webkit-scrollbar]:hidden lg:[-ms-overflow-style:none] lg:[scrollbar-width:none] gap-3">
+                        <ScrollableRow className="flex-wrap lg:flex-nowrap gap-3" scrollAmount={332}>
                           {dayEpisodes.map((ep) => {
                             const showEps = episodesByShow.get(ep.title_id) ?? [ep];
                             const imgUrl = getEpisodeCardImageUrl(ep);
@@ -852,7 +853,7 @@ export default function AgendaCalendar({
                               </div>
                             );
                           })}
-                        </div>
+                        </ScrollableRow>
                       )}
 
                       {/* Title cards */}

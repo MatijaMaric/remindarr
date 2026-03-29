@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router";
 import * as api from "../api";
+import ScrollableRow from "../components/ScrollableRow";
 import type { PersonDetailsResponse, PersonCastCredit, PersonCrewCredit } from "../types";
 import ExternalLinks from "../components/ExternalLinks";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
@@ -188,11 +189,11 @@ export default function PersonPage() {
       {castCredits.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-white">Acting ({castCredits.length})</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <ScrollableRow className="gap-4 pb-2" scrollAmount={160}>
             {castCredits.map((c) => (
               <CreditCard key={`cast-${c.id}-${c.character}`} credit={c} subtitle={c.character} />
             ))}
-          </div>
+          </ScrollableRow>
         </section>
       )}
 
@@ -200,11 +201,11 @@ export default function PersonPage() {
       {crewCredits.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-white">Crew ({crewCredits.length})</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <ScrollableRow className="gap-4 pb-2" scrollAmount={160}>
             {crewCredits.map((c) => (
               <CreditCard key={`crew-${c.id}-${c.job}`} credit={c} subtitle={c.job} />
             ))}
-          </div>
+          </ScrollableRow>
         </section>
       )}
     </div>

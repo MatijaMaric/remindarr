@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
 import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
 import PersonCard from "../components/PersonCard";
@@ -191,11 +192,11 @@ export default function EpisodeDetailPage() {
       {allCast.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-white">Cast</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <ScrollableRow className="gap-4 pb-2" scrollAmount={128}>
             {allCast.slice(0, 20).map((c) => (
               <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
-          </div>
+          </ScrollableRow>
         </section>
       )}
     </div>
