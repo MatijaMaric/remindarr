@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
 import type { SeasonDetailsResponse } from "../types";
 import PersonCard from "../components/PersonCard";
@@ -284,11 +285,11 @@ export default function SeasonDetailPage() {
       {tmdb?.credits?.cast && tmdb.credits.cast.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-white">Season Cast</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <ScrollableRow className="gap-4 pb-2" scrollAmount={128}>
             {tmdb.credits.cast.slice(0, 15).map((c) => (
               <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
-          </div>
+          </ScrollableRow>
         </section>
       )}
     </div>

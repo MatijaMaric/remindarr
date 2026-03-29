@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
 import type {
   Title,
@@ -401,11 +402,11 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
       {cast.length > 0 && (
         <Section title="Cast">
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <ScrollableRow className="gap-4 pb-2" scrollAmount={128}>
             {cast.map((c: CastMember) => (
               <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
-          </div>
+          </ScrollableRow>
         </Section>
       )}
 
@@ -696,11 +697,11 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
       {cast.length > 0 && (
         <Section title="Cast">
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <ScrollableRow className="gap-4 pb-2" scrollAmount={128}>
             {cast.map((c: CastMember) => (
               <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
-          </div>
+          </ScrollableRow>
         </Section>
       )}
 
