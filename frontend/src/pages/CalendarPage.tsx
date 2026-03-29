@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
+  CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   LayoutGridIcon,
@@ -9,6 +10,8 @@ import {
   EyeOffIcon,
   XIcon,
 } from "lucide-react";
+import { Popover } from "@base-ui/react/popover";
+import { Calendar } from "../components/ui/calendar";
 import { toast } from "sonner";
 import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -63,19 +66,6 @@ const typeFilters = [
 ] as const;
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-function getMonthOptions(): { label: string; value: string }[] {
-  const options: { label: string; value: string }[] = [];
-  const now = new Date();
-  for (let i = -24; i <= 24; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    options.push({
-      label: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }),
-      value: formatMonth(d),
-    });
-  }
-  return options;
-}
 
 type ViewMode = "grid" | "agenda";
 
@@ -550,11 +540,14 @@ function AgendaCalendar({
   const [months, setMonths] = useState<AgendaMonth[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [activeDate, setActiveDate] = useState(() => new Date());
+  const [pickerOpen, setPickerOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
-  const monthOptions = useMemo(() => getMonthOptions(), []);
+  const initialScrollDoneRef = useRef(false);
+  const scrollTargetRef = useRef(formatDateKey(new Date()));
 
   // Scroll-spy state for date sidebar
   const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
@@ -620,13 +613,30 @@ function AgendaCalendar({
     });
   }, [typeFilter, loadMonth]);
 
-  // Scroll to today after initial load
+  // Scroll to target date after load completes
   useEffect(() => {
-    if (!initialLoading && todayRef.current) {
-      requestAnimationFrame(() => {
-        todayRef.current?.scrollIntoView({ block: "start" });
-      });
+    if (initialLoading) {
+      initialScrollDoneRef.current = false;
+      return;
     }
+    // Double rAF to ensure DOM is fully settled after React commit
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        let target = dayRefs.current.get(scrollTargetRef.current) ?? todayRef.current;
+        // If exact date not found, scroll to nearest date (closest before, then after)
+        if (!target && dayRefs.current.size > 0) {
+          const targetKey = scrollTargetRef.current;
+          const keys = [...dayRefs.current.keys()].sort();
+          // Find the last date on or before target, or first date after
+          const before = keys.filter((k) => k <= targetKey);
+          const after = keys.filter((k) => k > targetKey);
+          const bestKey = before.length > 0 ? before[before.length - 1] : after[0];
+          if (bestKey) target = dayRefs.current.get(bestKey) ?? null;
+        }
+        target?.scrollIntoView({ block: "start" });
+        initialScrollDoneRef.current = true;
+      });
+    });
   }, [initialLoading]);
 
   // Infinite scroll down
@@ -668,7 +678,7 @@ function AgendaCalendar({
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadNextMonth();
+        if (entries[0].isIntersecting && initialScrollDoneRef.current) loadNextMonth();
       },
       { threshold: 0.1 }
     );
@@ -681,7 +691,7 @@ function AgendaCalendar({
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadPrevMonth();
+        if (entries[0].isIntersecting && initialScrollDoneRef.current) loadPrevMonth();
       },
       { threshold: 0.1 }
     );
@@ -704,7 +714,9 @@ function AgendaCalendar({
           }
           // Set active to the earliest visible date
           const sorted = [...visibleDates].sort();
-          setActiveDateKey(sorted[0] ?? null);
+          const first = sorted[0] ?? null;
+          setActiveDateKey(first);
+          if (first) setActiveDate(new Date(first + "T00:00:00"));
         },
         { threshold: 0.3 }
       );
@@ -715,24 +727,26 @@ function AgendaCalendar({
     return () => observers.forEach((o) => o.disconnect());
   }, [months, hideWatched]);
 
-  // Jump to month
-  const jumpToMonth = useCallback(
-    async (monthStr: string) => {
+  // Jump to a specific date
+  const jumpToDate = useCallback(
+    async (date: Date) => {
+      setActiveDate(date);
+      scrollTargetRef.current = formatDateKey(date);
+      initialScrollDoneRef.current = false;
       loadedMonthsRef.current.clear();
       setMonths([]);
       setInitialLoading(true);
 
-      const [yearStr, monthNum] = monthStr.split("-");
-      const target = new Date(parseInt(yearStr), parseInt(monthNum) - 1, 1);
-      const prev = new Date(target.getFullYear(), target.getMonth() - 1, 1);
-      const next = new Date(target.getFullYear(), target.getMonth() + 1, 1);
+      const targetMonth = formatMonth(date);
+      const prev = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+      const next = new Date(date.getFullYear(), date.getMonth() + 1, 1);
 
       setEarliestMonth(prev);
       setLatestMonth(next);
 
       const results = await Promise.all([
         loadMonth(formatMonth(prev)),
-        loadMonth(monthStr),
+        loadMonth(targetMonth),
         loadMonth(formatMonth(next)),
       ]);
       const loaded = results.filter((r): r is AgendaMonth => r !== null);
@@ -772,6 +786,12 @@ function AgendaCalendar({
   const contentDates = useMemo(
     () => [...agendaItems.keys()],
     [agendaItems]
+  );
+
+  // Date objects for calendar content highlights
+  const contentDateObjects = useMemo(
+    () => contentDates.map((d) => new Date(d + "T00:00:00")),
+    [contentDates]
   );
 
   // Toggle watched
@@ -893,17 +913,57 @@ function AgendaCalendar({
         {/* Header */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <select
-              value={formatMonth(new Date())}
-              onChange={(e) => jumpToMonth(e.target.value)}
-              className={`px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${viewMode ? "flex-1" : "w-full"}`}
-            >
-              {monthOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <Popover.Root open={pickerOpen} onOpenChange={setPickerOpen}>
+              <Popover.Trigger
+                className={`flex items-center gap-2 px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm hover:bg-zinc-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${viewMode ? "flex-1" : "w-full"}`}
+              >
+                <CalendarIcon className="size-4 text-amber-400 flex-shrink-0" />
+                <span>
+                  {activeDate.toLocaleDateString(undefined, {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Positioner side="bottom" align="start" sideOffset={4}>
+                  <Popover.Popup className="z-50 rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl p-2">
+                    <Calendar
+                      mode="single"
+                      selected={activeDate}
+                      defaultMonth={activeDate}
+                      className="!bg-zinc-900 text-white [--cell-size:--spacing(8)]"
+                      classNames={{
+                        month_caption: "text-white",
+                        weekday: "!text-zinc-500",
+                        today: "!bg-amber-500/20 !text-amber-400",
+                        day: "text-zinc-300",
+                      }}
+                      onSelect={(date) => {
+                        if (date) {
+                          jumpToDate(date);
+                          setPickerOpen(false);
+                        }
+                      }}
+                      modifiers={{ hasContent: contentDateObjects }}
+                      modifiersClassNames={{ hasContent: "!text-amber-400 font-semibold" }}
+                    />
+                    <div className="border-t border-white/[0.08] pt-2 mt-1">
+                      <button
+                        onClick={() => {
+                          jumpToDate(new Date());
+                          setPickerOpen(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-sm font-medium text-amber-400 hover:bg-zinc-800 rounded-md transition-colors cursor-pointer"
+                      >
+                        Go to Today
+                      </button>
+                    </div>
+                  </Popover.Popup>
+                </Popover.Positioner>
+              </Popover.Portal>
+            </Popover.Root>
             {viewMode && onViewModeChange && (
               <ViewToggle
                 viewMode={viewMode}
