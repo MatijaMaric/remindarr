@@ -97,15 +97,35 @@ app.get("/show/:id/season/:season", async (c) => {
   if (isNaN(seasonNumber)) return c.json({ error: "Invalid season number" }, 400);
 
   let tmdb = null;
+  let seasons: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null }[] = [];
+
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
-    try {
-      tmdb = await fetchSeasonDetails(title.tmdb_id, seasonNumber);
-    } catch (e) {
-      log.error("TMDB season fetch failed", { tmdbId: title.tmdb_id, season: seasonNumber, err: e });
+    const [seasonResult, showResult] = await Promise.allSettled([
+      fetchSeasonDetails(title.tmdb_id, seasonNumber),
+      fetchShowFullDetails(title.tmdb_id),
+    ]);
+
+    if (seasonResult.status === "fulfilled") {
+      tmdb = seasonResult.value;
+    } else {
+      log.error("TMDB season fetch failed", { tmdbId: title.tmdb_id, season: seasonNumber, err: seasonResult.reason });
+    }
+
+    if (showResult.status === "fulfilled" && showResult.value?.seasons) {
+      seasons = showResult.value.seasons
+        .filter((s: { season_number: number }) => s.season_number > 0)
+        .sort((a: { season_number: number }, b: { season_number: number }) => a.season_number - b.season_number)
+        .map((s: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null }) => ({
+          season_number: s.season_number,
+          name: s.name,
+          episode_count: s.episode_count,
+          air_date: s.air_date,
+          poster_path: s.poster_path,
+        }));
     }
   }
 
-  return ok(c, { title, tmdb, seasonNumber, country });
+  return ok(c, { title, tmdb, seasonNumber, country, seasons });
 });
 
 app.get("/show/:id/season/:season/episode/:episode", async (c) => {
