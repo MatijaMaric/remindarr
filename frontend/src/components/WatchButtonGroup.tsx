@@ -55,6 +55,30 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
   return <SplitWatchButton providers={providers} size={size} fullWidth={fullWidth} />;
 }
 
+function DropdownProviderItem({ offer, isLg }: { offer: Offer; isLg: boolean }) {
+  const [hovered, setHovered] = useState(false);
+  const c = getProviderColor(offer.provider_id);
+  const lbl = monetizationLabel(offer.monetization_type);
+
+  return (
+    <a
+      href={offer.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`flex items-center justify-center gap-1.5 font-semibold transition-colors duration-200 ${
+        isLg ? "rounded-xl px-6 py-3 text-base" : "rounded-lg px-3 py-1.5 text-xs"
+      }`}
+      style={{ backgroundColor: hovered ? c.bg : c.hover, color: c.text }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {lbl && <span className="opacity-75">{lbl}</span>}
+      <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-5 h-5 rounded" loading="lazy" />
+      <ExternalLink size={14} className="opacity-60" />
+    </a>
+  );
+}
+
 function SplitWatchButton({ providers, size, fullWidth }: { providers: Offer[]; size: "sm" | "lg"; fullWidth?: boolean }) {
   const [primaryHovered, setPrimaryHovered] = useState(false);
   const [caretHovered, setCaretHovered] = useState(false);
@@ -100,34 +124,10 @@ function SplitWatchButton({ providers, size, fullWidth }: { providers: Offer[]; 
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Positioner side="bottom" align="end" sideOffset={4} className="z-50">
-            <Popover.Popup className="bg-zinc-900 border border-white/[0.08] rounded-lg shadow-xl p-1 min-w-[160px]">
-              {rest.map((o) => {
-                const c = getProviderColor(o.provider_id);
-                const lbl = monetizationLabel(o.monetization_type);
-                return (
-                  <a
-                    key={o.provider_id}
-                    href={o.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-zinc-800 transition-colors"
-                  >
-                    <div
-                      className="w-6 h-6 rounded flex-shrink-0 flex items-center justify-center"
-                      style={{ backgroundColor: c.bg }}
-                    >
-                      <img src={o.provider_icon_url} alt={o.provider_name} className="w-5 h-5 rounded" loading="lazy" />
-                    </div>
-                    {lbl && (
-                      <span className="text-xs font-semibold" style={{ color: c.text }}>
-                        {lbl}
-                      </span>
-                    )}
-                    <span className="text-xs text-zinc-300 flex-1 truncate">{o.provider_name}</span>
-                    <ExternalLink size={11} className="text-zinc-600 flex-shrink-0" />
-                  </a>
-                );
-              })}
+            <Popover.Popup className="flex flex-col gap-1 p-1">
+              {rest.map((o) => (
+                <DropdownProviderItem key={o.provider_id} offer={o} isLg={isLg} />
+              ))}
             </Popover.Popup>
           </Popover.Positioner>
         </Popover.Portal>
