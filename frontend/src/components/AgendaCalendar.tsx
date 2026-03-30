@@ -18,12 +18,11 @@ import type { Title, Episode } from "../types";
 import { CalendarSkeleton } from "../components/SkeletonComponents";
 import {
   formatEpisodeCode,
-  getUniqueProviders,
   getEpisodeCardImageUrl,
   groupByShow,
 } from "../components/EpisodeComponents";
 import WatchedToggleButton from "../components/WatchedToggleButton";
-import WatchButton from "../components/WatchButton";
+import WatchButtonGroup from "../components/WatchButtonGroup";
 
 
 // ─── Types & Helpers ───────────────────────────────────────────────────────
@@ -781,7 +780,6 @@ export default function AgendaCalendar({
                           {dayEpisodes.map((ep) => {
                             const showEps = episodesByShow.get(ep.title_id) ?? [ep];
                             const imgUrl = getEpisodeCardImageUrl(ep);
-                            const providers = getUniqueProviders(ep.offers);
                             return (
                               <div
                                 key={ep.id}
@@ -836,16 +834,9 @@ export default function AgendaCalendar({
                                           )}
                                         </p>
                                       </Link>
-                                      {isEpisodeReleased(ep) && providers.length > 0 && (
+                                      {isEpisodeReleased(ep) && (
                                         <div className="mt-2">
-                                          <WatchButton
-                                            url={providers[0].url}
-                                            providerId={providers[0].provider_id}
-                                            providerName={providers[0].provider_name}
-                                            providerIconUrl={providers[0].provider_icon_url}
-                                            monetizationType={providers[0].monetization_type}
-                                            variant="full"
-                                          />
+                                          <WatchButtonGroup offers={ep.offers ?? []} variant="dropdown" />
                                         </div>
                                       )}
                                     </div>

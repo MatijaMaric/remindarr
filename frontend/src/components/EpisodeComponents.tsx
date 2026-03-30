@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { Episode, Offer } from "../types";
-import WatchButton from "./WatchButton";
+import WatchButtonGroup from "./WatchButtonGroup";
 import WatchedToggleButton from "./WatchedToggleButton";
 
 export function formatEpisodeCode(ep: Episode): string {
@@ -60,7 +60,6 @@ export function WatchedIcon({ watched, onClick, disabled, size = "sm", compactOn
 }
 
 export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Episode; compact?: boolean; onToggleWatched: (id: number, current: boolean) => void }) {
-  const providers = getUniqueProviders(episode.offers);
   const unreleased = !isEpisodeReleased(episode);
 
   if (compact) {
@@ -87,9 +86,9 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
             </p>
           </Link>
         </div>
-        {!unreleased && providers.length > 0 && (
+        {!unreleased && (
           <div className="flex-shrink-0">
-            <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
+            <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" />
           </div>
         )}
         <div className="flex-shrink-0">
@@ -125,9 +124,9 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
           {episode.overview && (
             <p className="text-sm text-zinc-400 mt-2 line-clamp-2">{episode.overview}</p>
           )}
-          {!unreleased && providers.length > 0 && (
+          {!unreleased && (
             <div className="mt-3">
-              <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
+              <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" />
             </div>
           )}
         </div>
@@ -150,7 +149,6 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
     return <EpisodeCard episode={episodes[0]} compact={compact} onToggleWatched={onToggleWatched} />;
   }
 
-  const providers = getUniqueProviders(episodes[0].offers);
   const allUnreleased = episodes.every((ep) => !isEpisodeReleased(ep));
 
   if (compact) {
@@ -176,9 +174,9 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
             ))}
           </div>
         </div>
-        {!allUnreleased && providers.length > 0 && (
+        {!allUnreleased && (
           <div className="flex-shrink-0">
-            <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
+            <WatchButtonGroup offers={episodes[0].offers ?? []} variant="dropdown" />
           </div>
         )}
       </div>
@@ -210,9 +208,9 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
               </div>
             ))}
           </div>
-          {!allUnreleased && providers.length > 0 && (
+          {!allUnreleased && (
             <div className="mt-3">
-              <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
+              <WatchButtonGroup offers={episodes[0].offers ?? []} variant="dropdown" />
             </div>
           )}
         </div>

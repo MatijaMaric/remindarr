@@ -2,7 +2,7 @@ import { memo } from "react";
 import { Link } from "react-router";
 import type { Title } from "../types";
 import TrackButton from "./TrackButton";
-import WatchButton from "./WatchButton";
+import WatchButtonGroup from "./WatchButtonGroup";
 import VisibilityButton from "./VisibilityButton";
 
 interface Props {
@@ -15,16 +15,6 @@ interface Props {
 }
 
 const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar }: Props) {
-  // Deduplicate offers by provider (keep best quality)
-  const uniqueProviders = new Map<number, Title["offers"][0]>();
-  for (const offer of title.offers) {
-    if (offer.monetization_type === "FLATRATE" || offer.monetization_type === "FREE" || offer.monetization_type === "ADS") {
-      if (!uniqueProviders.has(offer.provider_id)) {
-        uniqueProviders.set(offer.provider_id, offer);
-      }
-    }
-  }
-  const streamingOffers = Array.from(uniqueProviders.values());
 
   return (
     <div className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>
@@ -135,16 +125,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
 
         {/* Buttons — always anchored at bottom */}
         <div className="mt-auto flex flex-col gap-2">
-          {streamingOffers.length > 0 && (
-            <WatchButton
-              url={streamingOffers[0].url}
-              providerId={streamingOffers[0].provider_id}
-              providerName={streamingOffers[0].provider_name}
-              providerIconUrl={streamingOffers[0].provider_icon_url}
-              monetizationType={streamingOffers[0].monetization_type}
-              variant="full"
-            />
-          )}
+          <WatchButtonGroup offers={title.offers} variant="dropdown" />
           <TrackButton
             titleId={title.id}
             isTracked={title.is_tracked}

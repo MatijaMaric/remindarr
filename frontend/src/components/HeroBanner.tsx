@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Link } from "react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Episode } from "../types";
-import { formatEpisodeCode, getUniqueProviders } from "./EpisodeComponents";
+import { formatEpisodeCode } from "./EpisodeComponents";
 import { useDominantColors } from "./useDominantColor";
-import WatchButton from "./WatchButton";
+import WatchButtonGroup from "./WatchButtonGroup";
 
 export interface HeroBannerSlide {
   featured: Episode;
@@ -245,25 +245,9 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
               {current.remainingCount} episode
               {current.remainingCount !== 1 ? "s" : ""} remaining
             </p>
-            {(() => {
-              const providers = getUniqueProviders(current.featured.offers);
-              if (providers.length === 0) return null;
-              return (
-                <div className="flex gap-2 mt-3">
-                  {providers.slice(0, 4).map((o) => (
-                    <WatchButton
-                      key={o.provider_id}
-                      url={o.url}
-                      providerId={o.provider_id}
-                      providerName={o.provider_name}
-                      providerIconUrl={o.provider_icon_url}
-                      monetizationType={o.monetization_type}
-                      variant="full"
-                    />
-                  ))}
-                </div>
-              );
-            })()}
+            <div className="mt-3">
+              <WatchButtonGroup offers={current.featured.offers ?? []} variant="inline" maxVisible={4} />
+            </div>
           </div>
         </div>
       </div>

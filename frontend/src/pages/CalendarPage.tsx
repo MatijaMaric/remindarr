@@ -15,11 +15,10 @@ import type { Title, Episode } from "../types";
 import { GridCalendarSkeleton } from "../components/SkeletonComponents";
 import {
   formatEpisodeCode,
-  getUniqueProviders,
   groupByShow,
 } from "../components/EpisodeComponents";
 import WatchedToggleButton from "../components/WatchedToggleButton";
-import WatchButton from "../components/WatchButton";
+import WatchButtonGroup from "../components/WatchButtonGroup";
 import AgendaCalendar, {
   type CalendarItem,
   type ViewMode,
@@ -182,7 +181,6 @@ function SlideOverPanel({
                   <div className="space-y-2">
                     {showEps.map((ep) => {
                       const released = isEpisodeReleased(ep);
-                      const providers = getUniqueProviders(ep.offers);
                       return (
                         <div
                           key={ep.id}
@@ -236,16 +234,9 @@ function SlideOverPanel({
                                 {ep.overview}
                               </p>
                             )}
-                            {released && providers.length > 0 && (
+                            {released && (
                               <div className="mt-2">
-                                <WatchButton
-                                  url={providers[0].url}
-                                  providerId={providers[0].provider_id}
-                                  providerName={providers[0].provider_name}
-                                  providerIconUrl={providers[0].provider_icon_url}
-                                  monetizationType={providers[0].monetization_type}
-                                  variant="full"
-                                />
+                                <WatchButtonGroup offers={ep.offers ?? []} variant="dropdown" />
                               </div>
                             )}
                           </div>

@@ -1,7 +1,7 @@
 import { CheckCircle, Check } from "lucide-react";
 import { Link } from "react-router";
-import type { Episode, Offer } from "../types";
-import WatchButton from "./WatchButton";
+import type { Episode } from "../types";
+import WatchButtonGroup from "./WatchButtonGroup";
 
 function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
@@ -19,17 +19,6 @@ function isToday(dateStr: string | null): boolean {
   if (!dateStr) return false;
   const today = new Date().toISOString().slice(0, 10);
   return dateStr === today;
-}
-
-function getUniqueProviders(offers?: Offer[]) {
-  if (!offers?.length) return [];
-  const map = new Map<number, Offer>();
-  for (const o of offers) {
-    if (o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS") {
-      if (!map.has(o.provider_id)) map.set(o.provider_id, o);
-    }
-  }
-  return Array.from(map.values());
 }
 
 export function getBackgroundImageUrl(episode: Episode): string | null {
@@ -52,7 +41,6 @@ interface ReelsCardProps {
 
 export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, total }: ReelsCardProps) {
   const bgUrl = getBackgroundImageUrl(episode);
-  const providers = getUniqueProviders(episode.offers);
   const airDateFormatted = formatAirDate(episode.air_date);
   const isNew = isToday(episode.air_date);
 
@@ -134,19 +122,9 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
             )}
 
             {/* Watch on provider button */}
-            {providers.length > 0 && (
-              <div className="mb-2">
-                <WatchButton
-                  url={providers[0].url}
-                  providerId={providers[0].provider_id}
-                  providerName={providers[0].provider_name}
-                  providerIconUrl={providers[0].provider_icon_url}
-                  monetizationType={providers[0].monetization_type}
-                  variant="full"
-                  className="w-full justify-center px-6 py-3 rounded-xl text-base font-semibold"
-                />
-              </div>
-            )}
+            <div className="mb-2">
+              <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" size="lg" fullWidth />
+            </div>
 
             {/* Mark as watched button */}
             <button

@@ -12,7 +12,7 @@ interface WatchButtonProps {
   className?: string;
 }
 
-function monetizationLabel(type?: string): string | null {
+export function monetizationLabel(type?: string): string | null {
   switch (type) {
     case "FLATRATE": return "Stream";
     case "FREE": return "Free";

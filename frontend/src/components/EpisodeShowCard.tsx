@@ -6,11 +6,10 @@ import ScrollableRow from "./ScrollableRow";
 import type { Episode } from "../types";
 import {
   formatEpisodeCode,
-  getUniqueProviders,
   getEpisodeCardImageUrl,
   isEpisodeReleased,
 } from "./EpisodeComponents";
-import WatchButton from "./WatchButton";
+import WatchButtonGroup from "./WatchButtonGroup";
 
 /** Shared card component used across Unwatched, Today, Coming Up, and Calendar sections */
 export const EpisodeShowCard = memo(function EpisodeShowCard({
@@ -32,7 +31,6 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
 }) {
   const { t } = useTranslation();
   const imageUrl = getEpisodeCardImageUrl(episode);
-  const providers = getUniqueProviders(episode.offers);
 
   return (
     <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col h-full">
@@ -73,9 +71,9 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
         </p>
 
         {/* Stream button — only for released episodes */}
-        {isEpisodeReleased(episode) && providers.length > 0 && (
+        {isEpisodeReleased(episode) && (
           <div className="mt-2">
-            <WatchButton url={providers[0].url} providerId={providers[0].provider_id} providerName={providers[0].provider_name} providerIconUrl={providers[0].provider_icon_url} monetizationType={providers[0].monetization_type} variant="full" />
+            <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" />
           </div>
         )}
 
