@@ -98,7 +98,7 @@ export function registerSyncJobs() {
       log.info("Skipping deep link sync", { reason: "STREAMING_AVAILABILITY_API_KEY not configured" });
       return;
     }
-    const titleRows = await getTitlesNeedingSaEnrichment(CONFIG.SA_DAILY_BUDGET);
+    const titleRows = await getTitlesNeedingSaEnrichment();
     if (titleRows.length === 0) {
       log.info("No titles need deep link enrichment");
       return;

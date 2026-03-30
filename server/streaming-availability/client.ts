@@ -40,7 +40,7 @@ export async function fetchStreamingOptions(
         return [];
       }
 
-      if (res.status === 429) {
+      if (res.status === 429 || res.status === 403) {
         throw new RateLimitError();
       }
 
