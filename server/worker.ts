@@ -57,6 +57,7 @@ import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
+import jobsCfRoutes from "./routes/jobs-cf";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
@@ -318,7 +319,10 @@ function createApp(env: Env) {
   app.use("/api/admin", requireAuth, requireAdmin);
   app.route("/api/admin", adminRoutes);
 
-  // /api/jobs not available on CF Workers (uses Bun-only in-memory queue)
+  // Jobs admin (CF Workers-compatible — uses Drizzle ORM + static cron map)
+  app.use("/api/jobs/*", requireAuth, requireAdmin);
+  app.use("/api/jobs", requireAuth, requireAdmin);
+  app.route("/api/jobs", jobsCfRoutes);
 
   // Detail pages
   app.use("/api/details/*", optionalAuth);
