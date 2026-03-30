@@ -4,7 +4,7 @@
  * Used by the CF Workers scheduled handler to claim and execute pending jobs
  * from the `jobs` table. The Bun server uses its own polling worker instead.
  */
-import { eq, and, lte, asc, sql, inArray } from "drizzle-orm";
+import { eq, and, lte, lt, asc, sql, inArray } from "drizzle-orm";
 import { getDb, jobs } from "../db/schema";
 import { CONFIG } from "../config";
 import { logger } from "../logger";
@@ -352,6 +352,24 @@ export async function enqueueOneTimeMigration(name: string): Promise<void> {
     maxAttempts: 1,
   });
   log.info("Enqueued one-time migration", { name });
+}
+
+/**
+ * Reset jobs that have been stuck in "running" state for too long back to "pending".
+ * This recovers jobs that were killed mid-execution (e.g. CF Worker CPU limit).
+ */
+export async function recoverStaleJobs(staleMinutes: number = 15): Promise<number> {
+  const db = getDb();
+  const cutoff = new Date(Date.now() - staleMinutes * 60 * 1000).toISOString();
+  const result = await db
+    .update(jobs)
+    .set({ status: "pending", error: "Recovered after stale timeout" })
+    .where(and(eq(jobs.status, "running"), lt(jobs.startedAt, cutoff)));
+  const count = result.rowsAffected ?? 0;
+  if (count > 0) {
+    log.info("Recovered stale jobs", { count });
+  }
+  return count;
 }
 
 /**
