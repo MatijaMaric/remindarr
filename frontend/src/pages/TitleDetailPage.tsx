@@ -20,7 +20,6 @@ import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
 import WatchButton from "../components/WatchButton";
 import WatchButtonGroup from "../components/WatchButtonGroup";
-import { canonicalProviderId } from "../components/EpisodeComponents";
 import VisibilityButton from "../components/VisibilityButton";
 import ShareButton from "../components/ShareButton";
 import RecommendButton from "../components/RecommendButton";
@@ -827,14 +826,8 @@ function groupOffersByType(offers: Title["offers"]) {
   for (const { type, label } of MONETIZATION_ORDER) {
     const deduped = new Map<number, Title["offers"][0]>();
     for (const o of offers) {
-      if (o.monetization_type === type) {
-        const key = canonicalProviderId(o.provider_id);
-        const existing = deduped.get(key);
-        if (!existing) {
-          deduped.set(key, o);
-        } else if (existing.url.includes("themoviedb.org") && !o.url.includes("themoviedb.org")) {
-          deduped.set(key, o);
-        }
+      if (o.monetization_type === type && !deduped.has(o.provider_id)) {
+        deduped.set(o.provider_id, o);
       }
     }
     if (deduped.size > 0) {

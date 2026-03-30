@@ -1,4 +1,5 @@
 import { CONFIG } from "../config";
+import { canonicalProviderId } from "../streaming-availability/provider-map";
 import type {
   TmdbMovieDetails,
   TmdbTvDetails,
@@ -104,6 +105,7 @@ function parseWatchProviders(
   if (!countryData) return [];
 
   const offers: ParsedOffer[] = [];
+  const seen = new Set<string>();
   const types: [string, TmdbWatchProviderEntry[] | undefined][] = [
     ["FLATRATE", countryData.flatrate],
     ["FREE", countryData.free],
@@ -115,9 +117,13 @@ function parseWatchProviders(
   for (const [monetizationType, entries] of types) {
     if (!entries) continue;
     for (const entry of entries) {
+      const providerId = canonicalProviderId(entry.provider_id);
+      const key = `${providerId}:${monetizationType}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       offers.push({
         titleId,
-        providerId: entry.provider_id,
+        providerId,
         providerName: entry.provider_name,
         providerTechnicalName: entry.provider_name.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
         providerIconUrl: providerIconUrl(entry.logo_path),

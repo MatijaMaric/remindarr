@@ -6,6 +6,7 @@ import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitle, getOffersForTitles } from "./offers";
 import { toCanonicalGenre } from "../../genres";
+import { canonicalProviderId } from "../../streaming-availability/provider-map";
 
 // ─── Filter caches (genres & languages change only on sync) ──────────────────
 
@@ -109,8 +110,13 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
           .all();
         const deepLinkMap = new Map<string, string>();
         for (const o of existingOffers) {
-          if (o.deepLink) {
+          if (o.deepLink && o.providerId != null) {
             deepLinkMap.set(`${o.providerId}:${o.monetizationType}`, o.deepLink);
+            // Also index by canonical ID so remapped duplicate providers keep their deep links
+            const canonical = canonicalProviderId(o.providerId);
+            if (canonical !== o.providerId) {
+              deepLinkMap.set(`${canonical}:${o.monetizationType}`, o.deepLink);
+            }
           }
         }
 

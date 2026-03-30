@@ -1,4 +1,18 @@
 /**
+ * Provider IDs that represent the same streaming service under different TMDB entries.
+ * Key = duplicate ID, value = canonical ID to collapse into.
+ * The SA_TO_TMDB_PROVIDER map should always use the canonical IDs.
+ */
+export const DUPLICATE_TO_CANONICAL_PROVIDER: Record<number, number> = {
+  1899: 384,  // HBO Max (hbo_max) → HBO Max (hbo)
+  119: 9,     // Amazon Prime Video → Prime Video (prime)
+};
+
+export function canonicalProviderId(id: number): number {
+  return DUPLICATE_TO_CANONICAL_PROVIDER[id] ?? id;
+}
+
+/**
  * Maps Streaming Availability service IDs to TMDB provider IDs.
  * Extend this map as new providers are encountered.
  */

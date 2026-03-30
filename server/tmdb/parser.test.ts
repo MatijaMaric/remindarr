@@ -112,6 +112,33 @@ describe("parseMovieDetails", () => {
     expect(result.offers[0].monetizationType).toBe("FLATRATE");
     expect(result.offers[0].url).toBe("https://tmdb.org");
   });
+
+  it("collapses duplicate providers to canonical ID", () => {
+    const movie = makeTmdbMovieDetails({
+      "watch/providers": {
+        id: 123,
+        results: {
+          HR: {
+            link: "https://tmdb.org",
+            flatrate: [
+              { logo_path: "/hbo.jpg", provider_id: 384, provider_name: "HBO Max", display_priority: 1 },
+              { logo_path: "/hbo2.jpg", provider_id: 1899, provider_name: "HBO Max", display_priority: 2 },
+              { logo_path: "/prime.jpg", provider_id: 119, provider_name: "Amazon Prime Video", display_priority: 3 },
+              { logo_path: "/prime2.jpg", provider_id: 9, provider_name: "Prime Video", display_priority: 4 },
+            ],
+          },
+        },
+      },
+    });
+    const result = parseMovieDetails(movie);
+    // 4 raw entries collapse to 2 canonical providers (384 and 9)
+    expect(result.offers).toHaveLength(2);
+    const ids = result.offers.map((o) => o.providerId);
+    expect(ids).toContain(384);
+    expect(ids).toContain(9);
+    expect(ids).not.toContain(1899);
+    expect(ids).not.toContain(119);
+  });
 });
 
 describe("parseTvDetails", () => {
