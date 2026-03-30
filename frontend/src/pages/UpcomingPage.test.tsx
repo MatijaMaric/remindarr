@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import "../i18n";
 import * as sonner from "sonner";
 
 const mockGetUpcomingEpisodes = mock(() =>

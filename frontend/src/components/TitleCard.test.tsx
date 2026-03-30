@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import "../i18n";
 import TitleCard from "./TitleCard";
 import { AuthContext } from "../context/AuthContext";
 import * as api from "../api";

@@ -1,19 +1,7 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import "../i18n";
 import MultiSelectDropdown from "./MultiSelectDropdown";
-
-// Mock react-i18next
-mock.module("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "filter.search": "Search...",
-      };
-      return translations[key] ?? key;
-    },
-    i18n: { language: "en" },
-  }),
-}));
 
 afterEach(() => {
   cleanup();
