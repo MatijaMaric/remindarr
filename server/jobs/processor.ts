@@ -296,6 +296,13 @@ export async function processPendingJobs(): Promise<number> {
  * Enqueue a cron-triggered job if one isn't already pending for that name.
  */
 export async function enqueueCronJob(name: string): Promise<void> {
+  await enqueueJobReturningId(name);
+}
+
+/**
+ * Enqueue a job by name and return the new job ID, or null if one is already pending/running.
+ */
+export async function enqueueJobReturningId(name: string): Promise<number | null> {
   const db = getDb();
   const existing = await db
     .select({ id: jobs.id })
@@ -305,14 +312,24 @@ export async function enqueueCronJob(name: string): Promise<void> {
 
   if (existing) {
     log.debug("Cron job already pending/running, skipping", { name });
-    return;
+    return null;
   }
 
   await db.insert(jobs).values({
     name,
     runAt: new Date().toISOString(),
   });
+
+  const inserted = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(eq(jobs.name, name))
+    .orderBy(sql`${jobs.id} DESC`)
+    .limit(1)
+    .get();
+
   log.info("Enqueued cron job", { name });
+  return inserted?.id ?? null;
 }
 
 /**
