@@ -26,11 +26,6 @@ const OPTIONS = [
   { value: "d", label: "Delta" },
 ];
 
-function getDropdownButton() {
-  return screen.getByRole("button", { expanded: false }) ??
-    screen.getByRole("button", { name: /Pick|selected/i });
-}
-
 describe("MultiSelectDropdown", () => {
   it("renders button with label when nothing selected", () => {
     render(
