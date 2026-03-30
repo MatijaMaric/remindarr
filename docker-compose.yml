@@ -1,17 +1,21 @@
 services:
   remindarr:
-    image: ghcr.io/matijamaric/jwsync:latest
+    image: ghcr.io/matijamaric/remindarr:latest
     ports:
       - "3000:3000"
     volumes:
       - remindarr-data:/app/data
     environment:
       - DB_PATH=/app/data/remindarr.db
+      - TMDB_API_KEY=${TMDB_API_KEY}
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
       - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
       - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
       - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-}
       - OIDC_ADMIN_CLAIM=${OIDC_ADMIN_CLAIM:-}
       - OIDC_ADMIN_VALUE=${OIDC_ADMIN_VALUE:-}
+
 volumes:
   remindarr-data:
