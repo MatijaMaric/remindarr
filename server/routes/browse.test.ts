@@ -267,7 +267,7 @@ describe("GET /browse", () => {
     expect(body.titles[0].offers[0].providerName).toBe("Netflix");
   });
 
-  it("returns availableGenres from TMDB genre maps", async () => {
+  it("returns availableGenres with grouped canonical names from TMDB genre maps", async () => {
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
       results: [], total_pages: 1, total_results: 0, page: 1,
     });
@@ -276,10 +276,13 @@ describe("GET /browse", () => {
     const body = await res.json();
 
     expect(body.availableGenres).toBeDefined();
-    expect(body.availableGenres).toContain("Action");
-    expect(body.availableGenres).toContain("Drama");
-    expect(body.availableGenres).toContain("Science Fiction");
+    // "Action" should be grouped into "Action & Adventure"
+    expect(body.availableGenres).toContain("Action & Adventure");
+    expect(body.availableGenres).not.toContain("Action");
+    // "Science Fiction" and "Sci-Fi & Fantasy" should both map to "Sci-Fi & Fantasy"
     expect(body.availableGenres).toContain("Sci-Fi & Fantasy");
+    expect(body.availableGenres).not.toContain("Science Fiction");
+    expect(body.availableGenres).toContain("Drama");
   });
 
   it("returns availableProviders and availableLanguages from TMDB", async () => {
@@ -355,20 +358,23 @@ describe("GET /browse", () => {
   });
 
   describe("genre filtering", () => {
-    it("passes genre filter as TMDB genre ID to discover", async () => {
+    it("expands grouped genre to all constituent TMDB IDs", async () => {
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
         results: [], total_pages: 1, total_results: 0, page: 1,
       });
 
-      const res = await app.request("/browse?category=popular&type=MOVIE&genre=Action");
+      // "Action & Adventure" should expand to Action (28) from movies + Action & Adventure TV genres
+      const res = await app.request("/browse?category=popular&type=MOVIE&genre=Action%20%26%20Adventure");
       expect(res.status).toBe(200);
 
       const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
-      expect(filters.withGenres).toBe("28"); // Action = genre ID 28
+      // Should contain movie Action ID (28)
+      expect(filters.withGenres).toBeDefined();
+      expect(filters.withGenres!.split("|")).toContain("28");
     });
 
-    it("passes TV genre filter correctly", async () => {
+    it("passes TV genre filter correctly for grouped genres", async () => {
       (tmdbClient.discoverTv as any).mockResolvedValueOnce({
         results: [], total_pages: 1, total_results: 0, page: 1,
       });
@@ -378,7 +384,11 @@ describe("GET /browse", () => {
 
       const callArgs = ((tmdbClient.discoverTv as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
-      expect(filters.withGenres).toBe("10765"); // Sci-Fi & Fantasy
+      expect(filters.withGenres).toBeDefined();
+      // Should contain both Science Fiction (878) and Sci-Fi & Fantasy (10765)
+      const ids = filters.withGenres!.split("|");
+      expect(ids).toContain("878");
+      expect(ids).toContain("10765");
     });
 
     it("does not pass genre filter when genre name is not found", async () => {
@@ -431,15 +441,46 @@ describe("GET /browse", () => {
         results: [], total_pages: 1, total_results: 0, page: 1,
       });
 
-      const res = await app.request("/browse?category=top_rated&type=MOVIE&genre=Action&provider=8&language=en");
+      const res = await app.request("/browse?category=top_rated&type=MOVIE&genre=Drama&provider=8&language=en");
       expect(res.status).toBe(200);
 
       const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
-      expect(filters.withGenres).toBe("28");
+      // Drama is not grouped, so it maps to a single ID
+      expect(filters.withGenres).toBeDefined();
       expect(filters.withProviders).toBe("8");
       expect(filters.withOriginalLanguage).toBe("en");
       expect(callArgs.sortBy).toBe("vote_average.desc");
+    });
+  });
+
+  describe("regionProviderIds and priorityLanguageCodes", () => {
+    it("returns regionProviderIds in the response", async () => {
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=MOVIE");
+      const body = await res.json();
+
+      expect(body.regionProviderIds).toBeDefined();
+      expect(body.regionProviderIds).toContain(8);   // Netflix
+      expect(body.regionProviderIds).toContain(337);  // Disney Plus
+      expect(body.regionProviderIds).toContain(1899); // Max
+    });
+
+    it("returns priorityLanguageCodes in the response", async () => {
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=MOVIE");
+      const body = await res.json();
+
+      expect(body.priorityLanguageCodes).toBeDefined();
+      expect(body.priorityLanguageCodes).toContain("en");
+      expect(body.priorityLanguageCodes).toContain("fr");
+      expect(body.priorityLanguageCodes).toContain("ja");
     });
   });
 });

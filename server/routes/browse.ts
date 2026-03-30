@@ -22,6 +22,8 @@ import { getTrackedTitleIds, upsertTitles } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { toCanonicalGenre, expandGenreIds } from "../genres";
+import { CONFIG } from "../config";
 
 const log = logger.child({ module: "browse" });
 
@@ -32,19 +34,6 @@ function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-function reverseGenreLookup(
-  genreName: string,
-  movieGenres: Map<number, string>,
-  tvGenres: Map<number, string>
-): string | undefined {
-  for (const [id, name] of movieGenres) {
-    if (name === genreName) return String(id);
-  }
-  for (const [id, name] of tvGenres) {
-    if (name === genreName) return String(id);
-  }
-  return undefined;
-}
 
 interface CategoryDiscoverOptions {
   page: number;
@@ -126,10 +115,10 @@ app.get("/", async (c) => {
     // Build discover filters
     const filters: DiscoverFilters = {};
     if (genreNames.length > 0) {
-      const genreIds = genreNames
-        .map((name) => reverseGenreLookup(name, movieGenreMap, tvGenreMap))
-        .filter(Boolean);
-      if (genreIds.length > 0) filters.withGenres = genreIds.join("|");
+      const genreIds = genreNames.flatMap((name) =>
+        expandGenreIds(name, movieGenreMap, tvGenreMap),
+      );
+      if (genreIds.length > 0) filters.withGenres = genreIds.map(String).join("|");
     }
     if (providerValues.length > 0) filters.withProviders = providerValues.join("|");
     if (languageValues.length > 0) filters.withOriginalLanguage = languageValues[0];
@@ -197,7 +186,8 @@ app.get("/", async (c) => {
     }));
 
     // Build available filter options from TMDB data for dropdown population
-    const availableGenres = Array.from(new Set([...movieGenreMap.values(), ...tvGenreMap.values()])).sort();
+    const rawGenres = [...movieGenreMap.values(), ...tvGenreMap.values()];
+    const availableGenres = Array.from(new Set(rawGenres.map(toCanonicalGenre))).sort();
 
     // Deduplicate providers by ID and sort by name
     const providerMap = new Map<number, { id: number; name: string; iconUrl: string }>();
@@ -208,7 +198,18 @@ app.get("/", async (c) => {
 
     const availableLanguages = tmdbLanguages;
 
-    return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages });
+    // All browse providers come from TMDB filtered by region, so all are region providers
+    const regionProviderIds = Array.from(providerMap.keys());
+
+    // Priority languages: local language + English + common world languages
+    const localLang = CONFIG.LANGUAGE.split("-")[0];
+    const PRIORITY_LANGUAGES = ["en", "es", "fr", "de", "pt", "ja", "ko", "zh", "hi", "it", "ar"];
+    const prioritySet = new Set([localLang, ...PRIORITY_LANGUAGES]);
+    const priorityLanguageCodes = availableLanguages
+      .filter((l) => prioritySet.has(l.code))
+      .map((l) => l.code);
+
+    return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages, regionProviderIds, priorityLanguageCodes });
   } catch (e: any) {
     log.error("Browse error", { error: e.message, stack: e.stack });
     return err(c, e.message, 500);

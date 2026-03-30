@@ -78,6 +78,8 @@ export async function browseTitles(params: {
   availableGenres: string[];
   availableProviders: { id: number; name: string; iconUrl: string }[];
   availableLanguages: { code: string; name: string }[];
+  regionProviderIds: number[];
+  priorityLanguageCodes: string[];
 }> {
   const qs = new URLSearchParams();
   qs.set("category", params.category);
@@ -173,7 +175,7 @@ export async function resolveImdb(url: string): Promise<{ success: boolean; titl
   });
 }
 
-export async function getProviders(): Promise<{ providers: Provider[] }> {
+export async function getProviders(): Promise<{ providers: Provider[]; regionProviderIds: number[] }> {
   return fetchJson("/titles/providers");
 }
 
@@ -181,7 +183,7 @@ export async function getGenres(): Promise<{ genres: string[] }> {
   return fetchJson("/titles/genres");
 }
 
-export async function getLanguages(): Promise<{ languages: string[] }> {
+export async function getLanguages(): Promise<{ languages: string[]; priorityLanguageCodes: string[] }> {
   return fetchJson("/titles/languages");
 }
 
