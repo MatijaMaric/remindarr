@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import type { Offer } from "../types";
@@ -82,6 +82,7 @@ function DropdownProviderItem({ offer, isLg }: { offer: Offer; isLg: boolean }) 
 function SplitWatchButton({ providers, size, fullWidth }: { providers: Offer[]; size: "sm" | "lg"; fullWidth?: boolean }) {
   const [primaryHovered, setPrimaryHovered] = useState(false);
   const [caretHovered, setCaretHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const primary = providers[0];
   const rest = providers.slice(1);
   const color = getProviderColor(primary.provider_id);
@@ -89,7 +90,7 @@ function SplitWatchButton({ providers, size, fullWidth }: { providers: Offer[]; 
   const isLg = size === "lg";
 
   return (
-    <div className={`flex${fullWidth || isLg ? " w-full" : ""}`} style={{ minHeight: isLg ? "52px" : "32px" }}>
+    <div ref={containerRef} className={`flex${fullWidth || isLg ? " w-full" : ""}`} style={{ minHeight: isLg ? "52px" : "32px" }}>
       {/* Primary provider link */}
       <a
         href={primary.url}
@@ -123,7 +124,14 @@ function SplitWatchButton({ providers, size, fullWidth }: { providers: Offer[]; 
           <ChevronDown size={isLg ? 14 : 12} className="opacity-70" />
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Positioner side="bottom" align="end" sideOffset={4} className="z-50">
+          <Popover.Positioner
+            anchor={containerRef}
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            className="z-50"
+            style={{ minWidth: "var(--anchor-width)" }}
+          >
             <Popover.Popup className="flex flex-col gap-1 p-1">
               {rest.map((o) => (
                 <DropdownProviderItem key={o.provider_id} offer={o} isLg={isLg} />

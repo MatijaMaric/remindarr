@@ -9,12 +9,34 @@ export function formatEpisodeCode(ep: Episode): string {
   return `S${s}E${e}`;
 }
 
+// Provider IDs that are the same streaming service under different TMDB entries.
+// Key = duplicate ID, value = canonical ID to collapse into.
+const DUPLICATE_PROVIDER_IDS: Record<number, number> = {
+  1899: 384,  // HBO Max (hbo_max) → HBO Max (hbo)
+  119: 9,     // Amazon Prime Video → Prime Video
+};
+
+export function canonicalProviderId(id: number): number {
+  return DUPLICATE_PROVIDER_IDS[id] ?? id;
+}
+
+function isTmdbUrl(url: string): boolean {
+  return url.includes("themoviedb.org");
+}
+
 export function getUniqueProviders(offers?: Offer[]) {
   if (!offers?.length) return [];
   const map = new Map<number, Offer>();
   for (const o of offers) {
     if (o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS") {
-      if (!map.has(o.provider_id)) map.set(o.provider_id, o);
+      const key = canonicalProviderId(o.provider_id);
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, o);
+      } else if (isTmdbUrl(existing.url) && !isTmdbUrl(o.url)) {
+        // Prefer a real streaming deep-link over a generic TMDB watch page
+        map.set(key, o);
+      }
     }
   }
   return Array.from(map.values());
