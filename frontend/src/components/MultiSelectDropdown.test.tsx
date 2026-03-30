@@ -1,5 +1,5 @@
-import { describe, it, expect, mock } from "bun:test";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, mock, afterEach } from "bun:test";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
 // Mock react-i18next
@@ -15,12 +15,21 @@ mock.module("react-i18next", () => ({
   }),
 }));
 
+afterEach(() => {
+  cleanup();
+});
+
 const OPTIONS = [
   { value: "a", label: "Alpha" },
   { value: "b", label: "Beta" },
   { value: "c", label: "Charlie" },
   { value: "d", label: "Delta" },
 ];
+
+function getDropdownButton() {
+  return screen.getByRole("button", { expanded: false }) ??
+    screen.getByRole("button", { name: /Pick|selected/i });
+}
 
 describe("MultiSelectDropdown", () => {
   it("renders button with label when nothing selected", () => {
@@ -48,7 +57,7 @@ describe("MultiSelectDropdown", () => {
     render(
       <MultiSelectDropdown label="Pick" options={OPTIONS} selected={[]} onChange={() => {}} />,
     );
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByText("Pick"));
     expect(screen.getByPlaceholderText("Search...")).toBeDefined();
   });
 
@@ -56,7 +65,7 @@ describe("MultiSelectDropdown", () => {
     render(
       <MultiSelectDropdown label="Pick" options={OPTIONS} selected={[]} onChange={() => {}} />,
     );
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByText("Pick"));
     const searchInput = screen.getByPlaceholderText("Search...");
     fireEvent.change(searchInput, { target: { value: "alp" } });
 
@@ -74,7 +83,7 @@ describe("MultiSelectDropdown", () => {
     render(
       <MultiSelectDropdown label="Pick" sections={sections} selected={[]} onChange={() => {}} />,
     );
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByText("Pick"));
     expect(screen.getByText("Group A")).toBeDefined();
     expect(screen.getByText("Group B")).toBeDefined();
     expect(screen.getByText("Alpha")).toBeDefined();
@@ -89,7 +98,7 @@ describe("MultiSelectDropdown", () => {
     render(
       <MultiSelectDropdown label="Pick" sections={sections} selected={[]} onChange={() => {}} />,
     );
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByText("Pick"));
     const searchInput = screen.getByPlaceholderText("Search...");
     fireEvent.change(searchInput, { target: { value: "alp" } });
 
@@ -104,7 +113,7 @@ describe("MultiSelectDropdown", () => {
     render(
       <MultiSelectDropdown label="Pick" options={OPTIONS} selected={[]} onChange={onChange} />,
     );
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByText("Pick"));
     fireEvent.click(screen.getByText("Alpha"));
     expect(onChange).toHaveBeenCalledWith(["a"]);
   });
