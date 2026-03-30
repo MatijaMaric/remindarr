@@ -19,6 +19,7 @@ import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
 import WatchButton from "../components/WatchButton";
+import WatchButtonGroup from "../components/WatchButtonGroup";
 import VisibilityButton from "../components/VisibilityButton";
 import ShareButton from "../components/ShareButton";
 import RecommendButton from "../components/RecommendButton";
@@ -343,22 +344,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               >
                 {watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")}
               </button>
-              {(() => {
-                const streamingOffer = dedupeOffers(title.offers).find(o =>
-                  o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS"
-                );
-                if (!streamingOffer) return null;
-                return (
-                  <WatchButton
-                    url={streamingOffer.url}
-                    providerId={streamingOffer.provider_id}
-                    providerName={streamingOffer.provider_name}
-                    providerIconUrl={streamingOffer.provider_icon_url}
-                    monetizationType={streamingOffer.monetization_type}
-                    variant="full"
-                  />
-                );
-              })()}
+              <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
             </div>
           </div>
         </div>
@@ -647,22 +633,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             <div className="pt-2 flex flex-wrap items-center gap-2">
               <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
               <VisibilityButton titleId={title.id} isPublic={title.is_public ?? true} isTracked={title.is_tracked} />
-              {(() => {
-                const streamingOffer = dedupeOffers(title.offers).find(o =>
-                  o.monetization_type === "FLATRATE" || o.monetization_type === "FREE" || o.monetization_type === "ADS"
-                );
-                if (!streamingOffer) return null;
-                return (
-                  <WatchButton
-                    url={streamingOffer.url}
-                    providerId={streamingOffer.provider_id}
-                    providerName={streamingOffer.provider_name}
-                    providerIconUrl={streamingOffer.provider_icon_url}
-                    monetizationType={streamingOffer.monetization_type}
-                    variant="full"
-                  />
-                );
-              })()}
+              <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
             </div>
           </div>
         </div>
@@ -840,16 +811,6 @@ function getCertification(results: { iso_3166_1: string; rating: string }[] | un
   if (!results) return null;
   const match = results.find(r => r.iso_3166_1 === country) || results.find(r => r.iso_3166_1 === "US");
   return match?.rating || null;
-}
-
-function dedupeOffers(offers: Title["offers"]) {
-  const map = new Map<number, Title["offers"][0]>();
-  for (const o of offers) {
-    if (!map.has(o.provider_id)) {
-      map.set(o.provider_id, o);
-    }
-  }
-  return Array.from(map.values());
 }
 
 const MONETIZATION_ORDER = [
