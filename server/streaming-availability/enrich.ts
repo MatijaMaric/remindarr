@@ -4,7 +4,7 @@ import { logger } from "../logger";
 import { CONFIG } from "../config";
 import { fetchStreamingOptions } from "./client";
 import { SA_TO_TMDB_PROVIDER, mapSAMonetizationType } from "./provider-map";
-import type { SAStreamingOption } from "./types";
+import type { SAStreamingOption, SAService } from "./types";
 import { traceDbQuery } from "../tracing";
 
 const log = logger.child({ module: "sa-enrich" });
@@ -69,11 +69,6 @@ export async function enrichTitleDeepLinks(
       .all(),
   );
 
-  if (existingOffers.length === 0) {
-    await markSaFetched(titleId);
-    return 0;
-  }
-
   const providerCache = new Map<string, number>();
   let updated = 0;
 
@@ -94,23 +89,67 @@ export async function enrichTitleDeepLinks(
       (o) => o.providerId === providerId && o.monetizationType === monetizationType,
     );
 
-    if (!matchingOffer) {
-      // Try matching by provider only (ignore monetization type)
-      const providerMatch = existingOffers.find((o) => o.providerId === providerId);
-      if (providerMatch) {
-        await updateOfferDeepLink(providerMatch.id, saOption.link);
-        updated++;
-      }
+    if (matchingOffer) {
+      await updateOfferDeepLink(matchingOffer.id, saOption.link);
+      updated++;
       continue;
     }
 
-    await updateOfferDeepLink(matchingOffer.id, saOption.link);
+    // Try matching by provider only (ignore monetization type mismatch)
+    const providerMatch = existingOffers.find((o) => o.providerId === providerId);
+    if (providerMatch) {
+      await updateOfferDeepLink(providerMatch.id, saOption.link);
+      updated++;
+      continue;
+    }
+
+    // No existing offer for this provider — create one from SA data
+    await ensureProvider(providerId, saOption.service);
+    await createOfferFromSA(titleId, providerId, monetizationType, saOption);
     updated++;
   }
 
   await markSaFetched(titleId);
   log.debug("Enriched title deep links", { titleId, updated, saOptions: saOptions.length });
   return updated;
+}
+
+async function ensureProvider(providerId: number, service: SAService): Promise<void> {
+  return traceDbQuery("ensureProvider", async () => {
+    const db = getDb();
+    const technicalName = service.id.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    const iconUrl = service.imageSet?.whiteImage || service.imageSet?.lightThemeImage || null;
+    await db.insert(providers)
+      .values({ id: providerId, name: service.name, technicalName, iconUrl })
+      .onConflictDoNothing()
+      .run();
+  });
+}
+
+async function createOfferFromSA(
+  titleId: string,
+  providerId: number,
+  monetizationType: string,
+  saOption: SAStreamingOption,
+): Promise<void> {
+  return traceDbQuery("createOfferFromSA", async () => {
+    const db = getDb();
+    await db.insert(offers)
+      .values({
+        titleId,
+        providerId,
+        monetizationType,
+        presentationType: saOption.quality || "",
+        priceValue: saOption.price ? parseFloat(saOption.price.amount) : null,
+        priceCurrency: saOption.price?.currency || null,
+        url: saOption.link,
+        deepLink: saOption.link,
+        availableTo: saOption.expiresOn
+          ? new Date(saOption.expiresOn * 1000).toISOString()
+          : null,
+      })
+      .run();
+  });
 }
 
 async function updateOfferDeepLink(offerId: number, deepLink: string): Promise<void> {

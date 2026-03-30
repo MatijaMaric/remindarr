@@ -162,7 +162,7 @@ async function handleSyncDeepLinks(): Promise<void> {
   const { RateLimitError } = await import("../streaming-availability/types");
   const { getTitlesNeedingSaEnrichment } = await import("../db/repository");
 
-  const titleRows = await getTitlesNeedingSaEnrichment(CONFIG.SA_DAILY_BUDGET);
+  const titleRows = await getTitlesNeedingSaEnrichment();
   if (titleRows.length === 0) return;
 
   let enriched = 0;

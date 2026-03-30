@@ -1,6 +1,6 @@
 import { eq, inArray, sql, isNull, asc, desc } from "drizzle-orm";
 import { getDb } from "../schema";
-import { offers, providers, titles, tracked } from "../schema";
+import { offers, providers, titles, tracked, watchedTitles, watchedEpisodes, episodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
 const offerColumns = {
@@ -46,9 +46,10 @@ export async function getOffersForTitles(titleIds: string[]) {
 
 /**
  * Returns titles that need Streaming Availability enrichment.
- * Prioritizes tracked titles, then sorts by most recent release date.
+ * Includes titles never fetched OR fetched before the SA offer-creation fix.
+ * Priority: actively watched > tracked > untracked, then by release date.
  */
-export async function getTitlesNeedingSaEnrichment(limit: number) {
+export async function getTitlesNeedingSaEnrichment(limit = 500) {
   return traceDbQuery("getTitlesNeedingSaEnrichment", async () => {
     const db = getDb();
     return await db
@@ -60,10 +61,19 @@ export async function getTitlesNeedingSaEnrichment(limit: number) {
       .from(titles)
       .leftJoin(tracked, eq(titles.id, tracked.titleId))
       .where(
-        sql`${titles.tmdbId} IS NOT NULL AND ${titles.saFetchedAt} IS NULL`,
+        sql`${titles.tmdbId} IS NOT NULL AND (${titles.saFetchedAt} IS NULL OR ${titles.saFetchedAt} < '2026-03-30')`,
       )
       .orderBy(
-        desc(tracked.titleId),  // tracked titles first (non-null)
+        sql`CASE
+          WHEN ${titles.id} IN (
+            SELECT ${watchedTitles.titleId} FROM ${watchedTitles}
+            UNION
+            SELECT ${episodes.titleId} FROM ${episodes}
+              INNER JOIN ${watchedEpisodes} ON ${watchedEpisodes.episodeId} = ${episodes.id}
+          ) THEN 0
+          WHEN ${tracked.titleId} IS NOT NULL THEN 1
+          ELSE 2
+        END`,
         desc(titles.releaseDate),
       )
       .limit(limit)
