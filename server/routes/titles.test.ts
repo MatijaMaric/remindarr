@@ -1,17 +1,33 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import { upsertTitles, trackTitle, createUser } from "../db/repository";
 import titlesApp from "./titles";
 import type { AppEnv } from "../types";
+import * as tmdbClient from "../tmdb/client";
 
 let app: Hono<AppEnv>;
+let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(() => {
   setupTestDb();
   app = new Hono<AppEnv>();
   app.route("/titles", titlesApp);
+
+  spies = [
+    spyOn(tmdbClient, "getMovieWatchProviders").mockResolvedValue([
+      { id: 8, name: "Netflix", iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg" },
+    ]),
+    spyOn(tmdbClient, "getTvWatchProviders").mockResolvedValue([
+      { id: 8, name: "Netflix", iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg" },
+    ]),
+  ];
+});
+
+afterEach(() => {
+  for (const spy of spies) spy.mockRestore();
+  spies = [];
 });
 
 afterAll(() => {
@@ -204,7 +220,7 @@ describe("GET /titles", () => {
 });
 
 describe("GET /titles/genres", () => {
-  it("returns available genres", async () => {
+  it("returns available genres with canonical grouping", async () => {
     await upsertTitles([
       makeParsedTitle({ genres: ["Action", "Drama"] }),
     ]);
@@ -213,7 +229,9 @@ describe("GET /titles/genres", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.genres).toContain("Action");
+    // "Action" should be grouped into "Action & Adventure"
+    expect(body.genres).toContain("Action & Adventure");
+    expect(body.genres).not.toContain("Action");
     expect(body.genres).toContain("Drama");
   });
 });
@@ -233,7 +251,7 @@ describe("GET /titles/languages", () => {
 });
 
 describe("GET /titles/providers", () => {
-  it("returns available providers", async () => {
+  it("returns available providers with regionProviderIds", async () => {
     await upsertTitles([
       makeParsedTitle({
         offers: [makeParsedOffer({ providerId: 8, providerName: "Netflix" })],
@@ -246,5 +264,7 @@ describe("GET /titles/providers", () => {
     const body = await res.json();
     expect(body.providers).toHaveLength(1);
     expect(body.providers[0].name).toBe("Netflix");
+    expect(body.regionProviderIds).toBeDefined();
+    expect(body.regionProviderIds).toContain(8);
   });
 });

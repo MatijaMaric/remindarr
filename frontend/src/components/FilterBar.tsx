@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import MultiSelectDropdown from "./MultiSelectDropdown";
+import type { Section } from "./MultiSelectDropdown";
 
 interface ProviderOption {
   id: number;
@@ -24,9 +25,11 @@ interface Props {
   provider?: string[];
   onProviderChange?: (provider: string[]) => void;
   providers?: ProviderOption[];
+  regionProviderIds?: number[];
   language?: string[];
   onLanguageChange?: (language: string[]) => void;
   languages?: string[] | LanguageOption[];
+  priorityLanguageCodes?: string[];
   onClearFilters?: () => void;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
@@ -75,9 +78,11 @@ const FilterBar = memo(function FilterBar({
   provider,
   onProviderChange,
   providers,
+  regionProviderIds,
   language,
   onLanguageChange,
   languages,
+  priorityLanguageCodes,
   onClearFilters,
   hideTracked,
   onHideTrackedChange,
@@ -89,6 +94,46 @@ const FilterBar = memo(function FilterBar({
     (genre && genre.length > 0) ||
     (provider && provider.length > 0) ||
     (language && language.length > 0);
+
+  // Build provider sections: region providers first, then others
+  const providerSections = useMemo((): Section[] | undefined => {
+    if (!providers || providers.length === 0) return undefined;
+    if (!regionProviderIds || regionProviderIds.length === 0) {
+      return [{ options: providers.map((p) => ({ value: String(p.id), label: p.name })) }];
+    }
+    const regionSet = new Set(regionProviderIds);
+    const regionOpts = providers
+      .filter((p) => regionSet.has(p.id))
+      .map((p) => ({ value: String(p.id), label: p.name }));
+    const otherOpts = providers
+      .filter((p) => !regionSet.has(p.id))
+      .map((p) => ({ value: String(p.id), label: p.name }));
+    const sections: Section[] = [];
+    if (regionOpts.length > 0) sections.push({ options: regionOpts });
+    if (otherOpts.length > 0) sections.push({ label: "Other", options: otherOpts });
+    return sections;
+  }, [providers, regionProviderIds]);
+
+  // Build language sections: priority languages first, then others
+  const languageSections = useMemo((): Section[] | undefined => {
+    if (!languages || languages.length === 0) return undefined;
+    const allOpts = (languages as (string | LanguageOption)[]).map((l) =>
+      typeof l === "string"
+        ? { value: l, label: languageLabel(l) }
+        : { value: l.code, label: l.name },
+    );
+    if (!priorityLanguageCodes || priorityLanguageCodes.length === 0) {
+      return [{ options: allOpts }];
+    }
+    const prioritySet = new Set(priorityLanguageCodes);
+    const priorityOpts = allOpts.filter((o) => prioritySet.has(o.value));
+    const otherOpts = allOpts.filter((o) => !prioritySet.has(o.value));
+    const sections: Section[] = [];
+    if (priorityOpts.length > 0) sections.push({ options: priorityOpts });
+    if (otherOpts.length > 0) sections.push({ label: "Other", options: otherOpts });
+    return sections;
+  }, [languages, priorityLanguageCodes]);
+
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <div role="group" aria-label="Content type" className="flex gap-1 bg-zinc-800/50 rounded-lg p-1">
@@ -144,22 +189,18 @@ const FilterBar = memo(function FilterBar({
           onChange={onGenreChange}
         />
       )}
-      {providers && providers.length > 0 && onProviderChange && (
+      {providerSections && providerSections.length > 0 && onProviderChange && (
         <MultiSelectDropdown
           label={t("filter.allPlatforms")}
-          options={providers.map((p) => ({ value: String(p.id), label: p.name }))}
+          sections={providerSections}
           selected={provider || []}
           onChange={onProviderChange}
         />
       )}
-      {languages && languages.length > 0 && onLanguageChange && (
+      {languageSections && languageSections.length > 0 && onLanguageChange && (
         <MultiSelectDropdown
           label={t("filter.allLanguages")}
-          options={(languages as (string | LanguageOption)[]).map((l) =>
-            typeof l === "string"
-              ? { value: l, label: languageLabel(l) }
-              : { value: l.code, label: l.name }
-          )}
+          sections={languageSections}
           selected={language || []}
           onChange={onLanguageChange}
         />

@@ -5,6 +5,7 @@ import type { ParsedTitle } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitle, getOffersForTitles } from "./offers";
+import { toCanonicalGenre } from "../../genres";
 
 // ─── Filter caches (genres & languages change only on sync) ──────────────────
 
@@ -569,7 +570,8 @@ export async function getGenres(): Promise<string[]> {
       .from(titleGenres)
       .orderBy(asc(titleGenres.genre))
       .all();
-    return rows.map((r) => r.genre);
+    const rawGenres = rows.map((r) => r.genre);
+    return [...new Set(rawGenres.map(toCanonicalGenre))].sort();
   });
 
   genresCache = { value: result, expiresAt: now + CACHE_TTL_MS };
