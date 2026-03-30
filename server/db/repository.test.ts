@@ -414,7 +414,8 @@ describe("getGenres", () => {
       makeParsedTitle({ id: "movie-2", genres: ["Comedy", "Action"] }),
     ]);
     const genres = await getGenres();
-    expect(genres).toEqual(["Action", "Comedy", "Drama"]);
+    // "Action" is grouped into canonical "Action & Adventure"
+    expect(genres).toEqual(["Action & Adventure", "Comedy", "Drama"]);
   });
 
   it("returns empty array when no titles exist", async () => {
