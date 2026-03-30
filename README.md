@@ -2,6 +2,8 @@
 
 A self-hosted app for tracking streaming media releases. Browse, search, and get notified when movies and TV shows land on your streaming services.
 
+![Remindarr browse page](docs/screenshot.png)
+
 ## Features
 
 - **Browse & Discover** — Popular, upcoming, and top-rated titles with genre, provider, and language filters
