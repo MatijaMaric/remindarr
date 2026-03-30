@@ -1,7 +1,12 @@
 import { Hono } from "hono";
 import { getRecentTitles, getProviders, getGenres, getLanguages } from "../db/repository";
+import { getMovieWatchProviders, getTvWatchProviders } from "../tmdb/client";
+import { expandGenreGroup } from "../genres";
+import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
+
+const PRIORITY_LANGUAGES = ["en", "es", "fr", "de", "pt", "ja", "ko", "zh", "hi", "it", "ar"];
 
 const app = new Hono<AppEnv>();
 
@@ -18,7 +23,7 @@ app.get("/", async (c) => {
 
   const objectTypes = typeParam ? typeParam.split(",").filter(Boolean) : [];
   const providers = providerParam ? providerParam.split(",").filter(Boolean) : [];
-  const genres = genreParam ? genreParam.split(",").filter(Boolean) : [];
+  const genres = genreParam ? genreParam.split(",").filter(Boolean).flatMap(expandGenreGroup) : [];
   const languages = languageParam ? languageParam.split(",").filter(Boolean) : [];
 
   const titles = await getRecentTitles({ daysBack, objectTypes, providers, genres, languages, excludeTracked, limit, offset }, user?.id);
@@ -26,8 +31,16 @@ app.get("/", async (c) => {
 });
 
 app.get("/providers", async (c) => {
-  const providers = await getProviders();
-  return ok(c, { providers });
+  const [dbProviders, movieProviders, tvProviders] = await Promise.all([
+    getProviders(),
+    getMovieWatchProviders(),
+    getTvWatchProviders(),
+  ]);
+  const regionIds = new Set([
+    ...movieProviders.map((p) => p.id),
+    ...tvProviders.map((p) => p.id),
+  ]);
+  return ok(c, { providers: dbProviders, regionProviderIds: Array.from(regionIds) });
 });
 
 app.get("/genres", async (c) => {
@@ -37,7 +50,10 @@ app.get("/genres", async (c) => {
 
 app.get("/languages", async (c) => {
   const languages = await getLanguages();
-  return ok(c, { languages });
+  const localLang = CONFIG.LANGUAGE.split("-")[0];
+  const prioritySet = new Set([localLang, ...PRIORITY_LANGUAGES]);
+  const priorityLanguageCodes = languages.filter((l) => prioritySet.has(l));
+  return ok(c, { languages, priorityLanguageCodes });
 });
 
 export default app;

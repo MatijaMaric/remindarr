@@ -81,17 +81,17 @@ export default function ExternalLinks({ externalIds, tmdbId, type }: ExternalLin
 
 function TmdbIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm5 0h-2V8h2v8z" />
-    </svg>
+    <span className="inline-flex items-center rounded bg-current/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-tight">
+      TMDB
+    </span>
   );
 }
 
 function ImdbIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-      <path d="M2 4v16h20V4H2zm3 12H4V8h1v8zm5.5 0H9.3l-.5-3.5-.5 3.5H7V8h1.2l.5 3.5L9.2 8h1.3v8zm4.5 0h-1.5V8H14c.8 0 1.4.2 1.8.6.4.4.7 1 .7 1.8v3.2c0 .8-.2 1.4-.7 1.8-.4.4-1 .6-1.8.6zm4 0h-1.5V8H19c1.1 0 2 .7 2 1.6v1.8c0 .9-.4 1.5-1 1.7l1.2 2.9h-1.6L18.5 13H18v3zm-4-6.8v5.6c.6 0 .8-.3.8-.8v-4c0-.5-.2-.8-.8-.8zm4 0v2.3h.5c.3 0 .5-.2.5-.5v-1.3c0-.3-.2-.5-.5-.5H18z" />
-    </svg>
+    <span className="inline-flex items-center rounded bg-current/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-tight">
+      IMDb
+    </span>
   );
 }
 

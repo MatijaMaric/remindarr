@@ -150,7 +150,8 @@
     "allPlatforms": "All Platforms",
     "allLanguages": "All Languages",
     "hideTracked": "Hide Tracked",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "search": "Search..."
   },
   "search": {
     "placeholder": "Search titles or paste IMDB link...",

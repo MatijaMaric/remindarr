@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
+import "../i18n";
 
 // Mock browser Notification API
 Object.defineProperty(globalThis, "Notification", {

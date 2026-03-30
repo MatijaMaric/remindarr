@@ -46,12 +46,16 @@ export default function NewReleases({
   const [genres, setGenres] = useState<string[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
+  const [regionProviderIds, setRegionProviderIds] = useState<number[]>([]);
+  const [priorityLanguageCodes, setPriorityLanguageCodes] = useState<string[]>([]);
 
   useEffect(() => {
-    loadFilters().then(({ genres, providers, languages }) => {
+    loadFilters().then(({ genres, providers, languages, regionProviderIds, priorityLanguageCodes }) => {
       setGenres(genres);
       setProviders(providers);
       setLanguages(languages);
+      setRegionProviderIds(regionProviderIds);
+      setPriorityLanguageCodes(priorityLanguageCodes);
     });
   }, []);
 
@@ -106,9 +110,11 @@ export default function NewReleases({
           provider={provider}
           onProviderChange={onProviderChange}
           providers={providers}
+          regionProviderIds={regionProviderIds}
           language={language}
           onLanguageChange={onLanguageChange}
           languages={languages}
+          priorityLanguageCodes={priorityLanguageCodes}
           onClearFilters={onClearFilters}
           hideTracked={hideTracked}
           onHideTrackedChange={onHideTrackedChange}

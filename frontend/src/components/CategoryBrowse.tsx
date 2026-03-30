@@ -97,6 +97,8 @@ export default function CategoryBrowse({
 
   const [availableProviders, setAvailableProviders] = useState<{ id: number; name: string; iconUrl: string }[]>([]);
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
+  const [regionProviderIds, setRegionProviderIds] = useState<number[]>([]);
+  const [priorityLanguageCodes, setPriorityLanguageCodes] = useState<string[]>([]);
 
   const fetchTitles = useCallback(async (pageNum: number, append: boolean) => {
     if (append) {
@@ -128,6 +130,12 @@ export default function CategoryBrowse({
       }
       if (res.availableLanguages) {
         setAvailableLanguages(res.availableLanguages);
+      }
+      if (res.regionProviderIds) {
+        setRegionProviderIds(res.regionProviderIds);
+      }
+      if (res.priorityLanguageCodes) {
+        setPriorityLanguageCodes(res.priorityLanguageCodes);
       }
       setTotalPages(res.totalPages);
       if (!append) {
@@ -177,9 +185,11 @@ export default function CategoryBrowse({
         provider={provider}
         onProviderChange={onProviderChange}
         providers={availableProviders}
+        regionProviderIds={regionProviderIds}
         language={language}
         onLanguageChange={onLanguageChange}
         languages={availableLanguages}
+        priorityLanguageCodes={priorityLanguageCodes}
         onClearFilters={onClearFilters}
         hideTracked={hideTracked}
         onHideTrackedChange={onHideTrackedChange}
