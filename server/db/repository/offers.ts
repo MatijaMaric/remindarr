@@ -61,7 +61,7 @@ export async function getTitlesNeedingSaEnrichment(limit = 500) {
       .from(titles)
       .leftJoin(tracked, eq(titles.id, tracked.titleId))
       .where(
-        sql`${titles.tmdbId} IS NOT NULL AND (${titles.saFetchedAt} IS NULL OR ${titles.saFetchedAt} < '2026-03-30')`,
+        sql`${titles.tmdbId} IS NOT NULL AND (${titles.saFetchedAt} IS NULL OR ${titles.saFetchedAt} < '2026-03-31')`,
       )
       .orderBy(
         sql`CASE
