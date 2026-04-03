@@ -1,6 +1,7 @@
 import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
 import { logger } from "../logger";
+import { getCache } from "../cache";
 import type { SAShow, SAStreamingOption } from "./types";
 import { RateLimitError } from "./types";
 
@@ -18,6 +19,11 @@ export async function fetchStreamingOptions(
   country: string,
 ): Promise<SAStreamingOption[]> {
   const showType = objectType === "MOVIE" ? "movie" : "tv";
+  const cacheKey = `sa:streaming:${showType}/${tmdbId}:${country.toLowerCase()}`;
+  const cache = getCache();
+  const cached = await cache.get<SAStreamingOption[]>(cacheKey);
+  if (cached !== null) return cached;
+
   const showId = `${showType}/${tmdbId}`;
   const url = new URL(`${SA_BASE_URL}/shows/${showId}`);
   url.searchParams.set("country", country.toLowerCase());
@@ -37,6 +43,7 @@ export async function fetchStreamingOptions(
 
       if (res.status === 404) {
         log.debug("Title not found on SA", { tmdbId, objectType });
+        await cache.set(cacheKey, [], CONFIG.CACHE_TTL_STREAMING);
         return [];
       }
 
@@ -50,7 +57,9 @@ export async function fetchStreamingOptions(
 
       const data = (await res.json()) as SAShow;
       const countryKey = country.toLowerCase();
-      return data.streamingOptions?.[countryKey] ?? [];
+      const result = data.streamingOptions?.[countryKey] ?? [];
+      await cache.set(cacheKey, result, CONFIG.CACHE_TTL_STREAMING);
+      return result;
     } finally {
       clearTimeout(timeout);
     }

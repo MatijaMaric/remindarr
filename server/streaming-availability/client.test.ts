@@ -2,22 +2,29 @@ import { describe, it, expect, spyOn, beforeEach, afterEach } from "bun:test";
 import Sentry from "../sentry";
 import { CONFIG } from "../config";
 import { RateLimitError } from "./types";
+import { MemoryCache } from "../cache/memory";
+import * as cacheModule from "../cache";
 
 // Mock Sentry tracing
 let sentrySpy: ReturnType<typeof spyOn>;
 let fetchSpy: ReturnType<typeof spyOn>;
+let getCacheSpy: ReturnType<typeof spyOn>;
+let testCache: MemoryCache;
 
 const originalApiKey = CONFIG.STREAMING_AVAILABILITY_API_KEY;
 
 beforeEach(() => {
   sentrySpy = spyOn(Sentry, "startSpan").mockImplementation((_opts: any, fn: any) => fn({}));
   fetchSpy = spyOn(globalThis, "fetch");
+  testCache = new MemoryCache();
+  getCacheSpy = spyOn(cacheModule, "getCache").mockReturnValue(testCache);
   CONFIG.STREAMING_AVAILABILITY_API_KEY = "test-api-key";
 });
 
 afterEach(() => {
   sentrySpy?.mockRestore();
   fetchSpy?.mockRestore();
+  getCacheSpy?.mockRestore();
   CONFIG.STREAMING_AVAILABILITY_API_KEY = originalApiKey;
 });
 
@@ -117,5 +124,60 @@ describe("fetchStreamingOptions", () => {
     const headers = fetchSpy.mock.calls[0][1].headers;
     expect(headers["X-RapidAPI-Key"]).toBe("test-api-key");
     expect(headers["X-RapidAPI-Host"]).toBe("streaming-availability.p.rapidapi.com");
+  });
+
+  it("returns cached result without fetching", async () => {
+    const cachedOptions = [
+      { service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: { lightThemeImage: "", darkThemeImage: "", whiteImage: "" } }, type: "subscription", link: "https://netflix.com/cached" },
+    ] as any;
+    await testCache.set("sa:streaming:movie/550:us", cachedOptions, 3600);
+
+    const result = await fetchStreamingOptions(550, "MOVIE", "US");
+
+    expect(result).toEqual(cachedOptions);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("stores result in cache after successful fetch", async () => {
+    const mockResponse = {
+      streamingOptions: {
+        us: [{ service: { id: "hulu", name: "Hulu", homePage: "", themeColorCode: "", imageSet: { lightThemeImage: "", darkThemeImage: "", whiteImage: "" } }, type: "subscription", link: "https://hulu.com/watch/550" }],
+      },
+    };
+    fetchSpy.mockResolvedValue(jsonResponse(mockResponse));
+
+    await fetchStreamingOptions(550, "MOVIE", "US");
+
+    const cached = await testCache.get("sa:streaming:movie/550:us");
+    expect(cached).toHaveLength(1);
+    expect((cached as any[])[0].service.id).toBe("hulu");
+  });
+
+  it("stores empty array in cache on 404", async () => {
+    fetchSpy.mockResolvedValue(new Response("Not Found", { status: 404 }));
+
+    const result = await fetchStreamingOptions(999999, "MOVIE", "US");
+
+    expect(result).toEqual([]);
+    const cached = await testCache.get("sa:streaming:movie/999999:us");
+    expect(cached).toEqual([]);
+  });
+
+  it("does not cache on rate limit error", async () => {
+    fetchSpy.mockResolvedValue(new Response("Too Many Requests", { status: 429 }));
+
+    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toBeInstanceOf(RateLimitError);
+
+    const cached = await testCache.get("sa:streaming:movie/550:us");
+    expect(cached).toBeNull();
+  });
+
+  it("does not cache on other HTTP errors", async () => {
+    fetchSpy.mockResolvedValue(new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
+
+    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toThrow("SA API error: 500");
+
+    const cached = await testCache.get("sa:streaming:movie/550:us");
+    expect(cached).toBeNull();
   });
 });
