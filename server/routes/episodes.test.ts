@@ -2,15 +2,46 @@ import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bu
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
+import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import { requireAuth } from "../middleware/auth";
 import { CONFIG } from "../config";
 import * as sync from "../tmdb/sync";
 import type { AppEnv } from "../types";
 
+function createMockAuth() {
+  return {
+    api: {
+      getSession: async ({ headers }: { headers: Headers }) => {
+        const cookieHeader = headers.get("cookie") || "";
+        const match = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
+        const token = match?.[1];
+        if (!token) return null;
+        const user = await getSessionWithUser(token);
+        if (!user) return null;
+        return {
+          session: { id: "session-id", userId: user.id },
+          user: {
+            id: user.id,
+            name: user.display_name,
+            username: user.username,
+            role: user.role || (user.is_admin ? "admin" : "user"),
+          },
+        };
+      },
+    },
+  };
+}
+
 let app: Hono<AppEnv>;
+let authedApp: Hono<AppEnv>;
+let userToken: string;
 let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(async () => {
   setupTestDb();
+
+  const userId = await createUser("episodeuser", "hash");
+  userToken = await createSession(userId);
 
   spies = [
     spyOn(sync, "syncEpisodes").mockResolvedValue({ synced: 5, shows: 2 }),
@@ -19,8 +50,22 @@ beforeEach(async () => {
 
   // Import fresh route after spies are set up
   const episodesApp = (await import("./episodes")).default;
+
+  // Unauthenticated app (mirrors real setup with optionalAuth at path level)
   app = new Hono<AppEnv>();
+  app.use("*", async (c, next) => {
+    c.set("auth", createMockAuth() as any);
+    await next();
+  });
   app.route("/episodes", episodesApp);
+
+  // Authenticated app
+  authedApp = new Hono<AppEnv>();
+  authedApp.use("*", async (c, next) => {
+    c.set("auth", createMockAuth() as any);
+    await next();
+  });
+  authedApp.route("/episodes", episodesApp);
 });
 
 afterEach(() => {
@@ -203,14 +248,32 @@ describe("GET /episodes/status/:titleId/:season", () => {
   });
 });
 
+function authHeaders() {
+  return { Cookie: `better-auth.session_token=${userToken}` };
+}
+
 describe("POST /episodes/sync", () => {
+  it("returns 401 when unauthenticated", async () => {
+    const origKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const res = await app.request("/episodes/sync", { method: "POST" });
+    expect(res.status).toBe(401);
+    expect(sync.syncEpisodes).not.toHaveBeenCalled();
+
+    CONFIG.TMDB_API_KEY = origKey;
+  });
+
   it("syncs episodes successfully", async () => {
     const origKey = CONFIG.TMDB_API_KEY;
     CONFIG.TMDB_API_KEY = "test-key";
 
     (sync.syncEpisodes as any).mockResolvedValueOnce({ synced: 5, shows: 2 });
 
-    const res = await app.request("/episodes/sync", { method: "POST" });
+    const res = await authedApp.request("/episodes/sync", {
+      method: "POST",
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.synced).toBe(5);
@@ -224,7 +287,10 @@ describe("POST /episodes/sync", () => {
     const origKey = CONFIG.TMDB_API_KEY;
     CONFIG.TMDB_API_KEY = "";
 
-    const res = await app.request("/episodes/sync", { method: "POST" });
+    const res = await authedApp.request("/episodes/sync", {
+      method: "POST",
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toContain("TMDB_API_KEY");

@@ -129,6 +129,9 @@ app.route("/api/health", healthRoutes);
 // Prometheus metrics (public — protect via reverse proxy if needed)
 app.route("/metrics", metricsRoutes);
 
+// Rate limit auth routes: 20 requests per minute to prevent brute-force attacks
+app.use("/api/auth/*", rateLimiter({ limit: 20, windowMs: 60_000 }));
+
 // Custom auth routes (providers endpoint) — must be before better-auth catch-all
 app.route("/api/auth/custom", authCustomRoutes);
 
@@ -220,12 +223,14 @@ app.use("/api/details/*", optionalAuth);
 app.use("/api/details", optionalAuth);
 app.route("/api/details", detailsRoutes);
 
-// Sync (public — typically triggered by cron)
+// Sync (admin only — rate limited + require admin)
 app.use("/api/sync/*", rateLimiter({ limit: 5, windowMs: 60_000 }));
 app.use("/api/sync", rateLimiter({ limit: 5, windowMs: 60_000 }));
+app.use("/api/sync/*", requireAuth, requireAdmin);
+app.use("/api/sync", requireAuth, requireAdmin);
 app.route("/api/sync", syncRoutes);
 
-// Episodes (optionalAuth for upcoming, sync is public)
+// Episodes (optionalAuth for upcoming/status, requireAuth for sync)
 app.use("/api/episodes/*", optionalAuth);
 app.use("/api/episodes", optionalAuth);
 app.route("/api/episodes", episodesRoutes);

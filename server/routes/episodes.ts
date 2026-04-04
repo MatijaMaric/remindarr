@@ -3,6 +3,7 @@ import * as sync from "../tmdb/sync";
 import { getEpisodesByDateRange, getUnwatchedEpisodes, getSeasonEpisodeStatus } from "../db/repository";
 import { localDateForTimezone, addDays } from "../utils/timezone";
 import { CONFIG } from "../config";
+import { requireAuth } from "../middleware/auth";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 
@@ -39,7 +40,7 @@ app.get("/status/:titleId/:season", async (c) => {
   return ok(c, { episodes });
 });
 
-app.post("/sync", async (c) => {
+app.post("/sync", requireAuth, async (c) => {
   if (!CONFIG.TMDB_API_KEY) {
     return err(c, "TMDB_API_KEY not configured", 500);
   }

@@ -58,6 +58,12 @@ export function validateStartup(): void {
     process.exit(1);
   }
 
+  if (!CONFIG.BETTER_AUTH_SECRET) {
+    log.warn(
+      "BETTER_AUTH_SECRET is not set — sessions will be broken on server restart. Set the BETTER_AUTH_SECRET environment variable to a long random string.",
+    );
+  }
+
   checkDbWritable(CONFIG.DB_PATH);
 
   logActiveConfig();
