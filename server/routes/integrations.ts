@@ -10,7 +10,7 @@ import {
 import { createPin, checkPin, buildPlexAuthUrl, getServers } from "../plex/client";
 import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
-import { enqueueJob } from "../jobs/queue";
+import { enqueueJobReturningId } from "../jobs/processor";
 import { ok, err } from "./response";
 import Sentry from "../sentry";
 
@@ -122,7 +122,7 @@ app.post("/", async (c) => {
   const integration = await getIntegrationById(id, user.id);
 
   // Trigger an immediate library scan so Plex content shows up right away
-  enqueueJob("sync-plex-library", undefined, { maxAttempts: 1 });
+  enqueueJobReturningId("sync-plex-library");
 
   return c.json({ integration: sanitize(integration!) }, 201);
 });
