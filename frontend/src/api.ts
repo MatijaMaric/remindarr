@@ -493,3 +493,80 @@ export async function redeemInvitation(code: string): Promise<{ success: boolean
 export async function revokeInvitation(id: string): Promise<void> {
   await fetchJson(`/invitations/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+
+// ─── Integrations (Plex) ─────────────────────────────────────────────────────
+
+export interface PlexIntegrationConfig {
+  serverUrl: string;
+  serverId: string;
+  serverName: string;
+  plexUsername: string;
+  syncMovies: boolean;
+  syncEpisodes: boolean;
+}
+
+export interface Integration {
+  id: string;
+  user_id: string;
+  provider: string;
+  name: string;
+  config: PlexIntegrationConfig;
+  enabled: boolean;
+  last_sync_at: string | null;
+  last_sync_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlexServer {
+  name: string;
+  clientIdentifier: string;
+  connections: Array<{ uri: string; local: boolean; relay: boolean }>;
+}
+
+export async function getIntegrations(): Promise<{ integrations: Integration[] }> {
+  return fetchJson("/integrations");
+}
+
+export async function createIntegration(data: {
+  provider: string;
+  name?: string;
+  config: Record<string, unknown>;
+}): Promise<{ integration: Integration }> {
+  return fetchJson("/integrations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateIntegration(
+  id: string,
+  data: Partial<{ name: string; enabled: boolean; config: Partial<PlexIntegrationConfig> }>
+): Promise<{ integration: Integration }> {
+  return fetchJson(`/integrations/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteIntegration(id: string): Promise<void> {
+  await fetchJson(`/integrations/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function createPlexPin(): Promise<{ pinId: number; authUrl: string }> {
+  return fetchJson("/integrations/plex/pin", { method: "POST" });
+}
+
+export async function checkPlexPin(pinId: number): Promise<{
+  resolved: boolean;
+  authToken?: string;
+  servers?: PlexServer[];
+}> {
+  return fetchJson(`/integrations/plex/pin/${pinId}`, { method: "POST" });
+}
+
+export async function triggerPlexSync(
+  id: string
+): Promise<{ success: boolean; moviesMarked?: number; episodesMarked?: number; error?: string }> {
+  return fetchJson(`/integrations/${encodeURIComponent(id)}/sync`, { method: "POST" });
+}

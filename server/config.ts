@@ -57,6 +57,10 @@ export const CONFIG = {
   STREAMING_AVAILABILITY_API_KEY: process.env.STREAMING_AVAILABILITY_API_KEY || "",
   SYNC_DEEP_LINKS_CRON: process.env.SYNC_DEEP_LINKS_CRON || "0 4 * * *",
 
+  // Plex
+  PLEX_CLIENT_ID: process.env.PLEX_CLIENT_ID || "remindarr-plex-client",
+  SYNC_PLEX_CRON: process.env.SYNC_PLEX_CRON || "0 5 * * *",
+
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 

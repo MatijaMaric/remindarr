@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../i18n";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
-import type { JobsResponse, Notifier } from "../api";
+import type { JobsResponse, Notifier, Integration, PlexServer } from "../api";
 import type { AdminSettings, Title } from "../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../lib/push";
 import { authClient } from "../lib/auth-client";
@@ -30,6 +30,7 @@ export default function SettingsPage() {
       <SocialSection />
       <WatchlistSection />
       {isPushSupported() && <PushNotificationsSection />}
+      <PlexSection />
       <NotificationsSection />
       {user.is_admin && <BackgroundJobsSection />}
       {user.is_admin && <AdminSection />}
@@ -1469,5 +1470,360 @@ function SettingField({
         />
       )}
     </div>
+  );
+}
+
+// ─── Plex Integration ────────────────────────────────────────────────────────
+
+type ConnectStep =
+  | { type: "idle" }
+  | { type: "waiting"; pinId: number; authUrl: string }
+  | { type: "pick_server"; authToken: string; servers: PlexServer[] };
+
+function PlexSection() {
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState<ConnectStep>({ type: "idle" });
+  const [checking, setChecking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  // Server picker form state
+  const [selectedServer, setSelectedServer] = useState<PlexServer | null>(null);
+  const [selectedUri, setSelectedUri] = useState("");
+  const [syncMovies, setSyncMovies] = useState(true);
+  const [syncEpisodes, setSyncEpisodes] = useState(true);
+
+  const refresh = useCallback(() => {
+    api.getIntegrations()
+      .then((r) => {
+        setIntegrations(r.integrations.filter((i) => i.provider === "plex"));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  async function handleConnect() {
+    setMsg("");
+    setErr("");
+    try {
+      const { pinId, authUrl } = await api.createPlexPin();
+      window.open(authUrl, "_blank", "noopener");
+      setStep({ type: "waiting", pinId, authUrl });
+    } catch {
+      setErr("Failed to start Plex authorization. Please try again.");
+    }
+  }
+
+  async function handleCheckAuth() {
+    if (step.type !== "waiting") return;
+    setChecking(true);
+    setErr("");
+    try {
+      const result = await api.checkPlexPin(step.pinId);
+      if (!result.resolved) {
+        setErr("Authorization not yet completed. Please authorize in the Plex window, then try again.");
+        return;
+      }
+      const servers = result.servers ?? [];
+      if (servers.length === 0) {
+        setErr("No Plex servers found on your account.");
+        return;
+      }
+      setStep({ type: "pick_server", authToken: result.authToken!, servers });
+      // Pre-select the first server + first connection
+      setSelectedServer(servers[0]);
+      const firstConn = servers[0].connections.find((c) => !c.relay) ?? servers[0].connections[0];
+      setSelectedUri(firstConn?.uri ?? "");
+    } catch {
+      setErr("Failed to check authorization. Please try again.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  function handleCancelConnect() {
+    setStep({ type: "idle" });
+    setSelectedServer(null);
+    setSelectedUri("");
+    setErr("");
+  }
+
+  async function handleSaveServer() {
+    if (step.type !== "pick_server" || !selectedServer || !selectedUri) return;
+    setSaving(true);
+    setErr("");
+    try {
+      await api.createIntegration({
+        provider: "plex",
+        config: {
+          plexToken: step.authToken,
+          serverUrl: selectedUri,
+          serverId: selectedServer.clientIdentifier,
+          serverName: selectedServer.name,
+          syncMovies,
+          syncEpisodes,
+        },
+      });
+      setStep({ type: "idle" });
+      setMsg("Plex server connected successfully.");
+      refresh();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Failed to save integration.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSync(id: string) {
+    setMsg("");
+    setErr("");
+    setSyncing(id);
+    try {
+      const result = await api.triggerPlexSync(id);
+      if (result.success) {
+        setMsg(`Sync complete — ${result.moviesMarked ?? 0} movies, ${result.episodesMarked ?? 0} episodes marked watched.`);
+      } else {
+        setErr(result.error ?? "Sync failed.");
+      }
+      refresh();
+    } catch {
+      setErr("Sync failed.");
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  async function handleToggle(integration: Integration) {
+    setMsg("");
+    setErr("");
+    setToggling(integration.id);
+    try {
+      await api.updateIntegration(integration.id, { enabled: !integration.enabled });
+      refresh();
+    } catch {
+      setErr("Failed to update integration.");
+    } finally {
+      setToggling(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setMsg("");
+    setErr("");
+    try {
+      await api.deleteIntegration(id);
+      setMsg("Plex integration disconnected.");
+      refresh();
+    } catch {
+      setErr("Failed to disconnect integration.");
+    }
+  }
+
+  function formatSyncTime(iso: string | null) {
+    if (!iso) return "Never";
+    try {
+      return new Date(iso).toLocaleString();
+    } catch {
+      return iso;
+    }
+  }
+
+  if (loading) return null;
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-1">Plex</h2>
+      <p className="text-zinc-400 text-sm mb-4">Connect your Plex server to automatically sync your watched history.</p>
+
+      {msg && (
+        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">{msg}</div>
+      )}
+      {err && (
+        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">{err}</div>
+      )}
+
+      {/* Connected integrations */}
+      {integrations.length > 0 && (
+        <div className="space-y-3 mb-4">
+          {integrations.map((integration) => (
+            <div key={integration.id} className="bg-zinc-900 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-medium">{integration.name}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                    integration.enabled ? "bg-green-900/50 text-green-300" : "bg-zinc-700 text-zinc-400"
+                  }`}>
+                    {integration.enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleToggle(integration)}
+                    disabled={toggling === integration.id}
+                    className="text-xs text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {toggling === integration.id ? "..." : integration.enabled ? "Disable" : "Enable"}
+                  </button>
+                  <button
+                    onClick={() => handleSync(integration.id)}
+                    disabled={syncing === integration.id || !integration.enabled}
+                    className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50"
+                  >
+                    {syncing === integration.id ? "Syncing..." : "Sync now"}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(integration.id)}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+              <div className="text-xs text-zinc-500 space-y-0.5">
+                <div>Server: <span className="text-zinc-400">{integration.config.serverUrl}</span></div>
+                <div>Last sync: <span className="text-zinc-400">{formatSyncTime(integration.last_sync_at)}</span></div>
+                {integration.last_sync_error && (
+                  <div className="text-red-400">Error: {integration.last_sync_error}</div>
+                )}
+                <div className="flex gap-3 mt-1">
+                  <span className={integration.config.syncMovies ? "text-zinc-400" : "text-zinc-600"}>Movies</span>
+                  <span className={integration.config.syncEpisodes ? "text-zinc-400" : "text-zinc-600"}>Episodes</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Connect flow */}
+      {step.type === "idle" && (
+        <button
+          onClick={handleConnect}
+          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors"
+        >
+          Connect Plex
+        </button>
+      )}
+
+      {step.type === "waiting" && (
+        <div className="bg-zinc-900 rounded-lg p-4 space-y-3">
+          <p className="text-sm text-zinc-300">
+            A Plex authorization window has been opened. Authorize Remindarr in that window, then click <strong>Check authorization</strong>.
+          </p>
+          <p className="text-xs text-zinc-500">
+            Didn't see a window?{" "}
+            <a href={step.authUrl} target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400">
+              Open authorization page
+            </a>
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCheckAuth}
+              disabled={checking}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              {checking ? "Checking..." : "Check authorization"}
+            </button>
+            <button
+              onClick={handleCancelConnect}
+              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step.type === "pick_server" && (
+        <div className="bg-zinc-900 rounded-lg p-4 space-y-4">
+          <h3 className="text-white font-medium">Select a Plex server</h3>
+
+          {/* Server selection */}
+          <div className="space-y-2">
+            {step.servers.map((server) => (
+              <label key={server.clientIdentifier} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="plex_server"
+                  checked={selectedServer?.clientIdentifier === server.clientIdentifier}
+                  onChange={() => {
+                    setSelectedServer(server);
+                    const firstConn = server.connections.find((c) => !c.relay) ?? server.connections[0];
+                    setSelectedUri(firstConn?.uri ?? "");
+                  }}
+                  className="accent-amber-500"
+                />
+                <span className="text-white text-sm">{server.name}</span>
+              </label>
+            ))}
+          </div>
+
+          {/* Connection URL */}
+          {selectedServer && (
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Connection URL</label>
+              <select
+                value={selectedUri}
+                onChange={(e) => setSelectedUri(e.target.value)}
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              >
+                {selectedServer.connections.map((conn) => (
+                  <option key={conn.uri} value={conn.uri}>
+                    {conn.uri}{conn.local ? " (local)" : conn.relay ? " (relay)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Sync options */}
+          <div>
+            <label className="block text-xs text-zinc-400 mb-2">Sync options</label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={syncMovies}
+                  onChange={(e) => setSyncMovies(e.target.checked)}
+                  className="accent-amber-500"
+                />
+                Sync watched movies
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={syncEpisodes}
+                  onChange={(e) => setSyncEpisodes(e.target.checked)}
+                  className="accent-amber-500"
+                />
+                Sync watched episodes
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleSaveServer}
+              disabled={saving || !selectedServer || !selectedUri}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              {saving ? "Connecting..." : "Connect"}
+            </button>
+            <button
+              onClick={handleCancelConnect}
+              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

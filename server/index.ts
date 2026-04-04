@@ -22,6 +22,7 @@ import jobsRoutes from "./routes/jobs";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
+import integrationRoutes from "./routes/integrations";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
@@ -200,6 +201,10 @@ app.route("/api/imdb", imdbRoutes);
 app.use("/api/notifiers/*", requireAuth);
 app.use("/api/notifiers", requireAuth);
 app.route("/api/notifiers", notifierRoutes);
+
+app.use("/api/integrations/*", requireAuth);
+app.use("/api/integrations", requireAuth);
+app.route("/api/integrations", integrationRoutes);
 
 // Admin routes
 app.use("/api/admin/*", requireAuth, requireAdmin);

@@ -99,6 +99,13 @@
       "when": 1775252400000,
       "tag": "0013_add_profile_visibility_states",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1775352400000,
+      "tag": "0014_add_integrations",
+      "breakpoints": true
     }
   ]
 }

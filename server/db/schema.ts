@@ -293,6 +293,28 @@ export const notifiers = sqliteTable(
   ]
 );
 
+export const integrations = sqliteTable(
+  "integrations",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    name: text("name").notNull(),
+    config: text("config").notNull(),
+    enabled: integer("enabled").notNull().default(1),
+    lastSyncAt: text("last_sync_at"),
+    lastSyncError: text("last_sync_error"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    index("idx_integrations_user_id").on(table.userId),
+    index("idx_integrations_provider").on(table.provider),
+  ]
+);
+
 export const passkey = sqliteTable("passkey", {
   id: text("id").primaryKey(),
   name: text("name"),
@@ -460,6 +482,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   sentRecommendations: many(recommendations),
   recommendationReads: many(recommendationReads),
   createdInvitations: many(invitations, { relationName: "createdBy" }),
+  integrations: many(integrations),
+}));
+
+export const integrationsRelations = relations(integrations, ({ one }) => ({
+  user: one(users, { fields: [integrations.userId], references: [users.id] }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -523,11 +550,12 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
-  follows, ratings, recommendations, recommendationReads, invitations,
+  follows, ratings, recommendations, recommendationReads, invitations, integrations,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
   followsRelations, ratingsRelations, recommendationsRelations, recommendationReadsRelations, invitationsRelations,
+  integrationsRelations,
 };
 
 // Re-export the union type from platform for convenience
