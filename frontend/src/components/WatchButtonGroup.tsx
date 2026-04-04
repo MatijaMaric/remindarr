@@ -59,7 +59,7 @@ function DropdownProviderItem({ offer, isLg }: { offer: Offer; isLg: boolean }) 
   const [hovered, setHovered] = useState(false);
   const c = getProviderColor(offer.provider_id);
   const lbl = monetizationLabel(offer.monetization_type);
-  const useMobileDeepLink = offer.provider_id === PLEX_PROVIDER_ID && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const useMobileDeepLink = offer.provider_id === PLEX_PROVIDER_ID && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const effectiveUrl = useMobileDeepLink ? plexDeepLink(offer.url) : offer.url;
 
   return (
@@ -91,7 +91,7 @@ function SplitWatchButton({ providers, size, fullWidth }: { providers: Offer[]; 
   const label = monetizationLabel(primary.monetization_type);
   const isLg = size === "lg";
 
-  const useMobileDeepLink = primary.provider_id === PLEX_PROVIDER_ID && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const useMobileDeepLink = primary.provider_id === PLEX_PROVIDER_ID && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const primaryUrl = useMobileDeepLink ? plexDeepLink(primary.url) : primary.url;
 
   return (

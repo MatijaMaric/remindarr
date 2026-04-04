@@ -4,8 +4,8 @@ import { getProviderColor } from "../data/providerColors";
 
 export const PLEX_PROVIDER_ID = 9999;
 
-function isMobileDevice(): boolean {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function isIosDevice(): boolean {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 export function plexDeepLink(webUrl: string): string {
@@ -56,7 +56,7 @@ export default function WatchButton({
   const color = getProviderColor(providerId);
   const [hovered, setHovered] = useState(false);
   const isPlex = providerId === PLEX_PROVIDER_ID;
-  const useMobileDeepLink = isPlex && isMobileDevice();
+  const useMobileDeepLink = isPlex && isIosDevice();
   const effectiveUrl = useMobileDeepLink ? plexDeepLink(url) : url;
   const target = useMobileDeepLink ? undefined : "_blank";
 
