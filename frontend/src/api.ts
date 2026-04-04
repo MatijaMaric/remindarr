@@ -565,6 +565,13 @@ export async function checkPlexPin(pinId: number): Promise<{
   return fetchJson(`/integrations/plex/pin/${pinId}`, { method: "POST" });
 }
 
+export async function refreshPlexServers(authToken: string): Promise<{ servers: PlexServer[] }> {
+  return fetchJson("/integrations/plex/servers", {
+    method: "POST",
+    body: JSON.stringify({ authToken }),
+  });
+}
+
 export async function triggerPlexSync(
   id: string
 ): Promise<{ success: boolean; moviesMarked?: number; episodesMarked?: number; error?: string }> {

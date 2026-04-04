@@ -70,6 +70,27 @@ app.post("/plex/pin/:pinId", async (c) => {
   });
 });
 
+// POST /plex/servers — refresh server list with an existing token
+app.post("/plex/servers", async (c) => {
+  const body = await c.req.json();
+  const { authToken } = body;
+  if (!authToken) return err(c, "authToken is required");
+
+  try {
+    const servers = await getServers(authToken);
+    return ok(c, {
+      servers: servers.map((s) => ({
+        name: s.name,
+        clientIdentifier: s.clientIdentifier,
+        connections: s.connections,
+      })),
+    });
+  } catch (e) {
+    Sentry.captureException(e);
+    return err(c, "Failed to fetch Plex servers", 500);
+  }
+});
+
 // POST / — save a new integration
 app.post("/", async (c) => {
   const user = c.get("user")!;

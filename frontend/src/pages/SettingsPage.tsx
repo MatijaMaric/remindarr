@@ -1480,14 +1480,17 @@ type ConnectStep =
   | { type: "waiting"; pinId: number; authUrl: string }
   | { type: "pick_server"; authToken: string; servers: PlexServer[] };
 
+const PLEX_POPUP_FEATURES = "width=800,height=700,menubar=no,toolbar=no,location=no,status=no";
+const PIN_POLL_INTERVAL_MS = 2000;
+
 function PlexSection() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<ConnectStep>({ type: "idle" });
-  const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [refreshingServers, setRefreshingServers] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
@@ -1508,42 +1511,40 @@ function PlexSection() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Auto-poll PIN status while waiting
+  useEffect(() => {
+    if (step.type !== "waiting") return;
+    const timer = setInterval(async () => {
+      try {
+        const result = await api.checkPlexPin(step.pinId);
+        if (!result.resolved) return;
+        clearInterval(timer);
+        const servers = result.servers ?? [];
+        if (servers.length === 0) {
+          setErr("No Plex servers found on your account.");
+          setStep({ type: "idle" });
+          return;
+        }
+        setStep({ type: "pick_server", authToken: result.authToken!, servers });
+        setSelectedServer(servers[0]);
+        const firstConn = servers[0].connections.find((c) => !c.relay) ?? servers[0].connections[0];
+        setSelectedUri(firstConn?.uri ?? "");
+      } catch {
+        // Silently retry on next interval
+      }
+    }, PIN_POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [step]);
+
   async function handleConnect() {
     setMsg("");
     setErr("");
     try {
       const { pinId, authUrl } = await api.createPlexPin();
-      window.open(authUrl, "_blank", "noopener");
+      window.open(authUrl, "plex_auth", PLEX_POPUP_FEATURES);
       setStep({ type: "waiting", pinId, authUrl });
     } catch {
       setErr("Failed to start Plex authorization. Please try again.");
-    }
-  }
-
-  async function handleCheckAuth() {
-    if (step.type !== "waiting") return;
-    setChecking(true);
-    setErr("");
-    try {
-      const result = await api.checkPlexPin(step.pinId);
-      if (!result.resolved) {
-        setErr("Authorization not yet completed. Please authorize in the Plex window, then try again.");
-        return;
-      }
-      const servers = result.servers ?? [];
-      if (servers.length === 0) {
-        setErr("No Plex servers found on your account.");
-        return;
-      }
-      setStep({ type: "pick_server", authToken: result.authToken!, servers });
-      // Pre-select the first server + first connection
-      setSelectedServer(servers[0]);
-      const firstConn = servers[0].connections.find((c) => !c.relay) ?? servers[0].connections[0];
-      setSelectedUri(firstConn?.uri ?? "");
-    } catch {
-      setErr("Failed to check authorization. Please try again.");
-    } finally {
-      setChecking(false);
     }
   }
 
@@ -1552,6 +1553,33 @@ function PlexSection() {
     setSelectedServer(null);
     setSelectedUri("");
     setErr("");
+  }
+
+  function selectServer(server: PlexServer) {
+    setSelectedServer(server);
+    const firstConn = server.connections.find((c) => !c.relay) ?? server.connections[0];
+    setSelectedUri(firstConn?.uri ?? "");
+  }
+
+  async function handleRefreshServers() {
+    if (step.type !== "pick_server") return;
+    setRefreshingServers(true);
+    setErr("");
+    try {
+      const { servers } = await api.refreshPlexServers(step.authToken);
+      setStep({ type: "pick_server", authToken: step.authToken, servers });
+      if (servers.length > 0) {
+        // Re-select current server if it still exists, otherwise pick first
+        const current = selectedServer
+          ? servers.find((s) => s.clientIdentifier === selectedServer.clientIdentifier)
+          : null;
+        selectServer(current ?? servers[0]);
+      }
+    } catch {
+      setErr("Failed to refresh server list.");
+    } finally {
+      setRefreshingServers(false);
+    }
   }
 
   async function handleSaveServer() {
@@ -1714,29 +1742,20 @@ function PlexSection() {
       {step.type === "waiting" && (
         <div className="bg-zinc-900 rounded-lg p-4 space-y-3">
           <p className="text-sm text-zinc-300">
-            A Plex authorization window has been opened. Authorize Remindarr in that window, then click <strong>Check authorization</strong>.
+            Waiting for authorization&hellip; Sign in and authorize Remindarr in the Plex popup.
           </p>
           <p className="text-xs text-zinc-500">
-            Didn't see a window?{" "}
-            <a href={step.authUrl} target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400">
+            Popup blocked?{" "}
+            <a href={step.authUrl} target="plex_auth" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400">
               Open authorization page
             </a>
           </p>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCheckAuth}
-              disabled={checking}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors disabled:opacity-50"
-            >
-              {checking ? "Checking..." : "Check authorization"}
-            </button>
-            <button
-              onClick={handleCancelConnect}
-              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
+          <button
+            onClick={handleCancelConnect}
+            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
@@ -1752,11 +1771,7 @@ function PlexSection() {
                   type="radio"
                   name="plex_server"
                   checked={selectedServer?.clientIdentifier === server.clientIdentifier}
-                  onChange={() => {
-                    setSelectedServer(server);
-                    const firstConn = server.connections.find((c) => !c.relay) ?? server.connections[0];
-                    setSelectedUri(firstConn?.uri ?? "");
-                  }}
+                  onChange={() => selectServer(server)}
                   className="accent-amber-500"
                 />
                 <span className="text-white text-sm">{server.name}</span>
@@ -1767,7 +1782,16 @@ function PlexSection() {
           {/* Connection URL */}
           {selectedServer && (
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Connection URL</label>
+              <div className="flex items-center gap-2 mb-1">
+                <label className="text-xs text-zinc-400">Connection URL</label>
+                <button
+                  onClick={handleRefreshServers}
+                  disabled={refreshingServers}
+                  className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50"
+                >
+                  {refreshingServers ? "Refreshing..." : "Refresh"}
+                </button>
+              </div>
               <select
                 value={selectedUri}
                 onChange={(e) => setSelectedUri(e.target.value)}
