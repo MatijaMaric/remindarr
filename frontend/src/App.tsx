@@ -11,6 +11,7 @@ import InstallPrompt from "./components/InstallPrompt";
 import NotificationPrompt from "./components/NotificationPrompt";
 import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
+import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
 
 // Retry dynamic imports once on failure (handles stale chunks after deploy)
 function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>) {
@@ -56,6 +57,7 @@ export default function App() {
   const location = useLocation();
   const { t } = useTranslation();
   const isReelsPage = location.pathname === "/reels";
+  usePushSubscriptionSync();
 
   return (
     <div className={`bg-zinc-950 text-zinc-100 ${isReelsPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}>

@@ -95,6 +95,39 @@ app.post("/", async (c) => {
   return c.json({ notifier }, 201);
 });
 
+// POST /renew-subscription — update webpush subscription config after SW update
+app.post("/renew-subscription", async (c) => {
+  const user = c.get("user")!;
+  const body = await c.req.json();
+
+  const { endpoint, p256dh, auth } = body;
+
+  const providerImpl = getProvider("webpush");
+  if (!providerImpl) {
+    return err(c, "webpush provider not available", 500);
+  }
+
+  const validation = providerImpl.validateConfig({ endpoint, p256dh, auth });
+  if (!validation.valid) {
+    return err(c, validation.error ?? "Invalid subscription config");
+  }
+
+  const notifiers = await getNotifiersByUser(user.id);
+  const webpushNotifier = notifiers.find((n) => n.provider === "webpush");
+  if (!webpushNotifier) {
+    return err(c, "No webpush notifier found", 404);
+  }
+
+  await updateNotifier(webpushNotifier.id, user.id, {
+    config: { endpoint, p256dh, auth },
+    enabled: true,
+  });
+  await refreshNotificationSchedule();
+
+  const notifier = await getNotifierById(webpushNotifier.id, user.id);
+  return ok(c, { notifier });
+});
+
 // PUT /:id — update notifier
 app.put("/:id", async (c) => {
   const user = c.get("user")!;
