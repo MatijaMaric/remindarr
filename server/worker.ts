@@ -199,7 +199,8 @@ function createApp(env: Env) {
         const password = crypto.randomUUID().slice(0, 16);
         const hash = await platform.hashPassword(password);
         await createUser("admin", hash, "Admin", "local", undefined, true);
-        logger.info("Admin account created", { username: "admin", password });
+        logger.info("Admin account created", { username: "admin" });
+        console.log(`\n  Default admin password: ${password}\n  Change it after first login.\n`);
       }
     }
 
@@ -223,7 +224,7 @@ function createApp(env: Env) {
     }
     Sentry.captureException(err);
     logger.error("Unhandled error", { error: err.message, stack: err.stack });
-    return c.json({ error: "Internal server error", detail: err.message, stack: err.stack }, 500);
+    return c.json({ error: "Internal server error" }, 500);
   });
 
   // CORS — restricted to explicit origins via CORS_ORIGIN env var
@@ -237,6 +238,9 @@ function createApp(env: Env) {
 
   // Health check
   app.route("/api/health", healthRoutes);
+
+  // Rate limit auth routes: 20 requests per minute to prevent brute-force attacks
+  app.use("/api/auth/*", rateLimiter({ limit: 20, windowMs: 60_000 }));
 
   // Custom auth routes (providers endpoint) — must be before better-auth catch-all
   app.route("/api/auth/custom", authCustomRoutes);
@@ -334,12 +338,14 @@ function createApp(env: Env) {
   app.use("/api/details", optionalAuth);
   app.route("/api/details", detailsRoutes);
 
-  // Sync
+  // Sync (admin only — rate limited + require admin)
   app.use("/api/sync/*", rateLimiter({ limit: 5, windowMs: 60_000 }));
   app.use("/api/sync", rateLimiter({ limit: 5, windowMs: 60_000 }));
+  app.use("/api/sync/*", requireAuth, requireAdmin);
+  app.use("/api/sync", requireAuth, requireAdmin);
   app.route("/api/sync", syncRoutes);
 
-  // Episodes
+  // Episodes (optionalAuth for upcoming/status, requireAuth for sync)
   app.use("/api/episodes/*", optionalAuth);
   app.use("/api/episodes", optionalAuth);
   app.route("/api/episodes", episodesRoutes);
@@ -418,9 +424,7 @@ const handler = {
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
       });
-      const msg = err instanceof Error ? err.message : String(err);
-      const stack = err instanceof Error ? err.stack : undefined;
-      return new Response(JSON.stringify({ error: msg, stack }), {
+      return new Response(JSON.stringify({ error: "Internal server error" }), {
         status: 500,
         headers: { "content-type": "application/json" },
       });
@@ -487,7 +491,7 @@ export default withSentry(
   (env: Env) => ({
     dsn: env.SENTRY_DSN,
     tracesSampleRate: 1.0,
-    sendDefaultPii: true,
+    sendDefaultPii: false,
   }),
   handler,
 );

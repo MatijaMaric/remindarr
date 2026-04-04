@@ -7,6 +7,6 @@ if (dsn) {
     dsn,
     integrations: [Sentry.honoIntegration()],
     tracesSampleRate: 1.0,
-    sendDefaultPii: true,
+    sendDefaultPii: false,
   });
 }
