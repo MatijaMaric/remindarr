@@ -9,6 +9,8 @@ import {
 } from "../db/repository";
 import { createPin, checkPin, buildPlexAuthUrl, getServers } from "../plex/client";
 import { syncPlexWatched } from "../plex/sync";
+import { syncPlexLibrary } from "../plex/library-sync";
+import { enqueueJobReturningId } from "../jobs/processor";
 import { ok, err } from "./response";
 import Sentry from "../sentry";
 
@@ -118,6 +120,10 @@ app.post("/", async (c) => {
 
   const id = await createIntegration(user.id, provider, integrationName, integrationConfig);
   const integration = await getIntegrationById(id, user.id);
+
+  // Trigger an immediate library scan so Plex content shows up right away
+  enqueueJobReturningId("sync-plex-library");
+
   return c.json({ integration: sanitize(integration!) }, 201);
 });
 
@@ -168,8 +174,23 @@ app.post("/:id/sync", async (c) => {
   if (integration.provider !== "plex") return err(c, "Only Plex integrations support manual sync");
 
   try {
-    const result = await syncPlexWatched({ id, user_id: user.id, config: integration.config as any });
-    return ok(c, { success: true, ...result });
+    const [watchedResult, libraryResult] = await Promise.allSettled([
+      syncPlexWatched({ id, user_id: user.id, config: integration.config as any }),
+      syncPlexLibrary({ id, user_id: user.id, config: integration.config as any }),
+    ]);
+    const watchedData = watchedResult.status === "fulfilled" ? watchedResult.value : null;
+    const libraryData = libraryResult.status === "fulfilled" ? libraryResult.value : null;
+    const error = watchedResult.status === "rejected"
+      ? (watchedResult.reason instanceof Error ? watchedResult.reason.message : "Sync failed")
+      : (libraryResult.status === "rejected"
+        ? (libraryResult.reason instanceof Error ? libraryResult.reason.message : "Library sync failed")
+        : undefined);
+    return ok(c, {
+      success: !error,
+      ...(watchedData ?? {}),
+      ...(libraryData ?? {}),
+      ...(error ? { error } : {}),
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Sync failed";
     return ok(c, { success: false, error: message });

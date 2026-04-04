@@ -2,6 +2,7 @@ import { logger } from "../logger";
 import { registerHandler } from "./worker";
 import { getEnabledIntegrationsByProvider } from "../db/repository";
 import { syncPlexWatched } from "../plex/sync";
+import { syncPlexLibrary } from "../plex/library-sync";
 
 const log = logger.child({ module: "sync" });
 import { registerCron, enqueueJob } from "./queue";
@@ -154,11 +155,37 @@ export function registerSyncJobs() {
     log.info("Plex watched sync complete", { synced, failed });
   });
 
+  registerHandler("sync-plex-library", async () => {
+    const integrations = await getEnabledIntegrationsByProvider("plex");
+    if (integrations.length === 0) {
+      log.info("No enabled Plex integrations, skipping library sync");
+      return;
+    }
+    log.info("Starting Plex library sync", { count: integrations.length });
+    let synced = 0;
+    let failed = 0;
+    for (const integration of integrations) {
+      try {
+        const result = await syncPlexLibrary(integration as any);
+        log.info("Plex library sync done", {
+          integrationId: integration.id,
+          moviesAdded: result.moviesAdded,
+          showsAdded: result.showsAdded,
+        });
+        synced++;
+      } catch {
+        failed++;
+      }
+    }
+    log.info("Plex library sync complete", { synced, failed });
+  });
+
   // ─── Cron Schedules ────────────────────────────────────────────────────
 
   registerCron("sync-titles", CONFIG.SYNC_TITLES_CRON);
   registerCron("sync-episodes", CONFIG.SYNC_EPISODES_CRON);
   registerCron("sync-plex-watched", CONFIG.SYNC_PLEX_CRON);
+  registerCron("sync-plex-library", CONFIG.SYNC_PLEX_LIBRARY_CRON);
 
   if (CONFIG.STREAMING_AVAILABILITY_API_KEY) {
     registerCron("sync-deep-links", CONFIG.SYNC_DEEP_LINKS_CRON);

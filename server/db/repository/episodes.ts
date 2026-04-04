@@ -2,7 +2,7 @@ import { eq, and, sql, gte, lt, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
-import { getOffersForTitles } from "./offers";
+import { getOffersWithPlex } from "./offers";
 import { localDateForTimezone } from "../../utils/timezone";
 import type { MonthFilters } from "./titles";
 
@@ -94,7 +94,7 @@ export async function getEpisodesByMonth(filters: MonthFilters, userId?: string)
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
-    const offersByTitle = await getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
+    const offersByTitle = await getOffersWithPlex([...new Set(rows.map((r) => r.title_id))], userId);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
@@ -138,7 +138,7 @@ export async function getEpisodesByDateRange(startDate: string, endDate: string,
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
-    const offersByTitle = await getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
+    const offersByTitle = await getOffersWithPlex([...new Set(rows.map((r) => r.title_id))], userId);
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
@@ -193,7 +193,7 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
       .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
       .all();
 
-    const offersByTitle = await getOffersForTitles([...new Set(rows.map((r) => r.title_id))]);
+    const offersByTitle = await getOffersWithPlex([...new Set(rows.map((r) => r.title_id))], userId);
     return rows.map((row) => ({
       ...row,
       is_watched: false,

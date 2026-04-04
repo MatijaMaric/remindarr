@@ -1,7 +1,14 @@
 // Re-exports all repository functions for backward compatibility.
 // Individual modules can be imported directly for smaller dependency scope.
 
-export { getOffersForTitle, getOffersForTitles, getTitlesNeedingSaEnrichment } from "./offers";
+export { getOffersForTitle, getOffersForTitles, getOffersWithPlex, getTitlesNeedingSaEnrichment } from "./offers";
+export {
+  upsertPlexLibraryItems,
+  deleteStaleLibraryItems,
+  deletePlexLibraryByIntegration,
+  getPlexOffersForUser,
+  PLEX_PROVIDER_ID,
+} from "./plex-library";
 
 export {
   upsertTitles,

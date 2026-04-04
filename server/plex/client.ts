@@ -155,6 +155,19 @@ export async function getWatchedMovies(
   return items.filter((m) => (m.viewCount ?? 0) > 0);
 }
 
+export async function getAllMoviesInSection(
+  serverUrl: string,
+  token: string,
+  sectionKey: string
+): Promise<PlexMovieItem[]> {
+  const url = `${serverUrl}/library/sections/${sectionKey}/all?type=1&includeGuids=1`;
+  const data = await plexFetch<{ MediaContainer: { Metadata?: PlexMovieItem[] } }>(
+    url,
+    { headers: plexHeaders(token) }
+  );
+  return data.MediaContainer?.Metadata ?? [];
+}
+
 export async function getWatchedEpisodes(
   serverUrl: string,
   token: string,

@@ -407,6 +407,28 @@ export const invitations = sqliteTable(
   ]
 );
 
+export const plexLibraryItems = sqliteTable(
+  "plex_library_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    integrationId: text("integration_id")
+      .notNull()
+      .references(() => integrations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull(),
+    ratingKey: text("rating_key").notNull(),
+    mediaType: text("media_type").notNull(), // "movie" or "show"
+    syncedAt: text("synced_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    uniqueIndex("idx_plex_library_user_title").on(table.userId, table.titleId),
+    index("idx_plex_library_integration").on(table.integrationId),
+    index("idx_plex_library_title").on(table.titleId),
+  ]
+);
+
 export const jobs = sqliteTable(
   "jobs",
   {
@@ -485,8 +507,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   integrations: many(integrations),
 }));
 
-export const integrationsRelations = relations(integrations, ({ one }) => ({
+export const integrationsRelations = relations(integrations, ({ one, many }) => ({
   user: one(users, { fields: [integrations.userId], references: [users.id] }),
+  plexLibraryItems: many(plexLibraryItems),
+}));
+
+export const plexLibraryItemsRelations = relations(plexLibraryItems, ({ one }) => ({
+  integration: one(integrations, { fields: [plexLibraryItems.integrationId], references: [integrations.id] }),
+  user: one(users, { fields: [plexLibraryItems.userId], references: [users.id] }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -550,12 +578,12 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
-  follows, ratings, recommendations, recommendationReads, invitations, integrations,
+  follows, ratings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
   followsRelations, ratingsRelations, recommendationsRelations, recommendationReadsRelations, invitationsRelations,
-  integrationsRelations,
+  integrationsRelations, plexLibraryItemsRelations,
 };
 
 // Re-export the union type from platform for convenience
