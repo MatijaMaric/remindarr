@@ -1,5 +1,5 @@
 import { logger } from "../logger";
-import { getLibrarySections, getAllMoviesInSection, getShowsInSection, PlexAuthError } from "./client";
+import { getLibrarySections, getAllMoviesInSection, getShowsInSection, getPlexMetadataSlug, PlexAuthError } from "./client";
 import { parsePlexGuids, parseLegacyGuid, toRemindarrTitleId } from "./guid";
 import { upsertPlexLibraryItems, deleteStaleLibraryItems } from "../db/repository/plex-library";
 import { updateIntegrationSyncStatus, disableIntegration } from "../db/repository";
@@ -34,17 +34,29 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
     const movieSections = sections.filter((s) => s.type === "movie");
     for (const section of movieSections) {
       const movies = await getAllMoviesInSection(serverUrl, plexToken, section.key);
-      for (const item of movies) {
+      const slugResults = await Promise.allSettled(
+        movies.map((item) => {
+          const guids = parsePlexGuids(item.Guid) || parseLegacyGuid(item.guid);
+          return guids.tmdbId
+            ? getPlexMetadataSlug(guids.tmdbId.toString(), "movie", plexToken)
+            : Promise.resolve(null);
+        })
+      );
+      for (let i = 0; i < movies.length; i++) {
+        const item = movies[i];
         const guids = parsePlexGuids(item.Guid) || parseLegacyGuid(item.guid);
         if (!guids.tmdbId) continue;
         const titleId = toRemindarrTitleId("movie", guids.tmdbId);
         currentTitleIds.push(titleId);
+        const slugResult = slugResults[i];
+        const slug = slugResult.status === "fulfilled" ? slugResult.value : null;
         itemsToUpsert.push({
           integrationId,
           userId,
           titleId,
           ratingKey: item.ratingKey,
           mediaType: "movie",
+          plexSlug: slug,
         });
         moviesAdded++;
       }
@@ -54,17 +66,29 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
     const showSections = sections.filter((s) => s.type === "show");
     for (const section of showSections) {
       const shows = await getShowsInSection(serverUrl, plexToken, section.key);
-      for (const item of shows) {
+      const slugResults = await Promise.allSettled(
+        shows.map((item) => {
+          const guids = parsePlexGuids(item.Guid) || parseLegacyGuid(item.guid);
+          return guids.tmdbId
+            ? getPlexMetadataSlug(guids.tmdbId.toString(), "show", plexToken)
+            : Promise.resolve(null);
+        })
+      );
+      for (let i = 0; i < shows.length; i++) {
+        const item = shows[i];
         const guids = parsePlexGuids(item.Guid) || parseLegacyGuid(item.guid);
         if (!guids.tmdbId) continue;
         const titleId = toRemindarrTitleId("show", guids.tmdbId);
         currentTitleIds.push(titleId);
+        const slugResult = slugResults[i];
+        const slug = slugResult.status === "fulfilled" ? slugResult.value : null;
         itemsToUpsert.push({
           integrationId,
           userId,
           titleId,
           ratingKey: item.ratingKey,
           mediaType: "show",
+          plexSlug: slug,
         });
         showsAdded++;
       }

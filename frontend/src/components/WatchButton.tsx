@@ -4,18 +4,34 @@ import { getProviderColor } from "../data/providerColors";
 
 export const PLEX_PROVIDER_ID = 9999;
 
-function isMobileDevice(): boolean {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+type PlexPlatform = "ios" | "android" | "desktop";
+
+export function getPlexPlatform(): PlexPlatform {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
+  if (/Android/i.test(ua)) return "android";
+  return "desktop";
 }
 
-export function plexDeepLink(webUrl: string): string {
-  // Input:  https://app.plex.tv/#!/server/{serverId}/details?key=%2Flibrary%2Fmetadata%2F{ratingKey}
-  // Output: plex://preplay/?metadataKey=/library/metadata/{ratingKey}&server={serverId}
+export function plexDeepLink(webUrl: string, platform: PlexPlatform): string {
   try {
     const hashPart = webUrl.split("#!/")[1];
     const [pathPart, queryPart] = hashPart.split("?");
+    const params = new URLSearchParams(queryPart);
+
+    if (platform === "android") {
+      // Use watch.plex.tv deep link if a slug was embedded by the server
+      const slug = params.get("watchSlug");
+      const mediaType = params.get("mediaType");
+      if (slug && mediaType) {
+        return `https://watch.plex.tv/${mediaType}/${slug}`;
+      }
+      return webUrl; // No slug — fall back to browser
+    }
+
+    // iOS: plex://preplay/?metadataKey=...&server=...
     const serverId = pathPart.split("/")[1];
-    const metadataKey = new URLSearchParams(queryPart).get("key");
+    const metadataKey = params.get("key");
     if (!serverId || !metadataKey) return webUrl;
     return `plex://preplay/?metadataKey=${encodeURIComponent(metadataKey)}&server=${serverId}`;
   } catch {
@@ -56,8 +72,9 @@ export default function WatchButton({
   const color = getProviderColor(providerId);
   const [hovered, setHovered] = useState(false);
   const isPlex = providerId === PLEX_PROVIDER_ID;
-  const useMobileDeepLink = isPlex && isMobileDevice();
-  const effectiveUrl = useMobileDeepLink ? plexDeepLink(url) : url;
+  const platform = isPlex ? getPlexPlatform() : "desktop";
+  const useMobileDeepLink = platform === "ios" || platform === "android";
+  const effectiveUrl = useMobileDeepLink ? plexDeepLink(url, platform) : url;
   const target = useMobileDeepLink ? undefined : "_blank";
 
   if (variant === "compact") {

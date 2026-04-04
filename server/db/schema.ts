@@ -420,6 +420,7 @@ export const plexLibraryItems = sqliteTable(
     titleId: text("title_id").notNull(),
     ratingKey: text("rating_key").notNull(),
     mediaType: text("media_type").notNull(), // "movie" or "show"
+    plexSlug: text("plex_slug"), // watch.plex.tv slug for Android deep linking
     syncedAt: text("synced_at").default(sql`(datetime('now'))`),
   },
   (table) => [

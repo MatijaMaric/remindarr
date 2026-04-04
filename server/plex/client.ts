@@ -194,3 +194,27 @@ export async function getShowsInSection(
   );
   return data.MediaContainer?.Metadata ?? [];
 }
+
+// ─── Metadata / slugs ────────────────────────────────────────────────────────
+
+/**
+ * Looks up the watch.plex.tv slug for a title via the Plex metadata provider API.
+ * Returns null if the lookup fails or the title has no slug.
+ */
+export async function getPlexMetadataSlug(
+  tmdbId: string,
+  mediaType: "movie" | "show",
+  token: string
+): Promise<string | null> {
+  const type = mediaType === "movie" ? 1 : 2;
+  const url = `https://metadata.provider.plex.tv/library/metadata/matches?guid=tmdb://${tmdbId}&type=${type}`;
+  try {
+    const data = await plexFetch<{ MediaContainer?: { Metadata?: Array<{ slug?: string }> } }>(
+      url,
+      { headers: plexHeaders(token) }
+    );
+    return data.MediaContainer?.Metadata?.[0]?.slug ?? null;
+  } catch {
+    return null;
+  }
+}
