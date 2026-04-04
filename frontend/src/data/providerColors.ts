@@ -75,6 +75,8 @@ const PROVIDER_COLORS: Record<number, ProviderColor> = {
   72: { bg: "#EE4036", hover: "#C4342C", text: "#ffffff" },
   // Viaplay
   76: { bg: "#181726", hover: "#0F0E1A", text: "#ffffff" },
+  // Plex (synthetic provider ID — not a TMDB ID)
+  9999: { bg: "#E5A00D", hover: "#CC8E0B", text: "#000000" },
 };
 
 const DEFAULT_PROVIDER_COLOR: ProviderColor = {

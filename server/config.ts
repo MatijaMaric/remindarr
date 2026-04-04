@@ -60,6 +60,7 @@ export const CONFIG = {
   // Plex
   PLEX_CLIENT_ID: process.env.PLEX_CLIENT_ID || "remindarr-plex-client",
   SYNC_PLEX_CRON: process.env.SYNC_PLEX_CRON || "0 5 * * *",
+  SYNC_PLEX_LIBRARY_CRON: process.env.SYNC_PLEX_LIBRARY_CRON || "0 6 * * *",
 
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",

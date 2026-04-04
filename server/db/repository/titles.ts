@@ -4,7 +4,7 @@ import { titles, providers, offers, scores, tracked, titleGenres, watchedTitles 
 import type { ParsedTitle } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
-import { getOffersForTitle, getOffersForTitles } from "./offers";
+import { getOffersWithPlex } from "./offers";
 import { toCanonicalGenre } from "../../genres";
 import { canonicalProviderId } from "../../streaming-availability/provider-map";
 
@@ -229,14 +229,17 @@ export async function getTitleById(titleId: string, userId?: string) {
 
     if (!row) return null;
 
-    const genreMap = await getGenresForTitles([row.id]);
+    const [genreMap, offersMap] = await Promise.all([
+      getGenresForTitles([row.id]),
+      getOffersWithPlex([row.id], userId),
+    ]);
     return {
       ...row,
       genres: genreMap.get(row.id) ?? [],
       is_tracked: Boolean(row.is_tracked),
       is_public: row.is_public != null ? Boolean(row.is_public) : undefined,
       is_watched: Boolean(row.is_watched),
-      offers: await getOffersForTitle(row.id),
+      offers: offersMap.get(row.id) ?? [],
     };
   });
 }
@@ -360,7 +363,7 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
 
     const titleIds = rows.map((r) => r.id);
     const [offersByTitle, genresByTitle] = await Promise.all([
-      getOffersForTitles(titleIds),
+      getOffersWithPlex(titleIds, userId),
       getGenresForTitles(titleIds),
     ]);
     return rows.map((row) => ({
@@ -419,7 +422,7 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
 
     const titleIds = rows.map((r) => r.id);
     const [offersByTitle, genresByTitle] = await Promise.all([
-      getOffersForTitles(titleIds),
+      getOffersWithPlex(titleIds, userId),
       getGenresForTitles(titleIds),
     ]);
     return rows.map((row) => ({
@@ -534,7 +537,7 @@ export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
 
   const titleIds = rows.map((r) => r.id);
   const [offersByTitle, genresByTitle] = await Promise.all([
-    getOffersForTitles(titleIds),
+    getOffersWithPlex(titleIds, userId),
     getGenresForTitles(titleIds),
   ]);
   return rows.map((row) => ({

@@ -2,6 +2,7 @@ import { eq, inArray, sql, isNull, asc, desc } from "drizzle-orm";
 import { getDb } from "../schema";
 import { offers, providers, titles, tracked, watchedTitles, watchedEpisodes, episodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
+import { getPlexOffersForUser } from "./plex-library";
 
 const offerColumns = {
   id: offers.id,
@@ -42,6 +43,25 @@ export async function getOffersForTitles(titleIds: string[]) {
       .all();
     return Map.groupBy(allOffers, (o) => o.title_id);
   });
+}
+
+/**
+ * Returns offers for multiple titles, merged with per-user Plex library offers.
+ * Pass userId to include Plex offers for that user; omit for anonymous requests.
+ */
+export async function getOffersWithPlex(titleIds: string[], userId?: string) {
+  const globalOffers = await getOffersForTitles(titleIds);
+  if (!userId || titleIds.length === 0) return globalOffers;
+
+  const plexOffers = await getPlexOffersForUser(titleIds, userId);
+  if (plexOffers.size === 0) return globalOffers;
+
+  const result = new Map(globalOffers);
+  for (const [titleId, pOffers] of plexOffers) {
+    const existing = result.get(titleId) ?? [];
+    result.set(titleId, [...pOffers, ...existing]);
+  }
+  return result;
 }
 
 /**

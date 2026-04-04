@@ -2,7 +2,7 @@ import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, scores, tracked, titleGenres, watchedTitles } from "../schema";
 import { traceDbQuery } from "../../tracing";
-import { getOffersForTitles } from "./offers";
+import { getOffersWithPlex } from "./offers";
 
 type ShowStatus = "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
 
@@ -115,7 +115,7 @@ export async function getTrackedTitles(userId: string) {
 
     const titleIds = rows.map((r) => r.id);
     const [offersByTitle, genresByTitle] = await Promise.all([
-      getOffersForTitles(titleIds),
+      getOffersWithPlex(titleIds, userId),
       getGenresForTitles(titleIds),
     ]);
     return rows.map((row) => ({
@@ -171,7 +171,8 @@ export async function getPublicTrackedTitles(userId: string) {
 
     const titleIds = rows.map((r) => r.id);
     const [offersByTitle, genresByTitle] = await Promise.all([
-      getOffersForTitles(titleIds),
+      // Public profiles: don't inject Plex offers (they're per-user/private)
+      getOffersWithPlex(titleIds, undefined),
       getGenresForTitles(titleIds),
     ]);
     return rows.map((row) => ({
@@ -233,7 +234,7 @@ export async function getTrackedMoviesByReleaseDate(date: string, userId: string
       .where(and(eq(titles.releaseDate, date), eq(titles.objectType, "MOVIE")))
       .all();
 
-    const offersByTitle = await getOffersForTitles(rows.map((r) => r.id));
+    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
     return rows.map((row) => ({
       ...row,
       offers: offersByTitle.get(row.id) ?? [],
