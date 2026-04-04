@@ -54,110 +54,108 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
     }
 
     for (const t of parsedTitles) {
-      await db.transaction(async (tx) => {
-        await tx.insert(titles)
-          .values({
-            id: t.id,
-            objectType: t.objectType,
-            title: t.title,
-            originalTitle: t.originalTitle,
-            releaseYear: t.releaseYear,
-            releaseDate: t.releaseDate,
-            runtimeMinutes: t.runtimeMinutes,
-            shortDescription: t.shortDescription,
-            originalLanguage: t.originalLanguage,
-            imdbId: t.imdbId,
-            tmdbId: t.tmdbId,
-            posterUrl: t.posterUrl,
-            backdropUrl: t.backdropUrl,
-            ageCertification: t.ageCertification,
-            tmdbUrl: t.tmdbUrl,
+      await db.insert(titles)
+        .values({
+          id: t.id,
+          objectType: t.objectType,
+          title: t.title,
+          originalTitle: t.originalTitle,
+          releaseYear: t.releaseYear,
+          releaseDate: t.releaseDate,
+          runtimeMinutes: t.runtimeMinutes,
+          shortDescription: t.shortDescription,
+          originalLanguage: t.originalLanguage,
+          imdbId: t.imdbId,
+          tmdbId: t.tmdbId,
+          posterUrl: t.posterUrl,
+          backdropUrl: t.backdropUrl,
+          ageCertification: t.ageCertification,
+          tmdbUrl: t.tmdbUrl,
+          updatedAt: sql`datetime('now')`,
+        })
+        .onConflictDoUpdate({
+          target: titles.id,
+          set: {
+            title: sql`excluded.title`,
+            originalTitle: sql`excluded.original_title`,
+            releaseYear: sql`excluded.release_year`,
+            releaseDate: sql`excluded.release_date`,
+            runtimeMinutes: sql`excluded.runtime_minutes`,
+            shortDescription: sql`excluded.short_description`,
+            originalLanguage: sql`excluded.original_language`,
+            imdbId: sql`excluded.imdb_id`,
+            tmdbId: sql`excluded.tmdb_id`,
+            posterUrl: sql`excluded.poster_url`,
+            backdropUrl: sql`excluded.backdrop_url`,
+            ageCertification: sql`excluded.age_certification`,
+            tmdbUrl: sql`excluded.tmdb_url`,
             updatedAt: sql`datetime('now')`,
-          })
-          .onConflictDoUpdate({
-            target: titles.id,
-            set: {
-              title: sql`excluded.title`,
-              originalTitle: sql`excluded.original_title`,
-              releaseYear: sql`excluded.release_year`,
-              releaseDate: sql`excluded.release_date`,
-              runtimeMinutes: sql`excluded.runtime_minutes`,
-              shortDescription: sql`excluded.short_description`,
-              originalLanguage: sql`excluded.original_language`,
-              imdbId: sql`excluded.imdb_id`,
-              tmdbId: sql`excluded.tmdb_id`,
-              posterUrl: sql`excluded.poster_url`,
-              backdropUrl: sql`excluded.backdrop_url`,
-              ageCertification: sql`excluded.age_certification`,
-              tmdbUrl: sql`excluded.tmdb_url`,
-              updatedAt: sql`datetime('now')`,
-            },
-          })
-          .run();
+          },
+        })
+        .run();
 
-        // Replace genres
-        await tx.delete(titleGenres).where(eq(titleGenres.titleId, t.id)).run();
-        for (const genre of (t.genres ?? [])) {
-          await tx.insert(titleGenres).values({ titleId: t.id, genre }).onConflictDoNothing().run();
-        }
+      // Replace genres
+      await db.delete(titleGenres).where(eq(titleGenres.titleId, t.id)).run();
+      for (const genre of (t.genres ?? [])) {
+        await db.insert(titleGenres).values({ titleId: t.id, genre }).onConflictDoNothing().run();
+      }
 
-        // Replace offers only when new data includes them (prevents sync fallback from wiping existing offers)
-        if (t.offers.length > 0) {
-          // Preserve deep links: build a map of (providerId, monetizationType) → deepLink
-          const existingOffers = await tx
-            .select({ providerId: offers.providerId, monetizationType: offers.monetizationType, deepLink: offers.deepLink })
-            .from(offers)
-            .where(eq(offers.titleId, t.id))
-            .all();
-          const deepLinkMap = new Map<string, string>();
-          for (const o of existingOffers) {
-            if (o.deepLink && o.providerId != null) {
-              deepLinkMap.set(`${o.providerId}:${o.monetizationType}`, o.deepLink);
-              // Also index by canonical ID so remapped duplicate providers keep their deep links
-              const canonical = canonicalProviderId(o.providerId);
-              if (canonical !== o.providerId) {
-                deepLinkMap.set(`${canonical}:${o.monetizationType}`, o.deepLink);
-              }
+      // Replace offers only when new data includes them (prevents sync fallback from wiping existing offers)
+      if (t.offers.length > 0) {
+        // Preserve deep links: build a map of (providerId, monetizationType) → deepLink
+        const existingOffers = await db
+          .select({ providerId: offers.providerId, monetizationType: offers.monetizationType, deepLink: offers.deepLink })
+          .from(offers)
+          .where(eq(offers.titleId, t.id))
+          .all();
+        const deepLinkMap = new Map<string, string>();
+        for (const o of existingOffers) {
+          if (o.deepLink && o.providerId != null) {
+            deepLinkMap.set(`${o.providerId}:${o.monetizationType}`, o.deepLink);
+            // Also index by canonical ID so remapped duplicate providers keep their deep links
+            const canonical = canonicalProviderId(o.providerId);
+            if (canonical !== o.providerId) {
+              deepLinkMap.set(`${canonical}:${o.monetizationType}`, o.deepLink);
             }
           }
-
-          await tx.delete(offers).where(eq(offers.titleId, t.id)).run();
-          for (const o of t.offers) {
-            const preservedDeepLink = deepLinkMap.get(`${o.providerId}:${o.monetizationType}`) ?? null;
-            await tx.insert(offers)
-              .values({
-                titleId: o.titleId,
-                providerId: o.providerId,
-                monetizationType: o.monetizationType,
-                presentationType: o.presentationType,
-                priceValue: o.priceValue,
-                priceCurrency: o.priceCurrency,
-                url: o.url,
-                deepLink: preservedDeepLink,
-                availableTo: o.availableTo,
-              })
-              .run();
-          }
         }
 
-        // Upsert scores
-        await tx.insert(scores)
-          .values({
-            titleId: t.id,
-            imdbScore: t.scores.imdbScore,
-            imdbVotes: t.scores.imdbVotes,
-            tmdbScore: t.scores.tmdbScore,
-          })
-          .onConflictDoUpdate({
-            target: scores.titleId,
-            set: {
-              imdbScore: sql`excluded.imdb_score`,
-              imdbVotes: sql`excluded.imdb_votes`,
-              tmdbScore: sql`excluded.tmdb_score`,
-            },
-          })
-          .run();
-      });
+        await db.delete(offers).where(eq(offers.titleId, t.id)).run();
+        for (const o of t.offers) {
+          const preservedDeepLink = deepLinkMap.get(`${o.providerId}:${o.monetizationType}`) ?? null;
+          await db.insert(offers)
+            .values({
+              titleId: o.titleId,
+              providerId: o.providerId,
+              monetizationType: o.monetizationType,
+              presentationType: o.presentationType,
+              priceValue: o.priceValue,
+              priceCurrency: o.priceCurrency,
+              url: o.url,
+              deepLink: preservedDeepLink,
+              availableTo: o.availableTo,
+            })
+            .run();
+        }
+      }
+
+      // Upsert scores
+      await db.insert(scores)
+        .values({
+          titleId: t.id,
+          imdbScore: t.scores.imdbScore,
+          imdbVotes: t.scores.imdbVotes,
+          tmdbScore: t.scores.tmdbScore,
+        })
+        .onConflictDoUpdate({
+          target: scores.titleId,
+          set: {
+            imdbScore: sql`excluded.imdb_score`,
+            imdbVotes: sql`excluded.imdb_votes`,
+            tmdbScore: sql`excluded.tmdb_score`,
+          },
+        })
+        .run();
     }
 
     invalidateFilterCaches();
