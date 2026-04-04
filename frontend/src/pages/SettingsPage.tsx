@@ -1694,20 +1694,20 @@ function PlexSection() {
                   <button
                     onClick={() => handleToggle(integration)}
                     disabled={toggling === integration.id}
-                    className="text-xs text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
+                    className="text-xs text-zinc-400 hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     {toggling === integration.id ? "..." : integration.enabled ? "Disable" : "Enable"}
                   </button>
                   <button
                     onClick={() => handleSync(integration.id)}
                     disabled={syncing === integration.id || !integration.enabled}
-                    className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50"
+                    className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     {syncing === integration.id ? "Syncing..." : "Sync now"}
                   </button>
                   <button
                     onClick={() => handleDelete(integration.id)}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
                   >
                     Disconnect
                   </button>
@@ -1733,7 +1733,7 @@ function PlexSection() {
       {step.type === "idle" && (
         <button
           onClick={handleConnect}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors"
+          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors cursor-pointer"
         >
           Connect Plex
         </button>
@@ -1752,7 +1752,7 @@ function PlexSection() {
           </p>
           <button
             onClick={handleCancelConnect}
-            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors"
+            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -1787,7 +1787,7 @@ function PlexSection() {
                 <button
                   onClick={handleRefreshServers}
                   disabled={refreshingServers}
-                  className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50"
+                  className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {refreshingServers ? "Refreshing..." : "Refresh"}
                 </button>
@@ -1835,13 +1835,13 @@ function PlexSection() {
             <button
               onClick={handleSaveServer}
               disabled={saving || !selectedServer || !selectedUri}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors disabled:opacity-50 cursor-pointer"
             >
               {saving ? "Connecting..." : "Connect"}
             </button>
             <button
               onClick={handleCancelConnect}
-              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors"
+              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors cursor-pointer"
             >
               Cancel
             </button>
