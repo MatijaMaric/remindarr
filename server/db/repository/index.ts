@@ -132,3 +132,15 @@ export {
   getUserInvitations,
   revokeInvitation,
 } from "./invitations";
+
+export {
+  createIntegration,
+  updateIntegration,
+  deleteIntegration,
+  getIntegrationsByUser,
+  getIntegrationById,
+  getEnabledIntegrationsByProvider,
+  updateIntegrationSyncStatus,
+  disableIntegration,
+} from "./integrations";
+export type { IntegrationConfig, PlexConfig } from "./integrations";

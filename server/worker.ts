@@ -57,6 +57,7 @@ import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
+import integrationRoutes from "./routes/integrations";
 import jobsCfRoutes from "./routes/jobs-cf";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
@@ -313,6 +314,10 @@ function createApp(env: Env) {
   app.use("/api/notifiers/*", requireAuth);
   app.use("/api/notifiers", requireAuth);
   app.route("/api/notifiers", notifierRoutes);
+
+  app.use("/api/integrations/*", requireAuth);
+  app.use("/api/integrations", requireAuth);
+  app.route("/api/integrations", integrationRoutes);
 
   // Admin routes
   app.use("/api/admin/*", requireAuth, requireAdmin);
