@@ -138,6 +138,7 @@ export {
   redeemInvitation,
   getUserInvitations,
   revokeInvitation,
+  getUsersByIds,
 } from "./invitations";
 
 export {

@@ -121,6 +121,46 @@ describe("GET /invitations", () => {
     const res = await app.request("/invitations");
     expect(res.status).toBe(401);
   });
+
+  it("returns used_by with user info after invitation is redeemed (batch query)", async () => {
+    // Alice creates two invitations
+    const createRes1 = await app.request("/invitations", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    const { code: code1 } = await createRes1.json();
+
+    const createRes2 = await app.request("/invitations", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    const { code: code2 } = await createRes2.json();
+
+    // Bob redeems the first invitation
+    await app.request(`/invitations/redeem/${code1}`, {
+      method: "POST",
+      headers: authHeaders(userBToken),
+    });
+
+    // List Alice's invitations — should have used_by populated for the redeemed one
+    const res = await app.request("/invitations", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.invitations).toHaveLength(2);
+
+    const redeemed = body.invitations.find((inv: any) => inv.code === code1);
+    const unredeemed = body.invitations.find((inv: any) => inv.code === code2);
+
+    expect(redeemed).toBeDefined();
+    expect(redeemed.used_by).not.toBeNull();
+    expect(redeemed.used_by.id).toBe(userBId);
+    expect(redeemed.used_by.username).toBe("bob");
+
+    expect(unredeemed).toBeDefined();
+    expect(unredeemed.used_by).toBeNull();
+  });
 });
 
 describe("POST /invitations/redeem/:code", () => {

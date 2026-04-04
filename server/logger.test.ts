@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Hono } from "hono";
-import { Logger, requestLogger, resetLogLevel, logger } from "./logger";
+import { Logger, requestLogger, resetLogLevel, logger, normalizeRoutePath } from "./logger";
 
 describe("Logger", () => {
   let logSpy: ReturnType<typeof spyOn>;
@@ -216,6 +216,40 @@ describe("resetLogLevel", () => {
     expect(entry.msg).toBe("visible");
     expect(entry.module).toBe("browse");
     expect(entry.op).toBe("fetch");
+  });
+});
+
+describe("normalizeRoutePath", () => {
+  it("replaces numeric ID segments with :id", () => {
+    expect(normalizeRoutePath("/api/details/movie/12345")).toBe("/api/details/movie/:id");
+    expect(normalizeRoutePath("/api/details/show/999")).toBe("/api/details/show/:id");
+  });
+
+  it("replaces IMDB ID segments with :id", () => {
+    expect(normalizeRoutePath("/api/track/tt1234567")).toBe("/api/track/:id");
+  });
+
+  it("replaces UUID segments with :id", () => {
+    expect(normalizeRoutePath("/api/invitations/550e8400-e29b-41d4-a716-446655440000")).toBe(
+      "/api/invitations/:id"
+    );
+  });
+
+  it("replaces multiple numeric segments in a path", () => {
+    expect(normalizeRoutePath("/api/details/show/123/season/2/episode/5")).toBe(
+      "/api/details/show/:id/season/:id/episode/:id"
+    );
+  });
+
+  it("leaves static paths unchanged", () => {
+    expect(normalizeRoutePath("/api/titles")).toBe("/api/titles");
+    expect(normalizeRoutePath("/api/auth/me")).toBe("/api/auth/me");
+    expect(normalizeRoutePath("/api/health")).toBe("/api/health");
+  });
+
+  it("leaves paths with no IDs unchanged", () => {
+    expect(normalizeRoutePath("/api/jobs")).toBe("/api/jobs");
+    expect(normalizeRoutePath("/api/browse")).toBe("/api/browse");
   });
 });
 

@@ -1,8 +1,9 @@
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, scores, tracked, titleGenres, watchedTitles } from "../schema";
+import { titles, scores, tracked, watchedTitles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersWithPlex } from "./offers";
+import { getGenresForTitles } from "./titles";
 
 type ShowStatus = "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
 
@@ -19,23 +20,6 @@ function computeShowStatus(
   if (releasedEpisodesCount > 0 && releasedEpisodesCount === watchedEpisodesCount && totalEpisodes > releasedEpisodesCount) return "caught_up";
   if (releasedEpisodesCount > watchedEpisodesCount) return "watching";
   return null;
-}
-
-async function getGenresForTitles(titleIds: string[]): Promise<Map<string, string[]>> {
-  if (titleIds.length === 0) return new Map();
-  const db = getDb();
-  const rows = await db
-    .select({ titleId: titleGenres.titleId, genre: titleGenres.genre })
-    .from(titleGenres)
-    .where(inArray(titleGenres.titleId, titleIds))
-    .all();
-  const map = new Map<string, string[]>();
-  for (const row of rows) {
-    const list = map.get(row.titleId) ?? [];
-    list.push(row.genre);
-    map.set(row.titleId, list);
-  }
-  return map;
 }
 
 export async function trackTitle(titleId: string, userId: string, notes?: string) {

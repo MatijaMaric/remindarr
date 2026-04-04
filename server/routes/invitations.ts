@@ -6,7 +6,7 @@ import {
   getUserInvitations,
   revokeInvitation,
   follow,
-  getUserById,
+  getUsersByIds,
 } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
@@ -40,30 +40,33 @@ app.get("/", async (c) => {
   }
 
   const rows = await getUserInvitations(user.id);
-  const invitations = await Promise.all(
-    rows.map(async (row) => {
-      let usedBy = null;
-      if (row.usedById) {
-        const usedByUser = await getUserById(row.usedById);
-        if (usedByUser) {
-          usedBy = {
-            id: usedByUser.id,
-            username: usedByUser.username,
-            name: usedByUser.display_name,
-            image: null,
-          };
-        }
+
+  // Batch-fetch all users referenced by usedById to avoid N+1 queries
+  const usedByIds = [...new Set(rows.map((r) => r.usedById).filter((id): id is string => id !== null))];
+  const usedByUsers = await getUsersByIds(usedByIds);
+
+  const invitations = rows.map((row) => {
+    let usedBy = null;
+    if (row.usedById) {
+      const usedByUser = usedByUsers.get(row.usedById);
+      if (usedByUser) {
+        usedBy = {
+          id: usedByUser.id,
+          username: usedByUser.username,
+          name: usedByUser.display_name,
+          image: null,
+        };
       }
-      return {
-        id: row.id,
-        code: row.code,
-        created_at: row.createdAt,
-        expires_at: row.expiresAt,
-        used_at: row.usedAt,
-        used_by: usedBy,
-      };
-    })
-  );
+    }
+    return {
+      id: row.id,
+      code: row.code,
+      created_at: row.createdAt,
+      expires_at: row.expiresAt,
+      used_at: row.usedAt,
+      used_by: usedBy,
+    };
+  });
 
   return ok(c, { invitations });
 });
