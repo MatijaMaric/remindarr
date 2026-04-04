@@ -159,33 +159,25 @@ export default function TitleDetailPage() {
   const [movieData, setMovieData] = useState<MovieDetailsResponse | null>(null);
   const [showData, setShowData] = useState<ShowDetailsResponse | null>(null);
 
-  // First we need to know the object_type, so we fetch as movie first;
-  // if 404 or wrong type, we try show
   useEffect(() => {
     if (!id) return;
     const titleId = id;
     let cancelled = false;
 
+    // Determine type from the ID prefix (e.g. "movie-123" or "tv-456")
+    // to avoid making two API calls for shows.
+    const isShow = titleId.startsWith("tv-");
+
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        // Try movie first
-        try {
-          const data = await api.getMovieDetails(titleId);
-          if (!cancelled) {
-            if (data.title.object_type === "SHOW") {
-              // It's actually a show, fetch show details
-              const showResp = await api.getShowDetails(titleId);
-              if (!cancelled) setShowData(showResp);
-            } else {
-              setMovieData(data);
-            }
-          }
-        } catch {
-          // Try show if movie fails
+        if (isShow) {
           const data = await api.getShowDetails(titleId);
           if (!cancelled) setShowData(data);
+        } else {
+          const data = await api.getMovieDetails(titleId);
+          if (!cancelled) setMovieData(data);
         }
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load details");
