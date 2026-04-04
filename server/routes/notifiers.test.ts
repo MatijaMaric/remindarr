@@ -320,6 +320,94 @@ describe("POST /notifiers/:id/test", () => {
   });
 });
 
+describe("POST /notifiers/renew-subscription", () => {
+  const validWebpushConfig = {
+    endpoint: "https://push.example.com/sub/123",
+    p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlqHgx9tSimHctjAmKDF5lbREqX5L2tZIFO4-SrZs",
+    auth: "tBHItJI5svbpez7KI4CCXg",
+  };
+
+  it("updates subscription config for existing webpush notifier", async () => {
+    // Create webpush notifier
+    await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ provider: "webpush", config: validWebpushConfig, notify_time: "09:00", timezone: "UTC" }),
+    });
+
+    const newConfig = { ...validWebpushConfig, endpoint: "https://push.example.com/sub/456" };
+    const res = await app.request("/notifiers/renew-subscription", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(newConfig),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.notifier.config.endpoint).toBe(newConfig.endpoint);
+    expect(body.notifier.enabled).toBe(true);
+  });
+
+  it("re-enables a previously disabled webpush notifier", async () => {
+    // Create then disable
+    const createRes = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ provider: "webpush", config: validWebpushConfig, notify_time: "09:00", timezone: "UTC" }),
+    });
+    const { notifier } = await createRes.json();
+
+    await app.request(`/notifiers/${notifier.id}`, {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ enabled: false }),
+    });
+
+    const res = await app.request("/notifiers/renew-subscription", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validWebpushConfig),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.notifier.enabled).toBe(true);
+  });
+
+  it("returns 404 when no webpush notifier exists", async () => {
+    const res = await app.request("/notifiers/renew-subscription", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validWebpushConfig),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/notifiers/renew-subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(validWebpushConfig),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when endpoint is missing", async () => {
+    await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ provider: "webpush", config: validWebpushConfig, notify_time: "09:00", timezone: "UTC" }),
+    });
+
+    const res = await app.request("/notifiers/renew-subscription", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ p256dh: validWebpushConfig.p256dh, auth: validWebpushConfig.auth }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("ownership enforcement", () => {
   it("user cannot access another user's notifier", async () => {
     // Create notifier as user 1

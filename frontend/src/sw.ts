@@ -130,6 +130,32 @@ self.addEventListener("push", (event) => {
   );
 });
 
+// Push subscription change — re-subscribe after service worker update
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      const vapidRes = await fetch("/api/notifiers/vapid-public-key");
+      if (!vapidRes.ok) return;
+      const { publicKey } = await vapidRes.json();
+      const subscription = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: publicKey,
+      });
+      const json = subscription.toJSON();
+      if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return;
+      await fetch("/api/notifiers/renew-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: json.endpoint,
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+        }),
+      });
+    })().catch(() => {}) // best-effort
+  );
+});
+
 // Notification click handler — open or focus the app
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
