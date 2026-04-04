@@ -106,6 +106,25 @@ export function resetLogLevel(level: LogLevel): void {
   logger.setLevel(level);
 }
 
+/**
+ * Normalize a URL path to remove dynamic segments (IDs, UUIDs) so that
+ * Prometheus metric labels have bounded cardinality.
+ *
+ * Examples:
+ *   /api/details/movie/12345        → /api/details/movie/:id
+ *   /api/track/tt1234567            → /api/track/:id
+ *   /api/details/show/123/season/2  → /api/details/show/:id/season/:id
+ */
+export function normalizeRoutePath(path: string): string {
+  return path
+    // Replace UUID segments first (must come before numeric to prevent partial matches)
+    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi, "/:id")
+    // Replace IMDB IDs (tt followed by digits)
+    .replace(/\/tt\d+(?=\/|$)/g, "/:id")
+    // Replace purely numeric ID segments
+    .replace(/\/\d+(?=\/|$)/g, "/:id");
+}
+
 export function requestLogger(): MiddlewareHandler {
   const log = logger.child({ module: "http" });
   return async (c, next) => {
@@ -114,7 +133,7 @@ export function requestLogger(): MiddlewareHandler {
     const durationMs = performance.now() - start;
     const status = c.res.status;
     const method = c.req.method;
-    const route = c.req.path;
+    const route = normalizeRoutePath(c.req.path);
 
     const level: LogLevel =
       status >= 500 ? "error" : status >= 400 ? "warn" : "info";

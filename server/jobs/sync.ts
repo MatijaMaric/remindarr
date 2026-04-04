@@ -5,7 +5,7 @@ import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
 
 const log = logger.child({ module: "sync" });
-import { registerCron, enqueueJob } from "./queue";
+import { registerCron, enqueueJob, hasActiveJob } from "./queue";
 import { CONFIG } from "../config";
 import { fetchNewReleases } from "../tmdb/sync-titles";
 import { upsertTitles, getEpisodeIdsBySE, watchEpisodesBulk } from "../db/repository";
@@ -191,17 +191,21 @@ export function registerSyncJobs() {
     registerCron("sync-deep-links", CONFIG.SYNC_DEEP_LINKS_CRON);
   }
 
-  // Enqueue one-time title migration (will no-op if all titles already have original_title)
-  enqueueJob("migrate-titles", undefined, { maxAttempts: 1 });
+  // Enqueue one-time migration jobs only if not already pending/running/completed
+  if (!hasActiveJob("migrate-titles")) {
+    enqueueJob("migrate-titles", undefined, { maxAttempts: 1 });
+  }
 
-  // Enqueue one-time backdrop backfill (will no-op if all titles already have backdrop_url)
-  enqueueJob("migrate-backdrops", undefined, { maxAttempts: 1 });
+  if (!hasActiveJob("migrate-backdrops")) {
+    enqueueJob("migrate-backdrops", undefined, { maxAttempts: 1 });
+  }
 
-  // Enqueue one-time offers backfill (will no-op if all titles already have offers)
-  enqueueJob("migrate-offers", undefined, { maxAttempts: 1 });
+  if (!hasActiveJob("migrate-offers")) {
+    enqueueJob("migrate-offers", undefined, { maxAttempts: 1 });
+  }
 
   // Enqueue one-time deep link backfill for existing titles
-  if (CONFIG.STREAMING_AVAILABILITY_API_KEY) {
+  if (CONFIG.STREAMING_AVAILABILITY_API_KEY && !hasActiveJob("sync-deep-links")) {
     enqueueJob("sync-deep-links", undefined, { maxAttempts: 1 });
   }
 }
