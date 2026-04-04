@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
@@ -25,6 +25,11 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
   const [tracked, setTracked] = useState(isTracked);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Keep internal state in sync when parent prop changes (e.g., after data refetch)
+  useEffect(() => {
+    setTracked(isTracked);
+  }, [isTracked]);
 
   if (!user) return null;
 

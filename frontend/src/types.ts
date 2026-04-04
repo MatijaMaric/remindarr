@@ -405,7 +405,7 @@ export interface AdminSettingsUpdateResponse {
 export interface UserSummary {
   id: string;
   username: string;
-  name: string | null;
+  display_name: string | null;
   image: string | null;
 }
 
@@ -490,13 +490,6 @@ export interface RecommendationsResponse {
 }
 
 // ─── Social Types ────────────────────────────────────────────────────────────
-
-export interface UserSummary {
-  id: string;
-  username: string;
-  display_name: string | null;
-  image: string | null;
-}
 
 // ─── Invitation Types ─────────────────────────────────────────────────────
 

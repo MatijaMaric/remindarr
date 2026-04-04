@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import type { ReactNode } from "react";
 // Initialize i18n before anything else
 import "../i18n";
@@ -281,6 +281,52 @@ describe("TrackButton", () => {
 
       // No dialog should appear
       expect(screen.queryByText(/Stop tracking/)).toBeNull();
+    });
+  });
+
+  describe("prop sync via useEffect", () => {
+    it("reflects updated isTracked=true prop without user interaction", async () => {
+      const { rerender } = render(
+        <Wrapper>
+          <TrackButton titleId="sync-1" isTracked={false} />
+        </Wrapper>,
+      );
+
+      expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
+
+      await act(async () => {
+        rerender(
+          <Wrapper>
+            <TrackButton titleId="sync-1" isTracked={true} />
+          </Wrapper>,
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+      });
+    });
+
+    it("reflects updated isTracked=false prop without user interaction", async () => {
+      const { rerender } = render(
+        <Wrapper>
+          <TrackButton titleId="sync-2" isTracked={true} />
+        </Wrapper>,
+      );
+
+      expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+
+      await act(async () => {
+        rerender(
+          <Wrapper>
+            <TrackButton titleId="sync-2" isTracked={false} />
+          </Wrapper>,
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
+      });
     });
   });
 });

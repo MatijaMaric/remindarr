@@ -22,7 +22,34 @@ afterEach(() => {
   fetchSpy.mockRestore();
 });
 
-const { browseTitles, getAdminSettings, updateAdminSettings } = await import("./api");
+const { getTitles, browseTitles, getAdminSettings, updateAdminSettings } = await import("./api");
+
+describe("getTitles", () => {
+  it("includes offset=0 in query params (falsy zero must not be dropped)", async () => {
+    await getTitles({ offset: 0 });
+    expect(lastFetchUrl).toContain("offset=0");
+  });
+
+  it("includes limit=0 in query params", async () => {
+    await getTitles({ limit: 0 });
+    expect(lastFetchUrl).toContain("limit=0");
+  });
+
+  it("includes daysBack=0 in query params", async () => {
+    await getTitles({ daysBack: 0 });
+    expect(lastFetchUrl).toContain("daysBack=0");
+  });
+
+  it("omits offset when not provided", async () => {
+    await getTitles({});
+    expect(lastFetchUrl).not.toContain("offset=");
+  });
+
+  it("includes offset=5 normally", async () => {
+    await getTitles({ offset: 5 });
+    expect(lastFetchUrl).toContain("offset=5");
+  });
+});
 
 describe("browseTitles", () => {
   it("calls /api/browse with category param", async () => {

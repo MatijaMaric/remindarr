@@ -13,14 +13,22 @@ import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
 
-// Retry dynamic imports once on failure (handles stale chunks after deploy)
+const LAZY_RETRY_KEY = "__lazy_retry";
+
+// Retry dynamic imports on failure (handles stale chunks after deploy).
+// Uses sessionStorage to cap retries and prevent infinite reload loops.
 function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>) {
   return lazy(() =>
-    factory().catch(() => {
-      // Chunk likely changed after a new deploy — reload to get fresh assets
-      window.location.reload();
-      // Return a never-resolving promise so React doesn't render before reload
-      return new Promise(() => {});
+    factory().catch((importError: unknown) => {
+      const retries = parseInt(sessionStorage.getItem(LAZY_RETRY_KEY) ?? "0", 10);
+      if (retries < 2) {
+        sessionStorage.setItem(LAZY_RETRY_KEY, String(retries + 1));
+        window.location.reload();
+        // Return a never-resolving promise so React doesn't render before reload
+        return new Promise<never>(() => {});
+      }
+      sessionStorage.removeItem(LAZY_RETRY_KEY);
+      throw importError;
     })
   );
 }
@@ -42,6 +50,7 @@ const ReelsPage = lazyWithRetry(() => import("./pages/ReelsPage"));
 const UpcomingPage = lazyWithRetry(() => import("./pages/UpcomingPage"));
 const DiscoveryPage = lazyWithRetry(() => import("./pages/DiscoveryPage"));
 const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
+const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 
 function MobileHomeRedirect() {
   const { user, loading } = useAuth();
@@ -163,6 +172,7 @@ export default function App() {
             <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
             <Route path="/title/:id/season/:season/episode/:episode" element={<EpisodeDetailPage />} />
             <Route path="/person/:personId" element={<PersonPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </main>

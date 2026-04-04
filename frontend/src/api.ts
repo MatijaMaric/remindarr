@@ -48,14 +48,14 @@ export async function getTitles(params: {
   offset?: number;
 } = {}): Promise<{ titles: Title[]; count: number }> {
   const qs = new URLSearchParams();
-  if (params.daysBack) qs.set("daysBack", String(params.daysBack));
+  if (params.daysBack != null) qs.set("daysBack", String(params.daysBack));
   if (params.type) qs.set("type", params.type);
   if (params.provider) qs.set("provider", params.provider);
   if (params.genre) qs.set("genre", params.genre);
   if (params.language) qs.set("language", params.language);
   if (params.excludeTracked) qs.set("excludeTracked", "1");
-  if (params.limit) qs.set("limit", String(params.limit));
-  if (params.offset) qs.set("offset", String(params.offset));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
   return fetchJson(`/titles?${qs}`);
 }
 
@@ -84,7 +84,7 @@ export async function browseTitles(params: {
   const qs = new URLSearchParams();
   qs.set("category", params.category);
   if (params.type) qs.set("type", params.type);
-  if (params.page) qs.set("page", String(params.page));
+  if (params.page != null) qs.set("page", String(params.page));
   if (params.genre) qs.set("genre", params.genre);
   if (params.provider) qs.set("provider", params.provider);
   if (params.language) qs.set("language", params.language);

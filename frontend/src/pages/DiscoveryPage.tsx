@@ -88,7 +88,7 @@ function RecommendationCard({
     ? `https://image.tmdb.org/t/p/w92${rec.title.poster_url}`
     : null;
 
-  const senderName = rec.from_user.name ?? rec.from_user.display_name ?? rec.from_user.username;
+  const senderName = rec.from_user.display_name ?? rec.from_user.username;
   const senderInitial = (senderName || "?")[0].toUpperCase();
 
   return (
