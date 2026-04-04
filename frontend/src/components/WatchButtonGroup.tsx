@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import type { Offer } from "../types";
-import WatchButton, { monetizationLabel, PLEX_PROVIDER_ID, plexDeepLink } from "./WatchButton";
+import WatchButton, { monetizationLabel, PLEX_PROVIDER_ID, plexDeepLink, getPlexPlatform } from "./WatchButton";
 import { getUniqueProviders } from "./EpisodeComponents";
 import { getProviderColor } from "../data/providerColors";
 
@@ -59,8 +59,9 @@ function DropdownProviderItem({ offer, isLg }: { offer: Offer; isLg: boolean }) 
   const [hovered, setHovered] = useState(false);
   const c = getProviderColor(offer.provider_id);
   const lbl = monetizationLabel(offer.monetization_type);
-  const useMobileDeepLink = offer.provider_id === PLEX_PROVIDER_ID && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const effectiveUrl = useMobileDeepLink ? plexDeepLink(offer.url) : offer.url;
+  const platform = offer.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
+  const useMobileDeepLink = platform === "ios" || platform === "android";
+  const effectiveUrl = useMobileDeepLink ? plexDeepLink(offer.url, platform) : offer.url;
 
   return (
     <a
@@ -91,8 +92,9 @@ function SplitWatchButton({ providers, size, fullWidth }: { providers: Offer[]; 
   const label = monetizationLabel(primary.monetization_type);
   const isLg = size === "lg";
 
-  const useMobileDeepLink = primary.provider_id === PLEX_PROVIDER_ID && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const primaryUrl = useMobileDeepLink ? plexDeepLink(primary.url) : primary.url;
+  const platform = primary.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
+  const useMobileDeepLink = platform === "ios" || platform === "android";
+  const primaryUrl = useMobileDeepLink ? plexDeepLink(primary.url, platform) : primary.url;
 
   return (
     <div ref={containerRef} className={`flex${fullWidth || isLg ? " w-full" : ""}`} style={{ minHeight: isLg ? "52px" : "32px" }}>

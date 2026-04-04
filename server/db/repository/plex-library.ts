@@ -14,6 +14,7 @@ export type PlexLibraryItem = {
   titleId: string;
   ratingKey: string;
   mediaType: "movie" | "show";
+  plexSlug?: string | null;
 };
 
 export async function upsertPlexLibraryItems(items: PlexLibraryItem[]) {
@@ -28,6 +29,7 @@ export async function upsertPlexLibraryItems(items: PlexLibraryItem[]) {
           titleId: item.titleId,
           ratingKey: item.ratingKey,
           mediaType: item.mediaType,
+          plexSlug: item.plexSlug ?? null,
           syncedAt: sql`datetime('now')`,
         })
         .onConflictDoUpdate({
@@ -36,6 +38,8 @@ export async function upsertPlexLibraryItems(items: PlexLibraryItem[]) {
             integrationId: sql`excluded.integration_id`,
             ratingKey: sql`excluded.rating_key`,
             mediaType: sql`excluded.media_type`,
+            // Preserve existing slug if the new value is null (lookup may have failed)
+            plexSlug: sql`COALESCE(excluded.plex_slug, plex_library_items.plex_slug)`,
             syncedAt: sql`datetime('now')`,
           },
         })
@@ -104,6 +108,8 @@ export async function getPlexOffersForUser(
       .select({
         titleId: plexLibraryItems.titleId,
         ratingKey: plexLibraryItems.ratingKey,
+        mediaType: plexLibraryItems.mediaType,
+        plexSlug: plexLibraryItems.plexSlug,
         config: integrations.config,
       })
       .from(plexLibraryItems)
@@ -135,7 +141,7 @@ export async function getPlexOffersForUser(
         presentation_type: null,
         price_value: null,
         price_currency: null,
-        url: buildPlexDeepLink(serverId, row.ratingKey),
+        url: buildPlexDeepLink(serverId, row.ratingKey, row.plexSlug, row.mediaType),
         available_to: null,
         provider_name: "Plex",
         provider_technical_name: "plex",
