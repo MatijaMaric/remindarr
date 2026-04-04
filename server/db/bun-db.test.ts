@@ -129,10 +129,10 @@ describe("fixSkippedMigrations", () => {
     }>;
     expect(titleCols.some((c) => c.name === "genres")).toBe(false);
 
-    // All 16 migrations should be recorded
+    // All 17 migrations should be recorded
     const migrations = rawDb
       .prepare("SELECT COUNT(*) as cnt FROM __drizzle_migrations")
       .get() as { cnt: number };
-    expect(migrations.cnt).toBe(16);
+    expect(migrations.cnt).toBe(17);
   });
 });

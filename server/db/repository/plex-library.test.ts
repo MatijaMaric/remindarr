@@ -159,6 +159,19 @@ describe("getPlexOffersForUser", () => {
     );
   });
 
+  it("embeds watchSlug and mediaType in URL when plex_slug is set", async () => {
+    insertTitle("movie-1");
+    insertIntegration("int-1", userId, "my-server-id");
+
+    getRawDb().prepare(`INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type, plex_slug) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run("int-1", userId, "movie-1", "rk-42", "movie", "zoolander");
+
+    const result = await getPlexOffersForUser(["movie-1"], userId);
+    const offer = result.get("movie-1")![0];
+    expect(offer.url).toContain("watchSlug=zoolander");
+    expect(offer.url).toContain("mediaType=movie");
+  });
+
   it("returns empty map when user has no Plex library items", async () => {
     const result = await getPlexOffersForUser(["movie-1"], userId);
     expect(result.size).toBe(0);
