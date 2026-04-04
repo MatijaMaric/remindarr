@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, createUser, createSession, getSessionWithUser } from "../db/repository";
+import { upsertTitles, upsertEpisodes, createUser, createSession, getSessionWithUser } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import { getRawDb } from "../db/bun-db";
 import { CONFIG } from "../config";
@@ -172,6 +172,38 @@ describe("DELETE /track/:id", () => {
     const listRes = await app.request("/track", { headers: headers() });
     const listBody = await listRes.json();
     expect(listBody.titles).toHaveLength(0);
+  });
+
+  it("does not delete episodes from DB when untracking a show", async () => {
+    const showTitle = makeParsedTitle({ id: "tv-show-1", objectType: "SHOW", title: "Test Show" });
+    await upsertTitles([showTitle]);
+    await upsertEpisodes([
+      { title_id: "tv-show-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: "2024-01-01", still_path: null },
+      { title_id: "tv-show-1", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+    ]);
+
+    // Track the show
+    await app.request("/track/tv-show-1", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    // Verify episodes exist before untrack
+    const db = getRawDb();
+    const episodesBefore = db.prepare("SELECT id FROM episodes WHERE title_id = 'tv-show-1'").all();
+    expect(episodesBefore).toHaveLength(2);
+
+    // Untrack
+    const res = await app.request("/track/tv-show-1", {
+      method: "DELETE",
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+
+    // Episodes must still exist in DB (they are global TMDB data shared across users)
+    const episodesAfter = db.prepare("SELECT id FROM episodes WHERE title_id = 'tv-show-1'").all();
+    expect(episodesAfter).toHaveLength(2);
   });
 });
 

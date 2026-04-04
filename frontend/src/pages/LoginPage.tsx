@@ -11,7 +11,7 @@ function isWebAuthnSupported(): boolean {
 }
 
 export default function LoginPage() {
-  const { user, providers, login } = useAuth();
+  const { user, providers, login, refresh } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
@@ -52,14 +52,15 @@ export default function LoginPage() {
         if (result?.error) return;
         const session = await authClient.getSession();
         if (session.data?.user && !cancelled) {
-          window.location.href = "/";
+          await refresh();
+          if (!cancelled) navigate("/", { replace: true });
         }
       } catch {
         // Autofill silently fails if user doesn't select a passkey
       }
     })();
     return () => { cancelled = true; };
-  }, [passkeyAvailable]);
+  }, [passkeyAvailable, navigate, refresh]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,9 +93,8 @@ export default function LoginPage() {
       }
       const session = await authClient.getSession();
       if (session.data?.user) {
+        await refresh();
         navigate("/", { replace: true });
-        // Force a page reload to refresh auth context
-        window.location.href = "/";
       }
     } catch (err: unknown) {
       // Don't show error if user cancelled the WebAuthn prompt
@@ -106,7 +106,7 @@ export default function LoginPage() {
     } finally {
       setPasskeyLoading(false);
     }
-  }, [navigate, t]);
+  }, [navigate, refresh, t]);
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center">

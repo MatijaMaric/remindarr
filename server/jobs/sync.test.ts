@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { enqueueJob, registerCron, getCronJobs, claimNextJob } from "./queue";
+import { enqueueJob, registerCron, getCronJobs, claimNextJob, getJobStats } from "./queue";
 import { registerHandler, processJobs, stopWorker } from "./worker";
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
@@ -128,6 +128,46 @@ describe("registerSyncJobs", () => {
     const job = claimNextJob("migrate-offers");
     expect(job).not.toBeNull();
     expect(job!.name).toBe("migrate-offers");
+  });
+
+  it("does not create duplicate migrate-titles jobs when registerSyncJobs is called twice", () => {
+    registerSyncJobs();
+    registerSyncJobs();
+
+    const stats = getJobStats();
+    const migrateTitlesStats = stats["migrate-titles"];
+    // Should have exactly 1 job total (pending + running + completed = 1)
+    const total = (migrateTitlesStats?.pending ?? 0) +
+      (migrateTitlesStats?.running ?? 0) +
+      (migrateTitlesStats?.completed ?? 0) +
+      (migrateTitlesStats?.failed ?? 0);
+    expect(total).toBe(1);
+  });
+
+  it("does not create duplicate migrate-backdrops jobs when registerSyncJobs is called twice", () => {
+    registerSyncJobs();
+    registerSyncJobs();
+
+    const stats = getJobStats();
+    const migrateBackdropsStats = stats["migrate-backdrops"];
+    const total = (migrateBackdropsStats?.pending ?? 0) +
+      (migrateBackdropsStats?.running ?? 0) +
+      (migrateBackdropsStats?.completed ?? 0) +
+      (migrateBackdropsStats?.failed ?? 0);
+    expect(total).toBe(1);
+  });
+
+  it("does not create duplicate migrate-offers jobs when registerSyncJobs is called twice", () => {
+    registerSyncJobs();
+    registerSyncJobs();
+
+    const stats = getJobStats();
+    const migrateOffersStats = stats["migrate-offers"];
+    const total = (migrateOffersStats?.pending ?? 0) +
+      (migrateOffersStats?.running ?? 0) +
+      (migrateOffersStats?.completed ?? 0) +
+      (migrateOffersStats?.failed ?? 0);
+    expect(total).toBe(1);
   });
 });
 

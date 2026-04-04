@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, isNull } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { invitations, users } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -90,5 +90,26 @@ export async function revokeInvitation(id: string, userId: string) {
     await db.delete(invitations)
       .where(and(eq(invitations.id, id), eq(invitations.createdById, userId)))
       .run();
+  });
+}
+
+export async function getUsersByIds(ids: string[]): Promise<Map<string, { id: string; username: string; display_name: string | null }>> {
+  if (ids.length === 0) return new Map();
+  return traceDbQuery("getUsersByIds", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        display_name: users.name,
+      })
+      .from(users)
+      .where(inArray(users.id, ids))
+      .all();
+    const map = new Map<string, { id: string; username: string; display_name: string | null }>();
+    for (const row of rows) {
+      map.set(row.id, row);
+    }
+    return map;
   });
 }

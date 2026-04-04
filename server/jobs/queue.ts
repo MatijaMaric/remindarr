@@ -112,6 +112,20 @@ export function failJob(id: number, error: string) {
   }
 }
 
+/**
+ * Returns true if a job with the given name is already pending, running, or completed.
+ * Used to prevent duplicate one-time migration jobs from being enqueued on every restart.
+ */
+export function hasActiveJob(name: string): boolean {
+  const db = getRawDb();
+  const row = db
+    .prepare(
+      "SELECT id FROM jobs WHERE name = ? AND status IN ('pending', 'running', 'completed') LIMIT 1"
+    )
+    .get(name);
+  return row !== null;
+}
+
 export function cleanupOldJobs(retentionDays: number = 30) {
   const db = getRawDb();
   const result = db

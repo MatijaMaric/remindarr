@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, deleteEpisodesForTitle, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { getDb } from "../db/schema";
@@ -292,7 +292,6 @@ app.delete("/:id", async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("id");
   await untrackTitle(titleId, user.id);
-  await deleteEpisodesForTitle(titleId);
   return ok(c, { message: `Untracked ${titleId}` });
 });
 

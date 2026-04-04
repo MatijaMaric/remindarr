@@ -38,7 +38,7 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
         const mapped = data.users.map((u) => ({
           id: u.id,
           username: u.username,
-          displayName: u.display_name ?? u.name ?? null,
+          displayName: u.display_name ?? null,
           image: u.image,
         }));
         setResults(mapped);
