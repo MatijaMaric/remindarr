@@ -288,6 +288,13 @@
   "settings": {
     "title": "Settings",
     "viewProfile": "View Profile",
+    "tabs": {
+      "account": "Account",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "integrations": "Integrations",
+      "admin": "Admin"
+    },
     "theme": {
       "title": "Theme",
       "dark": "Dark",

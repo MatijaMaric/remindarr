@@ -57,7 +57,7 @@ mock.module("../context/AuthContext", () => ({
 const { default: SettingsPage } = await import("./SettingsPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return <MemoryRouter initialEntries={["/settings?tab=notifications"]}>{children}</MemoryRouter>;
 }
 
 afterEach(() => {

@@ -77,7 +77,7 @@ mock.module("../api", () => ({
   updateAllTitleVisibility: mock(() => Promise.resolve()),
   exportWatchlist: mock(() => Promise.resolve([])),
   importWatchlist: mock(() => Promise.resolve({ imported: 0 })),
-  getNotifiers: mock(() => Promise.resolve([])),
+  getNotifiers: mock(() => Promise.resolve({ notifiers: [] })),
   getNotifierProviders: mock(() => Promise.resolve({ providers: [] })),
   createNotifier: mock(() => Promise.resolve({ notifier: {} })),
   updateNotifier: mock(() => Promise.resolve()),
@@ -100,6 +100,18 @@ mock.module("../api", () => ({
     })
   ),
   updateAdminSettings: mock(() => Promise.resolve({})),
+  getHomepageLayout: mock(() => Promise.resolve([])),
+  updateHomepageLayout: mock(() => Promise.resolve({ layout: [] })),
+  getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
+  createPlexPin: mock(() => Promise.resolve({ pinId: 0, authUrl: "" })),
+  checkPlexPin: mock(() => Promise.resolve({ status: "pending" })),
+  refreshPlexServers: mock(() => Promise.resolve({ servers: [] })),
+  createIntegration: mock(() => Promise.resolve({ integration: {} })),
+  updateIntegration: mock(() => Promise.resolve()),
+  deleteIntegration: mock(() => Promise.resolve()),
+  triggerPlexSync: mock(() => Promise.resolve({ success: true })),
+  getFeedToken: mock(() => Promise.resolve({ token: "test-token" })),
+  regenerateFeedToken: mock(() => Promise.resolve({ token: "new-token" })),
 }));
 
 // Import after mocks
@@ -107,6 +119,12 @@ const { default: SettingsPage } = await import("./SettingsPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
+}
+
+function WrapperWithPath(path: string) {
+  return function ({ children }: { children: ReactNode }) {
+    return <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>;
+  };
 }
 
 afterEach(() => {
@@ -185,5 +203,42 @@ describe("ProfileVisibilitySection", () => {
     const friendsRadio = radios.find((r) => (r as HTMLInputElement).value === "friends_only") as HTMLInputElement | undefined;
     expect(friendsRadio).toBeDefined();
     expect(friendsRadio!.checked).toBe(true);
+  });
+});
+
+describe("Settings tabs", () => {
+  it("renders tab list with expected tabs for non-admin user", async () => {
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Account")).toBeDefined();
+    });
+
+    expect(screen.getByText("Appearance")).toBeDefined();
+    expect(screen.getByText("Notifications")).toBeDefined();
+    expect(screen.getByText("Integrations")).toBeDefined();
+    expect(screen.queryByText("Admin")).toBeNull();
+  });
+
+  it("shows account tab content by default", async () => {
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Profile Visibility")).toBeDefined();
+    });
+
+    // Appearance-tab content should not be rendered (base-ui only renders active panel)
+    expect(screen.queryByText("Homepage Layout")).toBeNull();
+  });
+
+  it("shows notifications tab content when ?tab=notifications", async () => {
+    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=notifications") });
+
+    await waitFor(() => {
+      expect(screen.getByText("Notifications")).toBeDefined();
+    });
+
+    // Account-tab content should not be rendered
+    expect(screen.queryByText("Profile Visibility")).toBeNull();
   });
 });
