@@ -6,6 +6,7 @@ import WatchButtonGroup from "./WatchButtonGroup";
 import VisibilityButton from "./VisibilityButton";
 import StatusPicker from "./StatusPicker";
 import NotificationModePicker from "./NotificationModePicker";
+import TagList from "./TagList";
 
 interface Props {
   title: Title;
@@ -16,11 +17,13 @@ interface Props {
   showProgressBar?: boolean;
   showStatusPicker?: boolean;
   showNotificationPicker?: boolean;
+  showTags?: boolean;
 }
 
-const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker }: Props) {
+const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker, showTags }: Props) {
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
   const [notifMode, setNotifMode] = useState(title.notification_mode ?? null);
+  const [tags, setTags] = useState<string[]>(title.tags ?? []);
 
   return (
     <article aria-label={title.title} className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>
@@ -166,6 +169,13 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
               titleId={title.id}
               currentMode={notifMode}
               onModeChange={(m) => setNotifMode(m)}
+            />
+          )}
+          {title.is_tracked && showTags && (
+            <TagList
+              titleId={title.id}
+              tags={tags}
+              onTagsChange={setTags}
             />
           )}
         </div>

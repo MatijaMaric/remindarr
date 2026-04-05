@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags } from "../db/repository";
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
@@ -302,6 +302,47 @@ app.patch("/:id/status", async (c) => {
 
   await updateTrackedStatus(titleId, user.id, body.status as UserStatus | null);
   return ok(c, { message: "Status updated" });
+});
+
+app.patch("/:id/notes", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("id");
+  const body = await c.req.json<{ notes: string | null }>().catch(() => null);
+  if (body === null || !("notes" in body)) {
+    return c.json({ error: "Missing notes field" }, 400);
+  }
+  if (body.notes !== null && typeof body.notes !== "string") {
+    return c.json({ error: "notes must be a string or null" }, 400);
+  }
+  if (body.notes !== null && body.notes.length > 500) {
+    return c.json({ error: "notes must be 500 characters or fewer" }, 400);
+  }
+  await updateTrackedNotes(titleId, user.id, body.notes);
+  return ok(c, { message: "Notes updated" });
+});
+
+app.patch("/:id/tags", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("id");
+  const body = await c.req.json<{ tags: string[] }>().catch(() => null);
+  if (body === null || !Array.isArray(body.tags)) {
+    return c.json({ error: "tags must be an array" }, 400);
+  }
+  if (body.tags.length > 10) {
+    return c.json({ error: "Maximum 10 tags allowed" }, 400);
+  }
+  for (const tag of body.tags) {
+    if (typeof tag !== "string") {
+      return c.json({ error: "Each tag must be a string" }, 400);
+    }
+    if (tag.trim().length > 30) {
+      return c.json({ error: "Each tag must be 30 characters or fewer" }, 400);
+    }
+  }
+  // Normalize: trim, lowercase, deduplicate
+  const normalized = [...new Set(body.tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0))];
+  await setTags(user.id, titleId, normalized);
+  return ok(c, { message: "Tags updated" });
 });
 
 app.delete("/:id", async (c) => {

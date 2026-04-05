@@ -41,7 +41,7 @@ export default function TrackedPage() {
               <h3 className="text-sm font-semibold text-zinc-400 mb-3">
                 {t(group.labelKey)} ({group.titles.length})
               </h3>
-              <TitleList titles={group.titles} onTrackToggle={refetch} hideTypeBadge showProgressBar showStatusPicker showNotificationPicker />
+              <TitleList titles={group.titles} onTrackToggle={refetch} hideTypeBadge showProgressBar showStatusPicker showNotificationPicker showTags />
             </div>
           ))}
           {movies.length > 0 && (
@@ -49,7 +49,7 @@ export default function TrackedPage() {
               <h3 className="text-sm font-semibold text-zinc-400 mb-3">
                 {t("tracked.sections.movies")} ({movies.length})
               </h3>
-              <TitleList titles={movies} onTrackToggle={refetch} showStatusPicker />
+              <TitleList titles={movies} onTrackToggle={refetch} showStatusPicker showTags />
             </div>
           )}
         </div>

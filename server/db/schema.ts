@@ -463,6 +463,21 @@ export const cronJobs = sqliteTable("cron_jobs", {
   enabled: integer("enabled").notNull().default(1),
 });
 
+export const titleTags = sqliteTable(
+  "title_tags",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.titleId, table.tag] }),
+    index("idx_title_tags_user_id").on(table.userId),
+    index("idx_title_tags_title_id").on(table.titleId),
+  ]
+);
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const titlesRelations = relations(titles, ({ many, one }) => ({
@@ -583,7 +598,7 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
-  follows, ratings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems,
+  follows, ratings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,

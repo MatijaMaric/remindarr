@@ -54,8 +54,11 @@ export {
   updateTrackedStatus,
   updateNotificationMode,
   getTrackedTitlesForNotifications,
+  updateTrackedNotes,
 } from "./tracked";
 export type { UserStatus, NotificationMode } from "./tracked";
+
+export { getTagsForUser, getTagsForTitle, setTags } from "./tags";
 
 export { getUserPublicProfile, updateProfilePublic } from "./profile";
 export type { ProfileVisibility } from "./profile";
