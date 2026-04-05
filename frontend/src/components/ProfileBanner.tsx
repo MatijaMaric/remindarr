@@ -34,7 +34,7 @@ export default function ProfileBanner({ backdrops, user, stats, isOwnProfile, au
 
   return (
     <div
-      className="w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[28rem] sm:h-[22rem] -mt-6"
+      className="w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[28rem] sm:h-[22rem] -mt-6 dark-section"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >

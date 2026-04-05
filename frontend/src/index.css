@@ -189,6 +189,31 @@
 .theme-light .border-zinc-800\/60 {
   border-color: rgba(203, 213, 225, 0.6);
 }
+/* Calendar cell hover states */
+.theme-light .hover\:bg-zinc-900\/60:hover {
+  background-color: rgba(241, 245, 249, 0.8);
+}
+.theme-light .hover\:bg-zinc-950\/80:hover {
+  background-color: rgba(250, 250, 250, 0.8);
+}
+
+/* Dark-section: preserve original dark-mode colors inside cinematic hero areas.
+   Applied to TitleDetailPage hero, HeroBanner, and ProfileBanner — all use
+   dark backgrounds via inline styles so text must stay light. */
+.theme-light .dark-section .text-white { color: white; }
+.theme-light .dark-section .text-zinc-100 { color: #f4f4f5; }
+.theme-light .dark-section .text-zinc-200 { color: #e4e4e7; }
+.theme-light .dark-section .text-zinc-300 { color: #d4d4d8; }
+.theme-light .dark-section .text-zinc-400 { color: #a1a1aa; }
+.theme-light .dark-section .text-zinc-500 { color: #71717a; }
+.theme-light .dark-section .bg-zinc-700 { background-color: #3f3f46; }
+.theme-light .dark-section .bg-zinc-800 { background-color: #27272a; }
+.theme-light .dark-section .bg-zinc-900 { background-color: #18181b; }
+.theme-light .dark-section .bg-zinc-900\/60 { background-color: rgba(24, 24, 27, 0.6); }
+.theme-light .dark-section .bg-zinc-900\/70 { background-color: rgba(24, 24, 27, 0.7); }
+.theme-light .dark-section .bg-zinc-900\/80 { background-color: rgba(24, 24, 27, 0.8); }
+.theme-light .dark-section .border-white\/\[0\.06\] { border-color: rgb(255 255 255 / 0.06); }
+.theme-light .dark-section .border-white\/\[0\.08\] { border-color: rgb(255 255 255 / 0.08); }
 
 /* OLED theme overrides */
 .theme-oled .bg-zinc-950 {

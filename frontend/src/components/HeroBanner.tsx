@@ -98,7 +98,7 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
 
   return (
     <div
-      className="group hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[450px]"
+      className="group hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[450px] dark-section"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >

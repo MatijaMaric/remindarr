@@ -255,7 +255,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   return (
     <div className="space-y-8 pb-12">
       {/* Hero */}
-      <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8" style={backdropUrl ? {
+      <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 dark-section" style={backdropUrl ? {
         backgroundImage: `linear-gradient(to bottom, rgba(3,7,18,0.6), rgba(3,7,18,1)), url(${backdropUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center top",
@@ -541,7 +541,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   return (
     <div className="space-y-8 pb-12">
       {/* Hero */}
-      <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8" style={backdropUrl ? {
+      <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 dark-section" style={backdropUrl ? {
         backgroundImage: `linear-gradient(to bottom, rgba(3,7,18,0.6), rgba(3,7,18,1)), url(${backdropUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center top",
