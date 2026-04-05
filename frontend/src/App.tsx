@@ -14,6 +14,7 @@ import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
 import { useKeyboardShortcut } from "./hooks/useKeyboardShortcut";
+import { useTheme } from "./hooks/useTheme";
 
 const LAZY_RETRY_KEY = "__lazy_retry";
 
@@ -72,6 +73,7 @@ export default function App() {
   const isReelsPage = location.pathname === "/reels";
   usePushSubscriptionSync();
 
+  const { theme } = useTheme();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useKeyboardShortcut("?", () => setShortcutsOpen((v) => !v));
   useKeyboardShortcut("/", () => {
@@ -217,7 +219,7 @@ export default function App() {
       </footer>
       <BottomTabBar />
       <OfflineIndicator />
-      <Toaster theme="dark" position="bottom-center" richColors />
+      <Toaster theme={theme === "light" ? "light" : "dark"} position="bottom-center" richColors />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );

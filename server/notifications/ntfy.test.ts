@@ -127,6 +127,21 @@ describe("NtfyProvider.send", () => {
     expect(fetchCalls).toHaveLength(0);
   });
 
+  it("sends when content has only streaming alerts", async () => {
+    const alertContent: NotificationContent = {
+      date: "2026-04-05",
+      episodes: [],
+      movies: [],
+      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix" }],
+    };
+    await ntfy.send({ url: "https://ntfy.sh/my-topic" }, alertContent);
+    expect(fetchCalls).toHaveLength(1);
+    const headers = fetchCalls[0].options.headers as Record<string, string>;
+    expect(headers["Title"]).toContain("now streaming");
+    expect(fetchCalls[0].options.body as string).toContain("Inception");
+    expect(fetchCalls[0].options.body as string).toContain("Netflix");
+  });
+
   it("throws on non-2xx response", async () => {
     fetchSpy.mockImplementation(async () => new Response("Forbidden", { status: 403 }));
     await expect(ntfy.send({ url: "https://ntfy.sh/my-topic" }, sampleContent)).rejects.toThrow("403");

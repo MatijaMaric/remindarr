@@ -140,6 +140,21 @@ describe("TelegramProvider.send", () => {
     expect(fetchCalls).toHaveLength(0);
   });
 
+  it("sends when content has only streaming alerts", async () => {
+    const alertContent: NotificationContent = {
+      date: "2026-04-05",
+      episodes: [],
+      movies: [],
+      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix" }],
+    };
+    await telegram.send(config, alertContent);
+    expect(fetchCalls).toHaveLength(1);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.text).toContain("now streaming");
+    expect(body.text).toContain("Inception");
+    expect(body.text).toContain("Netflix");
+  });
+
   it("throws on non-2xx response", async () => {
     fetchSpy.mockImplementation(async () =>
       new Response(JSON.stringify({ ok: false, description: "Bad Request" }), { status: 400 })

@@ -116,6 +116,21 @@ describe("WebhookProvider.send", () => {
     expect(fetchCalls).toHaveLength(0);
   });
 
+  it("sends when content has only streaming alerts", async () => {
+    const alertContent: NotificationContent = {
+      date: "2026-04-05",
+      episodes: [],
+      movies: [],
+      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix" }],
+    };
+    await webhook.send({ url: "https://example.com/hook" }, alertContent);
+    expect(fetchCalls).toHaveLength(1);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.streaming_alerts).toBeArray();
+    expect(body.streaming_alerts[0].title).toBe("Inception");
+    expect(body.streaming_alerts[0].providerName).toBe("Netflix");
+  });
+
   it("throws on non-2xx response", async () => {
     fetchSpy.mockImplementation(async () => new Response("Server Error", { status: 500 }));
     await expect(webhook.send({ url: "https://example.com/hook" }, sampleContent)).rejects.toThrow("500");
