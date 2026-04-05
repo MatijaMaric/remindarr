@@ -53,9 +53,9 @@ export class DiscordProvider implements NotificationProvider {
 
   private buildEmbeds(content: NotificationContent) {
     const embeds: any[] = [];
-    const { episodes, movies, date } = content;
+    const { episodes, movies, date, streamingAlerts = [] } = content;
 
-    if (episodes.length === 0 && movies.length === 0) return [];
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return [];
 
     // Header embed
     const parts: string[] = [];
@@ -66,11 +66,18 @@ export class DiscordProvider implements NotificationProvider {
       parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
     }
 
-    embeds.push({
-      title: `📺 Releases for ${date}`,
-      description: `${parts.join(" and ")} releasing today`,
-      color: EMBED_COLOR,
-    });
+    if (streamingAlerts.length > 0 || parts.length > 0) {
+      const descParts: string[] = [];
+      if (parts.length > 0) descParts.push(`${parts.join(" and ")} releasing today`);
+      if (streamingAlerts.length > 0) {
+        descParts.push(`${streamingAlerts.length} title${streamingAlerts.length !== 1 ? "s" : ""} now streaming`);
+      }
+      embeds.push({
+        title: `📺 Releases for ${date}`,
+        description: descParts.join(" · "),
+        color: EMBED_COLOR,
+      });
+    }
 
     // Episode embeds (grouped by show)
     const showMap = new Map<
@@ -133,6 +140,21 @@ export class DiscordProvider implements NotificationProvider {
         embed.footer = { text: `Available on: ${providers}` };
       }
 
+      embeds.push(embed);
+    }
+
+    // Streaming alert embeds
+    for (const alert of streamingAlerts) {
+      const embed: any = {
+        title: `🎬 ${alert.title}`,
+        description: `Now available on **${alert.providerName}**`,
+        color: EMBED_COLOR,
+      };
+      if (alert.posterUrl) {
+        embed.thumbnail = {
+          url: `${CONFIG.TMDB_IMAGE_BASE_URL}/w185${alert.posterUrl}`,
+        };
+      }
       embeds.push(embed);
     }
 

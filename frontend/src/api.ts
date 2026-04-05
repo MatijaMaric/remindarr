@@ -21,6 +21,7 @@ import type {
   RecommendationsResponse,
   InvitationItem,
   HomepageSection,
+  WatchHistoryEntry,
 } from "./types";
 
 const BASE = "/api";
@@ -157,6 +158,21 @@ export async function importWatchlist(file: File): Promise<{ success: boolean; i
   });
 }
 
+export async function importCsv(file: File): Promise<{ imported: number; failed: number; skipped: number; errors: string[] }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE}/import/csv`, { method: "POST", body: form });
+  if (res.status === 401) {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    throw new Error("Authentication required");
+  }
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(e.error || `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // ─── User Profile ──────────────────────────────────────────────────────────
 
 export async function getUserProfile(username: string): Promise<UserProfileResponse> {
@@ -268,6 +284,12 @@ export async function unwatchMovie(titleId: string): Promise<void> {
   await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, { method: "DELETE" });
 }
 
+// ─── Watch History ───────────────────────────────────────────────────────────
+
+export async function getWatchHistory(titleId: string): Promise<{ history: WatchHistoryEntry[]; playCount: number }> {
+  return fetchJson(`/watched/history/${encodeURIComponent(titleId)}`);
+}
+
 // ─── Details ────────────────────────────────────────────────────────────────
 
 export async function getMovieDetails(titleId: string): Promise<MovieDetailsResponse> {
@@ -358,6 +380,9 @@ export interface Notifier {
   timezone: string;
   enabled: boolean;
   last_sent_date: string | null;
+  digest_mode: "weekly" | "off" | null;
+  digest_day: number | null;
+  streaming_alerts_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -379,6 +404,9 @@ export async function createNotifier(data: {
   config: Record<string, string>;
   notify_time: string;
   timezone: string;
+  digest_mode?: "weekly" | "off" | null;
+  digest_day?: number | null;
+  streaming_alerts_enabled?: boolean;
 }): Promise<{ notifier: Notifier }> {
   return fetchJson("/notifiers", {
     method: "POST",
@@ -393,6 +421,9 @@ export async function updateNotifier(
     notify_time: string;
     timezone: string;
     enabled: boolean;
+    digest_mode: "weekly" | "off" | null;
+    digest_day: number | null;
+    streaming_alerts_enabled: boolean;
   }>
 ): Promise<{ notifier: Notifier }> {
   return fetchJson(`/notifiers/${encodeURIComponent(id)}`, {

@@ -34,6 +34,19 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
+const VALID_DIGEST_MODES = ["weekly", "off"] as const;
+type DigestMode = (typeof VALID_DIGEST_MODES)[number];
+
+function isValidDigestMode(mode: unknown): mode is DigestMode | null {
+  if (mode === null || mode === undefined) return true;
+  return VALID_DIGEST_MODES.includes(mode as DigestMode);
+}
+
+function isValidDigestDay(day: unknown): day is number | null {
+  if (day === null || day === undefined) return true;
+  return typeof day === "number" && Number.isInteger(day) && day >= 0 && day <= 6;
+}
+
 // GET / — list user's notifiers
 app.get("/", async (c) => {
   const user = c.get("user")!;
@@ -61,7 +74,7 @@ app.post("/", async (c) => {
   const user = c.get("user")!;
   const body = await c.req.json();
 
-  const { provider, config, notify_time, timezone } = body;
+  const { provider, config, notify_time, timezone, digest_mode, digest_day, streaming_alerts_enabled } = body;
 
   if (!provider || !config) {
     return err(c, "provider and config are required");
@@ -89,7 +102,19 @@ app.post("/", async (c) => {
     return err(c, "Invalid timezone");
   }
 
-  const id = await createNotifier(user.id, provider, name, config, time, tz);
+  if (!isValidDigestMode(digest_mode)) {
+    return err(c, "Invalid digest_mode. Must be 'weekly', 'off', or null");
+  }
+
+  if (!isValidDigestDay(digest_day)) {
+    return err(c, "Invalid digest_day. Must be 0-6 (0=Sunday) or null");
+  }
+
+  if (digest_mode === "weekly" && (digest_day === null || digest_day === undefined)) {
+    return err(c, "digest_day is required when digest_mode is 'weekly'");
+  }
+
+  const id = await createNotifier(user.id, provider, name, config, time, tz, digest_mode ?? null, digest_day ?? null, streaming_alerts_enabled !== false);
   await refreshNotificationSchedule();
   const notifier = await getNotifierById(id, user.id);
   return c.json({ notifier }, 201);
@@ -158,11 +183,32 @@ app.put("/:id", async (c) => {
     return err(c, "Invalid timezone");
   }
 
+  if ("digest_mode" in body && !isValidDigestMode(body.digest_mode)) {
+    return err(c, "Invalid digest_mode. Must be 'weekly', 'off', or null");
+  }
+
+  if ("digest_day" in body && !isValidDigestDay(body.digest_day)) {
+    return err(c, "Invalid digest_day. Must be 0-6 (0=Sunday) or null");
+  }
+
+  const digestMode = "digest_mode" in body ? body.digest_mode : undefined;
+  const digestDay = "digest_day" in body ? body.digest_day : undefined;
+
+  if (digestMode === "weekly" && (digestDay === null || digestDay === undefined)) {
+    // Check if existing notifier already has a digest_day set
+    if (existing.digest_day === null || existing.digest_day === undefined) {
+      return err(c, "digest_day is required when digest_mode is 'weekly'");
+    }
+  }
+
   await updateNotifier(id, user.id, {
     config: body.config,
     notifyTime: body.notify_time,
     timezone: body.timezone,
     enabled: body.enabled,
+    ...("digest_mode" in body ? { digestMode: body.digest_mode ?? null } : {}),
+    ...("digest_day" in body ? { digestDay: body.digest_day ?? null } : {}),
+    ...("streaming_alerts_enabled" in body ? { streamingAlertsEnabled: body.streaming_alerts_enabled !== false } : {}),
   });
   await refreshNotificationSchedule();
 

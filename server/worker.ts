@@ -68,6 +68,7 @@ import healthRoutes from "./routes/health";
 import statsRoutes from "./routes/stats";
 import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
+import importRoutes from "./routes/import";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig } from "./config";
@@ -325,6 +326,10 @@ function createApp(env: Env) {
   app.use("/api/integrations/*", requireAuth);
   app.use("/api/integrations", requireAuth);
   app.route("/api/integrations", integrationRoutes);
+
+  app.use("/api/import/*", requireAuth);
+  app.use("/api/import", requireAuth);
+  app.route("/api/import", importRoutes);
 
   app.use("/api/stats/*", requireAuth);
   app.use("/api/stats", requireAuth);

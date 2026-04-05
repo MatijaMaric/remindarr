@@ -3,6 +3,7 @@ import { registerHandler } from "./worker";
 import { getEnabledIntegrationsByProvider } from "../db/repository";
 import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
+import { checkStreamingAlerts } from "./check-streaming-alerts";
 
 const log = logger.child({ module: "sync" });
 import { registerCron, enqueueJob, hasActiveJob } from "./queue";
@@ -24,8 +25,10 @@ export function registerSyncJobs() {
 
   registerHandler("sync-titles", async () => {
     const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });
+    const titleIds = titles.map((t) => t.id);
     const count = await upsertTitles(titles);
     log.info("Synced titles from TMDB", { count });
+    await checkStreamingAlerts(titleIds);
   });
 
   registerHandler("sync-episodes", async () => {

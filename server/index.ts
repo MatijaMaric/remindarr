@@ -23,6 +23,7 @@ import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import integrationRoutes from "./routes/integrations";
+import importRoutes from "./routes/import";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
@@ -211,6 +212,10 @@ app.route("/api/notifiers", notifierRoutes);
 app.use("/api/integrations/*", requireAuth);
 app.use("/api/integrations", requireAuth);
 app.route("/api/integrations", integrationRoutes);
+
+app.use("/api/import/*", requireAuth);
+app.use("/api/import", requireAuth);
+app.route("/api/import", importRoutes);
 
 app.use("/api/stats/*", requireAuth);
 app.use("/api/stats", requireAuth);

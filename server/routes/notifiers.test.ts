@@ -408,6 +408,131 @@ describe("POST /notifiers/renew-subscription", () => {
   });
 });
 
+describe("digest_mode", () => {
+  it("creates a notifier with weekly digest_mode and digest_day", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        digest_mode: "weekly",
+        digest_day: 1,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.notifier.digest_mode).toBe("weekly");
+    expect(body.notifier.digest_day).toBe(1);
+  });
+
+  it("creates a notifier with off digest_mode", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        digest_mode: "off",
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.notifier.digest_mode).toBe("off");
+    expect(body.notifier.digest_day).toBeNull();
+  });
+
+  it("creates a notifier with null digest_mode (daily behavior)", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.notifier.digest_mode).toBeNull();
+    expect(body.notifier.digest_day).toBeNull();
+  });
+
+  it("rejects weekly digest_mode without digest_day", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        digest_mode: "weekly",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("digest_day");
+  });
+
+  it("rejects invalid digest_mode value", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        digest_mode: "monthly",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("digest_mode");
+  });
+
+  it("rejects digest_day out of range", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        digest_mode: "weekly",
+        digest_day: 7,
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("digest_day");
+  });
+
+  it("updates digest_mode via PUT", async () => {
+    const createRes = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    const { notifier } = await createRes.json();
+
+    const res = await app.request(`/notifiers/${notifier.id}`, {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ digest_mode: "weekly", digest_day: 5 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.notifier.digest_mode).toBe("weekly");
+    expect(body.notifier.digest_day).toBe(5);
+  });
+
+  it("returns digest fields in notifier list", async () => {
+    await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        digest_mode: "weekly",
+        digest_day: 3,
+      }),
+    });
+
+    const res = await app.request("/notifiers", { headers: headers() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.notifiers[0].digest_mode).toBe("weekly");
+    expect(body.notifiers[0].digest_day).toBe(3);
+  });
+});
+
 describe("ownership enforcement", () => {
   it("user cannot access another user's notifier", async () => {
     // Create notifier as user 1

@@ -14,10 +14,18 @@ export interface NotificationMovie {
   offers: Array<{ providerName: string; providerIconUrl: string | null }>;
 }
 
+export interface NotificationStreamingAlert {
+  titleId: string;
+  title: string;
+  posterUrl: string | null;
+  providerName: string;
+}
+
 export interface NotificationContent {
   episodes: NotificationEpisode[];
   movies: NotificationMovie[];
   date: string;
+  streamingAlerts?: NotificationStreamingAlert[];
 }
 
 export interface NotificationProvider {

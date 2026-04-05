@@ -7,7 +7,7 @@ import {
   createUser,
   trackTitle,
 } from "../db/repository";
-import { buildNotificationContent } from "./content";
+import { buildNotificationContent, buildWeeklyDigestContent } from "./content";
 
 let userId: string;
 
@@ -122,5 +122,115 @@ describe("buildNotificationContent", () => {
 
     const otherContent = await buildNotificationContent(otherUserId, today);
     expect(otherContent.movies).toHaveLength(1);
+  });
+});
+
+describe("buildWeeklyDigestContent", () => {
+  it("returns episodes across the date range for tracked shows", async () => {
+    const startDate = "2026-04-07";
+    const endDate = "2026-04-14";
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-w1",
+        objectType: "SHOW",
+        title: "Weekly Show",
+        releaseDate: "2026-01-01",
+      }),
+    ]);
+    await trackTitle("show-w1", userId);
+
+    await upsertEpisodes([
+      {
+        title_id: "show-w1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Episode One",
+        overview: null,
+        air_date: "2026-04-08",
+        still_path: null,
+      },
+      {
+        title_id: "show-w1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Episode Two",
+        overview: null,
+        air_date: "2026-04-11",
+        still_path: null,
+      },
+    ]);
+
+    const content = await buildWeeklyDigestContent(userId, startDate, endDate);
+
+    expect(content.episodes).toHaveLength(2);
+    expect(content.episodes[0].showTitle).toBe("Weekly Show");
+    expect(content.date).toBe(startDate);
+  });
+
+  it("returns tracked movies releasing within the date range", async () => {
+    const startDate = "2026-04-07";
+    const endDate = "2026-04-14";
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-w1",
+        objectType: "MOVIE",
+        title: "Week Movie",
+        releaseDate: "2026-04-10",
+        releaseYear: 2026,
+      }),
+    ]);
+    await trackTitle("movie-w1", userId);
+
+    const content = await buildWeeklyDigestContent(userId, startDate, endDate);
+
+    expect(content.movies).toHaveLength(1);
+    expect(content.movies[0].title).toBe("Week Movie");
+  });
+
+  it("excludes movies outside the date range", async () => {
+    const startDate = "2026-04-07";
+    const endDate = "2026-04-14";
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-w2",
+        objectType: "MOVIE",
+        title: "Outside Range Movie",
+        releaseDate: "2026-04-15",
+        releaseYear: 2026,
+      }),
+    ]);
+    await trackTitle("movie-w2", userId);
+
+    const content = await buildWeeklyDigestContent(userId, startDate, endDate);
+
+    expect(content.movies).toHaveLength(0);
+  });
+
+  it("returns empty content when nothing is in range", async () => {
+    const content = await buildWeeklyDigestContent(userId, "2026-04-07", "2026-04-14");
+
+    expect(content.episodes).toHaveLength(0);
+    expect(content.movies).toHaveLength(0);
+  });
+
+  it("does not include untracked titles", async () => {
+    const startDate = "2026-04-07";
+    const endDate = "2026-04-14";
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-w3",
+        objectType: "MOVIE",
+        title: "Untracked Week Movie",
+        releaseDate: "2026-04-10",
+      }),
+    ]);
+    // Intentionally NOT tracking
+
+    const content = await buildWeeklyDigestContent(userId, startDate, endDate);
+    expect(content.movies).toHaveLength(0);
   });
 });

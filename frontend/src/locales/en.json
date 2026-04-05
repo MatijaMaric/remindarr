@@ -69,6 +69,16 @@
     "prevTitle": "Previous title",
     "openTitle": "Open focused title"
   },
+  "import": {
+    "title": "Import from CSV",
+    "description": "Import your watchlist from Letterboxd, IMDB, or Trakt by uploading a CSV export file. Up to 500 titles will be processed per import.",
+    "letterboxdHint": "Export from letterboxd.com — go to your profile, then Export.",
+    "imdbHint": "Export your ratings or watchlist from imdb.com — go to your list, then Export.",
+    "traktHint": "Export your watchlist from trakt.tv — go to Settings, then Data Export.",
+    "dropHint": "Drag and drop a CSV file here, or click to choose a file",
+    "importing": "Importing...",
+    "chooseFile": "Choose CSV file"
+  },
   "home": {
     "welcomeTitle": "Welcome to Remindarr",
     "welcomeMessage": "Sign in to see your upcoming episodes.",

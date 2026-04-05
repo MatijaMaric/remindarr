@@ -86,6 +86,7 @@ export default function SettingsPage() {
           <PlexSection />
           <CalendarFeedSection />
           <WatchlistSection />
+          <CsvImportSection />
         </TabsContent>
 
         {user.is_admin && (
@@ -662,6 +663,111 @@ function WatchlistSection() {
   );
 }
 
+function CsvImportSection() {
+  const [importing, setImporting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const { t } = useTranslation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setMsg("");
+    setErr("");
+    setImporting(true);
+    try {
+      const result = await api.importCsv(file);
+      const parts: string[] = [`${result.imported} title${result.imported !== 1 ? "s" : ""} imported`];
+      if (result.failed > 0) parts.push(`${result.failed} failed`);
+      if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
+      setMsg(parts.join(", ") + ".");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) void handleFile(file);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) void handleFile(file);
+  }
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">{t("import.title")}</h2>
+
+      {msg && (
+        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+          {err}
+        </div>
+      )}
+
+      <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
+        <p className="text-sm text-zinc-400">{t("import.description")}</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <div className="bg-zinc-800 rounded-lg p-3">
+            <p className="text-white font-medium mb-1">Letterboxd</p>
+            <p className="text-zinc-400 text-xs">{t("import.letterboxdHint")}</p>
+          </div>
+          <div className="bg-zinc-800 rounded-lg p-3">
+            <p className="text-white font-medium mb-1">IMDB</p>
+            <p className="text-zinc-400 text-xs">{t("import.imdbHint")}</p>
+          </div>
+          <div className="bg-zinc-800 rounded-lg p-3">
+            <p className="text-white font-medium mb-1">Trakt</p>
+            <p className="text-zinc-400 text-xs">{t("import.traktHint")}</p>
+          </div>
+        </div>
+
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragOver ? "border-amber-500 bg-amber-500/10" : "border-zinc-700 hover:border-zinc-500"} ${importing ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <p className="text-zinc-400 text-sm mb-2">{t("import.dropHint")}</p>
+          <p className="text-zinc-500 text-xs">.csv</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleInputChange}
+            className="hidden"
+            disabled={importing}
+          />
+        </div>
+
+        <label className={`inline-block px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
+          {importing ? t("import.importing") : t("import.chooseFile")}
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleInputChange}
+            className="hidden"
+            disabled={importing}
+          />
+        </label>
+      </div>
+    </section>
+  );
+}
+
 function PushNotificationsSection() {
   const [loading, setLoading] = useState(true);
   const [enabling, setEnabling] = useState(false);
@@ -897,6 +1003,9 @@ function NotificationsSection() {
   const [formChatId, setFormChatId] = useState("");
   const [formTime, setFormTime] = useState("09:00");
   const [formTimezone, setFormTimezone] = useState(USER_TIMEZONE);
+  const [formDigestMode, setFormDigestMode] = useState<"daily" | "weekly" | "off">("daily");
+  const [formDigestDay, setFormDigestDay] = useState<number>(1);
+  const [formStreamingAlerts, setFormStreamingAlerts] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback(() => {
@@ -924,6 +1033,9 @@ function NotificationsSection() {
     setFormChatId("");
     setFormTime("09:00");
     setFormTimezone(USER_TIMEZONE);
+    setFormDigestMode("daily");
+    setFormDigestDay(1);
+    setFormStreamingAlerts(true);
     setShowForm(false);
     setEditingId(null);
   }
@@ -939,6 +1051,9 @@ function NotificationsSection() {
     setFormChatId(n.config.chatId || "");
     setFormTime(n.notify_time);
     setFormTimezone(n.timezone);
+    setFormDigestMode(n.digest_mode === "weekly" ? "weekly" : n.digest_mode === "off" ? "off" : "daily");
+    setFormDigestDay(n.digest_day ?? 1);
+    setFormStreamingAlerts(n.streaming_alerts_enabled !== false);
     setShowForm(true);
     setMsg("");
     setErr("");
@@ -967,12 +1082,18 @@ function NotificationsSection() {
       config.token = formToken;
     }
 
+    const digestModeValue = formDigestMode === "daily" ? null : formDigestMode;
+    const digestDayValue = formDigestMode === "weekly" ? formDigestDay : null;
+
     try {
       if (editingId) {
         await api.updateNotifier(editingId, {
           config,
           notify_time: formTime,
           timezone: formTimezone,
+          digest_mode: digestModeValue,
+          digest_day: digestDayValue,
+          streaming_alerts_enabled: formStreamingAlerts,
         });
         setMsg("Notifier updated");
       } else {
@@ -981,6 +1102,9 @@ function NotificationsSection() {
           config,
           notify_time: formTime,
           timezone: formTimezone,
+          digest_mode: digestModeValue,
+          digest_day: digestDayValue,
+          streaming_alerts_enabled: formStreamingAlerts,
         });
         setMsg("Notifier created");
       }
@@ -1108,6 +1232,16 @@ function NotificationsSection() {
                 <div>
                   Time: <span className="text-zinc-300">{n.notify_time}</span>{" "}
                   <span className="text-zinc-500">({n.timezone})</span>
+                </div>
+                <div>
+                  Frequency:{" "}
+                  <span className="text-zinc-300">
+                    {n.digest_mode === "weekly"
+                      ? `Weekly (${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][n.digest_day ?? 1]})`
+                      : n.digest_mode === "off"
+                        ? "Off"
+                        : "Daily"}
+                  </span>
                 </div>
                 {n.last_sent_date && (
                   <div>Last sent: {n.last_sent_date}</div>
@@ -1254,6 +1388,54 @@ function NotificationsSection() {
                 ))}
               </datalist>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Notification Frequency</label>
+            <select
+              value={formDigestMode}
+              onChange={(e) => setFormDigestMode(e.target.value as "daily" | "weekly" | "off")}
+              className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="off">Off</option>
+            </select>
+            {formDigestMode === "weekly" && (
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Send digest on</label>
+                <select
+                  value={formDigestDay}
+                  onChange={(e) => setFormDigestDay(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                >
+                  <option value={0}>Sunday</option>
+                  <option value={1}>Monday</option>
+                  <option value={2}>Tuesday</option>
+                  <option value={3}>Wednesday</option>
+                  <option value={4}>Thursday</option>
+                  <option value={5}>Friday</option>
+                  <option value={6}>Saturday</option>
+                </select>
+                <p className="text-xs text-zinc-500 mt-1">Covers the next 7 days of releases</p>
+              </div>
+            )}
+            {formDigestMode === "off" && (
+              <p className="text-xs text-zinc-500 mt-1">Notifications from this notifier will be suppressed</p>
+            )}
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={formStreamingAlerts}
+                onChange={(e) => setFormStreamingAlerts(e.target.checked)}
+                className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
+              />
+              <span className="text-sm text-zinc-300">Streaming alerts</span>
+            </label>
+            <p className="text-xs text-zinc-500 mt-1 ml-6">Notify when a tracked title becomes available to stream</p>
           </div>
 
           <div className="flex gap-3">

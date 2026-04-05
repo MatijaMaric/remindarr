@@ -324,3 +324,127 @@ describe("DELETE /watched/movies/:titleId", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("Watch history logging", () => {
+  it("marking an episode watched logs a history entry", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-hist-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-hist-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-hist-1", 1, 1);
+
+    const app = makeAuthedApp();
+    await app.request(`/watched/${episodeId}`, { method: "POST" });
+
+    const db = getRawDb();
+    const row = db.prepare("SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ? AND episode_id = ?")
+      .get(userId, "show-hist-1", episodeId) as { cnt: number };
+    expect(row.cnt).toBe(1);
+  });
+
+  it("marking the same episode watched twice increments play count to 2", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-hist-2", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-hist-2", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-hist-2", 1, 1);
+
+    const app = makeAuthedApp();
+    await app.request(`/watched/${episodeId}`, { method: "POST" });
+    await app.request(`/watched/${episodeId}`, { method: "POST" });
+
+    const db = getRawDb();
+    const row = db.prepare("SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?")
+      .get(userId, "show-hist-2") as { cnt: number };
+    expect(row.cnt).toBe(2);
+  });
+
+  it("marking a movie watched logs a history entry", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-hist-1", objectType: "MOVIE" })]);
+
+    const app = makeAuthedApp();
+    await app.request("/watched/movies/movie-hist-1", { method: "POST" });
+
+    const db = getRawDb();
+    const row = db.prepare("SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?")
+      .get(userId, "movie-hist-1") as { cnt: number };
+    expect(row.cnt).toBe(1);
+  });
+
+  it("bulk watch logs history for each released episode", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-hist-bulk", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-hist-bulk", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: yesterdayStr, still_path: null },
+      { title_id: "show-hist-bulk", season_number: 1, episode_number: 2, name: "Ep2", overview: null, air_date: yesterdayStr, still_path: null },
+    ]);
+    const ep1Id = await getEpisodeId("show-hist-bulk", 1, 1);
+    const ep2Id = await getEpisodeId("show-hist-bulk", 1, 2);
+
+    const app = makeAuthedApp();
+    await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [ep1Id, ep2Id], watched: true }),
+    });
+
+    const db = getRawDb();
+    const row = db.prepare("SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?")
+      .get(userId, "show-hist-bulk") as { cnt: number };
+    expect(row.cnt).toBe(2);
+  });
+});
+
+describe("GET /watched/history/:titleId", () => {
+  it("returns empty history and 0 play count for a title with no watches", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-nowatch", objectType: "MOVIE" })]);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/history/movie-nowatch");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.playCount).toBe(0);
+    expect(body.history).toEqual([]);
+  });
+
+  it("returns correct history and play count after watching a movie", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-hist-get", objectType: "MOVIE" })]);
+
+    const app = makeAuthedApp();
+    await app.request("/watched/movies/movie-hist-get", { method: "POST" });
+    await app.request("/watched/movies/movie-hist-get", { method: "POST" });
+
+    const res = await app.request("/watched/history/movie-hist-get");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.playCount).toBe(2);
+    expect(body.history.length).toBe(2);
+    // Newest first
+    expect(new Date(body.history[0].watchedAt).getTime()).toBeGreaterThanOrEqual(
+      new Date(body.history[1].watchedAt).getTime()
+    );
+  });
+
+  it("history entries for episodes include episodeId", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-hist-ep", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-hist-ep", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const episodeId = await getEpisodeId("show-hist-ep", 1, 1);
+
+    const app = makeAuthedApp();
+    await app.request(`/watched/${episodeId}`, { method: "POST" });
+
+    const res = await app.request("/watched/history/show-hist-ep");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.playCount).toBe(1);
+    expect(body.history[0].episodeId).toBe(episodeId);
+  });
+});

@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, gte, lt, asc } from "drizzle-orm";
+import { eq, and, sql, desc, gte, lt, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, scores, tracked, watchedTitles } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -306,5 +306,62 @@ export async function updateTrackedNotes(titleId: string, userId: string, notes:
       .set({ notes })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
+  });
+}
+
+/**
+ * Get tracked movies releasing within [startDate, endDate) for a user.
+ * Used for weekly digest notifications.
+ */
+export async function getTrackedMoviesByReleaseDateRange(startDate: string, endDate: string, userId: string) {
+  return traceDbQuery("getTrackedMoviesByReleaseDateRange", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: titles.id,
+        title: titles.title,
+        release_year: titles.releaseYear,
+        release_date: titles.releaseDate,
+        poster_url: titles.posterUrl,
+      })
+      .from(titles)
+      .innerJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+      .where(
+        and(
+          gte(titles.releaseDate, startDate),
+          lt(titles.releaseDate, endDate),
+          eq(titles.objectType, "MOVIE")
+        )
+      )
+      .all();
+
+    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
+    return rows.map((row) => ({
+      ...row,
+      offers: offersByTitle.get(row.id) ?? [],
+    }));
+  });
+}
+
+/**
+ * Returns a map of titleId -> userIds for all users tracking any of the given titleIds.
+ * Used during sync to find who should receive streaming availability alerts.
+ */
+export async function getUsersTrackingTitles(titleIds: string[]): Promise<Map<string, string[]>> {
+  return traceDbQuery("getUsersTrackingTitles", async () => {
+    if (titleIds.length === 0) return new Map();
+    const db = getDb();
+    const rows = await db
+      .select({ titleId: tracked.titleId, userId: tracked.userId })
+      .from(tracked)
+      .where(inArray(tracked.titleId, titleIds))
+      .all();
+    const map = new Map<string, string[]>();
+    for (const row of rows) {
+      const list = map.get(row.titleId) ?? [];
+      list.push(row.userId);
+      map.set(row.titleId, list);
+    }
+    return map;
   });
 }

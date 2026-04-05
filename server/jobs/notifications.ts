@@ -7,7 +7,7 @@ import {
   disableNotifier,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
-import { buildNotificationContent } from "../notifications/content";
+import { buildNotificationContent, buildWeeklyDigestContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { refreshNotificationSchedule } from "./schedule";
 
@@ -67,6 +67,46 @@ export async function registerNotificationJobs() {
             continue;
           }
 
+          // Weekly digest: only send if today matches the configured digest_day
+          if (notifier.digest_mode === "weekly") {
+            const tzInfo = timesByTimezone.get(notifier.timezone);
+            if (!tzInfo) continue;
+
+            const todayDayOfWeek = new Date(tzInfo.date + "T00:00:00Z").getUTCDay();
+            if (notifier.digest_day !== todayDayOfWeek) {
+              // Not the right day — skip without marking sent so we retry tomorrow
+              continue;
+            }
+
+            // Build content for the next 7 days
+            const endDate = new Date(tzInfo.date + "T00:00:00Z");
+            endDate.setUTCDate(endDate.getUTCDate() + 7);
+            const endDateStr = endDate.toISOString().slice(0, 10);
+
+            const content = await buildWeeklyDigestContent(
+              notifier.user_id,
+              tzInfo.date,
+              endDateStr
+            );
+
+            if (content.episodes.length === 0 && content.movies.length === 0) {
+              await markNotifierSent(notifier.id, notifier.todayDate);
+              continue;
+            }
+
+            await provider.send(notifier.config, content);
+            await markNotifierSent(notifier.id, notifier.todayDate);
+            log.info("Sent weekly digest notification", { provider: notifier.provider, userId: notifier.user_id });
+            continue;
+          }
+
+          // "off" mode: do nothing, just mark as sent to prevent re-firing
+          if (notifier.digest_mode === "off") {
+            await markNotifierSent(notifier.id, notifier.todayDate);
+            continue;
+          }
+
+          // Default daily behavior
           const content = await buildNotificationContent(
             notifier.user_id,
             notifier.todayDate
