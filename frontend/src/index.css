@@ -133,11 +133,28 @@
 .theme-light .bg-zinc-950\/80 {
   background-color: rgba(250, 250, 250, 0.8);
 }
+.theme-light .bg-zinc-950\/90 {
+  background-color: rgba(250, 250, 250, 0.9);
+}
+/* Fallback: override nav bg directly in case Tailwind @layer wins */
+:root.theme-light nav {
+  background-color: rgba(250, 250, 250, 0.85) !important;
+  border-color: rgb(0 0 0 / 0.1) !important;
+}
+.theme-light .text-white {
+  color: #18181b;
+}
+.theme-light .hover\:text-white:hover {
+  color: #18181b;
+}
 .theme-light .hover\:bg-zinc-700:hover {
   background-color: #cbd5e1;
 }
 .theme-light .hover\:text-zinc-100:hover {
   color: #18181b;
+}
+.theme-light .hover\:bg-zinc-800:hover {
+  background-color: #e2e8f0;
 }
 
 /* OLED theme overrides */
