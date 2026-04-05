@@ -17,7 +17,18 @@
     "calendar": "Calendar",
     "discovery": "Discovery",
     "profile": "Profile",
-    "signIn": "Sign In"
+    "signIn": "Sign In",
+    "unreadRecommendations_one": "{{count}} unread recommendation",
+    "unreadRecommendations_other": "{{count}} unread recommendations"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "close": "Close keyboard shortcuts",
+    "showHelp": "Show keyboard shortcuts",
+    "focusSearch": "Focus search",
+    "nextTitle": "Next title",
+    "prevTitle": "Previous title",
+    "openTitle": "Open focused title"
   },
   "home": {
     "welcomeTitle": "Welcome to Remindarr",
@@ -167,6 +178,7 @@
   },
   "search": {
     "placeholder": "Search titles or paste IMDB link...",
+    "label": "Search titles or paste IMDB link",
     "button": "Search"
   },
   "releases": {

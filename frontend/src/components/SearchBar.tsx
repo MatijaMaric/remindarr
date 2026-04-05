@@ -28,10 +28,12 @@ export default function SearchBar({ onSearch, onImdb, loading }: Props) {
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
       <input
+        id="search-input"
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={t("search.placeholder")}
+        aria-label={t("search.label")}
         className="flex-1 bg-zinc-900 border border-white/[0.06] rounded-lg px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
       />
       <button
