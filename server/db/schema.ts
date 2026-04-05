@@ -235,6 +235,7 @@ export const tracked = sqliteTable(
     notes: text("notes"),
     public: integer("public").notNull().default(1),
     userStatus: text("user_status"),
+    notificationMode: text("notification_mode"),
   },
   (table) => [primaryKey({ columns: [table.titleId, table.userId] })]
 );

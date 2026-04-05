@@ -5,6 +5,7 @@ import TrackButton from "./TrackButton";
 import WatchButtonGroup from "./WatchButtonGroup";
 import VisibilityButton from "./VisibilityButton";
 import StatusPicker from "./StatusPicker";
+import NotificationModePicker from "./NotificationModePicker";
 
 interface Props {
   title: Title;
@@ -14,10 +15,12 @@ interface Props {
   hideTypeBadge?: boolean;
   showProgressBar?: boolean;
   showStatusPicker?: boolean;
+  showNotificationPicker?: boolean;
 }
 
-const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker }: Props) {
+const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker }: Props) {
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
+  const [notifMode, setNotifMode] = useState(title.notification_mode ?? null);
 
   return (
     <article aria-label={title.title} className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>
@@ -156,6 +159,13 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
               objectType={title.object_type}
               currentStatus={userStatus as "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null}
               onStatusChange={(s) => setUserStatus(s)}
+            />
+          )}
+          {title.is_tracked && showNotificationPicker && (
+            <NotificationModePicker
+              titleId={title.id}
+              currentMode={notifMode}
+              onModeChange={(m) => setNotifMode(m)}
             />
           )}
         </div>

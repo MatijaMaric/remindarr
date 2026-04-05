@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus } from "../db/repository";
-import type { UserStatus } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode } from "../db/repository";
+import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { getDb } from "../db/schema";
@@ -309,6 +309,21 @@ app.delete("/:id", async (c) => {
   const titleId = c.req.param("id");
   await untrackTitle(titleId, user.id);
   return ok(c, { message: `Untracked ${titleId}` });
+});
+
+const VALID_NOTIFICATION_MODES = new Set<string>(["all", "premieres_only", "none"]);
+
+app.patch("/:id/notification", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("id");
+  const body = await c.req.json<{ mode: string | null }>();
+
+  if (body.mode !== null && !VALID_NOTIFICATION_MODES.has(body.mode)) {
+    return c.json({ error: "Invalid notification mode" }, 400);
+  }
+
+  await updateNotificationMode(titleId, user.id, body.mode as NotificationMode | null);
+  return ok(c, { message: "Notification mode updated" });
 });
 
 export default app;

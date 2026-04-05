@@ -83,6 +83,7 @@ export async function getTrackedTitles(userId: string) {
         notes: tracked.notes,
         public: tracked.public,
         user_status: tracked.userStatus,
+        notification_mode: tracked.notificationMode,
         is_tracked: sql<number>`1`,
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
@@ -140,6 +141,7 @@ export async function getPublicTrackedTitles(userId: string) {
         tmdb_score: scores.tmdbScore,
         tracked_at: tracked.trackedAt,
         user_status: tracked.userStatus,
+        notification_mode: tracked.notificationMode,
         is_tracked: sql<number>`1`,
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
@@ -261,5 +263,35 @@ export async function updateTrackedStatus(titleId: string, userId: string, statu
       .set({ userStatus: status })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
+  });
+}
+
+export type NotificationMode = "all" | "premieres_only" | "none";
+
+export async function updateNotificationMode(
+  titleId: string,
+  userId: string,
+  mode: NotificationMode | null
+): Promise<void> {
+  return traceDbQuery("updateNotificationMode", async () => {
+    const db = getDb();
+    await db.update(tracked)
+      .set({ notificationMode: mode })
+      .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+      .run();
+  });
+}
+
+export async function getTrackedTitlesForNotifications(userId: string) {
+  return traceDbQuery("getTrackedTitlesForNotifications", async () => {
+    const db = getDb();
+    return db
+      .select({
+        title_id: tracked.titleId,
+        notification_mode: tracked.notificationMode,
+      })
+      .from(tracked)
+      .where(eq(tracked.userId, userId))
+      .all();
   });
 }

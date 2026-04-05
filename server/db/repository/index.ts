@@ -52,8 +52,10 @@ export {
   getTrackedMoviesByReleaseDate,
   getUpcomingTrackedMovies,
   updateTrackedStatus,
+  updateNotificationMode,
+  getTrackedTitlesForNotifications,
 } from "./tracked";
-export type { UserStatus } from "./tracked";
+export type { UserStatus, NotificationMode } from "./tracked";
 
 export { getUserPublicProfile, updateProfilePublic } from "./profile";
 export type { ProfileVisibility } from "./profile";
