@@ -21,9 +21,19 @@ interface Props {
 }
 
 const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker, showTags }: Props) {
+  const [prevTitleId, setPrevTitleId] = useState(title.id);
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
   const [notifMode, setNotifMode] = useState(title.notification_mode ?? null);
   const [tags, setTags] = useState<string[]>(title.tags ?? []);
+
+  // Re-sync local state when the card is reused for a different title.
+  // Pattern from https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (title.id !== prevTitleId) {
+    setPrevTitleId(title.id);
+    setUserStatus(title.user_status ?? null);
+    setNotifMode(title.notification_mode ?? null);
+    setTags(title.tags ?? []);
+  }
 
   return (
     <article aria-label={title.title} className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>

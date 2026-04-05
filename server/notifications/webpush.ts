@@ -34,8 +34,8 @@ export class WebPushProvider implements NotificationProvider {
     config: Record<string, string>,
     content: NotificationContent
   ): Promise<void> {
-    const { episodes, movies } = content;
-    if (episodes.length === 0 && movies.length === 0) return;
+    const { episodes, movies, streamingAlerts = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
 
     const vapid = await getVapidKeys();
     webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
@@ -62,8 +62,8 @@ export class WebPushProvider implements NotificationProvider {
   }
 
   private buildPayload(content: NotificationContent) {
-    const { episodes, movies, date } = content;
-    const totalCount = episodes.length + movies.length;
+    const { episodes, movies, streamingAlerts = [] } = content;
+    const totalCount = episodes.length + movies.length + streamingAlerts.length;
 
     const lines: string[] = [];
     // Group episodes by show
@@ -84,6 +84,10 @@ export class WebPushProvider implements NotificationProvider {
 
     for (const movie of movies) {
       lines.push(movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title);
+    }
+
+    for (const alert of streamingAlerts) {
+      lines.push(`${alert.title} — now on ${alert.providerName}`);
     }
 
     return {

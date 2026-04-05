@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, notInArray } from "drizzle-orm";
 import { getDb, titleTags } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
@@ -41,21 +41,40 @@ export async function getTagsForTitle(userId: string, titleId: string): Promise<
 /**
  * Replaces all tags for a (user, title) pair with the provided list.
  * An empty array clears all tags.
+ *
+ * Uses a selective-delete + insert-ignore approach instead of
+ * delete-all-then-insert, so a crash between the two writes never
+ * leaves the row completely tag-less (only new tags would be missing).
  */
 export async function setTags(userId: string, titleId: string, tags: string[]): Promise<void> {
   return traceDbQuery("setTags", async () => {
     const db = getDb();
-    // Delete all existing tags for this (user, title)
+
+    if (tags.length === 0) {
+      await db
+        .delete(titleTags)
+        .where(and(eq(titleTags.userId, userId), eq(titleTags.titleId, titleId)))
+        .run();
+      return;
+    }
+
+    // Remove tags that are no longer in the list
     await db
       .delete(titleTags)
-      .where(and(eq(titleTags.userId, userId), eq(titleTags.titleId, titleId)))
+      .where(
+        and(
+          eq(titleTags.userId, userId),
+          eq(titleTags.titleId, titleId),
+          notInArray(titleTags.tag, tags)
+        )
+      )
       .run();
 
-    if (tags.length > 0) {
-      await db
-        .insert(titleTags)
-        .values(tags.map((tag) => ({ userId, titleId, tag })))
-        .run();
-    }
+    // Insert new tags; PK constraint silently ignores already-present ones
+    await db
+      .insert(titleTags)
+      .values(tags.map((tag) => ({ userId, titleId, tag })))
+      .onConflictDoNothing()
+      .run();
   });
 }

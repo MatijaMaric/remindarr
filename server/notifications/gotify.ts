@@ -23,18 +23,18 @@ export class GotifyProvider implements NotificationProvider {
   }
 
   async send(config: Record<string, string>, content: NotificationContent): Promise<void> {
-    const { episodes, movies } = content;
-    if (episodes.length === 0 && movies.length === 0) return;
+    const { episodes, movies, streamingAlerts = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
 
     const title = this.buildTitle(content);
     const message = this.buildMessage(content);
     const base = config.url.replace(/\/$/, "");
-    const url = `${base}/message?token=${encodeURIComponent(config.token)}`;
+    const url = `${base}/message`;
 
     await traceHttp("POST", url, async () => {
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Gotify-Key": config.token },
         body: JSON.stringify({ title, message, priority: 5 }),
       });
 
@@ -46,14 +46,16 @@ export class GotifyProvider implements NotificationProvider {
   }
 
   private buildTitle(content: NotificationContent): string {
-    const { episodes, movies } = content;
+    const { episodes, movies, streamingAlerts = [] } = content;
     const parts: string[] = [];
     if (episodes.length > 0) parts.push(`${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`);
     if (movies.length > 0) parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
-    return `Remindarr — ${parts.join(" and ")} today`;
+    if (streamingAlerts.length > 0) parts.push(`${streamingAlerts.length} now streaming`);
+    return `Remindarr — ${parts.join(" and ")}`;
   }
 
   private buildMessage(content: NotificationContent): string {
+    const { streamingAlerts = [] } = content;
     const lines: string[] = [];
 
     const showMap = new Map<string, typeof content.episodes>();
@@ -75,6 +77,10 @@ export class GotifyProvider implements NotificationProvider {
       const providers = [...new Set(movie.offers.map((o) => o.providerName))].join(", ");
       const label = movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title;
       lines.push(`${label}${providers ? ` (${providers})` : ""}`);
+    }
+
+    for (const alert of streamingAlerts) {
+      lines.push(`${alert.title} — now on ${alert.providerName}`);
     }
 
     return lines.join("\n");

@@ -176,6 +176,20 @@
       "when": 1744502400000,
       "tag": "0024_streaming_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1744588800000,
+      "tag": "0025_fix_watch_history_streaming_alerts",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1744675200000,
+      "tag": "0026_users_feed_token_index",
+      "breakpoints": true
     }
   ]
 }

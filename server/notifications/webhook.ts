@@ -20,8 +20,8 @@ export class WebhookProvider implements NotificationProvider {
   }
 
   async send(config: Record<string, string>, content: NotificationContent): Promise<void> {
-    const { episodes, movies } = content;
-    if (episodes.length === 0 && movies.length === 0) return;
+    const { episodes, movies, streamingAlerts = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
 
     const payload = this.buildPayload(content);
     const body = JSON.stringify(payload);
@@ -50,7 +50,7 @@ export class WebhookProvider implements NotificationProvider {
   }
 
   private buildPayload(content: NotificationContent) {
-    const { episodes, movies, date } = content;
+    const { episodes, movies, date, streamingAlerts = [] } = content;
 
     const summaryLines: string[] = [];
     const showMap = new Map<string, typeof episodes>();
@@ -69,7 +69,7 @@ export class WebhookProvider implements NotificationProvider {
       summaryLines.push(movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title);
     }
 
-    const total = episodes.length + movies.length;
+    const total = episodes.length + movies.length + streamingAlerts.length;
     return {
       source: "remindarr",
       date,
@@ -86,6 +86,12 @@ export class WebhookProvider implements NotificationProvider {
         title: m.title,
         year: m.releaseYear,
         providers: m.offers.map((o) => o.providerName),
+      })),
+      streaming_alerts: streamingAlerts.map((a) => ({
+        titleId: a.titleId,
+        title: a.title,
+        posterUrl: a.posterUrl,
+        providerName: a.providerName,
       })),
     };
   }

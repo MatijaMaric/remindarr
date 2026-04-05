@@ -46,6 +46,9 @@ export default function StatusPicker({ titleId, objectType, currentStatus, onSta
     try {
       await api.updateTrackedStatus(titleId, status);
       onStatusChange(status);
+    } catch {
+      // API call failed — do not update the parent; the picker reverts visually
+      // since we haven't called onStatusChange
     } finally {
       setLoading(false);
     }
