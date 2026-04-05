@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 
 export type Theme = "dark" | "light" | "oled";
 
@@ -18,23 +18,26 @@ function applyTheme(theme: Theme) {
 }
 
 function getStoredTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
   const stored = localStorage.getItem(STORAGE_KEY);
   return isValidTheme(stored) ? stored : "dark";
 }
 
-export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
-    return getStoredTheme();
-  });
+// Module-level subscriber registry so all useTheme() callers share the same state.
+const listeners = new Set<() => void>();
 
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+function subscribe(callback: () => void) {
+  listeners.add(callback);
+  return () => { listeners.delete(callback); };
+}
+
+export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
+  const theme = useSyncExternalStore(subscribe, getStoredTheme);
 
   function setTheme(newTheme: Theme) {
     localStorage.setItem(STORAGE_KEY, newTheme);
-    setThemeState(newTheme);
+    applyTheme(newTheme);
+    listeners.forEach((fn) => fn());
   }
 
   return { theme, setTheme };

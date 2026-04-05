@@ -23,8 +23,8 @@ export class TelegramProvider implements NotificationProvider {
   }
 
   async send(config: Record<string, string>, content: NotificationContent): Promise<void> {
-    const { episodes, movies } = content;
-    if (episodes.length === 0 && movies.length === 0) return;
+    const { episodes, movies, streamingAlerts = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
 
     const text = this.buildMessage(content);
     const url = `${TELEGRAM_API}/bot${config.botToken}/sendMessage`;
@@ -49,10 +49,11 @@ export class TelegramProvider implements NotificationProvider {
   }
 
   private buildMessage(content: NotificationContent): string {
-    const { episodes, movies, date } = content;
+    const { episodes, movies, date, streamingAlerts = [] } = content;
     const parts: string[] = [];
     if (episodes.length > 0) parts.push(`${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`);
     if (movies.length > 0) parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
+    if (streamingAlerts.length > 0) parts.push(`${streamingAlerts.length} now streaming`);
 
     const lines: string[] = [`<b>📺 Remindarr — ${parts.join(" and ")} today (${date})</b>`, ""];
 
@@ -77,6 +78,10 @@ export class TelegramProvider implements NotificationProvider {
       const providerStr = providers ? ` <i>(${providers})</i>` : "";
       const label = movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title;
       lines.push(`🎥 <b>${escapeHtml(label)}</b>${providerStr}`);
+    }
+
+    for (const alert of streamingAlerts) {
+      lines.push(`🔔 <b>${escapeHtml(alert.title)}</b> — now on <i>${escapeHtml(alert.providerName)}</i>`);
     }
 
     return lines.join("\n");

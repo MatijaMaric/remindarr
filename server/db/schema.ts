@@ -165,6 +165,7 @@ export const users = sqliteTable(
       table.authProvider,
       table.providerSubject
     ),
+    uniqueIndex("users_feed_token_idx").on(table.feedToken),
   ]
 );
 
@@ -485,9 +486,9 @@ export const watchHistory = sqliteTable(
   "watch_history",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull(),
-    titleId: text("title_id").notNull(),
-    episodeId: integer("episode_id"),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    episodeId: integer("episode_id").references(() => episodes.id, { onDelete: "set null" }),
     watchedAt: text("watched_at").notNull().default(sql`(datetime('now'))`),
     note: text("note"),
   },
@@ -500,13 +501,14 @@ export const streamingAlerts = sqliteTable(
   "streaming_alerts",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull(),
-    titleId: text("title_id").notNull(),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
     providerId: integer("provider_id").notNull(),
     providerName: text("provider_name").notNull(),
     alertedAt: text("alerted_at").notNull().default(sql`(datetime('now'))`),
   },
   (table) => [
+    uniqueIndex("uq_streaming_alerts_user_title_provider").on(table.userId, table.titleId, table.providerId),
     index("idx_streaming_alerts_user_title").on(table.userId, table.titleId),
   ]
 );

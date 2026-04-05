@@ -86,16 +86,18 @@ describe("GotifyProvider.send", () => {
     ],
   };
 
-  it("posts to /message endpoint with token in query string", async () => {
+  it("posts to /message endpoint with token in X-Gotify-Key header", async () => {
     await gotify.send(config, sampleContent);
     expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].url).toContain("/message");
-    expect(fetchCalls[0].url).toContain("token=myapptoken");
+    expect(fetchCalls[0].url).toBe("https://gotify.example.com/message");
+    const headers = fetchCalls[0].options.headers as Record<string, string>;
+    expect(headers["X-Gotify-Key"]).toBe("myapptoken");
+    expect(fetchCalls[0].url).not.toContain("token=");
   });
 
   it("strips trailing slash from base URL", async () => {
     await gotify.send({ url: "https://gotify.example.com/", token: "mytoken" }, sampleContent);
-    expect(fetchCalls[0].url).toBe("https://gotify.example.com/message?token=mytoken");
+    expect(fetchCalls[0].url).toBe("https://gotify.example.com/message");
   });
 
   it("payload includes title and message", async () => {
@@ -111,6 +113,21 @@ describe("GotifyProvider.send", () => {
   it("skips sending when content is empty", async () => {
     await gotify.send(config, { date: "2026-03-12", episodes: [], movies: [] });
     expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("sends when content has only streaming alerts", async () => {
+    const alertContent: NotificationContent = {
+      date: "2026-04-05",
+      episodes: [],
+      movies: [],
+      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix" }],
+    };
+    await gotify.send(config, alertContent);
+    expect(fetchCalls).toHaveLength(1);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.title).toContain("now streaming");
+    expect(body.message).toContain("Inception");
+    expect(body.message).toContain("Netflix");
   });
 
   it("throws on non-2xx response", async () => {

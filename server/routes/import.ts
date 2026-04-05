@@ -10,6 +10,7 @@ const log = logger.child({ module: "import" });
 const MAX_ROWS = 500;
 const BATCH_SIZE = 10;
 const BATCH_DELAY_MS = 500;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export type CsvFormat = "letterboxd" | "imdb" | "trakt" | "unknown";
 
@@ -172,6 +173,9 @@ app.post("/csv", async (c) => {
   }
 
   const file = fileField as File;
+  if (file.size > MAX_FILE_SIZE) {
+    return err(c, "File too large. Maximum allowed size is 5 MB.");
+  }
   let csvText: string;
   try {
     csvText = await file.text();
