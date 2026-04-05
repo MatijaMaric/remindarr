@@ -816,6 +816,11 @@ function NotificationsSection() {
   // Form fields
   const [formProvider, setFormProvider] = useState("discord");
   const [formWebhookUrl, setFormWebhookUrl] = useState("");
+  const [formUrl, setFormUrl] = useState("");
+  const [formToken, setFormToken] = useState("");
+  const [formSecret, setFormSecret] = useState("");
+  const [formBotToken, setFormBotToken] = useState("");
+  const [formChatId, setFormChatId] = useState("");
   const [formTime, setFormTime] = useState("09:00");
   const [formTimezone, setFormTimezone] = useState(USER_TIMEZONE);
   const [saving, setSaving] = useState(false);
@@ -838,6 +843,11 @@ function NotificationsSection() {
   function resetForm() {
     setFormProvider("discord");
     setFormWebhookUrl("");
+    setFormUrl("");
+    setFormToken("");
+    setFormSecret("");
+    setFormBotToken("");
+    setFormChatId("");
     setFormTime("09:00");
     setFormTimezone(USER_TIMEZONE);
     setShowForm(false);
@@ -848,6 +858,11 @@ function NotificationsSection() {
     setEditingId(n.id);
     setFormProvider(n.provider);
     setFormWebhookUrl(n.config.webhookUrl || "");
+    setFormUrl(n.config.url || "");
+    setFormToken(n.config.token || "");
+    setFormSecret(n.config.secret || "");
+    setFormBotToken(n.config.botToken || "");
+    setFormChatId(n.config.chatId || "");
     setFormTime(n.notify_time);
     setFormTimezone(n.timezone);
     setShowForm(true);
@@ -864,6 +879,18 @@ function NotificationsSection() {
     const config: Record<string, string> = {};
     if (formProvider === "discord") {
       config.webhookUrl = formWebhookUrl;
+    } else if (formProvider === "ntfy") {
+      config.url = formUrl;
+      if (formToken) config.token = formToken;
+    } else if (formProvider === "webhook") {
+      config.url = formUrl;
+      if (formSecret) config.secret = formSecret;
+    } else if (formProvider === "telegram") {
+      config.botToken = formBotToken;
+      config.chatId = formChatId;
+    } else if (formProvider === "gotify") {
+      config.url = formUrl;
+      config.token = formToken;
     }
 
     try {
@@ -1052,6 +1079,78 @@ function NotificationsSection() {
                 required
               />
             </div>
+          )}
+
+          {(formProvider === "ntfy" || formProvider === "webhook" || formProvider === "gotify") && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">
+                {formProvider === "ntfy" ? "Topic URL (e.g. https://ntfy.sh/my-topic)" : formProvider === "gotify" ? "Server URL (e.g. https://gotify.example.com)" : "Webhook URL"}
+              </label>
+              <input
+                type="url"
+                value={formUrl}
+                onChange={(e) => setFormUrl(e.target.value)}
+                placeholder={formProvider === "ntfy" ? "https://ntfy.sh/my-topic" : formProvider === "gotify" ? "https://gotify.example.com" : "https://your-server.com/hook"}
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                required
+              />
+            </div>
+          )}
+
+          {(formProvider === "ntfy" || formProvider === "gotify") && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">
+                {formProvider === "gotify" ? "Application Token" : "Access Token"}{formProvider === "ntfy" ? " (optional)" : ""}
+              </label>
+              <input
+                type="password"
+                value={formToken}
+                onChange={(e) => setFormToken(e.target.value)}
+                placeholder={formProvider === "gotify" ? "App token from Gotify" : "Bearer token (leave empty for public topics)"}
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                required={formProvider === "gotify"}
+              />
+            </div>
+          )}
+
+          {formProvider === "webhook" && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Signing Secret <span className="text-zinc-500">(optional — enables HMAC-SHA256 signature header)</span></label>
+              <input
+                type="password"
+                value={formSecret}
+                onChange={(e) => setFormSecret(e.target.value)}
+                placeholder="Leave empty to skip request signing"
+                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+              />
+            </div>
+          )}
+
+          {formProvider === "telegram" && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Bot Token</label>
+                <input
+                  type="password"
+                  value={formBotToken}
+                  onChange={(e) => setFormBotToken(e.target.value)}
+                  placeholder="123456789:ABCdef..."
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Chat ID</label>
+                <input
+                  type="text"
+                  value={formChatId}
+                  onChange={(e) => setFormChatId(e.target.value)}
+                  placeholder="-1001234567890"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                  required
+                />
+              </div>
+            </>
           )}
 
           <div className="grid grid-cols-2 gap-4">
