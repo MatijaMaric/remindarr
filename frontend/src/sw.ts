@@ -67,6 +67,29 @@ registerRoute(
   })
 );
 
+// Detail pages — show cached immediately, update in background (long TTL; content rarely changes)
+registerRoute(
+  ({ url }) => url.pathname.startsWith("/api/details/"),
+  new StaleWhileRevalidate({
+    cacheName: "api-details",
+    plugins: [
+      new ExpirationPlugin({ maxAgeSeconds: 7 * 24 * 60 * 60, maxEntries: 200 }),
+    ],
+  })
+);
+
+// Calendar data — prefer network, fall back to cached months when offline
+registerRoute(
+  ({ url }) => url.pathname === "/api/calendar",
+  new NetworkFirst({
+    cacheName: "api-calendar",
+    networkTimeoutSeconds: 5,
+    plugins: [
+      new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 12 }),
+    ],
+  })
+);
+
 // Current user — prefer network for up-to-date auth state, cache as fallback
 registerRoute(
   ({ url }) => url.pathname === "/api/auth/me",
@@ -95,6 +118,36 @@ registerRoute(
   new NetworkOnly({ plugins: [trackSyncPlugin] }),
   "DELETE"
 );
+
+// Background sync for watched/unwatched mutations made while offline
+const watchedSyncPlugin = new BackgroundSyncPlugin("watched-queue", {
+  maxRetentionTime: 24 * 60,
+});
+
+registerRoute(
+  ({ url }) => url.pathname.startsWith("/api/watched/"),
+  new NetworkOnly({ plugins: [watchedSyncPlugin] }),
+  "POST"
+);
+
+registerRoute(
+  ({ url }) => url.pathname.startsWith("/api/watched/"),
+  new NetworkOnly({ plugins: [watchedSyncPlugin] }),
+  "DELETE"
+);
+
+// Pre-cache a tracked title's detail data on demand
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "PRECACHE_TITLE") return;
+  const { titleId, objectType } = event.data as { titleId: string; objectType: "MOVIE" | "SHOW" };
+  const path =
+    objectType === "MOVIE"
+      ? `/api/details/movie/${encodeURIComponent(titleId)}`
+      : `/api/details/show/${encodeURIComponent(titleId)}`;
+  event.waitUntil(
+    caches.open("api-details").then((c) => c.add(path)).catch(() => {})
+  );
+});
 
 // Activate immediately
 self.skipWaiting();
