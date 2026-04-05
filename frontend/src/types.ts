@@ -53,6 +53,7 @@ export interface Title {
   offers: Offer[];
   tracked_at?: string;
   notes?: string;
+  tags?: string[];
 }
 
 export interface Episode {

@@ -148,6 +148,13 @@
       "when": 1744156800000,
       "tag": "0020_tracked_notification_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1744243200000,
+      "tag": "0021_title_tags",
+      "breakpoints": true
     }
   ]
 }

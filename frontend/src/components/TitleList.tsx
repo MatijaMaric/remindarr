@@ -14,6 +14,7 @@ interface Props {
   showProgressBar?: boolean;
   showStatusPicker?: boolean;
   showNotificationPicker?: boolean;
+  showTags?: boolean;
   /** Limit grid display to N rows. Uses the largest breakpoint column count to calculate the slice size. */
   maxRows?: number;
   /** Optional link shown when maxRows truncates the list */
@@ -21,7 +22,7 @@ interface Props {
   viewAllLabel?: string;
 }
 
-export default function TitleList({ titles, onTrackToggle, emptyMessage = "No titles found", showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker, maxRows, viewAllHref, viewAllLabel }: Props) {
+export default function TitleList({ titles, onTrackToggle, emptyMessage = "No titles found", showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker, showTags, maxRows, viewAllHref, viewAllLabel }: Props) {
   if (titles.length === 0) {
     return (
       <div className="text-center py-12 text-zinc-500">
@@ -39,7 +40,7 @@ export default function TitleList({ titles, onTrackToggle, emptyMessage = "No ti
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {displayTitles.map((title) => (
-          <TitleCard key={title.id} title={title} onTrackToggle={onTrackToggle} showVisibilityToggle={showVisibilityToggle} onVisibilityToggle={onVisibilityToggle} hideTypeBadge={hideTypeBadge} showProgressBar={showProgressBar} showStatusPicker={showStatusPicker} showNotificationPicker={showNotificationPicker} />
+          <TitleCard key={title.id} title={title} onTrackToggle={onTrackToggle} showVisibilityToggle={showVisibilityToggle} onVisibilityToggle={onVisibilityToggle} hideTypeBadge={hideTypeBadge} showProgressBar={showProgressBar} showStatusPicker={showStatusPicker} showNotificationPicker={showNotificationPicker} showTags={showTags} />
         ))}
       </div>
       {isTruncated && viewAllHref && (

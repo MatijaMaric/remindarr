@@ -835,3 +835,201 @@ describe("PATCH /track/visibility", () => {
     expect(listBody.titles.every((t: any) => t.public === false)).toBe(true);
   });
 });
+
+describe("PATCH /track/:id/notes", () => {
+  it("updates notes for a tracked title", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/notes", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "Great movie!" }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].notes).toBe("Great movie!");
+  });
+
+  it("clears notes when null is sent", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "Initial note" }),
+    });
+
+    await app.request("/track/movie-123/notes", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "Initial note" }),
+    });
+
+    const res = await app.request("/track/movie-123/notes", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: null }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].notes).toBeNull();
+  });
+
+  it("rejects notes over 500 chars", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/notes", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "x".repeat(501) }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/movie-123/notes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "test" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("PATCH /track/:id/tags", () => {
+  it("sets tags for a tracked title", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: ["action", "favorite"] }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].tags).toContain("action");
+    expect(listBody.titles[0].tags).toContain("favorite");
+  });
+
+  it("normalizes tags (trim, lowercase, deduplicate)", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: ["  Action  ", "ACTION", "action"] }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].tags).toEqual(["action"]);
+  });
+
+  it("clears all tags when empty array is sent", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: ["sci-fi"] }),
+    });
+
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: [] }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].tags).toEqual([]);
+  });
+
+  it("rejects more than 10 tags", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11"] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a tag over 30 chars", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: ["x".repeat(31)] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects non-array tags", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: "not-an-array" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: [] }),
+    });
+    expect(res.status).toBe(401);
+  });
+});

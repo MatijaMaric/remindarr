@@ -4,6 +4,7 @@ import { titles, scores, tracked, watchedTitles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersWithPlex } from "./offers";
 import { getGenresForTitles } from "./titles";
+import { getTagsForUser } from "./tags";
 
 type ShowStatus = "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
 
@@ -100,13 +101,15 @@ export async function getTrackedTitles(userId: string) {
       .all();
 
     const titleIds = rows.map((r) => r.id);
-    const [offersByTitle, genresByTitle] = await Promise.all([
+    const [offersByTitle, genresByTitle, tagsByTitle] = await Promise.all([
       getOffersWithPlex(titleIds, userId),
       getGenresForTitles(titleIds),
+      getTagsForUser(userId),
     ]);
     return rows.map((row) => ({
       ...row,
       genres: genresByTitle.get(row.id) ?? [],
+      tags: tagsByTitle[row.id] ?? [],
       is_tracked: true,
       is_watched: Boolean(row.is_watched),
       public: Boolean(row.public),
@@ -293,5 +296,15 @@ export async function getTrackedTitlesForNotifications(userId: string) {
       .from(tracked)
       .where(eq(tracked.userId, userId))
       .all();
+  });
+}
+
+export async function updateTrackedNotes(titleId: string, userId: string, notes: string | null) {
+  return traceDbQuery("updateTrackedNotes", async () => {
+    const db = getDb();
+    await db.update(tracked)
+      .set({ notes })
+      .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+      .run();
   });
 }
