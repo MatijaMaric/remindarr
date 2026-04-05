@@ -32,6 +32,7 @@ export default function SettingsPage() {
       <WatchlistSection />
       {isPushSupported() && <PushNotificationsSection />}
       <HomepageLayoutSection />
+      <CalendarFeedSection />
       <PlexSection />
       <NotificationsSection />
       {user.is_admin && <BackgroundJobsSection />}
@@ -2046,6 +2047,83 @@ function PlexSection() {
             </button>
           </div>
         </div>
+      )}
+    </section>
+  );
+}
+
+function CalendarFeedSection() {
+  const { t } = useTranslation();
+  const [token, setToken] = useState<string | null>(null);
+  const [loadingToken, setLoadingToken] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    api.getFeedToken()
+      .then(({ token: tok }) => { setToken(tok); setLoadingToken(false); })
+      .catch(() => setLoadingToken(false));
+  }, []);
+
+  const feedUrl = token ? `${window.location.origin}/api/feed/calendar.ics?token=${token}` : null;
+
+  async function handleRegenerate() {
+    setRegenerating(true);
+    try {
+      const { token: newToken } = await api.regenerateFeedToken();
+      setToken(newToken);
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!feedUrl) return;
+    await navigator.clipboard.writeText(feedUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <section className="bg-zinc-900 rounded-xl p-6 space-y-4">
+      <h2 className="text-lg font-semibold">{t("feed.title")}</h2>
+      <p className="text-sm text-zinc-400">{t("feed.description")}</p>
+      {loadingToken ? (
+        <p className="text-sm text-zinc-500">{t("common.loading")}</p>
+      ) : token ? (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={feedUrl!}
+              readOnly
+              aria-label={t("feed.title")}
+              className="flex-1 min-w-0 bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-xs text-zinc-300 font-mono focus:outline-none"
+            />
+            <button
+              onClick={handleCopy}
+              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            >
+              {copied ? t("feed.copied") : t("feed.copyUrl")}
+            </button>
+          </div>
+          <p className="text-xs text-zinc-500">{t("feed.warning")}</p>
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {regenerating ? t("feed.regenerating") : t("feed.regenerate")}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleRegenerate}
+          disabled={regenerating}
+          className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-medium text-sm rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+        >
+          {regenerating ? t("feed.generating") : t("feed.generate")}
+        </button>
       )}
     </section>
   );

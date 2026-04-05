@@ -1,4 +1,4 @@
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, gte, lt, asc } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, scores, tracked, watchedTitles } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -229,6 +229,30 @@ export async function getTrackedMoviesByReleaseDate(date: string, userId: string
 }
 
 export type UserStatus = "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed";
+
+export async function getUpcomingTrackedMovies(userId: string, startDate: string, endDate: string) {
+  return traceDbQuery("getUpcomingTrackedMovies", async () => {
+    const db = getDb();
+    return db
+      .select({
+        id: titles.id,
+        title: titles.title,
+        release_date: titles.releaseDate,
+      })
+      .from(tracked)
+      .innerJoin(titles, eq(titles.id, tracked.titleId))
+      .where(
+        and(
+          eq(tracked.userId, userId),
+          sql`${titles.objectType} = 'MOVIE'`,
+          gte(titles.releaseDate, startDate),
+          lt(titles.releaseDate, endDate),
+        )
+      )
+      .orderBy(asc(titles.releaseDate))
+      .all();
+  });
+}
 
 export async function updateTrackedStatus(titleId: string, userId: string, status: UserStatus | null) {
   return traceDbQuery("updateTrackedStatus", async () => {

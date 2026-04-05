@@ -366,3 +366,28 @@ export async function deleteUser(userId: string) {
     await db.delete(users).where(eq(users.id, userId)).run();
   });
 }
+
+// ─── Calendar feed token ──────────────────────────────────────────────────────
+
+export async function getFeedToken(userId: string): Promise<string | null> {
+  return traceDbQuery("getFeedToken", async () => {
+    const db = getDb();
+    const row = await db.select({ feedToken: users.feedToken }).from(users).where(eq(users.id, userId)).get();
+    return row?.feedToken ?? null;
+  });
+}
+
+export async function setFeedToken(userId: string, token: string): Promise<void> {
+  return traceDbQuery("setFeedToken", async () => {
+    const db = getDb();
+    await db.update(users).set({ feedToken: token }).where(eq(users.id, userId)).run();
+  });
+}
+
+export async function getUserByFeedToken(token: string): Promise<{ id: string } | null> {
+  return traceDbQuery("getUserByFeedToken", async () => {
+    const db = getDb();
+    const row = await db.select({ id: users.id }).from(users).where(eq(users.feedToken, token)).get();
+    return row ?? null;
+  });
+}

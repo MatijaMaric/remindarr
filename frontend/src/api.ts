@@ -653,3 +653,13 @@ export async function unbanAdminUser(userId: string): Promise<{ message: string 
 export async function deleteAdminUser(userId: string): Promise<{ message: string }> {
   return fetchJson(`/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
 }
+
+// ─── Calendar feed ────────────────────────────────────────────────────────────
+
+export async function getFeedToken(): Promise<{ token: string | null }> {
+  return fetchJson("/feed/token");
+}
+
+export async function regenerateFeedToken(): Promise<{ token: string }> {
+  return fetchJson("/feed/token/regenerate", { method: "POST" });
+}
