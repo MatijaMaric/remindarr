@@ -125,7 +125,7 @@ describe("POST /notifiers", () => {
     const res = await app.request("/notifiers", {
       method: "POST",
       headers: jsonHeaders(),
-      body: JSON.stringify({ ...validNotifier, provider: "telegram" }),
+      body: JSON.stringify({ ...validNotifier, provider: "nonexistent_provider" }),
     });
     expect(res.status).toBe(400);
     const body = await res.json();
