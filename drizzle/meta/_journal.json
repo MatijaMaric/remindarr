@@ -127,6 +127,13 @@
       "when": 1743897600000,
       "tag": "0017_tracked_user_status",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1743984000000,
+      "tag": "0018_users_homepage_layout",
+      "breakpoints": true
     }
   ]
 }

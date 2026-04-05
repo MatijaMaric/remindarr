@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
-import type { Episode, Title, Recommendation } from "../types";
-import { normalizeSearchTitle } from "../types";
+import type { Episode, Title, Recommendation, HomepageSection } from "../types";
+import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import TitleList from "../components/TitleList";
 import { TitleGridSkeleton, EpisodeListSkeleton } from "../components/SkeletonComponents";
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
@@ -78,6 +78,7 @@ export default function HomePage() {
   const [unwatched, setUnwatched] = useState<Episode[]>([]);
   const [popularTitles, setPopularTitles] = useState<Title[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [layout, setLayout] = useState<HomepageSection[]>(DEFAULT_HOMEPAGE_LAYOUT);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [confirmingTitleId, setConfirmingTitleId] = useState<string | null>(null);
@@ -95,14 +96,16 @@ export default function HomePage() {
 
     async function load() {
       try {
-        const [episodeData, recData] = await Promise.all([
+        const [episodeData, recData, layoutData] = await Promise.all([
           api.getUpcomingEpisodes(),
           api.getRecommendations(6).catch(() => ({ recommendations: [], count: 0 })),
+          api.getHomepageLayout().catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
         ]);
         setToday(episodeData.today);
         setUpcoming(episodeData.upcoming);
         setUnwatched(episodeData.unwatched);
         setRecommendations(recData.recommendations);
+        setLayout(layoutData.homepage_layout);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -248,153 +251,164 @@ export default function HomePage() {
 
   const noEpisodes = today.length === 0 && upcoming.length === 0 && unwatched.length === 0;
 
+  function renderSection(sectionId: string) {
+    switch (sectionId) {
+      case "unwatched":
+        return unwatched.length > 0 ? (
+          <>
+            <div className="-mt-6">
+              <HeroBanner episodes={unwatched} />
+            </div>
+            <section key="unwatched">
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-xl font-bold text-white">{t("home.unwatched")}</h2>
+                <Link
+                  to="/reels"
+                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
+                  title="Full-screen reels view"
+                >
+                  <Maximize2 size={14} />
+                  {t("home.reels")}
+                </Link>
+              </div>
+              <UnwatchedCarousel>
+                {unwatchedCards.map((card) => (
+                  <div key={card.titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                    <DeckCardWrapper episodeCount={card.totalEpisodeCount}>
+                      <EpisodeShowCard
+                        episode={card.episode}
+                        episodeCount={card.totalEpisodeCount}
+                        showActions
+                        allEpisodeIds={card.allEpisodeIds}
+                        onToggleWatched={toggleWatched}
+                        onMarkAllWatched={(ids) => handleMarkAllWatched(card.titleId, ids)}
+                        isConfirming={confirmingTitleId === card.titleId}
+                      />
+                    </DeckCardWrapper>
+                  </div>
+                ))}
+              </UnwatchedCarousel>
+            </section>
+          </>
+        ) : null;
+
+      case "recommendations":
+        return recommendations.length > 0 ? (
+          <section key="recommendations">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">{t("home.recommendedForYou")}</h2>
+              <Link to="/discovery" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
+                {t("home.seeAll")} →
+              </Link>
+            </div>
+            <UnwatchedCarousel>
+              {recommendations.map((rec) => {
+                const posterSrc = rec.title.poster_url
+                  ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`
+                  : null;
+                const isUnread = !rec.read_at;
+                return (
+                  <Link
+                    key={rec.id}
+                    to={`/title/${rec.title.id}`}
+                    className="w-32 flex-shrink-0 group"
+                    style={{ scrollSnapAlign: "start" }}
+                  >
+                    <div className={`relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 ${isUnread ? "ring-2 ring-amber-500/60" : ""}`}>
+                      {posterSrc ? (
+                        <img
+                          src={posterSrc}
+                          alt={rec.title.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+                          N/A
+                        </div>
+                      )}
+                      {isUnread && (
+                        <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" />
+                      )}
+                    </div>
+                    <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
+                      {rec.title.title}
+                    </p>
+                    <p className="text-xs text-zinc-400 truncate">
+                      from @{rec.from_user.username}
+                    </p>
+                  </Link>
+                );
+              })}
+            </UnwatchedCarousel>
+          </section>
+        ) : null;
+
+      case "today":
+        return (
+          <section key="today">
+            <h2 className="text-xl font-bold text-white mb-4">{t("home.today")}</h2>
+            {today.length === 0 ? (
+              <p className="text-zinc-500 text-sm">
+                {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
+              </p>
+            ) : (
+              <UnwatchedCarousel>
+                {Array.from(groupByShow(today).entries()).map(([titleId, eps]) => (
+                  <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                    <DeckCardWrapper episodeCount={eps.length}>
+                      <EpisodeShowCard
+                        episode={eps[0]}
+                        episodeCount={eps.length}
+                      />
+                    </DeckCardWrapper>
+                  </div>
+                ))}
+              </UnwatchedCarousel>
+            )}
+          </section>
+        );
+
+      case "upcoming":
+        return upcoming.length > 0 ? (
+          <section key="upcoming">
+            <h2 className="text-lg font-semibold text-zinc-300 mb-4">{t("home.comingUp")}</h2>
+            <div className="space-y-4">
+              {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
+                const byShow = groupByShow(eps);
+                const dateLabel = formatUpcomingDate(date);
+                return (
+                  <div key={date}>
+                    <h3 className="text-sm font-medium text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
+                    <UnwatchedCarousel>
+                      {Array.from(byShow.entries()).map(([titleId, showEps]) => (
+                        <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                          <DeckCardWrapper episodeCount={showEps.length}>
+                            <EpisodeShowCard
+                              episode={showEps[0]}
+                              episodeCount={showEps.length}
+                            />
+                          </DeckCardWrapper>
+                        </div>
+                      ))}
+                    </UnwatchedCarousel>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null;
+
+      default:
+        return null;
+    }
+  }
+
   return (
     <div className="space-y-8">
-      {/* Hero Banner (desktop only, full-width) */}
-      {unwatched.length > 0 && (
-        <div className="-mt-6">
-          <HeroBanner episodes={unwatched} />
-        </div>
-      )}
-
-      {/* Unwatched Episodes */}
-      {unwatched.length > 0 && (
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-xl font-bold text-white">{t("home.unwatched")}</h2>
-            <Link
-              to="/reels"
-              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
-              title="Full-screen reels view"
-            >
-              <Maximize2 size={14} />
-              {t("home.reels")}
-            </Link>
-          </div>
-          <UnwatchedCarousel>
-            {unwatchedCards.map((card) => (
-              <div key={card.titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-                <DeckCardWrapper episodeCount={card.totalEpisodeCount}>
-                  <EpisodeShowCard
-                    episode={card.episode}
-                    episodeCount={card.totalEpisodeCount}
-                    showActions
-                    allEpisodeIds={card.allEpisodeIds}
-                    onToggleWatched={toggleWatched}
-                    onMarkAllWatched={(ids) => handleMarkAllWatched(card.titleId, ids)}
-                    isConfirming={confirmingTitleId === card.titleId}
-                  />
-                </DeckCardWrapper>
-              </div>
-            ))}
-          </UnwatchedCarousel>
-        </section>
-      )}
-
-      {/* Recommended for You */}
-      {recommendations.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">{t("home.recommendedForYou")}</h2>
-            <Link to="/discovery" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
-              {t("home.seeAll")} →
-            </Link>
-          </div>
-          <UnwatchedCarousel>
-            {recommendations.map((rec) => {
-              const posterSrc = rec.title.poster_url
-                ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`
-                : null;
-              const isUnread = !rec.read_at;
-              return (
-                <Link
-                  key={rec.id}
-                  to={`/title/${rec.title.id}`}
-                  className="w-32 flex-shrink-0 group"
-                  style={{ scrollSnapAlign: "start" }}
-                >
-                  <div className={`relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 ${isUnread ? "ring-2 ring-amber-500/60" : ""}`}>
-                    {posterSrc ? (
-                      <img
-                        src={posterSrc}
-                        alt={rec.title.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
-                        N/A
-                      </div>
-                    )}
-                    {isUnread && (
-                      <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" />
-                    )}
-                  </div>
-                  <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
-                    {rec.title.title}
-                  </p>
-                  <p className="text-xs text-zinc-400 truncate">
-                    from @{rec.from_user.username}
-                  </p>
-                </Link>
-              );
-            })}
-          </UnwatchedCarousel>
-        </section>
-      )}
-
-      {/* Today's Episodes */}
-      <section>
-        <h2 className="text-xl font-bold text-white mb-4">{t("home.today")}</h2>
-        {today.length === 0 ? (
-          <p className="text-zinc-500 text-sm">
-            {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
-          </p>
-        ) : (
-          <UnwatchedCarousel>
-            {Array.from(groupByShow(today).entries()).map(([titleId, eps]) => (
-              <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-                <DeckCardWrapper episodeCount={eps.length}>
-                  <EpisodeShowCard
-                    episode={eps[0]}
-                    episodeCount={eps.length}
-                  />
-                </DeckCardWrapper>
-              </div>
-            ))}
-          </UnwatchedCarousel>
-        )}
-      </section>
-
-      {/* Upcoming Episodes */}
-      {upcoming.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-zinc-300 mb-4">{t("home.comingUp")}</h2>
-          <div className="space-y-4">
-            {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
-              const byShow = groupByShow(eps);
-              const dateLabel = formatUpcomingDate(date);
-              return (
-                <div key={date}>
-                  <h3 className="text-sm font-medium text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
-                  <UnwatchedCarousel>
-                    {Array.from(byShow.entries()).map(([titleId, showEps]) => (
-                      <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-                        <DeckCardWrapper episodeCount={showEps.length}>
-                          <EpisodeShowCard
-                            episode={showEps[0]}
-                            episodeCount={showEps.length}
-                          />
-                        </DeckCardWrapper>
-                      </div>
-                    ))}
-                  </UnwatchedCarousel>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {layout
+        .filter((s) => s.enabled)
+        .map((s) => renderSection(s.id))}
     </div>
   );
 }

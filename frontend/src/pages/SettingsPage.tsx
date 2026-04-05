@@ -1,14 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../i18n";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type { JobsResponse, Notifier, Integration, PlexServer } from "../api";
-import type { AdminSettings, Title } from "../types";
+import type { AdminSettings, Title, HomepageSection } from "../types";
+import { DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../lib/push";
 import { authClient } from "../lib/auth-client";
-import { UserPlus } from "lucide-react";
+import { UserPlus, GripVertical, Eye, EyeOff } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ export default function SettingsPage() {
       <SocialSection />
       <WatchlistSection />
       {isPushSupported() && <PushNotificationsSection />}
+      <HomepageLayoutSection />
       <PlexSection />
       <NotificationsSection />
       {user.is_admin && <BackgroundJobsSection />}
@@ -1581,6 +1583,99 @@ type ConnectStep =
 
 const PLEX_POPUP_FEATURES = "width=800,height=700,menubar=no,toolbar=no,location=no,status=no";
 const PIN_POLL_INTERVAL_MS = 2000;
+
+const SECTION_LABELS: Record<string, string> = {
+  unwatched: "settings.homepage.sections.unwatched",
+  recommendations: "settings.homepage.sections.recommendations",
+  today: "settings.homepage.sections.today",
+  upcoming: "settings.homepage.sections.upcoming",
+};
+
+function HomepageLayoutSection() {
+  const { t } = useTranslation();
+  const [layout, setLayout] = useState<HomepageSection[]>(DEFAULT_HOMEPAGE_LAYOUT);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const dragIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    api.getHomepageLayout()
+      .then((res) => setLayout(res.homepage_layout))
+      .catch(() => {});
+  }, []);
+
+  async function save(newLayout: HomepageSection[]) {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const res = await api.updateHomepageLayout(newLayout);
+      setLayout(res.homepage_layout);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // silently ignore
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleEnabled(id: string) {
+    const updated = layout.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
+    setLayout(updated);
+    save(updated);
+  }
+
+  function handleDragStart(index: number) {
+    dragIndexRef.current = index;
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    const from = dragIndexRef.current;
+    if (from === null || from === index) return;
+    const updated = [...layout];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(index, 0, moved);
+    dragIndexRef.current = index;
+    setLayout(updated);
+  }
+
+  function handleDrop() {
+    dragIndexRef.current = null;
+    save(layout);
+  }
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold mb-1">{t("settings.homepage.title")}</h2>
+      <p className="text-sm text-zinc-400 mb-4">{t("settings.homepage.description")}</p>
+      <div className="space-y-2">
+        {layout.map((section, index) => (
+          <div
+            key={section.id}
+            draggable
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDrop={handleDrop}
+            className="flex items-center gap-3 bg-zinc-900 border border-white/[0.06] rounded-lg px-4 py-3 cursor-grab active:cursor-grabbing select-none"
+          >
+            <GripVertical size={16} className="text-zinc-500 flex-shrink-0" aria-hidden="true" />
+            <span className="flex-1 text-sm text-zinc-100">{t(SECTION_LABELS[section.id] ?? section.id)}</span>
+            <button
+              onClick={() => toggleEnabled(section.id)}
+              className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              aria-label={section.enabled ? t("settings.homepage.hideSection") : t("settings.homepage.showSection")}
+            >
+              {section.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
+          </div>
+        ))}
+      </div>
+      {saved && <p className="text-xs text-emerald-400 mt-2">{t("settings.homepage.saved")}</p>}
+      {saving && <p className="text-xs text-zinc-400 mt-2">{t("settings.homepage.saving")}</p>}
+    </section>
+  );
+}
 
 function PlexSection() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);

@@ -234,3 +234,24 @@ export async function deleteExpiredSessions() {
     }
   });
 }
+
+export async function getHomepageLayout(userId: string): Promise<string | null> {
+  return traceDbQuery("getHomepageLayout", async () => {
+    const db = getDb();
+    const row = await db.select({ homepageLayout: users.homepageLayout })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    return row?.homepageLayout ?? null;
+  });
+}
+
+export async function setHomepageLayout(userId: string, layout: string): Promise<void> {
+  return traceDbQuery("setHomepageLayout", async () => {
+    const db = getDb();
+    await db.update(users)
+      .set({ homepageLayout: layout })
+      .where(eq(users.id, userId))
+      .run();
+  });
+}

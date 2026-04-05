@@ -532,6 +532,20 @@ export interface InvitationItem {
   used_by: UserSummary | null;
 }
 
+export type HomepageSectionId = "unwatched" | "recommendations" | "today" | "upcoming";
+
+export interface HomepageSection {
+  id: HomepageSectionId;
+  enabled: boolean;
+}
+
+export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
+  { id: "unwatched", enabled: true },
+  { id: "recommendations", enabled: true },
+  { id: "today", enabled: true },
+  { id: "upcoming", enabled: true },
+];
+
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {
   return {
