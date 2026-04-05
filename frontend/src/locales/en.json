@@ -328,6 +328,12 @@
     "showTitle": "Show on profile",
     "hideTitle": "Hide from profile"
   },
+  "notifications": {
+    "all": "All episodes",
+    "premieres_only": "Premieres only",
+    "none": "Muted",
+    "label": "Notifications"
+  },
   "notificationPrompt": {
     "message": "Enable push notifications to get alerts about new episodes and releases.",
     "enable": "Enable",

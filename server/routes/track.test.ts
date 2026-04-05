@@ -693,6 +693,118 @@ describe("PATCH /track/:id/status", () => {
   });
 });
 
+describe("PATCH /track/:id/notification", () => {
+  it("sets mode to 'all'", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "all" }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].notification_mode).toBe("all");
+  });
+
+  it("sets mode to 'premieres_only'", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "premieres_only" }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].notification_mode).toBe("premieres_only");
+  });
+
+  it("sets mode to 'none'", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "none" }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].notification_mode).toBe("none");
+  });
+
+  it("clears mode with null", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "none" }),
+    });
+
+    const res = await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: null }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].notification_mode).toBeNull();
+  });
+
+  it("rejects an invalid mode value", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "invalid_mode" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "all" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("PATCH /track/visibility", () => {
   it("bulk toggles all title visibility", async () => {
     await upsertTitles([

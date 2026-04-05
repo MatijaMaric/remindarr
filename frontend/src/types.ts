@@ -47,6 +47,7 @@ export interface Title {
   released_episodes_count?: number;
   show_status?: "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
   user_status?: "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null;
+  notification_mode?: "all" | "premieres_only" | "none" | null;
   latest_released_air_date?: string | null;
   next_episode_air_date?: string | null;
   offers: Offer[];

@@ -15,17 +15,24 @@ export async function buildNotificationContent(
 
   // Episodes airing today for tracked shows
   const rawEpisodes = await getEpisodesByDateRange(date, nextDay, userId);
-  const episodes = rawEpisodes.map((ep) => ({
-    showTitle: ep.show_title,
-    seasonNumber: ep.season_number,
-    episodeNumber: ep.episode_number,
-    episodeName: ep.name,
-    posterUrl: ep.poster_url,
-    offers: (ep.offers || []).map((o) => ({
-      providerName: o.provider_name,
-      providerIconUrl: o.provider_icon_url,
-    })),
-  }));
+  const episodes = rawEpisodes
+    .filter((ep) => {
+      const mode = ep.notification_mode;
+      if (mode === "none") return false;
+      if (mode === "premieres_only") return ep.episode_number === 1;
+      return true; // "all" or null
+    })
+    .map((ep) => ({
+      showTitle: ep.show_title,
+      seasonNumber: ep.season_number,
+      episodeNumber: ep.episode_number,
+      episodeName: ep.name,
+      posterUrl: ep.poster_url,
+      offers: (ep.offers || []).map((o) => ({
+        providerName: o.provider_name,
+        providerIconUrl: o.provider_icon_url,
+      })),
+    }));
 
   // Tracked movies releasing today
   const rawMovies = await getTrackedMoviesByReleaseDate(date, userId);

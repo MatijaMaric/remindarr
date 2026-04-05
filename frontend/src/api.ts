@@ -697,3 +697,14 @@ export async function updateTrackedTags(titleId: string, tags: string[]): Promis
     body: JSON.stringify({ tags }),
   });
 }
+
+export async function setNotificationMode(
+  titleId: string,
+  mode: "all" | "premieres_only" | "none" | null
+): Promise<void> {
+  return fetchJson(`/track/${encodeURIComponent(titleId)}/notification`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode }),
+  });
+}
