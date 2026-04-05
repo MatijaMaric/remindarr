@@ -148,6 +148,12 @@ export {
   getUserRating,
   getTitleRatings,
   getFriendsRatings,
+  rateEpisode,
+  unrateEpisode,
+  getUserEpisodeRating,
+  getEpisodeRatings,
+  getFriendsEpisodeRatings,
+  getSeasonEpisodeRatings,
 } from "./ratings";
 export type { RatingValue } from "./ratings";
 
