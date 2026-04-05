@@ -72,6 +72,12 @@ export {
   deleteExpiredSessions,
   getHomepageLayout,
   setHomepageLayout,
+  getAllUsers,
+  getAdminUserCount,
+  getUserTrackedCount,
+  banUser,
+  unbanUser,
+  deleteUser,
 } from "./users";
 
 export {

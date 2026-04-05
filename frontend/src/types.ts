@@ -430,6 +430,32 @@ export interface AdminSettingsUpdateResponse {
   oidc_configured: boolean;
 }
 
+// ─── Admin Types ────────────────────────────────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+  is_admin: number;
+  auth_provider: string;
+  banned: boolean | null;
+  ban_reason: string | null;
+  ban_expires: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+  tracked_count?: number;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 // ─── User Summary Type ──────────────────────────────────────────────────────
 
 export interface UserSummary {

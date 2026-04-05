@@ -53,6 +53,7 @@ const UpcomingPage = lazyWithRetry(() => import("./pages/UpcomingPage"));
 const DiscoveryPage = lazyWithRetry(() => import("./pages/DiscoveryPage"));
 const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
 const StatsPage = lazyWithRetry(() => import("./pages/StatsPage"));
+const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 
 function MobileHomeRedirect() {
@@ -185,6 +186,7 @@ export default function App() {
             <Route path="/discovery" element={<RequireAuth><DiscoveryPage /></RequireAuth>} />
             <Route path="/invite" element={<RequireAuth><InvitePage /></RequireAuth>} />
             <Route path="/stats" element={<RequireAuth><StatsPage /></RequireAuth>} />
+            <Route path="/admin/users" element={<RequireAuth><AdminUsersPage /></RequireAuth>} />
             <Route path="/user/:username" element={<UserProfilePage />} />
             <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
             <Route path="/profile" element={<ProfilePage />} />

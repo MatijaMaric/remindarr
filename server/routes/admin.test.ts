@@ -7,6 +7,7 @@ import {
   getSessionWithUser,
   getSetting,
   setSetting,
+  getUserById,
 } from "../db/repository";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import adminApp from "./admin";
@@ -191,5 +192,191 @@ describe("PUT /admin/settings", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.oidc_configured).toBeDefined();
+  });
+});
+
+// ─── User management tests ────────────────────────────────────────────────────
+
+describe("GET /admin/users", () => {
+  it("returns user list for admin", async () => {
+    await createUser("alice", "hash");
+    await createUser("bob", "hash");
+    const res = await app.request("/admin/users", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.users)).toBe(true);
+    expect(body.total).toBeGreaterThanOrEqual(3); // admin + alice + bob
+    expect(body.page).toBe(1);
+    expect(body.page_size).toBe(50);
+  });
+
+  it("filters by search query", async () => {
+    await createUser("searchable_user", "hash");
+    const res = await app.request("/admin/users?search=searchable", {
+      headers: { Cookie: adminCookie },
+    });
+    const body = await res.json();
+    expect(body.users.some((u: { username: string }) => u.username === "searchable_user")).toBe(true);
+  });
+
+  it("filters banned users", async () => {
+    const userId = await createUser("tobebanned", "hash");
+    await app.request(`/admin/users/${userId}/ban`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "test ban" }),
+    });
+    const res = await app.request("/admin/users?filter=banned", {
+      headers: { Cookie: adminCookie },
+    });
+    const body = await res.json();
+    expect(body.users.some((u: { username: string }) => u.username === "tobebanned")).toBe(true);
+  });
+
+  it("returns 403 for non-admin", async () => {
+    const userId = await createUser("regular", "hash");
+    const token = await createSession(userId);
+    const res = await app.request("/admin/users", {
+      headers: { Cookie: `better-auth.session_token=${token}` },
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("GET /admin/users/:id", () => {
+  it("returns user details with tracked count", async () => {
+    const userId = await createUser("detailuser", "hash");
+    const res = await app.request(`/admin/users/${userId}`, {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user.username).toBe("detailuser");
+    expect(typeof body.user.tracked_count).toBe("number");
+  });
+
+  it("returns 404 for non-existent user", async () => {
+    const res = await app.request("/admin/users/nonexistent-id", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("PUT /admin/users/:id/role", () => {
+  it("promotes a user to admin", async () => {
+    const userId = await createUser("toPromote", "hash");
+    const res = await app.request(`/admin/users/${userId}/role`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "admin" }),
+    });
+    expect(res.status).toBe(200);
+    const user = await getUserById(userId);
+    expect(user?.role).toBe("admin");
+  });
+
+  it("demotes admin to user", async () => {
+    const userId = await createUser("toDemote", "hash", undefined, "local", undefined, true);
+    const res = await app.request(`/admin/users/${userId}/role`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "user" }),
+    });
+    expect(res.status).toBe(200);
+    const user = await getUserById(userId);
+    expect(user?.role).toBe("user");
+  });
+
+  it("returns 400 for invalid role", async () => {
+    const userId = await createUser("roletest", "hash");
+    const res = await app.request(`/admin/users/${userId}/role`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "superuser" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when trying to change own role", async () => {
+    // Get admin's userId from the session
+    const sessionUser = await getSessionWithUser(adminCookie.split("=")[1]);
+    const res = await app.request(`/admin/users/${sessionUser!.id}/role`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "user" }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("PUT /admin/users/:id/ban and /unban", () => {
+  it("bans a user with a reason", async () => {
+    const userId = await createUser("tobanned", "hash");
+    const res = await app.request(`/admin/users/${userId}/ban`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "spam" }),
+    });
+    expect(res.status).toBe(200);
+    const user = await getUserById(userId);
+    expect(user).not.toBeNull();
+  });
+
+  it("unbans a user", async () => {
+    const userId = await createUser("bannedUser", "hash");
+    await app.request(`/admin/users/${userId}/ban`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const res = await app.request(`/admin/users/${userId}/unban`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 400 when trying to ban yourself", async () => {
+    const sessionUser = await getSessionWithUser(adminCookie.split("=")[1]);
+    const res = await app.request(`/admin/users/${sessionUser!.id}/ban`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("DELETE /admin/users/:id", () => {
+  it("deletes a user", async () => {
+    const userId = await createUser("todelete", "hash");
+    const res = await app.request(`/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    const user = await getUserById(userId);
+    expect(user).toBeNull();
+  });
+
+  it("returns 404 for non-existent user", async () => {
+    const res = await app.request("/admin/users/nonexistent", {
+      method: "DELETE",
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 when trying to delete yourself", async () => {
+    const sessionUser = await getSessionWithUser(adminCookie.split("=")[1]);
+    const res = await app.request(`/admin/users/${sessionUser!.id}`, {
+      method: "DELETE",
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(400);
   });
 });
