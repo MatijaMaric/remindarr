@@ -12,6 +12,8 @@ import type {
   AdminSettings,
   AdminSettingsUpdateRequest,
   AdminSettingsUpdateResponse,
+  AdminUser,
+  AdminUsersResponse,
   UserProfileResponse,
   UserSummary,
   TitleRatingResponse,
@@ -607,4 +609,47 @@ export async function updateHomepageLayout(layout: HomepageSection[]): Promise<{
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ homepage_layout: layout }),
   });
+}
+
+// ─── Admin user management ────────────────────────────────────────────────────
+
+export async function getAdminUsers(opts: { search?: string; filter?: string; page?: number } = {}): Promise<AdminUsersResponse> {
+  const params = new URLSearchParams();
+  if (opts.search) params.set("search", opts.search);
+  if (opts.filter) params.set("filter", opts.filter);
+  if (opts.page) params.set("page", String(opts.page));
+  const qs = params.toString();
+  return fetchJson(`/admin/users${qs ? `?${qs}` : ""}`);
+}
+
+export async function getAdminUser(userId: string): Promise<{ user: AdminUser }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}`);
+}
+
+export async function setAdminUserRole(userId: string, role: "admin" | "user"): Promise<{ message: string }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}/role`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function banAdminUser(userId: string, reason?: string): Promise<{ message: string }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}/ban`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function unbanAdminUser(userId: string): Promise<{ message: string }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}/unban`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+}
+
+export async function deleteAdminUser(userId: string): Promise<{ message: string }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
 }

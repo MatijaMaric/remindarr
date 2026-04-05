@@ -1452,8 +1452,13 @@ function AdminSection() {
   if (loading) return <div className="text-zinc-500">Loading settings...</div>;
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">Admin Settings</h2>
+    <section className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white">Admin Settings</h2>
+        <Link to="/admin/users" className="text-sm px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg transition-colors border border-white/[0.06]">
+          Manage Users →
+        </Link>
+      </div>
 
       <div className="bg-zinc-900 rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">

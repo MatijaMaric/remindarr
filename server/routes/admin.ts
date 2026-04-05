@@ -6,10 +6,21 @@ import {
   getSettingsByPrefix,
   isOidcConfigured,
   getOidcConfig,
+  getAllUsers,
+  getAdminUserCount,
+  getUserTrackedCount,
+  getUserById,
+  banUser,
+  unbanUser,
+  deleteUser,
+  updateUserAdmin,
 } from "../db/repository";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "admin" });
 
 /**
  * Callback to recreate the auth instance after OIDC settings change.
@@ -85,6 +96,110 @@ app.put("/settings", async (c) => {
   }
 
   return ok(c, { oidc_configured: await isOidcConfigured() });
+});
+
+// ─── User management ─────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 50;
+
+// GET /api/admin/users?search=&filter=all|active|banned&page=1
+app.get("/users", async (c) => {
+  const search = c.req.query("search") || undefined;
+  const filter = (c.req.query("filter") as "all" | "active" | "banned") || "all";
+  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const [rows, total] = await Promise.all([
+    getAllUsers({ search, filter, limit: PAGE_SIZE, offset }),
+    getAdminUserCount({ search, filter }),
+  ]);
+
+  return ok(c, {
+    users: rows,
+    total,
+    page,
+    page_size: PAGE_SIZE,
+    total_pages: Math.ceil(total / PAGE_SIZE),
+  });
+});
+
+// GET /api/admin/users/:id
+app.get("/users/:id", async (c) => {
+  const id = c.req.param("id");
+  const user = await getUserById(id);
+  if (!user) return c.json({ error: "User not found" }, 404);
+
+  const trackedCount = await getUserTrackedCount(id);
+  return ok(c, { user: { ...user, tracked_count: trackedCount } });
+});
+
+// PUT /api/admin/users/:id/role  { role: "admin" | "user" }
+app.put("/users/:id/role", async (c) => {
+  const id = c.req.param("id");
+  const actingUser = c.get("user")!;
+
+  if (id === actingUser.id) {
+    return c.json({ error: "Cannot change your own role" }, 400);
+  }
+
+  const body = await c.req.json<{ role: string }>();
+  if (body.role !== "admin" && body.role !== "user") {
+    return c.json({ error: "role must be 'admin' or 'user'" }, 400);
+  }
+
+  const target = await getUserById(id);
+  if (!target) return c.json({ error: "User not found" }, 404);
+
+  await updateUserAdmin(id, body.role === "admin");
+  log.info("Admin role changed", { targetUserId: id, newRole: body.role, by: actingUser.id });
+  return ok(c, { message: `User role updated to ${body.role}` });
+});
+
+// PUT /api/admin/users/:id/ban  { reason?: string }
+app.put("/users/:id/ban", async (c) => {
+  const id = c.req.param("id");
+  const actingUser = c.get("user")!;
+
+  if (id === actingUser.id) {
+    return c.json({ error: "Cannot ban yourself" }, 400);
+  }
+
+  const target = await getUserById(id);
+  if (!target) return c.json({ error: "User not found" }, 404);
+
+  const body = await c.req.json<{ reason?: string }>().catch(() => ({ reason: undefined }));
+  const reason = "reason" in body ? (body.reason ?? null) : null;
+  await banUser(id, reason, null);
+  log.info("User banned", { targetUserId: id, reason, by: actingUser.id });
+  return ok(c, { message: "User banned" });
+});
+
+// PUT /api/admin/users/:id/unban
+app.put("/users/:id/unban", async (c) => {
+  const id = c.req.param("id");
+  const target = await getUserById(id);
+  if (!target) return c.json({ error: "User not found" }, 404);
+
+  await unbanUser(id);
+  log.info("User unbanned", { targetUserId: id, by: c.get("user")!.id });
+  return ok(c, { message: "User unbanned" });
+});
+
+// DELETE /api/admin/users/:id
+app.delete("/users/:id", async (c) => {
+  const id = c.req.param("id");
+  const actingUser = c.get("user")!;
+
+  if (id === actingUser.id) {
+    return c.json({ error: "Cannot delete your own account from admin panel" }, 400);
+  }
+
+  const target = await getUserById(id);
+  if (!target) return c.json({ error: "User not found" }, 404);
+
+  await deleteUser(id);
+  log.info("User deleted by admin", { targetUserId: id, by: actingUser.id });
+  return ok(c, { message: "User deleted" });
 });
 
 export default app;

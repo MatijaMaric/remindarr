@@ -1,6 +1,6 @@
-import { eq, and, sql, count } from "drizzle-orm";
+import { eq, and, sql, count, desc } from "drizzle-orm";
 import { getDb } from "../schema";
-import { users, sessions, account } from "../schema";
+import { users, sessions, account, tracked } from "../schema";
 import { logger } from "../../logger";
 import { traceDbQuery } from "../../tracing";
 
@@ -253,5 +253,116 @@ export async function setHomepageLayout(userId: string, layout: string): Promise
       .set({ homepageLayout: layout })
       .where(eq(users.id, userId))
       .run();
+  });
+}
+
+// ─── Admin user management ────────────────────────────────────────────────────
+
+export async function getAllUsers(opts: { search?: string; filter?: "all" | "banned" | "active"; limit?: number; offset?: number } = {}) {
+  return traceDbQuery("getAllUsers", async () => {
+    const db = getDb();
+    const { search, filter = "all", limit = 50, offset = 0 } = opts;
+
+    const conditions: ReturnType<typeof sql>[] = [];
+
+    if (search) {
+      const pattern = `%${search}%`;
+      conditions.push(sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`);
+    }
+
+    if (filter === "banned") {
+      conditions.push(sql`COALESCE(${users.banned}, 0) = 1`);
+    } else if (filter === "active") {
+      conditions.push(sql`COALESCE(${users.banned}, 0) = 0`);
+    }
+
+    const rows = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        is_admin: users.isAdmin,
+        auth_provider: users.authProvider,
+        banned: users.banned,
+        ban_reason: users.banReason,
+        ban_expires: users.banExpires,
+        created_at: users.createdAt,
+        updated_at: users.updatedAt,
+      })
+      .from(users)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset)
+      .all();
+
+    return rows;
+  });
+}
+
+export async function getAdminUserCount(opts: { search?: string; filter?: "all" | "banned" | "active" } = {}) {
+  return traceDbQuery("getAdminUserCount", async () => {
+    const db = getDb();
+    const { search, filter = "all" } = opts;
+
+    const conditions: ReturnType<typeof sql>[] = [];
+
+    if (search) {
+      const pattern = `%${search}%`;
+      conditions.push(sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`);
+    }
+
+    if (filter === "banned") {
+      conditions.push(sql`COALESCE(${users.banned}, 0) = 1`);
+    } else if (filter === "active") {
+      conditions.push(sql`COALESCE(${users.banned}, 0) = 0`);
+    }
+
+    const row = await db
+      .select({ cnt: count() })
+      .from(users)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .get();
+
+    return row?.cnt ?? 0;
+  });
+}
+
+export async function getUserTrackedCount(userId: string): Promise<number> {
+  return traceDbQuery("getUserTrackedCount", async () => {
+    const db = getDb();
+    const row = await db.select({ cnt: count() }).from(tracked).where(eq(tracked.userId, userId)).get();
+    return row?.cnt ?? 0;
+  });
+}
+
+export async function banUser(userId: string, reason: string | null, expiresAt: number | null) {
+  return traceDbQuery("banUser", async () => {
+    const db = getDb();
+    await db
+      .update(users)
+      .set({ banned: true, banReason: reason, banExpires: expiresAt })
+      .where(eq(users.id, userId))
+      .run();
+  });
+}
+
+export async function unbanUser(userId: string) {
+  return traceDbQuery("unbanUser", async () => {
+    const db = getDb();
+    await db
+      .update(users)
+      .set({ banned: false, banReason: null, banExpires: null })
+      .where(eq(users.id, userId))
+      .run();
+  });
+}
+
+export async function deleteUser(userId: string) {
+  return traceDbQuery("deleteUser", async () => {
+    const db = getDb();
+    await db.delete(users).where(eq(users.id, userId)).run();
   });
 }
