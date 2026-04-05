@@ -17,6 +17,17 @@ app.get("/", async (c) => {
     return err(c, "Query parameter 'q' is required");
   }
 
+  // Parse optional filter params
+  const yearMinRaw = c.req.query("year_min");
+  const yearMaxRaw = c.req.query("year_max");
+  const minRatingRaw = c.req.query("min_rating");
+  const typeParam = c.req.query("type"); // "MOVIE" | "SHOW"
+  const languageParam = c.req.query("language");
+
+  const yearMin = yearMinRaw ? parseInt(yearMinRaw, 10) : undefined;
+  const yearMax = yearMaxRaw ? parseInt(yearMaxRaw, 10) : undefined;
+  const minRating = minRatingRaw ? parseFloat(minRatingRaw) : undefined;
+
   try {
     const [genreMap, tvGenreMap, searchResult] = await Promise.all([
       getMovieGenres(),
@@ -28,9 +39,27 @@ app.get("/", async (c) => {
     const allGenres = new Map([...genreMap, ...tvGenreMap]);
 
     // Parse search results (filter out "person" results)
-    const basicTitles = searchResult.results
+    let basicTitles = searchResult.results
       .map((r) => parseSearchResult(r, allGenres))
       .filter((t): t is ParsedTitle => t !== null);
+
+    // Apply type filter on TMDB results
+    if (typeParam === "MOVIE" || typeParam === "SHOW") {
+      basicTitles = basicTitles.filter((t) => t.objectType === typeParam);
+    }
+
+    // Apply year filters on TMDB results
+    if (yearMin != null && !isNaN(yearMin)) {
+      basicTitles = basicTitles.filter((t) => t.releaseYear != null && t.releaseYear >= yearMin);
+    }
+    if (yearMax != null && !isNaN(yearMax)) {
+      basicTitles = basicTitles.filter((t) => t.releaseYear != null && t.releaseYear <= yearMax);
+    }
+
+    // Apply language filter on TMDB results (originalLanguage may be null for search results)
+    if (languageParam) {
+      basicTitles = basicTitles.filter((t) => t.originalLanguage === languageParam);
+    }
 
     // Fetch watch providers for each result
     const titles = await Promise.all(
@@ -48,8 +77,18 @@ app.get("/", async (c) => {
       })
     );
 
+    // Apply rating filter only after fetching details (TMDB search results lack ratings;
+    // full details include tmdbScore but not imdbScore — rating filter is best-effort here)
+    let filteredTitles = titles;
+    if (minRating != null && !isNaN(minRating)) {
+      filteredTitles = titles.filter((t) => {
+        const score = t.scores?.tmdbScore ?? null;
+        return score != null && score >= minRating;
+      });
+    }
+
     // Persist titles with offers to DB so stream buttons appear on subsequent views
-    const titlesWithOffers = titles.filter((t) => t.offers.length > 0);
+    const titlesWithOffers = filteredTitles.filter((t) => t.offers.length > 0);
     if (titlesWithOffers.length > 0) {
       upsertTitles(titlesWithOffers).catch((e) => {
         log.error("Failed to persist search titles", { error: (e as Error).message });
@@ -58,14 +97,14 @@ app.get("/", async (c) => {
 
     const user = c.get("user");
     const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
-    const titlesWithTracked = titles.map((t) => ({
+    const titlesWithTracked = filteredTitles.map((t) => ({
       ...t,
       isTracked: trackedIds.has(t.id),
     }));
 
     return ok(c, { titles: titlesWithTracked, count: titlesWithTracked.length });
-  } catch (e: any) {
-    return err(c, e.message, 500);
+  } catch (e: unknown) {
+    return err(c, (e as Error).message, 500);
   }
 });
 

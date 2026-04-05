@@ -63,8 +63,24 @@ export async function getTitles(params: {
   return fetchJson(`/titles?${qs}`);
 }
 
-export async function searchTitles(query: string): Promise<{ titles: SearchTitle[]; count: number }> {
-  return fetchJson(`/search?q=${encodeURIComponent(query)}`);
+export async function searchTitles(
+  query: string,
+  filters?: {
+    yearMin?: number;
+    yearMax?: number;
+    minRating?: number;
+    language?: string;
+    type?: "MOVIE" | "SHOW";
+  }
+): Promise<{ titles: SearchTitle[]; count: number }> {
+  const qs = new URLSearchParams();
+  qs.set("q", query);
+  if (filters?.yearMin != null) qs.set("year_min", String(filters.yearMin));
+  if (filters?.yearMax != null) qs.set("year_max", String(filters.yearMax));
+  if (filters?.minRating != null) qs.set("min_rating", String(filters.minRating));
+  if (filters?.language) qs.set("language", filters.language);
+  if (filters?.type) qs.set("type", filters.type);
+  return fetchJson(`/search?${qs}`);
 }
 
 export async function browseTitles(params: {
@@ -662,4 +678,22 @@ export async function getFeedToken(): Promise<{ token: string | null }> {
 
 export async function regenerateFeedToken(): Promise<{ token: string }> {
   return fetchJson("/feed/token/regenerate", { method: "POST" });
+}
+
+// ─── Title Notes & Tags ───────────────────────────────────────────────────────
+
+export async function updateTrackedNotes(titleId: string, notes: string | null): Promise<void> {
+  return fetchJson(`/track/${encodeURIComponent(titleId)}/notes`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export async function updateTrackedTags(titleId: string, tags: string[]): Promise<void> {
+  return fetchJson(`/track/${encodeURIComponent(titleId)}/tags`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tags }),
+  });
 }
