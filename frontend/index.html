@@ -11,6 +11,14 @@
     <title>Remindarr</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var theme = localStorage.getItem('remindarr-theme');
+        var valid = ['dark', 'light', 'oled'];
+        if (!theme || !valid.includes(theme)) theme = 'dark';
+        document.documentElement.classList.add('theme-' + theme);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
