@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser } from "../repository";
+import { upsertTitles, createUser, upsertEpisodes } from "../repository";
 import { follow } from "./follows";
 import {
   rateTitle,
@@ -9,11 +9,21 @@ import {
   getUserRating,
   getTitleRatings,
   getFriendsRatings,
+  rateEpisode,
+  unrateEpisode,
+  getUserEpisodeRating,
+  getEpisodeRatings,
+  getFriendsEpisodeRatings,
+  getSeasonEpisodeRatings,
 } from "./ratings";
+import { getDb } from "../schema";
+import { episodes } from "../schema";
 
 let userA: string;
 let userB: string;
 let userC: string;
+let episodeId1: number;
+let episodeId2: number;
 
 beforeEach(async () => {
   setupTestDb();
@@ -23,7 +33,16 @@ beforeEach(async () => {
   await upsertTitles([
     makeParsedTitle({ id: "movie-1", title: "Test Movie" }),
     makeParsedTitle({ id: "movie-2", title: "Another Movie" }),
+    makeParsedTitle({ id: "show-1", title: "Test Show", objectType: "SHOW" }),
   ]);
+  await upsertEpisodes([
+    { title_id: "show-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: "2024-01-01", still_path: null },
+    { title_id: "show-1", season_number: 1, episode_number: 2, name: "Episode 2", overview: null, air_date: "2024-01-08", still_path: null },
+  ]);
+  const db = getDb();
+  const eps = await db.select({ id: episodes.id, episodeNumber: episodes.episodeNumber }).from(episodes).all();
+  episodeId1 = eps.find((e) => e.episodeNumber === 1)!.id;
+  episodeId2 = eps.find((e) => e.episodeNumber === 2)!.id;
 });
 
 afterAll(() => {
@@ -121,5 +140,112 @@ describe("getFriendsRatings", () => {
     await follow(userA, userB);
     const result = await getFriendsRatings(userA, "movie-1");
     expect(result).toHaveLength(0);
+  });
+});
+
+// ─── Episode Rating Tests ─────────────────────────────────────────────────────
+
+describe("rateEpisode", () => {
+  it("inserts a new episode rating", async () => {
+    await rateEpisode(userA, episodeId1, "LOVE");
+    const result = await getUserEpisodeRating(userA, episodeId1);
+    expect(result?.rating).toBe("LOVE");
+    expect(result?.review).toBeNull();
+  });
+
+  it("inserts with optional review", async () => {
+    await rateEpisode(userA, episodeId1, "LIKE", "Great episode!");
+    const result = await getUserEpisodeRating(userA, episodeId1);
+    expect(result?.rating).toBe("LIKE");
+    expect(result?.review).toBe("Great episode!");
+  });
+
+  it("upserts — updates existing rating and review", async () => {
+    await rateEpisode(userA, episodeId1, "LIKE", "Good");
+    await rateEpisode(userA, episodeId1, "LOVE", "Amazing");
+    const result = await getUserEpisodeRating(userA, episodeId1);
+    expect(result?.rating).toBe("LOVE");
+    expect(result?.review).toBe("Amazing");
+  });
+});
+
+describe("unrateEpisode", () => {
+  it("removes an episode rating", async () => {
+    await rateEpisode(userA, episodeId1, "LIKE");
+    await unrateEpisode(userA, episodeId1);
+    const result = await getUserEpisodeRating(userA, episodeId1);
+    expect(result).toBeNull();
+  });
+
+  it("is a no-op when no rating exists", async () => {
+    await unrateEpisode(userA, episodeId1);
+    const result = await getUserEpisodeRating(userA, episodeId1);
+    expect(result).toBeNull();
+  });
+});
+
+describe("getUserEpisodeRating", () => {
+  it("returns null when no rating exists", async () => {
+    expect(await getUserEpisodeRating(userA, episodeId1)).toBeNull();
+  });
+});
+
+describe("getEpisodeRatings", () => {
+  it("returns aggregated counts per rating type", async () => {
+    await rateEpisode(userA, episodeId1, "LOVE");
+    await rateEpisode(userB, episodeId1, "LOVE");
+    await rateEpisode(userC, episodeId1, "LIKE");
+
+    const result = await getEpisodeRatings(episodeId1);
+    expect(result.LOVE).toBe(2);
+    expect(result.LIKE).toBe(1);
+    expect(result.DISLIKE).toBe(0);
+    expect(result.HATE).toBe(0);
+  });
+
+  it("returns all zeros for an unrated episode", async () => {
+    const result = await getEpisodeRatings(episodeId2);
+    expect(result.LOVE).toBe(0);
+    expect(result.LIKE).toBe(0);
+    expect(result.DISLIKE).toBe(0);
+    expect(result.HATE).toBe(0);
+  });
+});
+
+describe("getFriendsEpisodeRatings", () => {
+  it("returns ratings from followed users", async () => {
+    await follow(userA, userB);
+    await rateEpisode(userB, episodeId1, "LOVE");
+    await rateEpisode(userC, episodeId1, "LIKE"); // not followed
+
+    const result = await getFriendsEpisodeRatings(userA, episodeId1);
+    expect(result).toHaveLength(1);
+    expect(result[0].username).toBe("bob");
+    expect(result[0].rating).toBe("LOVE");
+  });
+
+  it("returns empty list when no friends have rated", async () => {
+    await follow(userA, userB);
+    const result = await getFriendsEpisodeRatings(userA, episodeId1);
+    expect(result).toHaveLength(0);
+  });
+});
+
+describe("getSeasonEpisodeRatings", () => {
+  it("returns aggregate per episode number for a season", async () => {
+    await rateEpisode(userA, episodeId1, "LOVE");
+    await rateEpisode(userB, episodeId1, "LIKE");
+    await rateEpisode(userC, episodeId2, "HATE");
+
+    const result = await getSeasonEpisodeRatings("show-1", 1);
+    expect(result[1].LOVE).toBe(1);
+    expect(result[1].LIKE).toBe(1);
+    expect(result[2].HATE).toBe(1);
+    expect(result[2].LOVE).toBe(0);
+  });
+
+  it("returns empty object when no ratings exist", async () => {
+    const result = await getSeasonEpisodeRatings("show-1", 1);
+    expect(Object.keys(result)).toHaveLength(0);
   });
 });

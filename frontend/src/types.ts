@@ -531,6 +531,13 @@ export interface TitleRatingResponse {
   friends_ratings: FriendRating[];
 }
 
+export interface EpisodeRatingResponse {
+  user_rating: RatingValue | null;
+  user_review: string | null;
+  aggregated: Record<RatingValue, number>;
+  friends_ratings: FriendRating[];
+}
+
 // ─── Recommendation Types ─────────────────────────────────────────────────────
 
 export interface Recommendation {

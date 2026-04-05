@@ -17,6 +17,8 @@ import type {
   UserProfileResponse,
   UserSummary,
   TitleRatingResponse,
+  EpisodeRatingResponse,
+  RatingValue,
   SentRecommendation,
   RecommendationsResponse,
   InvitationItem,
@@ -498,6 +500,27 @@ export async function unrateTitle(titleId: string): Promise<void> {
 
 export async function getTitleRating(titleId: string): Promise<TitleRatingResponse> {
   return fetchJson(`/ratings/${encodeURIComponent(titleId)}`);
+}
+
+export async function rateEpisode(episodeId: number, rating: string, review?: string): Promise<void> {
+  await fetchJson(`/ratings/episode/${episodeId}`, {
+    method: "POST",
+    body: JSON.stringify({ rating, review }),
+  });
+}
+
+export async function unrateEpisode(episodeId: number): Promise<void> {
+  await fetchJson(`/ratings/episode/${episodeId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getEpisodeRating(episodeId: number): Promise<EpisodeRatingResponse> {
+  return fetchJson(`/ratings/episode/${episodeId}`);
+}
+
+export async function getSeasonEpisodeRatings(titleId: string, season: number): Promise<{ ratings: Record<number, Record<RatingValue, number>> }> {
+  return fetchJson(`/ratings/season/${encodeURIComponent(titleId)}/${season}`);
 }
 
 // ─── Recommendations ──────────────────────────────────────────────────────────

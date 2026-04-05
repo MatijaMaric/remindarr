@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
-import type { SeasonDetailsResponse } from "../types";
+import type { SeasonDetailsResponse, RatingValue } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
@@ -41,6 +41,7 @@ export default function SeasonDetailPage() {
   );
 
   const [statusMap, setStatusMap] = useState<Map<number, EpisodeStatus>>(new Map());
+  const [episodeRatings, setEpisodeRatings] = useState<Record<number, Record<RatingValue, number>>>({});
 
   useApiCall(
     () => user && id && season
@@ -55,6 +56,16 @@ export default function SeasonDetailPage() {
         }
         setStatusMap(map);
       },
+    },
+  );
+
+  useApiCall(
+    () => id && season
+      ? api.getSeasonEpisodeRatings(id, Number(season))
+      : Promise.resolve({ ratings: {} }),
+    [id, season],
+    {
+      onSuccess: (result) => setEpisodeRatings(result.ratings),
     },
   );
 
@@ -268,6 +279,16 @@ export default function SeasonDetailPage() {
                                 <span className="text-yellow-500">{ep.vote_average.toFixed(1)}</span>
                               </>
                             )}
+                            {(() => {
+                              const r = episodeRatings[ep.episode_number];
+                              const total = r ? (r.HATE + r.DISLIKE + r.LIKE + r.LOVE) : 0;
+                              return total > 0 ? (
+                                <>
+                                  <span className="text-zinc-700">·</span>
+                                  <span className="text-pink-400">{total} {total === 1 ? "rating" : "ratings"}</span>
+                                </>
+                              ) : null;
+                            })()}
                           </div>
                         </div>
                       </div>

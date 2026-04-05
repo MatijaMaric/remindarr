@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router";
-import { Undo2 } from "lucide-react";
+import { Undo2, HeartCrack, ThumbsDown, ThumbsUp, Heart } from "lucide-react";
 import * as api from "../api";
-import type { Episode } from "../types";
+import type { Episode, RatingValue } from "../types";
 import ReelsCard from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
 import { ReelsSkeleton } from "../components/SkeletonComponents";
@@ -22,6 +22,13 @@ interface UndoAction {
   episodeId: number;
   wasCaughtUp: boolean;
 }
+
+const REELS_RATING_CONFIG: { value: RatingValue; Icon: typeof ThumbsDown; label: string; filled?: boolean }[] = [
+  { value: "HATE", Icon: HeartCrack, label: "Hate", filled: true },
+  { value: "DISLIKE", Icon: ThumbsDown, label: "Dislike" },
+  { value: "LIKE", Icon: ThumbsUp, label: "Like" },
+  { value: "LOVE", Icon: Heart, label: "Love", filled: true },
+];
 
 export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
   const grouped = new Map<string, Episode[]>();
@@ -68,6 +75,9 @@ export default function ReelsPage() {
 
   // Season panel state
   const [seasonPanel, setSeasonPanel] = useState<{ card: ShowCard; seasonNumber: number } | null>(null);
+
+  // Ephemeral episode rating (shown alongside undo)
+  const [reelsRating, setReelsRating] = useState<RatingValue | null>(null);
 
   // Swipe detection
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -211,9 +221,10 @@ export default function ReelsPage() {
       });
     });
 
-    // Show undo toast
+    // Show undo toast + rating prompt
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoAction(action);
+    setReelsRating(null);
     undoTimerRef.current = setTimeout(() => setUndoAction(null), 5000);
 
     try {
@@ -235,6 +246,22 @@ export default function ReelsPage() {
       actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
     }
   }, []);
+
+  const handleReelsRate = useCallback(async (value: RatingValue) => {
+    if (!undoAction) return;
+    const isActive = reelsRating === value;
+    try {
+      if (isActive) {
+        await api.unrateEpisode(undoAction.episodeId);
+        setReelsRating(null);
+      } else {
+        await api.rateEpisode(undoAction.episodeId, value);
+        setReelsRating(value);
+      }
+    } catch {
+      // Non-critical: silently ignore rating errors in Reels
+    }
+  }, [undoAction, reelsRating]);
 
   const handleUndo = useCallback(async () => {
     if (!undoAction) return;
@@ -360,9 +387,33 @@ export default function ReelsPage() {
         )}
       </div>
 
-      {/* Undo toast */}
+      {/* Undo + rating prompt */}
       {undoAction && (
-        <div className="fixed bottom-22 left-1/2 -translate-x-1/2 z-[60] sm:bottom-8">
+        <div className="fixed bottom-22 left-1/2 -translate-x-1/2 z-[60] sm:bottom-8 flex flex-col items-center gap-2">
+          {/* Rating buttons */}
+          <div className="dark-section flex items-center gap-1.5 bg-zinc-800/90 px-3 py-2 rounded-full shadow-lg border border-white/[0.08]">
+            {REELS_RATING_CONFIG.map(({ value, Icon, label, filled }) => {
+              const isActive = reelsRating === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => handleReelsRate(value)}
+                  aria-label={label}
+                  aria-pressed={isActive}
+                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                    isActive ? "bg-amber-500 text-zinc-950" : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <Icon
+                    size={18}
+                    fill={isActive && filled ? "currentColor" : "none"}
+                    strokeWidth={value === "HATE" ? 2.5 : 2}
+                  />
+                </button>
+              );
+            })}
+          </div>
+          {/* Undo button */}
           <button
             onClick={handleUndo}
             className="dark-section flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-full shadow-lg border border-white/[0.08] transition-colors cursor-pointer"

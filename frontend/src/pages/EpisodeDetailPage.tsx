@@ -11,6 +11,7 @@ import { useApiCall } from "../hooks/useApiCall";
 import { useAuth } from "../context/AuthContext";
 import { WatchedIcon } from "../components/EpisodeComponents";
 import ShareButton from "../components/ShareButton";
+import EpisodeRatingButtons from "../components/EpisodeRatingButtons";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -158,6 +159,14 @@ export default function EpisodeDetailPage() {
           ) : null}
         </div>
       </div>
+
+      {/* Rating */}
+      {released && episodeStatus && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-white">Rate this episode</h2>
+          <EpisodeRatingButtons episodeId={episodeStatus.id} />
+        </section>
+      )}
 
       {/* Overview */}
       {tmdb?.overview && (

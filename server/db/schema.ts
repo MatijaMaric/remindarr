@@ -497,6 +497,21 @@ export const watchHistory = sqliteTable(
   ]
 );
 
+export const episodeRatings = sqliteTable(
+  "episode_ratings",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    episodeId: integer("episode_id").notNull().references(() => episodes.id, { onDelete: "cascade" }),
+    rating: text("rating").notNull(), // 'HATE', 'DISLIKE', 'LIKE', 'LOVE'
+    review: text("review"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.episodeId] }),
+    index("idx_episode_ratings_episode").on(table.episodeId),
+  ]
+);
+
 export const streamingAlerts = sqliteTable(
   "streaming_alerts",
   {
@@ -545,8 +560,9 @@ export const scoresRelations = relations(scores, ({ one }) => ({
   title: one(titles, { fields: [scores.titleId], references: [titles.id] }),
 }));
 
-export const episodesRelations = relations(episodes, ({ one }) => ({
+export const episodesRelations = relations(episodes, ({ one, many }) => ({
   title: one(titles, { fields: [episodes.titleId], references: [titles.id] }),
+  ratings: many(episodeRatings),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -554,6 +570,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(account),
   tracked: many(tracked),
   ratings: many(ratings),
+  episodeRatings: many(episodeRatings),
   followers: many(follows, { relationName: "following" }),
   following: many(follows, { relationName: "follower" }),
   sentRecommendations: many(recommendations),
@@ -609,6 +626,11 @@ export const ratingsRelations = relations(ratings, ({ one }) => ({
   title: one(titles, { fields: [ratings.titleId], references: [titles.id] }),
 }));
 
+export const episodeRatingsRelations = relations(episodeRatings, ({ one }) => ({
+  user: one(users, { fields: [episodeRatings.userId], references: [users.id] }),
+  episode: one(episodes, { fields: [episodeRatings.episodeId], references: [episodes.id] }),
+}));
+
 export const recommendationsRelations = relations(recommendations, ({ one, many }) => ({
   fromUser: one(users, { fields: [recommendations.fromUserId], references: [users.id] }),
   title: one(titles, { fields: [recommendations.titleId], references: [titles.id] }),
@@ -633,12 +655,12 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
-  follows, ratings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
+  follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
   watchHistory, streamingAlerts,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
-  followsRelations, ratingsRelations, recommendationsRelations, recommendationReadsRelations, invitationsRelations,
+  followsRelations, ratingsRelations, episodeRatingsRelations, recommendationsRelations, recommendationReadsRelations, invitationsRelations,
   integrationsRelations, plexLibraryItemsRelations,
 };
 

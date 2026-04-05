@@ -54,7 +54,7 @@ docker compose up --build
 - Frontend tests use `@testing-library/react` with `happy-dom`
 - External APIs (TMDB, OIDC, Discord) must be mocked — never make real HTTP calls in tests
 - **Run `bun run check` before committing** — this runs the full CI pipeline locally (server type check, frontend type check, ESLint, and all tests). Do not use `bun test` alone as it skips type checking and linting.
-- Frontend code must pass ESLint with zero errors. Warnings (e.g., `react-refresh/only-export-components` for multi-component files) are acceptable.
+- Frontend code must pass ESLint with zero errors and zero warnings.
 - Avoid `any` types in source files — use `unknown` for catch blocks and proper types elsewhere. Test files are exempt from `no-explicit-any`.
 
 ## Architecture
