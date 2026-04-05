@@ -66,6 +66,7 @@ import recommendationsRoutes from "./routes/recommendations";
 import invitationsRoutes from "./routes/invitations";
 import healthRoutes from "./routes/health";
 import statsRoutes from "./routes/stats";
+import userSettingsRoutes from "./routes/user-settings";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig } from "./config";
@@ -327,6 +328,9 @@ function createApp(env: Env) {
   app.use("/api/stats/*", requireAuth);
   app.use("/api/stats", requireAuth);
   app.route("/api/stats", statsRoutes);
+
+  app.use("/api/user/settings/*", requireAuth);
+  app.route("/api/user/settings", userSettingsRoutes);
 
   // Admin routes
   app.use("/api/admin/*", requireAuth, requireAdmin);

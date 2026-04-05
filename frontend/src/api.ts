@@ -18,6 +18,7 @@ import type {
   SentRecommendation,
   RecommendationsResponse,
   InvitationItem,
+  HomepageSection,
 } from "./types";
 
 const BASE = "/api";
@@ -591,4 +592,19 @@ export async function triggerPlexSync(
 
 export async function getStats(): Promise<StatsResponse> {
   return fetchJson("/stats");
+}
+
+
+// ─── User settings ────────────────────────────────────────────────────────────
+
+export async function getHomepageLayout(): Promise<{ homepage_layout: HomepageSection[] }> {
+  return fetchJson("/user/settings/homepage-layout");
+}
+
+export async function updateHomepageLayout(layout: HomepageSection[]): Promise<{ homepage_layout: HomepageSection[] }> {
+  return fetchJson("/user/settings/homepage-layout", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ homepage_layout: layout }),
+  });
 }

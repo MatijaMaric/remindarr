@@ -70,6 +70,8 @@ export {
   getSessionWithUser,
   deleteSession,
   deleteExpiredSessions,
+  getHomepageLayout,
+  setHomepageLayout,
 } from "./users";
 
 export {

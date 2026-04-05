@@ -243,6 +243,20 @@
   "settings": {
     "title": "Settings",
     "viewProfile": "View Profile",
+    "homepage": {
+      "title": "Homepage Layout",
+      "description": "Drag to reorder sections. Toggle the eye icon to show or hide a section.",
+      "saved": "Layout saved",
+      "saving": "Saving...",
+      "showSection": "Show section",
+      "hideSection": "Hide section",
+      "sections": {
+        "unwatched": "Unwatched Episodes",
+        "recommendations": "Recommended for You",
+        "today": "Today's Episodes",
+        "upcoming": "Coming Up"
+      }
+    },
     "profileVisibility": "Profile Visibility",
     "profileVisibilityDescription": "Control which titles are visible on your public profile.",
     "showWatchlist": "Show watchlist on public profile",
