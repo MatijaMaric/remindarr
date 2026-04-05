@@ -133,6 +133,12 @@
 .theme-light .bg-zinc-950\/80 {
   background-color: rgba(250, 250, 250, 0.8);
 }
+.theme-light .hover\:bg-zinc-700:hover {
+  background-color: #cbd5e1;
+}
+.theme-light .hover\:text-zinc-100:hover {
+  color: #18181b;
+}
 
 /* OLED theme overrides */
 .theme-oled .bg-zinc-950 {
