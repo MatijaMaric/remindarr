@@ -376,7 +376,15 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
   });
 }
 
-export async function searchLocalTitles(query: string, limit = 50, userId?: string) {
+export interface LocalSearchFilters {
+  yearMin?: number;
+  yearMax?: number;
+  minRating?: number;
+  objectType?: string;
+  language?: string;
+}
+
+export async function searchLocalTitles(query: string, limit = 50, userId?: string, filters: LocalSearchFilters = {}) {
   return traceDbQuery("searchLocalTitles", async () => {
     const db = getDb();
 
@@ -411,11 +419,30 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
       .leftJoin(scores, eq(scores.titleId, titles.id))
       .$dynamic();
 
+    const conditions: ReturnType<typeof eq>[] = [like(titles.title, `%${query}%`)];
+
+    if (filters.yearMin != null) {
+      conditions.push(gte(titles.releaseYear, filters.yearMin));
+    }
+    if (filters.yearMax != null) {
+      // Use sql<number> cast to silence type mismatch between number and number | null column
+      conditions.push(sql`${titles.releaseYear} <= ${filters.yearMax}` as ReturnType<typeof eq>);
+    }
+    if (filters.minRating != null) {
+      conditions.push(gte(scores.imdbScore, filters.minRating));
+    }
+    if (filters.objectType) {
+      conditions.push(eq(titles.objectType, filters.objectType));
+    }
+    if (filters.language) {
+      conditions.push(eq(titles.originalLanguage, filters.language));
+    }
+
     const rows = await (userId
       ? queryBuilder.leftJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
       : queryBuilder
     )
-      .where(like(titles.title, `%${query}%`))
+      .where(and(...conditions))
       .orderBy(desc(titles.releaseDate))
       .limit(limit)
       .all();

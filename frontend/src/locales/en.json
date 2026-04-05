@@ -213,12 +213,18 @@
     "allLanguages": "All Languages",
     "hideTracked": "Hide Tracked",
     "clearFilters": "Clear filters",
-    "search": "Search..."
+    "search": "Search...",
+    "yearFrom": "From year",
+    "yearTo": "To year",
+    "minRating": "Min rating",
+    "anyRating": "Any rating",
+    "anyYear": "Any year"
   },
   "search": {
     "placeholder": "Search titles or paste IMDB link...",
     "label": "Search titles or paste IMDB link",
-    "button": "Search"
+    "button": "Search",
+    "advancedFilters": "Filters"
   },
   "releases": {
     "syncing": "Syncing...",
@@ -377,5 +383,10 @@
     "copyUrl": "Copy",
     "copied": "Copied!",
     "warning": "Keep this URL private — anyone with it can see your upcoming releases."
+  },
+  "tags": {
+    "placeholder": "Add tag...",
+    "tooMany": "Max 10 tags",
+    "tooLong": "Tag too long (max 30 chars)"
   }
 }

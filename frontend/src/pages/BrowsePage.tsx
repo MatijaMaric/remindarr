@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import SearchBar from "../components/SearchBar";
@@ -94,6 +94,32 @@ export default function BrowsePage() {
   const { t } = useTranslation();
   useGridNavigation();
 
+  // ── Advanced search filter state ────────────────────────────────────────────
+  const [searchType, setSearchType] = useState<"" | "MOVIE" | "SHOW">("");
+  const [yearMin, setYearMin] = useState<string>("");
+  const [yearMax, setYearMax] = useState<string>("");
+  const [minRating, setMinRating] = useState<string>("");
+  const [searchLanguage, setSearchLanguage] = useState<string>("");
+  const [availableLanguages, setAvailableLanguages] = useState<{ code: string; label: string }[]>([]);
+
+  // Load languages once for the dropdown
+  useEffect(() => {
+    api.getLanguages().then(({ languages }) => {
+      setAvailableLanguages(
+        languages.map((code) => {
+          let label = code;
+          try {
+            label = new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+          } catch { /* noop */ }
+          return { code, label };
+        }).sort((a, b) => a.label.localeCompare(b.label))
+      );
+    }).catch(() => { /* ignore */ });
+  }, []);
+
+  // Current search query ref so we can re-run when filters change while results are shown
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
+
   const rawCategory = searchParams.get("category") || "popular";
   const category: BrowseCategory = VALID_CATEGORIES.includes(rawCategory as BrowseCategory)
     ? (rawCategory as BrowseCategory)
@@ -136,17 +162,29 @@ export default function BrowsePage() {
     [setHideTrackedStr]
   );
 
-  async function handleSearch(query: string) {
+  async function runSearch(query: string) {
     setSearchLoading(true);
     setSearchError("");
     try {
-      const res = await api.searchTitles(query);
+      const filters = {
+        type: (searchType || undefined) as "MOVIE" | "SHOW" | undefined,
+        yearMin: yearMin ? parseInt(yearMin, 10) : undefined,
+        yearMax: yearMax ? parseInt(yearMax, 10) : undefined,
+        minRating: minRating ? parseFloat(minRating) : undefined,
+        language: searchLanguage || undefined,
+      };
+      const res = await api.searchTitles(query, filters);
       setSearchResults(res.titles.map(normalizeSearchTitle));
     } catch (err: unknown) {
       setSearchError(err instanceof Error ? err.message : String(err));
     } finally {
       setSearchLoading(false);
     }
+  }
+
+  async function handleSearch(query: string) {
+    setLastQuery(query);
+    await runSearch(query);
   }
 
   async function handleImdb(url: string) {
@@ -167,12 +205,116 @@ export default function BrowsePage() {
   function clearSearch() {
     setSearchResults(null);
     setSearchError("");
+    setLastQuery(null);
+    setSearchType("");
+    setYearMin("");
+    setYearMax("");
+    setMinRating("");
+    setSearchLanguage("");
   }
+
+
+  const RATING_OPTIONS = ["5", "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5"] as const;
+  const inputCls =
+    "bg-zinc-800 border border-zinc-700 text-white text-sm rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-zinc-500";
+  const selectCls =
+    "bg-zinc-800 border border-zinc-700 text-white text-sm rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-zinc-500 w-full";
+  const pillBase = "px-3 py-1 rounded-full text-sm font-medium border transition-colors cursor-pointer";
+  const pillActive = "bg-white text-black border-white";
+  const pillInactive = "bg-transparent text-zinc-300 border-zinc-600 hover:border-zinc-400";
 
   return (
     <div className="space-y-6">
       <SearchBar onSearch={handleSearch} onImdb={handleImdb} loading={searchLoading} />
 
+
+      {/* Advanced search filters shown only while search results are displayed */}
+      {searchResults !== null && lastQuery !== null && (
+        <div className="space-y-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            {t("search.advancedFilters")}
+          </p>
+          <div className="flex flex-wrap gap-4 items-end">
+            {/* Type toggle */}
+            <div className="flex items-center gap-1">
+              <button
+                className={`${pillBase} ${searchType === "" ? pillActive : pillInactive}`}
+                onClick={() => { setSearchType(""); void runSearch(lastQuery); }}
+              >
+                {t("filter.all")}
+              </button>
+              <button
+                className={`${pillBase} ${searchType === "MOVIE" ? pillActive : pillInactive}`}
+                onClick={() => { setSearchType("MOVIE"); void runSearch(lastQuery); }}
+              >
+                {t("filter.movies")}
+              </button>
+              <button
+                className={`${pillBase} ${searchType === "SHOW" ? pillActive : pillInactive}`}
+                onClick={() => { setSearchType("SHOW"); void runSearch(lastQuery); }}
+              >
+                {t("filter.shows")}
+              </button>
+            </div>
+            {/* Year range */}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                className={inputCls + " w-24"}
+                placeholder={t("filter.yearFrom")}
+                value={yearMin}
+                min={1900}
+                max={2100}
+                onChange={(e) => setYearMin(e.target.value)}
+                onBlur={() => void runSearch(lastQuery)}
+              />
+              <span className="text-zinc-500 text-sm">–</span>
+              <input
+                type="number"
+                className={inputCls + " w-24"}
+                placeholder={t("filter.yearTo")}
+                value={yearMax}
+                min={1900}
+                max={2100}
+                onChange={(e) => setYearMax(e.target.value)}
+                onBlur={() => void runSearch(lastQuery)}
+              />
+            </div>
+            {/* Min rating */}
+            <div className="w-36">
+              <select
+                className={selectCls}
+                value={minRating}
+                onChange={(e) => { setMinRating(e.target.value); void runSearch(lastQuery); }}
+              >
+                <option value="">{t("filter.anyRating")}</option>
+                {RATING_OPTIONS.map((v) => (
+                  <option key={v} value={v}>
+                    {t("filter.minRating")} {v}+
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Language */}
+            {availableLanguages.length > 0 && (
+              <div className="w-40">
+                <select
+                  className={selectCls}
+                  value={searchLanguage}
+                  onChange={(e) => { setSearchLanguage(e.target.value); void runSearch(lastQuery); }}
+                >
+                  <option value="">{t("filter.allLanguages")}</option>
+                  {availableLanguages.map(({ code, label }) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <CategoryBar category={category} onCategoryChange={setCategory} />
 
       {searchError && (
