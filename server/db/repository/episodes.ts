@@ -217,6 +217,31 @@ export async function getEpisodeAirDate(episodeId: number): Promise<string | nul
   });
 }
 
+export async function getEpisodeTitleId(episodeId: number): Promise<string | null> {
+  return traceDbQuery("getEpisodeTitleId", async () => {
+    const db = getDb();
+    const row = await db
+      .select({ titleId: episodes.titleId })
+      .from(episodes)
+      .where(eq(episodes.id, episodeId))
+      .get();
+    return row?.titleId ?? null;
+  });
+}
+
+export async function getEpisodeTitleIds(episodeIds: number[]): Promise<Map<number, string>> {
+  return traceDbQuery("getEpisodeTitleIds", async () => {
+    if (episodeIds.length === 0) return new Map();
+    const db = getDb();
+    const rows = await db
+      .select({ id: episodes.id, titleId: episodes.titleId })
+      .from(episodes)
+      .where(inArray(episodes.id, episodeIds))
+      .all();
+    return new Map(rows.map((r) => [r.id, r.titleId]));
+  });
+}
+
 export async function getReleasedEpisodeIds(episodeIds: number[], timezone = "UTC"): Promise<number[]> {
   return traceDbQuery("getReleasedEpisodeIds", async () => {
     const today = localDateForTimezone(timezone);

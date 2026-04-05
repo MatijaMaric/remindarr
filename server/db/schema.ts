@@ -288,6 +288,9 @@ export const notifiers = sqliteTable(
     timezone: text("timezone").notNull().default("UTC"),
     enabled: integer("enabled").notNull().default(1),
     lastSentDate: text("last_sent_date"),
+    digestMode: text("digest_mode"),
+    digestDay: integer("digest_day"),
+    streamingAlertsEnabled: integer("streaming_alerts_enabled").notNull().default(1),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
@@ -478,6 +481,36 @@ export const titleTags = sqliteTable(
   ]
 );
 
+export const watchHistory = sqliteTable(
+  "watch_history",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    titleId: text("title_id").notNull(),
+    episodeId: integer("episode_id"),
+    watchedAt: text("watched_at").notNull().default(sql`(datetime('now'))`),
+    note: text("note"),
+  },
+  (table) => [
+    index("watch_history_user_title").on(table.userId, table.titleId),
+  ]
+);
+
+export const streamingAlerts = sqliteTable(
+  "streaming_alerts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    titleId: text("title_id").notNull(),
+    providerId: integer("provider_id").notNull(),
+    providerName: text("provider_name").notNull(),
+    alertedAt: text("alerted_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    index("idx_streaming_alerts_user_title").on(table.userId, table.titleId),
+  ]
+);
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const titlesRelations = relations(titles, ({ many, one }) => ({
@@ -599,6 +632,7 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
   follows, ratings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
+  watchHistory, streamingAlerts,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,

@@ -1,5 +1,10 @@
 import { Hono } from "hono";
-import { watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk, getEpisodeAirDate, getReleasedEpisodeIds, watchTitle, unwatchTitle } from "../db/repository";
+import {
+  watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk,
+  getEpisodeAirDate, getReleasedEpisodeIds, watchTitle, unwatchTitle,
+  getEpisodeTitleId, getEpisodeTitleIds,
+} from "../db/repository";
+import { logWatch, getTitlePlayCount, getTitleWatchHistory } from "../db/repository/watch-history";
 import { localDateForTimezone } from "../utils/timezone";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
@@ -28,11 +33,30 @@ app.post("/bulk", async (c) => {
       return err(c, "Cannot mark unreleased episodes as watched");
     }
     await watchEpisodesBulk(releasedIds, user.id);
+
+    // Log watch history for each released episode
+    const titleIdMap = await getEpisodeTitleIds(releasedIds);
+    for (const episodeId of releasedIds) {
+      const titleId = titleIdMap.get(episodeId);
+      if (titleId) {
+        await logWatch(user.id, titleId, episodeId);
+      }
+    }
   } else {
     await unwatchEpisodesBulk(episodeIds, user.id);
   }
 
   return ok(c, {});
+});
+
+app.get("/history/:titleId", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("titleId");
+  const [history, playCount] = await Promise.all([
+    getTitleWatchHistory(user.id, titleId),
+    getTitlePlayCount(user.id, titleId),
+  ]);
+  return ok(c, { history, playCount });
 });
 
 app.post("/:episodeId", async (c) => {
@@ -45,6 +69,13 @@ app.post("/:episodeId", async (c) => {
     return err(c, "Cannot mark an unreleased episode as watched");
   }
   await watchEpisode(episodeId, user.id);
+
+  // Log to watch history
+  const titleId = await getEpisodeTitleId(episodeId);
+  if (titleId) {
+    await logWatch(user.id, titleId, episodeId);
+  }
+
   return ok(c, {});
 });
 
@@ -62,6 +93,7 @@ app.post("/movies/:titleId", async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("titleId");
   await watchTitle(titleId, user.id);
+  await logWatch(user.id, titleId);
   return ok(c, {});
 });
 

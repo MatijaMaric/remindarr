@@ -119,6 +119,13 @@ export interface Provider {
   icon_url: string;
 }
 
+export interface WatchHistoryEntry {
+  id: string;
+  watchedAt: string;
+  episodeId: number | null;
+  note: string | null;
+}
+
 // ─── Detail Types ────────────────────────────────────────────────────────────
 
 export interface CastMember {

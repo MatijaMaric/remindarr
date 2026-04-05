@@ -12,7 +12,10 @@ export async function createNotifier(
   name: string,
   config: Record<string, string>,
   notifyTime: string,
-  timezone: string
+  timezone: string,
+  digestMode?: string | null,
+  digestDay?: number | null,
+  streamingAlertsEnabled = true
 ): Promise<string> {
   return traceDbQuery("createNotifier", async () => {
     const db = getDb();
@@ -26,6 +29,9 @@ export async function createNotifier(
         config: JSON.stringify(config),
         notifyTime,
         timezone,
+        digestMode: digestMode ?? null,
+        digestDay: digestDay ?? null,
+        streamingAlertsEnabled: streamingAlertsEnabled ? 1 : 0,
       })
       .run();
     return id;
@@ -41,6 +47,9 @@ export async function updateNotifier(
     notifyTime?: string;
     timezone?: string;
     enabled?: boolean;
+    digestMode?: string | null;
+    digestDay?: number | null;
+    streamingAlertsEnabled?: boolean;
   }
 ) {
   return traceDbQuery("updateNotifier", async () => {
@@ -51,6 +60,9 @@ export async function updateNotifier(
     if (updates.notifyTime !== undefined) set.notifyTime = updates.notifyTime;
     if (updates.timezone !== undefined) set.timezone = updates.timezone;
     if (updates.enabled !== undefined) set.enabled = updates.enabled ? 1 : 0;
+    if ("digestMode" in updates) set.digestMode = updates.digestMode ?? null;
+    if ("digestDay" in updates) set.digestDay = updates.digestDay ?? null;
+    if (updates.streamingAlertsEnabled !== undefined) set.streamingAlertsEnabled = updates.streamingAlertsEnabled ? 1 : 0;
 
     await db.update(notifiers)
       .set(set)
@@ -82,6 +94,9 @@ export async function getNotifiersByUser(userId: string) {
         timezone: notifiers.timezone,
         enabled: notifiers.enabled,
         last_sent_date: notifiers.lastSentDate,
+        digest_mode: notifiers.digestMode,
+        digest_day: notifiers.digestDay,
+        streaming_alerts_enabled: notifiers.streamingAlertsEnabled,
         created_at: notifiers.createdAt,
         updated_at: notifiers.updatedAt,
       })
@@ -102,6 +117,7 @@ export async function getNotifiersByUser(userId: string) {
         ...row,
         config,
         enabled: Boolean(row.enabled),
+        streaming_alerts_enabled: Boolean(row.streaming_alerts_enabled),
       };
     });
   });
@@ -121,6 +137,9 @@ export async function getNotifierById(id: string, userId: string) {
         timezone: notifiers.timezone,
         enabled: notifiers.enabled,
         last_sent_date: notifiers.lastSentDate,
+        digest_mode: notifiers.digestMode,
+        digest_day: notifiers.digestDay,
+        streaming_alerts_enabled: notifiers.streamingAlertsEnabled,
         created_at: notifiers.createdAt,
         updated_at: notifiers.updatedAt,
       })
@@ -140,6 +159,7 @@ export async function getNotifierById(id: string, userId: string) {
       ...row,
       config,
       enabled: Boolean(row.enabled),
+      streaming_alerts_enabled: Boolean(row.streaming_alerts_enabled),
     };
   });
 }
@@ -161,6 +181,9 @@ export async function getDueNotifiers(
         notify_time: notifiers.notifyTime,
         timezone: notifiers.timezone,
         last_sent_date: notifiers.lastSentDate,
+        digest_mode: notifiers.digestMode,
+        digest_day: notifiers.digestDay,
+        streaming_alerts_enabled: notifiers.streamingAlertsEnabled,
       })
       .from(notifiers)
       .where(eq(notifiers.enabled, 1))
@@ -235,5 +258,35 @@ export async function getEnabledNotifierSchedules(): Promise<{ notify_time: stri
       .where(eq(notifiers.enabled, 1))
       .all();
     return rows;
+  });
+}
+
+/**
+ * Returns all enabled notifiers for a user that have streaming alerts enabled.
+ * Used during sync to dispatch streaming availability notifications.
+ */
+export async function getStreamingAlertNotifiersForUser(userId: string) {
+  return traceDbQuery("getStreamingAlertNotifiersForUser", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: notifiers.id,
+        user_id: notifiers.userId,
+        provider: notifiers.provider,
+        config: notifiers.config,
+      })
+      .from(notifiers)
+      .where(and(eq(notifiers.userId, userId), eq(notifiers.enabled, 1), eq(notifiers.streamingAlertsEnabled, 1)))
+      .all();
+    return rows.map((row) => {
+      let config: Record<string, string>;
+      try {
+        config = JSON.parse(row.config);
+      } catch {
+        log.warn("Failed to parse notifier config", { id: row.id });
+        config = {};
+      }
+      return { ...row, config };
+    });
   });
 }

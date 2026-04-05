@@ -13,6 +13,7 @@ import type {
   ReleaseDatesResult,
   SeasonSummary,
 } from "../types";
+import type { WatchHistoryEntry } from "../types";
 import TrackButton from "../components/TrackButton";
 import RatingButtons from "../components/RatingButtons";
 import PersonCard from "../components/PersonCard";
@@ -214,6 +215,16 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { t } = useTranslation();
   const { title, tmdb, country } = data;
   const [watched, setWatched] = useState(title.is_watched ?? false);
+  const [playCount, setPlayCount] = useState(0);
+  const [watchHistory, setWatchHistory] = useState<WatchHistoryEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    api.getWatchHistory(title.id).then(({ history, playCount: cnt }) => {
+      setWatchHistory(history);
+      setPlayCount(cnt);
+    }).catch(() => {});
+  }, [title.id]);
 
   async function toggleWatched() {
     const prev = watched;
@@ -223,6 +234,10 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
         await api.unwatchMovie(title.id);
       } else {
         await api.watchMovie(title.id);
+        // Refresh history after marking watched
+        const { history, playCount: cnt } = await api.getWatchHistory(title.id);
+        setWatchHistory(history);
+        setPlayCount(cnt);
       }
     } catch {
       setWatched(prev);
@@ -336,8 +351,31 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               >
                 {watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")}
               </button>
+              {playCount > 0 && (
+                <button
+                  onClick={() => setHistoryOpen((o) => !o)}
+                  className="min-h-8 inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors cursor-pointer"
+                  title="Watch history"
+                >
+                  <span>Watched {playCount}x</span>
+                  <span className="text-zinc-600">{historyOpen ? "▲" : "▼"}</span>
+                </button>
+              )}
               <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
             </div>
+            {historyOpen && watchHistory.length > 0 && (
+              <div className="mt-3 rounded-lg bg-zinc-900/60 border border-white/[0.06] overflow-hidden">
+                <div className="px-3 py-2 text-xs font-medium text-zinc-400 border-b border-white/[0.06]">Watch History</div>
+                <ul>
+                  {watchHistory.map((entry, i) => (
+                    <li key={entry.id} className={`px-3 py-2 text-xs text-zinc-300 flex items-center gap-2 ${i < watchHistory.length - 1 ? "border-b border-zinc-800/50" : ""}`}>
+                      <span className="text-zinc-500 shrink-0">{new Date(entry.watchedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                      {entry.note && <span className="text-zinc-400 italic">{entry.note}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>

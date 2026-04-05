@@ -30,6 +30,8 @@ export {
   deleteEpisodesForTitle,
   getUnwatchedEpisodes,
   getEpisodeAirDate,
+  getEpisodeTitleId,
+  getEpisodeTitleIds,
   getReleasedEpisodeIds,
   watchEpisode,
   unwatchEpisode,
@@ -41,6 +43,12 @@ export {
 } from "./episodes";
 
 export {
+  logWatch,
+  getTitlePlayCount,
+  getTitleWatchHistory,
+} from "./watch-history";
+
+export {
   trackTitle,
   untrackTitle,
   getTrackedTitleIds,
@@ -50,11 +58,13 @@ export {
   updateTrackedVisibility,
   updateAllTrackedVisibility,
   getTrackedMoviesByReleaseDate,
+  getTrackedMoviesByReleaseDateRange,
   getUpcomingTrackedMovies,
   updateTrackedStatus,
   updateNotificationMode,
   getTrackedTitlesForNotifications,
   updateTrackedNotes,
+  getUsersTrackingTitles,
 } from "./tracked";
 export type { UserStatus, NotificationMode } from "./tracked";
 
@@ -118,6 +128,7 @@ export {
   markNotifierSent,
   getDistinctNotifierTimezones,
   getEnabledNotifierSchedules,
+  getStreamingAlertNotifiersForUser,
 } from "./notifiers";
 
 export {
@@ -171,3 +182,8 @@ export {
   disableIntegration,
 } from "./integrations";
 export type { IntegrationConfig, PlexConfig } from "./integrations";
+
+export {
+  getUnalertedProviders,
+  markAlerted,
+} from "./streaming-alerts";
