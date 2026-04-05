@@ -30,6 +30,7 @@ import recommendationsRoutes from "./routes/recommendations";
 import invitationsRoutes from "./routes/invitations";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
+import statsRoutes from "./routes/stats";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -208,6 +209,10 @@ app.route("/api/notifiers", notifierRoutes);
 app.use("/api/integrations/*", requireAuth);
 app.use("/api/integrations", requireAuth);
 app.route("/api/integrations", integrationRoutes);
+
+app.use("/api/stats/*", requireAuth);
+app.use("/api/stats", requireAuth);
+app.route("/api/stats", statsRoutes);
 
 // Admin routes
 app.use("/api/admin/*", requireAuth, requireAdmin);

@@ -1,9 +1,10 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Link } from "react-router";
 import type { Title } from "../types";
 import TrackButton from "./TrackButton";
 import WatchButtonGroup from "./WatchButtonGroup";
 import VisibilityButton from "./VisibilityButton";
+import StatusPicker from "./StatusPicker";
 
 interface Props {
   title: Title;
@@ -12,9 +13,11 @@ interface Props {
   onVisibilityToggle?: (titleId: string, isPublic: boolean) => void;
   hideTypeBadge?: boolean;
   showProgressBar?: boolean;
+  showStatusPicker?: boolean;
 }
 
-const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar }: Props) {
+const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker }: Props) {
+  const [userStatus, setUserStatus] = useState(title.user_status ?? null);
 
   return (
     <div className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>
@@ -39,7 +42,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             TV
           </span>
         )}
-        {title.show_status === "completed" && (
+        {(title.show_status === "completed" || userStatus === "completed") && (
           <>
             <div className="absolute inset-0 bg-emerald-900/40 pointer-events-none" data-testid="completed-overlay" />
             <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
@@ -50,9 +53,24 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             </span>
           </>
         )}
-        {title.show_status === "caught_up" && (
+        {title.show_status === "caught_up" && userStatus !== "completed" && (
           <span className="absolute bottom-2 left-2 bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
             Caught Up
+          </span>
+        )}
+        {userStatus === "on_hold" && (
+          <span className="absolute bottom-2 left-2 bg-yellow-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            On Hold
+          </span>
+        )}
+        {userStatus === "dropped" && (
+          <span className="absolute bottom-2 left-2 bg-red-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            Dropped
+          </span>
+        )}
+        {userStatus === "plan_to_watch" && (
+          <span className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            Plan to Watch
           </span>
         )}
         {title.show_status === "watching" && title.object_type === "SHOW" && (
@@ -132,6 +150,14 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             onToggle={onTrackToggle}
             titleData={title}
           />
+          {title.is_tracked && (showProgressBar || showStatusPicker) && (
+            <StatusPicker
+              titleId={title.id}
+              objectType={title.object_type}
+              currentStatus={userStatus as "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null}
+              onStatusChange={(s) => setUserStatus(s)}
+            />
+          )}
         </div>
       </div>
     </div>

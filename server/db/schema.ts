@@ -232,6 +232,7 @@ export const tracked = sqliteTable(
     trackedAt: text("tracked_at").default(sql`(datetime('now'))`),
     notes: text("notes"),
     public: integer("public").notNull().default(1),
+    userStatus: text("user_status"),
   },
   (table) => [primaryKey({ columns: [table.titleId, table.userId] })]
 );

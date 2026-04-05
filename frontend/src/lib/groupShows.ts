@@ -6,13 +6,16 @@ export interface ShowGroup {
   titles: Title[];
 }
 
-const STATUS_ORDER = ["watching", "caught_up", "not_started", "unreleased", "completed"] as const;
+const STATUS_ORDER = ["watching", "caught_up", "not_started", "unreleased", "on_hold", "dropped", "plan_to_watch", "completed"] as const;
 
 const LABEL_KEYS: Record<string, string> = {
   watching: "tracked.sections.watching",
   caught_up: "tracked.sections.caughtUp",
   not_started: "tracked.sections.notStarted",
   unreleased: "tracked.sections.unreleased",
+  on_hold: "tracked.sections.onHold",
+  dropped: "tracked.sections.dropped",
+  plan_to_watch: "tracked.sections.planToWatch",
   completed: "tracked.sections.completed",
 };
 
@@ -53,6 +56,9 @@ function sortGroup(key: string, titles: Title[]): Title[] {
         compareDatesAsc(a.release_date, b.release_date)
       );
     case "completed":
+    case "on_hold":
+    case "dropped":
+    case "plan_to_watch":
       return [...titles].sort(sortByTrackedAtDesc);
     default:
       return titles;
@@ -71,12 +77,12 @@ export function groupShowsByStatus(shows: Title[]): ShowGroup[] {
   }
 
   for (const show of shows) {
-    const status = show.show_status ?? "not_started";
+    // user_status takes precedence over computed show_status
+    const status = show.user_status ?? show.show_status ?? "not_started";
     const bucket = buckets[status];
     if (bucket) {
       bucket.push(show);
     } else {
-      // Fallback for unexpected status values
       buckets["not_started"].push(show);
     }
   }

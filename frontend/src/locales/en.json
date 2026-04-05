@@ -7,7 +7,8 @@
     "calendar": "Calendar",
     "logout": "Logout",
     "signIn": "Sign In",
-    "settings": "Settings"
+    "settings": "Settings",
+    "stats": "Stats"
   },
   "bottomNav": {
     "watch": "Watch",
@@ -45,8 +46,19 @@
       "notStarted": "Not Started",
       "unreleased": "Unreleased",
       "completed": "Completed",
+      "onHold": "On Hold",
+      "dropped": "Dropped",
+      "planToWatch": "Plan to Watch",
       "movies": "Movies"
     }
+  },
+  "status": {
+    "auto": "Auto",
+    "watching": "Watching",
+    "planToWatch": "Plan to Watch",
+    "onHold": "On Hold",
+    "dropped": "Dropped",
+    "completed": "Completed"
   },
   "upcoming": {
     "today": "Today",

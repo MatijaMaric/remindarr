@@ -46,6 +46,7 @@ export interface Title {
   watched_episodes_count?: number;
   released_episodes_count?: number;
   show_status?: "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
+  user_status?: "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null;
   latest_released_air_date?: string | null;
   next_episode_air_date?: string | null;
   offers: Offer[];
@@ -364,6 +365,35 @@ export interface PersonDetailsResponse {
       crew: PersonCrewCredit[];
     };
     external_ids?: ExternalIds;
+  };
+}
+
+// ─── Stats Types ─────────────────────────────────────────────────────────────
+
+export interface StatsResponse {
+  overview: {
+    tracked_movies: number;
+    tracked_shows: number;
+    watched_movies: number;
+    watched_episodes: number;
+    watch_time_minutes: number;
+  };
+  genres: { genre: string; count: number }[];
+  languages: { language: string; count: number }[];
+  monthly: {
+    month: string;
+    movies_watched: number;
+    episodes_watched: number;
+  }[];
+  shows_by_status: {
+    watching: number;
+    caught_up: number;
+    completed: number;
+    not_started: number;
+    unreleased: number;
+    on_hold: number;
+    dropped: number;
+    plan_to_watch: number;
   };
 }
 

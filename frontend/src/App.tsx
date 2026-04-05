@@ -50,6 +50,7 @@ const ReelsPage = lazyWithRetry(() => import("./pages/ReelsPage"));
 const UpcomingPage = lazyWithRetry(() => import("./pages/UpcomingPage"));
 const DiscoveryPage = lazyWithRetry(() => import("./pages/DiscoveryPage"));
 const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
+const StatsPage = lazyWithRetry(() => import("./pages/StatsPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 
 function MobileHomeRedirect() {
@@ -112,6 +113,12 @@ export default function App() {
                 >
                   {t("nav.calendar")}
                 </NavLink>
+                <NavLink
+                  to="/stats"
+                  className={({ isActive }) => navLinkClass(isActive)}
+                >
+                  {t("nav.stats")}
+                </NavLink>
               </>
             )}
           </div>
@@ -165,6 +172,7 @@ export default function App() {
             <Route path="/upcoming" element={<RequireAuth><UpcomingPage /></RequireAuth>} />
             <Route path="/discovery" element={<RequireAuth><DiscoveryPage /></RequireAuth>} />
             <Route path="/invite" element={<RequireAuth><InvitePage /></RequireAuth>} />
+            <Route path="/stats" element={<RequireAuth><StatsPage /></RequireAuth>} />
             <Route path="/user/:username" element={<UserProfilePage />} />
             <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
             <Route path="/profile" element={<ProfilePage />} />
