@@ -142,4 +142,33 @@ describe("TitleList", () => {
     }
     expect(screen.queryByText("Title movie-12")).toBeNull();
   });
+
+  it("renders normal grid for lists at or below the virtual threshold (24 items)", () => {
+    const titles = Array.from({ length: 24 }, (_, i) => makeTitle(`movie-${i}`));
+    render(<TitleList titles={titles} />, { wrapper: Wrapper });
+
+    expect(screen.getByTestId("title-grid")).toBeDefined();
+    expect(screen.queryByTestId("virtual-list")).toBeNull();
+    // All items should be in the DOM
+    for (let i = 0; i < 24; i++) {
+      expect(screen.getByText(`Title movie-${i}`)).toBeDefined();
+    }
+  });
+
+  it("renders virtual list container for lists above the virtual threshold (>24 items)", () => {
+    const titles = Array.from({ length: 30 }, (_, i) => makeTitle(`movie-${i}`));
+    render(<TitleList titles={titles} />, { wrapper: Wrapper });
+
+    expect(screen.getByTestId("virtual-list")).toBeDefined();
+    expect(screen.queryByTestId("title-grid")).toBeNull();
+  });
+
+  it("does not virtualize when maxRows is set even if count exceeds threshold", () => {
+    const titles = Array.from({ length: 30 }, (_, i) => makeTitle(`movie-${i}`));
+    render(<TitleList titles={titles} maxRows={1} />, { wrapper: Wrapper });
+
+    // maxRows forces normal grid path (and also truncates to 6)
+    expect(screen.getByTestId("title-grid")).toBeDefined();
+    expect(screen.queryByTestId("virtual-list")).toBeNull();
+  });
 });

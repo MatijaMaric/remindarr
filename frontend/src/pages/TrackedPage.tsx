@@ -7,10 +7,12 @@ import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { groupShowsByStatus } from "../lib/groupShows";
 import { useGridNavigation } from "../hooks/useGridNavigation";
+import { useScrollRestoration } from "../hooks/useScrollRestoration";
 
 export default function TrackedPage() {
   const { data, loading, refetch } = useApiCall(() => api.getTrackedTitles(), []);
   const titles: Title[] = useMemo(() => data?.titles ?? [], [data]);
+  useScrollRestoration("tracked", !loading);
   const { t } = useTranslation();
   useGridNavigation();
 
