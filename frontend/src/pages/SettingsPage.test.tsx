@@ -100,8 +100,8 @@ mock.module("../api", () => ({
     })
   ),
   updateAdminSettings: mock(() => Promise.resolve({})),
-  getHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [] })),
-  updateHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [] })),
+  getHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [{ id: "unwatched", enabled: true }, { id: "recommendations", enabled: true }, { id: "today", enabled: true }, { id: "upcoming", enabled: true }] })),
+  updateHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [{ id: "unwatched", enabled: true }, { id: "recommendations", enabled: true }, { id: "today", enabled: true }, { id: "upcoming", enabled: true }] })),
   getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
   createPlexPin: mock(() => Promise.resolve({ pinId: 0, authUrl: "" })),
   checkPlexPin: mock(() => Promise.resolve({ status: "pending" })),
