@@ -282,6 +282,12 @@
   "settings": {
     "title": "Settings",
     "viewProfile": "View Profile",
+    "theme": {
+      "title": "Theme",
+      "dark": "Dark",
+      "light": "Light",
+      "oled": "OLED Black"
+    },
     "homepage": {
       "title": "Homepage Layout",
       "description": "Drag to reorder sections. Toggle the eye icon to show or hide a section.",

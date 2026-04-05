@@ -10,6 +10,7 @@ import { DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../lib/push";
 import { authClient } from "../lib/auth-client";
 import { UserPlus, GripVertical, Eye, EyeOff } from "lucide-react";
+import ThemePicker from "../components/ThemePicker";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export default function SettingsPage() {
         </Link>
       </div>
       <UserSection />
+      <ThemeSection />
       <PasskeySection />
       <ProfileVisibilitySection />
       <SocialSection />
@@ -37,6 +39,19 @@ export default function SettingsPage() {
       {user.is_admin && <BackgroundJobsSection />}
       {user.is_admin && <AdminSection />}
     </div>
+  );
+}
+
+function ThemeSection() {
+  const { t } = useTranslation();
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-white mb-4">{t("settings.theme.title")}</h2>
+      <div className="bg-zinc-900 rounded-lg p-5">
+        <ThemePicker />
+      </div>
+    </section>
   );
 }
 
