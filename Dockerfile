@@ -22,7 +22,7 @@ FROM oven/bun:1.3.9-slim
 WORKDIR /app
 COPY --from=server-build /app/ ./
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
-RUN addgroup --system app && adduser --system --ingroup app app && mkdir -p /app/data && chown app:app /app/data
+RUN groupadd --system app && useradd --system --no-create-home --gid app app && mkdir -p /app/data && chown app:app /app/data
 USER app
 EXPOSE 3000
 VOLUME /app/data
