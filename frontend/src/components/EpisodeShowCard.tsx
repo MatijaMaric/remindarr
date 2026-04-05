@@ -2,7 +2,6 @@ import { memo } from "react";
 import { Link } from "react-router";
 import { CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import ScrollableRow from "./ScrollableRow";
 import type { Episode } from "../types";
 import {
   formatEpisodeCode,
@@ -122,13 +121,5 @@ export function DeckCardWrapper({ episodeCount, children }: { episodeCount: numb
       )}
       <div className="relative">{children}</div>
     </div>
-  );
-}
-
-export function UnwatchedCarousel({ children }: { children: React.ReactNode }) {
-  return (
-    <ScrollableRow className="gap-3" scrollAmount={332} scrollSnap>
-      {children}
-    </ScrollableRow>
   );
 }

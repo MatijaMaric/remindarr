@@ -24,6 +24,7 @@ export default function FullBleedCarousel({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    el.scrollLeft = 0;
     updateScrollButtons();
     el.addEventListener("scroll", updateScrollButtons, { passive: true });
     const observer = new ResizeObserver(updateScrollButtons);
