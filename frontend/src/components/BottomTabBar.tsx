@@ -42,6 +42,7 @@ export default function BottomTabBar() {
                 {unreadCount > 0 && (
                   <span
                     data-testid="unread-badge"
+                    aria-label={t("bottomNav.unreadRecommendations", { count: unreadCount })}
                     className="absolute -top-1 -right-2 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-amber-500 text-zinc-950 text-[9px] font-bold leading-none"
                   >
                     {unreadCount > 99 ? "99+" : unreadCount}

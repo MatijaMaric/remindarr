@@ -6,11 +6,13 @@ import TitleList from "../components/TitleList";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { groupShowsByStatus } from "../lib/groupShows";
+import { useGridNavigation } from "../hooks/useGridNavigation";
 
 export default function TrackedPage() {
   const { data, loading, refetch } = useApiCall(() => api.getTrackedTitles(), []);
   const titles: Title[] = useMemo(() => data?.titles ?? [], [data]);
   const { t } = useTranslation();
+  useGridNavigation();
 
   const { showGroups, movies } = useMemo(() => {
     const shows = titles.filter((t) => t.object_type === "SHOW");

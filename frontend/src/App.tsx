@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Routes, Route, NavLink, Link, Navigate, useLocation } from "react-router";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -9,9 +9,11 @@ import BottomTabBar from "./components/BottomTabBar";
 import OfflineIndicator from "./components/OfflineIndicator";
 import InstallPrompt from "./components/InstallPrompt";
 import NotificationPrompt from "./components/NotificationPrompt";
+import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
 import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
+import { useKeyboardShortcut } from "./hooks/useKeyboardShortcut";
 
 const LAZY_RETRY_KEY = "__lazy_retry";
 
@@ -68,6 +70,16 @@ export default function App() {
   const { t } = useTranslation();
   const isReelsPage = location.pathname === "/reels";
   usePushSubscriptionSync();
+
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  useKeyboardShortcut("?", () => setShortcutsOpen((v) => !v));
+  useKeyboardShortcut("/", () => {
+    const input = document.getElementById("search-input") as HTMLInputElement | null;
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  });
 
   return (
     <div className={`bg-zinc-950 text-zinc-100 ${isReelsPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}>
@@ -201,6 +213,7 @@ export default function App() {
       <BottomTabBar />
       <OfflineIndicator />
       <Toaster theme="dark" position="bottom-center" richColors />
+      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

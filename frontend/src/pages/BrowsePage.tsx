@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import SearchBar from "../components/SearchBar";
@@ -9,7 +9,7 @@ import TitleList from "../components/TitleList";
 import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
-import { useState } from "react";
+import { useGridNavigation } from "../hooks/useGridNavigation";
 
 const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
 
@@ -92,6 +92,7 @@ export default function BrowsePage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
   const { t } = useTranslation();
+  useGridNavigation();
 
   const rawCategory = searchParams.get("category") || "popular";
   const category: BrowseCategory = VALID_CATEGORIES.includes(rawCategory as BrowseCategory)
