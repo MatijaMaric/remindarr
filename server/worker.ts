@@ -67,6 +67,7 @@ import invitationsRoutes from "./routes/invitations";
 import healthRoutes from "./routes/health";
 import statsRoutes from "./routes/stats";
 import userSettingsRoutes from "./routes/user-settings";
+import feedRoutes from "./routes/feed";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig } from "./config";
@@ -331,6 +332,10 @@ function createApp(env: Env) {
 
   app.use("/api/user/settings/*", requireAuth);
   app.route("/api/user/settings", userSettingsRoutes);
+
+  // Calendar feed
+  app.use("/api/feed/token*", requireAuth);
+  app.route("/api/feed", feedRoutes);
 
   // Admin routes
   app.use("/api/admin/*", requireAuth, requireAdmin);

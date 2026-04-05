@@ -50,6 +50,7 @@ export {
   updateTrackedVisibility,
   updateAllTrackedVisibility,
   getTrackedMoviesByReleaseDate,
+  getUpcomingTrackedMovies,
   updateTrackedStatus,
 } from "./tracked";
 export type { UserStatus } from "./tracked";
@@ -78,6 +79,9 @@ export {
   banUser,
   unbanUser,
   deleteUser,
+  getFeedToken,
+  setFeedToken,
+  getUserByFeedToken,
 } from "./users";
 
 export {

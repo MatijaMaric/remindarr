@@ -365,5 +365,17 @@
     "error": "An error occurred",
     "save": "Save",
     "cancel": "Cancel"
+  },
+  "feed": {
+    "title": "Calendar Feed",
+    "description": "Subscribe to your upcoming episodes and movie releases in any calendar app (Google Calendar, Apple Calendar, Outlook).",
+    "noToken": "Generate a feed URL to subscribe from your calendar app.",
+    "generate": "Generate Feed URL",
+    "generating": "Generating...",
+    "regenerate": "Regenerate URL",
+    "regenerating": "Regenerating...",
+    "copyUrl": "Copy",
+    "copied": "Copied!",
+    "warning": "Keep this URL private — anyone with it can see your upcoming releases."
   }
 }
