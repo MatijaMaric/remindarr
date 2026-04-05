@@ -45,23 +45,34 @@ async function getStats(userId: string) {
            WHERE wt.user_id = ${userId} AND ti.runtime_minutes IS NOT NULL) AS watch_time_minutes
       `),
 
-      // Top genres from watched movies
+      // Top genres from watched movies + shows with watched episodes
       db.all<{ genre: string; count: number }>(sql`
         SELECT tg.genre, COUNT(*) AS count
-        FROM watched_titles wt
-        INNER JOIN title_genres tg ON tg.title_id = wt.title_id
-        WHERE wt.user_id = ${userId}
+        FROM (
+          SELECT wt.title_id FROM watched_titles wt WHERE wt.user_id = ${userId}
+          UNION
+          SELECT e.title_id FROM watched_episodes we
+          INNER JOIN episodes e ON e.id = we.episode_id
+          WHERE we.user_id = ${userId}
+        ) AS watched
+        INNER JOIN title_genres tg ON tg.title_id = watched.title_id
         GROUP BY tg.genre
         ORDER BY count DESC
         LIMIT 10
       `),
 
-      // Top languages from all watched titles (movies + tracked shows with watched episodes)
+      // Top languages from watched movies + shows with watched episodes
       db.all<{ language: string; count: number }>(sql`
         SELECT ti.original_language AS language, COUNT(*) AS count
-        FROM watched_titles wt
-        INNER JOIN titles ti ON ti.id = wt.title_id
-        WHERE wt.user_id = ${userId} AND ti.original_language IS NOT NULL
+        FROM (
+          SELECT wt.title_id FROM watched_titles wt WHERE wt.user_id = ${userId}
+          UNION
+          SELECT e.title_id FROM watched_episodes we
+          INNER JOIN episodes e ON e.id = we.episode_id
+          WHERE we.user_id = ${userId}
+        ) AS watched
+        INNER JOIN titles ti ON ti.id = watched.title_id
+        WHERE ti.original_language IS NOT NULL
         GROUP BY ti.original_language
         ORDER BY count DESC
         LIMIT 10

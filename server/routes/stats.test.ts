@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, upsertEpisodes, createUser, trackTitle } from "../db/repository";
+import { upsertTitles, upsertEpisodes, createUser, trackTitle, watchEpisode } from "../db/repository";
 import { getRawDb } from "../db/bun-db";
 import statsApp from "./stats";
 import type { AppEnv } from "../types";
@@ -111,6 +111,47 @@ describe("GET /stats", () => {
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     expect(body.monthly[body.monthly.length - 1].month).toBe(currentMonth);
+  });
+
+  it("includes show genres when episodes are watched", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", genres: ["Action"] }),
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", genres: ["Comedy"] }),
+    ]);
+    const db = getRawDb();
+    db.prepare("INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run("movie-1", userId);
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
+    ]);
+    const ep = db.prepare("SELECT id FROM episodes WHERE title_id = ?").get("show-1") as { id: number };
+    await watchEpisode(ep.id, userId);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/stats");
+    const body = await res.json();
+    const genreNames = body.genres.map((g: { genre: string }) => g.genre);
+    expect(genreNames).toContain("Action");
+    expect(genreNames).toContain("Comedy");
+  });
+
+  it("includes show language when episodes are watched", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", originalLanguage: "ja", genres: [] }),
+    ]);
+    const db = getRawDb();
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
+    ]);
+    const ep = db.prepare("SELECT id FROM episodes WHERE title_id = ?").get("show-1") as { id: number };
+    await watchEpisode(ep.id, userId);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/stats");
+    const body = await res.json();
+    const langs = body.languages.map((l: { language: string }) => l.language);
+    expect(langs).toContain("ja");
   });
 
   it("returns 401 without auth", async () => {
