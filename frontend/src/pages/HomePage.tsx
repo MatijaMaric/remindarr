@@ -12,6 +12,7 @@ import { TitleGridSkeleton, EpisodeListSkeleton } from "../components/SkeletonCo
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
 import { EpisodeShowCard, DeckCardWrapper, UnwatchedCarousel } from "../components/EpisodeShowCard";
 import HeroBanner from "../components/HeroBanner";
+import FullBleedCarousel from "../components/FullBleedCarousel";
 
 export interface UnwatchedCardEntry {
   episode: Episode;
@@ -271,7 +272,7 @@ export default function HomePage() {
                   {t("home.reels")}
                 </Link>
               </div>
-              <UnwatchedCarousel>
+              <FullBleedCarousel>
                 {unwatchedCards.map((card) => (
                   <div key={card.titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
                     <DeckCardWrapper episodeCount={card.totalEpisodeCount}>
@@ -287,7 +288,7 @@ export default function HomePage() {
                     </DeckCardWrapper>
                   </div>
                 ))}
-              </UnwatchedCarousel>
+              </FullBleedCarousel>
             </section>
           </>
         ) : null;
