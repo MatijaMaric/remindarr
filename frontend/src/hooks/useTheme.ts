@@ -35,7 +35,6 @@ export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
   function setTheme(newTheme: Theme) {
     localStorage.setItem(STORAGE_KEY, newTheme);
     setThemeState(newTheme);
-    applyTheme(newTheme);
   }
 
   return { theme, setTheme };

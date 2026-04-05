@@ -162,16 +162,24 @@ export default function BrowsePage() {
     [setHideTrackedStr]
   );
 
-  async function runSearch(query: string) {
+  async function runSearch(
+    query: string,
+    overrides?: { type?: "" | "MOVIE" | "SHOW"; yearMin?: string; yearMax?: string; minRating?: string; language?: string }
+  ) {
     setSearchLoading(true);
     setSearchError("");
     try {
+      const effectiveType = overrides?.type !== undefined ? overrides.type : searchType;
+      const effectiveYearMin = overrides?.yearMin !== undefined ? overrides.yearMin : yearMin;
+      const effectiveYearMax = overrides?.yearMax !== undefined ? overrides.yearMax : yearMax;
+      const effectiveMinRating = overrides?.minRating !== undefined ? overrides.minRating : minRating;
+      const effectiveLanguage = overrides?.language !== undefined ? overrides.language : searchLanguage;
       const filters = {
-        type: (searchType || undefined) as "MOVIE" | "SHOW" | undefined,
-        yearMin: yearMin ? parseInt(yearMin, 10) : undefined,
-        yearMax: yearMax ? parseInt(yearMax, 10) : undefined,
-        minRating: minRating ? parseFloat(minRating) : undefined,
-        language: searchLanguage || undefined,
+        type: (effectiveType || undefined) as "MOVIE" | "SHOW" | undefined,
+        yearMin: effectiveYearMin ? parseInt(effectiveYearMin, 10) : undefined,
+        yearMax: effectiveYearMax ? parseInt(effectiveYearMax, 10) : undefined,
+        minRating: effectiveMinRating ? parseFloat(effectiveMinRating) : undefined,
+        language: effectiveLanguage || undefined,
       };
       const res = await api.searchTitles(query, filters);
       setSearchResults(res.titles.map(normalizeSearchTitle));
@@ -239,19 +247,19 @@ export default function BrowsePage() {
             <div className="flex items-center gap-1">
               <button
                 className={`${pillBase} ${searchType === "" ? pillActive : pillInactive}`}
-                onClick={() => { setSearchType(""); void runSearch(lastQuery); }}
+                onClick={() => { setSearchType(""); void runSearch(lastQuery, { type: "" }); }}
               >
                 {t("filter.all")}
               </button>
               <button
                 className={`${pillBase} ${searchType === "MOVIE" ? pillActive : pillInactive}`}
-                onClick={() => { setSearchType("MOVIE"); void runSearch(lastQuery); }}
+                onClick={() => { setSearchType("MOVIE"); void runSearch(lastQuery, { type: "MOVIE" }); }}
               >
                 {t("filter.movies")}
               </button>
               <button
                 className={`${pillBase} ${searchType === "SHOW" ? pillActive : pillInactive}`}
-                onClick={() => { setSearchType("SHOW"); void runSearch(lastQuery); }}
+                onClick={() => { setSearchType("SHOW"); void runSearch(lastQuery, { type: "SHOW" }); }}
               >
                 {t("filter.shows")}
               </button>
@@ -285,7 +293,7 @@ export default function BrowsePage() {
               <select
                 className={selectCls}
                 value={minRating}
-                onChange={(e) => { setMinRating(e.target.value); void runSearch(lastQuery); }}
+                onChange={(e) => { setMinRating(e.target.value); void runSearch(lastQuery, { minRating: e.target.value }); }}
               >
                 <option value="">{t("filter.anyRating")}</option>
                 {RATING_OPTIONS.map((v) => (
@@ -301,7 +309,7 @@ export default function BrowsePage() {
                 <select
                   className={selectCls}
                   value={searchLanguage}
-                  onChange={(e) => { setSearchLanguage(e.target.value); void runSearch(lastQuery); }}
+                  onChange={(e) => { setSearchLanguage(e.target.value); void runSearch(lastQuery, { language: e.target.value }); }}
                 >
                   <option value="">{t("filter.allLanguages")}</option>
                   {availableLanguages.map(({ code, label }) => (
