@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../i18n";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
@@ -12,33 +13,88 @@ import { authClient } from "../lib/auth-client";
 import { UserPlus, GripVertical, Eye, EyeOff } from "lucide-react";
 import ThemePicker from "../components/ThemePicker";
 
+const VALID_TABS = ["account", "appearance", "notifications", "integrations", "admin"] as const;
+type SettingsTab = (typeof VALID_TABS)[number];
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   if (!user) return null;
 
+  const rawTab = searchParams.get("tab") ?? "account";
+  const activeTab: SettingsTab =
+    (VALID_TABS as readonly string[]).includes(rawTab) && (rawTab !== "admin" || user.is_admin)
+      ? (rawTab as SettingsTab)
+      : "account";
+
+  function handleTabChange(value: string | number) {
+    const tab = String(value) as SettingsTab;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === "account") {
+          next.delete("tab");
+        } else {
+          next.set("tab", tab);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">{t("settings.title")}</h1>
         <Link to={`/user/${user.username}`} className="text-sm text-amber-500 hover:text-amber-400 transition-colors">
           {t("settings.viewProfile")}
         </Link>
       </div>
-      <UserSection />
-      <ThemeSection />
-      <PasskeySection />
-      <ProfileVisibilitySection />
-      <SocialSection />
-      <WatchlistSection />
-      {isPushSupported() && <PushNotificationsSection />}
-      <HomepageLayoutSection />
-      <CalendarFeedSection />
-      <PlexSection />
-      <NotificationsSection />
-      {user.is_admin && <BackgroundJobsSection />}
-      {user.is_admin && <AdminSection />}
+
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="account">{t("settings.tabs.account")}</TabsTrigger>
+          <TabsTrigger value="appearance">{t("settings.tabs.appearance")}</TabsTrigger>
+          <TabsTrigger value="notifications">{t("settings.tabs.notifications")}</TabsTrigger>
+          <TabsTrigger value="integrations">{t("settings.tabs.integrations")}</TabsTrigger>
+          {user.is_admin && (
+            <TabsTrigger value="admin">{t("settings.tabs.admin")}</TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="account">
+          <UserSection />
+          <PasskeySection />
+          <ProfileVisibilitySection />
+          <SocialSection />
+        </TabsContent>
+
+        <TabsContent value="appearance">
+          <ThemeSection />
+          <HomepageLayoutSection />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          {isPushSupported() && <PushNotificationsSection />}
+          <NotificationsSection />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <PlexSection />
+          <CalendarFeedSection />
+          <WatchlistSection />
+        </TabsContent>
+
+        {user.is_admin && (
+          <TabsContent value="admin">
+            <BackgroundJobsSection />
+            <AdminSection />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
