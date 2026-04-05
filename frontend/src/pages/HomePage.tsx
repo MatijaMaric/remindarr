@@ -10,7 +10,7 @@ import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import TitleList from "../components/TitleList";
 import { TitleGridSkeleton, EpisodeListSkeleton } from "../components/SkeletonComponents";
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
-import { EpisodeShowCard, DeckCardWrapper, UnwatchedCarousel } from "../components/EpisodeShowCard";
+import { EpisodeShowCard, DeckCardWrapper } from "../components/EpisodeShowCard";
 import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
 
@@ -302,7 +302,7 @@ export default function HomePage() {
                 {t("home.seeAll")} →
               </Link>
             </div>
-            <UnwatchedCarousel>
+            <FullBleedCarousel scrollAmount={144}>
               {recommendations.map((rec) => {
                 const posterSrc = rec.title.poster_url
                   ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`
@@ -341,7 +341,7 @@ export default function HomePage() {
                   </Link>
                 );
               })}
-            </UnwatchedCarousel>
+            </FullBleedCarousel>
           </section>
         ) : null;
 
@@ -354,7 +354,7 @@ export default function HomePage() {
                 {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
               </p>
             ) : (
-              <UnwatchedCarousel>
+              <FullBleedCarousel>
                 {Array.from(groupByShow(today).entries()).map(([titleId, eps]) => (
                   <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
                     <DeckCardWrapper episodeCount={eps.length}>
@@ -365,7 +365,7 @@ export default function HomePage() {
                     </DeckCardWrapper>
                   </div>
                 ))}
-              </UnwatchedCarousel>
+              </FullBleedCarousel>
             )}
           </section>
         );
@@ -381,7 +381,7 @@ export default function HomePage() {
                 return (
                   <div key={date}>
                     <h3 className="text-sm font-medium text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
-                    <UnwatchedCarousel>
+                    <FullBleedCarousel>
                       {Array.from(byShow.entries()).map(([titleId, showEps]) => (
                         <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
                           <DeckCardWrapper episodeCount={showEps.length}>
@@ -392,7 +392,7 @@ export default function HomePage() {
                           </DeckCardWrapper>
                         </div>
                       ))}
-                    </UnwatchedCarousel>
+                    </FullBleedCarousel>
                   </div>
                 );
               })}
