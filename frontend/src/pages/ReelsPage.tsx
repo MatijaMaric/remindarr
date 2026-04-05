@@ -365,7 +365,7 @@ export default function ReelsPage() {
         <div className="fixed bottom-22 left-1/2 -translate-x-1/2 z-[60] sm:bottom-8">
           <button
             onClick={handleUndo}
-            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-full shadow-lg border border-white/[0.08] transition-colors cursor-pointer"
+            className="dark-section flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-full shadow-lg border border-white/[0.08] transition-colors cursor-pointer"
           >
             <Undo2 size={16} />
             <span className="text-sm font-medium">Undo</span>

@@ -214,6 +214,13 @@
 .theme-light .dark-section .bg-zinc-900\/80 { background-color: rgba(24, 24, 27, 0.8); }
 .theme-light .dark-section .border-white\/\[0\.06\] { border-color: rgb(255 255 255 / 0.06); }
 .theme-light .dark-section .border-white\/\[0\.08\] { border-color: rgb(255 255 255 / 0.08); }
+.theme-light .dark-section .hover\:text-white:hover { color: white; }
+.theme-light .dark-section .hover\:bg-zinc-700:hover { background-color: #3f3f46; }
+.theme-light .dark-section .hover\:bg-zinc-800:hover { background-color: #27272a; }
+.theme-light .dark-section .bg-zinc-900\/95 { background-color: rgba(24, 24, 27, 0.95); }
+.theme-light .dark-section .bg-zinc-800\/30 { background-color: rgba(39, 39, 42, 0.3); }
+.theme-light .dark-section .bg-zinc-800\/60 { background-color: rgba(39, 39, 42, 0.6); }
+.theme-light .dark-section .border-zinc-800\/60 { border-color: rgba(63, 63, 70, 0.6); }
 
 /* OLED theme overrides */
 .theme-oled .bg-zinc-950 {
