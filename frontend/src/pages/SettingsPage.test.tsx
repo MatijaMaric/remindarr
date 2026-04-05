@@ -100,8 +100,8 @@ mock.module("../api", () => ({
     })
   ),
   updateAdminSettings: mock(() => Promise.resolve({})),
-  getHomepageLayout: mock(() => Promise.resolve([])),
-  updateHomepageLayout: mock(() => Promise.resolve({ layout: [] })),
+  getHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [] })),
+  updateHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [] })),
   getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
   createPlexPin: mock(() => Promise.resolve({ pinId: 0, authUrl: "" })),
   checkPlexPin: mock(() => Promise.resolve({ status: "pending" })),
