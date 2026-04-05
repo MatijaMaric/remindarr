@@ -124,6 +124,13 @@ export async function trackTitle(id: string, notes?: string, titleData?: Title):
     method: "POST",
     body: JSON.stringify({ notes, titleData }),
   });
+  if (titleData && "serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "PRECACHE_TITLE",
+      titleId: id,
+      objectType: titleData.object_type,
+    });
+  }
 }
 
 export async function untrackTitle(id: string): Promise<void> {

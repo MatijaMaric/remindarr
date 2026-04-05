@@ -30,6 +30,13 @@ describe("OfflineIndicator", () => {
     expect(screen.getByText(/You're offline/)).toBeDefined();
   });
 
+  it("shows available features when offline", () => {
+    setOnline(false);
+    render(<OfflineIndicator />);
+    expect(screen.getByText(/Browsing, details & calendar available/)).toBeDefined();
+    expect(screen.getByText(/Episode & watchlist changes will sync/)).toBeDefined();
+  });
+
   it("shows banner when offline event fires", () => {
     render(<OfflineIndicator />);
     act(() => {

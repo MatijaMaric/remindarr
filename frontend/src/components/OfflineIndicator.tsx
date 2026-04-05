@@ -19,9 +19,15 @@ export default function OfflineIndicator() {
   if (isOnline) return null;
 
   return (
-    <div className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-yellow-500/90 px-4 py-2 text-sm font-medium text-black shadow-lg backdrop-blur">
-      <span className="h-2 w-2 rounded-full bg-black/40" />
-      You're offline — showing cached content
+    <div className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-1 rounded-xl bg-yellow-500/90 px-4 py-2.5 text-sm font-medium text-black shadow-lg backdrop-blur max-w-xs w-max">
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-black/40 shrink-0" />
+        You're offline
+      </div>
+      <ul className="text-xs font-normal opacity-75 pl-4 space-y-0.5">
+        <li>Browsing, details &amp; calendar available</li>
+        <li>Episode &amp; watchlist changes will sync</li>
+      </ul>
     </div>
   );
 }
