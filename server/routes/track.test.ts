@@ -621,6 +621,78 @@ describe("PATCH /track/:id/visibility", () => {
   });
 });
 
+describe("PATCH /track/:id/status", () => {
+  it("sets a valid user status", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/status", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "on_hold" }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].user_status).toBe("on_hold");
+  });
+
+  it("clears status with null", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await app.request("/track/movie-123/status", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "dropped" }),
+    });
+
+    const res = await app.request("/track/movie-123/status", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: null }),
+    });
+    expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].user_status).toBeNull();
+  });
+
+  it("rejects an invalid status value", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/movie-123/status", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "invalid_value" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/movie-123/status", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "on_hold" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("PATCH /track/visibility", () => {
   it("bulk toggles all title visibility", async () => {
     await upsertTitles([

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus } from "../db/repository";
+import type { UserStatus } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
 import { getDb } from "../db/schema";
@@ -286,6 +287,21 @@ app.patch("/:id/visibility", async (c) => {
   const body = await c.req.json<{ public: boolean }>();
   await updateTrackedVisibility(titleId, user.id, body.public);
   return ok(c, { message: "Visibility updated" });
+});
+
+const VALID_USER_STATUSES = new Set<string>(["plan_to_watch", "watching", "on_hold", "dropped", "completed"]);
+
+app.patch("/:id/status", async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("id");
+  const body = await c.req.json<{ status: string | null }>();
+
+  if (body.status !== null && !VALID_USER_STATUSES.has(body.status)) {
+    return c.json({ error: "Invalid status value" }, 400);
+  }
+
+  await updateTrackedStatus(titleId, user.id, body.status as UserStatus | null);
+  return ok(c, { message: "Status updated" });
 });
 
 app.delete("/:id", async (c) => {

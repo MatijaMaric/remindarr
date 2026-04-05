@@ -50,7 +50,9 @@ export {
   updateTrackedVisibility,
   updateAllTrackedVisibility,
   getTrackedMoviesByReleaseDate,
+  updateTrackedStatus,
 } from "./tracked";
+export type { UserStatus } from "./tracked";
 
 export { getUserPublicProfile, updateProfilePublic } from "./profile";
 export type { ProfileVisibility } from "./profile";

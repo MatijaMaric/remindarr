@@ -3,6 +3,7 @@ import type {
   SearchTitle,
   Provider,
   Episode,
+  StatsResponse,
   MovieDetailsResponse,
   ShowDetailsResponse,
   SeasonDetailsResponse,
@@ -154,6 +155,13 @@ export async function updateTitleVisibility(titleId: string, isPublic: boolean):
   await fetchJson(`/track/${encodeURIComponent(titleId)}/visibility`, {
     method: "PATCH",
     body: JSON.stringify({ public: isPublic }),
+  });
+}
+
+export async function updateTrackedStatus(titleId: string, status: string | null): Promise<void> {
+  await fetchJson(`/track/${encodeURIComponent(titleId)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
   });
 }
 
@@ -576,4 +584,11 @@ export async function triggerPlexSync(
   id: string
 ): Promise<{ success: boolean; moviesMarked?: number; episodesMarked?: number; error?: string }> {
   return fetchJson(`/integrations/${encodeURIComponent(id)}/sync`, { method: "POST" });
+}
+
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+export async function getStats(): Promise<StatsResponse> {
+  return fetchJson("/stats");
 }

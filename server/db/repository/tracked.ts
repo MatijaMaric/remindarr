@@ -82,6 +82,7 @@ export async function getTrackedTitles(userId: string) {
         tracked_at: tracked.trackedAt,
         notes: tracked.notes,
         public: tracked.public,
+        user_status: tracked.userStatus,
         is_tracked: sql<number>`1`,
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
@@ -138,6 +139,7 @@ export async function getPublicTrackedTitles(userId: string) {
         imdb_votes: scores.imdbVotes,
         tmdb_score: scores.tmdbScore,
         tracked_at: tracked.trackedAt,
+        user_status: tracked.userStatus,
         is_tracked: sql<number>`1`,
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
@@ -223,5 +225,17 @@ export async function getTrackedMoviesByReleaseDate(date: string, userId: string
       ...row,
       offers: offersByTitle.get(row.id) ?? [],
     }));
+  });
+}
+
+export type UserStatus = "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed";
+
+export async function updateTrackedStatus(titleId: string, userId: string, status: UserStatus | null) {
+  return traceDbQuery("updateTrackedStatus", async () => {
+    const db = getDb();
+    await db.update(tracked)
+      .set({ userStatus: status })
+      .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+      .run();
   });
 }
