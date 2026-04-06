@@ -76,7 +76,6 @@ export default function ReelsPage() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Track visible card index for swipe context
-  const [visibleCardIndex, setVisibleCardIndex] = useState(0);
   const visibleCardIndexRef = useRef(0);
 
   useEffect(() => {
@@ -104,7 +103,6 @@ export default function ReelsPage() {
       if (cardHeight === 0) return;
       const index = Math.round(container.scrollTop / cardHeight);
       visibleCardIndexRef.current = index;
-      setVisibleCardIndex(index);
     }
 
     container.addEventListener("scroll", onScroll, { passive: true });
@@ -178,13 +176,13 @@ export default function ReelsPage() {
     // Only trigger on horizontal swipe (dx > 80px, and more horizontal than vertical)
     if (dx < -80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       // Swipe left -> open season panel
-      const card = cardsRef.current[visibleCardIndex];
+      const card = cardsRef.current[visibleCardIndexRef.current];
       if (card && !card.caughtUp) {
         const currentEp = card.episodes[card.currentIndex];
         setSeasonPanel({ card, seasonNumber: currentEp.season_number });
       }
     }
-  }, [visibleCardIndex]);
+  }, []);
 
   const markWatched = useCallback(async (titleId: string) => {
     const card = cardsRef.current.find((c) => c.titleId === titleId);
