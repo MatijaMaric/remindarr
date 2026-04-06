@@ -175,8 +175,17 @@ export default function ReelsPage() {
 
     // Only trigger on horizontal swipe (dx > 80px, and more horizontal than vertical)
     if (dx < -80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      // Swipe left -> open season panel
-      const card = cardsRef.current[visibleCardIndexRef.current];
+      // Compute visible card index synchronously from current scroll position
+      // instead of relying on the async scroll-event-updated ref, which can be
+      // stale when the user swipes before CSS snap animation settles.
+      const container = scrollRef.current;
+      if (!container) return;
+      const cardHeight = container.clientHeight;
+      if (cardHeight === 0) return;
+      const rawIndex = Math.round(container.scrollTop / cardHeight);
+      // Handle clone card at the end (maps back to first card)
+      const index = rawIndex >= cardsRef.current.length ? 0 : rawIndex;
+      const card = cardsRef.current[index];
       if (card && !card.caughtUp) {
         const currentEp = card.episodes[card.currentIndex];
         setSeasonPanel({ card, seasonNumber: currentEp.season_number });
