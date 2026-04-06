@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router";
-import { Undo2, HeartCrack, ThumbsDown, ThumbsUp, Heart } from "lucide-react";
 import * as api from "../api";
 import type { Episode, RatingValue } from "../types";
 import ReelsCard from "../components/ReelsCard";
+import type { UndoInfo } from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
 import { ReelsSkeleton } from "../components/SkeletonComponents";
 
@@ -22,13 +22,6 @@ interface UndoAction {
   episodeId: number;
   wasCaughtUp: boolean;
 }
-
-const REELS_RATING_CONFIG: { value: RatingValue; Icon: typeof ThumbsDown; label: string; filled?: boolean }[] = [
-  { value: "HATE", Icon: HeartCrack, label: "Hate", filled: true },
-  { value: "DISLIKE", Icon: ThumbsDown, label: "Dislike" },
-  { value: "LIKE", Icon: ThumbsUp, label: "Like" },
-  { value: "LOVE", Icon: Heart, label: "Love", filled: true },
-];
 
 export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
   const grouped = new Map<string, Episode[]>();
@@ -322,6 +315,22 @@ export default function ReelsPage() {
     }
   }, []);
 
+  const getUndoInfo = (titleId: string): UndoInfo | undefined => {
+    if (!undoAction || undoAction.titleId !== titleId) return undefined;
+    const card = cards.find((c) => c.titleId === titleId);
+    if (!card) return undefined;
+    const ep = card.episodes.find((e) => e.id === undoAction.episodeId);
+    const episodeCode = ep
+      ? `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}`
+      : "episode";
+    return {
+      episodeCode,
+      currentRating: reelsRating,
+      onRate: handleReelsRate,
+      onUndo: handleUndo,
+    };
+  };
+
   if (loading) {
     return <ReelsSkeleton />;
   }
@@ -371,6 +380,7 @@ export default function ReelsPage() {
             onMarkWatched={() => markWatched(card.titleId)}
             index={i}
             total={cards.length}
+            undoInfo={getUndoInfo(card.titleId)}
           />
         ))}
 
@@ -383,46 +393,10 @@ export default function ReelsPage() {
             onMarkWatched={() => markWatched(cards[0].titleId)}
             index={0}
             total={cards.length}
+            undoInfo={getUndoInfo(cards[0].titleId)}
           />
         )}
       </div>
-
-      {/* Undo + rating prompt */}
-      {undoAction && (
-        <div className="fixed bottom-22 left-1/2 -translate-x-1/2 z-[60] sm:bottom-8 flex flex-col items-center gap-2">
-          {/* Rating buttons */}
-          <div className="dark-section flex items-center gap-1.5 bg-zinc-800/90 px-3 py-2 rounded-full shadow-lg border border-white/[0.08]">
-            {REELS_RATING_CONFIG.map(({ value, Icon, label, filled }) => {
-              const isActive = reelsRating === value;
-              return (
-                <button
-                  key={value}
-                  onClick={() => handleReelsRate(value)}
-                  aria-label={label}
-                  aria-pressed={isActive}
-                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                    isActive ? "bg-amber-500 text-zinc-950" : "text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  <Icon
-                    size={18}
-                    fill={isActive && filled ? "currentColor" : "none"}
-                    strokeWidth={value === "HATE" ? 2.5 : 2}
-                  />
-                </button>
-              );
-            })}
-          </div>
-          {/* Undo button */}
-          <button
-            onClick={handleUndo}
-            className="dark-section flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-full shadow-lg border border-white/[0.08] transition-colors cursor-pointer"
-          >
-            <Undo2 size={16} />
-            <span className="text-sm font-medium">Undo</span>
-          </button>
-        </div>
-      )}
 
       {/* Action error banner */}
       {actionError && (
