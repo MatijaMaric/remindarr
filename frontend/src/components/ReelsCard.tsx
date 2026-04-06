@@ -1,7 +1,8 @@
 import { CheckCircle, Check } from "lucide-react";
 import { Link } from "react-router";
-import type { Episode } from "../types";
+import type { Episode, RatingValue } from "../types";
 import WatchButtonGroup from "./WatchButtonGroup";
+import ReelsUndoBar from "./ReelsUndoBar";
 
 function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
@@ -31,15 +32,23 @@ export function getBackgroundImageUrl(episode: Episode): string | null {
   return null;
 }
 
+export interface UndoInfo {
+  episodeCode: string;
+  currentRating: RatingValue | null;
+  onRate: (value: RatingValue) => void;
+  onUndo: () => void;
+}
+
 interface ReelsCardProps {
   episode: Episode;
   caughtUp: boolean;
   onMarkWatched: () => void;
   index: number;
   total: number;
+  undoInfo?: UndoInfo;
 }
 
-export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, total }: ReelsCardProps) {
+export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, total, undoInfo }: ReelsCardProps) {
   const bgUrl = getBackgroundImageUrl(episode);
   const airDateFormatted = formatAirDate(episode.air_date);
   const isNew = isToday(episode.air_date);
@@ -81,7 +90,12 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
               <Check size={20} />
               All caught up!
             </div>
-            <p className="text-zinc-400 text-sm">{episode.show_title}</p>
+            <p className="text-zinc-400 text-sm mb-3">{episode.show_title}</p>
+            {undoInfo && (
+              <div className="flex justify-center">
+                <ReelsUndoBar {...undoInfo} />
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -125,6 +139,9 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
             <div className="mb-2">
               <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" size="lg" fullWidth />
             </div>
+
+            {/* Undo/rating bar for previously marked episode */}
+            {undoInfo && <ReelsUndoBar {...undoInfo} />}
 
             {/* Mark as watched button */}
             <button
