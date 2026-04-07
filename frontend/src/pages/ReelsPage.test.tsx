@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, act, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
@@ -92,6 +92,127 @@ describe("ReelsPage", () => {
       });
       await waitFor(() => expect(screen.getByText("Watch failed")).toBeDefined());
     }
+  });
+});
+
+const show1Episode = {
+  ...sampleEpisode,
+  id: 10,
+  title_id: "show1",
+  show_title: "First Show",
+  season_number: 1,
+  episode_number: 1,
+};
+
+const show2Episode = {
+  ...sampleEpisode,
+  id: 20,
+  title_id: "show2",
+  show_title: "Second Show",
+  season_number: 1,
+  episode_number: 1,
+};
+
+function simulateSwipeLeft(container: HTMLElement) {
+  fireEvent.touchStart(container, {
+    touches: [{ clientX: 300, clientY: 400 }],
+  });
+  fireEvent.touchEnd(container, {
+    changedTouches: [{ clientX: 100, clientY: 400 }],
+  });
+}
+
+describe("ReelsPage swipe to open season panel", () => {
+  async function renderWithShows() {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({
+        today: [],
+        upcoming: [],
+        unwatched: [show1Episode, show2Episode],
+      })
+    );
+    const result = render(<ReelsPage />, { wrapper: Wrapper });
+    // Wait for cards to render ("First Show" appears twice: card + clone)
+    await waitFor(() => expect(screen.getAllByText("First Show").length).toBeGreaterThanOrEqual(1));
+    const scrollContainer = result.container.querySelector(".overflow-y-scroll") as HTMLElement;
+    return { ...result, scrollContainer };
+  }
+
+  it("swipe left opens season panel for the visible card", async () => {
+    const { scrollContainer } = await renderWithShows();
+    Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
+    Object.defineProperty(scrollContainer, "scrollTop", { value: 0, configurable: true });
+
+    await act(async () => {
+      simulateSwipeLeft(scrollContainer);
+    });
+
+    // Season panel has aria-label identifying the show
+    await waitFor(() =>
+      expect(screen.getByLabelText("First Show — Season 1")).toBeDefined()
+    );
+  });
+
+  it("swipe left on second card opens correct season panel", async () => {
+    const { scrollContainer } = await renderWithShows();
+    Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
+    Object.defineProperty(scrollContainer, "scrollTop", { value: 800, configurable: true });
+
+    await act(async () => {
+      simulateSwipeLeft(scrollContainer);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Second Show — Season 1")).toBeDefined()
+    );
+  });
+
+  it("swipe left on clone card maps to first card", async () => {
+    const { scrollContainer } = await renderWithShows();
+    Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
+    // Clone card is at index 2 (with 2 real cards)
+    Object.defineProperty(scrollContainer, "scrollTop", { value: 1600, configurable: true });
+
+    await act(async () => {
+      simulateSwipeLeft(scrollContainer);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("First Show — Season 1")).toBeDefined()
+    );
+  });
+
+  it("swipe does not open panel for caught-up card", async () => {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({
+        today: [],
+        upcoming: [],
+        unwatched: [show1Episode],
+      })
+    );
+    const { container } = render(<ReelsPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText("First Show")).toBeDefined());
+
+    // Mark the only episode as watched to trigger caughtUp
+    const markBtn = screen.queryByText("Mark as Watched");
+    if (markBtn) {
+      await act(async () => {
+        markBtn.click();
+      });
+    }
+
+    const scrollContainer = container.querySelector(".overflow-y-scroll");
+    if (scrollContainer) {
+      Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
+      Object.defineProperty(scrollContainer, "scrollTop", { value: 0, configurable: true });
+
+      await act(async () => {
+        simulateSwipeLeft(scrollContainer as HTMLElement);
+      });
+    }
+
+    // Season panel should NOT appear
+    expect(screen.queryByLabelText("First Show — Season 1")).toBeNull();
   });
 });
 
