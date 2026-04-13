@@ -46,6 +46,8 @@ export default function FullBleedCarousel({
 
   // Arrow positioned just inside the body edge: max(0px, (100vw - 80rem) / 2 - 0.75rem)
   const arrowOffset = "max(0px, calc((100vw - 80rem) / 2 - 0.75rem))";
+  // Align first card with the body content (mirrors max-w-7xl mx-auto px-4)
+  const edgePad = "max(1rem, calc((100vw - 80rem) / 2 + 1rem))";
 
   return (
     // Break out of the max-w-7xl container, same trick as HeroBanner
@@ -56,9 +58,11 @@ export default function FullBleedCarousel({
         className="flex overflow-x-auto gap-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         style={{
           scrollSnapType: "x mandatory",
-          // Align first card with the body content (mirrors max-w-7xl mx-auto px-4)
-          paddingLeft: "max(1rem, calc((100vw - 80rem) / 2 + 1rem))",
-          paddingRight: "max(1rem, calc((100vw - 80rem) / 2 + 1rem))",
+          paddingLeft: edgePad,
+          paddingRight: edgePad,
+          // Ensure snap points account for the padding so the first card is reachable
+          scrollPaddingLeft: edgePad,
+          scrollPaddingRight: edgePad,
           // Fade content outside the body zone into the background
           maskImage:
             "linear-gradient(to right, transparent, black max(1rem, calc((100vw - 80rem) / 2)), black calc(100% - max(1rem, calc((100vw - 80rem) / 2))), transparent)",

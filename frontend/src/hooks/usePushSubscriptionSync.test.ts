@@ -1,13 +1,43 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 import { renderHook, waitFor, cleanup } from "@testing-library/react";
-import * as push from "../lib/push";
-import * as api from "../api";
-import { usePushSubscriptionSync } from "./usePushSubscriptionSync";
 
 const mockSubscription = { endpoint: "https://push.example.com/sub/new", p256dh: "key", auth: "auth" };
 const mockNotifier = { id: "n1", provider: "webpush", enabled: true, config: {} };
 
-let spies: ReturnType<typeof spyOn>[] = [];
+// Use mock.module (hoisted before imports) to guarantee this file controls
+// the push and api modules even when other test files have called
+// mock.module on the same specifiers earlier in the bun process.
+const mockIsPushSupported = mock(() => true as boolean);
+const mockSubscribeToPush = mock(() => Promise.resolve(mockSubscription));
+const mockGetExistingSubscription = mock(() =>
+  Promise.resolve({ endpoint: "https://push.example.com/sub/old" } as PushSubscription | null),
+);
+
+mock.module("../lib/push", () => ({
+  isPushSupported: mockIsPushSupported,
+  subscribeToPush: mockSubscribeToPush,
+  getExistingSubscription: mockGetExistingSubscription,
+  unsubscribeFromPush: mock(() => Promise.resolve()),
+}));
+
+const mockGetNotifiers = mock(() =>
+  Promise.resolve({ notifiers: [mockNotifier] } as any),
+);
+const mockGetVapidPublicKey = mock(() =>
+  Promise.resolve({ publicKey: "vapid-key" }),
+);
+const mockUpdateNotifier = mock(() =>
+  Promise.resolve({ notifier: mockNotifier } as any),
+);
+
+mock.module("../api", () => ({
+  getNotifiers: mockGetNotifiers,
+  getVapidPublicKey: mockGetVapidPublicKey,
+  updateNotifier: mockUpdateNotifier,
+}));
+
+import { usePushSubscriptionSync } from "./usePushSubscriptionSync";
+
 let controllerChangeListeners: Array<(e: Event) => void> = [];
 
 function mockNotificationPermission(value: NotificationPermission) {
@@ -42,20 +72,31 @@ beforeEach(() => {
   mockNotificationPermission("granted");
   mockServiceWorker();
 
-  spies = [
-    spyOn(push, "isPushSupported").mockReturnValue(true),
-    spyOn(push, "subscribeToPush").mockResolvedValue(mockSubscription),
-    spyOn(push, "getExistingSubscription").mockResolvedValue({ endpoint: "https://push.example.com/sub/old" } as any),
-    spyOn(api, "getNotifiers").mockResolvedValue({ notifiers: [mockNotifier] } as any),
-    spyOn(api, "getVapidPublicKey").mockResolvedValue({ publicKey: "vapid-key" }),
-    spyOn(api, "updateNotifier").mockResolvedValue({ notifier: mockNotifier } as any),
-  ];
+  // Reset all mocks to default behavior
+  mockIsPushSupported.mockReturnValue(true);
+  mockSubscribeToPush.mockImplementation(() => Promise.resolve(mockSubscription));
+  mockGetExistingSubscription.mockImplementation(() =>
+    Promise.resolve({ endpoint: "https://push.example.com/sub/old" } as any),
+  );
+  mockGetNotifiers.mockImplementation(() =>
+    Promise.resolve({ notifiers: [mockNotifier] } as any),
+  );
+  mockGetVapidPublicKey.mockImplementation(() =>
+    Promise.resolve({ publicKey: "vapid-key" }),
+  );
+  mockUpdateNotifier.mockImplementation(() =>
+    Promise.resolve({ notifier: mockNotifier } as any),
+  );
 });
 
 afterEach(() => {
   cleanup();
-  for (const spy of spies) spy.mockRestore();
-  spies = [];
+  mockIsPushSupported.mockReset();
+  mockSubscribeToPush.mockReset();
+  mockGetExistingSubscription.mockReset();
+  mockGetNotifiers.mockReset();
+  mockGetVapidPublicKey.mockReset();
+  mockUpdateNotifier.mockReset();
 });
 
 describe("usePushSubscriptionSync", () => {
@@ -63,42 +104,42 @@ describe("usePushSubscriptionSync", () => {
     renderHook(() => usePushSubscriptionSync());
 
     await waitFor(() => {
-      expect(api.getNotifiers).toHaveBeenCalled();
+      expect(mockGetNotifiers).toHaveBeenCalled();
     });
 
-    expect(push.subscribeToPush).not.toHaveBeenCalled();
-    expect(api.updateNotifier).not.toHaveBeenCalled();
+    expect(mockSubscribeToPush).not.toHaveBeenCalled();
+    expect(mockUpdateNotifier).not.toHaveBeenCalled();
   });
 
   it("re-subscribes on mount when notifier is disabled", async () => {
-    (api.getNotifiers as any).mockResolvedValue({ notifiers: [{ ...mockNotifier, enabled: false }] });
+    mockGetNotifiers.mockResolvedValue({ notifiers: [{ ...mockNotifier, enabled: false }] });
 
     renderHook(() => usePushSubscriptionSync());
 
     await waitFor(() => {
-      expect(api.updateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
+      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
     });
   });
 
   it("re-subscribes on mount when browser has no active subscription", async () => {
-    (push.getExistingSubscription as any).mockResolvedValue(null);
+    mockGetExistingSubscription.mockResolvedValue(null);
 
     renderHook(() => usePushSubscriptionSync());
 
     await waitFor(() => {
-      expect(api.updateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
+      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
     });
   });
 
   it("does nothing on mount when push is not supported", async () => {
-    (push.isPushSupported as any).mockReturnValue(false);
+    mockIsPushSupported.mockReturnValue(false);
 
     renderHook(() => usePushSubscriptionSync());
 
     // Give effects time to run
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(api.getNotifiers).not.toHaveBeenCalled();
+    expect(mockGetNotifiers).not.toHaveBeenCalled();
   });
 
   it("does nothing on mount when permission is not granted", async () => {
@@ -108,37 +149,37 @@ describe("usePushSubscriptionSync", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(push.subscribeToPush).not.toHaveBeenCalled();
+    expect(mockSubscribeToPush).not.toHaveBeenCalled();
   });
 
   it("does nothing on mount when no webpush notifier exists", async () => {
-    (api.getNotifiers as any).mockResolvedValue({ notifiers: [] });
+    mockGetNotifiers.mockResolvedValue({ notifiers: [] });
 
     renderHook(() => usePushSubscriptionSync());
 
     await waitFor(() => {
-      expect(api.getNotifiers).toHaveBeenCalled();
+      expect(mockGetNotifiers).toHaveBeenCalled();
     });
 
-    expect(push.subscribeToPush).not.toHaveBeenCalled();
+    expect(mockSubscribeToPush).not.toHaveBeenCalled();
   });
 
   it("re-subscribes when controllerchange fires", async () => {
-    (push.getExistingSubscription as any).mockResolvedValue({ endpoint: "old" } as any);
+    mockGetExistingSubscription.mockResolvedValue({ endpoint: "old" } as any);
 
     renderHook(() => usePushSubscriptionSync());
 
     // Wait for mount check to complete (enabled notifier + existing sub = no-op)
-    await waitFor(() => expect(api.getNotifiers).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockGetNotifiers).toHaveBeenCalledTimes(1));
 
     // Simulate the notifier becoming disabled after a SW update
-    (api.getNotifiers as any).mockResolvedValue({ notifiers: [{ ...mockNotifier, enabled: false }] });
+    mockGetNotifiers.mockResolvedValue({ notifiers: [{ ...mockNotifier, enabled: false }] });
 
     // Fire controllerchange
     controllerChangeListeners.forEach((l) => l(new Event("controllerchange")));
 
     await waitFor(() => {
-      expect(api.updateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
+      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
     });
   });
 
@@ -152,7 +193,7 @@ describe("usePushSubscriptionSync", () => {
   });
 
   it("swallows errors silently", async () => {
-    (api.getNotifiers as any).mockRejectedValue(new Error("Network error"));
+    mockGetNotifiers.mockRejectedValue(new Error("Network error"));
 
     // Should not throw
     expect(() => renderHook(() => usePushSubscriptionSync())).not.toThrow();
