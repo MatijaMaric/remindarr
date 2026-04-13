@@ -1,24 +1,32 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from "bun:test";
-import { WebPushProvider, SubscriptionExpiredError } from "./webpush";
+import { CONFIG } from "../config";
 import type { NotificationContent } from "./types";
 
-// Mock web-push module
+// Mock web-push module (include generateVAPIDKeys so the mock doesn't break
+// vapid.test.ts if it leaks across files in the same bun process)
 mock.module("web-push", () => ({
   default: {
     setVapidDetails: () => {},
     sendNotification: async () => ({ statusCode: 201 }),
+    generateVAPIDKeys: () => ({
+      publicKey: "mock-generated-public",
+      privateKey: "mock-generated-private",
+    }),
   },
 }));
 
-// Mock vapid module
-mock.module("./vapid", () => ({
-  getVapidKeys: () => ({
-    publicKey: "test-public-key",
-    privateKey: "test-private-key",
-    subject: "mailto:test@example.com",
-  }),
-}));
+// Use CONFIG values so the real getVapidKeys() returns them without DB access.
+// This avoids mock.module("./vapid") which permanently poisons the module
+// registry and breaks vapid.test.ts when both files run in the same process.
+const savedVapidPublicKey = CONFIG.VAPID_PUBLIC_KEY;
+const savedVapidPrivateKey = CONFIG.VAPID_PRIVATE_KEY;
+const savedVapidSubject = CONFIG.VAPID_SUBJECT;
 
+CONFIG.VAPID_PUBLIC_KEY = "test-public-key";
+CONFIG.VAPID_PRIVATE_KEY = "test-private-key";
+CONFIG.VAPID_SUBJECT = "mailto:test@example.com";
+
+const { WebPushProvider, SubscriptionExpiredError } = await import("./webpush");
 const provider = new WebPushProvider();
 
 const sampleContent: NotificationContent = {
@@ -48,6 +56,18 @@ const validConfig = {
   p256dh: "test-p256dh-key",
   auth: "test-auth-key",
 };
+
+beforeEach(() => {
+  CONFIG.VAPID_PUBLIC_KEY = "test-public-key";
+  CONFIG.VAPID_PRIVATE_KEY = "test-private-key";
+  CONFIG.VAPID_SUBJECT = "mailto:test@example.com";
+});
+
+afterEach(() => {
+  CONFIG.VAPID_PUBLIC_KEY = savedVapidPublicKey;
+  CONFIG.VAPID_PRIVATE_KEY = savedVapidPrivateKey;
+  CONFIG.VAPID_SUBJECT = savedVapidSubject;
+});
 
 describe("WebPushProvider.validateConfig", () => {
   it("accepts valid config", () => {
