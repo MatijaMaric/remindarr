@@ -4,8 +4,6 @@ interface ScrollableRowProps {
   children: React.ReactNode;
   /** CSS classes for the inner flex container (controls gap, padding, etc.) */
   className?: string;
-  /** Pixels to scroll per click. Defaults to 332 (320 + 12). */
-  scrollAmount?: number;
   /** Enable scroll-snap-type: x mandatory. Defaults to false. */
   scrollSnap?: boolean;
 }
@@ -13,7 +11,6 @@ interface ScrollableRowProps {
 export default function ScrollableRow({
   children,
   className,
-  scrollAmount = 332,
   scrollSnap = false,
 }: ScrollableRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -43,8 +40,9 @@ export default function ScrollableRow({
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
+    const amount = el.clientWidth;
     el.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
+      left: direction === "left" ? -amount : amount,
       behavior: "smooth",
     });
   };

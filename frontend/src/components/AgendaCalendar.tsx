@@ -776,7 +776,7 @@ export default function AgendaCalendar({
 
                       {/* All episode cards in a single row */}
                       {dayEpisodes.length > 0 && (
-                        <ScrollableRow className="flex-wrap lg:flex-nowrap gap-3" scrollAmount={332}>
+                        <ScrollableRow className="flex-wrap lg:flex-nowrap gap-3">
                           {dayEpisodes.map((ep) => {
                             const showEps = episodesByShow.get(ep.title_id) ?? [ep];
                             const imgUrl = getEpisodeCardImageUrl(ep);
