@@ -93,7 +93,7 @@ describe("FullBleedCarousel", () => {
     const scrollByMock = mock(() => {});
 
     const { container } = render(
-      <FullBleedCarousel scrollAmount={332}>
+      <FullBleedCarousel>
         <div>Item</div>
       </FullBleedCarousel>,
     );
@@ -109,17 +109,17 @@ describe("FullBleedCarousel", () => {
     const buttons = container.querySelectorAll("button");
     expect(buttons.length).toBe(2);
 
-    // Click left button
+    // Click left button — scrolls by clientWidth (400)
     fireEvent.click(buttons[0]);
     expect(scrollByMock).toHaveBeenCalledWith({
-      left: -332,
+      left: -400,
       behavior: "smooth",
     });
 
-    // Click right button
+    // Click right button — scrolls by clientWidth (400)
     fireEvent.click(buttons[1]);
     expect(scrollByMock).toHaveBeenCalledWith({
-      left: 332,
+      left: 400,
       behavior: "smooth",
     });
   });

@@ -302,7 +302,7 @@ export default function HomePage() {
                 {t("home.seeAll")} →
               </Link>
             </div>
-            <FullBleedCarousel scrollAmount={144}>
+            <FullBleedCarousel>
               {recommendations.map((rec) => {
                 const posterSrc = rec.title.poster_url
                   ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`

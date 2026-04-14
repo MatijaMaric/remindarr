@@ -2,13 +2,10 @@ import { useRef, useState, useCallback, useEffect } from "react";
 
 interface FullBleedCarouselProps {
   children: React.ReactNode;
-  /** Pixels to scroll per click. Defaults to 332 (320 card + 12 gap). */
-  scrollAmount?: number;
 }
 
 export default function FullBleedCarousel({
   children,
-  scrollAmount = 332,
 }: FullBleedCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -43,8 +40,9 @@ export default function FullBleedCarousel({
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
+    const amount = el.clientWidth;
     el.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
+      left: direction === "left" ? -amount : amount,
       behavior: "smooth",
     });
   };

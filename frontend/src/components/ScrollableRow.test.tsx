@@ -64,7 +64,7 @@ describe("ScrollableRow", () => {
     const scrollByMock = mock(() => {});
 
     const { container } = render(
-      <ScrollableRow scrollAmount={200}>
+      <ScrollableRow>
         <div>Item</div>
       </ScrollableRow>,
     );
@@ -82,17 +82,17 @@ describe("ScrollableRow", () => {
     const buttons = container.querySelectorAll("button");
     expect(buttons.length).toBe(2);
 
-    // Click right button
+    // Click right button — scrolls by clientWidth (400)
     fireEvent.click(buttons[1]);
     expect(scrollByMock).toHaveBeenCalledWith({
-      left: 200,
+      left: 400,
       behavior: "smooth",
     });
 
-    // Click left button
+    // Click left button — scrolls by clientWidth (400)
     fireEvent.click(buttons[0]);
     expect(scrollByMock).toHaveBeenCalledWith({
-      left: -200,
+      left: -400,
       behavior: "smooth",
     });
   });

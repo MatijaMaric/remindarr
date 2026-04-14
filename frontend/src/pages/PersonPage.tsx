@@ -189,7 +189,7 @@ export default function PersonPage() {
       {castCredits.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-white">Acting ({castCredits.length})</h2>
-          <ScrollableRow className="gap-4 pb-2" scrollAmount={160}>
+          <ScrollableRow className="gap-4 pb-2">
             {castCredits.map((c) => (
               <CreditCard key={`cast-${c.id}-${c.character}`} credit={c} subtitle={c.character} />
             ))}
@@ -201,7 +201,7 @@ export default function PersonPage() {
       {crewCredits.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-white">Crew ({crewCredits.length})</h2>
-          <ScrollableRow className="gap-4 pb-2" scrollAmount={160}>
+          <ScrollableRow className="gap-4 pb-2">
             {crewCredits.map((c) => (
               <CreditCard key={`crew-${c.id}-${c.job}`} credit={c} subtitle={c.job} />
             ))}

@@ -201,7 +201,7 @@ export default function EpisodeDetailPage() {
       {allCast.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-white">Cast</h2>
-          <ScrollableRow className="gap-4 pb-2" scrollAmount={128}>
+          <ScrollableRow className="gap-4 pb-2">
             {allCast.slice(0, 20).map((c) => (
               <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}

@@ -418,7 +418,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
       {cast.length > 0 && (
         <Section title="Cast">
-          <ScrollableRow className="gap-4 pb-2" scrollAmount={128}>
+          <ScrollableRow className="gap-4 pb-2">
             {cast.map((c: CastMember) => (
               <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
@@ -698,7 +698,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
       {cast.length > 0 && (
         <Section title="Cast">
-          <ScrollableRow className="gap-4 pb-2" scrollAmount={128}>
+          <ScrollableRow className="gap-4 pb-2">
             {cast.map((c: CastMember) => (
               <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
             ))}
