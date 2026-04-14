@@ -26,10 +26,15 @@ export default function FullBleedCarousel({
     if (!el) return;
     el.scrollLeft = 0;
     updateScrollButtons();
+    // Enable snap AFTER position is set so mandatory snap doesn't override it
+    const rafId = requestAnimationFrame(() => {
+      el.style.scrollSnapType = "x mandatory";
+    });
     el.addEventListener("scroll", updateScrollButtons, { passive: true });
     const observer = new ResizeObserver(updateScrollButtons);
     observer.observe(el);
     return () => {
+      cancelAnimationFrame(rafId);
       el.removeEventListener("scroll", updateScrollButtons);
       observer.disconnect();
     };
@@ -57,7 +62,6 @@ export default function FullBleedCarousel({
         ref={scrollRef}
         className="flex overflow-x-auto gap-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         style={{
-          scrollSnapType: "x mandatory",
           paddingLeft: edgePad,
           paddingRight: edgePad,
           // Ensure snap points account for the padding so the first card is reachable
