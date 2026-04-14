@@ -37,8 +37,10 @@ describe("FullBleedCarousel", () => {
     const style = scrollDiv.getAttribute("style") ?? "";
     expect(style).toContain("scroll-padding-left");
     expect(style).toContain("scroll-padding-right");
-    // The scroll-padding values should use the same expression as the padding values
-    expect(style).toContain("scroll-snap-type");
+    // scroll-snap-type is NOT in the inline style — it is set imperatively
+    // after scrollLeft = 0 via requestAnimationFrame to prevent mandatory
+    // snap from overriding the initial scroll position
+    expect(style).not.toContain("scroll-snap-type");
   });
 
   it("hides scroll buttons when content does not overflow", () => {
