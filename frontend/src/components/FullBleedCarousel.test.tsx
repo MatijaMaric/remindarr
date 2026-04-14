@@ -89,8 +89,21 @@ describe("FullBleedCarousel", () => {
     expect(buttons.length).toBe(1);
   });
 
-  it("calls scrollBy with correct values when arrow buttons are clicked", () => {
+  it("calls scrollBy with visible content width (clientWidth minus padding)", () => {
     const scrollByMock = mock(() => {});
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = ((el: Element) => {
+      const real = originalGetComputedStyle(el);
+      return new Proxy(real, {
+        get(target, prop) {
+          if (prop === "paddingLeft") return "80px";
+          if (prop === "paddingRight") return "80px";
+          const val = Reflect.get(target, prop);
+          return typeof val === "function" ? val.bind(target) : val;
+        },
+      });
+    }) as typeof window.getComputedStyle;
 
     const { container } = render(
       <FullBleedCarousel>
@@ -109,18 +122,20 @@ describe("FullBleedCarousel", () => {
     const buttons = container.querySelectorAll("button");
     expect(buttons.length).toBe(2);
 
-    // Click left button — scrolls by clientWidth (400)
+    // Click left button — scrolls by visible content width (400 - 80 - 80 = 240)
     fireEvent.click(buttons[0]);
     expect(scrollByMock).toHaveBeenCalledWith({
-      left: -400,
+      left: -240,
       behavior: "smooth",
     });
 
-    // Click right button — scrolls by clientWidth (400)
+    // Click right button — scrolls by visible content width (400 - 80 - 80 = 240)
     fireEvent.click(buttons[1]);
     expect(scrollByMock).toHaveBeenCalledWith({
-      left: 400,
+      left: 240,
       behavior: "smooth",
     });
+
+    window.getComputedStyle = originalGetComputedStyle;
   });
 });
