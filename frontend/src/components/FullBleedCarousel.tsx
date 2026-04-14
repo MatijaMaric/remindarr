@@ -40,7 +40,10 @@ export default function FullBleedCarousel({
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
-    const amount = el.clientWidth;
+    const style = getComputedStyle(el);
+    const padLeft = parseFloat(style.paddingLeft) || 0;
+    const padRight = parseFloat(style.paddingRight) || 0;
+    const amount = el.clientWidth - padLeft - padRight;
     el.scrollBy({
       left: direction === "left" ? -amount : amount,
       behavior: "smooth",
