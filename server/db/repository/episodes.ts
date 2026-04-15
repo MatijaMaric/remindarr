@@ -1,4 +1,4 @@
-import { eq, and, sql, gte, lt, asc, inArray } from "drizzle-orm";
+import { eq, and, sql, gte, lt, lte, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -184,7 +184,7 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
       )
       .where(
         and(
-          lt(episodes.airDate, today),
+          lte(episodes.airDate, today),
           sql`NOT EXISTS(
             SELECT 1 FROM watched_episodes we
             WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
