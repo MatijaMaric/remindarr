@@ -38,9 +38,11 @@ export default function LoginPage() {
     if (oidcError) setError(t("login.loginFailed", { error: oidcError }));
   }, [searchParams, t]);
 
-  // Enable passkey autofill (conditional UI)
+  // Enable passkey autofill (conditional UI) — only when the username field is
+  // visible, otherwise the pending ceremony has nothing to attach to and can
+  // conflict with an explicit passkey button click (surfaces as AUTH_CANCELLED).
   useEffect(() => {
-    if (!passkeyAvailable) return;
+    if (!passkeyAvailable || !showLocalLogin) return;
     let cancelled = false;
     (async () => {
       try {
@@ -60,7 +62,7 @@ export default function LoginPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [passkeyAvailable, navigate, refresh]);
+  }, [passkeyAvailable, showLocalLogin, navigate, refresh]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,7 +91,14 @@ export default function LoginPage() {
     try {
       const result = await authClient.signIn.passkey();
       if (result?.error) {
-        throw new Error(String(result.error.message || t("login.passkeyFailed")));
+        // better-auth maps every WebAuthn failure (user cancel, timeout,
+        // conditional-UI conflict) to AUTH_CANCELLED — treat it as a silent
+        // dismissal and show other errors normally.
+        const code = (result.error as { code?: string }).code;
+        const message = result.error.message ? String(result.error.message) : "";
+        if (code === "AUTH_CANCELLED" || message === "AUTH_CANCELLED") return;
+        setError(message || t("login.passkeyFailed"));
+        return;
       }
       const session = await authClient.getSession();
       if (session.data?.user) {
