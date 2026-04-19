@@ -10,6 +10,7 @@ import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
 import { useGridNavigation } from "../hooks/useGridNavigation";
+import { PageHeader } from "../components/design";
 
 const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
 
@@ -233,6 +234,7 @@ export default function BrowsePage() {
 
   return (
     <div className="space-y-6">
+      <PageHeader kicker="Browse catalog" title="Browse" className="px-0 pt-4 pb-4" />
       <SearchBar onSearch={handleSearch} onImdb={handleImdb} loading={searchLoading} />
 
 
@@ -334,7 +336,7 @@ export default function BrowsePage() {
       {searchResults !== null ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t("browse.searchResults", { count: searchResults.length })}</h2>
+            <h2 className="text-xl font-bold tracking-[-0.01em]">{t("browse.searchResults", { count: searchResults.length })}</h2>
             <button
               onClick={clearSearch}
               className="text-sm text-zinc-400 hover:text-white cursor-pointer"
@@ -346,7 +348,7 @@ export default function BrowsePage() {
         </div>
       ) : (
         <div>
-          <h2 className="text-lg font-semibold mb-4">{t(CATEGORY_LABEL_KEYS[category])}</h2>
+          <h2 className="text-xl font-bold tracking-[-0.01em] mb-4">{t(CATEGORY_LABEL_KEYS[category])}</h2>
           {category === "new_releases" ? (
             <NewReleases
               type={type}

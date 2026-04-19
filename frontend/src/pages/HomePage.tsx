@@ -13,6 +13,7 @@ import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents
 import { EpisodeShowCard, DeckCardWrapper } from "../components/EpisodeShowCard";
 import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
+import { Kicker } from "../components/design";
 
 export interface UnwatchedCardEntry {
   episode: Episode;
@@ -217,9 +218,12 @@ export default function HomePage() {
 
         {/* Popular titles */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">{t("landing.popularNow")}</h2>
-            <Link to="/browse" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <Kicker>Browse</Kicker>
+              <h2 className="text-xl font-bold tracking-[-0.01em]">{t("landing.popularNow")}</h2>
+            </div>
+            <Link to="/browse" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
               {t("landing.discoverMore")} →
             </Link>
           </div>
@@ -261,16 +265,22 @@ export default function HomePage() {
               <HeroBanner episodes={unwatched} />
             </div>
             <section key="unwatched">
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-xl font-bold text-white">{t("home.unwatched")}</h2>
-                <Link
-                  to="/reels"
-                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
-                  title="Full-screen reels view"
-                >
-                  <Maximize2 size={14} />
-                  {t("home.reels")}
-                </Link>
+              <div className="flex items-baseline justify-between mb-4">
+                <div>
+                  <Kicker>Up next</Kicker>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.unwatched")}</h2>
+                    <Link
+                      to="/reels"
+                      className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
+                      title="Full-screen reels view"
+                    >
+                      <Maximize2 size={14} />
+                      {t("home.reels")}
+                    </Link>
+                  </div>
+                </div>
+                <Link to="/upcoming" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">{t("home.seeAll")} →</Link>
               </div>
               <FullBleedCarousel>
                 {unwatchedCards.map((card) => (
@@ -296,9 +306,12 @@ export default function HomePage() {
       case "recommendations":
         return recommendations.length > 0 ? (
           <section key="recommendations">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">{t("home.recommendedForYou")}</h2>
-              <Link to="/discovery" className="text-sm text-amber-400 hover:text-amber-300 transition-colors">
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <Kicker>From friends</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.recommendedForYou")}</h2>
+              </div>
+              <Link to="/discovery" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
                 {t("home.seeAll")} →
               </Link>
             </div>
@@ -348,7 +361,13 @@ export default function HomePage() {
       case "today":
         return (
           <section key="today">
-            <h2 className="text-xl font-bold text-white mb-4">{t("home.today")}</h2>
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <Kicker>Airing tonight</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.today")}</h2>
+              </div>
+              <Link to="/calendar" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">{t("home.seeAll")} →</Link>
+            </div>
             {today.length === 0 ? (
               <p className="text-zinc-500 text-sm">
                 {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
@@ -373,14 +392,20 @@ export default function HomePage() {
       case "upcoming":
         return upcoming.length > 0 ? (
           <section key="upcoming">
-            <h2 className="text-lg font-semibold text-zinc-300 mb-4">{t("home.comingUp")}</h2>
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <Kicker>This week</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.comingUp")}</h2>
+              </div>
+              <Link to="/calendar" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">Open calendar →</Link>
+            </div>
             <div className="space-y-4">
               {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
                 const byShow = groupByShow(eps);
                 const dateLabel = formatUpcomingDate(date);
                 return (
                   <div key={date}>
-                    <h3 className="text-sm font-medium text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
+                    <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
                     <FullBleedCarousel>
                       {Array.from(byShow.entries()).map(([titleId, showEps]) => (
                         <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>

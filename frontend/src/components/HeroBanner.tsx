@@ -94,7 +94,6 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
   if (slides.length === 0) return null;
 
   const current = slides[activeIndex];
-  const currentPosterUrl = current.featured.poster_url;
 
   return (
     <div
@@ -149,143 +148,75 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
         }}
       />
 
-      {/* Content overlay */}
-      <div className="relative z-10 h-full max-w-[1920px] mx-auto flex">
-        {/* Continue Watching card (left side) */}
-        {current.sidebar.length > 0 && (
-          <div className="w-72 shrink-0 flex items-center px-4">
-            <div className="w-full bg-zinc-900/80 backdrop-blur-sm rounded-xl p-4">
-              <p className="text-xs uppercase tracking-widest text-zinc-400 font-medium mb-3">
-                Continue Watching
-              </p>
-              <div className="space-y-1">
-                {current.sidebar.map((item) => {
-                  const slideIdx = slides.findIndex(
-                    (s) => s.featured.title_id === item.titleId
-                  );
-                  return (
-                    <button
-                      key={item.titleId}
-                      onClick={() => goTo(slideIdx)}
-                      className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                        slideIdx === activeIndex
-                          ? "bg-white/15"
-                          : "hover:bg-white/10"
-                      }`}
-                    >
-                      {item.posterUrl ? (
-                        <img
-                          src={item.posterUrl}
-                          alt={item.showTitle}
-                          className="w-8 h-12 rounded object-cover shrink-0"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-8 h-12 rounded bg-zinc-700 shrink-0" />
-                      )}
-                      <div className="min-w-0 text-left">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {item.showTitle}
-                        </p>
-                        <p className="text-xs text-zinc-400 truncate">
-                          {item.episodeCode}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Content overlay — bottom-left anchored */}
+      <div className="relative z-10 h-full flex items-end pb-12 px-8 sm:px-16">
+        <div className="max-w-[560px]">
+          {/* Kicker */}
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-400 mb-3">
+            Continue watching
+            {current.remainingCount > 0 && ` · ${current.remainingCount} unwatched`}
+          </p>
 
-        {/* Poster + text info */}
-        <div className="flex items-center gap-6 px-8">
-          {/* Show poster */}
-          {currentPosterUrl && (
-            <Link
-              to={`/title/${current.featured.title_id}`}
-              className="shrink-0"
-            >
-              <img
-                src={currentPosterUrl}
-                alt={current.featured.show_title}
-                className="h-[300px] rounded-lg shadow-2xl object-cover"
-                style={{ aspectRatio: "2/3" }}
-              />
-            </Link>
-          )}
+          {/* Title */}
+          <Link to={`/title/${current.featured.title_id}`} className="group">
+            <h2 className="text-5xl sm:text-[56px] font-extrabold tracking-[-0.03em] leading-none text-white group-hover:text-amber-300 transition-colors mb-4">
+              {current.featured.show_title}
+            </h2>
+          </Link>
 
           {/* Episode info */}
-          <div
-            className="flex flex-col justify-center max-w-md"
-            style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
-          >
-            <p className="text-xs uppercase tracking-widest text-amber-400 font-medium mb-2">
-              Currently Watching
-            </p>
+          <p className="text-base text-zinc-300 leading-relaxed mb-6 line-clamp-2">
+            {formatEpisodeCode(current.featured)}
+            {current.featured.name && ` · ${current.featured.name}`}
+            {current.featured.overview && ` — ${current.featured.overview}`}
+          </p>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 flex-wrap">
             <Link
               to={`/title/${current.featured.title_id}`}
-              className="group"
+              className="bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors"
             >
-              <h2 className="text-4xl font-bold text-white group-hover:text-amber-300 transition-colors">
-                {current.featured.show_title}
-              </h2>
+              ▶ Watch now
             </Link>
-            <p className="text-xl text-zinc-200 mt-2">
-              {formatEpisodeCode(current.featured)}
-              {current.featured.name && ` · ${current.featured.name}`}
-            </p>
-            {current.featured.overview && (
-              <p className="text-zinc-300 mt-3 line-clamp-3 max-w-xl">
-                {current.featured.overview}
-              </p>
-            )}
-            <p className="text-sm text-amber-300 mt-4">
-              {current.remainingCount} episode
-              {current.remainingCount !== 1 ? "s" : ""} remaining
-            </p>
-            <div className="mt-3">
-              <WatchButtonGroup offers={current.featured.offers ?? []} variant="inline" maxVisible={4} />
-            </div>
+            <WatchButtonGroup offers={current.featured.offers ?? []} variant="inline" maxVisible={2} />
           </div>
+
+          {/* Slide dots */}
+          {slides.length > 1 && (
+            <div className="flex gap-2 mt-6">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  className={`h-1 rounded-full transition-all cursor-pointer ${
+                    i === activeIndex ? "w-6 bg-amber-400" : "w-2 bg-white/30 hover:bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Slide nav arrows — top-right of hero */}
+        {slides.length > 1 && (
+          <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => goTo(activeIndex - 1)}
+              className="bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => goTo(activeIndex + 1)}
+              className="bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Navigation arrows */}
-      {slides.length > 1 && (
-        <>
-          <button
-            onClick={() => goTo(activeIndex - 1)}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
-            onClick={() => goTo(activeIndex + 1)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </>
-      )}
-
-      {/* Navigation dots */}
-      {slides.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className={`w-2 h-2 rounded-full transition-colors cursor-pointer ${
-                i === activeIndex
-                  ? "bg-amber-400"
-                  : "bg-white/30 hover:bg-white/50"
-              }`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

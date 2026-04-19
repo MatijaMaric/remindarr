@@ -25,6 +25,7 @@ import VisibilityButton from "../components/VisibilityButton";
 import ShareButton from "../components/ShareButton";
 import RecommendButton from "../components/RecommendButton";
 import { getProviderColor } from "../data/providerColors";
+import { Kicker, Chip } from "../components/design";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 
@@ -54,6 +55,13 @@ function formatRuntime(minutes: number | null | undefined): string {
 function formatCurrency(value: number): string {
   if (!value) return "—";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+}
+
+function isToday(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -291,7 +299,10 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               {tmdb?.tagline && (
                 <p className="text-sm text-amber-400 italic mb-1">{tmdb.tagline}</p>
               )}
-              <h1 className="text-3xl font-bold text-white">{tmdb?.title || title.title}</h1>
+              <Kicker className="mb-2">
+                Movie{title.release_year ? ` · ${title.release_year}` : ""}{title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
+              </Kicker>
+              <h1 className="text-[56px] leading-tight font-bold text-white">{tmdb?.title || title.title}</h1>
               {(() => {
                 const displayTitle = tmdb?.title || title.title;
                 const originalTitle = tmdb?.original_title || title.original_title;
@@ -323,11 +334,14 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               )}
             </div>
 
-            {genres.length > 0 && (
+            {(genres.length > 0 || title.imdb_score) && (
               <div className="flex flex-wrap gap-2">
                 {genres.map((g) => (
-                  <span key={g} className="bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
+                  <Chip key={g} variant="default">{g}</Chip>
                 ))}
+                {title.imdb_score && (
+                  <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>
+                )}
               </div>
             )}
 
@@ -378,6 +392,30 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Metadata strip */}
+      <div className="dark-section -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-white/[0.06]">
+        {[
+          { label: 'TYPE', value: 'Movie' },
+          title.runtime_minutes
+            ? { label: 'RUNTIME', value: `${title.runtime_minutes} min` }
+            : null,
+          tmdb?.status
+            ? { label: 'STATUS', value: tmdb.status }
+            : null,
+          title.offers[0]?.provider_name
+            ? { label: 'NETWORK', value: title.offers[0].provider_name }
+            : null,
+          title.imdb_score
+            ? { label: 'IMDB', value: `★ ${title.imdb_score.toFixed(1)}` }
+            : null,
+        ].filter(Boolean).map(cell => (
+          <div key={cell!.label}>
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-1">{cell!.label}</div>
+            <div className="font-mono text-[13px] font-semibold text-zinc-100">{cell!.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Overview */}
@@ -598,7 +636,10 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               {tmdb?.tagline && (
                 <p className="text-sm text-amber-400 italic mb-1">{tmdb.tagline}</p>
               )}
-              <h1 className="text-3xl font-bold text-white">{tmdb?.name || title.title}</h1>
+              <Kicker className="mb-2">
+                TV Show{title.release_year ? ` · ${title.release_year}` : ""}{title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
+              </Kicker>
+              <h1 className="text-[56px] leading-tight font-bold text-white">{tmdb?.name || title.title}</h1>
               {(() => {
                 const displayTitle = tmdb?.name || title.title;
                 const originalTitle = tmdb?.original_name || title.original_title;
@@ -642,11 +683,14 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               )}
             </div>
 
-            {genres.length > 0 && (
+            {(genres.length > 0 || title.imdb_score) && (
               <div className="flex flex-wrap gap-2">
                 {genres.map((g) => (
-                  <span key={g} className="bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full text-xs">{g}</span>
+                  <Chip key={g} variant="default">{g}</Chip>
                 ))}
+                {title.imdb_score && (
+                  <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>
+                )}
               </div>
             )}
 
@@ -667,6 +711,39 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Metadata strip */}
+      <div className="dark-section -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-white/[0.06]">
+        {[
+          { label: 'TYPE', value: 'TV Show' },
+          tmdb?.status
+            ? { label: 'STATUS', value: tmdb.status }
+            : null,
+          tmdb?.number_of_seasons != null
+            ? { label: 'SEASONS', value: String(tmdb.number_of_seasons) }
+            : null,
+          tmdb?.number_of_episodes != null
+            ? { label: 'EPISODES', value: String(tmdb.number_of_episodes) }
+            : null,
+          title.next_episode_air_date
+            ? { label: 'NEXT EP', value: formatDate(title.next_episode_air_date) }
+            : null,
+          title.offers[0]?.provider_name
+            ? { label: 'NETWORK', value: title.offers[0].provider_name }
+            : null,
+          tmdb?.episode_run_time?.[0]
+            ? { label: 'AVG RUNTIME', value: `${tmdb.episode_run_time[0]} min` }
+            : null,
+          title.imdb_score
+            ? { label: 'IMDB', value: `★ ${title.imdb_score.toFixed(1)}` }
+            : null,
+        ].filter(Boolean).map(cell => (
+          <div key={cell!.label}>
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-1">{cell!.label}</div>
+            <div className="font-mono text-[13px] font-semibold text-zinc-100">{cell!.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Overview */}
@@ -710,35 +787,47 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {seasons.length > 0 && (
         <Section title="Seasons">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {seasons.map((s: SeasonSummary) => (
-              <Link
-                key={s.season_number}
-                to={`/title/${title.id}/season/${s.season_number}`}
-                className="bg-zinc-900 rounded-xl overflow-hidden border border-white/[0.06] hover:border-amber-500/50 transition-colors group"
-              >
-                <div className="aspect-[2/3] bg-zinc-800">
-                  {s.poster_path ? (
-                    <img
-                      src={`${TMDB_IMG}/w342${s.poster_path}`}
-                      alt={s.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
-                      Season {s.season_number}
+            {seasons.map((s: SeasonSummary) => {
+              const airingToday = isToday(s.air_date);
+              return (
+                <Link
+                  key={s.season_number}
+                  to={`/title/${title.id}/season/${s.season_number}`}
+                  className={`rounded-xl overflow-hidden border transition-colors group ${
+                    airingToday
+                      ? "bg-amber-400/[0.06] border-amber-400/25 hover:border-amber-400/50"
+                      : "bg-zinc-900 border-white/[0.06] hover:border-amber-500/50"
+                  }`}
+                >
+                  <div className="aspect-[2/3] bg-zinc-800">
+                    {s.poster_path ? (
+                      <img
+                        src={`${TMDB_IMG}/w342${s.poster_path}`}
+                        alt={s.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
+                        Season {s.season_number}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors truncate">{s.name}</h3>
+                      {airingToday && (
+                        <span className="font-mono text-[10px] text-amber-400 tracking-[0.12em] uppercase shrink-0">AIRING NOW</span>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <h3 className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors truncate">{s.name}</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    {s.episode_count} episode{s.episode_count !== 1 ? "s" : ""}
-                    {s.air_date && ` · ${s.air_date.slice(0, 4)}`}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {s.episode_count} episode{s.episode_count !== 1 ? "s" : ""}
+                      {s.air_date && ` · ${s.air_date.slice(0, 4)}`}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </Section>
       )}

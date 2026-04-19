@@ -1,6 +1,14 @@
 export function navLinkClass(isActive: boolean, mobile = false): string {
-  return `${mobile ? "block w-full px-3 py-2.5" : "px-4 py-2"} rounded-lg text-sm font-medium transition-colors ${
-    isActive ? "bg-amber-500 text-zinc-950 font-medium" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+  if (mobile) {
+    return `block w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+      isActive ? "bg-amber-500 text-zinc-950 font-medium" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+    }`;
+  }
+  // Desktop: underline active indicator (matches V1 Signal design)
+  return `px-1 py-2 text-sm font-medium transition-colors border-b-2 leading-none ${
+    isActive
+      ? "text-zinc-100 border-amber-400 font-semibold"
+      : "text-zinc-400 border-transparent hover:text-zinc-100"
   }`;
 }
 

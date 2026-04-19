@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../i18n";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
@@ -12,9 +11,22 @@ import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubsc
 import { authClient } from "../lib/auth-client";
 import { UserPlus, GripVertical, Eye, EyeOff } from "lucide-react";
 import ThemePicker from "../components/ThemePicker";
+import { PageHeader } from "../components/design";
 
 const VALID_TABS = ["account", "appearance", "notifications", "integrations", "admin"] as const;
 type SettingsTab = (typeof VALID_TABS)[number];
+
+function SettingsCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-zinc-900 border border-white/[0.06] rounded-xl p-6 mb-4">
+      <div className="mb-5">
+        <div className="text-[17px] font-bold tracking-[-0.01em] mb-1">{title}</div>
+        {subtitle && <div className="text-sm text-zinc-500">{subtitle}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -29,8 +41,8 @@ export default function SettingsPage() {
       ? (rawTab as SettingsTab)
       : "account";
 
-  function handleTabChange(value: string | number) {
-    const tab = String(value) as SettingsTab;
+  function setTab(value: string) {
+    const tab = value as SettingsTab;
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -45,57 +57,84 @@ export default function SettingsPage() {
     );
   }
 
+  const TABS = [
+    { value: "account", label: t("settings.tabs.account") },
+    { value: "appearance", label: t("settings.tabs.appearance") },
+    { value: "notifications", label: t("settings.tabs.notifications") },
+    { value: "integrations", label: t("settings.tabs.integrations") },
+    ...(user.is_admin ? [{ value: "admin", label: t("settings.tabs.admin") }] : []),
+  ];
+
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">{t("settings.title")}</h1>
-        <Link to={`/user/${user.username}`} className="text-sm text-amber-500 hover:text-amber-400 transition-colors">
-          {t("settings.viewProfile")}
-        </Link>
-      </div>
+      <PageHeader kicker="Your preferences" title="Settings" className="px-0 pt-4 pb-4" />
 
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="account">{t("settings.tabs.account")}</TabsTrigger>
-          <TabsTrigger value="appearance">{t("settings.tabs.appearance")}</TabsTrigger>
-          <TabsTrigger value="notifications">{t("settings.tabs.notifications")}</TabsTrigger>
-          <TabsTrigger value="integrations">{t("settings.tabs.integrations")}</TabsTrigger>
-          {user.is_admin && (
-            <TabsTrigger value="admin">{t("settings.tabs.admin")}</TabsTrigger>
+      <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-8">
+        {/* Sidebar */}
+        <nav className="flex flex-col gap-0.5">
+          {TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setTab(tab.value)}
+              className={`w-full text-left px-[14px] py-[10px] text-sm font-medium transition-colors rounded-r-md border-l-2 ${
+                activeTab === tab.value
+                  ? "bg-amber-400/10 text-zinc-100 border-amber-400"
+                  : "text-zinc-400 border-transparent hover:text-zinc-100 hover:bg-white/[0.04]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Content */}
+        <div>
+          {activeTab === "account" && (
+            <>
+              <SettingsCard title="Account" subtitle="Your profile and login credentials">
+                <UserSection />
+                <PasskeySection />
+              </SettingsCard>
+              <SettingsCard title={t("settings.profileVisibility")} subtitle="Control who can see your watchlist">
+                <ProfileVisibilitySection />
+              </SettingsCard>
+              <SettingsCard title="Social" subtitle="Invite friends and share your activity">
+                <SocialSection />
+              </SettingsCard>
+            </>
           )}
-        </TabsList>
 
-        <TabsContent value="account">
-          <UserSection />
-          <PasskeySection />
-          <ProfileVisibilitySection />
-          <SocialSection />
-        </TabsContent>
+          {activeTab === "appearance" && (
+            <SettingsCard title="Appearance" subtitle="Theme and display preferences">
+              <ThemeSection />
+              <HomepageLayoutSection />
+            </SettingsCard>
+          )}
 
-        <TabsContent value="appearance">
-          <ThemeSection />
-          <HomepageLayoutSection />
-        </TabsContent>
+          {activeTab === "notifications" && (
+            <SettingsCard title="Notifications" subtitle="How and when you receive alerts">
+              {isPushSupported() && <PushNotificationsSection />}
+              <NotificationsSection />
+            </SettingsCard>
+          )}
 
-        <TabsContent value="notifications">
-          {isPushSupported() && <PushNotificationsSection />}
-          <NotificationsSection />
-        </TabsContent>
+          {activeTab === "integrations" && (
+            <SettingsCard title="Integrations" subtitle="Connected services and data sources">
+              <PlexSection />
+              <CalendarFeedSection />
+              <WatchlistSection />
+              <CsvImportSection />
+            </SettingsCard>
+          )}
 
-        <TabsContent value="integrations">
-          <PlexSection />
-          <CalendarFeedSection />
-          <WatchlistSection />
-          <CsvImportSection />
-        </TabsContent>
-
-        {user.is_admin && (
-          <TabsContent value="admin">
-            <BackgroundJobsSection />
-            <AdminSection />
-          </TabsContent>
-        )}
-      </Tabs>
+          {activeTab === "admin" && user.is_admin && (
+            <SettingsCard title="Admin" subtitle="Server and user management">
+              <BackgroundJobsSection />
+              <AdminSection />
+            </SettingsCard>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

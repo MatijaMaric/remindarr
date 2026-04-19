@@ -1,3 +1,5 @@
+import { Pill } from "../components/design";
+
 export type BrowseCategory = "new_releases" | "popular" | "upcoming" | "top_rated";
 
 const CATEGORIES: { value: BrowseCategory; label: string }[] = [
@@ -14,19 +16,15 @@ interface Props {
 
 export default function CategoryBar({ category, onCategoryChange }: Props) {
   return (
-    <div className="flex gap-1 bg-zinc-800/50 rounded-lg p-1">
+    <div className="flex gap-2">
       {CATEGORIES.map((c) => (
-        <button
+        <Pill
           key={c.value}
+          active={category === c.value}
           onClick={() => onCategoryChange(c.value)}
-          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-            category === c.value
-              ? "bg-amber-500/15 text-amber-400"
-              : "text-zinc-400 hover:text-white"
-          }`}
         >
           {c.label}
-        </button>
+        </Pill>
       ))}
     </div>
   );

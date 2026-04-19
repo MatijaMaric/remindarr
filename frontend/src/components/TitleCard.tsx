@@ -18,9 +18,11 @@ interface Props {
   showStatusPicker?: boolean;
   showNotificationPicker?: boolean;
   showTags?: boolean;
+  showProviderBadge?: boolean;
+  showRating?: boolean;
 }
 
-const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker, showTags }: Props) {
+const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibilityToggle, onVisibilityToggle, hideTypeBadge, showProgressBar, showStatusPicker, showNotificationPicker, showTags, showProviderBadge, showRating }: Props) {
   const [prevTitleId, setPrevTitleId] = useState(title.id);
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
   const [notifMode, setNotifMode] = useState(title.notification_mode ?? null);
@@ -53,7 +55,12 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             </div>
           )}
         </Link>
-        {!hideTypeBadge && title.object_type === "SHOW" && (
+        {showProviderBadge && title.offers?.[0]?.provider_name && (
+          <span className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-zinc-100 font-mono text-[10px] font-semibold px-2 py-0.5 rounded">
+            {title.offers[0].provider_name}
+          </span>
+        )}
+        {!hideTypeBadge && !showProviderBadge && title.object_type === "SHOW" && (
           <span className="absolute top-2 left-2 bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
             TV
           </span>
@@ -126,9 +133,14 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             />
           </div>
         )}
-        {title.imdb_score && !showVisibilityToggle && (
+        {title.imdb_score && !showVisibilityToggle && !showRating && (
           <span className="absolute top-2 right-2 bg-yellow-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded">
             {title.imdb_score.toFixed(1)}
+          </span>
+        )}
+        {showRating && (title.imdb_score ?? title.tmdb_score) && (
+          <span className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-amber-400 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded">
+            ★ {(title.imdb_score ?? title.tmdb_score)?.toFixed(1)}
           </span>
         )}
         {showVisibilityToggle && (

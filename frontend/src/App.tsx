@@ -99,12 +99,16 @@ export default function App() {
       </a>
       {/* Hide top nav on reels page for mobile */}
       <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isReelsPage ? "hidden sm:block" : ""}`}>
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
-          <Link to="/" className="text-lg font-bold text-white tracking-tight hover:text-amber-400 transition-colors">
-            Remindarr
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-8 h-14">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
+            <div className="w-6 h-6 rounded-md bg-amber-400 flex items-center justify-center font-extrabold text-sm text-black leading-none select-none">
+              R
+            </div>
+            <span className="text-base font-bold text-white tracking-tight">Remindarr</span>
           </Link>
           {/* Desktop nav links */}
-          <div className="hidden sm:flex gap-1">
+          <div className="hidden sm:flex items-center gap-6">
             <NavLink
               to="/"
               end
@@ -141,6 +145,21 @@ export default function App() {
               </>
             )}
           </div>
+          <div className="flex-1" />
+          {/* ⌘K search trigger */}
+          <button
+            type="button"
+            aria-label="Search (press / or ⌘K)"
+            onClick={() => {
+              const input = document.getElementById("search-input") as HTMLInputElement | null;
+              if (input) { input.focus(); input.select(); }
+            }}
+            className="hidden sm:flex items-center gap-2 w-[260px] bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors"
+          >
+            <span className="opacity-60 text-base leading-none">⌕</span>
+            <span className="flex-1 text-left text-[13px]">Search titles, people…</span>
+            <span className="font-mono text-[11px] opacity-60">⌘K</span>
+          </button>
           {/* Desktop user section */}
           <div className="hidden sm:flex items-center gap-3">
             {loading ? null : user ? (

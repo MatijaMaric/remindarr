@@ -46,8 +46,8 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
           <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
         )}
         {episodeCount > 1 && (
-          <span className="absolute top-2 right-2 bg-black/70 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-            {episodeCount}
+          <span className="absolute top-2 right-2 bg-black/75 backdrop-blur-sm text-zinc-100 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full">
+            {episodeCount} new
           </span>
         )}
       </Link>
@@ -113,13 +113,13 @@ export function DeckCardWrapper({ episodeCount, children }: { episodeCount: numb
     <div className="relative pb-2">
       {/* Second offset layer (deepest) */}
       {episodeCount > 2 && (
-        <div className="absolute inset-0 translate-y-2 scale-[0.97] opacity-40 bg-zinc-900 rounded-xl pointer-events-none" />
+        <div className="absolute inset-0 translate-y-3 scale-[0.96] opacity-35 bg-zinc-800 border border-white/[0.06] rounded-xl pointer-events-none" />
       )}
       {/* First offset layer */}
       {episodeCount > 1 && (
-        <div className="absolute inset-0 translate-y-1 scale-[0.985] opacity-60 bg-zinc-900 rounded-xl pointer-events-none" />
+        <div className="absolute inset-0 translate-y-1.5 scale-[0.98] opacity-60 bg-zinc-800 border border-white/[0.06] rounded-xl pointer-events-none" />
       )}
-      <div className="relative">{children}</div>
+      <div className="relative border border-white/[0.06] rounded-xl overflow-hidden">{children}</div>
     </div>
   );
 }

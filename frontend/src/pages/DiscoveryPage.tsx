@@ -6,6 +6,7 @@ import * as api from "../api";
 import type { Recommendation } from "../types";
 import { useApiCall } from "../hooks/useApiCall";
 import { Skeleton } from "../components/ui/skeleton";
+import { PageHeader, Kicker, Pill } from "../components/design";
 
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
@@ -166,9 +167,143 @@ function RecommendationCard({
   );
 }
 
+function HeroCard({
+  rec,
+  onTrack,
+  onDismiss,
+}: {
+  rec: Recommendation;
+  onTrack: (rec: Recommendation) => void;
+  onDismiss: (rec: Recommendation) => void;
+}) {
+  const { t } = useTranslation();
+  const posterSrc = rec.title.poster_url
+    ? `https://image.tmdb.org/t/p/w342${rec.title.poster_url}`
+    : null;
+
+  const senderName = rec.from_user.display_name ?? rec.from_user.username;
+
+  return (
+    <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 mb-8 grid grid-cols-[200px_1fr] sm:grid-cols-[240px_1fr] gap-6 items-start">
+      {/* Poster */}
+      <div className="aspect-[2/3] rounded-lg overflow-hidden">
+        {posterSrc ? (
+          <img
+            src={posterSrc}
+            alt={rec.title.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-zinc-800" />
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex flex-col gap-3 min-w-0">
+        <Kicker>Pick of the week</Kicker>
+
+        <h2 className="font-bold text-2xl text-zinc-100 leading-tight">
+          {rec.title.title}
+        </h2>
+
+        <p className="text-zinc-300 text-sm leading-relaxed line-clamp-4">
+          {rec.title.object_type === "SHOW" ? "TV Series" : "Movie"}
+        </p>
+
+        {/* "Why you'll like it" tag — from sender */}
+        {senderName && (
+          <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <span className="text-amber-400">&#10022;</span>
+            <span>
+              Recommended by <span className="text-zinc-200 font-medium">{senderName}</span>
+            </span>
+            {rec.message && (
+              <span className="text-zinc-500 italic truncate max-w-[200px]">
+                &ldquo;{rec.message}&rdquo;
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2 mt-1">
+          <button
+            onClick={() => onTrack(rec)}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-colors cursor-pointer"
+          >
+            {t("discovery.track")}
+          </button>
+          <Link
+            to={`/title/${rec.title.id}`}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.1] transition-colors"
+          >
+            View details
+          </Link>
+          <button
+            onClick={() => onDismiss(rec)}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+          >
+            Not interested
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RailCard({
+  rec,
+  onTrack,
+  onDismiss,
+}: {
+  rec: Recommendation;
+  onTrack: (rec: Recommendation) => void;
+  onDismiss: (rec: Recommendation) => void;
+}) {
+  const { t } = useTranslation();
+  const posterSrc = rec.title.poster_url
+    ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`
+    : null;
+
+  return (
+    <div className="w-[140px] shrink-0 flex flex-col gap-2">
+      <Link to={`/title/${rec.title.id}`} className="block aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800">
+        {posterSrc ? (
+          <img
+            src={posterSrc}
+            alt={rec.title.title}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full bg-zinc-800" />
+        )}
+      </Link>
+      <p className="text-xs text-zinc-300 font-medium line-clamp-2 leading-snug">
+        {rec.title.title}
+      </p>
+      <div className="flex gap-1">
+        <button
+          onClick={() => onTrack(rec)}
+          className="flex-1 py-1 rounded text-[10px] font-semibold bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-colors cursor-pointer"
+        >
+          {t("discovery.track")}
+        </button>
+        <button
+          onClick={() => onDismiss(rec)}
+          className="flex-1 py-1 rounded text-[10px] font-semibold bg-zinc-700 text-zinc-400 hover:bg-zinc-600 transition-colors cursor-pointer"
+        >
+          {t("discovery.dismiss")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function DiscoveryPage() {
   const { t } = useTranslation();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [tab, setTab] = useState<"foryou" | "activity">("foryou");
 
   const { loading, error } = useApiCall(
     () => api.getRecommendations(),
@@ -222,15 +357,26 @@ export default function DiscoveryPage() {
     }
   }, [t]);
 
+  const heroRec = recommendations[0];
+  const railRecs = recommendations.slice(1);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">{t("discovery.title")}</h2>
-        {unreadCount > 0 && (
-          <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-amber-500 text-zinc-950 text-xs font-bold">
-            {unreadCount}
-          </span>
-        )}
+    <div className="space-y-0">
+      <PageHeader kicker="Based on what you watch" title="For you" className="px-0 pt-4 pb-4" />
+
+      {/* Tab toggle */}
+      <div className="flex gap-2 mb-6">
+        <Pill active={tab === "foryou"} onClick={() => setTab("foryou")}>
+          For you
+        </Pill>
+        <Pill active={tab === "activity"} onClick={() => setTab("activity")}>
+          Activity
+          {unreadCount > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-zinc-950 text-[9px] font-bold">
+              {unreadCount}
+            </span>
+          )}
+        </Pill>
       </div>
 
       {loading ? (
@@ -239,22 +385,59 @@ export default function DiscoveryPage() {
         <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
           {error}
         </div>
-      ) : recommendations.length === 0 ? (
-        <p className="text-zinc-500 text-sm py-8 text-center">
-          {t("discovery.empty")}
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {recommendations.map((rec) => (
-            <RecommendationCard
-              key={rec.id}
-              rec={rec}
+      ) : tab === "foryou" ? (
+        recommendations.length === 0 ? (
+          <p className="text-zinc-500 text-sm py-8 text-center">
+            {t("discovery.empty")}
+          </p>
+        ) : (
+          <div>
+            {/* Hero card — first recommendation */}
+            <HeroCard
+              rec={heroRec}
               onTrack={handleTrack}
               onDismiss={handleDismiss}
-              onMarkRead={handleMarkRead}
             />
-          ))}
-        </div>
+
+            {/* Horizontal rail — remaining recommendations */}
+            {railRecs.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+                  More recommendations
+                </p>
+                <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
+                  {railRecs.map((rec) => (
+                    <RailCard
+                      key={rec.id}
+                      rec={rec}
+                      onTrack={handleTrack}
+                      onDismiss={handleDismiss}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      ) : (
+        /* Activity tab — original feed */
+        recommendations.length === 0 ? (
+          <p className="text-zinc-500 text-sm py-8 text-center">
+            {t("discovery.empty")}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {recommendations.map((rec) => (
+              <RecommendationCard
+                key={rec.id}
+                rec={rec}
+                onTrack={handleTrack}
+                onDismiss={handleDismiss}
+                onMarkRead={handleMarkRead}
+              />
+            ))}
+          </div>
+        )
       )}
     </div>
   );
