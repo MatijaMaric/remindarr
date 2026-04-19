@@ -49,6 +49,8 @@ import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth"
 import { migrateAuthData } from "./db/migrate-auth";
 import { validateStartup } from "./startup-validation";
 import { createCache, initCache } from "./cache";
+import fs from "node:fs";
+import path from "node:path";
 
 // Validate required configuration before anything else
 validateStartup();
@@ -71,8 +73,33 @@ if (await getUserCount() === 0) {
   const hash = await platform.hashPassword(password);
   const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
   migrateTrackedData(adminId);
-  logger.info("Admin account created", { username: "admin" });
-  console.log(`\n  Default admin password: ${password}\n  Change it after first login.\n`);
+
+  // Write the password to a file next to the DB rather than stdout so that
+  // log aggregators don't permanently archive the initial secret. Chmod 600
+  // on POSIX; on Windows we fall back to the default ACL.
+  const passwordFile = path.resolve(
+    path.dirname(CONFIG.DB_PATH === ":memory:" ? "./remindarr.db" : CONFIG.DB_PATH),
+    "admin-password.txt"
+  );
+  try {
+    fs.writeFileSync(
+      passwordFile,
+      `Default admin password: ${password}\nChange it after first login, then delete this file.\n`,
+      { mode: 0o600 }
+    );
+    logger.warn("Admin account created — default password written to file", {
+      username: "admin",
+      passwordFile,
+    });
+  } catch (err) {
+    // If we can't write the file (read-only FS, permissions), fall back to
+    // the structured log so the operator can still recover the password.
+    logger.warn("Admin account created — could not write password file, logging instead", {
+      username: "admin",
+      password,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 // Create auth instance (singleton for Bun)
@@ -222,6 +249,7 @@ app.use("/api/stats", requireAuth);
 app.route("/api/stats", statsRoutes);
 
 app.use("/api/user/settings/*", requireAuth);
+app.use("/api/user/settings", requireAuth);
 app.route("/api/user/settings", userSettingsRoutes);
 
 // Calendar feed — /calendar.ics is public (token-authenticated); /token endpoints require session

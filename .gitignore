@@ -10,6 +10,9 @@ frontend/dist/
 *.db-shm
 *.db-wal
 
+# Initial admin bootstrap password (written once on first launch)
+admin-password.txt
+
 # Environment
 .env
 .env.*
