@@ -28,11 +28,13 @@ import type {
 
 const BASE = "/api";
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${url}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+/**
+ * Low-level fetch used by every helper. Shares 401-handling (dispatching the
+ * `auth:unauthorized` CustomEvent that `AuthContext` listens for) and
+ * error-body parsing across JSON, blob, and form-data callers.
+ */
+async function doFetch(url: string, options: RequestInit): Promise<Response> {
+  const res = await fetch(`${BASE}${url}`, options);
   if (res.status === 401) {
     window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     throw new Error("Authentication required");
@@ -41,6 +43,26 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || `Request failed: ${res.status}`);
   }
+  return res;
+}
+
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await doFetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  return res.json();
+}
+
+/** Fetches a binary response. Returns the raw Response so callers can read the
+ *  blob and headers (e.g. Content-Disposition for downloads). */
+async function fetchBlob(url: string, options?: RequestInit): Promise<Response> {
+  return doFetch(url, { credentials: "include", ...options });
+}
+
+/** Posts multipart form data and parses the JSON response. */
+async function fetchForm<T>(url: string, form: FormData): Promise<T> {
+  const res = await doFetch(url, { method: "POST", body: form });
   return res.json();
 }
 
@@ -146,8 +168,7 @@ export async function getTrackedTitles(): Promise<{ titles: (Title & { public: b
 }
 
 export async function exportWatchlist(): Promise<void> {
-  const res = await fetch(`${BASE}/track/export`, { credentials: "include" });
-  if (!res.ok) throw new Error("Export failed");
+  const res = await fetchBlob("/track/export");
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -170,16 +191,7 @@ export async function importWatchlist(file: File): Promise<{ success: boolean; i
 export async function importCsv(file: File): Promise<{ imported: number; failed: number; skipped: number; errors: string[] }> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${BASE}/import/csv`, { method: "POST", body: form });
-  if (res.status === 401) {
-    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
-    throw new Error("Authentication required");
-  }
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(e.error || `Request failed: ${res.status}`);
-  }
-  return res.json();
+  return fetchForm("/import/csv", form);
 }
 
 // ─── User Profile ──────────────────────────────────────────────────────────

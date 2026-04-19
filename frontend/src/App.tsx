@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
+import ErrorBoundary from "./components/ErrorBoundary";
 import BottomTabBar from "./components/BottomTabBar";
 import ScrollToTop from "./components/ScrollToTop";
 import OfflineIndicator from "./components/OfflineIndicator";
@@ -55,6 +56,12 @@ const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
 const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
+
+// Wraps a route element in an inline ErrorBoundary so a single page crash
+// shows a contained fallback instead of taking down the whole shell.
+function Page({ children }: { children: React.ReactNode }) {
+  return <ErrorBoundary variant="inline">{children}</ErrorBoundary>;
+}
 
 function focusOrNavigateSearch(navigate: ReturnType<typeof useNavigate>, currentPath: string) {
   if (currentPath === "/browse") {
@@ -194,27 +201,27 @@ export default function App() {
         {user && <NotificationPrompt />}
         <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/browse" element={<BrowsePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/tracked" element={<RequireAuth><TrackedPage /></RequireAuth>} />
-            <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
-            <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
+            <Route path="/" element={<Page><HomePage /></Page>} />
+            <Route path="/browse" element={<Page><BrowsePage /></Page>} />
+            <Route path="/login" element={<Page><LoginPage /></Page>} />
+            <Route path="/signup" element={<Page><SignupPage /></Page>} />
+            <Route path="/tracked" element={<RequireAuth><Page><TrackedPage /></Page></RequireAuth>} />
+            <Route path="/calendar" element={<RequireAuth><Page><CalendarPage /></Page></RequireAuth>} />
+            <Route path="/reels" element={<RequireAuth><Page><ReelsPage /></Page></RequireAuth>} />
             <Route path="/upcoming" element={<RequireAuth><Navigate to="/calendar" replace /></RequireAuth>} />
-            <Route path="/more" element={<RequireAuth><MorePage /></RequireAuth>} />
-            <Route path="/discovery" element={<RequireAuth><DiscoveryPage /></RequireAuth>} />
-            <Route path="/invite" element={<RequireAuth><InvitePage /></RequireAuth>} />
+            <Route path="/more" element={<RequireAuth><Page><MorePage /></Page></RequireAuth>} />
+            <Route path="/discovery" element={<RequireAuth><Page><DiscoveryPage /></Page></RequireAuth>} />
+            <Route path="/invite" element={<RequireAuth><Page><InvitePage /></Page></RequireAuth>} />
             <Route path="/stats" element={<Navigate to="/tracked?view=stats" replace />} />
-            <Route path="/admin/users" element={<RequireAuth><AdminUsersPage /></RequireAuth>} />
-            <Route path="/user/:username" element={<UserProfilePage />} />
-            <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/title/:id" element={<TitleDetailPage />} />
-            <Route path="/title/:id/season/:season" element={<SeasonDetailPage />} />
-            <Route path="/title/:id/season/:season/episode/:episode" element={<EpisodeDetailPage />} />
-            <Route path="/person/:personId" element={<PersonPage />} />
-            <Route path="*" element={<NotFoundPage />} />
+            <Route path="/admin/users" element={<RequireAuth><Page><AdminUsersPage /></Page></RequireAuth>} />
+            <Route path="/user/:username" element={<Page><UserProfilePage /></Page>} />
+            <Route path="/settings" element={<RequireAuth><Page><SettingsPage /></Page></RequireAuth>} />
+            <Route path="/profile" element={<Page><ProfilePage /></Page>} />
+            <Route path="/title/:id" element={<Page><TitleDetailPage /></Page>} />
+            <Route path="/title/:id/season/:season" element={<Page><SeasonDetailPage /></Page>} />
+            <Route path="/title/:id/season/:season/episode/:episode" element={<Page><EpisodeDetailPage /></Page>} />
+            <Route path="/person/:personId" element={<Page><PersonPage /></Page>} />
+            <Route path="*" element={<Page><NotFoundPage /></Page>} />
           </Routes>
         </Suspense>
       </main>
