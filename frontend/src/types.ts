@@ -70,6 +70,8 @@ export interface Episode {
   backdrop_url?: string | null;
   is_watched?: boolean;
   offers?: Offer[];
+  total_episodes?: number;
+  watched_episodes_count?: number;
 }
 
 // Search results come from the API directly with different shape

@@ -226,9 +226,9 @@ function MobileFeedHome({
                 <Link key={titleId} to={`/title/${titleId}`} className="w-[132px] shrink-0">
                   <div className="aspect-[2/3] rounded-[10px] overflow-hidden relative mb-2 bg-zinc-800">
                     {pUrl && <img src={pUrl} alt="" className="w-full h-full object-cover" loading="lazy" />}
-                    {/* Progress bar placeholder */}
+                    {/* Progress bar */}
                     <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/40">
-                      <div className="h-full bg-amber-400" style={{ width: "30%" }} />
+                      <div className="h-full bg-amber-400" style={{ width: `${ep.total_episodes ? Math.round((ep.watched_episodes_count ?? 0) / ep.total_episodes * 100) : 0}%` }} />
                     </div>
                     {/* Unwatched badge */}
                     <div className="absolute top-1.5 right-1.5 bg-black/70 text-amber-400 text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full">

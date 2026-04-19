@@ -175,6 +175,16 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
         show_original_title: titles.originalTitle,
         poster_url: titles.posterUrl,
         backdrop_url: titles.backdropUrl,
+        total_episodes: sql<number>`(
+          SELECT COUNT(*) FROM episodes e2
+          WHERE e2.title_id = ${episodes.titleId}
+          AND e2.air_date IS NOT NULL AND e2.air_date <= ${today}
+        )`,
+        watched_episodes_count: sql<number>`(
+          SELECT COUNT(*) FROM watched_episodes we2
+          INNER JOIN episodes e3 ON e3.id = we2.episode_id
+          WHERE e3.title_id = ${episodes.titleId} AND we2.user_id = ${userId}
+        )`,
       })
       .from(episodes)
       .innerJoin(titles, eq(titles.id, episodes.titleId))

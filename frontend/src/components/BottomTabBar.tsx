@@ -1,5 +1,5 @@
 import { NavLink } from "react-router";
-import { Clapperboard, Search, CalendarDays, Bookmark, MoreHorizontal, LogIn } from "lucide-react";
+import { Home, Search, CalendarDays, Bookmark, MoreHorizontal, LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useApiCall } from "../hooks/useApiCall";
@@ -36,8 +36,8 @@ export default function BottomTabBar() {
         {user ? (
           <>
             <NavLink to="/reels" className={({ isActive }) => tabClass(isActive)}>
-              <Clapperboard size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.watch")}</span>
+              <Home size={ICON_SIZE} aria-hidden="true" />
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.home")}</span>
             </NavLink>
 
             <NavLink to="/browse" className={({ isActive }) => tabClass(isActive)}>

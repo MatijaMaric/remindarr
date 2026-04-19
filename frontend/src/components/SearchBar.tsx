@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -12,6 +13,15 @@ const IMDB_REGEX = /imdb\.com\/title\/tt\d+/i;
 export default function SearchBar({ onSearch, onImdb, loading }: Props) {
   const [value, setValue] = useState("");
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchParams.get("focus") === "search") {
+      inputRef.current?.focus();
+      setSearchParams((p) => { p.delete("focus"); return p; }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +38,7 @@ export default function SearchBar({ onSearch, onImdb, loading }: Props) {
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
       <input
+        ref={inputRef}
         id="search-input"
         type="text"
         value={value}
