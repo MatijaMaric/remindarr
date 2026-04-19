@@ -238,7 +238,10 @@ export const tracked = sqliteTable(
     userStatus: text("user_status"),
     notificationMode: text("notification_mode"),
   },
-  (table) => [primaryKey({ columns: [table.titleId, table.userId] })]
+  (table) => [
+    primaryKey({ columns: [table.titleId, table.userId] }),
+    index("idx_tracked_user_id").on(table.userId),
+  ]
 );
 
 export const watchedEpisodes = sqliteTable(
