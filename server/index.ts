@@ -204,9 +204,14 @@ app.use("/api/social/following/*", optionalAuth);
 app.use("/api/social/following", optionalAuth);
 app.route("/api/social", socialRoutes);
 
-// Ratings routes — optionalAuth base, POST/DELETE check auth internally
-app.use("/api/ratings/*", optionalAuth);
-app.use("/api/ratings", optionalAuth);
+// Rate limit write-heavy routes: 60 requests per minute per IP.
+// Applied before requireAuth so floods are rejected cheaply.
+const writeRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+
+// Ratings routes — optionalAuth base, POST/DELETE check auth internally.
+// Rate-limit applies to all (reads + writes) so unauth scrapers get throttled too.
+app.use("/api/ratings/*", writeRateLimiter, optionalAuth);
+app.use("/api/ratings", writeRateLimiter, optionalAuth);
 app.route("/api/ratings", ratingsRoutes);
 
 // Recommendations routes
@@ -220,28 +225,29 @@ app.use("/api/invitations", requireAuth);
 app.route("/api/invitations", invitationsRoutes);
 
 // Protected routes
-app.use("/api/track/*", requireAuth);
-app.use("/api/track", requireAuth);
+app.use("/api/track/*", writeRateLimiter, requireAuth);
+app.use("/api/track", writeRateLimiter, requireAuth);
 app.route("/api/track", trackRoutes);
 
-app.use("/api/watched/*", requireAuth);
-app.use("/api/watched", requireAuth);
+app.use("/api/watched/*", writeRateLimiter, requireAuth);
+app.use("/api/watched", writeRateLimiter, requireAuth);
 app.route("/api/watched", watchedRoutes);
 
-app.use("/api/imdb/*", requireAuth);
-app.use("/api/imdb", requireAuth);
+app.use("/api/imdb/*", writeRateLimiter, requireAuth);
+app.use("/api/imdb", writeRateLimiter, requireAuth);
 app.route("/api/imdb", imdbRoutes);
 
-app.use("/api/notifiers/*", requireAuth);
-app.use("/api/notifiers", requireAuth);
+app.use("/api/notifiers/*", writeRateLimiter, requireAuth);
+app.use("/api/notifiers", writeRateLimiter, requireAuth);
 app.route("/api/notifiers", notifierRoutes);
 
-app.use("/api/integrations/*", requireAuth);
-app.use("/api/integrations", requireAuth);
+app.use("/api/integrations/*", writeRateLimiter, requireAuth);
+app.use("/api/integrations", writeRateLimiter, requireAuth);
 app.route("/api/integrations", integrationRoutes);
 
-app.use("/api/import/*", requireAuth);
-app.use("/api/import", requireAuth);
+// Import is more expensive per request — tighter cap.
+app.use("/api/import/*", rateLimiter({ limit: 10, windowMs: 60_000 }), requireAuth);
+app.use("/api/import", rateLimiter({ limit: 10, windowMs: 60_000 }), requireAuth);
 app.route("/api/import", importRoutes);
 
 app.use("/api/stats/*", requireAuth);

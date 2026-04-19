@@ -2,13 +2,16 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { resetMetrics, httpRequestsTotal, jobsTotal } from "../metrics";
-import metricsApp from "./metrics";
+import { CONFIG } from "../config";
+import metricsApp, { __resetSessionsCountCache } from "./metrics";
 
 let app: Hono;
 
 beforeEach(() => {
   setupTestDb();
   resetMetrics();
+  __resetSessionsCountCache();
+  CONFIG.METRICS_TOKEN = "";
   app = new Hono();
   app.route("/metrics", metricsApp);
 });
@@ -67,5 +70,41 @@ describe("GET /metrics", () => {
     const res = await app.request("/metrics");
     const body = await res.text();
     expect(body.endsWith("\n")).toBe(true);
+  });
+
+  describe("METRICS_TOKEN bearer guard", () => {
+    it("rejects requests without a bearer token when METRICS_TOKEN is set", async () => {
+      CONFIG.METRICS_TOKEN = "secret";
+      try {
+        const res = await app.request("/metrics");
+        expect(res.status).toBe(401);
+      } finally {
+        CONFIG.METRICS_TOKEN = "";
+      }
+    });
+
+    it("rejects requests with a wrong bearer token", async () => {
+      CONFIG.METRICS_TOKEN = "secret";
+      try {
+        const res = await app.request("/metrics", {
+          headers: { authorization: "Bearer nope" },
+        });
+        expect(res.status).toBe(401);
+      } finally {
+        CONFIG.METRICS_TOKEN = "";
+      }
+    });
+
+    it("allows requests with the correct bearer token", async () => {
+      CONFIG.METRICS_TOKEN = "secret";
+      try {
+        const res = await app.request("/metrics", {
+          headers: { authorization: "Bearer secret" },
+        });
+        expect(res.status).toBe(200);
+      } finally {
+        CONFIG.METRICS_TOKEN = "";
+      }
+    });
   });
 });

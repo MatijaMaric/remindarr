@@ -65,6 +65,11 @@ export const CONFIG = {
   // Sentry
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 
+  // Prometheus metrics bearer token. If set, /metrics requires
+  // `Authorization: Bearer <token>`. If empty, /metrics is public
+  // (intended for home-lab deploys behind a trusted reverse proxy).
+  METRICS_TOKEN: process.env.METRICS_TOKEN || "",
+
   // Cache
   CACHE_BACKEND: (process.env.CACHE_BACKEND || "memory") as
     | "memory"
