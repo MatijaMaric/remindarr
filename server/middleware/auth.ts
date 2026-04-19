@@ -1,6 +1,29 @@
 import { createMiddleware } from "hono/factory";
 import type { AppEnv, AuthUser } from "../types";
 
+/**
+ * Shape of the `user` returned by better-auth after our plugins (username,
+ * admin, passkey) extend it. These fields aren't in better-auth's base typing
+ * so we narrow here instead of sprinkling `as any` at every call site.
+ */
+type BetterAuthSessionUser = {
+  id: string;
+  name?: string | null;
+  username?: string | null;
+  role?: string | null;
+};
+
+function toAuthUser(sessionUser: BetterAuthSessionUser): AuthUser {
+  const role = sessionUser.role ?? null;
+  return {
+    id: sessionUser.id,
+    username: sessionUser.username ?? sessionUser.name ?? "",
+    name: sessionUser.name ?? null,
+    role,
+    is_admin: role === "admin",
+  };
+}
+
 /** Sets c.get("user") if a valid session exists. Does not block. */
 export const optionalAuth = createMiddleware<AppEnv>(async (c, next) => {
   const auth = c.get("auth");
@@ -10,14 +33,7 @@ export const optionalAuth = createMiddleware<AppEnv>(async (c, next) => {
         headers: c.req.raw.headers,
       });
       if (session?.user) {
-        const user: AuthUser = {
-          id: session.user.id,
-          username: (session.user as any).username || session.user.name || "",
-          name: session.user.name,
-          role: (session.user as any).role || null,
-          is_admin: (session.user as any).role === "admin",
-        };
-        c.set("user", user);
+        c.set("user", toAuthUser(session.user as BetterAuthSessionUser));
       }
     } catch {
       // Invalid session — continue without user
@@ -40,14 +56,7 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     if (!session?.user) {
       return c.json({ error: "Session expired" }, 401);
     }
-    const user: AuthUser = {
-      id: session.user.id,
-      username: (session.user as any).username || session.user.name || "",
-      name: session.user.name,
-      role: (session.user as any).role || null,
-      is_admin: (session.user as any).role === "admin",
-    };
-    c.set("user", user);
+    c.set("user", toAuthUser(session.user as BetterAuthSessionUser));
   } catch {
     return c.json({ error: "Authentication required" }, 401);
   }
