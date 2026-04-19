@@ -3,7 +3,6 @@ import { Routes, Route, NavLink, Link, Navigate, useLocation } from "react-route
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
-import { useIsMobile } from "./hooks/useIsMobile";
 import RequireAuth from "./components/RequireAuth";
 import BottomTabBar from "./components/BottomTabBar";
 import ScrollToTop from "./components/ScrollToTop";
@@ -57,15 +56,6 @@ const StatsPage = lazyWithRetry(() => import("./pages/StatsPage"));
 const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
-
-function MobileHomeRedirect() {
-  const { user, loading } = useAuth();
-  const isMobile = useIsMobile();
-
-  if (loading) return null;
-  if (isMobile && user) return <Navigate to="/reels" replace />;
-  return <HomePage />;
-}
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -210,7 +200,7 @@ export default function App() {
         {user && <NotificationPrompt />}
         <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
           <Routes>
-            <Route path="/" element={<MobileHomeRedirect />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />

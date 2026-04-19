@@ -371,6 +371,11 @@ export default function ReelsPage() {
 
   return (
     <>
+      {/* Feed / Reels mode switcher — fixed overlay, top-left */}
+      <div className="fixed z-40 flex items-center gap-2" style={{ top: "calc(8px + env(safe-area-inset-top, 0px))", left: 20 }}>
+        <Link to="/" className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent">Feed</Link>
+        <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">Reels</span>
+      </div>
       <div
         ref={scrollRef}
         className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"

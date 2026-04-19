@@ -12,6 +12,7 @@ import * as api from "../api";
 import type { Title, Provider } from "../types";
 import { normalizeSearchTitle } from "../types";
 import { useGridNavigation } from "../hooks/useGridNavigation";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader } from "../components/design";
 
 const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
@@ -95,6 +96,7 @@ export default function BrowsePage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   useGridNavigation();
 
   // ── Browse filter data (loaded once) ────────────────────────────────────────
@@ -347,31 +349,75 @@ export default function BrowsePage() {
 
       <CategoryBar category={category} onCategoryChange={setCategory} />
 
-      {/* Persistent browse filter card */}
+      {/* Persistent browse filter — desktop card / mobile chip strip */}
       {searchResults === null && (
-        <div className="rounded-xl bg-zinc-900 border border-white/[0.06] p-4">
-          <FilterBar
-            type={type}
-            onTypeChange={setType}
-            showDaysFilter={category === "new_releases"}
-            daysBack={daysBack}
-            onDaysBackChange={setDaysBack}
-            genre={genre}
-            onGenreChange={setGenre}
-            genres={filterGenres}
-            provider={provider}
-            onProviderChange={setProvider}
-            providers={filterProviders}
-            regionProviderIds={filterRegionProviderIds}
-            language={language}
-            onLanguageChange={setLanguage}
-            languages={filterLanguages}
-            priorityLanguageCodes={filterPriorityLanguageCodes}
-            onClearFilters={clearFilters}
-            hideTracked={hideTracked}
-            onHideTrackedChange={setHideTracked}
-          />
-        </div>
+        isMobile ? (
+          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
+            {/* Type chips */}
+            {[
+              { label: "All", value: "" },
+              { label: "Shows", value: "SHOW" },
+              { label: "Movies", value: "MOVIE" },
+            ].map(({ label, value }) => {
+              const isActive = value === "" ? type.length === 0 : type.includes(value);
+              return (
+                <button
+                  key={label}
+                  onClick={() => value === "" ? setType([]) : setType(isActive ? [] : [value])}
+                  className={`shrink-0 inline-flex items-center text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
+                    isActive
+                      ? "bg-amber-400 text-black border-amber-400"
+                      : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            {/* Provider chips */}
+            {filterProviders.filter((_, i) => i < 6).map((p) => {
+              const isActive = provider.includes(String(p.id));
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setProvider(isActive ? provider.filter((v) => v !== String(p.id)) : [...provider, String(p.id)])}
+                  className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
+                    isActive
+                      ? "bg-amber-400/[0.12] text-amber-400 border-amber-400/[0.25]"
+                      : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
+                  }`}
+                >
+                  {p.icon_url && <img src={p.icon_url} alt="" className="w-3.5 h-3.5 rounded-sm" />}
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl bg-zinc-900 border border-white/[0.06] p-4">
+            <FilterBar
+              type={type}
+              onTypeChange={setType}
+              showDaysFilter={category === "new_releases"}
+              daysBack={daysBack}
+              onDaysBackChange={setDaysBack}
+              genre={genre}
+              onGenreChange={setGenre}
+              genres={filterGenres}
+              provider={provider}
+              onProviderChange={setProvider}
+              providers={filterProviders}
+              regionProviderIds={filterRegionProviderIds}
+              language={language}
+              onLanguageChange={setLanguage}
+              languages={filterLanguages}
+              priorityLanguageCodes={filterPriorityLanguageCodes}
+              onClearFilters={clearFilters}
+              hideTracked={hideTracked}
+              onHideTrackedChange={setHideTracked}
+            />
+          </div>
+        )
       )}
 
       {/* Active filter chips */}

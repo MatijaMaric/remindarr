@@ -9,6 +9,7 @@ import { useApiCall } from "../hooks/useApiCall";
 import { groupShowsByStatus } from "../lib/groupShows";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
 
 function TrackedStatsBand({ titles }: { titles: Title[] }) {
@@ -195,6 +196,54 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function TrackedTable({ titles }: { titles: Title[] }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-2">
+        {titles.map((title) => {
+          const statusKey = title.user_status ?? title.show_status ?? null;
+          const statusColor = statusKey ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS['plan_to_watch']) : '#71717a';
+          const statusLabel = statusKey ? (statusKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) : '—';
+          const watched = title.watched_episodes_count ?? 0;
+          const total = title.total_episodes ?? title.released_episodes_count ?? 0;
+          const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
+          return (
+            <Link
+              key={title.id}
+              to={`/title/${title.id}`}
+              className="flex gap-3 items-center bg-zinc-900 border border-white/[0.05] rounded-xl p-2.5"
+            >
+              <div className="w-[48px] h-[68px] rounded-lg overflow-hidden shrink-0 bg-zinc-800">
+                {title.poster_url && (
+                  <img src={title.poster_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor }} />
+                  <span className="text-[13px] font-semibold truncate">{title.title}</span>
+                </div>
+                <div className="font-mono text-[10px] text-zinc-500 mb-1.5">
+                  {title.offers[0]?.provider_name ?? ''}{statusKey ? ` · ${statusLabel}` : ''}
+                  {title.next_episode_air_date && statusKey !== 'completed' ? ` · ${new Date(title.next_episode_air_date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}` : ''}
+                </div>
+                {total > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-[3px] bg-white/[0.08] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: statusColor }} />
+                    </div>
+                    <span className="font-mono text-[10px] text-zinc-400 shrink-0">{watched}/{total}</span>
+                  </div>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Column header */}

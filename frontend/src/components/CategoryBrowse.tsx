@@ -226,8 +226,15 @@ export default function CategoryBrowse({
           )}
           {!error && page < totalPages && (
             <div ref={sentinelRef} className="text-center py-4">
-              {loadingMore && (
+              {loadingMore ? (
                 <div className="text-zinc-500 text-sm">Loading...</div>
+              ) : (
+                <button
+                  onClick={() => fetchTitles(page + 1, true)}
+                  className="bg-white/[0.05] border border-white/[0.08] text-zinc-300 px-6 py-2.5 rounded-xl text-[13px] font-semibold sm:hidden"
+                >
+                  Load more
+                </button>
               )}
             </div>
           )}
