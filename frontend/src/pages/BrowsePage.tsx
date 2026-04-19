@@ -5,9 +5,11 @@ import SearchBar from "../components/SearchBar";
 import NewReleases from "../components/NewReleases";
 import CategoryBar, { type BrowseCategory } from "../components/CategoryBar";
 import CategoryBrowse from "../components/CategoryBrowse";
+import FilterBar from "../components/FilterBar";
 import TitleList from "../components/TitleList";
+import { loadFilters } from "../components/loadFilters";
 import * as api from "../api";
-import type { Title } from "../types";
+import type { Title, Provider } from "../types";
 import { normalizeSearchTitle } from "../types";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { PageHeader } from "../components/design";
@@ -94,6 +96,23 @@ export default function BrowsePage() {
   const [searchError, setSearchError] = useState("");
   const { t } = useTranslation();
   useGridNavigation();
+
+  // ── Browse filter data (loaded once) ────────────────────────────────────────
+  const [filterGenres, setFilterGenres] = useState<string[]>([]);
+  const [filterProviders, setFilterProviders] = useState<Provider[]>([]);
+  const [filterLanguages, setFilterLanguages] = useState<string[]>([]);
+  const [filterRegionProviderIds, setFilterRegionProviderIds] = useState<number[]>([]);
+  const [filterPriorityLanguageCodes, setFilterPriorityLanguageCodes] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadFilters().then(({ genres, providers, languages, regionProviderIds, priorityLanguageCodes }) => {
+      setFilterGenres(genres);
+      setFilterProviders(providers);
+      setFilterLanguages(languages);
+      setFilterRegionProviderIds(regionProviderIds);
+      setFilterPriorityLanguageCodes(priorityLanguageCodes);
+    }).catch(() => { /* ignore */ });
+  }, []);
 
   // ── Advanced search filter state ────────────────────────────────────────────
   const [searchType, setSearchType] = useState<"" | "MOVIE" | "SHOW">("");
@@ -325,7 +344,78 @@ export default function BrowsePage() {
           </div>
         </div>
       )}
+
       <CategoryBar category={category} onCategoryChange={setCategory} />
+
+      {/* Persistent browse filter card */}
+      {searchResults === null && (
+        <div className="rounded-xl bg-zinc-900 border border-white/[0.06] p-4">
+          <FilterBar
+            type={type}
+            onTypeChange={setType}
+            showDaysFilter={category === "new_releases"}
+            daysBack={daysBack}
+            onDaysBackChange={setDaysBack}
+            genre={genre}
+            onGenreChange={setGenre}
+            genres={filterGenres}
+            provider={provider}
+            onProviderChange={setProvider}
+            providers={filterProviders}
+            regionProviderIds={filterRegionProviderIds}
+            language={language}
+            onLanguageChange={setLanguage}
+            languages={filterLanguages}
+            priorityLanguageCodes={filterPriorityLanguageCodes}
+            onClearFilters={clearFilters}
+            hideTracked={hideTracked}
+            onHideTrackedChange={setHideTracked}
+          />
+        </div>
+      )}
+
+      {/* Active filter chips */}
+      {searchResults === null && (type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">Active</span>
+          {type.map((t) => (
+            <span
+              key={t}
+              onClick={() => setType(type.filter((v) => v !== t))}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+            >
+              {t === "MOVIE" ? "Movies" : "Shows"} ×
+            </span>
+          ))}
+          {genre.map((g) => (
+            <span
+              key={g}
+              onClick={() => setGenre(genre.filter((v) => v !== g))}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+            >
+              {g} ×
+            </span>
+          ))}
+          {provider.map((p) => (
+            <span
+              key={p}
+              onClick={() => setProvider(provider.filter((v) => v !== p))}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+            >
+              {filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} ×
+            </span>
+          ))}
+          {language.map((l) => (
+            <span
+              key={l}
+              onClick={() => setLanguage(language.filter((v) => v !== l))}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+            >
+              {l} ×
+            </span>
+          ))}
+        </div>
+      )}
 
       {searchError && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
@@ -364,6 +454,7 @@ export default function BrowsePage() {
               onClearFilters={clearFilters}
               hideTracked={hideTracked}
               onHideTrackedChange={setHideTracked}
+              hideFilterBar
             />
           ) : (
             <CategoryBrowse
@@ -380,6 +471,7 @@ export default function BrowsePage() {
               onClearFilters={clearFilters}
               hideTracked={hideTracked}
               onHideTrackedChange={setHideTracked}
+              hideFilterBar
             />
           )}
         </div>

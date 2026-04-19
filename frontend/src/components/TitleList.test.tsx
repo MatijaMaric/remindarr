@@ -80,17 +80,17 @@ describe("TitleList", () => {
     expect(screen.getByText("Nothing here")).toBeDefined();
   });
 
-  it("limits to maxRows * 6 items when maxRows is set", () => {
+  it("limits to maxRows * 7 items when maxRows is set", () => {
     const titles = Array.from({ length: 10 }, (_, i) => makeTitle(`movie-${i}`));
     render(<TitleList titles={titles} maxRows={1} />, { wrapper: Wrapper });
 
-    // maxRows=1 means 6 items (xl breakpoint = 6 columns)
-    for (let i = 0; i < 6; i++) {
+    // maxRows=1 means 7 items (xl breakpoint = 7 columns)
+    for (let i = 0; i < 7; i++) {
       expect(screen.getByText(`Title movie-${i}`)).toBeDefined();
     }
-    // Items beyond 6 should not be rendered
-    expect(screen.queryByText("Title movie-6")).toBeNull();
+    // Items beyond 7 should not be rendered
     expect(screen.queryByText("Title movie-7")).toBeNull();
+    expect(screen.queryByText("Title movie-8")).toBeNull();
   });
 
   it("shows all items if fewer than maxRows * 6", () => {
@@ -132,15 +132,15 @@ describe("TitleList", () => {
     expect(screen.queryByText("View all")).toBeNull();
   });
 
-  it("limits to maxRows * 6 items with maxRows=2", () => {
-    const titles = Array.from({ length: 15 }, (_, i) => makeTitle(`movie-${i}`));
+  it("limits to maxRows * 7 items with maxRows=2", () => {
+    const titles = Array.from({ length: 16 }, (_, i) => makeTitle(`movie-${i}`));
     render(<TitleList titles={titles} maxRows={2} />, { wrapper: Wrapper });
 
-    // maxRows=2 means 12 items
-    for (let i = 0; i < 12; i++) {
+    // maxRows=2 means 14 items (xl breakpoint = 7 columns)
+    for (let i = 0; i < 14; i++) {
       expect(screen.getByText(`Title movie-${i}`)).toBeDefined();
     }
-    expect(screen.queryByText("Title movie-12")).toBeNull();
+    expect(screen.queryByText("Title movie-14")).toBeNull();
   });
 
   it("renders normal grid for lists at or below the virtual threshold (24 items)", () => {

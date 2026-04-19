@@ -70,6 +70,7 @@ interface Props {
   onClearFilters?: () => void;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
+  hideFilterBar?: boolean;
 }
 
 export default function CategoryBrowse({
@@ -85,6 +86,7 @@ export default function CategoryBrowse({
   onClearFilters,
   hideTracked,
   onHideTrackedChange,
+  hideFilterBar,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
@@ -175,25 +177,27 @@ export default function CategoryBrowse({
 
   return (
     <div className="space-y-4">
-      <FilterBar
-        type={type}
-        onTypeChange={onTypeChange}
-        showDaysFilter={false}
-        genre={genre}
-        onGenreChange={onGenreChange}
-        genres={availableGenres}
-        provider={provider}
-        onProviderChange={onProviderChange}
-        providers={availableProviders}
-        regionProviderIds={regionProviderIds}
-        language={language}
-        onLanguageChange={onLanguageChange}
-        languages={availableLanguages}
-        priorityLanguageCodes={priorityLanguageCodes}
-        onClearFilters={onClearFilters}
-        hideTracked={hideTracked}
-        onHideTrackedChange={onHideTrackedChange}
-      />
+      {!hideFilterBar && (
+        <FilterBar
+          type={type}
+          onTypeChange={onTypeChange}
+          showDaysFilter={false}
+          genre={genre}
+          onGenreChange={onGenreChange}
+          genres={availableGenres}
+          provider={provider}
+          onProviderChange={onProviderChange}
+          providers={availableProviders}
+          regionProviderIds={regionProviderIds}
+          language={language}
+          onLanguageChange={onLanguageChange}
+          languages={availableLanguages}
+          priorityLanguageCodes={priorityLanguageCodes}
+          onClearFilters={onClearFilters}
+          hideTracked={hideTracked}
+          onHideTrackedChange={onHideTrackedChange}
+        />
+      )}
 
       {error && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">

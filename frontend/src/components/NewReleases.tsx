@@ -20,6 +20,7 @@ interface Props {
   onClearFilters?: () => void;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
+  hideFilterBar?: boolean;
 }
 
 export default function NewReleases({
@@ -36,6 +37,7 @@ export default function NewReleases({
   onClearFilters,
   hideTracked,
   onHideTrackedChange,
+  hideFilterBar,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
@@ -99,26 +101,28 @@ export default function NewReleases({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <FilterBar
-          type={type}
-          onTypeChange={onTypeChange}
-          daysBack={daysBack}
-          onDaysBackChange={onDaysBackChange}
-          genre={genre}
-          onGenreChange={onGenreChange}
-          genres={genres}
-          provider={provider}
-          onProviderChange={onProviderChange}
-          providers={providers}
-          regionProviderIds={regionProviderIds}
-          language={language}
-          onLanguageChange={onLanguageChange}
-          languages={languages}
-          priorityLanguageCodes={priorityLanguageCodes}
-          onClearFilters={onClearFilters}
-          hideTracked={hideTracked}
-          onHideTrackedChange={onHideTrackedChange}
-        />
+        {!hideFilterBar && (
+          <FilterBar
+            type={type}
+            onTypeChange={onTypeChange}
+            daysBack={daysBack}
+            onDaysBackChange={onDaysBackChange}
+            genre={genre}
+            onGenreChange={onGenreChange}
+            genres={genres}
+            provider={provider}
+            onProviderChange={onProviderChange}
+            providers={providers}
+            regionProviderIds={regionProviderIds}
+            language={language}
+            onLanguageChange={onLanguageChange}
+            languages={languages}
+            priorityLanguageCodes={priorityLanguageCodes}
+            onClearFilters={onClearFilters}
+            hideTracked={hideTracked}
+            onHideTrackedChange={onHideTrackedChange}
+          />
+        )}
         <button
           onClick={handleSync}
           disabled={syncing}

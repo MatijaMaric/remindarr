@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type { Title } from "../types";
@@ -8,7 +9,7 @@ import { useApiCall } from "../hooks/useApiCall";
 import { groupShowsByStatus } from "../lib/groupShows";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
-import { PageHeader } from "../components/design";
+import { PageHeader, Pill } from "../components/design";
 
 function TrackedStatsBand({ titles }: { titles: Title[] }) {
   const watching = titles.filter(t => t.show_status === 'watching' || t.user_status === 'watching').length;
@@ -48,6 +49,28 @@ const STATUS_TABS = [
 ] as const;
 type StatusTab = (typeof STATUS_TABS)[number]['key'];
 
+type SortKey = 'last_aired' | 'title' | 'rating' | 'progress';
+
+function sortTitles(titles: Title[], sort: SortKey): Title[] {
+  return [...titles].sort((a, b) => {
+    switch (sort) {
+      case 'title': return a.title.localeCompare(b.title);
+      case 'rating': return ((b.imdb_score ?? b.tmdb_score ?? 0) - (a.imdb_score ?? a.tmdb_score ?? 0));
+      case 'progress': {
+        const pctA = a.total_episodes ? (a.watched_episodes_count ?? 0) / a.total_episodes : 0;
+        const pctB = b.total_episodes ? (b.watched_episodes_count ?? 0) / b.total_episodes : 0;
+        return pctB - pctA;
+      }
+      case 'last_aired':
+      default: {
+        const dA = a.latest_released_air_date ?? a.tracked_at ?? '';
+        const dB = b.latest_released_air_date ?? b.tracked_at ?? '';
+        return dB.localeCompare(dA);
+      }
+    }
+  });
+}
+
 export default function TrackedPage() {
   const { data, loading, refetch } = useApiCall(() => api.getTrackedTitles(), []);
   const allTitles: Title[] = useMemo(() => data?.titles ?? [], [data]);
@@ -56,6 +79,8 @@ export default function TrackedPage() {
   useGridNavigation();
 
   const [statusFilter, setStatusFilter] = useState<StatusTab>('all');
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [sort, setSort] = useState<SortKey>('last_aired');
 
   const { showGroups, movies } = useMemo(() => {
     const shows = allTitles.filter((t) => t.object_type === "SHOW");
@@ -79,17 +104,25 @@ export default function TrackedPage() {
     );
   }, [allTitles, statusFilter]);
 
+  const sortedFilteredTitles = useMemo(() => sortTitles(filteredTitles, sort), [filteredTitles, sort]);
+
   return (
     <div className="space-y-4">
       <PageHeader
         kicker={`Your library · ${allTitles.length} title${allTitles.length === 1 ? '' : 's'}`}
         title="Tracked"
         className="px-0 pt-4 pb-4"
+        right={
+          <div className="flex items-center gap-2">
+            <Pill active={view === 'grid'} onClick={() => setView('grid')}>Grid</Pill>
+            <Pill active={view === 'list'} onClick={() => setView('list')}>List</Pill>
+          </div>
+        }
       />
 
       {!loading && <TrackedStatsBand titles={allTitles} />}
 
-      <div className="flex gap-0 border-b border-white/[0.06] mb-4 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-0 border-b border-white/[0.06] mb-4 overflow-x-auto scrollbar-none">
         {STATUS_TABS.map(tab => {
           const count = tab.key === 'all' ? allTitles.length
             : allTitles.filter(t => t.user_status === tab.key || (tab.key === 'watching' && t.show_status === 'watching') || (tab.key === 'completed' && t.show_status === 'completed')).length;
@@ -108,14 +141,27 @@ export default function TrackedPage() {
             </button>
           );
         })}
+        <div className="flex-1" />
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+          className="font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none mb-0.5"
+        >
+          <option value="last_aired">sort: last aired</option>
+          <option value="title">sort: title</option>
+          <option value="rating">sort: rating</option>
+          <option value="progress">sort: progress</option>
+        </select>
       </div>
 
       {loading ? (
         <TitleGridSkeleton />
       ) : filteredTitles.length === 0 ? (
         <TitleList titles={[]} onTrackToggle={refetch} emptyMessage={t("tracked.empty")} />
+      ) : view === 'list' ? (
+        <TrackedTable titles={sortedFilteredTitles} />
       ) : statusFilter !== 'all' ? (
-        <TitleList titles={filteredTitles} onTrackToggle={refetch} hideTypeBadge showProgressBar showStatusPicker showNotificationPicker showTags />
+        <TitleList titles={sortedFilteredTitles} onTrackToggle={refetch} hideTypeBadge showProgressBar showStatusPicker showNotificationPicker showTags />
       ) : (
         <div className="space-y-6">
           {showGroups.map((group) => (
@@ -136,6 +182,104 @@ export default function TrackedPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  watching: '#fbbf24',
+  completed: 'oklch(0.7 0.14 140)',
+  on_hold: 'oklch(0.7 0.12 60)',
+  plan_to_watch: 'oklch(0.72 0.1 240)',
+  dropped: 'oklch(0.65 0.12 0)',
+};
+
+function TrackedTable({ titles }: { titles: Title[] }) {
+  return (
+    <div>
+      {/* Column header */}
+      <div className="grid gap-4 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500"
+        style={{ gridTemplateColumns: '50px 1fr 130px 200px 130px 90px 90px' }}>
+        <div />
+        <div>Show</div>
+        <div>Status</div>
+        <div>Progress</div>
+        <div>Next</div>
+        <div>Rating</div>
+        <div className="text-right">Actions</div>
+      </div>
+      {/* Rows */}
+      <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
+        {titles.map((title) => {
+          const statusKey = title.user_status ?? title.show_status ?? null;
+          const statusColor = statusKey ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS['plan_to_watch']) : '#71717a';
+          const statusLabel = statusKey ? (statusKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) : '—';
+          const watched = title.watched_episodes_count ?? 0;
+          const total = title.total_episodes ?? title.released_episodes_count ?? 0;
+          const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
+          const score = title.imdb_score ?? title.tmdb_score;
+          const nextDate = title.next_episode_air_date
+            ? new Date(title.next_episode_air_date).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+            : null;
+          return (
+            <div
+              key={title.id}
+              className="grid gap-4 px-4 py-3 items-center bg-zinc-900 hover:bg-zinc-800/60 transition-colors"
+              style={{ gridTemplateColumns: '50px 1fr 130px 200px 130px 90px 90px' }}
+            >
+              {/* Poster thumbnail */}
+              <div className="w-[38px] h-[56px] rounded overflow-hidden shrink-0 bg-zinc-800">
+                {title.poster_url && (
+                  <img src={title.poster_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                )}
+              </div>
+              {/* Title + meta */}
+              <div>
+                <Link to={`/title/${title.id}`} className="text-sm font-semibold hover:text-amber-300 transition-colors line-clamp-1">
+                  {title.title}
+                </Link>
+                <div className="font-mono text-[11px] text-zinc-500 mt-0.5">
+                  {title.release_year}{title.object_type === 'SHOW' ? ' · Show' : ' · Movie'}
+                  {title.offers[0] && ` · ${title.offers[0].provider_name}`}
+                </div>
+              </div>
+              {/* Status */}
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: statusColor }} />
+                <span className="text-[12px] font-semibold" style={{ color: statusColor }}>{statusLabel}</span>
+              </div>
+              {/* Progress */}
+              {total > 0 ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="flex-1 h-1 rounded-full bg-white/[0.08] overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: statusColor }} />
+                    </div>
+                    <span className="font-mono text-[11px] text-zinc-400 shrink-0">{watched}/{total}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="font-mono text-[11px] text-zinc-600">—</div>
+              )}
+              {/* Next air date */}
+              <div className="font-mono text-[12px] text-zinc-300">{nextDate ?? '—'}</div>
+              {/* Rating */}
+              <div className="font-mono text-[13px] font-semibold" style={{ color: score ? '#fbbf24' : '#52525b' }}>
+                {score ? `★ ${score.toFixed(1)}` : '—'}
+              </div>
+              {/* Actions */}
+              <div className="flex gap-1 justify-end">
+                <Link
+                  to={`/title/${title.id}`}
+                  className="px-2.5 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-300 hover:text-white transition-colors"
+                >
+                  Open
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

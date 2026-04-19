@@ -137,6 +137,12 @@ export default function App() {
                   {t("nav.calendar")}
                 </NavLink>
                 <NavLink
+                  to="/discovery"
+                  className={({ isActive }) => navLinkClass(isActive)}
+                >
+                  {t("nav.discovery")}
+                </NavLink>
+                <NavLink
                   to="/stats"
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
@@ -166,9 +172,12 @@ export default function App() {
               <>
                 <Link
                   to={`/user/${user.username}`}
-                  className="text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[13px] text-black hover:opacity-80 transition-opacity shrink-0"
+                  style={{ background: "oklch(0.6 0.1 250)" }}
+                  aria-label={user.display_name || user.username}
+                  title={user.display_name || user.username}
                 >
-                  {user.display_name || user.username}
+                  {(user.display_name || user.username).charAt(0).toUpperCase()}
                 </Link>
                 <Link
                   to="/settings"
