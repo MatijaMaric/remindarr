@@ -34,14 +34,19 @@ bun test                     # Run all tests (no type check)
 bun test server/             # Server tests only
 bun test frontend/src/       # Frontend tests only
 bun test --watch             # Watch mode
+bun run test:e2e             # Playwright e2e suite
 
 # Database (Drizzle ORM)
 bun run db:generate          # Generate migrations
-bun run db:push              # Push schema to DB
+bun run db:push              # Push schema to local DB (dev only)
+bun run db:migrate:cf        # Apply migrations to Cloudflare D1 (prod)
 bun run db:studio            # Open Drizzle Studio
 
 # Docker
 docker compose up --build
+
+# Cloudflare Workers
+bun run deploy:cf            # Deploy to Cloudflare
 ```
 
 ## Testing Rules
@@ -59,115 +64,167 @@ docker compose up --build
 
 ## Architecture
 
-**Remindarr** — a full-stack app for tracking streaming media releases using TMDB as the data source. Supports multi-user auth, notifications, episode tracking, and scheduled sync. Locale is configurable via env vars.
+**Remindarr** — a full-stack app for tracking streaming media releases using TMDB as the data source. Supports multi-user auth (local + OIDC + WebAuthn passkeys), Discord/Telegram/Gotify/Ntfy/Webhook/Web Push notifications, episode tracking, social features (follow, recommendations, ratings), a public `.ics` calendar feed, and scheduled TMDB sync. Deployable as a Bun server (Docker) or a Cloudflare Workers app backed by D1 + KV.
 
 ### Stack
-- **Runtime**: Bun (with built-in SQLite)
+- **Runtime**: Bun (server) or Cloudflare Workers
 - **Server**: Hono framework, TypeScript strict mode
-- **Frontend**: React 19 + Vite + Tailwind CSS 4 + shadcn/ui + react-router
-- **Database**: SQLite via Drizzle ORM (WAL mode, auto-created on startup)
-- **Observability**: Sentry (optional), structured JSON logging
+- **Frontend**: React 19 + Vite + Tailwind CSS 4 + shadcn/ui + react-router + Vite PWA
+- **Database**: SQLite via Drizzle ORM (WAL mode when run under Bun; Cloudflare D1 on Workers)
+- **Auth**: better-auth (username + admin + passkey + generic OAuth/OIDC plugins)
+- **Cache**: in-memory, Redis, or Cloudflare KV
+- **Observability**: Sentry (optional), Prometheus metrics at `/metrics`, structured JSON logging
 
 ### Server (`server/`)
-- `index.ts` — Entry point, Hono app setup, serves static frontend in production
-- `config.ts` — All configuration from env vars with defaults
+- `index.ts` — Bun entry point, Hono app setup, serves static frontend in production
+- `worker.ts` — Cloudflare Workers entry point; patches CONFIG from env bindings; excludes the Bun-only job worker
+- `config.ts` — All configuration from env vars with defaults; `patchConfig()` for CF runtime
 - `logger.ts` — Structured JSON logger (pino-style)
-- `instrument.ts` — Sentry SDK initialization
+- `instrument.ts` — Sentry SDK initialization (Bun)
+- `sentry.ts` — Shared Sentry exports
 - `tracing.ts` — DB query and HTTP client tracing helpers
+- `startup-validation.ts` — Fatal-if-missing env checks, startup summary log
+- `graceful-shutdown.ts` — SIGTERM/SIGINT handler for worker/DB/cache teardown
 - `types.ts` — Shared server types
 
 #### Auth (`server/auth/`)
-- `oidc.ts` — OIDC discovery, token exchange, user creation/sync
+- `better-auth.ts` — better-auth instance factory with OIDC + passkey + admin plugins, trusted origins, passkey RP config
+
+#### Platform (`server/platform/`)
+- `bun.ts` — Bun platform impl (password hashing, DB handle)
+- `cloudflare.ts` — CF platform impl
+- `types.ts` — Platform interface
 
 #### Database (`server/db/`)
-- `schema.ts` — SQLite schema via Drizzle ORM (13 tables: titles, providers, offers, tracked, scores, episodes, watched_episodes, users, sessions, settings, notifiers, oidc_states, schema_version)
+- `schema.ts` — SQLite schema via Drizzle ORM. Current tables (30):
+  - **Content**: `titles`, `providers`, `offers`, `scores`, `title_genres`, `episodes`, `streaming_alerts`
+  - **Auth/user**: `users`, `sessions`, `account`, `verification`, `passkey`, `oidc_states`, `invitations`
+  - **Tracking**: `tracked`, `watched_episodes`, `watched_titles`, `watch_history`, `title_tags`
+  - **Ratings/social**: `ratings`, `episode_ratings`, `follows`, `recommendations`, `recommendation_reads`
+  - **Config/ops**: `settings`, `notifiers`, `integrations`, `plex_library_items`, `jobs`, `cron_jobs`
+- `bun-db.ts` — Bun sqlite initialization, migration runner
+- `cloudflare-db.ts` — D1 adapter
+- `migrate-auth.ts` — One-time better-auth data migration
 - `repository.ts` — Re-exports all repository modules
-- `repository/` — Domain-specific query modules:
-  - `users.ts` — User CRUD and lookup
-  - `titles.ts` — Title upsert, search, filtering
-  - `episodes.ts` — Episode queries and upserts
-  - `offers.ts` — Watch provider offer management
-  - `tracked.ts` — User watchlist management
-  - `notifiers.ts` — Notification config CRUD
-  - `settings.ts` — Key-value settings store (for OIDC config via admin UI)
-  - Session management lives in `repository.ts`
+- `repository/` — Domain-specific query modules (users, titles, episodes, offers, tracked, watched, notifiers, settings, ratings, recommendations, social, integrations, invitations, plex, stats, sessions)
 
 #### TMDB Client (`server/tmdb/`)
 - `client.ts` — TMDB API client (releases, search, watch providers, details, genres, people)
 - `parser.ts` — Transforms TMDB API responses to internal types
+- `sync.ts` + `sync-titles.ts` — Periodic release and episode sync
 
 #### IMDB (`server/imdb/`)
 - `resolver.ts` — Resolves IMDB URLs/IDs via autocomplete API, matches to TMDB titles
 
+#### Plex (`server/plex/`)
+- Library sync, account linking, metadata enrichment
+
+#### Cache (`server/cache/`)
+- `index.ts` — Factory: selects memory / redis / cloudflare-kv based on `CACHE_BACKEND`
+- `memory.ts`, `redis.ts`, `cloudflare-kv.ts` — Backends
+- `types.ts` — Cache interface
+
+#### Streaming Availability (`server/streaming-availability/`)
+- Deep-link enrichment via external API (optional)
+
+#### Metrics (`server/metrics/`)
+- Counters, histograms, gauges exposed at `/metrics` in Prometheus text format
+
 #### Jobs (`server/jobs/`)
-- `queue.ts` — In-memory job queue with SQLite persistence and retry logic
-- `worker.ts` — Cron scheduler (standard 5-field cron), job execution loop
+- `queue.ts` — In-memory job queue with SQLite persistence and exponential-backoff retry
+- `worker.ts` — Polling loop + cron scheduler (5-field cron via `cron-parser`)
+- `schedule.ts` — Cron-callback plumbing
 - `sync.ts` — Title and episode sync job handlers
-- `notifications.ts` — Notification dispatch job with dynamic cron scheduling
+- `notifications.ts` — Notification dispatch with dynamic per-user scheduling
+- `backup.ts` — DB backup job
 - `migrate-titles.ts` — Data migration job handler
 
 #### Middleware (`server/middleware/`)
 - `auth.ts` — `optionalAuth` (sets user if session exists), `requireAuth` (401), `requireAdmin` (403)
-- `rate-limit.ts` — Token bucket rate limiter (per-IP via x-forwarded-for)
+- `rate-limit.ts` — Token bucket rate limiter (per-IP via `x-forwarded-for`)
 
 #### Notifications (`server/notifications/`)
-- `discord.ts` — Discord webhook sender
-- `content.ts` — Notification content builder (formats titles, episodes, release info)
-- `registry.ts` — Provider registry (currently Discord)
-- `types.ts` — Notification provider interface
+- `registry.ts` — Provider registry (Discord, Telegram, Gotify, Ntfy, Webhook, Web Push)
+- `content.ts` — Notification content builder (titles, episodes, streaming alerts)
+- `discord.ts`, `telegram.ts`, `gotify.ts`, `ntfy.ts`, `webhook.ts`, `webpush.ts` — Providers
+- `vapid.ts` — VAPID key handling
+- `types.ts` — Provider interface
 
 #### Routes (`server/routes/`)
 One file per domain, each with colocated tests:
 - `titles.ts` — Title listing with filters (daysBack, objectType, provider, genre, language)
-- `search.ts` — TMDB search
+- `search.ts` — TMDB search (rate-limited)
 - `browse.ts` — Category browsing (popular, upcoming, top_rated)
 - `calendar.ts` — Monthly calendar view
 - `details.ts` — Movie/show/season/episode/person details
-- `track.ts` — Watchlist management
+- `track.ts` — Watchlist add/remove (requires auth)
 - `episodes.ts` — Upcoming episodes, episode sync trigger
 - `watched.ts` — Episode watched status (single + bulk)
-- `sync.ts` — Manual sync trigger
+- `sync.ts` — Manual sync trigger (admin only, rate-limited)
 - `imdb.ts` — IMDB URL resolution
-- `auth.ts` — Login, logout, current user, password change, OIDC flow
-- `admin.ts` — OIDC settings management (admin only)
-- `notifiers.ts` — Notification config CRUD + test
-- `jobs.ts` — Job stats, manual trigger
+- `auth-custom.ts` — Custom auth endpoints (providers discovery); better-auth handles the rest at `/api/auth/*`
+- `admin.ts` — OIDC settings + user management (admin only)
+- `notifiers.ts` — Notification channel CRUD + test
+- `integrations.ts` — External integration CRUD (Plex, etc.)
+- `import.ts` — Watchlist CSV import
+- `profile.ts` — User profile (public view)
+- `social.ts` — Follow/unfollow, follower/following lists
+- `ratings.ts` — Title and episode ratings (HATE/DISLIKE/LIKE/LOVE)
+- `recommendations.ts` — Recommendation broadcast to followers
+- `invitations.ts` — Signup invite codes
+- `feed.ts` — Public `.ics` calendar feed (token-authenticated) + token management
+- `stats.ts` — User statistics
+- `user-settings.ts` — Per-user settings (homepage layout, etc.)
+- `jobs.ts` / `jobs-cf.ts` — Job stats + manual trigger (Bun / CF variants)
+- `metrics.ts` — Prometheus metrics
 - `health.ts` — Health check
 
 ### Frontend (`frontend/src/`)
-- `api.ts` — API client functions matching all backend routes
+- `main.tsx` — Entry point with BrowserRouter + ErrorBoundary + AuthProvider
+- `App.tsx` — Lazy-loaded route tree with RequireAuth guards
+- `api.ts` — API client functions matching all backend routes (uses `fetchJson` helper with 401 CustomEvent)
 - `types.ts` — Title/Offer/Provider types + `normalizeSearchTitle()` for unified rendering
+- `i18n.ts` + `locales/` — i18next setup (currently English-only scaffolding)
+- `instrument.ts` — Sentry frontend init
+- `sw.ts` — Service worker (Workbox strategies + BackgroundSync + push handler)
 
 #### Pages (`frontend/src/pages/`)
-- `HomePage.tsx` — Browse + search landing
-- `BrowsePage.tsx` — Category browsing (popular, upcoming, top rated)
-- `CalendarPage.tsx` — Monthly calendar view
-- `TrackedPage.tsx` — Watchlist
-- `UpcomingPage.tsx` — Upcoming releases and episodes
-- `TitleDetailPage.tsx` — Movie/show details with seasons/episodes
-- `SeasonDetailPage.tsx` — Season details
-- `EpisodeDetailPage.tsx` — Episode details
+- `HomePage.tsx` — Browse + search landing with customizable layout
+- `BrowsePage.tsx` — Category browsing + filters
+- `CalendarPage.tsx` — Monthly episode calendar grid
+- `DiscoveryPage.tsx` — Personalized discovery feed
+- `TrackedPage.tsx` — Watchlist + stats view
+- `UpcomingPage.tsx` — Upcoming releases (legacy; redirects to `/calendar`)
+- `StatsPage.tsx` — User statistics
+- `ReelsPage.tsx` — Swipeable short-form discovery
+- `TitleDetailPage.tsx` / `SeasonDetailPage.tsx` / `EpisodeDetailPage.tsx` — Content detail pages
 - `PersonPage.tsx` — Actor/crew details and filmography
-- `ReelsPage.tsx` — Short-form discovery UI
-- `LoginPage.tsx` — Local + OIDC login
-- `ProfilePage.tsx` — User profile and settings
+- `UserProfilePage.tsx` — Public user profile
+- `ProfilePage.tsx` — Current user (redirects to UserProfilePage)
+- `SettingsPage.tsx` — Notifiers, integrations, password, invitations, layout
+- `InvitePage.tsx` — Create/manage invitations
+- `LoginPage.tsx` — Local + passkey + OIDC login
+- `SignupPage.tsx` — Local signup
+- `MorePage.tsx` — Mobile-only menu overlay
+- `AdminUsersPage.tsx` — Admin user management
+- `NotFoundPage.tsx` — 404 fallback
 
 #### Components (`frontend/src/components/`)
-- `TitleCard.tsx` / `TitleList.tsx` — Title display card and grid
-- `FilterBar.tsx` — Filter controls (type, provider, genre, language)
-- `SearchBar.tsx` — Search with IMDB URL auto-detection
-- `TrackButton.tsx` — Watchlist toggle
-- `NewReleases.tsx` — New releases section
-- `CategoryBar.tsx` / `CategoryBrowse.tsx` — Category navigation and browsing
-- `EpisodeComponents.tsx` — Episode list and details
-- `PersonCard.tsx` — Actor/crew card
-- `ReelsCard.tsx` / `ReelsSeasonPanel.tsx` — Reel discovery components
-- `BottomTabBar.tsx` — Mobile navigation
-- `MultiSelectDropdown.tsx` — Multi-select filter dropdown
-- `ErrorBoundary.tsx` — Error fallback UI
-- `RequireAuth.tsx` — Auth guard wrapper
-- `loadFilters.ts` — Filter data loading utility
-- `ui/` — shadcn/ui primitives (button, calendar, etc.)
+Inventory is large (~45 components). Broad groups:
+- **Title display**: `TitleCard`, `TitleList`, `NewReleases`, `FullBleedCarousel`, `HeroBanner`, `ScrollableRow`, `CategoryBar`, `CategoryBrowse`, `AgendaCalendar`
+- **Filters/search**: `FilterBar`, `MultiSelectDropdown`, `SearchBar`, `UserSearchDropdown`
+- **Actions**: `TrackButton`, `WatchButton`, `WatchButtonGroup`, `WatchedToggleButton`, `RatingButtons`, `EpisodeRatingButtons`, `FollowButton`, `RecommendButton`, `ShareButton`, `VisibilityButton`, `StatusPicker`, `TagList`, `NotificationModePicker`
+- **Episode/reels**: `EpisodeComponents`, `EpisodeShowCard`, `ReelsCard`, `ReelsSeasonPanel`, `ReelsUndoBar`
+- **Navigation/shell**: `BottomTabBar`, `RequireAuth`, `ErrorBoundary`, `ScrollToTop`, `SkeletonComponents`, `OfflineIndicator`, `InstallPrompt`, `NotificationPrompt`, `KeyboardShortcutsModal`, `ThemePicker`
+- **People**: `PersonCard`, `ExternalLinks`, `ProfileBanner`
+- **Utilities**: `loadFilters.ts`, `useDominantColor.ts`
+- **Design system**: `design/Chip`, `design/Kicker`, `design/PageHeader`, `design/Pill`
+- **shadcn/ui primitives** (`ui/`): `alert-dialog`, `button`, `calendar`, `skeleton`, `tabs`
+
+#### Context / Hooks / Lib
+- `context/AuthContext.tsx` — Session state, providers, login/signup/logout; listens for `"auth:unauthorized"` CustomEvent
+- `hooks/` — `useApiCall`, `useGridNavigation`, `useInstallPrompt`, `useIsMobile`, `useKeyboardShortcut`, `usePushSubscriptionSync`, `useScrollRestoration`, `useTheme`
+- `lib/` — `auth-client` (better-auth browser client), `push` (Web Push subscription), `groupShows`, `base64`, `utils`
 
 ### Logging
 - All server-side code MUST use the structured logger from `server/logger.ts` — never use `console.log/warn/error` directly
@@ -181,41 +238,55 @@ One file per domain, each with colocated tests:
 - Offers are deduplicated by provider ID with priority: FLATRATE > FREE > ADS
 - The SearchBar auto-detects IMDB URLs/IDs and routes to a separate resolution flow
 - All DB writes use transactions for consistency
-- Rate limiting uses a token bucket algorithm keyed by IP
+- Rate limiting uses a token bucket algorithm keyed by `x-forwarded-for` — deployments MUST terminate at a proxy that sets this header
 - Auth middleware is composable: `optionalAuth` → `requireAuth` → `requireAdmin`
-- OIDC settings can come from env vars (take precedence) or DB (admin UI configurable)
-- Jobs use an in-memory queue with cron scheduling; notification jobs dynamically reschedule based on user timezone preferences
+- OIDC settings have env-var precedence over DB (admin UI editable)
+- Jobs use an in-memory queue with cron scheduling on Bun; Cloudflare uses scheduled triggers
+- Notification jobs dynamically reschedule based on user timezone preferences
+- Recommendations are 1-to-N broadcast (to followers), not 1-to-1
+- New notification providers must guard on `streamingAlerts.length` before rendering streaming-alert content
+- The Bun route wiring in `server/index.ts` and the CF route wiring in `server/worker.ts` must stay in sync
 
 ### API Routes
-- `GET /api/titles` — Recent titles with filters (daysBack, objectType, provider, genre, language)
-- `GET /api/titles/providers` — Available streaming services
-- `GET /api/titles/genres` — Available genres
-- `GET /api/titles/languages` — Available languages
-- `GET /api/search?q=` — Live search via TMDB
-- `GET /api/browse` — Browse by category (popular, upcoming, top_rated) with filters
-- `GET /api/calendar` — Monthly calendar view
-- `GET /api/details/movie/:id` — Movie details
-- `GET /api/details/show/:id` — Show details
-- `GET /api/details/show/:id/season/:season` — Season details
-- `GET /api/details/show/:id/season/:season/episode/:episode` — Episode details
-- `GET /api/details/person/:personId` — Person details
-- `POST /api/sync` — Trigger data sync from TMDB
-- `GET/POST/DELETE /api/track/:id` — Watchlist management
-- `GET /api/episodes/upcoming` — Upcoming and unwatched episodes
-- `POST /api/episodes/sync` — Manual episode sync
-- `POST/DELETE /api/watched/:episodeId` — Mark episode watched/unwatched
-- `POST /api/watched/bulk` — Bulk mark episodes
-- `POST /api/imdb` — Resolve IMDB URL, save to DB, auto-track
-- `POST /api/auth/login` — Local login
-- `POST /api/auth/logout` — Logout
-- `GET /api/auth/me` — Current user
-- `GET /api/auth/providers` — Available auth methods
-- `POST /api/auth/change-password` — Change password
-- `GET /api/auth/oidc/authorize` — OIDC authorization redirect
-- `GET /api/auth/oidc/callback` — OIDC callback
-- `GET/PUT /api/admin/settings` — OIDC settings (admin only)
-- `GET/POST/PUT/DELETE /api/notifiers` — Notification config CRUD
-- `POST /api/notifiers/:id/test` — Send test notification
-- `GET /api/jobs` — Job stats, cron schedules, history
-- `POST /api/jobs/:name` — Manually trigger a job
+Grouped by middleware. All routes are under `/api` except `/metrics`.
+
+**Public (no auth)**
 - `GET /api/health` — Health check
+- `GET /metrics` — Prometheus metrics (optionally bearer-guarded via `METRICS_TOKEN`)
+- `POST|GET /api/auth/*` — better-auth handler (login, signup, session, passkey, OIDC callback)
+- `GET /api/auth/custom/providers` — Available auth methods
+- `GET /api/feed/calendar.ics?token=<user-feed-token>` — Public ICS calendar feed
+
+**Optional auth (`is_tracked` depends on session)**
+- `GET /api/titles` — Recent titles with filters
+- `GET /api/titles/{providers,genres,languages}` — Filter catalogs
+- `GET /api/search?q=` — TMDB search (rate-limited: 30/min)
+- `GET /api/browse` — Category browsing
+- `GET /api/calendar` — Monthly calendar
+- `GET /api/user/:username` — Public user profile
+- `GET /api/social/{followers,following}/:id` — Follower lists
+- `GET /api/ratings/*` — Ratings read endpoints (write checks auth internally)
+- `GET /api/details/{movie,show,person}/...` — Detail pages
+- `GET /api/episodes/upcoming` — Upcoming episodes
+
+**Requires auth**
+- `GET/POST/DELETE /api/track/:id` — Watchlist
+- `POST/DELETE /api/watched/:episodeId`, `POST /api/watched/bulk` — Watched status
+- `POST /api/imdb` — IMDB URL resolve + auto-track
+- `GET/POST/PUT/DELETE /api/notifiers` + `POST /api/notifiers/:id/test`
+- `GET/POST/PUT/DELETE /api/integrations`
+- `POST /api/import` — CSV watchlist import
+- `GET /api/stats` — User statistics
+- `GET/PUT /api/user/settings` — Per-user settings
+- `POST/DELETE /api/social/follow` — Follow/unfollow
+- `POST/DELETE /api/ratings` — Rate a title/episode
+- `GET/POST /api/recommendations` — Recommendations
+- `GET/POST/DELETE /api/invitations` — Invite codes
+- `GET/POST/DELETE /api/feed/token` — Feed token management
+- `POST /api/episodes/sync` — Manual episode sync
+
+**Admin only**
+- `GET/PUT /api/admin/settings` — OIDC settings
+- `GET/PATCH /api/admin/users` — User admin
+- `GET /api/jobs`, `POST /api/jobs/:name` — Job stats + manual trigger
+- `POST /api/sync` — Manual TMDB sync (rate-limited: 5/min)
