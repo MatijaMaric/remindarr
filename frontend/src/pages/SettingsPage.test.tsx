@@ -210,14 +210,18 @@ describe("Settings tabs", () => {
   it("renders tab list with expected tabs for non-admin user", async () => {
     render(<SettingsPage />, { wrapper: Wrapper });
 
+    // Wait for the sidebar nav to be rendered — all tabs appear as <button> elements in the sidebar
     await waitFor(() => {
-      expect(screen.getByText("Account")).toBeDefined();
+      const navButtons = screen.getAllByRole("button", { name: "Account" });
+      expect(navButtons.length).toBeGreaterThanOrEqual(1);
     });
 
-    expect(screen.getByText("Appearance")).toBeDefined();
-    expect(screen.getByText("Notifications")).toBeDefined();
-    expect(screen.getByText("Integrations")).toBeDefined();
-    expect(screen.queryByText("Admin")).toBeNull();
+    // Sidebar nav buttons for each tab should exist
+    expect(screen.getAllByRole("button", { name: "Appearance" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("button", { name: "Notifications" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("button", { name: "Integrations" }).length).toBeGreaterThanOrEqual(1);
+    // Admin tab should not appear for non-admin users
+    expect(screen.queryByRole("button", { name: "Admin" })).toBeNull();
   });
 
   it("shows account tab content by default", async () => {
@@ -227,15 +231,17 @@ describe("Settings tabs", () => {
       expect(screen.getByText("Profile Visibility")).toBeDefined();
     });
 
-    // Appearance-tab content should not be rendered (base-ui only renders active panel)
+    // Appearance-tab content should not be rendered (conditional rendering)
     expect(screen.queryByText("Homepage Layout")).toBeNull();
   });
 
   it("shows notifications tab content when ?tab=notifications", async () => {
     render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=notifications") });
 
+    // The notifications card title and the sidebar button both say "Notifications" —
+    // use the SettingsCard subtitle which is unique to the notifications tab content
     await waitFor(() => {
-      expect(screen.getByText("Notifications")).toBeDefined();
+      expect(screen.getByText("How and when you receive alerts")).toBeDefined();
     });
 
     // Account-tab content should not be rendered

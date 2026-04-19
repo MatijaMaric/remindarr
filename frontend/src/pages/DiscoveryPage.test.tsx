@@ -136,6 +136,12 @@ describe("DiscoveryPage", () => {
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
+    // Switch to Activity tab where RecommendationCard feed is rendered
+    await waitFor(() => {
+      expect(screen.getByText("Activity")).toBeDefined();
+    });
+    fireEvent.click(screen.getByText("Activity"));
+
     await waitFor(() => {
       expect(screen.getByText("Movie r1")).toBeDefined();
       expect(screen.getByText("Show R2")).toBeDefined();
@@ -199,6 +205,12 @@ describe("DiscoveryPage", () => {
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
+    // Switch to Activity tab where RecommendationCard with "Dismiss" button is rendered
+    await waitFor(() => {
+      expect(screen.getByText("Activity")).toBeDefined();
+    });
+    fireEvent.click(screen.getByText("Activity"));
+
     await waitFor(() => {
       expect(screen.getByText("Movie r1")).toBeDefined();
     });
@@ -253,12 +265,18 @@ describe("DiscoveryPage", () => {
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
+    // Switch to Activity tab where RecommendationCard renders type badges via i18n
+    await waitFor(() => {
+      expect(screen.getByText("Activity")).toBeDefined();
+    });
+    fireEvent.click(screen.getByText("Activity"));
+
     await waitFor(() => {
       expect(screen.getByText("A Movie")).toBeDefined();
       expect(screen.getByText("A Show")).toBeDefined();
     });
 
-    // Check type badges
+    // Check type badges (t("discovery.movie") = "Movie", t("discovery.tv") = "TV Show")
     const movieBadges = screen.getAllByText("Movie");
     const tvBadges = screen.getAllByText("TV Show");
     expect(movieBadges.length).toBeGreaterThanOrEqual(1);

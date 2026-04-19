@@ -25,12 +25,11 @@ import AgendaCalendar, {
   typeFilters,
   formatMonth,
   formatDateKey,
-  getItemHeroUrl,
-  pickFeaturedItem,
   getCellBorderColor,
   useCalendarParam,
   ViewToggle,
 } from "../components/AgendaCalendar";
+import { PageHeader } from "../components/design";
 
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -527,62 +526,73 @@ function GridCalendar({
     }
   };
 
+  const monthTitle = currentMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const headerRight = (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={prevMonth}
+        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+      >
+        <ChevronLeftIcon className="size-5" />
+      </button>
+      <button
+        onClick={() => setMonthParam(formatMonth(new Date()))}
+        className="px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+      >
+        Today
+      </button>
+      <button
+        onClick={nextMonth}
+        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+      >
+        <ChevronRightIcon className="size-5" />
+      </button>
+      <div className="w-px h-5 bg-white/10 mx-1" />
+      {typeFilters.map((f) => (
+        <button
+          key={f.value}
+          onClick={() => setTypeFilter(f.value)}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+            typeFilter === f.value
+              ? "bg-amber-500 text-zinc-950"
+              : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+          }`}
+        >
+          {f.label}
+        </button>
+      ))}
+      <button
+        onClick={() => setHideWatched((v) => !v)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+          hideWatched
+            ? "bg-amber-500 text-zinc-950"
+            : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+        }`}
+        title={hideWatched ? "Show watched" : "Hide watched"}
+      >
+        {hideWatched ? (
+          <EyeOffIcon className="size-4" />
+        ) : (
+          <EyeIcon className="size-4" />
+        )}
+      </button>
+      <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={prevMonth}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <ChevronLeftIcon className="size-5" />
-          </button>
-          <h2 className="text-lg font-semibold w-44 text-center">
-            {currentMonth.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </h2>
-          <button
-            onClick={nextMonth}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <ChevronRightIcon className="size-5" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          {typeFilters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setTypeFilter(f.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                typeFilter === f.value
-                  ? "bg-amber-500 text-zinc-950"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-          <button
-            onClick={() => setHideWatched((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              hideWatched
-                ? "bg-amber-500 text-zinc-950"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-            }`}
-            title={hideWatched ? "Show watched" : "Hide watched"}
-          >
-            {hideWatched ? (
-              <EyeOffIcon className="size-4" />
-            ) : (
-              <EyeIcon className="size-4" />
-            )}
-          </button>
-          <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
-        </div>
-      </div>
+      <PageHeader
+        kicker="Month view · your timezone"
+        title={monthTitle}
+        right={headerRight}
+        className="px-0 pt-4 pb-4"
+      />
 
       {/* Stats bar */}
       {!loading && <MonthStatsBar episodes={stats.episodes} titles={stats.titles} />}
@@ -597,7 +607,7 @@ function GridCalendar({
             {WEEKDAYS.map((d) => (
               <div
                 key={d}
-                className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase"
+                className="px-2 py-2 text-center font-mono text-[11px] text-zinc-500 font-semibold uppercase tracking-[0.15em]"
               >
                 {d}
               </div>
@@ -608,12 +618,12 @@ function GridCalendar({
           {weeks.map((week, wi) => (
             <div
               key={wi}
-              className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0"
+              className="grid grid-cols-7 gap-px bg-white/[0.06]"
             >
               {week.map((day, di) => {
                 if (!day) {
                   return (
-                    <div key={di} className="min-h-28 bg-zinc-950/50" />
+                    <div key={di} className="min-h-28 bg-zinc-950" />
                   );
                 }
                 const dateKey = formatDateKey(day);
@@ -622,84 +632,67 @@ function GridCalendar({
                 const isSelected = dateKey === selectedDate;
                 const borderColor = getCellBorderColor(dayItems);
 
-                // Pick featured item for card display
-                const featured = dayItems.length > 0 ? pickFeaturedItem(dayItems) : null;
-                const featuredImageUrl = featured ? getItemHeroUrl(featured) : null;
-
                 return (
                   <button
                     key={di}
                     onClick={() =>
                       setSelectedDate(isSelected ? "" : dateKey)
                     }
-                    className={`min-h-36 p-1.5 text-left transition-colors cursor-pointer border-r border-white/[0.06] last:border-r-0 ${
+                    className={`min-h-36 p-1.5 text-left transition-colors cursor-pointer bg-zinc-950 ${
                       borderColor ? `border-l-2 ${borderColor}` : ""
                     } ${
                       isSelected
                         ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500"
                         : dayItems.length > 0
                           ? "hover:bg-zinc-900/60"
-                          : "hover:bg-zinc-950/80"
-                    } ${isToday ? "ring-2 ring-inset ring-amber-500/40" : ""}`}
+                          : "hover:bg-zinc-900/30"
+                    } ${isToday ? "outline-2 outline-amber-400 outline-offset-[-2px] relative z-10" : ""}`}
                   >
-                    <div
-                      className={`text-xs font-medium mb-1 ${
-                        isToday
-                          ? "bg-amber-500 text-zinc-950 rounded-full size-5 flex items-center justify-center"
-                          : "text-zinc-400 pl-0.5"
-                      }`}
-                    >
-                      {day.getDate()}
+                    <div className="flex items-center mb-1">
+                      {isToday ? (
+                        <>
+                          <span className="font-mono text-[13px] text-amber-400 font-bold">
+                            {day.getDate()}
+                          </span>
+                          <span className="font-mono text-[9px] ml-1 tracking-widest text-amber-400 opacity-80">TODAY</span>
+                        </>
+                      ) : (
+                        <span className="font-mono text-[13px] text-zinc-400 pl-0.5">
+                          {day.getDate()}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Mini card — episode still + title + code */}
-                    {featured && (
-                      <div className="space-y-1">
-                        <div className="relative rounded-sm overflow-hidden">
-                          {featuredImageUrl ? (
-                            <img
-                              src={featuredImageUrl}
-                              alt=""
-                              className="w-full aspect-video object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
-                          )}
-                          {dayItems.length > 1 && (
-                            <span className="absolute top-1 right-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                              +{dayItems.length - 1}
-                            </span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-white truncate">
-                            {featured.type === "episode"
-                              ? featured.data.show_title
-                              : featured.data.title}
-                          </p>
-                          <p className="text-xs truncate">
-                            {featured.type === "episode" ? (
-                              <>
-                                <span className="text-amber-400 font-medium">
-                                  {formatEpisodeCode(featured.data)}
-                                </span>
-                                {featured.data.name && (
-                                  <span className="text-zinc-400"> · {featured.data.name}</span>
-                                )}
-                              </>
-                            ) : (
-                              <span className={
-                                featured.data.object_type === "MOVIE"
-                                  ? "text-blue-400"
-                                  : "text-purple-400"
-                              }>
-                                {featured.data.object_type === "MOVIE" ? "Movie" : "Show"}
-                                {featured.data.release_year && ` · ${featured.data.release_year}`}
-                              </span>
-                            )}
-                          </p>
-                        </div>
+                    {/* Episode + title pills */}
+                    {dayItems.length > 0 && (
+                      <div className="space-y-0.5">
+                        {dayItems.slice(0, 3).map((item, idx) => {
+                          const isEp = item.type === "episode";
+                          const label = isEp
+                            ? item.data.show_title
+                            : item.type === "title"
+                              ? item.data.title
+                              : "";
+                          const prefix = isEp
+                            ? `S${item.data.season_number}E${item.data.episode_number} `
+                            : item.type === "title"
+                              ? (item.data.object_type === "MOVIE" ? "FILM " : "SHOW ")
+                              : "";
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-amber-400/10 text-amber-400 border-l-2 border-amber-400 px-1.5 py-0.5 rounded-sm text-[10px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap"
+                            >
+                              <span className="font-mono">{prefix}</span>
+                              {label}
+                            </div>
+                          );
+                        })}
+                        {dayItems.length > 3 && (
+                          <div className="text-[10px] text-zinc-500 pl-1.5">
+                            +{dayItems.length - 3} more
+                          </div>
+                        )}
                       </div>
                     )}
                   </button>

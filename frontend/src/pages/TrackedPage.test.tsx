@@ -152,11 +152,17 @@ describe("TrackedPage", () => {
       expect(screen.getByText("Currently Watching (1)")).toBeDefined();
     });
 
-    // These sections should not exist
-    expect(screen.queryByText(/Caught Up/)).toBeNull();
-    expect(screen.queryByText(/Not Started/)).toBeNull();
-    expect(screen.queryByText(/Unreleased/)).toBeNull();
-    expect(screen.queryByText(/Completed/)).toBeNull();
+    // These section headers (h3) should not exist — note that status filter tab buttons
+    // like "Completed" and "Watching" are always rendered but as tab buttons, not group headers.
+    // Group headers use the pattern "Label (count)" so we check for those specific patterns.
+    expect(screen.queryByText("Caught Up (0)")).toBeNull();
+    expect(screen.queryByText(/^Caught Up \(/)).toBeNull();
+    expect(screen.queryByText("Not Started (0)")).toBeNull();
+    expect(screen.queryByText(/^Not Started \(/)).toBeNull();
+    expect(screen.queryByText("Unreleased (0)")).toBeNull();
+    expect(screen.queryByText(/^Unreleased \(/)).toBeNull();
+    expect(screen.queryByText("Completed (0)")).toBeNull();
+    expect(screen.queryByText(/^Completed \(/)).toBeNull();
   });
 
   it("shows movies in their own section after shows", async () => {
@@ -188,8 +194,9 @@ describe("TrackedPage", () => {
 
     render(<TrackedPage />, { wrapper: Wrapper });
 
+    // The new header uses a PageHeader kicker showing "Your library · N title(s)"
     await waitFor(() => {
-      expect(screen.getByText("Tracked Titles (3)")).toBeDefined();
+      expect(screen.getByText("Your library · 3 titles")).toBeDefined();
     });
   });
 

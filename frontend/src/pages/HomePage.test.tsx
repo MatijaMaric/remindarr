@@ -277,8 +277,11 @@ describe("HomePage — authenticated recommendations", () => {
       expect(screen.getByText("Recommended for You")).toBeDefined();
     });
 
-    const seeAllLink = screen.getByText(/See all/).closest("a");
-    expect(seeAllLink?.getAttribute("href")).toBe("/discovery");
+    // Multiple "See all" links may exist (e.g. today section also has one).
+    // Find the specific link pointing to /discovery.
+    const seeAllLinks = screen.getAllByText(/See all/).map((el) => el.closest("a"));
+    const discoveryLink = seeAllLinks.find((a) => a?.getAttribute("href") === "/discovery");
+    expect(discoveryLink).toBeDefined();
   });
 
   it("links recommendation cards to title detail page", async () => {
