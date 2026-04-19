@@ -5,6 +5,12 @@ const log = logger.child({ module: "error-boundary" });
 
 interface Props {
   children: ReactNode;
+  /**
+   * "page" (default) — full-screen fallback used at the app root.
+   * "inline" — compact fallback suitable for per-route wrapping inside the
+   *   main content area, so a single page crash doesn't nuke the shell.
+   */
+  variant?: "page" | "inline";
 }
 
 interface State {
@@ -39,8 +45,13 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const variant = this.props.variant ?? "page";
+      const outerClass =
+        variant === "inline"
+          ? "py-12 px-4 flex items-center justify-center"
+          : "min-h-screen bg-zinc-950 flex items-center justify-center p-4";
       return (
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <div className={outerClass}>
           <div className="max-w-md w-full bg-zinc-900 border border-red-800 rounded-lg p-6 text-center">
             <h1 className="text-xl font-bold text-red-400 mb-2">
               Something went wrong
