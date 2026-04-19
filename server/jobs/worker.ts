@@ -72,6 +72,10 @@ export async function processJobs() {
 }
 
 export function startWorker() {
+  // Cron runs missed during downtime are not backfilled: `recoverStaleJobs`
+  // only re-queues jobs that were already claimed when the process died, and
+  // `tickCrons` computes the next run from "now" rather than "last run".
+  // This is intentional — it prevents restart storms after long outages.
   recoverStaleJobs();
 
   // Poll for pending jobs
