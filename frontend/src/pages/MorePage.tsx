@@ -113,7 +113,7 @@ export default function MorePage() {
           icon={<BarChart2 size={16} />}
           label="Stats"
           sub="Your watch history"
-          to="/stats"
+          to="/tracked?view=stats"
           isLast
         />
       </MoreGroup>

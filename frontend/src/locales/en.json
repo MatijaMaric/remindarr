@@ -51,6 +51,7 @@
     "stats": "Stats"
   },
   "bottomNav": {
+    "home": "Home",
     "watch": "Home",
     "upcoming": "Upcoming",
     "browse": "Browse",

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { Routes, Route, NavLink, Link, Navigate, useLocation } from "react-router";
+import { Routes, Route, NavLink, Link, Navigate, useLocation, useNavigate } from "react-router";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
@@ -52,14 +52,23 @@ const PersonPage = lazyWithRetry(() => import("./pages/PersonPage"));
 const ReelsPage = lazyWithRetry(() => import("./pages/ReelsPage"));
 const DiscoveryPage = lazyWithRetry(() => import("./pages/DiscoveryPage"));
 const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
-const StatsPage = lazyWithRetry(() => import("./pages/StatsPage"));
 const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
 
+function focusOrNavigateSearch(navigate: ReturnType<typeof useNavigate>, currentPath: string) {
+  if (currentPath === "/browse") {
+    const input = document.getElementById("search-input") as HTMLInputElement | null;
+    if (input) { input.focus(); input.select(); }
+  } else {
+    navigate("/browse?focus=search");
+  }
+}
+
 export default function App() {
   const { user, loading, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const isReelsPage = location.pathname === "/reels";
   usePushSubscriptionSync();
@@ -67,13 +76,7 @@ export default function App() {
   const { theme } = useTheme();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useKeyboardShortcut("?", () => setShortcutsOpen((v) => !v));
-  useKeyboardShortcut("/", () => {
-    const input = document.getElementById("search-input") as HTMLInputElement | null;
-    if (input) {
-      input.focus();
-      input.select();
-    }
-  });
+  useKeyboardShortcut("/", () => focusOrNavigateSearch(navigate, location.pathname));
 
   return (
     <div
@@ -115,28 +118,22 @@ export default function App() {
             {user && (
               <>
                 <NavLink
-                  to="/tracked"
-                  className={({ isActive }) => navLinkClass(isActive)}
-                >
-                  {t("nav.tracked")}
-                </NavLink>
-                <NavLink
                   to="/calendar"
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
                   {t("nav.calendar")}
                 </NavLink>
                 <NavLink
+                  to="/tracked"
+                  className={({ isActive }) => navLinkClass(isActive)}
+                >
+                  {t("nav.tracked")}
+                </NavLink>
+                <NavLink
                   to="/discovery"
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
                   {t("nav.discovery")}
-                </NavLink>
-                <NavLink
-                  to="/stats"
-                  className={({ isActive }) => navLinkClass(isActive)}
-                >
-                  {t("nav.stats")}
                 </NavLink>
               </>
             )}
@@ -146,10 +143,7 @@ export default function App() {
           <button
             type="button"
             aria-label="Search (press / or ⌘K)"
-            onClick={() => {
-              const input = document.getElementById("search-input") as HTMLInputElement | null;
-              if (input) { input.focus(); input.select(); }
-            }}
+            onClick={() => focusOrNavigateSearch(navigate, location.pathname)}
             className="hidden sm:flex items-center gap-2 w-[260px] bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors"
           >
             <span className="opacity-60 text-base leading-none">⌕</span>
@@ -211,7 +205,7 @@ export default function App() {
             <Route path="/more" element={<RequireAuth><MorePage /></RequireAuth>} />
             <Route path="/discovery" element={<RequireAuth><DiscoveryPage /></RequireAuth>} />
             <Route path="/invite" element={<RequireAuth><InvitePage /></RequireAuth>} />
-            <Route path="/stats" element={<RequireAuth><StatsPage /></RequireAuth>} />
+            <Route path="/stats" element={<Navigate to="/tracked?view=stats" replace />} />
             <Route path="/admin/users" element={<RequireAuth><AdminUsersPage /></RequireAuth>} />
             <Route path="/user/:username" element={<UserProfilePage />} />
             <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />

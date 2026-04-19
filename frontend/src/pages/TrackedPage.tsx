@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
@@ -11,6 +11,7 @@ import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
+import { StatsView } from "./StatsPage";
 
 function TrackedStatsBand({ titles }: { titles: Title[] }) {
   const watching = titles.filter(t => t.show_status === 'watching' || t.user_status === 'watching').length;
@@ -80,7 +81,7 @@ export default function TrackedPage() {
   useGridNavigation();
 
   const [statusFilter, setStatusFilter] = useState<StatusTab>('all');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<'grid' | 'list' | 'stats'>('list');
   const [sort, setSort] = useState<SortKey>('last_aired');
 
   const { showGroups, movies } = useMemo(() => {
@@ -117,50 +118,55 @@ export default function TrackedPage() {
           <div className="flex items-center gap-2">
             <Pill active={view === 'grid'} onClick={() => setView('grid')}>Grid</Pill>
             <Pill active={view === 'list'} onClick={() => setView('list')}>List</Pill>
+            <Pill active={view === 'stats'} onClick={() => setView('stats')}>Stats</Pill>
           </div>
         }
       />
 
       {!loading && <TrackedStatsBand titles={allTitles} />}
 
-      <div className="flex items-center gap-0 border-b border-white/[0.06] mb-4 overflow-x-auto scrollbar-none">
-        {STATUS_TABS.map(tab => {
-          const count = tab.key === 'all' ? allTitles.length
-            : allTitles.filter(t => t.user_status === tab.key || (tab.key === 'watching' && t.show_status === 'watching') || (tab.key === 'completed' && t.show_status === 'completed')).length;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                statusFilter === tab.key
-                  ? 'text-zinc-100 border-amber-400 font-semibold'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-100'
-              }`}
-            >
-              {tab.label}
-              <span className="ml-2 font-mono text-[11px] text-zinc-500">{count}</span>
-            </button>
-          );
-        })}
-        <div className="flex-1" />
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortKey)}
-          className="font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none mb-0.5"
-        >
-          <option value="last_aired">sort: last aired</option>
-          <option value="title">sort: title</option>
-          <option value="rating">sort: rating</option>
-          <option value="progress">sort: progress</option>
-        </select>
-      </div>
+      {view !== 'stats' && (
+        <div className="flex items-center gap-0 border-b border-white/[0.06] mb-4 overflow-x-auto scrollbar-none">
+          {STATUS_TABS.map(tab => {
+            const count = tab.key === 'all' ? allTitles.length
+              : allTitles.filter(t => t.user_status === tab.key || (tab.key === 'watching' && t.show_status === 'watching') || (tab.key === 'completed' && t.show_status === 'completed')).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  statusFilter === tab.key
+                    ? 'text-zinc-100 border-amber-400 font-semibold'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-100'
+                }`}
+              >
+                {tab.label}
+                <span className="ml-2 font-mono text-[11px] text-zinc-500">{count}</span>
+              </button>
+            );
+          })}
+          <div className="flex-1" />
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            className="font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none mb-0.5"
+          >
+            <option value="last_aired">sort: last aired</option>
+            <option value="title">sort: title</option>
+            <option value="rating">sort: rating</option>
+            <option value="progress">sort: progress</option>
+          </select>
+        </div>
+      )}
 
-      {loading ? (
+      {view === 'stats' ? (
+        <StatsView />
+      ) : loading ? (
         <TitleGridSkeleton />
       ) : filteredTitles.length === 0 ? (
         <TitleList titles={[]} onTrackToggle={refetch} emptyMessage={t("tracked.empty")} />
       ) : view === 'list' ? (
-        <TrackedTable titles={sortedFilteredTitles} />
+        <TrackedTable titles={sortedFilteredTitles} onRefetch={refetch} />
       ) : statusFilter !== 'all' ? (
         <TitleList titles={sortedFilteredTitles} onTrackToggle={refetch} hideTypeBadge showProgressBar showStatusPicker showNotificationPicker showTags />
       ) : (
@@ -195,7 +201,59 @@ const STATUS_COLORS: Record<string, string> = {
   dropped: 'oklch(0.65 0.12 0)',
 };
 
-function TrackedTable({ titles }: { titles: Title[] }) {
+function RowActionsMenu({ title, onRefetch }: { title: Title; onRefetch: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleUntrack = async () => {
+    setOpen(false);
+    await api.untrackTitle(title.id);
+    onRefetch();
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="px-2 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-400 hover:text-white transition-colors cursor-pointer"
+      >
+        ···
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 min-w-[160px] bg-zinc-800 border border-white/[0.08] rounded-lg shadow-xl py-1 text-sm">
+          {title.tmdb_url && (
+            <a
+              href={title.tmdb_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-zinc-300 hover:bg-white/[0.06] transition-colors"
+            >
+              Open on TMDB ↗
+            </a>
+          )}
+          <button
+            onClick={() => { void handleUntrack(); }}
+            className="w-full text-left px-3 py-2 text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"
+          >
+            Untrack
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () => void }) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -324,6 +382,7 @@ function TrackedTable({ titles }: { titles: Title[] }) {
                 >
                   Open
                 </Link>
+                <RowActionsMenu title={title} onRefetch={onRefetch} />
               </div>
             </div>
           );

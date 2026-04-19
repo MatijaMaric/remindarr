@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type { StatsResponse } from "../types";
 import { useApiCall } from "../hooks/useApiCall";
@@ -106,14 +105,19 @@ function ShowStatusGrid({ showsByStatus }: { showsByStatus: StatsResponse["shows
   );
 }
 
-export default function StatsPage() {
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English", ja: "Japanese", ko: "Korean", fr: "French", de: "German",
+  es: "Spanish", it: "Italian", pt: "Portuguese", zh: "Chinese", hi: "Hindi",
+  ar: "Arabic", ru: "Russian", tr: "Turkish", nl: "Dutch", sv: "Swedish",
+  da: "Danish", fi: "Finnish", no: "Norwegian", pl: "Polish", th: "Thai",
+};
+
+export function StatsView() {
   const { data, loading } = useApiCall(() => api.getStats(), []);
-  const { t: _t } = useTranslation();
 
   if (loading || !data) {
     return (
       <div className="space-y-6">
-        <h2 className="text-lg font-semibold">Stats</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="bg-zinc-900 rounded-xl p-4 h-20 animate-pulse" />
@@ -127,17 +131,8 @@ export default function StatsPage() {
   const maxGenre = genres[0]?.count ?? 0;
   const maxLang = languages[0]?.count ?? 0;
 
-  const LANGUAGE_NAMES: Record<string, string> = {
-    en: "English", ja: "Japanese", ko: "Korean", fr: "French", de: "German",
-    es: "Spanish", it: "Italian", pt: "Portuguese", zh: "Chinese", hi: "Hindi",
-    ar: "Arabic", ru: "Russian", tr: "Turkish", nl: "Dutch", sv: "Swedish",
-    da: "Danish", fi: "Finnish", no: "Norwegian", pl: "Polish", th: "Thai",
-  };
-
   return (
     <div className="space-y-8 pb-8">
-      <h2 className="text-lg font-semibold">Stats</h2>
-
       {/* Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <OverviewCard label="Movies Watched" value={overview.watched_movies} />
@@ -200,6 +195,15 @@ export default function StatsPage() {
           <ShowStatusGrid showsByStatus={shows_by_status} />
         </div>
       )}
+    </div>
+  );
+}
+
+export default function StatsPage() {
+  return (
+    <div className="space-y-8">
+      <h2 className="text-lg font-semibold">Stats</h2>
+      <StatsView />
     </div>
   );
 }

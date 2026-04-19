@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
@@ -128,6 +128,10 @@ describe("TrackedPage", () => {
 
     render(<TrackedPage />, { wrapper: Wrapper });
 
+    // Default view is list; switch to grid to see section headers
+    await waitFor(() => expect(screen.getByText("Grid")).toBeDefined());
+    fireEvent.click(screen.getByText("Grid"));
+
     await waitFor(() => {
       expect(screen.getByText("Currently Watching (1)")).toBeDefined();
       expect(screen.getByText("Caught Up (1)")).toBeDefined();
@@ -147,6 +151,9 @@ describe("TrackedPage", () => {
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Grid")).toBeDefined());
+    fireEvent.click(screen.getByText("Grid"));
 
     await waitFor(() => {
       expect(screen.getByText("Currently Watching (1)")).toBeDefined();
@@ -176,6 +183,9 @@ describe("TrackedPage", () => {
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Grid")).toBeDefined());
+    fireEvent.click(screen.getByText("Grid"));
 
     await waitFor(() => {
       expect(screen.getByText("Movies (2)")).toBeDefined();
@@ -210,6 +220,9 @@ describe("TrackedPage", () => {
 
     render(<TrackedPage />, { wrapper: Wrapper });
 
+    await waitFor(() => expect(screen.getByText("Grid")).toBeDefined());
+    fireEvent.click(screen.getByText("Grid"));
+
     await waitFor(() => {
       expect(screen.getByText("Unreleased (1)")).toBeDefined();
     });
@@ -224,6 +237,9 @@ describe("TrackedPage", () => {
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Grid")).toBeDefined());
+    fireEvent.click(screen.getByText("Grid"));
 
     await waitFor(() => {
       expect(screen.getByText("Currently Watching (1)")).toBeDefined();
