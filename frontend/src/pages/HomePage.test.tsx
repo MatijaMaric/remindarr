@@ -42,6 +42,11 @@ Object.defineProperty(globalThis, "ResizeObserver", {
   configurable: true,
 });
 
+// Ensure useIsMobile returns false so desktop layout renders in tests
+mock.module("../hooks/useIsMobile", () => ({
+  useIsMobile: () => false,
+}));
+
 function makeSearchTitle(i: number) {
   return {
     id: `t${i}`,
@@ -105,10 +110,20 @@ const mockGetRecommendations = mock(() =>
   Promise.resolve({ recommendations: [], count: 0 })
 );
 
+const mockGetHomepageLayout = mock(() =>
+  Promise.resolve({ homepage_layout: [
+    { id: "today", enabled: true },
+    { id: "upcoming", enabled: true },
+    { id: "unwatched", enabled: true },
+    { id: "recommendations", enabled: true },
+  ]})
+);
+
 mock.module("../api", () => ({
   browseTitles: mockBrowseTitles,
   getUpcomingEpisodes: mockGetUpcomingEpisodes,
   getRecommendations: mockGetRecommendations,
+  getHomepageLayout: mockGetHomepageLayout,
 }));
 
 const { default: HomePage } = await import("./HomePage");

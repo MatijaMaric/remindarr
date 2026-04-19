@@ -3,10 +3,10 @@ import { Pill } from "../components/design";
 export type BrowseCategory = "new_releases" | "popular" | "upcoming" | "top_rated";
 
 const CATEGORIES: { value: BrowseCategory; label: string }[] = [
-  { value: "new_releases", label: "New Releases" },
   { value: "popular", label: "Popular" },
   { value: "upcoming", label: "Upcoming" },
   { value: "top_rated", label: "Top Rated" },
+  { value: "new_releases", label: "Now Playing" },
 ];
 
 interface Props {

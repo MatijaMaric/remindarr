@@ -47,6 +47,7 @@
     "logout": "Logout",
     "signIn": "Sign In",
     "settings": "Settings",
+    "discovery": "Discovery",
     "stats": "Stats"
   },
   "bottomNav": {

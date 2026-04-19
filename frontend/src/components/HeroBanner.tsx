@@ -5,6 +5,7 @@ import type { Episode } from "../types";
 import { formatEpisodeCode } from "./EpisodeComponents";
 import { useDominantColors } from "./useDominantColor";
 import WatchButtonGroup from "./WatchButtonGroup";
+import * as api from "../api";
 
 export interface HeroBannerSlide {
   featured: Episode;
@@ -61,10 +62,11 @@ export function getHeroImageUrl(episode: Episode): string | null {
   return null;
 }
 
-export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
+export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[]; onWatched?: () => void }) {
   const slides = getHeroBannerSlides(episodes);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [markingWatched, setMarkingWatched] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const imageUrls = useMemo(
@@ -91,13 +93,25 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
     };
   }, [slides.length, isPaused]);
 
+  const handleMarkWatched = useCallback(async () => {
+    const ep = slides[activeIndex]?.featured;
+    if (!ep || markingWatched) return;
+    setMarkingWatched(true);
+    try {
+      await api.watchEpisode(ep.id);
+      onWatched?.();
+    } finally {
+      setMarkingWatched(false);
+    }
+  }, [slides, activeIndex, markingWatched, onWatched]);
+
   if (slides.length === 0) return null;
 
   const current = slides[activeIndex];
 
   return (
     <div
-      className="group hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[450px] dark-section"
+      className="group hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] overflow-hidden h-[520px] dark-section"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -177,10 +191,23 @@ export default function HeroBanner({ episodes }: { episodes: Episode[] }) {
               to={`/title/${current.featured.title_id}`}
               className="bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors"
             >
-              ▶ Watch now
+              ▶ Play S{current.featured.season_number}·E{current.featured.episode_number}
             </Link>
+            <button
+              onClick={() => void handleMarkWatched()}
+              disabled={markingWatched}
+              className="bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {markingWatched ? "Marking…" : "Mark watched"}
+            </button>
             <WatchButtonGroup offers={current.featured.offers ?? []} variant="inline" maxVisible={2} />
           </div>
+          {/* Metadata strip */}
+          {current.featured.offers && current.featured.offers.length > 0 && (
+            <p className="mt-3 font-mono text-[11px] text-zinc-500 tracking-wide">
+              {current.featured.offers[0].provider_name}
+            </p>
+          )}
 
           {/* Slide dots */}
           {slides.length > 1 && (

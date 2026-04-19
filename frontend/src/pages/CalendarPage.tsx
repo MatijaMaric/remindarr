@@ -273,6 +273,162 @@ function SlideOverPanel({
   );
 }
 
+// ─── Mobile Calendar ─────────────────────────────────────────────────────────
+
+function MiniMonthGrid({
+  year,
+  month,
+  dotDates,
+}: {
+  year: number;
+  month: number;
+  dotDates: Set<string>;
+}) {
+  const todayStr = formatDateKey(new Date());
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Week starts on Monday; getDay() returns 0=Sun
+  const startDow = (firstDay.getDay() + 6) % 7;
+  const cells: (number | null)[] = [...Array(startDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const weekdays = ["M", "T", "W", "T", "F", "S", "S"];
+
+  return (
+    <div className="px-5 pb-4">
+      <div className="grid grid-cols-7 gap-0.5 mb-1 text-center font-mono text-[9px] text-zinc-500 uppercase tracking-[0.1em]">
+        {weekdays.map((d, i) => <div key={i}>{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={`e-${i}`} />;
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const isToday = dateStr === todayStr;
+          const hasDots = dotDates.has(dateStr);
+          return (
+            <div
+              key={dateStr}
+              className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg text-[13px] font-mono ${
+                isToday
+                  ? "border border-amber-400 bg-amber-400/[0.12] text-amber-400 font-bold"
+                  : hasDots
+                  ? "bg-white/[0.03] text-zinc-200 font-medium"
+                  : "text-zinc-600"
+              }`}
+            >
+              <span>{day}</span>
+              {hasDots && (
+                <div className="flex gap-0.5">
+                  <span className="w-1 h-1 rounded-full bg-amber-400" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MobileCalendar({
+  searchParams,
+  setSearchParams,
+}: {
+  searchParams: URLSearchParams;
+  setSearchParams: ReturnType<typeof useSearchParams>[1];
+}) {
+  const [mobileView, setMobileView] = useState<"agenda" | "month">("agenda");
+  const [monthParam, setMonthParam] = useCalendarParam(searchParams, setSearchParams, "month", formatMonth(new Date()));
+
+  const currentMonth = useMemo(() => {
+    const [y, m] = monthParam.split("-").map(Number);
+    return new Date(y, m - 1, 1);
+  }, [monthParam]);
+
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [loadingMonth, setLoadingMonth] = useState(false);
+
+  useEffect(() => {
+    if (mobileView !== "month") return;
+    let cancelled = false;
+    void (async () => {
+      setLoadingMonth(true);
+      try {
+        const data = await getCalendarTitles({ month: formatMonth(currentMonth) });
+        if (!cancelled) setEpisodes(data.episodes || []);
+      } catch { /* ignore */ } finally {
+        if (!cancelled) setLoadingMonth(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [mobileView, currentMonth]);
+
+  const dotDates = useMemo(() => {
+    const set = new Set<string>();
+    for (const ep of episodes) {
+      if (ep.air_date) set.add(ep.air_date);
+    }
+    return set;
+  }, [episodes]);
+
+  const monthLabel = currentMonth.toLocaleDateString(undefined, { month: "long" });
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  function prevMonth() {
+    const d = new Date(year, month - 1, 1);
+    setMonthParam(formatMonth(d));
+  }
+  function nextMonth() {
+    const d = new Date(year, month + 1, 1);
+    setMonthParam(formatMonth(d));
+  }
+
+  return (
+    <div className="space-y-0">
+      {mobileView === "month" && (
+        <>
+          {/* Month header */}
+          <div className="flex items-baseline justify-between px-5 pt-3 pb-2">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-0.5">
+                {year} · {dotDates.size} airings
+              </div>
+              <div className="text-[32px] font-extrabold tracking-[-1.2px]">{monthLabel}</div>
+            </div>
+            <div className="flex gap-2 items-center">
+              <button onClick={prevMonth} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">‹</button>
+              <button onClick={nextMonth} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">›</button>
+            </div>
+          </div>
+          {/* Month/Agenda toggle */}
+          <div className="flex gap-2 px-5 pb-4">
+            <button onClick={() => setMobileView("month")} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Month</button>
+            <button onClick={() => setMobileView("agenda")} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Agenda</button>
+          </div>
+          {loadingMonth ? (
+            <div className="text-center py-8 text-zinc-500 font-mono text-xs">Loading...</div>
+          ) : (
+            <MiniMonthGrid year={year} month={month} dotDates={dotDates} />
+          )}
+        </>
+      )}
+
+      {mobileView === "agenda" && (
+        <div>
+          {/* Month/Agenda toggle */}
+          <div className="flex gap-2 px-4 pt-2 pb-2">
+            <button onClick={() => setMobileView("month")} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Month</button>
+            <button onClick={() => setMobileView("agenda")} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Agenda</button>
+          </div>
+          <AgendaCalendar
+            searchParams={searchParams}
+            setSearchParams={setSearchParams}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Export ─────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
@@ -290,7 +446,7 @@ export default function CalendarPage() {
 
   if (isMobile) {
     return (
-      <AgendaCalendar
+      <MobileCalendar
         searchParams={searchParams}
         setSearchParams={setSearchParams}
       />

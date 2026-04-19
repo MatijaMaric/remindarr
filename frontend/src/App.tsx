@@ -3,7 +3,6 @@ import { Routes, Route, NavLink, Link, Navigate, useLocation } from "react-route
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
-import { useIsMobile } from "./hooks/useIsMobile";
 import RequireAuth from "./components/RequireAuth";
 import BottomTabBar from "./components/BottomTabBar";
 import ScrollToTop from "./components/ScrollToTop";
@@ -57,15 +56,6 @@ const StatsPage = lazyWithRetry(() => import("./pages/StatsPage"));
 const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
-
-function MobileHomeRedirect() {
-  const { user, loading } = useAuth();
-  const isMobile = useIsMobile();
-
-  if (loading) return null;
-  if (isMobile && user) return <Navigate to="/reels" replace />;
-  return <HomePage />;
-}
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -137,6 +127,12 @@ export default function App() {
                   {t("nav.calendar")}
                 </NavLink>
                 <NavLink
+                  to="/discovery"
+                  className={({ isActive }) => navLinkClass(isActive)}
+                >
+                  {t("nav.discovery")}
+                </NavLink>
+                <NavLink
                   to="/stats"
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
@@ -166,9 +162,12 @@ export default function App() {
               <>
                 <Link
                   to={`/user/${user.username}`}
-                  className="text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[13px] text-black hover:opacity-80 transition-opacity shrink-0"
+                  style={{ background: "oklch(0.6 0.1 250)" }}
+                  aria-label={user.display_name || user.username}
+                  title={user.display_name || user.username}
                 >
-                  {user.display_name || user.username}
+                  {(user.display_name || user.username).charAt(0).toUpperCase()}
                 </Link>
                 <Link
                   to="/settings"
@@ -201,7 +200,7 @@ export default function App() {
         {user && <NotificationPrompt />}
         <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
           <Routes>
-            <Route path="/" element={<MobileHomeRedirect />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
