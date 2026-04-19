@@ -4,7 +4,7 @@ import type { Title } from "../types";
 import TitleCard from "./TitleCard";
 
 /** Number of columns at each responsive breakpoint */
-const BREAKPOINT_COLS = { base: 2, sm: 3, md: 4, lg: 5, xl: 6 };
+const BREAKPOINT_COLS = { base: 3, sm: 3, md: 4, lg: 5, xl: 6 };
 
 /** Auto-virtualize when list exceeds this many items (4 rows × 6 cols at xl) */
 const VIRTUAL_THRESHOLD = 24;
@@ -140,7 +140,7 @@ export default function TitleList({
                 transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
               }}
             >
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-4">
+              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4 pb-4">
                 {(rows[virtualRow.index] ?? []).map((title) => (
                   <TitleCard key={title.id} title={title} {...cardProps} />
                 ))}
@@ -151,7 +151,7 @@ export default function TitleList({
       ) : (
         <div
           data-testid="title-grid"
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+          className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4"
         >
           {displayTitles.map((title) => (
             <TitleCard key={title.id} title={title} {...cardProps} />

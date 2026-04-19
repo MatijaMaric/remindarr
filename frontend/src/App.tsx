@@ -51,12 +51,12 @@ const SeasonDetailPage = lazyWithRetry(() => import("./pages/SeasonDetailPage"))
 const EpisodeDetailPage = lazyWithRetry(() => import("./pages/EpisodeDetailPage"));
 const PersonPage = lazyWithRetry(() => import("./pages/PersonPage"));
 const ReelsPage = lazyWithRetry(() => import("./pages/ReelsPage"));
-const UpcomingPage = lazyWithRetry(() => import("./pages/UpcomingPage"));
 const DiscoveryPage = lazyWithRetry(() => import("./pages/DiscoveryPage"));
 const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
 const StatsPage = lazyWithRetry(() => import("./pages/StatsPage"));
 const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
+const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
 
 function MobileHomeRedirect() {
   const { user, loading } = useAuth();
@@ -208,7 +208,8 @@ export default function App() {
             <Route path="/tracked" element={<RequireAuth><TrackedPage /></RequireAuth>} />
             <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
             <Route path="/reels" element={<RequireAuth><ReelsPage /></RequireAuth>} />
-            <Route path="/upcoming" element={<RequireAuth><UpcomingPage /></RequireAuth>} />
+            <Route path="/upcoming" element={<RequireAuth><Navigate to="/calendar" replace /></RequireAuth>} />
+            <Route path="/more" element={<RequireAuth><MorePage /></RequireAuth>} />
             <Route path="/discovery" element={<RequireAuth><DiscoveryPage /></RequireAuth>} />
             <Route path="/invite" element={<RequireAuth><InvitePage /></RequireAuth>} />
             <Route path="/stats" element={<RequireAuth><StatsPage /></RequireAuth>} />

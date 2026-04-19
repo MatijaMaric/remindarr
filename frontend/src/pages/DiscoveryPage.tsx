@@ -184,9 +184,9 @@ function HeroCard({
   const senderName = rec.from_user.display_name ?? rec.from_user.username;
 
   return (
-    <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 mb-8 grid grid-cols-[200px_1fr] sm:grid-cols-[240px_1fr] gap-6 items-start">
+    <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 items-start">
       {/* Poster */}
-      <div className="aspect-[2/3] rounded-lg overflow-hidden">
+      <div className="aspect-[2/3] rounded-lg overflow-hidden max-w-[200px] sm:max-w-none mx-auto sm:mx-0">
         {posterSrc ? (
           <img
             src={posterSrc}
@@ -266,7 +266,7 @@ function RailCard({
     : null;
 
   return (
-    <div className="w-[140px] shrink-0 flex flex-col gap-2">
+    <div className="w-[118px] sm:w-[140px] shrink-0 flex flex-col gap-2">
       <Link to={`/title/${rec.title.id}`} className="block aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800">
         {posterSrc ? (
           <img

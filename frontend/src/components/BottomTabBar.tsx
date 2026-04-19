@@ -1,12 +1,11 @@
 import { NavLink } from "react-router";
-import { Clapperboard, Clock, Search, Sparkles, User, LogIn } from "lucide-react";
+import { Clapperboard, Search, CalendarDays, Bookmark, MoreHorizontal, LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
-import { bottomTabClass } from "../nav-utils";
 import { useApiCall } from "../hooks/useApiCall";
 import * as api from "../api";
 
-const ICON_SIZE = 20;
+const ICON_SIZE = 22;
 
 export default function BottomTabBar() {
   const { user, loading } = useAuth();
@@ -21,24 +20,44 @@ export default function BottomTabBar() {
 
   if (loading) return null;
 
+  const tabClass = (isActive: boolean) =>
+    `flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+      isActive ? "text-amber-400" : "text-zinc-500"
+    }`;
+
   return (
-    <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/90 backdrop-blur-xl border-t border-white/[0.06] sm:hidden safe-bottom">
-      <div className="flex justify-around">
+    <nav
+      aria-label="Mobile navigation"
+      className="fixed left-3 right-3 bottom-[18px] z-50 sm:hidden"
+    >
+      <div
+        className="flex items-center bg-zinc-900/[0.72] backdrop-blur-xl backdrop-saturate-150 border border-white/[0.08] rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] px-1.5"
+      >
         {user ? (
           <>
-            <NavLink to="/reels" className={({ isActive }) => bottomTabClass(isActive)}>
+            <NavLink to="/reels" className={({ isActive }) => tabClass(isActive)}>
               <Clapperboard size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] mt-0.5">{t("bottomNav.watch")}</span>
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.watch")}</span>
             </NavLink>
 
-            <NavLink to="/upcoming" className={({ isActive }) => bottomTabClass(isActive)}>
-              <Clock size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] mt-0.5">{t("bottomNav.upcoming")}</span>
+            <NavLink to="/browse" className={({ isActive }) => tabClass(isActive)}>
+              <Search size={ICON_SIZE} aria-hidden="true" />
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.browse")}</span>
             </NavLink>
 
-            <NavLink to="/discovery" className={({ isActive }) => bottomTabClass(isActive)}>
+            <NavLink to="/calendar" className={({ isActive }) => tabClass(isActive)}>
+              <CalendarDays size={ICON_SIZE} aria-hidden="true" />
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.calendar")}</span>
+            </NavLink>
+
+            <NavLink to="/tracked" className={({ isActive }) => tabClass(isActive)}>
+              <Bookmark size={ICON_SIZE} aria-hidden="true" />
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.tracked")}</span>
+            </NavLink>
+
+            <NavLink to="/more" className={({ isActive }) => tabClass(isActive)}>
               <div className="relative">
-                <Sparkles size={ICON_SIZE} aria-hidden="true" />
+                <MoreHorizontal size={ICON_SIZE} aria-hidden="true" />
                 {unreadCount > 0 && (
                   <span
                     data-testid="unread-badge"
@@ -49,29 +68,19 @@ export default function BottomTabBar() {
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5">{t("bottomNav.discovery")}</span>
-            </NavLink>
-
-            <NavLink to="/browse" className={({ isActive }) => bottomTabClass(isActive)}>
-              <Search size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] mt-0.5">{t("bottomNav.browse")}</span>
-            </NavLink>
-
-            <NavLink to={`/user/${user.username}`} className={({ isActive }) => bottomTabClass(isActive)}>
-              <User size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] mt-0.5">{t("bottomNav.profile")}</span>
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.more")}</span>
             </NavLink>
           </>
         ) : (
           <>
-            <NavLink to="/browse" className={({ isActive }) => bottomTabClass(isActive)}>
+            <NavLink to="/browse" className={({ isActive }) => tabClass(isActive)}>
               <Search size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] mt-0.5">{t("bottomNav.browse")}</span>
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.browse")}</span>
             </NavLink>
 
-            <NavLink to="/login" className={({ isActive }) => bottomTabClass(isActive)}>
+            <NavLink to="/login" className={({ isActive }) => tabClass(isActive)}>
               <LogIn size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] mt-0.5">{t("bottomNav.signIn")}</span>
+              <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.signIn")}</span>
             </NavLink>
           </>
         )}

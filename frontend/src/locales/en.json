@@ -50,11 +50,13 @@
     "stats": "Stats"
   },
   "bottomNav": {
-    "watch": "Watch",
+    "watch": "Home",
     "upcoming": "Upcoming",
     "browse": "Browse",
     "calendar": "Calendar",
+    "tracked": "Tracked",
     "discovery": "Discovery",
+    "more": "More",
     "profile": "Profile",
     "signIn": "Sign In",
     "unreadRecommendations_one": "{{count}} unread recommendation",

@@ -89,7 +89,7 @@ export default function TrackedPage() {
 
       {!loading && <TrackedStatsBand titles={allTitles} />}
 
-      <div className="flex gap-0 border-b border-white/[0.06] mb-4">
+      <div className="flex gap-0 border-b border-white/[0.06] mb-4 overflow-x-auto scrollbar-none">
         {STATUS_TABS.map(tab => {
           const count = tab.key === 'all' ? allTitles.length
             : allTitles.filter(t => t.user_status === tab.key || (tab.key === 'watching' && t.show_status === 'watching') || (tab.key === 'completed' && t.show_status === 'completed')).length;

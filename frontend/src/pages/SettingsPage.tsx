@@ -69,17 +69,17 @@ export default function SettingsPage() {
     <div className="max-w-7xl mx-auto">
       <PageHeader kicker="Your preferences" title="Settings" className="px-0 pt-4 pb-4" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-8">
-        {/* Sidebar */}
-        <nav className="flex flex-col gap-0.5">
+      <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 sm:gap-8">
+        {/* Sidebar — pill row on mobile, vertical list on desktop */}
+        <nav className="flex sm:flex-col gap-1 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
           {TABS.map((tab) => (
             <button
               key={tab.value}
               onClick={() => setTab(tab.value)}
-              className={`w-full text-left px-[14px] py-[10px] text-sm font-medium transition-colors rounded-r-md border-l-2 ${
+              className={`shrink-0 sm:w-full text-left px-3 sm:px-[14px] py-2 sm:py-[10px] text-sm font-medium transition-colors rounded-lg sm:rounded-r-md sm:border-l-2 whitespace-nowrap ${
                 activeTab === tab.value
-                  ? "bg-amber-400/10 text-zinc-100 border-amber-400"
-                  : "text-zinc-400 border-transparent hover:text-zinc-100 hover:bg-white/[0.04]"
+                  ? "bg-amber-400/10 text-zinc-100 sm:border-amber-400 border border-amber-400/40"
+                  : "text-zinc-400 sm:border-transparent hover:text-zinc-100 hover:bg-white/[0.04] border border-white/[0.06] sm:border-transparent"
               }`}
             >
               {tab.label}

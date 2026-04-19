@@ -41,11 +41,11 @@ describe("BottomTabBar", () => {
   it("renders 5 tabs when user is authenticated", () => {
     render(<BottomTabBar />, { wrapper: Wrapper });
 
-    expect(screen.getByText("Watch")).toBeDefined();
-    expect(screen.getByText("Upcoming")).toBeDefined();
-    expect(screen.getByText("Discovery")).toBeDefined();
+    expect(screen.getByText("Home")).toBeDefined();
     expect(screen.getByText("Browse")).toBeDefined();
-    expect(screen.getByText("Profile")).toBeDefined();
+    expect(screen.getByText("Calendar")).toBeDefined();
+    expect(screen.getByText("Tracked")).toBeDefined();
+    expect(screen.getByText("More")).toBeDefined();
   });
 
   it("renders Browse and Sign In when user is not authenticated", () => {
@@ -60,10 +60,10 @@ describe("BottomTabBar", () => {
 
     expect(screen.getByText("Browse")).toBeDefined();
     expect(screen.getByText("Sign In")).toBeDefined();
-    expect(screen.queryByText("Watch")).toBeNull();
-    expect(screen.queryByText("Upcoming")).toBeNull();
-    expect(screen.queryByText("Discovery")).toBeNull();
-    expect(screen.queryByText("Profile")).toBeNull();
+    expect(screen.queryByText("Home")).toBeNull();
+    expect(screen.queryByText("Calendar")).toBeNull();
+    expect(screen.queryByText("Tracked")).toBeNull();
+    expect(screen.queryByText("More")).toBeNull();
   });
 
   it("renders nothing while auth is loading", () => {
@@ -91,10 +91,10 @@ describe("BottomTabBar", () => {
     const links = screen.getAllByRole("link");
     const hrefs = links.map((link) => link.getAttribute("href"));
     expect(hrefs).toContain("/reels");
-    expect(hrefs).toContain("/upcoming");
-    expect(hrefs).toContain("/discovery");
     expect(hrefs).toContain("/browse");
-    expect(hrefs).toContain("/user/test");
+    expect(hrefs).toContain("/calendar");
+    expect(hrefs).toContain("/tracked");
+    expect(hrefs).toContain("/more");
   });
 
   it("links to correct routes when not authenticated", () => {
