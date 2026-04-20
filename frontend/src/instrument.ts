@@ -8,6 +8,7 @@ if (dsn) {
 
     Sentry.init({
       dsn,
+      release: import.meta.env.VITE_SENTRY_RELEASE,
       integrations: [
         Sentry.browserTracingIntegration(),
         Sentry.replayIntegration(),

@@ -18,6 +18,9 @@ admin-password.txt
 .env.*
 !.env.example
 
+# Sentry CLI auth
+.sentryclirc
+
 # OS
 .DS_Store
 Thumbs.db
