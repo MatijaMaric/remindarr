@@ -19,11 +19,12 @@
     "db:push": "bunx drizzle-kit push",
     "db:studio": "bunx drizzle-kit studio",
     "db:migrate:cf": "bunx wrangler d1 migrations apply remindarr --remote",
+    "sentry:env-check": "bun -e \"const e=process.env;console.log('SENTRY_AUTH_TOKEN len:',(e.SENTRY_AUTH_TOKEN||'').length);console.log('SENTRY_ORG:',e.SENTRY_ORG||'UNSET');console.log('SENTRY_URL:',e.SENTRY_URL||'UNSET');console.log('VITE_SENTRY_DSN len:',(e.VITE_SENTRY_DSN||'').length);\"",
     "sentry:release:new": "bunx sentry-cli releases new -p remindarr-cf -p remindarr-fe \"$VERSION\"",
     "sentry:release:upload-maps": "bunx sentry-cli sourcemaps inject frontend/dist && bunx sentry-cli sourcemaps upload --project remindarr-fe --release=\"$VERSION\" frontend/dist",
     "sentry:release:finalize": "bunx sentry-cli releases set-commits \"$VERSION\" --auto && bunx sentry-cli releases finalize \"$VERSION\"",
-    "deploy:cf": "bun run db:migrate:cf && export VERSION=$(bunx sentry-cli releases propose-version) && export VITE_SENTRY_RELEASE=\"$VERSION\" && bun run build && bun run sentry:release:new && bun run sentry:release:upload-maps && bunx wrangler deploy --var SENTRY_RELEASE:\"$VERSION\" && bun run sentry:release:finalize",
-    "deploy:cf:version": "bun run db:migrate:cf && bunx wrangler versions upload"
+    "deploy:cf": "bun run sentry:env-check && bun run db:migrate:cf && export VERSION=$(bunx sentry-cli releases propose-version) && export VITE_SENTRY_RELEASE=\"$VERSION\" && bun run build && bun run sentry:release:new && bun run sentry:release:upload-maps && bunx wrangler deploy --var SENTRY_RELEASE:\"$VERSION\" && bun run sentry:release:finalize",
+    "deploy:cf:version": "bun run sentry:env-check && bun run db:migrate:cf && bunx wrangler versions upload"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.5.6",
