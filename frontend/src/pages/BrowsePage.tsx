@@ -255,7 +255,11 @@ export default function BrowsePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader kicker="Browse catalog" title="Browse" className="px-0 pt-4 pb-4" />
+      <PageHeader
+        kicker={searchResults !== null ? `Search · ${searchResults.length} result${searchResults.length === 1 ? "" : "s"}` : "Catalog · discover titles"}
+        title="Browse"
+        className="px-0 pt-4 pb-4"
+      />
       <SearchBar onSearch={handleSearch} onImdb={handleImdb} loading={searchLoading} />
 
 

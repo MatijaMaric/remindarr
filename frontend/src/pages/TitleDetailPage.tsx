@@ -303,7 +303,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               <Kicker className="mb-2">
                 Movie{title.release_year ? ` · ${title.release_year}` : ""}{title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
               </Kicker>
-              <h1 className="text-[30px] sm:text-[56px] leading-tight font-bold text-white">{tmdb?.title || title.title}</h1>
+              <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white">{tmdb?.title || title.title}</h1>
               {(() => {
                 const displayTitle = tmdb?.title || title.title;
                 const originalTitle = tmdb?.original_title || title.original_title;
@@ -702,7 +702,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                 <Kicker className="mb-2">
                   TV Show{title.release_year ? ` · ${title.release_year}` : ""}{title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
                 </Kicker>
-                <h1 className="text-[30px] sm:text-[56px] leading-tight font-bold text-white">{tmdb?.name || title.title}</h1>
+                <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white">{tmdb?.name || title.title}</h1>
                 {(() => {
                   const displayTitle = tmdb?.name || title.title;
                   const originalTitle = tmdb?.original_name || title.original_title;
