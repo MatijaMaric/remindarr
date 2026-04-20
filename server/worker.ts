@@ -93,6 +93,7 @@ interface Env {
   LOG_LEVEL?: string;
   CORS_ORIGIN?: string;
   SENTRY_DSN?: string;
+  SENTRY_RELEASE?: string;
   OIDC_ISSUER_URL?: string;
   OIDC_CLIENT_ID?: string;
   OIDC_CLIENT_SECRET?: string;
@@ -509,6 +510,7 @@ const handler = {
 export default withSentry(
   (env: Env) => ({
     dsn: env.SENTRY_DSN,
+    release: env.SENTRY_RELEASE,
     tracesSampleRate: 1.0,
     sendDefaultPii: false,
   }),
