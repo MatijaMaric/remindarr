@@ -54,11 +54,13 @@ export default function FullBleedCarousel({
   const arrowOffset = "max(0px, calc((100vw - 80rem) / 2 - 0.75rem))";
   // Align first card with the body content (mirrors max-w-7xl mx-auto px-4)
   const edgePad = "max(1rem, calc((100vw - 80rem) / 2 + 1rem))";
+  // Width of the left/right fade zones (outside the 80rem body)
+  const fadeWidth = "max(1rem, calc((100vw - 80rem) / 2))";
 
   return (
     // Break out of the max-w-7xl container, same trick as HeroBanner
     <div className="group/fullbleed relative w-[100vw] left-[50%] ml-[-50vw]">
-      {/* Scroll container: pad content to align with body, fade edges via mask */}
+      {/* Scroll container: pad content to align with body */}
       <div
         ref={scrollRef}
         className="flex overflow-x-auto gap-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
@@ -68,17 +70,31 @@ export default function FullBleedCarousel({
           // Ensure snap points account for the padding so the first card is reachable
           scrollPaddingLeft: edgePad,
           scrollPaddingRight: edgePad,
-          // Fade content outside the body zone into the background
-          maskImage:
-            "linear-gradient(to right, transparent, black max(1rem, calc((100vw - 80rem) / 2)), black calc(100% - max(1rem, calc((100vw - 80rem) / 2))), transparent)",
-          WebkitMaskImage:
-            "linear-gradient(to right, transparent, black max(1rem, calc((100vw - 80rem) / 2)), black calc(100% - max(1rem, calc((100vw - 80rem) / 2))), transparent)",
         }}
       >
         {children}
       </div>
 
-      {/* Left arrow — outside the masked scroll div so it stays fully visible */}
+      {/* Edge fade overlays — sibling divs instead of mask-image on the scroll container
+          (mask-image + overflow-x auto flickers in Firefox when siblings transition). */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-10"
+        style={{
+          width: fadeWidth,
+          background: "linear-gradient(to right, var(--bg-app), transparent)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 z-10"
+        style={{
+          width: fadeWidth,
+          background: "linear-gradient(to left, var(--bg-app), transparent)",
+        }}
+      />
+
+      {/* Left arrow — on top of the fade overlay so it stays fully visible */}
       {canScrollLeft && (
         <button
           onClick={() => scroll("left")}
