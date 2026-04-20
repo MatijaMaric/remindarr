@@ -6,7 +6,7 @@ import * as api from "../api";
 import type { Recommendation } from "../types";
 import { useApiCall } from "../hooks/useApiCall";
 import { Skeleton } from "../components/ui/skeleton";
-import { PageHeader, Kicker, Pill } from "../components/design";
+import { PageHeader, Kicker, Pill, Chip } from "../components/design";
 
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
@@ -182,11 +182,12 @@ function HeroCard({
     : null;
 
   const senderName = rec.from_user.display_name ?? rec.from_user.username;
+  const typeLabel = rec.title.object_type === "SHOW" ? "TV Series" : "Movie";
 
   return (
-    <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 items-start">
+    <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-[280px_1fr] lg:grid-cols-[360px_1fr] gap-6 sm:gap-8 items-stretch">
       {/* Poster */}
-      <div className="aspect-[2/3] rounded-lg overflow-hidden max-w-[200px] sm:max-w-none mx-auto sm:mx-0">
+      <div className="aspect-[2/3] rounded-[10px] overflow-hidden max-w-[220px] sm:max-w-none mx-auto sm:mx-0 shadow-2xl">
         {posterSrc ? (
           <img
             src={posterSrc}
@@ -199,49 +200,54 @@ function HeroCard({
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-3 min-w-0">
-        <Kicker>Pick of the week</Kicker>
+      <div className="flex flex-col min-w-0 py-2">
+        <Kicker>Pick of the week{senderName ? ` · from @${rec.from_user.username}` : ""}</Kicker>
 
-        <h2 className="font-bold text-2xl text-zinc-100 leading-tight">
+        <h2 className="text-[30px] sm:text-[36px] lg:text-[44px] font-extrabold tracking-[-0.03em] leading-[1.02] text-zinc-100 mb-3.5">
           {rec.title.title}
         </h2>
 
-        <p className="text-zinc-300 text-sm leading-relaxed line-clamp-4">
-          {rec.title.object_type === "SHOW" ? "TV Series" : "Movie"}
-        </p>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Chip variant="default">{typeLabel}</Chip>
+        </div>
 
-        {/* "Why you'll like it" tag — from sender */}
-        {senderName && (
-          <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-            <span className="text-amber-400">&#10022;</span>
-            <span>
-              Recommended by <span className="text-zinc-200 font-medium">{senderName}</span>
-            </span>
-            {rec.message && (
-              <span className="text-zinc-500 italic truncate max-w-[200px]">
-                &ldquo;{rec.message}&rdquo;
-              </span>
+        {/* "Why you'll like it" — featuring sender message */}
+        {(rec.message || senderName) && (
+          <div className="bg-white/[0.04] border border-white/[0.06] rounded-lg p-3.5 mb-5">
+            <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2">
+              Why you'll like it
+            </div>
+            {rec.message ? (
+              <p className="text-sm text-zinc-300 italic leading-relaxed mb-2">&ldquo;{rec.message}&rdquo;</p>
+            ) : null}
+            {senderName && (
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-400/[0.08] text-amber-400 border border-amber-400/[0.18] font-medium">
+                  Recommended by
+                </span>
+                <span className="text-xs text-zinc-200 font-medium">{senderName}</span>
+              </div>
             )}
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex flex-wrap gap-2 mt-1">
+        <div className="flex flex-wrap gap-2.5 mt-auto">
           <button
             onClick={() => onTrack(rec)}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-bold bg-amber-400 text-black hover:bg-amber-300 transition-colors cursor-pointer"
           >
             {t("discovery.track")}
           </button>
           <Link
             to={`/title/${rec.title.id}`}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.1] transition-colors"
+            className="inline-flex items-center justify-center px-[18px] py-2.5 rounded-lg text-sm font-semibold bg-white/[0.08] border border-white/[0.14] text-zinc-100 hover:bg-white/[0.14] transition-colors"
           >
             View details
           </Link>
           <button
             onClick={() => onDismiss(rec)}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-lg text-sm font-semibold text-zinc-500 border border-white/[0.08] hover:text-zinc-300 hover:border-white/[0.16] transition-colors cursor-pointer"
           >
             Not interested
           </button>

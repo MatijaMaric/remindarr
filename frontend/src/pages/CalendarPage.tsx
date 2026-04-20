@@ -744,7 +744,7 @@ function GridCalendar({
     <div className="space-y-4">
       {/* Header */}
       <PageHeader
-        kicker="Month view · your timezone"
+        kicker={`Month view · ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
         title={monthTitle}
         right={headerRight}
         className="px-0 pt-4 pb-4"
@@ -856,6 +856,27 @@ function GridCalendar({
               })}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Legend */}
+      {!loading && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-zinc-500 pt-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-amber-400">●</span>
+            <span>Tracked · airing</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span style={{ color: "oklch(0.72 0.13 220)" }}>●</span>
+            <span>Followed · new episode</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span style={{ color: "oklch(0.72 0.15 140)" }}>●</span>
+            <span>Premiere</span>
+          </div>
+          <div className="ml-auto">
+            {stats.episodes} episode{stats.episodes === 1 ? "" : "s"} this month
+          </div>
         </div>
       )}
 
