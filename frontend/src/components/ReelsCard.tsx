@@ -217,10 +217,24 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
               </p>
             )}
 
-            {/* 3px progress bar */}
-            <div className="h-[3px] bg-white/[0.15] rounded-full mb-4 overflow-hidden">
-              <div className="h-full w-0 bg-amber-400 rounded-full" />
-            </div>
+            {/* Continue-watching progress */}
+            {(() => {
+              const total = episode.total_episodes ?? 0;
+              const watched = episode.watched_episodes_count ?? 0;
+              if (total <= 0) return null;
+              const pct = Math.max(0, Math.min(100, Math.round((watched / total) * 100)));
+              return (
+                <div className="mb-4">
+                  <div className="flex justify-between mb-1.5 font-mono text-[10px] text-zinc-500 tracking-[0.1em]">
+                    <span>{pct}% CAUGHT UP</span>
+                    <span>{watched} OF {total}</span>
+                  </div>
+                  <div className="h-[3px] bg-white/[0.15] rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Watch on provider button */}
             <div className="mb-2">
