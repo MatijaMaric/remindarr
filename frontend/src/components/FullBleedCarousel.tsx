@@ -63,7 +63,7 @@ export default function FullBleedCarousel({
       {/* Scroll container: pad content to align with body */}
       <div
         ref={scrollRef}
-        className="flex overflow-x-auto gap-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        className="flex overflow-x-auto overflow-y-hidden gap-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         style={{
           paddingLeft: edgePad,
           paddingRight: edgePad,
