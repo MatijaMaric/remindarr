@@ -37,7 +37,7 @@ function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>)
   );
 }
 
-const HomePage = lazyWithRetry(() => import("./pages/HomePage"));
+const HomeRoute = lazyWithRetry(() => import("./routes/HomeRoute"));
 const BrowsePage = lazyWithRetry(() => import("./pages/BrowsePage"));
 const TrackedPage = lazyWithRetry(() => import("./pages/TrackedPage"));
 const CalendarPage = lazyWithRetry(() => import("./pages/CalendarPage"));
@@ -201,7 +201,7 @@ export default function App() {
         {user && <NotificationPrompt />}
         <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
           <Routes>
-            <Route path="/" element={<Page><HomePage /></Page>} />
+            <Route path="/" element={<HomeRoute />} />
             <Route path="/browse" element={<Page><BrowsePage /></Page>} />
             <Route path="/login" element={<Page><LoginPage /></Page>} />
             <Route path="/signup" element={<Page><SignupPage /></Page>} />
