@@ -27,6 +27,16 @@ describe("FullBleedCarousel", () => {
     expect(getByTestId("child-2")).toBeDefined();
   });
 
+  it("hides vertical overflow so horizontal scroll container does not produce a vertical scrollbar", () => {
+    const { container } = render(
+      <FullBleedCarousel>
+        <div>Item</div>
+      </FullBleedCarousel>,
+    );
+    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
+    expect(scrollDiv.className).toContain("overflow-y-hidden");
+  });
+
   it("applies scroll-padding matching padding so snap respects the inset", () => {
     const { container } = render(
       <FullBleedCarousel>
