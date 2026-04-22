@@ -20,7 +20,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import ExternalLinks from "../components/ExternalLinks";
-import WatchButton from "../components/WatchButton";
+import { PLEX_PROVIDER_ID, getPlexPlatform, plexDeepLink } from "../components/WatchButton";
 import WatchButtonGroup from "../components/WatchButtonGroup";
 import VisibilityButton from "../components/VisibilityButton";
 import ShareButton from "../components/ShareButton";
@@ -71,8 +71,8 @@ function RatingBadge({ label, score, max = 10 }: { label: string; score: number 
   if (score === null || score === undefined) return null;
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-xs text-zinc-400 uppercase tracking-wider">{label}</span>
-      <span className="text-xl font-bold text-white">
+      <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.1em]">{label}</span>
+      <span className="text-[22px] font-bold text-white leading-none">
         {score.toFixed(1)}<span className="text-sm text-zinc-500">/{max}</span>
       </span>
     </div>
@@ -81,15 +81,14 @@ function RatingBadge({ label, score, max = 10 }: { label: string; score: number 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-white">{title}</h2>
+    <section className="space-y-4">
+      <h2 className="text-[18px] font-semibold text-white tracking-tight leading-tight">{title}</h2>
       {children}
     </section>
   );
 }
 
 const NETWORK_DISPLAY_LIMIT = 5;
-const PROVIDER_DISPLAY_LIMIT = 8;
 
 function NetworkList({ networks }: { networks: { id: number; name: string; logo_path: string | null }[] }) {
   const [expanded, setExpanded] = useState(false);
@@ -117,46 +116,120 @@ function NetworkList({ networks }: { networks: { id: number; name: string; logo_
   );
 }
 
-function ProviderRow({ label, providers, watchLink }: { label: string; providers: { logo_path: string; provider_name: string; provider_id: number }[]; watchLink?: string }) {
-  const [expanded, setExpanded] = useState(false);
-  if (!providers?.length) return null;
-  const hasMore = providers.length > PROVIDER_DISPLAY_LIMIT;
-  const visible = expanded ? providers : providers.slice(0, PROVIDER_DISPLAY_LIMIT);
+function ProviderRow({ label, children, isEmpty }: { label: string; children: React.ReactNode; isEmpty: boolean }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-zinc-400 w-20 shrink-0">{label}</span>
-      <div className="flex flex-wrap gap-2 items-center">
-        {visible.map((p) => {
-          const color = getProviderColor(p.provider_id);
-          const chip = (
-            <div
-              key={p.provider_name}
-              className="flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors"
-              style={{ backgroundColor: `${color.bg}20`, borderLeft: `3px solid ${color.bg}` }}
-            >
-              <img src={`${TMDB_IMG}/w45${p.logo_path}`} alt={p.provider_name} className="w-6 h-6 rounded" />
-              <span className="text-sm text-zinc-300">{p.provider_name}</span>
-            </div>
-          );
-          if (watchLink) {
-            return (
-              <a key={p.provider_name} href={watchLink} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                {chip}
-              </a>
-            );
-          }
-          return chip;
-        })}
-        {hasMore && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-sm text-amber-400 hover:text-amber-300 transition-colors px-2 py-1"
-          >
-            {expanded ? "Show less" : `+${providers.length - PROVIDER_DISPLAY_LIMIT} more`}
-          </button>
+    <div className="flex items-start gap-3.5">
+      <div className="w-[70px] shrink-0 pt-1.5 text-sm text-zinc-400">{label}</div>
+      <div className="flex flex-wrap gap-2 items-center min-h-8">
+        {isEmpty ? (
+          <span className="text-xs text-zinc-600 italic">— not available</span>
+        ) : (
+          children
         )}
       </div>
     </div>
+  );
+}
+
+function OfferChip({ offer }: { offer: Title["offers"][number] }) {
+  const color = getProviderColor(offer.provider_id);
+  const isPlex = offer.provider_id === PLEX_PROVIDER_ID;
+  const platform = isPlex ? getPlexPlatform() : "desktop";
+  const useMobileDeepLink = platform === "ios" || platform === "android";
+  const url = useMobileDeepLink ? plexDeepLink(offer.url, platform) : offer.url;
+  return (
+    <a
+      href={url}
+      target={useMobileDeepLink ? undefined : "_blank"}
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:opacity-90 transition-opacity"
+      style={{ backgroundColor: `${color.bg}20`, borderLeft: `3px solid ${color.bg}` }}
+      title={offer.provider_name}
+    >
+      <img
+        src={offer.provider_icon_url}
+        alt={offer.provider_name}
+        className="w-6 h-6 rounded"
+        loading="lazy"
+      />
+      <span className="text-sm text-zinc-300">{offer.provider_name}</span>
+    </a>
+  );
+}
+
+function TmdbProviderChip({
+  provider,
+  watchLink,
+}: {
+  provider: { logo_path: string; provider_name: string; provider_id: number };
+  watchLink?: string;
+}) {
+  const color = getProviderColor(provider.provider_id);
+  const chip = (
+    <div
+      className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+      style={{ backgroundColor: `${color.bg}20`, borderLeft: `3px solid ${color.bg}` }}
+    >
+      <img src={`${TMDB_IMG}/w45${provider.logo_path}`} alt={provider.provider_name} className="w-6 h-6 rounded" />
+      <span className="text-sm text-zinc-300">{provider.provider_name}</span>
+    </div>
+  );
+  if (watchLink) {
+    return (
+      <a href={watchLink} target="_blank" rel="noopener noreferrer" className="hover:opacity-90 transition-opacity">
+        {chip}
+      </a>
+    );
+  }
+  return chip;
+}
+
+function WhereToWatch({
+  offers,
+  watchProviders,
+  watchLink,
+}: {
+  offers: Title["offers"];
+  watchProviders: WatchProviderCountry | undefined;
+  watchLink: string | undefined;
+}) {
+  const offerGroups = groupOffersByType(offers);
+  const hasOffers = offerGroups.length > 0;
+  const hasProviders = !!watchProviders;
+  if (!hasOffers && !hasProviders) return null;
+
+  const providerMap: Record<"FLATRATE" | "FREE" | "ADS" | "RENT" | "BUY", "flatrate" | "free" | "ads" | "rent" | "buy"> = {
+    FLATRATE: "flatrate",
+    FREE: "free",
+    ADS: "ads",
+    RENT: "rent",
+    BUY: "buy",
+  };
+
+  return (
+    <Section title="Where to Watch">
+      <div className="flex flex-col gap-3 max-w-4xl">
+        {MONETIZATION_ORDER.map(({ type, label }) => {
+          const groupOffers = hasOffers
+            ? (offerGroups.find((g) => g.type === type)?.offers ?? [])
+            : [];
+          const tmdbKey = providerMap[type];
+          const tmdbProviders =
+            !hasOffers && hasProviders && watchProviders ? (watchProviders[tmdbKey] ?? []) : [];
+          const isEmpty = groupOffers.length === 0 && tmdbProviders.length === 0;
+          return (
+            <ProviderRow key={type} label={label} isEmpty={isEmpty}>
+              {groupOffers.map((offer) => (
+                <OfferChip key={offer.id} offer={offer} />
+              ))}
+              {tmdbProviders.map((p) => (
+                <TmdbProviderChip key={p.provider_id} provider={p} watchLink={watchLink} />
+              ))}
+            </ProviderRow>
+          );
+        })}
+      </div>
+    </Section>
   );
 }
 
@@ -279,23 +352,23 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   return (
     <div className="space-y-8 pb-12">
       {/* Hero */}
-      <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 dark-section" style={backdropUrl ? {
+      <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 sm:px-8 sm:pt-10 sm:pb-10 lg:px-16 lg:pt-14 lg:pb-12 dark-section" style={backdropUrl ? {
         backgroundImage: `linear-gradient(to bottom, rgba(3,7,18,0.6), rgba(3,7,18,1)), url(${backdropUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center top",
       } : undefined}>
-        <div className="flex flex-col sm:flex-row gap-6">
+        <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 lg:gap-10 items-end">
           {/* Poster */}
-          <div className="w-48 shrink-0 mx-auto sm:mx-0">
+          <div className="w-48 sm:w-56 lg:w-60 shrink-0 mx-auto sm:mx-0">
             {posterUrl ? (
-              <img src={posterUrl} alt={title.title} className="w-full rounded-xl shadow-2xl" />
+              <img src={posterUrl} alt={title.title} className="w-full rounded-xl shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-white/[0.08]" />
             ) : (
-              <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">No poster</div>
+              <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">No poster</div>
             )}
           </div>
 
           {/* Title info */}
-          <div className="flex-1 space-y-3">
+          <div className="flex-1 space-y-3 max-w-[820px]">
             <div>
               {tmdb?.tagline && (
                 <p className="text-sm text-amber-400 italic mb-1">{tmdb.tagline}</p>
@@ -427,9 +500,13 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       )}
 
       {/* Rating & Social */}
-      <div className="space-y-3">
-        <RatingButtons titleId={title.id} />
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="space-y-2">
+          <Kicker color="zinc" className="mb-0">Your rating</Kicker>
+          <RatingButtons titleId={title.id} />
+        </div>
+        <div className="flex-1 min-w-0" />
+        <div className="flex items-center gap-2 pt-6">
           <ShareButton title={tmdb?.title || title.title} />
           <RecommendButton titleId={title.id} />
         </div>
@@ -498,44 +575,7 @@ function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       )}
 
       {/* Streaming Availability */}
-      {(() => {
-        const offerGroups = groupOffersByType(title.offers);
-        if (offerGroups.length > 0) {
-          return (
-            <Section title="Where to Watch">
-              <div className="flex flex-wrap gap-2">
-                {offerGroups.flatMap(({ offers }) =>
-                  offers.map((offer) => (
-                    <WatchButton
-                      key={offer.id}
-                      url={offer.url}
-                      providerId={offer.provider_id}
-                      providerName={offer.provider_name}
-                      providerIconUrl={offer.provider_icon_url}
-                      monetizationType={offer.monetization_type}
-                      variant="full"
-                    />
-                  ))
-                )}
-              </div>
-            </Section>
-          );
-        }
-        if (watchProviders) {
-          return (
-            <Section title="Where to Watch">
-              <div className="space-y-3">
-                <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
-              </div>
-            </Section>
-          );
-        }
-        return null;
-      })()}
+      <WhereToWatch offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
 
       {/* External Links */}
       {tmdb && (
@@ -680,21 +720,21 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           </div>
         </>
       ) : (
-        <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 dark-section" style={backdropUrl ? {
+        <div className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 sm:px-8 sm:pt-10 sm:pb-10 lg:px-16 lg:pt-14 lg:pb-12 dark-section" style={backdropUrl ? {
           backgroundImage: `linear-gradient(to bottom, rgba(3,7,18,0.6), rgba(3,7,18,1)), url(${backdropUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center top",
         } : undefined}>
-          <div className="flex flex-col sm:flex-row gap-6">
-            <div className="w-48 shrink-0 mx-auto sm:mx-0">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 lg:gap-10 items-end">
+            <div className="w-48 sm:w-56 lg:w-60 shrink-0 mx-auto sm:mx-0">
               {posterUrl ? (
-                <img src={posterUrl} alt={title.title} className="w-full rounded-xl shadow-2xl" />
+                <img src={posterUrl} alt={title.title} className="w-full rounded-xl shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-white/[0.08]" />
               ) : (
-                <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">No poster</div>
+                <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">No poster</div>
               )}
             </div>
 
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-3 max-w-[820px]">
               <div>
                 {tmdb?.tagline && (
                   <p className="text-sm text-amber-400 italic mb-1">{tmdb.tagline}</p>
@@ -818,9 +858,13 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       )}
 
       {/* Rating & Social */}
-      <div className="space-y-3">
-        <RatingButtons titleId={title.id} />
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="space-y-2">
+          <Kicker color="zinc" className="mb-0">Your rating</Kicker>
+          <RatingButtons titleId={title.id} />
+        </div>
+        <div className="flex-1 min-w-0" />
+        <div className="flex items-center gap-2 pt-6">
           <ShareButton title={tmdb?.name || title.title} />
           <RecommendButton titleId={title.id} />
         </div>
@@ -897,44 +941,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       )}
 
       {/* Streaming Availability */}
-      {(() => {
-        const offerGroups = groupOffersByType(title.offers);
-        if (offerGroups.length > 0) {
-          return (
-            <Section title="Where to Watch">
-              <div className="flex flex-wrap gap-2">
-                {offerGroups.flatMap(({ offers }) =>
-                  offers.map((offer) => (
-                    <WatchButton
-                      key={offer.id}
-                      url={offer.url}
-                      providerId={offer.provider_id}
-                      providerName={offer.provider_name}
-                      providerIconUrl={offer.provider_icon_url}
-                      monetizationType={offer.monetization_type}
-                      variant="full"
-                    />
-                  ))
-                )}
-              </div>
-            </Section>
-          );
-        }
-        if (watchProviders) {
-          return (
-            <Section title="Where to Watch">
-              <div className="space-y-3">
-                <ProviderRow label="Stream" providers={watchProviders.flatrate || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Free" providers={watchProviders.free || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Ads" providers={watchProviders.ads || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Rent" providers={watchProviders.rent || []} watchLink={watchProviders.link} />
-                <ProviderRow label="Buy" providers={watchProviders.buy || []} watchLink={watchProviders.link} />
-              </div>
-            </Section>
-          );
-        }
-        return null;
-      })()}
+      <WhereToWatch offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
 
       {/* External Links */}
       {tmdb && (
