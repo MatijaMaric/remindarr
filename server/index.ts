@@ -160,8 +160,13 @@ app.route("/api/health", healthRoutes);
 // Prometheus metrics (public — protect via reverse proxy if needed)
 app.route("/metrics", metricsRoutes);
 
-// Rate limit auth routes: 20 requests per minute to prevent brute-force attacks
-app.use("/api/auth/*", rateLimiter({ limit: 20, windowMs: 60_000 }));
+// Rate limit auth routes to prevent brute-force attacks. Defaults to 20/min,
+// configurable via AUTH_RATE_LIMIT_PER_MINUTE for environments (like e2e) that
+// need a higher cap.
+app.use(
+  "/api/auth/*",
+  rateLimiter({ limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
+);
 
 // Custom auth routes (providers endpoint) — must be before better-auth catch-all
 app.route("/api/auth/custom", authCustomRoutes);
