@@ -93,10 +93,16 @@ app.get("/", async (c) => {
   const genreParam = c.req.query("genre") || "";
   const providerParam = c.req.query("provider") || "";
   const languageParam = c.req.query("language") || "";
+  const yearMinParam = c.req.query("year_min");
+  const yearMaxParam = c.req.query("year_max");
+  const minRatingParam = c.req.query("min_rating");
   const genreNames = genreParam ? genreParam.split(",").filter(Boolean) : [];
   const providerValues = providerParam ? providerParam.split(",").filter(Boolean) : [];
   const languageValues = languageParam ? languageParam.split(",").filter(Boolean) : [];
   const typeValues = type ? type.split(",").filter(Boolean) : [];
+  const yearMin = yearMinParam ? parseInt(yearMinParam, 10) : undefined;
+  const yearMax = yearMaxParam ? parseInt(yearMaxParam, 10) : undefined;
+  const minRating = minRatingParam ? parseFloat(minRatingParam) : undefined;
 
   if (!category || !VALID_CATEGORIES.includes(category as Category)) {
     return err(c, "Invalid category. Must be one of: popular, upcoming, top_rated");
@@ -122,6 +128,9 @@ app.get("/", async (c) => {
     }
     if (providerValues.length > 0) filters.withProviders = providerValues.join("|");
     if (languageValues.length > 0) filters.withOriginalLanguage = languageValues[0];
+    if (yearMin != null && Number.isFinite(yearMin)) filters.yearMin = yearMin;
+    if (yearMax != null && Number.isFinite(yearMax)) filters.yearMax = yearMax;
+    if (minRating != null && Number.isFinite(minRating)) filters.voteAverageGte = minRating;
 
     const discoverOpts: CategoryDiscoverOptions = { page, filters };
 

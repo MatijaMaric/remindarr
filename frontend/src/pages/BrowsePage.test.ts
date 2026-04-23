@@ -40,6 +40,15 @@ describe("buildCategoryParams", () => {
 
 describe("FILTER_KEYS", () => {
   it("contains all expected filter keys", () => {
-    expect(FILTER_KEYS).toEqual(["type", "genre", "provider", "language", "daysBack"]);
+    expect(FILTER_KEYS).toEqual([
+      "type",
+      "genre",
+      "provider",
+      "language",
+      "daysBack",
+      "yearMin",
+      "yearMax",
+      "minRating",
+    ]);
   });
 });

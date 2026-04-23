@@ -129,6 +129,9 @@ export interface DiscoverFilters {
   withGenres?: string;       // comma-separated TMDB genre IDs
   withProviders?: string;    // comma-separated TMDB provider IDs
   withOriginalLanguage?: string; // ISO 639-1 language code
+  yearMin?: number;          // earliest release/first-air year (inclusive)
+  yearMax?: number;          // latest release/first-air year (inclusive)
+  voteAverageGte?: number;   // minimum TMDB vote average
 }
 
 export async function discoverMovies(options: {
@@ -147,11 +150,25 @@ export async function discoverMovies(options: {
     "vote_count.gte": options.voteCountGte || "0",
     watch_region: CONFIG.COUNTRY,
   };
-  if (options.releaseDateGte) params["release_date.gte"] = options.releaseDateGte;
-  if (options.releaseDateLte) params["release_date.lte"] = options.releaseDateLte;
+  // Intersect category's default date range with user-supplied year filter
+  // (more restrictive bound wins, so "upcoming" stays in the future even if a
+  // wider year range is requested).
+  let dateGte = options.releaseDateGte;
+  let dateLte = options.releaseDateLte;
+  if (options.filters?.yearMin != null) {
+    const userMin = `${options.filters.yearMin}-01-01`;
+    dateGte = !dateGte || userMin > dateGte ? userMin : dateGte;
+  }
+  if (options.filters?.yearMax != null) {
+    const userMax = `${options.filters.yearMax}-12-31`;
+    dateLte = !dateLte || userMax < dateLte ? userMax : dateLte;
+  }
+  if (dateGte) params["release_date.gte"] = dateGte;
+  if (dateLte) params["release_date.lte"] = dateLte;
   if (options.filters?.withGenres) params["with_genres"] = options.filters.withGenres;
   if (options.filters?.withProviders) params["with_watch_providers"] = options.filters.withProviders;
   if (options.filters?.withOriginalLanguage) params["with_original_language"] = options.filters.withOriginalLanguage;
+  if (options.filters?.voteAverageGte != null) params["vote_average.gte"] = String(options.filters.voteAverageGte);
   return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/discover/movie", params);
 }
 
@@ -170,11 +187,23 @@ export async function discoverTv(options: {
     page: String(options.page || 1),
   };
   if (options.voteCountGte) params["vote_count.gte"] = options.voteCountGte;
-  if (options.firstAirDateGte) params["first_air_date.gte"] = options.firstAirDateGte;
-  if (options.firstAirDateLte) params["first_air_date.lte"] = options.firstAirDateLte;
+  // Intersect category's default first-air range with user year filter
+  let dateGte = options.firstAirDateGte;
+  let dateLte = options.firstAirDateLte;
+  if (options.filters?.yearMin != null) {
+    const userMin = `${options.filters.yearMin}-01-01`;
+    dateGte = !dateGte || userMin > dateGte ? userMin : dateGte;
+  }
+  if (options.filters?.yearMax != null) {
+    const userMax = `${options.filters.yearMax}-12-31`;
+    dateLte = !dateLte || userMax < dateLte ? userMax : dateLte;
+  }
+  if (dateGte) params["first_air_date.gte"] = dateGte;
+  if (dateLte) params["first_air_date.lte"] = dateLte;
   if (options.filters?.withGenres) params["with_genres"] = options.filters.withGenres;
   if (options.filters?.withProviders) params["with_watch_providers"] = options.filters.withProviders;
   if (options.filters?.withOriginalLanguage) params["with_original_language"] = options.filters.withOriginalLanguage;
+  if (options.filters?.voteAverageGte != null) params["vote_average.gte"] = String(options.filters.voteAverageGte);
   return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/discover/tv", params);
 }
 

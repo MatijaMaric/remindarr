@@ -454,6 +454,49 @@ describe("GET /browse", () => {
     });
   });
 
+  describe("year and rating filtering", () => {
+    it("passes yearMin/yearMax to discover filters", async () => {
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=MOVIE&year_min=2020&year_max=2024");
+      expect(res.status).toBe(200);
+
+      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, unknown>;
+      expect(filters.yearMin).toBe(2020);
+      expect(filters.yearMax).toBe(2024);
+    });
+
+    it("passes minRating as voteAverageGte", async () => {
+      (tmdbClient.discoverTv as any).mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=SHOW&min_rating=7.5");
+      expect(res.status).toBe(200);
+
+      const callArgs = ((tmdbClient.discoverTv as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, unknown>;
+      expect(filters.voteAverageGte).toBe(7.5);
+    });
+
+    it("ignores non-numeric year/rating values", async () => {
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [], total_pages: 1, total_results: 0, page: 1,
+      });
+
+      const res = await app.request("/browse?category=popular&type=MOVIE&year_min=abc&min_rating=xyz");
+      expect(res.status).toBe(200);
+
+      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, unknown>;
+      expect(filters.yearMin).toBeUndefined();
+      expect(filters.voteAverageGte).toBeUndefined();
+    });
+  });
+
   describe("regionProviderIds and priorityLanguageCodes", () => {
     it("returns regionProviderIds in the response", async () => {
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({

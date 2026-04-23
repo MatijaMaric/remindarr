@@ -164,7 +164,7 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
 
       {/* Content overlay — bottom-left anchored, text aligned to main container */}
       <div className="relative z-10 h-full flex items-end pb-12">
-        <div className="max-w-7xl mx-auto px-4 w-full">
+        <div className="max-w-[1440px] mx-auto px-4 w-full">
         <div className="max-w-[560px]">
           {/* Kicker */}
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-400 mb-3">
