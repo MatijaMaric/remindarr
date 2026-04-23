@@ -165,7 +165,11 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
           )}
           <p className="text-xs text-zinc-500 mt-0.5">
             {title.release_year}
-            {title.runtime_minutes ? ` \u00B7 ${title.runtime_minutes}m` : ""}
+            {showRating && title.genres?.[0]
+              ? ` \u00B7 ${title.genres[0]}`
+              : title.runtime_minutes
+                ? ` \u00B7 ${title.runtime_minutes}m`
+                : ""}
           </p>
         </div>
 

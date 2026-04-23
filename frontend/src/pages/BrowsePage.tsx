@@ -6,6 +6,7 @@ import NewReleases from "../components/NewReleases";
 import CategoryBar, { type BrowseCategory } from "../components/CategoryBar";
 import CategoryBrowse from "../components/CategoryBrowse";
 import FilterBar from "../components/FilterBar";
+import BrowseFilterCard from "../components/BrowseFilterCard";
 import TitleList from "../components/TitleList";
 import { loadFilters } from "../components/loadFilters";
 import * as api from "../api";
@@ -78,7 +79,7 @@ function useQueryParamArray(
   return [value, setValue];
 }
 
-export const FILTER_KEYS = ["type", "genre", "provider", "language", "daysBack"] as const;
+export const FILTER_KEYS = ["type", "genre", "provider", "language", "daysBack", "yearMin", "yearMax", "minRating"] as const;
 
 export function buildCategoryParams(prev: URLSearchParams, cat: BrowseCategory): URLSearchParams {
   const next = new URLSearchParams(prev);
@@ -172,6 +173,16 @@ export default function BrowsePage() {
   const [genre, setGenre] = useQueryParamArray(searchParams, setSearchParams, "genre");
   const [provider, setProvider] = useQueryParamArray(searchParams, setSearchParams, "provider");
   const [language, setLanguage] = useQueryParamArray(searchParams, setSearchParams, "language");
+  const [browseYearMin, setBrowseYearMin] = useQueryParam(searchParams, setSearchParams, "yearMin");
+  const [browseYearMax, setBrowseYearMax] = useQueryParam(searchParams, setSearchParams, "yearMax");
+  const [browseMinRating, setBrowseMinRating] = useQueryParam(searchParams, setSearchParams, "minRating");
+  const setBrowseYearRange = useCallback(
+    (min: string, max: string) => {
+      setBrowseYearMin(min);
+      setBrowseYearMax(max);
+    },
+    [setBrowseYearMin, setBrowseYearMax]
+  );
   const [daysBackStr, setDaysBackStr] = useQueryParam(searchParams, setSearchParams, "daysBack", "30");
   const daysBack = parseInt(daysBackStr, 10) || 30;
   const setDaysBack = useCallback(
@@ -360,7 +371,7 @@ export default function BrowsePage() {
 
       <CategoryBar category={category} onCategoryChange={setCategory} />
 
-      {/* Persistent browse filter — desktop card / mobile chip strip */}
+      {/* Persistent browse filter — desktop 4-field card / mobile chip strip */}
       {searchResults === null && (
         isMobile ? (
           <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
@@ -404,12 +415,13 @@ export default function BrowsePage() {
               );
             })}
           </div>
-        ) : (
+        ) : category === "new_releases" ? (
+          // new_releases keeps the legacy FilterBar so the daysBack toggle stays available.
           <div className="rounded-xl bg-zinc-900 border border-white/[0.06] p-4">
             <FilterBar
               type={type}
               onTypeChange={setType}
-              showDaysFilter={category === "new_releases"}
+              showDaysFilter
               daysBack={daysBack}
               onDaysBackChange={setDaysBack}
               genre={genre}
@@ -428,11 +440,35 @@ export default function BrowsePage() {
               onHideTrackedChange={setHideTracked}
             />
           </div>
+        ) : (
+          <BrowseFilterCard
+            genre={genre}
+            onGenreChange={setGenre}
+            genres={filterGenres}
+            provider={provider}
+            onProviderChange={setProvider}
+            providers={filterProviders.map((p) => ({ id: p.id, name: p.name, iconUrl: p.icon_url }))}
+            regionProviderIds={filterRegionProviderIds}
+            yearMin={browseYearMin}
+            yearMax={browseYearMax}
+            onYearChange={setBrowseYearRange}
+            minRating={browseMinRating}
+            onMinRatingChange={setBrowseMinRating}
+            type={type}
+            onTypeChange={setType}
+            language={language}
+            onLanguageChange={setLanguage}
+            languages={filterLanguages}
+            priorityLanguageCodes={filterPriorityLanguageCodes}
+            hideTracked={hideTracked}
+            onHideTrackedChange={setHideTracked}
+            onClearFilters={clearFilters}
+          />
         )
       )}
 
       {/* Active filter chips */}
-      {searchResults === null && (type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0) && (
+      {searchResults === null && (type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0 || browseYearMin !== "" || browseYearMax !== "" || browseMinRating !== "") && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">Active</span>
           {type.map((t) => (
@@ -471,6 +507,22 @@ export default function BrowsePage() {
               {l} ×
             </span>
           ))}
+          {(browseYearMin !== "" || browseYearMax !== "") && (
+            <span
+              onClick={() => setBrowseYearRange("", "")}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+            >
+              {browseYearMin || "…"}–{browseYearMax || "…"} ×
+            </span>
+          )}
+          {browseMinRating !== "" && (
+            <span
+              onClick={() => setBrowseMinRating("")}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+            >
+              ★ {browseMinRating}+ ×
+            </span>
+          )}
         </div>
       )}
 
@@ -528,6 +580,9 @@ export default function BrowsePage() {
               onProviderChange={setProvider}
               language={language}
               onLanguageChange={setLanguage}
+              yearMin={browseYearMin}
+              yearMax={browseYearMax}
+              minRating={browseMinRating}
               onClearFilters={clearFilters}
               hideTracked={hideTracked}
               onHideTrackedChange={setHideTracked}

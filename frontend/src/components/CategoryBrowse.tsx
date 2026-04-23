@@ -67,6 +67,9 @@ interface Props {
   onProviderChange: (provider: string[]) => void;
   language: string[];
   onLanguageChange: (language: string[]) => void;
+  yearMin?: string;
+  yearMax?: string;
+  minRating?: string;
   onClearFilters?: () => void;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
@@ -86,6 +89,9 @@ export default function CategoryBrowse({
   onProviderChange,
   language,
   onLanguageChange,
+  yearMin,
+  yearMax,
+  minRating,
   onClearFilters,
   hideTracked,
   onHideTrackedChange,
@@ -115,6 +121,9 @@ export default function CategoryBrowse({
     }
     setError("");
     try {
+      const yearMinNum = yearMin ? parseInt(yearMin, 10) : undefined;
+      const yearMaxNum = yearMax ? parseInt(yearMax, 10) : undefined;
+      const minRatingNum = minRating ? parseFloat(minRating) : undefined;
       const res = await api.browseTitles({
         category,
         type: type.length ? type.join(",") : undefined,
@@ -122,6 +131,9 @@ export default function CategoryBrowse({
         genre: genre.length ? genre.join(",") : undefined,
         provider: provider.length ? provider.join(",") : undefined,
         language: language.length ? language.join(",") : undefined,
+        yearMin: yearMinNum != null && Number.isFinite(yearMinNum) ? yearMinNum : undefined,
+        yearMax: yearMaxNum != null && Number.isFinite(yearMaxNum) ? yearMaxNum : undefined,
+        minRating: minRatingNum != null && Number.isFinite(minRatingNum) ? minRatingNum : undefined,
       });
       const normalized = res.titles.map(normalizeSearchTitle);
       if (append) {
@@ -155,7 +167,7 @@ export default function CategoryBrowse({
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [category, type, genre, provider, language, onResultsCount]);
+  }, [category, type, genre, provider, language, yearMin, yearMax, minRating, onResultsCount]);
 
   useEffect(() => {
     fetchTitles(1, false);
