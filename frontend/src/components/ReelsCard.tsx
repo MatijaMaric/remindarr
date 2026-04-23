@@ -172,7 +172,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
       )}
 
       {/* Bottom content */}
-      <div className="absolute bottom-0 left-0 z-10 pb-24 sm:pb-6" style={{ right: 84, padding: "0 20px 96px" }}>
+      <div className="absolute bottom-0 left-0 z-10 pb-24 sm:pb-6" style={{ right: caughtUp ? 0 : 84, padding: "0 20px 96px" }}>
         {caughtUp ? (
           <div className="text-center py-8">
             <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full text-lg font-semibold mb-2">
