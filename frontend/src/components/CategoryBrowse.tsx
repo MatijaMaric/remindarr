@@ -71,6 +71,9 @@ interface Props {
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
   hideFilterBar?: boolean;
+  showProviderBadge?: boolean;
+  showRating?: boolean;
+  onResultsCount?: (count: number) => void;
 }
 
 export default function CategoryBrowse({
@@ -87,6 +90,9 @@ export default function CategoryBrowse({
   hideTracked,
   onHideTrackedChange,
   hideFilterBar,
+  showProviderBadge,
+  showRating,
+  onResultsCount,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
@@ -94,7 +100,6 @@ export default function CategoryBrowse({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
-  const [totalResults, setTotalResults] = useState(0);
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
 
   const [availableProviders, setAvailableProviders] = useState<{ id: number; name: string; iconUrl: string }[]>([]);
@@ -141,7 +146,7 @@ export default function CategoryBrowse({
       }
       setTotalPages(res.totalPages);
       if (!append) {
-        setTotalResults(res.totalResults);
+        onResultsCount?.(res.totalResults);
       }
       setPage(pageNum);
     } catch (err: unknown) {
@@ -150,7 +155,7 @@ export default function CategoryBrowse({
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [category, type, genre, provider, language]);
+  }, [category, type, genre, provider, language, onResultsCount]);
 
   useEffect(() => {
     fetchTitles(1, false);
@@ -209,10 +214,12 @@ export default function CategoryBrowse({
         <div className="text-center py-12 text-zinc-500">Loading...</div>
       ) : (
         <>
-          {totalResults > 0 && (
-            <p className="text-sm text-zinc-500">{totalResults} result{totalResults !== 1 ? "s" : ""}</p>
-          )}
-          <TitleList titles={hideTracked ? titles.filter((t) => !t.is_tracked) : titles} emptyMessage="No titles found." />
+          <TitleList
+            titles={hideTracked ? titles.filter((t) => !t.is_tracked) : titles}
+            emptyMessage="No titles found."
+            showProviderBadge={showProviderBadge}
+            showRating={showRating}
+          />
           {error && (
             <div className="text-center py-4 text-red-400">
               <p>{error}</p>

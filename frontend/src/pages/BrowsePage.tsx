@@ -95,6 +95,7 @@ export default function BrowsePage() {
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [resultsCount, setResultsCount] = useState<number | null>(null);
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   useGridNavigation();
@@ -256,7 +257,13 @@ export default function BrowsePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        kicker={searchResults !== null ? `Search · ${searchResults.length} result${searchResults.length === 1 ? "" : "s"}` : "Catalog · discover titles"}
+        kicker={
+          searchResults !== null
+            ? `Search · ${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`
+            : resultsCount !== null
+              ? `Catalog · ${resultsCount.toLocaleString()} titles`
+              : "Catalog · discover titles"
+        }
         title="Browse"
         className="px-0 pt-4 pb-4"
       />
@@ -505,6 +512,9 @@ export default function BrowsePage() {
               hideTracked={hideTracked}
               onHideTrackedChange={setHideTracked}
               hideFilterBar
+              showProviderBadge
+              showRating
+              onResultsCount={setResultsCount}
             />
           ) : (
             <CategoryBrowse
@@ -522,6 +532,9 @@ export default function BrowsePage() {
               hideTracked={hideTracked}
               onHideTrackedChange={setHideTracked}
               hideFilterBar
+              showProviderBadge
+              showRating
+              onResultsCount={setResultsCount}
             />
           )}
         </div>

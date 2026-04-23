@@ -21,6 +21,9 @@ interface Props {
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
   hideFilterBar?: boolean;
+  showProviderBadge?: boolean;
+  showRating?: boolean;
+  onResultsCount?: (count: number) => void;
 }
 
 export default function NewReleases({
@@ -38,6 +41,9 @@ export default function NewReleases({
   hideTracked,
   onHideTrackedChange,
   hideFilterBar,
+  showProviderBadge,
+  showRating,
+  onResultsCount,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,12 +80,13 @@ export default function NewReleases({
         excludeTracked: hideTracked || undefined,
       });
       setTitles(res.titles);
+      onResultsCount?.(res.titles.length);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
-  }, [daysBack, type, genre, provider, language, hideTracked]);
+  }, [daysBack, type, genre, provider, language, hideTracked, onResultsCount]);
 
   useEffect(() => {
     fetchTitles();
@@ -145,6 +152,8 @@ export default function NewReleases({
           titles={titles}
           onTrackToggle={fetchTitles}
           emptyMessage={t("releases.empty")}
+          showProviderBadge={showProviderBadge}
+          showRating={showRating}
         />
       )}
     </div>
