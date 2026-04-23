@@ -237,18 +237,15 @@ describe("SeasonDetailPage", () => {
     });
   });
 
-  it("renders season selector when multiple seasons exist", async () => {
+  it("renders season pill tabs when multiple seasons exist", async () => {
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
     await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
 
-    const selector = screen.getByRole("combobox");
-    expect(selector).toBeDefined();
-
-    const options = screen.getAllByRole("option");
-    expect(options).toHaveLength(2);
-    expect(options[0].textContent).toBe("Season 1");
-    expect(options[1].textContent).toBe("Season 2");
+    const s1 = screen.getByRole("button", { name: "Season 1" });
+    const s2 = screen.getByRole("button", { name: "Season 2" });
+    expect(s1.getAttribute("aria-pressed")).toBe("true");
+    expect(s2.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("shows AIRING NOW indicator for episodes airing today", async () => {
@@ -295,7 +292,7 @@ describe("SeasonDetailPage", () => {
     expect(screen.getByText("03")).toBeDefined();
   });
 
-  it("does not render season selector when only one season", async () => {
+  it("does not render season pill tabs when only one season", async () => {
     mockGetSeasonDetails.mockImplementation(() => Promise.resolve({
       title: { id: "tv-100", title: "Test Show", is_tracked: true },
       tmdb: {
@@ -313,7 +310,23 @@ describe("SeasonDetailPage", () => {
 
     await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
 
-    const selector = screen.queryByRole("combobox");
-    expect(selector).toBeNull();
+    expect(screen.queryByRole("button", { name: "Season 1" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Season 2" })).toBeNull();
+  });
+
+  it("renders per-row overflow menu and opens on click", async () => {
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const moreButtons = screen.getAllByLabelText(/more actions/i);
+    expect(moreButtons.length).toBe(3);
+
+    await act(async () => {
+      fireEvent.click(moreButtons[0]);
+    });
+
+    expect(screen.getByRole("menuitem", { name: /view details/i })).toBeDefined();
+    expect(screen.getByRole("menuitem", { name: /share/i })).toBeDefined();
   });
 });

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { CheckCircle, Circle, MoreHorizontal, Share2 } from "lucide-react";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
 import type { SeasonDetailsResponse, RatingValue } from "../types";
@@ -9,7 +10,6 @@ import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { useAuth } from "../context/AuthContext";
-import { WatchedIcon } from "../components/EpisodeComponents";
 import ShareButton from "../components/ShareButton";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
@@ -160,21 +160,7 @@ export default function SeasonDetailPage() {
       <div className="flex items-center gap-2 text-sm text-zinc-400">
         <Link to={`/title/${title.id}`} className="hover:text-white transition-colors">{title.title}</Link>
         <span className="text-zinc-600">/</span>
-        {seasons && seasons.length > 1 ? (
-          <select
-            value={seasonNumber}
-            onChange={(e) => navigate(`/title/${title.id}/season/${e.target.value}`)}
-            className="bg-zinc-800 text-white text-sm rounded-lg border border-white/[0.06] px-2 py-1 focus:border-amber-500/50 focus:outline-none cursor-pointer"
-          >
-            {seasons.map((s) => (
-              <option key={s.season_number} value={s.season_number} className="bg-zinc-900">
-                {s.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="text-white">{tmdb?.name || `Season ${seasonNumber}`}</span>
-        )}
+        <span className="text-white">{tmdb?.name || `Season ${seasonNumber}`}</span>
       </div>
 
       {/* Header */}
@@ -221,7 +207,30 @@ export default function SeasonDetailPage() {
       {episodes.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-lg font-semibold text-white">{t("season.episodes", "Episodes")}</h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-lg font-semibold text-white">{t("season.episodes", "Episodes")}</h2>
+              {seasons && seasons.length > 1 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {seasons.map((s) => {
+                    const active = s.season_number === seasonNumber;
+                    return (
+                      <button
+                        key={s.season_number}
+                        onClick={() => navigate(`/title/${title.id}/season/${s.season_number}`)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                          active
+                            ? "bg-amber-400 text-black"
+                            : "bg-white/[0.04] text-zinc-300 border border-white/[0.08] hover:border-white/20"
+                        }`}
+                        aria-pressed={active}
+                      >
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-4">
               {hasStatus && releasedWithStatus.length > 0 && (
                 <span className="text-[11px] font-mono text-zinc-500 tracking-wide whitespace-nowrap">
@@ -348,18 +357,28 @@ export default function SeasonDetailPage() {
                       )}
                     </div>
 
-                    {/* Watched toggle */}
+                    {/* Watched pill */}
                     {hasStatus && (
                       <div className="shrink-0 self-center">
-                        <WatchedIcon
+                        <EpisodeWatchedPill
                           watched={watched}
-                          onClick={() => toggleWatched(ep.episode_number)}
-                          disabled={!released || !status}
-                          size="md"
-                          compactOnMobile
+                          released={released}
+                          hasStatus={!!status}
+                          onToggle={() => toggleWatched(ep.episode_number)}
                         />
                       </div>
                     )}
+
+                    {/* Overflow menu */}
+                    <div className="shrink-0 self-center">
+                      <EpisodeOverflowMenu
+                        titleId={title.id}
+                        seasonNumber={seasonNumber}
+                        episodeNumber={ep.episode_number}
+                        episodeName={ep.name}
+                        showTitle={title.title}
+                      />
+                    </div>
                   </div>
                 </div>
               );
@@ -378,6 +397,152 @@ export default function SeasonDetailPage() {
             ))}
           </ScrollableRow>
         </section>
+      )}
+    </div>
+  );
+}
+
+function EpisodeWatchedPill({
+  watched,
+  released,
+  hasStatus,
+  onToggle,
+}: {
+  watched: boolean;
+  released: boolean;
+  hasStatus: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  const disabled = !released || !hasStatus;
+
+  if (disabled) {
+    return (
+      <span
+        role="img"
+        aria-label={t("episodes.notYetReleased", "Not yet released")}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold bg-zinc-800/50 text-zinc-600 border-zinc-800 cursor-not-allowed opacity-60"
+      >
+        <Circle size={12} aria-hidden="true" />
+        <span className="hidden sm:inline">{t("episodes.watch", "Watch")}</span>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      aria-pressed={watched}
+      aria-label={
+        watched
+          ? t("episodes.markAsUnwatched", "Mark as unwatched")
+          : t("episodes.markAsWatched", "Mark as watched")
+      }
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors ${
+        watched
+          ? "bg-amber-400/15 text-amber-400 border-amber-400/30 hover:bg-amber-400/25"
+          : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:bg-white/10 hover:text-white"
+      }`}
+    >
+      {watched ? <CheckCircle size={12} aria-hidden="true" /> : <Circle size={12} aria-hidden="true" />}
+      <span className="hidden sm:inline">
+        {watched ? t("episodes.watched", "Watched") : t("episodes.markWatchedShort", "Mark")}
+      </span>
+    </button>
+  );
+}
+
+function EpisodeOverflowMenu({
+  titleId,
+  seasonNumber,
+  episodeNumber,
+  episodeName,
+  showTitle,
+}: {
+  titleId: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  episodeName: string;
+  showTitle: string;
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const handleShare = async () => {
+    setOpen(false);
+    const shareUrl = `${window.location.origin}/title/${titleId}/season/${seasonNumber}/episode/${episodeNumber}`;
+    const shareTitle = `${showTitle} — S${String(seasonNumber).padStart(2, "0")}E${String(episodeNumber).padStart(2, "0")} · ${episodeName}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: shareTitle, url: shareUrl });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success(t("share.copied", "Link copied"));
+      }
+    } catch {
+      // user cancelled or copy failed — stay quiet
+    }
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t("episodes.moreActions", "More actions")}
+        className="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
+      >
+        <MoreHorizontal size={16} aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl py-1"
+        >
+          <button
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              navigate(`/title/${titleId}/season/${seasonNumber}/episode/${episodeNumber}`);
+            }}
+            className="w-full text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+          >
+            {t("episodes.viewDetails", "View details")}
+          </button>
+          <button
+            role="menuitem"
+            onClick={handleShare}
+            className="w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+          >
+            <Share2 size={13} aria-hidden="true" />
+            {t("share.share", "Share")}
+          </button>
+        </div>
       )}
     </div>
   );
