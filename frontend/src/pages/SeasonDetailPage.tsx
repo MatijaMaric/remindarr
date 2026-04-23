@@ -421,7 +421,7 @@ function EpisodeWatchedPill({
       <span
         role="img"
         aria-label={t("episodes.notYetReleased", "Not yet released")}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold bg-zinc-800/50 text-zinc-600 border-zinc-800 cursor-not-allowed opacity-60"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold bg-zinc-800/50 text-zinc-600 border-zinc-800 cursor-not-allowed opacity-60 sm:w-[108px] sm:justify-center"
       >
         <Circle size={12} aria-hidden="true" />
         <span className="hidden sm:inline">{t("episodes.watch", "Watch")}</span>
@@ -441,7 +441,7 @@ function EpisodeWatchedPill({
           ? t("episodes.markAsUnwatched", "Mark as unwatched")
           : t("episodes.markAsWatched", "Mark as watched")
       }
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors sm:w-[108px] sm:justify-center ${
         watched
           ? "bg-amber-400/15 text-amber-400 border-amber-400/30 hover:bg-amber-400/25"
           : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:bg-white/10 hover:text-white"
