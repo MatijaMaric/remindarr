@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import {
   getSetting,
   setSetting,
@@ -19,8 +20,31 @@ import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { logger } from "../logger";
+import { zValidator } from "../lib/validator";
 
 const log = logger.child({ module: "admin" });
+
+const OIDC_SETTING_KEYS = [
+  "oidc_issuer_url",
+  "oidc_client_id",
+  "oidc_client_secret",
+  "oidc_redirect_uri",
+  "oidc_admin_claim",
+  "oidc_admin_value",
+] as const;
+
+// PUT /settings only accepts whitelisted OIDC keys. Values must be string|null
+// (null or empty string deletes the setting). Unknown keys are ignored, which
+// preserves the existing behavior before validation was added.
+const updateSettingsSchema = z
+  .object(Object.fromEntries(
+    OIDC_SETTING_KEYS.map((k) => [k, z.string().nullable().optional()]),
+  ) as Record<(typeof OIDC_SETTING_KEYS)[number], z.ZodOptional<z.ZodNullable<z.ZodString>>>)
+  .passthrough();
+
+const updateRoleSchema = z.object({
+  role: z.enum(["admin", "user"]),
+});
 
 /**
  * Callback to recreate the auth instance after OIDC settings change.
@@ -33,8 +57,6 @@ export function setOnOidcSettingsChanged(cb: () => Promise<void>) {
 }
 
 const app = new Hono<AppEnv>();
-
-const OIDC_SETTING_KEYS = ["oidc_issuer_url", "oidc_client_id", "oidc_client_secret", "oidc_redirect_uri", "oidc_admin_claim", "oidc_admin_value"];
 
 // GET /api/admin/settings
 app.get("/settings", async (c) => {
@@ -76,13 +98,13 @@ app.get("/settings", async (c) => {
 });
 
 // PUT /api/admin/settings
-app.put("/settings", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
+app.put("/settings", zValidator("json", updateSettingsSchema), async (c) => {
+  const body = c.req.valid("json") as Partial<Record<(typeof OIDC_SETTING_KEYS)[number], string | null>>;
 
   for (const key of OIDC_SETTING_KEYS) {
     if (key in body) {
       const value = body[key];
-      if (value === "" || value === null) {
+      if (value === "" || value === null || value === undefined) {
         await deleteSetting(key);
       } else {
         await setSetting(key, value);
@@ -134,7 +156,7 @@ app.get("/users/:id", async (c) => {
 });
 
 // PUT /api/admin/users/:id/role  { role: "admin" | "user" }
-app.put("/users/:id/role", async (c) => {
+app.put("/users/:id/role", zValidator("json", updateRoleSchema), async (c) => {
   const id = c.req.param("id");
   const actingUser = c.get("user")!;
 
@@ -142,17 +164,14 @@ app.put("/users/:id/role", async (c) => {
     return c.json({ error: "Cannot change your own role" }, 400);
   }
 
-  const body = await c.req.json<{ role: string }>();
-  if (body.role !== "admin" && body.role !== "user") {
-    return c.json({ error: "role must be 'admin' or 'user'" }, 400);
-  }
+  const { role } = c.req.valid("json");
 
   const target = await getUserById(id);
   if (!target) return c.json({ error: "User not found" }, 404);
 
-  await updateUserAdmin(id, body.role === "admin");
-  log.info("Admin role changed", { targetUserId: id, newRole: body.role, by: actingUser.id });
-  return ok(c, { message: `User role updated to ${body.role}` });
+  await updateUserAdmin(id, role === "admin");
+  log.info("Admin role changed", { targetUserId: id, newRole: role, by: actingUser.id });
+  return ok(c, { message: `User role updated to ${role}` });
 });
 
 // PUT /api/admin/users/:id/ban  { reason?: string }

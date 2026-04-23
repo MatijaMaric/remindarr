@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import {
   rateTitle,
   unrateTitle,
@@ -16,29 +17,52 @@ import type { RatingValue } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const log = logger.child({ module: "ratings" });
 
-const VALID_RATINGS: RatingValue[] = ["HATE", "DISLIKE", "LIKE", "LOVE"];
+export const VALID_RATINGS = ["HATE", "DISLIKE", "LIKE", "LOVE"] as const;
+const ratingEnum = z.enum(VALID_RATINGS);
+
+const rateTitleSchema = z.object({
+  rating: ratingEnum,
+});
+
+const rateEpisodeSchema = z.object({
+  rating: ratingEnum,
+  review: z
+    .string()
+    .max(500)
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      const trimmed = v.trim();
+      return trimmed.length > 0 ? trimmed.slice(0, 500) : undefined;
+    }),
+});
+
+const episodeIdParamSchema = z.object({
+  episodeId: z.coerce.number().int(),
+});
+
+const seasonParamSchema = z.object({
+  titleId: z.string().min(1),
+  season: z.coerce.number().int(),
+});
 
 const app = new Hono<AppEnv>();
 
 // POST /:titleId — Rate a title
-app.post("/:titleId", async (c) => {
+app.post("/:titleId", zValidator("json", rateTitleSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
   const titleId = c.req.param("titleId");
-  const body = await c.req.json<{ rating: string }>();
+  const { rating } = c.req.valid("json");
 
-  if (!body.rating || !VALID_RATINGS.includes(body.rating as RatingValue)) {
-    return err(c, "Invalid rating value. Must be one of: HATE, DISLIKE, LIKE, LOVE", 400);
-  }
-
-  const rating = body.rating as RatingValue;
-  await rateTitle(user.id, titleId, rating);
+  await rateTitle(user.id, titleId, rating as RatingValue);
   log.info("Title rated", { userId: user.id, titleId, rating });
   return ok(c, { success: true, rating });
 });
@@ -85,76 +109,80 @@ app.get("/:titleId", async (c) => {
 // ─── Episode Rating Endpoints ────────────────────────────────────────────────
 
 // POST /episode/:episodeId — Rate an episode
-app.post("/episode/:episodeId", async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
+app.post(
+  "/episode/:episodeId",
+  zValidator("param", episodeIdParamSchema),
+  zValidator("json", rateEpisodeSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
 
-  const episodeId = Number(c.req.param("episodeId"));
-  if (isNaN(episodeId)) return err(c, "Invalid episode ID", 400);
+    const { episodeId } = c.req.valid("param");
+    const { rating, review } = c.req.valid("json");
 
-  const body = await c.req.json<{ rating: string; review?: string }>();
-  if (!body.rating || !VALID_RATINGS.includes(body.rating as RatingValue)) {
-    return err(c, "Invalid rating value. Must be one of: HATE, DISLIKE, LIKE, LOVE", 400);
-  }
-
-  const review = body.review && body.review.trim().length > 0
-    ? body.review.trim().slice(0, 500)
-    : undefined;
-
-  await rateEpisode(user.id, episodeId, body.rating as RatingValue, review);
-  log.info("Episode rated", { userId: user.id, episodeId, rating: body.rating });
-  return ok(c, { success: true, rating: body.rating });
-});
+    await rateEpisode(user.id, episodeId, rating as RatingValue, review);
+    log.info("Episode rated", { userId: user.id, episodeId, rating });
+    return ok(c, { success: true, rating });
+  },
+);
 
 // DELETE /episode/:episodeId — Remove episode rating
-app.delete("/episode/:episodeId", async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
+app.delete(
+  "/episode/:episodeId",
+  zValidator("param", episodeIdParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
 
-  const episodeId = Number(c.req.param("episodeId"));
-  if (isNaN(episodeId)) return err(c, "Invalid episode ID", 400);
+    const { episodeId } = c.req.valid("param");
 
-  await unrateEpisode(user.id, episodeId);
-  log.info("Episode unrated", { userId: user.id, episodeId });
-  return ok(c, { success: true });
-});
+    await unrateEpisode(user.id, episodeId);
+    log.info("Episode unrated", { userId: user.id, episodeId });
+    return ok(c, { success: true });
+  },
+);
 
 // GET /episode/:episodeId — Get episode rating info
-app.get("/episode/:episodeId", async (c) => {
-  const user = c.get("user");
-  const episodeId = Number(c.req.param("episodeId"));
-  if (isNaN(episodeId)) return err(c, "Invalid episode ID", 400);
+app.get(
+  "/episode/:episodeId",
+  zValidator("param", episodeIdParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    const { episodeId } = c.req.valid("param");
 
-  const userRatingData = user ? await getUserEpisodeRating(user.id, episodeId) : null;
-  const aggregated = await getEpisodeRatings(episodeId);
-  const friendsRaw = user ? await getFriendsEpisodeRatings(user.id, episodeId) : [];
+    const userRatingData = user ? await getUserEpisodeRating(user.id, episodeId) : null;
+    const aggregated = await getEpisodeRatings(episodeId);
+    const friendsRaw = user ? await getFriendsEpisodeRatings(user.id, episodeId) : [];
 
-  const friendsRatings = friendsRaw.map((f) => ({
-    user: {
-      id: f.userId,
-      username: f.username,
-      display_name: f.displayName,
-      image: f.image,
-    },
-    rating: f.rating,
-  }));
+    const friendsRatings = friendsRaw.map((f) => ({
+      user: {
+        id: f.userId,
+        username: f.username,
+        display_name: f.displayName,
+        image: f.image,
+      },
+      rating: f.rating,
+    }));
 
-  return ok(c, {
-    user_rating: userRatingData?.rating ?? null,
-    user_review: userRatingData?.review ?? null,
-    aggregated,
-    friends_ratings: friendsRatings,
-  });
-});
+    return ok(c, {
+      user_rating: userRatingData?.rating ?? null,
+      user_review: userRatingData?.review ?? null,
+      aggregated,
+      friends_ratings: friendsRatings,
+    });
+  },
+);
 
 // GET /season/:titleId/:season — Get aggregate episode ratings for a season
-app.get("/season/:titleId/:season", async (c) => {
-  const titleId = c.req.param("titleId");
-  const season = Number(c.req.param("season"));
-  if (isNaN(season)) return err(c, "Invalid season number", 400);
+app.get(
+  "/season/:titleId/:season",
+  zValidator("param", seasonParamSchema),
+  async (c) => {
+    const { titleId, season } = c.req.valid("param");
 
-  const ratings = await getSeasonEpisodeRatings(titleId, season);
-  return ok(c, { ratings });
-});
+    const ratings = await getSeasonEpisodeRatings(titleId, season);
+    return ok(c, { ratings });
+  },
+);
 
 export default app;

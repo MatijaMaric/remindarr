@@ -142,7 +142,8 @@ describe("POST /recommendations", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("titleId is required");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns 401 without auth", async () => {
@@ -401,6 +402,53 @@ describe("DELETE /recommendations/:id", () => {
       method: "DELETE",
     });
     expect(res.status).toBe(401);
+  });
+});
+
+describe("validation", () => {
+  it("rejects POST / with empty titleId via zod", async () => {
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues.length).toBeGreaterThan(0);
+  });
+
+  it("rejects POST / when message exceeds 500 chars", async () => {
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", message: "x".repeat(501) }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects GET / with invalid limit", async () => {
+    const res = await app.request("/recommendations?limit=9999", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects GET / with negative offset", async () => {
+    const res = await app.request("/recommendations?offset=-1", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });
 
