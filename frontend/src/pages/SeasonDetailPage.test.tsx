@@ -251,6 +251,50 @@ describe("SeasonDetailPage", () => {
     expect(options[1].textContent).toBe("Season 2");
   });
 
+  it("shows AIRING NOW indicator for episodes airing today", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    mockGetSeasonDetails.mockImplementation(() => Promise.resolve({
+      title: { id: "tv-100", title: "Test Show", is_tracked: true },
+      tmdb: {
+        id: 1, name: "Season 1", overview: "Overview", air_date: "2024-01-01", poster_path: null, season_number: 1, vote_average: 8.0,
+        episodes: [
+          { id: 101, name: "Today Ep", overview: "Airing today", air_date: today, episode_number: 1, season_number: 1, still_path: null, runtime: 45, vote_average: 0, guest_stars: [], crew: [] },
+          { id: 102, name: "Other Ep", overview: "Not today", air_date: "2024-01-08", episode_number: 2, season_number: 1, still_path: null, runtime: 42, vote_average: 0, guest_stars: [], crew: [] },
+        ],
+        credits: { cast: [], crew: [] },
+      },
+      seasonNumber: 1, country: "US", seasons: defaultSeasons,
+    }));
+
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Today Ep")).toBeDefined());
+
+    const airingLabels = screen.getAllByText(/airing now/i);
+    expect(airingLabels.length).toBe(1);
+  });
+
+  it("renders watched count summary", async () => {
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    // 1 watched (episode 2), 2 released/tracked; 3 total episodes; 2 remaining
+    await waitFor(() => {
+      expect(screen.getByText(/1 of 3 watched · 2 remaining/i)).toBeDefined();
+    });
+  });
+
+  it("renders padded two-digit episode numbers", async () => {
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    expect(screen.getByText("01")).toBeDefined();
+    expect(screen.getByText("02")).toBeDefined();
+    expect(screen.getByText("03")).toBeDefined();
+  });
+
   it("does not render season selector when only one season", async () => {
     mockGetSeasonDetails.mockImplementation(() => Promise.resolve({
       title: { id: "tv-100", title: "Test Show", is_tracked: true },

@@ -21,10 +21,17 @@ function formatDate(dateStr: string | null | undefined): string {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function isReleased(airDate: string | null | undefined): boolean {
   if (!airDate) return false;
-  const today = new Date().toISOString().slice(0, 10);
-  return airDate <= today;
+  return airDate <= todayISO();
+}
+
+function isAiringToday(airDate: string | null | undefined): boolean {
+  return !!airDate && airDate === todayISO();
 }
 
 type EpisodeStatus = { id: number; is_watched: boolean };
@@ -213,103 +220,147 @@ export default function SeasonDetailPage() {
       {/* Episode List */}
       {episodes.length > 0 && (
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="text-lg font-semibold text-white">{t("season.episodes", "Episodes")}</h2>
-            {hasStatus && releasedWithStatus.length > 0 && (
-              <button
-                onClick={toggleAllWatched}
-                className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              >
-                {allReleasedWatched
-                  ? t("episodes.markAllUnwatched", "Mark all unwatched")
-                  : t("episodes.markAllWatched", "Mark all watched")}
-              </button>
-            )}
+            <div className="flex items-center gap-4">
+              {hasStatus && releasedWithStatus.length > 0 && (
+                <span className="text-[11px] font-mono text-zinc-500 tracking-wide whitespace-nowrap">
+                  {releasedWithStatus.filter((ep) => statusMap.get(ep.episode_number)?.is_watched).length} of {episodes.length} watched · {episodes.length - releasedWithStatus.filter((ep) => statusMap.get(ep.episode_number)?.is_watched).length} remaining
+                </span>
+              )}
+              {hasStatus && releasedWithStatus.length > 0 && (
+                <button
+                  onClick={toggleAllWatched}
+                  className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {allReleasedWatched
+                    ? t("episodes.markAllUnwatched", "Mark all unwatched")
+                    : t("episodes.markAllWatched", "Mark all watched")}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-1.5">
             {episodes.map((ep) => {
               const status = statusMap.get(ep.episode_number);
               const released = isReleased(ep.air_date);
+              const airingToday = isAiringToday(ep.air_date);
+              const watched = status?.is_watched ?? false;
+              const ratingCounts = episodeRatings[ep.episode_number];
+              const totalRatings = ratingCounts
+                ? ratingCounts.HATE + ratingCounts.DISLIKE + ratingCounts.LIKE + ratingCounts.LOVE
+                : 0;
 
               return (
                 <div
                   key={ep.episode_number}
-                  className="flex items-center gap-3 bg-zinc-900 rounded-xl border border-white/[0.06] hover:border-amber-500/50 transition-colors p-3 group"
+                  className={`rounded-[10px] border transition-colors group ${
+                    airingToday
+                      ? "bg-amber-400/[0.06] border-amber-400/25"
+                      : "bg-zinc-900 border-white/[0.05] hover:border-white/10"
+                  }`}
                 >
-                  {/* Episode link */}
-                  <Link
-                    to={`/title/${title.id}/season/${seasonNumber}/episode/${ep.episode_number}`}
-                    className="flex gap-3 sm:gap-4 flex-1 min-w-0"
-                  >
-                    {/* Episode still */}
-                    <div className="w-24 sm:w-36 shrink-0 aspect-video bg-zinc-800 rounded-lg overflow-hidden">
-                      {ep.still_path ? (
-                        <img
-                          src={`${TMDB_IMG}/w300${ep.still_path}`}
-                          alt={ep.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
-                          E{String(ep.episode_number).padStart(2, "0")}
-                        </div>
-                      )}
+                  <div className="flex items-stretch sm:items-center gap-3 sm:gap-5 p-3 sm:p-4">
+                    {/* Episode number */}
+                    <div
+                      className={`shrink-0 w-8 sm:w-10 self-center text-[22px] leading-none font-mono font-extrabold tabular-nums tracking-tight text-center ${
+                        watched ? "text-zinc-600" : "text-zinc-100"
+                      }`}
+                    >
+                      {String(ep.episode_number).padStart(2, "0")}
                     </div>
 
-                    {/* Episode info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors">
-                            <span className="text-zinc-500 mr-1">{ep.episode_number}.</span>
+                    <Link
+                      to={`/title/${title.id}/season/${seasonNumber}/episode/${ep.episode_number}`}
+                      className="flex flex-1 min-w-0 gap-3 sm:gap-5 items-stretch sm:items-center"
+                    >
+                      {/* Still */}
+                      <div className="shrink-0 w-24 sm:w-[180px] aspect-video bg-zinc-800 rounded-md overflow-hidden self-center">
+                        {ep.still_path ? (
+                          <img
+                            src={`${TMDB_IMG}/w300${ep.still_path}`}
+                            alt={ep.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-[11px] font-mono">
+                            E{String(ep.episode_number).padStart(2, "0")}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Title + description */}
+                      <div className="flex-1 min-w-0 self-center">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3
+                            className={`text-sm font-semibold transition-colors group-hover:text-amber-400 ${
+                              watched ? "text-zinc-400" : "text-zinc-100"
+                            }`}
+                          >
                             {ep.name}
                           </h3>
-                          <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
-                            {ep.air_date && <span>{formatDate(ep.air_date)}</span>}
-                            {ep.runtime && (
-                              <>
-                                <span className="text-zinc-700">·</span>
-                                <span>{ep.runtime}m</span>
-                              </>
-                            )}
-                            {ep.vote_average > 0 && (
-                              <>
-                                <span className="text-zinc-700">·</span>
-                                <span className="text-yellow-500">{ep.vote_average.toFixed(1)}</span>
-                              </>
-                            )}
-                            {(() => {
-                              const r = episodeRatings[ep.episode_number];
-                              const total = r ? (r.HATE + r.DISLIKE + r.LIKE + r.LOVE) : 0;
-                              return total > 0 ? (
-                                <>
-                                  <span className="text-zinc-700">·</span>
-                                  <span className="text-pink-400">{total} {total === 1 ? "rating" : "ratings"}</span>
-                                </>
-                              ) : null;
-                            })()}
-                          </div>
+                          {airingToday && (
+                            <span className="text-[10px] font-mono font-semibold tracking-[0.15em] text-amber-400">
+                              AIRING NOW
+                            </span>
+                          )}
+                        </div>
+                        {ep.overview && (
+                          <p className="hidden sm:block text-xs text-zinc-500 mt-1 line-clamp-2 leading-snug">
+                            {ep.overview}
+                          </p>
+                        )}
+                        {/* Mobile-only meta row */}
+                        <div className="sm:hidden flex items-center gap-2 mt-1 text-[11px] font-mono text-zinc-400">
+                          {ep.air_date && <span>{formatDate(ep.air_date)}</span>}
+                          {ep.runtime && (
+                            <>
+                              <span className="text-zinc-700">·</span>
+                              <span>{ep.runtime} min</span>
+                            </>
+                          )}
+                          {ep.vote_average > 0 && (
+                            <>
+                              <span className="text-zinc-700">·</span>
+                              <span className="text-amber-400">★ {ep.vote_average.toFixed(1)}</span>
+                            </>
+                          )}
                         </div>
                       </div>
-                      {ep.overview && (
-                        <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{ep.overview}</p>
+                    </Link>
+
+                    {/* Desktop: air date column */}
+                    <div className="hidden sm:block shrink-0 w-[110px] text-xs font-mono text-zinc-400">
+                      {ep.air_date ? formatDate(ep.air_date) : "—"}
+                    </div>
+
+                    {/* Desktop: runtime + rating column */}
+                    <div className="hidden sm:block shrink-0 w-[100px] text-xs font-mono text-zinc-400">
+                      <div>{ep.runtime ? `${ep.runtime} min` : "—"}</div>
+                      {ep.vote_average > 0 && (
+                        <div className="text-amber-400 mt-0.5">★ {ep.vote_average.toFixed(1)}</div>
+                      )}
+                      {totalRatings > 0 && (
+                        <div className="text-pink-400 mt-0.5">
+                          {totalRatings} {totalRatings === 1 ? "rating" : "ratings"}
+                        </div>
                       )}
                     </div>
-                  </Link>
 
-                  {/* Watched icon */}
-                  {hasStatus && (
-                    <div className="flex-shrink-0">
-                      <WatchedIcon
-                        watched={status?.is_watched ?? false}
-                        onClick={() => toggleWatched(ep.episode_number)}
-                        disabled={!released || !status}
-                        size="md"
-                        compactOnMobile
-                      />
-                    </div>
-                  )}
+                    {/* Watched toggle */}
+                    {hasStatus && (
+                      <div className="shrink-0 self-center">
+                        <WatchedIcon
+                          watched={watched}
+                          onClick={() => toggleWatched(ep.episode_number)}
+                          disabled={!released || !status}
+                          size="md"
+                          compactOnMobile
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
