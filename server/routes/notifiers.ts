@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import type { AppEnv } from "../types";
 import {
   createNotifier,
@@ -14,16 +15,9 @@ import { getVapidPublicKey } from "../notifications/vapid";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import Sentry from "../sentry";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const app = new Hono<AppEnv>();
-
-function isValidTime(time: string): boolean {
-  const match = time.match(/^(\d{2}):(\d{2})$/);
-  if (!match) return false;
-  const h = parseInt(match[1], 10);
-  const m = parseInt(match[2], 10);
-  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
-}
 
 function isValidTimezone(tz: string): boolean {
   try {
@@ -34,18 +28,47 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
-const VALID_DIGEST_MODES = ["weekly", "off"] as const;
-type DigestMode = (typeof VALID_DIGEST_MODES)[number];
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const timezoneSchema = z.string().refine(isValidTimezone, { message: "Invalid timezone" });
+const digestModeSchema = z.enum(["weekly", "off"]);
+const digestDaySchema = z.number().int().min(0).max(6);
 
-function isValidDigestMode(mode: unknown): mode is DigestMode | null {
-  if (mode === null || mode === undefined) return true;
-  return VALID_DIGEST_MODES.includes(mode as DigestMode);
-}
+const createNotifierSchema = z
+  .object({
+    provider: z.string().min(1),
+    config: z.record(z.string(), z.string()),
+    notify_time: z.string().regex(HHMM, { message: "Invalid time format. Use HH:MM (24h)" }).default("09:00"),
+    timezone: timezoneSchema.default("UTC"),
+    digest_mode: digestModeSchema.nullish(),
+    digest_day: digestDaySchema.nullish(),
+    streaming_alerts_enabled: z.boolean().optional(),
+  })
+  .refine(
+    (v) => v.digest_mode !== "weekly" || (v.digest_day !== undefined && v.digest_day !== null),
+    {
+      message: "digest_day is required when digest_mode is 'weekly'",
+      path: ["digest_day"],
+    },
+  );
 
-function isValidDigestDay(day: unknown): day is number | null {
-  if (day === null || day === undefined) return true;
-  return typeof day === "number" && Number.isInteger(day) && day >= 0 && day <= 6;
-}
+const updateNotifierSchema = z
+  .object({
+    provider: z.string().min(1).optional(),
+    config: z.record(z.string(), z.string()).optional(),
+    notify_time: z.string().regex(HHMM, { message: "Invalid time format. Use HH:MM (24h)" }).optional(),
+    timezone: timezoneSchema.optional(),
+    enabled: z.boolean().optional(),
+    digest_mode: digestModeSchema.nullish(),
+    digest_day: digestDaySchema.nullish(),
+    streaming_alerts_enabled: z.boolean().optional(),
+  })
+  .passthrough();
+
+const renewSubscriptionSchema = z.object({
+  endpoint: z.string().min(1),
+  p256dh: z.string().min(1),
+  auth: z.string().min(1),
+});
 
 // GET / — list user's notifiers
 app.get("/", async (c) => {
@@ -70,15 +93,19 @@ app.get("/vapid-public-key", async (c) => {
 });
 
 // POST / — create notifier
-app.post("/", async (c) => {
+app.post("/", zValidator("json", createNotifierSchema), async (c) => {
   const user = c.get("user")!;
-  const body = await c.req.json();
+  const body = c.req.valid("json");
 
-  const { provider, config, notify_time, timezone, digest_mode, digest_day, streaming_alerts_enabled } = body;
-
-  if (!provider || !config) {
-    return err(c, "provider and config are required");
-  }
+  const {
+    provider,
+    config,
+    notify_time,
+    timezone,
+    digest_mode,
+    digest_day,
+    streaming_alerts_enabled,
+  } = body;
 
   const name = provider.charAt(0).toUpperCase() + provider.slice(1);
 
@@ -87,45 +114,32 @@ app.post("/", async (c) => {
     return err(c, `Unknown provider: ${provider}. Available: ${getAvailableProviders().join(", ")}`);
   }
 
+  // Provider-specific config validation (beyond zod's shape validation)
   const validation = providerImpl.validateConfig(config);
   if (!validation.valid) {
     return err(c, validation.error ?? "Invalid config");
   }
 
-  const time = notify_time || "09:00";
-  if (!isValidTime(time)) {
-    return err(c, "Invalid time format. Use HH:MM (24h)");
-  }
-
-  const tz = timezone || "UTC";
-  if (!isValidTimezone(tz)) {
-    return err(c, "Invalid timezone");
-  }
-
-  if (!isValidDigestMode(digest_mode)) {
-    return err(c, "Invalid digest_mode. Must be 'weekly', 'off', or null");
-  }
-
-  if (!isValidDigestDay(digest_day)) {
-    return err(c, "Invalid digest_day. Must be 0-6 (0=Sunday) or null");
-  }
-
-  if (digest_mode === "weekly" && (digest_day === null || digest_day === undefined)) {
-    return err(c, "digest_day is required when digest_mode is 'weekly'");
-  }
-
-  const id = await createNotifier(user.id, provider, name, config, time, tz, digest_mode ?? null, digest_day ?? null, streaming_alerts_enabled !== false);
+  const id = await createNotifier(
+    user.id,
+    provider,
+    name,
+    config,
+    notify_time,
+    timezone,
+    digest_mode ?? null,
+    digest_day ?? null,
+    streaming_alerts_enabled !== false,
+  );
   await refreshNotificationSchedule();
   const notifier = await getNotifierById(id, user.id);
   return c.json({ notifier }, 201);
 });
 
 // POST /renew-subscription — update webpush subscription config after SW update
-app.post("/renew-subscription", async (c) => {
+app.post("/renew-subscription", zValidator("json", renewSubscriptionSchema), async (c) => {
   const user = c.get("user")!;
-  const body = await c.req.json();
-
-  const { endpoint, p256dh, auth } = body;
+  const { endpoint, p256dh, auth } = c.req.valid("json");
 
   const providerImpl = getProvider("webpush");
   if (!providerImpl) {
@@ -154,17 +168,17 @@ app.post("/renew-subscription", async (c) => {
 });
 
 // PUT /:id — update notifier
-app.put("/:id", async (c) => {
+app.put("/:id", zValidator("json", updateNotifierSchema), async (c) => {
   const user = c.get("user")!;
   const id = c.req.param("id");
-  const body = await c.req.json();
+  const body = c.req.valid("json");
 
   const existing = await getNotifierById(id, user.id);
   if (!existing) {
     return err(c, "Notifier not found", 404);
   }
 
-  // Validate config if provided
+  // Validate config if provided (provider-specific)
   if (body.config) {
     const provider = getProvider(body.provider || existing.provider);
     if (provider) {
@@ -173,22 +187,6 @@ app.put("/:id", async (c) => {
         return err(c, validation.error ?? "Invalid config");
       }
     }
-  }
-
-  if (body.notify_time && !isValidTime(body.notify_time)) {
-    return err(c, "Invalid time format. Use HH:MM (24h)");
-  }
-
-  if (body.timezone && !isValidTimezone(body.timezone)) {
-    return err(c, "Invalid timezone");
-  }
-
-  if ("digest_mode" in body && !isValidDigestMode(body.digest_mode)) {
-    return err(c, "Invalid digest_mode. Must be 'weekly', 'off', or null");
-  }
-
-  if ("digest_day" in body && !isValidDigestDay(body.digest_day)) {
-    return err(c, "Invalid digest_day. Must be 0-6 (0=Sunday) or null");
   }
 
   const digestMode = "digest_mode" in body ? body.digest_mode : undefined;
@@ -208,7 +206,9 @@ app.put("/:id", async (c) => {
     enabled: body.enabled,
     ...("digest_mode" in body ? { digestMode: body.digest_mode ?? null } : {}),
     ...("digest_day" in body ? { digestDay: body.digest_day ?? null } : {}),
-    ...("streaming_alerts_enabled" in body ? { streamingAlertsEnabled: body.streaming_alerts_enabled !== false } : {}),
+    ...("streaming_alerts_enabled" in body
+      ? { streamingAlertsEnabled: body.streaming_alerts_enabled !== false }
+      : {}),
   });
   await refreshNotificationSchedule();
 

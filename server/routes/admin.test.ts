@@ -183,15 +183,13 @@ describe("PUT /admin/settings", () => {
     expect(res.status).toBe(403);
   });
 
-  it("handles invalid JSON gracefully", async () => {
+  it("rejects invalid JSON body", async () => {
     const res = await app.request("/admin/settings", {
       method: "PUT",
       headers: { Cookie: adminCookie, "Content-Type": "application/json" },
       body: "not json",
     });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.oidc_configured).toBeDefined();
+    expect(res.status).toBe(400);
   });
 });
 
@@ -262,6 +260,46 @@ describe("GET /admin/users/:id", () => {
       headers: { Cookie: adminCookie },
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("validation", () => {
+  it("rejects PUT /settings when OIDC value is a non-string", async () => {
+    const res = await app.request("/admin/settings", {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ oidc_issuer_url: 123 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PUT /users/:id/role with invalid enum", async () => {
+    const userId = await createUser("zodcheck", "hash");
+    const res = await app.request(`/admin/users/${userId}/role`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "superadmin" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PUT /users/:id/role without role field", async () => {
+    const userId = await createUser("zodcheck2", "hash");
+    const res = await app.request(`/admin/users/${userId}/role`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });
 

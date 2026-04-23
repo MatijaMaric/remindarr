@@ -463,7 +463,9 @@ describe("digest_mode", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("digest_day");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues.some((i: { path: unknown[] }) => i.path.includes("digest_day"))).toBe(true);
   });
 
   it("rejects invalid digest_mode value", async () => {
@@ -477,7 +479,9 @@ describe("digest_mode", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("digest_mode");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues.some((i: { path: unknown[] }) => i.path.includes("digest_mode"))).toBe(true);
   });
 
   it("rejects digest_day out of range", async () => {
@@ -492,7 +496,9 @@ describe("digest_mode", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("digest_day");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues.some((i: { path: unknown[] }) => i.path.includes("digest_day"))).toBe(true);
   });
 
   it("updates digest_mode via PUT", async () => {
@@ -530,6 +536,56 @@ describe("digest_mode", () => {
     const body = await res.json();
     expect(body.notifiers[0].digest_mode).toBe("weekly");
     expect(body.notifiers[0].digest_day).toBe(3);
+  });
+});
+
+describe("validation", () => {
+  it("rejects POST / when provider is missing", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ config: {}, notify_time: "09:00", timezone: "UTC" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST / when notify_time is malformed", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ ...validNotifier, notify_time: "9am" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST / when timezone is invalid", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ ...validNotifier, timezone: "Not/AZone" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /renew-subscription when endpoint is empty", async () => {
+    const res = await app.request("/notifiers/renew-subscription", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ endpoint: "", p256dh: "x", auth: "y" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });
 
