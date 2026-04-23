@@ -99,7 +99,7 @@ export default function App() {
       </a>
       {/* Hide top nav on reels page for mobile */}
       <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isReelsPage ? "hidden sm:block" : ""}`}>
-        <div className="max-w-7xl mx-auto px-4 flex items-center gap-8 h-14">
+        <div className="max-w-[1440px] mx-auto px-4 flex items-center gap-8 h-14">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
             <div className="w-6 h-6 rounded-md bg-amber-400 flex items-center justify-center font-extrabold text-sm text-black leading-none select-none">
@@ -197,7 +197,7 @@ export default function App() {
       </nav>
       <ScrollToTop />
       <InstallPrompt />
-      <main id="main-content" className={isReelsPage ? "" : "max-w-7xl mx-auto px-4 py-6 pb-20 sm:pb-6"}>
+      <main id="main-content" className={isReelsPage ? "" : "max-w-[1440px] mx-auto px-4 py-6 pb-20 sm:pb-6"}>
         {user && <NotificationPrompt />}
         <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
           <Routes>
@@ -226,7 +226,7 @@ export default function App() {
         </Suspense>
       </main>
       <footer className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage ? "hidden" : "hidden sm:block"}`}>
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
+        <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>
           <a
             href="https://github.com/MatijaMaric/remindarr"
