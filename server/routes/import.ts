@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { resolveImdbUrl } from "../imdb/resolver";
 import { upsertTitles, trackTitle } from "../db/repository";
 import type { AppEnv } from "../types";
@@ -11,6 +12,32 @@ const MAX_ROWS = 500;
 const BATCH_SIZE = 10;
 const BATCH_DELAY_MS = 500;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+// `@hono/zod-validator` does not cleanly handle multipart `File` objects, so
+// we parse the FormData manually and then validate the shape via zod. This
+// keeps the 400 response shape consistent with the shared `zValidator`.
+//
+// Note: `instanceof File` is unreliable across Bun runtimes (happy-dom can
+// replace the global `File` in test setup), so we duck-type the upload field
+// instead: must look like a `Blob`/`File` and have a numeric `size`.
+const uploadedFileSchema = z
+  .custom<Blob>(
+    (v) =>
+      typeof v === "object" &&
+      v !== null &&
+      typeof (v as Blob).size === "number" &&
+      typeof (v as Blob).text === "function" &&
+      typeof (v as Blob).arrayBuffer === "function",
+    { message: "Missing 'file' field in form data" },
+  )
+  .refine((f) => f.size > 0, { message: "File is empty" })
+  .refine((f) => f.size <= MAX_FILE_SIZE, {
+    message: `File too large. Maximum allowed size is ${MAX_FILE_SIZE / (1024 * 1024)} MB.`,
+  });
+
+const uploadSchema = z.object({
+  file: uploadedFileSchema,
+});
 
 export type CsvFormat = "letterboxd" | "imdb" | "trakt" | "unknown";
 
@@ -167,15 +194,15 @@ app.post("/csv", async (c) => {
     return err(c, "Expected multipart form data with a 'file' field");
   }
 
-  const fileField = formData.get("file");
-  if (!fileField || typeof fileField === "string") {
-    return err(c, "Missing 'file' field in form data");
+  const parsed = uploadSchema.safeParse({ file: formData.get("file") });
+  if (!parsed.success) {
+    return c.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      400,
+    );
   }
 
-  const file = fileField as File;
-  if (file.size > MAX_FILE_SIZE) {
-    return err(c, "File too large. Maximum allowed size is 5 MB.");
-  }
+  const { file } = parsed.data;
   let csvText: string;
   try {
     csvText = await file.text();

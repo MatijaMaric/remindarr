@@ -518,7 +518,7 @@ function GridCalendar({
   const month = currentMonth.getMonth();
 
   useEffect(() => {
-    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect -- reset before async load
+    setLoading(true);
     getCalendarTitles({
       month: formatMonth(currentMonth),
       type: typeFilter || undefined,

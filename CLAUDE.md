@@ -247,6 +247,14 @@ Inventory is large (~45 components). Broad groups:
 - New notification providers must guard on `streamingAlerts.length` before rendering streaming-alert content
 - The Bun route wiring in `server/index.ts` and the CF route wiring in `server/worker.ts` must stay in sync
 
+### Route validation
+- Use zod + `zValidator` from `server/lib/validator.ts` for request shape validation at the route boundary.
+- Schemas are defined at the top of the route file (or a sibling `*-schemas.ts` for large surfaces) and applied as middleware: `app.post("/", zValidator("json", schema), handler)`.
+- Validation failures return HTTP 400 with `{ error: "Validation failed", issues: ZodIssue[] }`. Successful requests are not changed.
+- Supported targets: `"json"`, `"query"`, `"param"`, `"form"`, `"header"`, `"cookie"`. For multipart `File` uploads, parse `FormData` manually and feed into `schema.safeParse(...)` (see `server/routes/import.ts`) — `instanceof File` is unreliable in the Bun test env, duck-type the upload instead.
+- Provider- or business-level validation (e.g. notifier `validateConfig`, timezone semantics, uniqueness) runs AFTER zod inside the handler. Zod only validates shape/types.
+- Tests for every migrated route should include a `describe("validation", ...)` block asserting `res.status === 400` and that the response body exposes an `issues` array.
+
 ### API Routes
 Grouped by middleware. All routes are under `/api` except `/metrics`.
 

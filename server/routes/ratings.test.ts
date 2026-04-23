@@ -134,7 +134,8 @@ describe("POST /ratings/:titleId", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Invalid rating value");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns 400 for missing rating value", async () => {
@@ -148,7 +149,8 @@ describe("POST /ratings/:titleId", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Invalid rating value");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns 401 without auth", async () => {
@@ -320,5 +322,44 @@ describe("GET /ratings/:titleId", () => {
     expect(body.user_rating).toBeNull();
     expect(body.aggregated).toEqual({ HATE: 0, DISLIKE: 0, LIKE: 0, LOVE: 0 });
     expect(body.friends_ratings).toHaveLength(0);
+  });
+});
+
+describe("validation", () => {
+  it("rejects POST /:titleId with unknown rating enum value", async () => {
+    const res = await app.request("/ratings/movie-123", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: "OKAY" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues.length).toBeGreaterThan(0);
+  });
+
+  it("rejects POST /episode/:episodeId when episodeId is not numeric", async () => {
+    const res = await app.request("/ratings/episode/abc", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: "LIKE" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /episode/:episodeId with review over 500 chars", async () => {
+    const res = await app.request("/ratings/episode/1", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: "LIKE", review: "x".repeat(501) }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });

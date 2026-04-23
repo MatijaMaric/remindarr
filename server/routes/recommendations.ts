@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import {
   createRecommendation,
   getUserRecommendation,
@@ -12,23 +13,30 @@ import {
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const log = logger.child({ module: "recommendations" });
+
+const createRecommendationSchema = z.object({
+  titleId: z.string().min(1),
+  message: z.string().max(500).optional(),
+});
+
+const discoveryFeedQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 
 const app = new Hono<AppEnv>();
 
 // POST / — Broadcast a recommendation (no toUserId needed)
-app.post("/", async (c) => {
+app.post("/", zValidator("json", createRecommendationSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const body = await c.req.json<{ titleId?: string; message?: string }>();
-
-  if (!body.titleId) {
-    return err(c, "titleId is required", 400);
-  }
+  const body = c.req.valid("json");
 
   // Check for duplicate recommendation
   const existing = await getUserRecommendation(user.id, body.titleId);
@@ -88,14 +96,13 @@ app.get("/check/:titleId", async (c) => {
 });
 
 // GET / — Discovery feed (recommendations from followed users)
-app.get("/", async (c) => {
+app.get("/", zValidator("query", discoveryFeedQuerySchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const limit = Math.min(Math.max(parseInt(c.req.query("limit") || "20", 10), 1), 100);
-  const offset = Math.max(parseInt(c.req.query("offset") || "0", 10), 0);
+  const { limit, offset } = c.req.valid("query");
 
   const [rows, count] = await Promise.all([
     getDiscoveryFeed(user.id, limit, offset),

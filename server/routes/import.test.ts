@@ -192,7 +192,9 @@ describe("POST /import/csv", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Missing 'file'");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues.length).toBeGreaterThan(0);
   });
 
   it("returns 400 for unrecognized CSV format", async () => {
@@ -290,6 +292,22 @@ describe("POST /import/csv", () => {
     const body = await res.json();
     expect(body.failed).toBe(1);
     expect(body.errors).toHaveLength(1);
+  });
+
+  it("rejects oversized file via validation", async () => {
+    // Build a file just over the 5 MB limit
+    const oneMb = "x".repeat(1024 * 1024);
+    const csvContent = "Const,Title\n" + oneMb.repeat(6);
+    const form = makeFormData(csvContent);
+    const res = await app.request("/import/csv", {
+      method: "POST",
+      headers: { Cookie: userCookie },
+      body: form,
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns errors array with details for failed rows", async () => {
