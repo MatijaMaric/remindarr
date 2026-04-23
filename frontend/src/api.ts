@@ -115,6 +115,9 @@ export async function browseTitles(params: {
   genre?: string;
   provider?: string;
   language?: string;
+  yearMin?: number;
+  yearMax?: number;
+  minRating?: number;
 }): Promise<{
   titles: SearchTitle[];
   page: number;
@@ -133,6 +136,9 @@ export async function browseTitles(params: {
   if (params.genre) qs.set("genre", params.genre);
   if (params.provider) qs.set("provider", params.provider);
   if (params.language) qs.set("language", params.language);
+  if (params.yearMin != null) qs.set("year_min", String(params.yearMin));
+  if (params.yearMax != null) qs.set("year_max", String(params.yearMax));
+  if (params.minRating != null) qs.set("min_rating", String(params.minRating));
   return fetchJson(`/browse?${qs}`);
 }
 

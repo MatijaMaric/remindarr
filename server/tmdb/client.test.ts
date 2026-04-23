@@ -275,6 +275,36 @@ describe("discoverMovies", () => {
     expect(result.results).toHaveLength(1);
     expect(result.results[0].title).toBe("Movie");
   });
+
+  it("translates yearMin/yearMax filters into release_date bounds", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    await discoverMovies({ filters: { yearMin: 2020, yearMax: 2024 } });
+    const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
+    expect(url.searchParams.get("release_date.gte")).toBe("2020-01-01");
+    expect(url.searchParams.get("release_date.lte")).toBe("2024-12-31");
+  });
+
+  it("intersects year filter with category-supplied date range (more restrictive wins)", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    // category default: future window 2026-01-01 -> 2026-06-30; user wants <= 2024
+    await discoverMovies({
+      releaseDateGte: "2026-01-01",
+      releaseDateLte: "2026-06-30",
+      filters: { yearMin: 2020, yearMax: 2024 },
+    });
+    const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
+    // gte: max(2026-01-01, 2020-01-01) = 2026-01-01
+    expect(url.searchParams.get("release_date.gte")).toBe("2026-01-01");
+    // lte: min(2026-06-30, 2024-12-31) = 2024-12-31
+    expect(url.searchParams.get("release_date.lte")).toBe("2024-12-31");
+  });
+
+  it("translates voteAverageGte filter into vote_average.gte", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    await discoverMovies({ filters: { voteAverageGte: 7.5 } });
+    const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
+    expect(url.searchParams.get("vote_average.gte")).toBe("7.5");
+  });
 });
 
 // ─── discoverTv ─────────────────────────────────────────────────────────────

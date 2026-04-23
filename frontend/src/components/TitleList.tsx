@@ -31,6 +31,8 @@ interface Props {
   showStatusPicker?: boolean;
   showNotificationPicker?: boolean;
   showTags?: boolean;
+  showProviderBadge?: boolean;
+  showRating?: boolean;
   /** Limit grid display to N rows. Uses the largest breakpoint column count to calculate the slice size. */
   maxRows?: number;
   /** Optional link shown when maxRows truncates the list */
@@ -49,6 +51,8 @@ export default function TitleList({
   showStatusPicker,
   showNotificationPicker,
   showTags,
+  showProviderBadge,
+  showRating,
   maxRows,
   viewAllHref,
   viewAllLabel,
@@ -117,6 +121,8 @@ export default function TitleList({
     showStatusPicker,
     showNotificationPicker,
     showTags,
+    showProviderBadge,
+    showRating,
   };
 
   return (

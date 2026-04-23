@@ -50,15 +50,15 @@ export default function FullBleedCarousel({
     });
   };
 
-  // Arrow positioned just inside the body edge: max(0px, (100vw - 80rem) / 2 - 0.75rem)
-  const arrowOffset = "max(0px, calc((100vw - 80rem) / 2 - 0.75rem))";
-  // Align first card with the body content (mirrors max-w-7xl mx-auto px-4)
-  const edgePad = "max(1rem, calc((100vw - 80rem) / 2 + 1rem))";
-  // Width of the left/right fade zones (outside the 80rem body)
-  const fadeWidth = "max(1rem, calc((100vw - 80rem) / 2))";
+  // Arrow positioned just inside the body edge: max(0px, (100vw - 90rem) / 2 - 0.75rem)
+  const arrowOffset = "max(0px, calc((100vw - 90rem) / 2 - 0.75rem))";
+  // Align first card with the body content (mirrors max-w-[1440px] mx-auto px-4)
+  const edgePad = "max(1rem, calc((100vw - 90rem) / 2 + 1rem))";
+  // Width of the left/right fade zones (outside the 90rem body)
+  const fadeWidth = "max(1rem, calc((100vw - 90rem) / 2))";
 
   return (
-    // Break out of the max-w-7xl container, same trick as HeroBanner
+    // Break out of the max-w-[1440px] container, same trick as HeroBanner
     <div className="group/fullbleed relative w-[100vw] left-[50%] ml-[-50vw]">
       {/* Scroll container: pad content to align with body */}
       <div
