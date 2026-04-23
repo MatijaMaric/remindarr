@@ -69,8 +69,10 @@ export const offers = sqliteTable(
   "offers",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    titleId: text("title_id").references(() => titles.id),
-    providerId: integer("provider_id").references(() => providers.id),
+    titleId: text("title_id").references(() => titles.id, { onDelete: "cascade" }),
+    // onDelete: restrict — providers are a reference/enum-like table seeded from TMDB
+    // and are not user-deletable; block deletion if offers reference them.
+    providerId: integer("provider_id").references(() => providers.id, { onDelete: "restrict" }),
     monetizationType: text("monetization_type"),
     presentationType: text("presentation_type"),
     priceValue: real("price_value"),
@@ -88,7 +90,7 @@ export const offers = sqliteTable(
 export const scores = sqliteTable("scores", {
   titleId: text("title_id")
     .primaryKey()
-    .references(() => titles.id),
+    .references(() => titles.id, { onDelete: "cascade" }),
   imdbScore: real("imdb_score"),
   imdbVotes: integer("imdb_votes"),
   tmdbScore: real("tmdb_score"),
@@ -228,7 +230,7 @@ export const tracked = sqliteTable(
   {
     titleId: text("title_id")
       .notNull()
-      .references(() => titles.id),
+      .references(() => titles.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -266,7 +268,7 @@ export const watchedTitles = sqliteTable(
   {
     titleId: text("title_id")
       .notNull()
-      .references(() => titles.id),
+      .references(() => titles.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -365,7 +367,7 @@ export const ratings = sqliteTable(
   "ratings",
   {
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id),
+    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
     rating: text("rating").notNull(), // 'HATE', 'DISLIKE', 'LIKE', 'LOVE'
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
@@ -380,7 +382,7 @@ export const recommendations = sqliteTable(
   {
     id: text("id").primaryKey(),
     fromUserId: text("from_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id),
+    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
     message: text("message"),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
@@ -408,7 +410,8 @@ export const invitations = sqliteTable(
     id: text("id").primaryKey(),
     code: text("code").notNull().unique(),
     createdById: text("created_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    usedById: text("used_by_id").references(() => users.id),
+    // onDelete: set null — preserves invite audit trail after the redeeming user is deleted.
+    usedById: text("used_by_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
     usedAt: text("used_at"),
     expiresAt: text("expires_at").notNull(),

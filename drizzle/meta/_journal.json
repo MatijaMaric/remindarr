@@ -204,6 +204,13 @@
       "when": 1745021200000,
       "tag": "0028_tracked_user_id_index",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1745107600000,
+      "tag": "0029_unify_fk_ondelete",
+      "breakpoints": true
     }
   ]
 }
