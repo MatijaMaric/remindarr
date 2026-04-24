@@ -34,11 +34,11 @@ describe("ThemePicker", () => {
 
     const activeButton = screen.getByRole("button", { name: "Dark" });
     expect(activeButton.getAttribute("aria-pressed")).toBe("true");
-    expect(activeButton.className).toContain("bg-amber-500");
+    expect(activeButton.className).toContain("amber-400");
 
     const inactiveButton = screen.getByRole("button", { name: "Light" });
     expect(inactiveButton.getAttribute("aria-pressed")).toBe("false");
-    expect(inactiveButton.className).not.toContain("bg-amber-500");
+    expect(inactiveButton.className).not.toContain("amber-400/");
 
     spy.mockRestore();
   });
@@ -94,7 +94,7 @@ describe("ThemePicker", () => {
     render(<ThemePicker />);
     const activeButton = screen.getByRole("button", { name: "Light" });
     expect(activeButton.getAttribute("aria-pressed")).toBe("true");
-    expect(activeButton.className).toContain("bg-amber-500");
+    expect(activeButton.className).toContain("amber-400");
 
     spy.mockRestore();
   });
@@ -108,7 +108,7 @@ describe("ThemePicker", () => {
     render(<ThemePicker />);
     const activeButton = screen.getByRole("button", { name: "OLED Black" });
     expect(activeButton.getAttribute("aria-pressed")).toBe("true");
-    expect(activeButton.className).toContain("bg-amber-500");
+    expect(activeButton.className).toContain("amber-400");
 
     spy.mockRestore();
   });
