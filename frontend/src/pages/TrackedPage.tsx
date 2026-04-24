@@ -113,7 +113,6 @@ export default function TrackedPage() {
       <PageHeader
         kicker={`Your library · ${allTitles.length} title${allTitles.length === 1 ? '' : 's'}`}
         title="Tracked"
-        className="px-0 pt-4 pb-4"
         right={
           <div className="flex items-center gap-2">
             <Pill active={view === 'grid'} onClick={() => setView('grid')}>Grid</Pill>

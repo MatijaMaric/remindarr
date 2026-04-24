@@ -276,7 +276,6 @@ export default function BrowsePage() {
               : "Catalog · discover titles"
         }
         title="Browse"
-        className="px-0 pt-4 pb-4"
       />
       <SearchBar onSearch={handleSearch} onImdb={handleImdb} loading={searchLoading} />
 
