@@ -11,22 +11,26 @@ import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubsc
 import { authClient } from "../lib/auth-client";
 import { UserPlus, GripVertical, Eye, EyeOff } from "lucide-react";
 import ThemePicker from "../components/ThemePicker";
-import { PageHeader } from "../components/design";
+import { Kicker } from "../components/design";
+import { SettingsSidebar } from "../components/settings/SettingsSidebar";
+import {
+  SCard,
+  SLabel,
+  SFormRow,
+  SSwitch,
+  SRadioCard,
+  SStatusPill,
+  SHint,
+  SDivider,
+  SKeyValue,
+  SButton,
+  SInput,
+  SMessage,
+} from "../components/settings/kit";
+import { cn } from "@/lib/utils";
 
 const VALID_TABS = ["account", "appearance", "notifications", "integrations", "admin"] as const;
 type SettingsTab = (typeof VALID_TABS)[number];
-
-function SettingsCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-zinc-900 border border-white/[0.06] rounded-xl p-6 mb-4">
-      <div className="mb-5">
-        <div className="text-[17px] font-bold tracking-[-0.01em] mb-1">{title}</div>
-        {subtitle && <div className="text-sm text-zinc-500">{subtitle}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -65,91 +69,114 @@ export default function SettingsPage() {
     ...(user.is_admin ? [{ value: "admin", label: t("settings.tabs.admin") }] : []),
   ];
 
+  const breadcrumbLabel = TABS.find((x) => x.value === activeTab)?.label ?? activeTab;
+
   return (
     <div className="max-w-7xl mx-auto">
-      <PageHeader kicker="Your preferences" title="Settings" />
+      {/* Header */}
+      <div className="pt-4 pb-3">
+        <Kicker>
+          Your preferences{user.username ? ` · ${user.username}` : ""}
+        </Kicker>
+        <h1 className="text-4xl md:text-[44px] font-extrabold tracking-[-0.03em] leading-none text-zinc-100">
+          {t("settings.title")}
+        </h1>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 sm:gap-8">
-        {/* Sidebar — pill row on mobile, vertical list on desktop */}
-        <nav className="flex sm:flex-col gap-1 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
-          {TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setTab(tab.value)}
-              className={`shrink-0 sm:w-full text-left px-3 sm:px-[14px] py-2 sm:py-[10px] text-sm font-medium transition-colors rounded-lg sm:rounded-r-md sm:border-l-2 whitespace-nowrap ${
-                activeTab === tab.value
-                  ? "bg-amber-400/10 text-zinc-100 sm:border-amber-400 border border-amber-400/40"
-                  : "text-zinc-400 sm:border-transparent hover:text-zinc-100 hover:bg-white/[0.04] border border-white/[0.06] sm:border-transparent"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+      {/* Breadcrumb */}
+      <div className="pb-4 font-mono text-xs text-zinc-500 tracking-wide">
+        <span className="opacity-60">/settings</span>
+        <span className="mx-2 opacity-40">›</span>
+        <span className="text-amber-400">{breadcrumbLabel}</span>
+      </div>
 
-        {/* Content */}
-        <div>
-          {activeTab === "account" && (
-            <>
-              <SettingsCard title="Account" subtitle="Your profile and login credentials">
-                <UserSection />
-                <PasskeySection />
-              </SettingsCard>
-              <SettingsCard title={t("settings.profileVisibility")} subtitle="Control who can see your watchlist">
-                <ProfileVisibilitySection />
-              </SettingsCard>
-              <SettingsCard title="Social" subtitle="Invite friends and share your activity">
-                <SocialSection />
-              </SettingsCard>
-            </>
-          )}
+      <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-4 sm:gap-9">
+        <SettingsSidebar
+          tabs={TABS}
+          active={activeTab}
+          onSelect={setTab}
+          buildInfo={
+            <div className="space-y-0.5">
+              <div>Remindarr · self-hosted</div>
+              <div className="text-zinc-500">TMDB · {navigator.language || "en"}</div>
+            </div>
+          }
+        />
 
-          {activeTab === "appearance" && (
-            <SettingsCard title="Appearance" subtitle="Theme and display preferences">
-              <ThemeSection />
-              <HomepageLayoutSection />
-            </SettingsCard>
-          )}
-
-          {activeTab === "notifications" && (
-            <SettingsCard title="Notifications" subtitle="How and when you receive alerts">
-              {isPushSupported() && <PushNotificationsSection />}
-              <NotificationsSection />
-            </SettingsCard>
-          )}
-
-          {activeTab === "integrations" && (
-            <SettingsCard title="Integrations" subtitle="Connected services and data sources">
-              <PlexSection />
-              <CalendarFeedSection />
-              <WatchlistSection />
-              <CsvImportSection />
-            </SettingsCard>
-          )}
-
-          {activeTab === "admin" && user.is_admin && (
-            <SettingsCard title="Admin" subtitle="Server and user management">
-              <BackgroundJobsSection />
-              <AdminSection />
-            </SettingsCard>
-          )}
+        <div className="min-w-0">
+          {activeTab === "account" && <AccountTab />}
+          {activeTab === "appearance" && <AppearanceTab />}
+          {activeTab === "notifications" && <NotificationsTab />}
+          {activeTab === "integrations" && <IntegrationsTab />}
+          {activeTab === "admin" && user.is_admin && <AdminTab />}
         </div>
       </div>
     </div>
   );
 }
 
-function ThemeSection() {
-  const { t } = useTranslation();
+// ─── Tab containers ──────────────────────────────────────────────────────────
 
+function AccountTab() {
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">{t("settings.theme.title")}</h2>
-      <div className="bg-zinc-900 rounded-lg p-5">
-        <ThemePicker />
-      </div>
-    </section>
+    <>
+      <UserSection />
+      <PasskeySection />
+      <ProfileVisibilitySection />
+      <SocialSection />
+    </>
   );
+}
+
+function AppearanceTab() {
+  return (
+    <>
+      <ThemeSection />
+      <HomepageLayoutSection />
+    </>
+  );
+}
+
+function NotificationsTab() {
+  return (
+    <>
+      {isPushSupported() && <PushNotificationsSection />}
+      <NotificationsSection />
+    </>
+  );
+}
+
+function IntegrationsTab() {
+  return (
+    <>
+      <PlexSection />
+      <CalendarFeedSection />
+      <WatchlistSection />
+      <CsvImportSection />
+    </>
+  );
+}
+
+function AdminTab() {
+  return (
+    <>
+      <BackgroundJobsSection />
+      <AdminSection />
+    </>
+  );
+}
+
+// ─── Account tab sections ────────────────────────────────────────────────────
+
+function passwordStrength(pw: string): number {
+  if (!pw) return 0;
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return Math.min(score, 5);
 }
 
 function UserSection() {
@@ -185,75 +212,116 @@ function UserSection() {
     }
   }
 
-  return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">{t("profile.title")}</h2>
+  const strength = passwordStrength(newPassword);
+  const strengthLabel = strength >= 4 ? "strong" : strength >= 3 ? "good" : strength > 0 ? "weak" : "";
 
-      {user && (
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-3">{t("profile.changePassword")}</h3>
-          <form onSubmit={handleChangePassword} className="bg-zinc-900 rounded-lg p-5 space-y-4">
-            {passwordMsg && (
-              <div className="p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-                {passwordMsg}
-              </div>
-            )}
-            {passwordErr && (
-              <div className="p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-                {passwordErr}
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">{t("profile.currentPassword")}</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">{t("profile.newPassword")}</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                minLength={6}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? t("profile.changing") : t("profile.changePassword")}
-            </button>
-          </form>
+  const initials = (user?.username ?? "??").slice(0, 2).toUpperCase();
+
+  return (
+    <>
+      <SCard
+        title={t("profile.title")}
+        subtitle="Your account identity. Username is used on public profile pages and friend activity."
+      >
+        <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-6 items-start">
+          <div
+            aria-hidden="true"
+            className="w-20 sm:w-24 h-20 sm:h-24 rounded-full flex items-center justify-center font-extrabold text-[28px] text-black"
+            style={{ background: "oklch(0.72 0.12 250)" }}
+          >
+            {initials}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 min-w-0">
+            <SFormRow label={t("profile.username")}>
+              <SInput value={user?.username ?? ""} mono readOnly />
+            </SFormRow>
+            <SFormRow label="Auth provider">
+              <SInput value={user?.auth_provider ?? "local"} mono readOnly />
+            </SFormRow>
+            <SFormRow label="Display name">
+              <SInput value={user?.display_name ?? user?.username ?? ""} readOnly />
+            </SFormRow>
+            <SFormRow label="Role">
+              <SInput value={user?.is_admin ? "admin" : "user"} mono readOnly />
+            </SFormRow>
+          </div>
         </div>
+      </SCard>
+
+      {user && user.auth_provider === "local" && (
+        <SCard
+          title={t("profile.changePassword")}
+          subtitle="Use at least 6 characters. We recommend a long passphrase."
+        >
+          <form onSubmit={handleChangePassword} className="space-y-3.5">
+            {passwordMsg && <SMessage kind="success">{passwordMsg}</SMessage>}
+            {passwordErr && <SMessage kind="error">{passwordErr}</SMessage>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-[640px]">
+              <SFormRow label={t("profile.currentPassword")}>
+                <SInput
+                  type="password"
+                  value={currentPassword}
+                  onChange={setCurrentPassword}
+                  autoComplete="current-password"
+                  required
+                />
+              </SFormRow>
+              <SFormRow
+                label={t("profile.newPassword")}
+                hint={strengthLabel ? <span>strength: {strengthLabel}</span> : undefined}
+              >
+                <SInput
+                  type="password"
+                  value={newPassword}
+                  onChange={setNewPassword}
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                />
+              </SFormRow>
+            </div>
+            <div className="flex gap-1 max-w-[300px]">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex-1 h-[4px] rounded-sm",
+                    i < strength ? "bg-amber-400" : "bg-zinc-700",
+                  )}
+                />
+              ))}
+            </div>
+            <div>
+              <SButton type="submit" disabled={loading}>
+                {loading ? t("profile.changing") : t("profile.changePassword")}
+              </SButton>
+            </div>
+          </form>
+        </SCard>
       )}
 
       {SUPPORTED_LANGUAGES.length > 1 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold text-white mb-3">{t("profile.language")}</h3>
-          <div className="bg-zinc-900 rounded-lg p-5">
-            <div className="flex gap-2 flex-wrap">
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => setLanguage(lang.code)}
-                  className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer bg-zinc-700 text-white hover:bg-amber-500 hover:text-zinc-950"
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
+        <SCard
+          title={t("profile.language")}
+          subtitle="Changes apply immediately. Title metadata is fetched in TMDB's own language."
+        >
+          <div className="flex gap-1.5 flex-wrap">
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => setLanguage(lang.code)}
+                className="px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer bg-zinc-800 text-zinc-200 border border-white/[0.08] hover:bg-amber-400 hover:text-black hover:border-transparent flex items-center gap-1.5"
+              >
+                <span className="font-mono text-[10px] text-zinc-500">
+                  {lang.code}
+                </span>
+                {lang.label}
+              </button>
+            ))}
           </div>
-        </div>
+        </SCard>
       )}
-    </section>
+    </>
   );
 }
 
@@ -361,83 +429,84 @@ function PasskeySection() {
   if (!webauthnSupported) return null;
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">{t("profile.passkeys")}</h2>
-      <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
-        {msg && (
-          <div className="p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-            {msg}
-          </div>
-        )}
-        {err && (
-          <div className="p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-            {err}
-          </div>
-        )}
+    <SCard
+      title={t("profile.passkeys")}
+      subtitle="Sign in with Face ID, Touch ID, Windows Hello, or a security key."
+    >
+      <div className="space-y-3">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
 
         {loading ? (
           <p className="text-zinc-400 text-sm">{t("common.loading")}</p>
         ) : (
           <>
             {passkeys.length === 0 ? (
-              <p className="text-zinc-400 text-sm">{t("profile.noPasskeys")}</p>
+              <p className="text-zinc-400 text-sm py-1">{t("profile.noPasskeys")}</p>
             ) : (
               <ul className="space-y-2">
                 {passkeys.map((pk) => (
-                  <li key={pk.id} className="flex items-center justify-between bg-zinc-800 rounded-lg px-4 py-3">
+                  <li
+                    key={pk.id}
+                    className="bg-zinc-800 rounded-[10px] px-3.5 py-3 flex items-center gap-3.5"
+                  >
                     {editing === pk.id ? (
                       <form
-                        className="flex items-center gap-2 flex-1 mr-2"
+                        className="flex items-center gap-2 flex-1"
                         onSubmit={(e) => { e.preventDefault(); handleRenamePasskey(pk.id); }}
                       >
-                        <input
-                          type="text"
+                        <SInput
                           value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="flex-1 px-2 py-1 bg-zinc-700 border border-white/[0.08] rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                          onChange={setEditName}
                           autoFocus
+                          aria-label="Passkey name"
                         />
-                        <button
-                          type="submit"
-                          className="text-amber-400 hover:text-amber-300 text-sm cursor-pointer"
-                        >
+                        <SButton type="submit" small>
                           {t("common.save")}
-                        </button>
-                        <button
+                        </SButton>
+                        <SButton
                           type="button"
+                          variant="ghost"
+                          small
                           onClick={() => { setEditing(null); setEditName(""); }}
-                          className="text-zinc-400 hover:text-zinc-300 text-sm cursor-pointer"
                         >
                           {t("common.cancel")}
-                        </button>
+                        </SButton>
                       </form>
                     ) : (
                       <>
-                        <div>
-                          <span className="text-white text-sm font-medium">
+                        <div
+                          aria-hidden="true"
+                          className="w-9 h-9 rounded-lg bg-zinc-700 text-amber-400 font-mono font-bold text-sm flex items-center justify-center"
+                        >
+                          ◈
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-zinc-100 truncate">
                             {pk.name || t("profile.passkeyUnnamed")}
-                          </span>
+                          </div>
                           {pk.createdAt && (
-                            <span className="text-zinc-500 text-xs ml-2">
-                              {new Date(pk.createdAt).toLocaleDateString()}
-                            </span>
+                            <div className="text-[11px] text-zinc-500 font-mono">
+                              Created {new Date(pk.createdAt).toLocaleDateString()}
+                            </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => { setEditing(pk.id); setEditName(pk.name || ""); }}
-                            className="text-zinc-400 hover:text-zinc-300 text-sm transition-colors cursor-pointer"
-                          >
-                            {t("profile.renamePasskey")}
-                          </button>
-                          <button
-                            onClick={() => handleDeletePasskey(pk.id)}
-                            disabled={deleting === pk.id}
-                            className="text-red-400 hover:text-red-300 text-sm transition-colors disabled:opacity-50 cursor-pointer"
-                          >
-                            {deleting === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
-                          </button>
-                        </div>
+                        <SButton
+                          variant="ghost"
+                          small
+                          onClick={() => { setEditing(pk.id); setEditName(pk.name || ""); }}
+                        >
+                          {t("profile.renamePasskey")}
+                        </SButton>
+                        <SButton
+                          variant="outline"
+                          small
+                          danger
+                          disabled={deleting === pk.id}
+                          onClick={() => handleDeletePasskey(pk.id)}
+                        >
+                          {deleting === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
+                        </SButton>
                       </>
                     )}
                   </li>
@@ -445,29 +514,25 @@ function PasskeySection() {
               </ul>
             )}
 
-            <div className="flex gap-2 items-end pt-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-end pt-1 bg-zinc-800 rounded-[10px] p-3.5">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-zinc-300 mb-1">{t("profile.passkeyName")}</label>
-                <input
-                  type="text"
+                <SLabel hint={<span>optional</span>}>
+                  {t("profile.passkeyName")}
+                </SLabel>
+                <SInput
                   value={passkeyName}
-                  onChange={(e) => setPasskeyName(e.target.value)}
+                  onChange={setPasskeyName}
                   placeholder={t("profile.passkeyNamePlaceholder")}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
                 />
               </div>
-              <button
-                onClick={handleAddPasskey}
-                disabled={adding}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
-              >
+              <SButton onClick={handleAddPasskey} disabled={adding} icon="+">
                 {adding ? t("profile.addingPasskey") : t("profile.addPasskey")}
-              </button>
+              </SButton>
             </div>
           </>
         )}
       </div>
-    </section>
+    </SCard>
   );
 }
 
@@ -516,7 +581,7 @@ function ProfileVisibilitySection() {
     setUpdatingAll(true);
     try {
       await api.updateAllTitleVisibility(isPublic);
-      setTitles((prev) => prev.map((t) => ({ ...t, public: isPublic })));
+      setTitles((prev) => prev.map((x) => ({ ...x, public: isPublic })));
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -524,75 +589,83 @@ function ProfileVisibilitySection() {
     }
   }
 
-  if (loading) return <div className="text-zinc-500">{t("common.loading")}</div>;
+  if (loading) {
+    return (
+      <SCard title={t("settings.profileVisibility")}>
+        <div className="text-zinc-500 text-sm">{t("common.loading")}</div>
+      </SCard>
+    );
+  }
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">{t("settings.profileVisibility")}</h2>
-
+    <SCard
+      title={t("settings.profileVisibility")}
+      subtitle={t("settings.profileVisibilityDescription")}
+    >
       {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-          {err}
+        <div className="mb-4">
+          <SMessage kind="error">{err}</SMessage>
         </div>
       )}
 
-      <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
-        {/* Visibility selector */}
-        <div className="space-y-3" data-testid="visibility-selector">
-          {VISIBILITY_OPTIONS.map((option) => (
-            <label
-              key={option}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                visibility === option
-                  ? "bg-amber-500/10 border border-amber-500/30"
-                  : "bg-zinc-800 border border-transparent hover:bg-zinc-700"
-              } ${updatingGlobal ? "opacity-50 pointer-events-none" : ""}`}
-            >
-              <input
-                type="radio"
-                name="profile-visibility"
-                value={option}
-                checked={visibility === option}
-                onChange={() => handleVisibilityChange(option)}
-                disabled={updatingGlobal}
-                className="accent-amber-500"
-              />
-              <div>
-                <p className={`font-medium ${visibility === option ? "text-amber-400" : "text-white"}`}>
-                  {t(`settings.visibility_${option}`)}
-                </p>
-                <p className="text-sm text-zinc-400">{t(`settings.visibility_${option}_desc`)}</p>
-              </div>
-            </label>
-          ))}
-        </div>
+      <div data-testid="visibility-selector" className="space-y-2">
+        {VISIBILITY_OPTIONS.map((option) => (
+          <label
+            key={option}
+            className={cn(
+              "block",
+              updatingGlobal && "opacity-50 pointer-events-none",
+            )}
+          >
+            <input
+              type="radio"
+              name="profile-visibility"
+              value={option}
+              checked={visibility === option}
+              onChange={() => handleVisibilityChange(option)}
+              disabled={updatingGlobal}
+              className="sr-only peer"
+            />
+            <SRadioCard
+              selected={visibility === option}
+              title={t(`settings.visibility_${option}`)}
+              desc={t(`settings.visibility_${option}_desc`)}
+              onClick={() => handleVisibilityChange(option)}
+              disabled={updatingGlobal}
+            />
+          </label>
+        ))}
+      </div>
 
-        {/* Bulk actions */}
-        {titles.length > 0 && (
-          <div className="flex items-center gap-2 border-t border-white/[0.06] pt-4">
-            <span className="text-sm text-zinc-400 mr-auto">{t("settings.perTitleVisibility")}</span>
-            <button
+      {titles.length > 0 ? (
+        <>
+          <SDivider label="Per-title overrides" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-zinc-400 mr-auto">
+              {t("settings.perTitleVisibility")}
+            </span>
+            <SButton
+              variant="ghost"
+              small
               onClick={() => handleBulkVisibility(true)}
               disabled={updatingAll}
-              className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
             >
               {t("settings.showAll")}
-            </button>
-            <button
+            </SButton>
+            <SButton
+              variant="ghost"
+              small
               onClick={() => handleBulkVisibility(false)}
               disabled={updatingAll}
-              className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
             >
               {t("settings.hideAll")}
-            </button>
+            </SButton>
           </div>
-        )}
-
-        {titles.length === 0 && (
-          <p className="text-zinc-500 text-sm">{t("settings.noTrackedTitles")}</p>
-        )}
-      </div>
-    </section>
+        </>
+      ) : (
+        <p className="text-zinc-500 text-sm mt-4">{t("settings.noTrackedTitles")}</p>
+      )}
+    </SCard>
   );
 }
 
@@ -600,212 +673,165 @@ function SocialSection() {
   const { t } = useTranslation();
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">Social</h2>
-      <div className="bg-zinc-900 rounded-lg p-5">
-        <Link
-          to="/invite"
-          className="flex items-center gap-3 text-amber-500 hover:text-amber-400 transition-colors font-medium"
+    <SCard
+      title="Social"
+      subtitle="Invite friends to your Remindarr instance. They'll get a limited signup link."
+    >
+      <Link
+        to="/invite"
+        className="flex items-center gap-3 p-4 bg-zinc-800 rounded-[10px] hover:bg-zinc-800/80 transition-colors"
+      >
+        <span
+          aria-hidden="true"
+          className="w-10 h-10 rounded-[10px] bg-amber-400/10 text-amber-400 flex items-center justify-center"
         >
-          <UserPlus className="size-5" />
-          {t("invite.settingsLink")}
-        </Link>
-      </div>
-    </section>
+          <UserPlus size={18} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-zinc-100 mb-0.5">
+            {t("invite.settingsLink")}
+          </div>
+          <div className="text-[11px] text-zinc-500 font-mono">
+            Manage invite codes on the Invite page
+          </div>
+        </div>
+        <span aria-hidden="true" className="text-amber-400 font-mono">
+          →
+        </span>
+      </Link>
+    </SCard>
   );
 }
 
-function WatchlistSection() {
-  const [exporting, setExporting] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
+// ─── Appearance tab sections ─────────────────────────────────────────────────
+
+function ThemeSection() {
   const { t } = useTranslation();
-
-  async function handleExport() {
-    setMsg("");
-    setErr("");
-    setExporting(true);
-    try {
-      await api.exportWatchlist();
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMsg("");
-    setErr("");
-    setImporting(true);
-    try {
-      const result = await api.importWatchlist(file);
-      setMsg(t("profile.importComplete", {
-        imported: result.imported,
-        skippedText: result.skipped > 0 ? t("profile.importSkipped", { count: result.skipped }) : "",
-      }));
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setImporting(false);
-      e.target.value = "";
-    }
-  }
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">{t("profile.watchlist")}</h2>
-
-      {msg && (
-        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-          {msg}
-        </div>
-      )}
-      {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-          {err}
-        </div>
-      )}
-
-      <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
-        <div>
-          <p className="text-white font-medium mb-1">{t("profile.exportWatchlist")}</p>
-          <p className="text-sm text-zinc-400 mb-3">{t("profile.exportDescription")}</p>
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {exporting ? t("profile.exporting") : t("profile.export")}
-          </button>
-        </div>
-
-        <div className="border-t border-white/[0.06] pt-4">
-          <p className="text-white font-medium mb-1">{t("profile.importWatchlist")}</p>
-          <p className="text-sm text-zinc-400 mb-3">{t("profile.importDescription")}</p>
-          <label className={`px-4 py-2 bg-zinc-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
-            {importing ? t("profile.importing") : t("profile.import")}
-            <input
-              type="file"
-              accept=".json,application/json"
-              onChange={handleImport}
-              className="hidden"
-              disabled={importing}
-            />
-          </label>
-        </div>
-      </div>
-    </section>
+    <SCard
+      title={t("settings.theme.title")}
+      subtitle="Applies to the whole app."
+    >
+      <ThemePicker />
+    </SCard>
   );
 }
 
-function CsvImportSection() {
-  const [importing, setImporting] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-  const { t } = useTranslation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const SECTION_LABELS: Record<string, string> = {
+  unwatched: "settings.homepage.sections.unwatched",
+  recommendations: "settings.homepage.sections.recommendations",
+  today: "settings.homepage.sections.today",
+  upcoming: "settings.homepage.sections.upcoming",
+};
 
-  async function handleFile(file: File) {
-    setMsg("");
-    setErr("");
-    setImporting(true);
+function HomepageLayoutSection() {
+  const { t } = useTranslation();
+  const [layout, setLayout] = useState<HomepageSection[]>(DEFAULT_HOMEPAGE_LAYOUT);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const dragIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    api.getHomepageLayout()
+      .then((res) => setLayout(res.homepage_layout))
+      .catch(() => {});
+  }, []);
+
+  async function save(newLayout: HomepageSection[]) {
+    setSaving(true);
+    setSaved(false);
     try {
-      const result = await api.importCsv(file);
-      const parts: string[] = [`${result.imported} title${result.imported !== 1 ? "s" : ""} imported`];
-      if (result.failed > 0) parts.push(`${result.failed} failed`);
-      if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
-      setMsg(parts.join(", ") + ".");
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
+      const res = await api.updateHomepageLayout(newLayout);
+      setLayout(res.homepage_layout);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // silently ignore
     } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSaving(false);
     }
   }
 
-  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) void handleFile(file);
+  function toggleEnabled(id: string) {
+    const updated = layout.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
+    setLayout(updated);
+    save(updated);
   }
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+  function handleDragStart(index: number) {
+    dragIndexRef.current = index;
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
     e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) void handleFile(file);
+    const from = dragIndexRef.current;
+    if (from === null || from === index) return;
+    const updated = [...layout];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(index, 0, moved);
+    dragIndexRef.current = index;
+    setLayout(updated);
+  }
+
+  function handleDrop() {
+    dragIndexRef.current = null;
+    save(layout);
   }
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">{t("import.title")}</h2>
-
-      {msg && (
-        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-          {msg}
-        </div>
-      )}
-      {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-          {err}
-        </div>
-      )}
-
-      <div className="bg-zinc-900 rounded-lg p-5 space-y-4">
-        <p className="text-sm text-zinc-400">{t("import.description")}</p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <div className="bg-zinc-800 rounded-lg p-3">
-            <p className="text-white font-medium mb-1">Letterboxd</p>
-            <p className="text-zinc-400 text-xs">{t("import.letterboxdHint")}</p>
+    <SCard
+      title={t("settings.homepage.title")}
+      subtitle={t("settings.homepage.description")}
+    >
+      <div className="flex flex-col gap-1.5">
+        {layout.map((section, index) => (
+          <div
+            key={section.id}
+            draggable
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDrop={handleDrop}
+            className={cn(
+              "flex items-center gap-3 px-3.5 py-3 rounded-[10px] cursor-grab active:cursor-grabbing select-none border transition-colors",
+              section.enabled
+                ? "bg-zinc-800 border-transparent"
+                : "bg-transparent border-white/[0.06] opacity-60",
+            )}
+          >
+            <GripVertical
+              size={16}
+              className="text-zinc-500 shrink-0"
+              aria-hidden="true"
+            />
+            <span
+              aria-hidden="true"
+              className="w-6 h-6 rounded-md bg-zinc-700 text-amber-400 font-mono font-bold text-[10px] flex items-center justify-center"
+            >
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <span className="flex-1 text-sm font-semibold text-zinc-100">
+              {t(SECTION_LABELS[section.id] ?? section.id)}
+            </span>
+            <button
+              onClick={() => toggleEnabled(section.id)}
+              className="text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer p-1"
+              aria-label={section.enabled ? t("settings.homepage.hideSection") : t("settings.homepage.showSection")}
+            >
+              {section.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
           </div>
-          <div className="bg-zinc-800 rounded-lg p-3">
-            <p className="text-white font-medium mb-1">IMDB</p>
-            <p className="text-zinc-400 text-xs">{t("import.imdbHint")}</p>
-          </div>
-          <div className="bg-zinc-800 rounded-lg p-3">
-            <p className="text-white font-medium mb-1">Trakt</p>
-            <p className="text-zinc-400 text-xs">{t("import.traktHint")}</p>
-          </div>
-        </div>
-
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragOver ? "border-amber-500 bg-amber-500/10" : "border-zinc-700 hover:border-zinc-500"} ${importing ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <p className="text-zinc-400 text-sm mb-2">{t("import.dropHint")}</p>
-          <p className="text-zinc-500 text-xs">.csv</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleInputChange}
-            className="hidden"
-            disabled={importing}
-          />
-        </div>
-
-        <label className={`inline-block px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
-          {importing ? t("import.importing") : t("import.chooseFile")}
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleInputChange}
-            className="hidden"
-            disabled={importing}
-          />
-        </label>
+        ))}
       </div>
-    </section>
+      <div className="mt-3 min-h-[18px] font-mono text-[11px]">
+        {saved && <span className="text-emerald-400">{t("settings.homepage.saved")}</span>}
+        {saving && !saved && <span className="text-zinc-400">{t("settings.homepage.saving")}</span>}
+      </div>
+    </SCard>
   );
 }
+
+// ─── Notifications tab sections ──────────────────────────────────────────────
 
 function PushNotificationsSection() {
   const [loading, setLoading] = useState(true);
@@ -826,16 +852,13 @@ function PushNotificationsSection() {
       ]);
       const webpushNotifier = notifiers.find((n) => n.provider === "webpush") || null;
 
-      // Auto-cleanup stale states
       if (webpushNotifier && !webpushNotifier.enabled) {
-        // Background job disabled it (expired subscription) — clean up
         try { await unsubscribeFromPush(); } catch { /* ignore */ }
         try { await api.deleteNotifier(webpushNotifier.id); } catch { /* ignore */ }
         setPushNotifier(null);
         setHasSubscription(false);
         setErr("Push subscription expired. Please re-enable push notifications.");
       } else if (webpushNotifier && !subscription) {
-        // DB record exists but browser has no subscription — stale
         try { await api.deleteNotifier(webpushNotifier.id); } catch { /* ignore */ }
         setPushNotifier(null);
         setHasSubscription(false);
@@ -877,10 +900,8 @@ function PushNotificationsSection() {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
 
-      // Verify the subscription actually works by sending a test push
       const testResult = await api.testNotifier(notifier.id);
       if (!testResult.success && testResult.message.toLowerCase().includes("subscription expired")) {
-        // Fresh subscription is already invalid — clean up
         try { await unsubscribeFromPush(); } catch { /* ignore */ }
         try { await api.deleteNotifier(notifier.id); } catch { /* ignore */ }
         setErr("Could not establish a working push subscription. Please try clearing site data and re-enabling.");
@@ -925,7 +946,6 @@ function PushNotificationsSection() {
       if (result.success) {
         setMsg(result.message);
       } else if (result.message.toLowerCase().includes("subscription expired")) {
-        // Auto-cleanup expired subscription
         try { await unsubscribeFromPush(); } catch { /* ignore */ }
         try { await api.deleteNotifier(pushNotifier.id); } catch { /* ignore */ }
         setPushNotifier(null);
@@ -943,71 +963,80 @@ function PushNotificationsSection() {
 
   const { t } = useTranslation();
 
-  if (loading) return <div className="text-zinc-500">{t("profile.loadingPushStatus")}</div>;
+  if (loading) {
+    return (
+      <SCard
+        title={t("profile.pushNotifications")}
+        subtitle="Native notifications directly from the browser. Works even when Remindarr is closed."
+      >
+        <div className="text-zinc-500 text-sm">{t("profile.loadingPushStatus")}</div>
+      </SCard>
+    );
+  }
 
   const isEnabled = !!pushNotifier && pushNotifier.enabled && hasSubscription;
   const isDenied = permissionState === "denied";
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">{t("profile.pushNotifications")}</h2>
+    <SCard
+      title={t("profile.pushNotifications")}
+      subtitle="Native notifications directly from the browser. Works even when Remindarr is closed."
+    >
+      <div className="space-y-3.5">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
 
-      {msg && (
-        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-          {msg}
-        </div>
-      )}
-      {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-          {err}
-        </div>
-      )}
-
-      <div className="bg-zinc-900 rounded-lg p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white font-medium">
-              {isEnabled ? "Push notifications are enabled" : "Get notified about new releases"}
-            </p>
-            <p className="text-sm text-zinc-400 mt-1">
+        <div
+          className={cn(
+            "flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-[10px] border",
+            isEnabled
+              ? "bg-gradient-to-br from-amber-400/[0.08] to-amber-400/[0.02] border-amber-400/30"
+              : "bg-zinc-800 border-white/[0.06]",
+          )}
+        >
+          <div
+            aria-hidden="true"
+            className={cn(
+              "w-14 h-14 rounded-[14px] flex items-center justify-center font-mono font-extrabold text-2xl shrink-0",
+              isEnabled ? "bg-amber-400 text-black" : "bg-zinc-700 text-zinc-400",
+            )}
+          >
+            ◉
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+              <div className="text-base font-bold text-zinc-100">
+                {isEnabled ? "Push notifications are enabled" : "Get notified about new releases"}
+              </div>
+              {isEnabled && <SStatusPill kind="ok">Active</SStatusPill>}
+            </div>
+            <div className="text-xs text-zinc-400 font-mono leading-relaxed">
               {isEnabled
                 ? "You'll receive notifications on this device"
                 : isDenied
                   ? "Notifications are blocked. Enable them in your browser settings."
                   : "Receive native push notifications for new episodes and movies"}
-            </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2 shrink-0">
             {isEnabled ? (
               <>
-                <button
-                  onClick={handleTest}
-                  disabled={testing}
-                  className="px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                >
+                <SButton variant="ghost" onClick={handleTest} disabled={testing}>
                   {testing ? t("profile.testing") : t("profile.testPush")}
-                </button>
-                <button
-                  onClick={handleDisable}
-                  disabled={disabling}
-                  className="px-3 py-1.5 text-sm bg-red-900/50 hover:bg-red-800/50 text-red-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                >
+                </SButton>
+                <SButton danger onClick={handleDisable} disabled={disabling}>
                   {disabling ? t("profile.disabling") : t("profile.disablePush")}
-                </button>
+                </SButton>
               </>
             ) : (
-              <button
-                onClick={handleEnable}
-                disabled={enabling || isDenied}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-              >
+              <SButton onClick={handleEnable} disabled={enabling || isDenied}>
                 {enabling ? t("profile.enabling") : t("profile.enablePush")}
-              </button>
+              </SButton>
             )}
           </div>
         </div>
       </div>
-    </section>
+    </SCard>
   );
 }
 
@@ -1021,6 +1050,18 @@ const TIMEZONE_OPTIONS = (() => {
 
 const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+const PROVIDER_META: Record<string, { label: string; icon: string; color: string }> = {
+  discord:  { label: "Discord",  icon: "D", color: "oklch(0.6 0.18 275)" },
+  telegram: { label: "Telegram", icon: "T", color: "oklch(0.72 0.13 225)" },
+  ntfy:     { label: "ntfy",     icon: "◉", color: "oklch(0.72 0.17 25)" },
+  gotify:   { label: "Gotify",   icon: "G", color: "oklch(0.72 0.15 85)" },
+  webhook:  { label: "Webhook",  icon: "W", color: "oklch(0.7 0.06 200)" },
+};
+
+function providerMeta(id: string) {
+  return PROVIDER_META[id] ?? { label: id.charAt(0).toUpperCase() + id.slice(1), icon: id.charAt(0).toUpperCase(), color: "oklch(0.7 0.06 200)" };
+}
+
 function NotificationsSection() {
   const [notifiers, setNotifiers] = useState<Notifier[]>([]);
   const [providers, setProviders] = useState<string[]>([]);
@@ -1032,7 +1073,6 @@ function NotificationsSection() {
   const [testing, setTesting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
 
-  // Form fields
   const [formProvider, setFormProvider] = useState("discord");
   const [formWebhookUrl, setFormWebhookUrl] = useState("");
   const [formUrl, setFormUrl] = useState("");
@@ -1050,7 +1090,6 @@ function NotificationsSection() {
   const refresh = useCallback(() => {
     Promise.all([api.getNotifiers(), api.getNotifierProviders()])
       .then(([n, p]) => {
-        // Hide webpush from manual notifier list — it's managed via PushNotificationsSection
         setNotifiers(n.notifiers.filter((x) => x.provider !== "webpush"));
         setProviders(p.providers.filter((x) => x !== "webpush"));
         setLoading(false);
@@ -1200,253 +1239,278 @@ function NotificationsSection() {
     }
   }
 
-  if (loading) return <div className="text-zinc-500">Loading notifications...</div>;
+  if (loading) {
+    return (
+      <SCard title="Notifiers" subtitle="How and when you receive alerts">
+        <div className="text-zinc-500 text-sm">Loading notifications...</div>
+      </SCard>
+    );
+  }
+
+  function describeDigest(n: Notifier) {
+    if (n.digest_mode === "weekly") {
+      const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][n.digest_day ?? 1];
+      return `Weekly · ${dayName}`;
+    }
+    if (n.digest_mode === "off") return "Off · per-event";
+    return "Daily";
+  }
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">Notifications</h2>
+    <>
+      <SCard
+        title="Notifiers"
+        subtitle="How and when you receive alerts"
+        action={
+          !showForm && (
+            <SButton icon="+" onClick={() => { resetForm(); setShowForm(true); setMsg(""); setErr(""); }}>
+              Add notifier
+            </SButton>
+          )
+        }
+      >
+        <div className="space-y-2.5">
+          {msg && <SMessage kind="success">{msg}</SMessage>}
+          {err && <SMessage kind="error">{err}</SMessage>}
 
-      {msg && (
-        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-          {msg}
-        </div>
-      )}
-      {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-          {err}
-        </div>
-      )}
+          {notifiers.length === 0 && !showForm && (
+            <p className="text-zinc-500 text-sm py-1">No notifiers configured.</p>
+          )}
 
-      {/* Existing notifiers */}
-      {notifiers.length > 0 && (
-        <div className="space-y-3 mb-4">
-          {notifiers.map((n) => (
-            <div
-              key={n.id}
-              className="bg-zinc-900 rounded-lg p-4"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-medium capitalize">{n.provider}</span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                      n.enabled
-                        ? "bg-green-900/50 text-green-300"
-                        : "bg-zinc-700 text-zinc-400"
-                    }`}
-                  >
-                    {n.enabled ? "Enabled" : "Disabled"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleToggle(n)}
-                    disabled={toggling === n.id}
-                    className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {toggling === n.id ? "..." : n.enabled ? "Disable" : "Enable"}
-                  </button>
-                  <button
-                    onClick={() => handleTest(n.id)}
-                    disabled={testing === n.id}
-                    className="px-2 py-1 text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {testing === n.id ? "Sending..." : "Test"}
-                  </button>
-                  <button
-                    onClick={() => startEdit(n)}
-                    className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(n.id)}
-                    className="px-2 py-1 text-xs bg-red-900/50 hover:bg-red-800/50 text-red-300 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-              <div className="text-xs text-zinc-400 space-y-0.5">
-                <div>
-                  Time: <span className="text-zinc-300">{n.notify_time}</span>{" "}
-                  <span className="text-zinc-500">({n.timezone})</span>
-                </div>
-                <div>
-                  Frequency:{" "}
-                  <span className="text-zinc-300">
-                    {n.digest_mode === "weekly"
-                      ? `Weekly (${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][n.digest_day ?? 1]})`
-                      : n.digest_mode === "off"
-                        ? "Off"
-                        : "Daily"}
-                  </span>
-                </div>
-                {n.last_sent_date && (
-                  <div>Last sent: {n.last_sent_date}</div>
+          {notifiers.map((n) => {
+            const meta = providerMeta(n.provider);
+            return (
+              <div
+                key={n.id}
+                className={cn(
+                  "p-4 bg-zinc-800 border border-white/[0.08] rounded-[10px]",
+                  !n.enabled && "opacity-60",
                 )}
+              >
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
+                  <div
+                    aria-hidden="true"
+                    className="w-9 h-9 rounded-lg flex items-center justify-center font-mono font-extrabold text-black text-sm shrink-0"
+                    style={{ background: meta.color }}
+                  >
+                    {meta.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <div className="text-[15px] font-bold text-zinc-100">{meta.label}</div>
+                      <SStatusPill kind={n.enabled ? "ok" : "neutral"}>
+                        {n.enabled ? "Enabled" : "Disabled"}
+                      </SStatusPill>
+                      {n.streaming_alerts_enabled !== false && (
+                        <SStatusPill kind="amber">Streaming alerts</SStatusPill>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0 flex-wrap">
+                    <SButton
+                      variant="ghost"
+                      small
+                      onClick={() => handleToggle(n)}
+                      disabled={toggling === n.id}
+                    >
+                      {toggling === n.id ? "..." : n.enabled ? "Disable" : "Enable"}
+                    </SButton>
+                    <SButton small onClick={() => handleTest(n.id)} disabled={testing === n.id}>
+                      {testing === n.id ? "Sending..." : "Test"}
+                    </SButton>
+                    <SButton variant="ghost" small onClick={() => startEdit(n)}>
+                      Edit
+                    </SButton>
+                    <SButton variant="outline" small danger onClick={() => handleDelete(n.id)}>
+                      Delete
+                    </SButton>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-white/[0.04]">
+                  <SKeyValue k="Time" v={`${n.notify_time} ${n.timezone}`} />
+                  <SKeyValue k="Frequency" v={describeDigest(n)} />
+                  <SKeyValue k="Last sent" v={n.last_sent_date ?? "—"} />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      )}
+      </SCard>
 
-      {/* Add/Edit form */}
-      {showForm ? (
-        <form onSubmit={handleSave} className="bg-zinc-900 rounded-lg p-5 space-y-4">
-          <h3 className="text-lg font-semibold text-white">
-            {editingId ? "Edit Notifier" : "Add Notifier"}
-          </h3>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Provider</label>
-            <select
-              value={formProvider}
-              onChange={(e) => setFormProvider(e.target.value)}
-              disabled={!!editingId}
-              className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-            >
-              {providers.map((p) => (
-                <option key={p} value={p}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {formProvider === "discord" && (
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Webhook URL</label>
-              <input
-                type="url"
-                value={formWebhookUrl}
-                onChange={(e) => setFormWebhookUrl(e.target.value)}
-                placeholder="https://discord.com/api/webhooks/..."
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                required
-              />
+      {showForm && (
+        <SCard
+          title={editingId ? "Edit notifier" : "Add a notifier"}
+          subtitle="Pick a provider and configure delivery."
+        >
+          <form onSubmit={handleSave} className="space-y-0">
+            <SLabel>Provider</SLabel>
+            <div className="flex gap-2 mb-5 flex-wrap">
+              {providers.map((p) => {
+                const meta = providerMeta(p);
+                const isActive = formProvider === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    disabled={!!editingId && !isActive}
+                    onClick={() => !editingId && setFormProvider(p)}
+                    className={cn(
+                      "px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer",
+                      isActive
+                        ? "bg-amber-400 text-black"
+                        : "bg-zinc-800 text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1]",
+                      !!editingId && !isActive && "opacity-30 cursor-not-allowed",
+                    )}
+                  >
+                    {meta.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
 
-          {(formProvider === "ntfy" || formProvider === "webhook" || formProvider === "gotify") && (
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                {formProvider === "ntfy" ? "Topic URL (e.g. https://ntfy.sh/my-topic)" : formProvider === "gotify" ? "Server URL (e.g. https://gotify.example.com)" : "Webhook URL"}
-              </label>
-              <input
-                type="url"
-                value={formUrl}
-                onChange={(e) => setFormUrl(e.target.value)}
-                placeholder={formProvider === "ntfy" ? "https://ntfy.sh/my-topic" : formProvider === "gotify" ? "https://gotify.example.com" : "https://your-server.com/hook"}
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                required
-              />
-            </div>
-          )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {formProvider === "discord" && (
+                <SFormRow label="Webhook URL" hint={<span>required</span>} className="sm:col-span-2">
+                  <SInput
+                    type="url"
+                    value={formWebhookUrl}
+                    onChange={setFormWebhookUrl}
+                    placeholder="https://discord.com/api/webhooks/..."
+                    mono
+                    required
+                  />
+                </SFormRow>
+              )}
 
-          {(formProvider === "ntfy" || formProvider === "gotify") && (
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                {formProvider === "gotify" ? "Application Token" : "Access Token"}{formProvider === "ntfy" ? " (optional)" : ""}
-              </label>
-              <input
-                type="password"
-                value={formToken}
-                onChange={(e) => setFormToken(e.target.value)}
-                placeholder={formProvider === "gotify" ? "App token from Gotify" : "Bearer token (leave empty for public topics)"}
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                required={formProvider === "gotify"}
-              />
-            </div>
-          )}
+              {(formProvider === "ntfy" || formProvider === "webhook" || formProvider === "gotify") && (
+                <SFormRow
+                  label={
+                    formProvider === "ntfy"
+                      ? "Topic URL"
+                      : formProvider === "gotify"
+                        ? "Server URL"
+                        : "Webhook URL"
+                  }
+                  hint={<span>required</span>}
+                  className="sm:col-span-2"
+                >
+                  <SInput
+                    type="url"
+                    value={formUrl}
+                    onChange={setFormUrl}
+                    placeholder={
+                      formProvider === "ntfy"
+                        ? "https://ntfy.sh/my-topic"
+                        : formProvider === "gotify"
+                          ? "https://gotify.example.com"
+                          : "https://your-server.com/hook"
+                    }
+                    mono
+                    required
+                  />
+                </SFormRow>
+              )}
 
-          {formProvider === "webhook" && (
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Signing Secret <span className="text-zinc-500">(optional — enables HMAC-SHA256 signature header)</span></label>
-              <input
-                type="password"
-                value={formSecret}
-                onChange={(e) => setFormSecret(e.target.value)}
-                placeholder="Leave empty to skip request signing"
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-              />
-            </div>
-          )}
+              {(formProvider === "ntfy" || formProvider === "gotify") && (
+                <SFormRow
+                  label={formProvider === "gotify" ? "Application token" : "Access token"}
+                  hint={formProvider === "ntfy" ? <span>optional</span> : undefined}
+                  className="sm:col-span-2"
+                >
+                  <SInput
+                    type="password"
+                    value={formToken}
+                    onChange={setFormToken}
+                    placeholder={formProvider === "gotify" ? "App token from Gotify" : "Bearer token (leave empty for public topics)"}
+                    required={formProvider === "gotify"}
+                  />
+                </SFormRow>
+              )}
 
-          {formProvider === "telegram" && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Bot Token</label>
-                <input
-                  type="password"
-                  value={formBotToken}
-                  onChange={(e) => setFormBotToken(e.target.value)}
-                  placeholder="123456789:ABCdef..."
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+              {formProvider === "webhook" && (
+                <SFormRow
+                  label="Signing secret"
+                  hint={<span>optional — HMAC-SHA256</span>}
+                  className="sm:col-span-2"
+                >
+                  <SInput
+                    type="password"
+                    value={formSecret}
+                    onChange={setFormSecret}
+                    placeholder="Leave empty to skip request signing"
+                  />
+                </SFormRow>
+              )}
+
+              {formProvider === "telegram" && (
+                <>
+                  <SFormRow label="Bot token" hint={<span>required</span>}>
+                    <SInput
+                      type="password"
+                      value={formBotToken}
+                      onChange={setFormBotToken}
+                      placeholder="123456789:ABCdef..."
+                      required
+                    />
+                  </SFormRow>
+                  <SFormRow label="Chat ID" hint={<span>required</span>}>
+                    <SInput
+                      value={formChatId}
+                      onChange={setFormChatId}
+                      placeholder="-1001234567890"
+                      required
+                    />
+                  </SFormRow>
+                </>
+              )}
+
+              <SFormRow label="Notification time">
+                <SInput type="time" value={formTime} onChange={setFormTime} mono required />
+              </SFormRow>
+              <SFormRow label="Timezone">
+                <SInput
+                  value={formTimezone}
+                  onChange={setFormTimezone}
+                  list="timezone-list"
+                  mono
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Chat ID</label>
-                <input
-                  type="text"
-                  value={formChatId}
-                  onChange={(e) => setFormChatId(e.target.value)}
-                  placeholder="-1001234567890"
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                  required
-                />
-              </div>
-            </>
-          )}
+                <datalist id="timezone-list">
+                  {TIMEZONE_OPTIONS.map((tz) => (
+                    <option key={tz} value={tz} />
+                  ))}
+                </datalist>
+              </SFormRow>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Notification Time</label>
-              <input
-                type="time"
-                value={formTime}
-                onChange={(e) => setFormTime(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                required
+            <SDivider label="Frequency" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3.5">
+              <SRadioCard
+                selected={formDigestMode === "daily"}
+                title="Daily digest"
+                desc="One message at notify time with every new episode or release."
+                onClick={() => setFormDigestMode("daily")}
+              />
+              <SRadioCard
+                selected={formDigestMode === "weekly"}
+                title="Weekly digest"
+                desc="A single round-up each week. Quieter, but items can stack."
+                onClick={() => setFormDigestMode("weekly")}
+              />
+              <SRadioCard
+                selected={formDigestMode === "off"}
+                title="Off · per-event"
+                desc="Fires the instant a tracked title drops. Noisier."
+                onClick={() => setFormDigestMode("off")}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Timezone</label>
-              <input
-                type="text"
-                value={formTimezone}
-                onChange={(e) => setFormTimezone(e.target.value)}
-                list="timezone-list"
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-                required
-              />
-              <datalist id="timezone-list">
-                {TIMEZONE_OPTIONS.map((tz) => (
-                  <option key={tz} value={tz} />
-                ))}
-              </datalist>
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Notification Frequency</label>
-            <select
-              value={formDigestMode}
-              onChange={(e) => setFormDigestMode(e.target.value as "daily" | "weekly" | "off")}
-              className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="off">Off</option>
-            </select>
             {formDigestMode === "weekly" && (
-              <div className="mt-2">
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Send digest on</label>
+              <SFormRow label="Send digest on">
                 <select
                   value={formDigestDay}
                   onChange={(e) => setFormDigestDay(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-400/40"
                 >
                   <option value={0}>Sunday</option>
                   <option value={1}>Monday</option>
@@ -1456,423 +1520,36 @@ function NotificationsSection() {
                   <option value={5}>Friday</option>
                   <option value={6}>Saturday</option>
                 </select>
-                <p className="text-xs text-zinc-500 mt-1">Covers the next 7 days of releases</p>
-              </div>
-            )}
-            {formDigestMode === "off" && (
-              <p className="text-xs text-zinc-500 mt-1">Notifications from this notifier will be suppressed</p>
-            )}
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={formStreamingAlerts}
-                onChange={(e) => setFormStreamingAlerts(e.target.checked)}
-                className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
-              />
-              <span className="text-sm text-zinc-300">Streaming alerts</span>
-            </label>
-            <p className="text-xs text-zinc-500 mt-1 ml-6">Notify when a tracked title becomes available to stream</p>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {saving ? "Saving..." : editingId ? "Update" : "Create"}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium rounded-lg transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : (
-        <button
-          onClick={() => { resetForm(); setShowForm(true); setMsg(""); setErr(""); }}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors cursor-pointer"
-        >
-          Add Notifier
-        </button>
-      )}
-    </section>
-  );
-}
-
-function formatJobName(name: string): string {
-  return name
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-function formatDate(date: string | null): string {
-  if (!date) return "Never";
-  const d = new Date(date + (date.endsWith("Z") ? "" : "Z"));
-  return d.toLocaleString();
-}
-
-function BackgroundJobsSection() {
-  const [data, setData] = useState<JobsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [triggering, setTriggering] = useState<string | null>(null);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-
-  const refresh = useCallback(() => {
-    api.getJobs().then((d) => {
-      setData(d);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 15000);
-    return () => clearInterval(interval);
-  }, [refresh]);
-
-  async function handleTrigger(name: string) {
-    setMsg("");
-    setErr("");
-    setTriggering(name);
-    try {
-      await api.triggerJob(name);
-      setMsg(`Job "${formatJobName(name)}" queued successfully`);
-      refresh();
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setTriggering(null);
-    }
-  }
-
-  if (loading) return <div className="text-zinc-500">Loading jobs...</div>;
-
-  return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-4">Background Jobs</h2>
-
-      {msg && (
-        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-          {msg}
-        </div>
-      )}
-      {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-          {err}
-        </div>
-      )}
-
-      {/* Cron Schedules */}
-      <div className="bg-zinc-900 rounded-lg p-5 mb-4">
-        <h3 className="text-lg font-semibold text-white mb-3">Scheduled Jobs</h3>
-        {data?.crons.length === 0 && (
-          <p className="text-zinc-500 text-sm">No scheduled jobs configured.</p>
-        )}
-        <div className="space-y-3">
-          {data?.crons.map((cron) => {
-            const stats = data.stats[cron.name];
-            const isRunning = stats?.running > 0;
-            return (
-              <div
-                key={cron.name}
-                className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">
-                      {formatJobName(cron.name)}
-                    </span>
-                    {isRunning && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-900/50 text-blue-300">
-                        Running
-                      </span>
-                    )}
-                    {!cron.enabled && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-700 text-zinc-400">
-                        Disabled
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-zinc-400 mt-1 space-y-0.5">
-                    <div>
-                      Schedule: <code className="text-zinc-300">{cron.cron}</code>
-                    </div>
-                    <div>Last run: {formatDate(cron.last_run)}</div>
-                    <div>Next run: {formatDate(cron.next_run)}</div>
-                    {stats && (
-                      <div className="flex gap-3 mt-1">
-                        <span className="text-yellow-400">{stats.pending} pending</span>
-                        <span className="text-blue-400">{stats.running} running</span>
-                        <span className="text-green-400">{stats.completed} completed</span>
-                        {stats.failed > 0 && (
-                          <span className="text-red-400">{stats.failed} failed</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                <div className="text-[11px] text-zinc-500 mt-1 font-mono">
+                  Covers the next 7 days of releases
                 </div>
-                <button
-                  onClick={() => handleTrigger(cron.name)}
-                  disabled={triggering === cron.name}
-                  className="ml-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer shrink-0"
-                >
-                  {triggering === cron.name ? "Queuing..." : "Run Now"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+              </SFormRow>
+            )}
 
-      {/* Recent Job History */}
-      {data?.recentJobs && data.recentJobs.length > 0 && (
-        <div className="bg-zinc-900 rounded-lg p-5">
-          <h3 className="text-lg font-semibold text-white mb-3">Recent History</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-zinc-400 text-left border-b border-white/[0.06]">
-                  <th className="pb-2 font-medium">Job</th>
-                  <th className="pb-2 font-medium">Status</th>
-                  <th className="pb-2 font-medium">Started</th>
-                  <th className="pb-2 font-medium">Completed</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.06]">
-                {data.recentJobs.map((job) => (
-                  <tr key={job.id}>
-                    <td className="py-2 text-white">{formatJobName(job.name)}</td>
-                    <td className="py-2">
-                      <JobStatusBadge status={job.status} />
-                    </td>
-                    <td className="py-2 text-zinc-400 text-xs">
-                      {formatDate(job.started_at)}
-                    </td>
-                    <td className="py-2 text-zinc-400 text-xs">
-                      {formatDate(job.completed_at)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            <SDivider label="Triggers" />
+            <SSwitch
+              label="Streaming availability alerts"
+              sub="Fires when a tracked title lands on a provider you have"
+              on={formStreamingAlerts}
+              onChange={setFormStreamingAlerts}
+            />
+
+            <div className="flex gap-2 mt-5 flex-wrap">
+              <SButton type="submit" disabled={saving}>
+                {saving ? "Saving..." : editingId ? "Update notifier" : "Create notifier"}
+              </SButton>
+              <SButton type="button" variant="ghost" onClick={resetForm}>
+                Cancel
+              </SButton>
+            </div>
+          </form>
+        </SCard>
       )}
-    </section>
+    </>
   );
 }
 
-function JobStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending: "bg-yellow-900/50 text-yellow-300",
-    running: "bg-blue-900/50 text-blue-300",
-    completed: "bg-green-900/50 text-green-300",
-    failed: "bg-red-900/50 text-red-300",
-  };
-
-  return (
-    <span
-      className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${styles[status] || "bg-zinc-700 text-zinc-400"}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function AdminSection() {
-  const [settings, setSettings] = useState<AdminSettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-
-  const [issuerUrl, setIssuerUrl] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const [redirectUri, setRedirectUri] = useState("");
-
-  useEffect(() => {
-    api.getAdminSettings().then((data) => {
-      setSettings(data);
-      setIssuerUrl(data.oidc.issuer_url.source !== "env" ? data.oidc.issuer_url.value : "");
-      setClientId(data.oidc.client_id.source !== "env" ? data.oidc.client_id.value : "");
-      setClientSecret(""); // Never prefill secrets
-      setRedirectUri(
-        data.oidc.redirect_uri.source !== "env"
-          ? data.oidc.redirect_uri.value || `${window.location.origin}/api/auth/oidc/callback`
-          : ""
-      );
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg("");
-    setErr("");
-    setSaving(true);
-    try {
-      const body: Record<string, string> = {
-        oidc_issuer_url: issuerUrl,
-        oidc_client_id: clientId,
-        oidc_redirect_uri: redirectUri,
-      };
-      // Only send client_secret if changed
-      if (clientSecret) {
-        body.oidc_client_secret = clientSecret;
-      }
-      const result = await api.updateAdminSettings(body);
-      setMsg(result.oidc_configured ? "OIDC configured successfully" : "Settings saved");
-      // Refresh settings
-      const data = await api.getAdminSettings();
-      setSettings(data);
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading) return <div className="text-zinc-500">Loading settings...</div>;
-
-  return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">Admin Settings</h2>
-        <Link to="/admin/users" className="text-sm px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg transition-colors border border-white/[0.06]">
-          Manage Users →
-        </Link>
-      </div>
-
-      <div className="bg-zinc-900 rounded-lg p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">OpenID Connect</h3>
-          <span
-            className={`px-2 py-1 rounded text-xs font-medium ${
-              settings?.oidc_configured
-                ? "bg-green-900/50 text-green-300"
-                : "bg-zinc-800 text-zinc-400"
-            }`}
-          >
-            {settings?.oidc_configured ? "Configured" : "Not configured"}
-          </span>
-        </div>
-
-        {msg && (
-          <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">
-            {msg}
-          </div>
-        )}
-        {err && (
-          <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
-            {err}
-          </div>
-        )}
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <SettingField
-            label="Issuer URL"
-            value={issuerUrl}
-            onChange={setIssuerUrl}
-            placeholder="https://auth.example.com"
-            source={settings?.oidc.issuer_url.source}
-            envValue={settings?.oidc.issuer_url.source === "env" ? settings.oidc.issuer_url.value : undefined}
-          />
-          <SettingField
-            label="Client ID"
-            value={clientId}
-            onChange={setClientId}
-            placeholder="my-client-id"
-            source={settings?.oidc.client_id.source}
-            envValue={settings?.oidc.client_id.source === "env" ? settings.oidc.client_id.value : undefined}
-          />
-          <SettingField
-            label="Client Secret"
-            value={clientSecret}
-            onChange={setClientSecret}
-            placeholder={settings?.oidc.client_secret.source !== "unset" ? "••••••••  (leave blank to keep)" : ""}
-            type="password"
-            source={settings?.oidc.client_secret.source}
-            envValue={settings?.oidc.client_secret.source === "env" ? "********" : undefined}
-          />
-          <SettingField
-            label="Redirect URI"
-            value={redirectUri}
-            onChange={setRedirectUri}
-            placeholder={`${window.location.origin}/api/auth/oidc/callback`}
-            source={settings?.oidc.redirect_uri.source}
-            envValue={settings?.oidc.redirect_uri.source === "env" ? settings.oidc.redirect_uri.value : undefined}
-          />
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {saving ? "Saving..." : "Save OIDC Settings"}
-          </button>
-        </form>
-      </div>
-    </section>
-  );
-}
-
-function SettingField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  source,
-  envValue,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-  source?: string;
-  envValue?: string;
-}) {
-  const isEnv = source === "env";
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <label className="block text-sm font-medium text-zinc-300">{label}</label>
-        {isEnv && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-900/50 text-amber-300">
-            ENV
-          </span>
-        )}
-      </div>
-      {isEnv ? (
-        <div className="px-3 py-2 bg-zinc-800/50 border border-white/[0.08] rounded-lg text-zinc-400 text-sm">
-          {envValue} <span className="text-zinc-600">(set via environment variable)</span>
-        </div>
-      ) : (
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── Plex Integration ────────────────────────────────────────────────────────
+// ─── Integrations tab sections ───────────────────────────────────────────────
 
 type ConnectStep =
   | { type: "idle" }
@@ -1881,99 +1558,6 @@ type ConnectStep =
 
 const PLEX_POPUP_FEATURES = "width=800,height=700,menubar=no,toolbar=no,location=no,status=no";
 const PIN_POLL_INTERVAL_MS = 2000;
-
-const SECTION_LABELS: Record<string, string> = {
-  unwatched: "settings.homepage.sections.unwatched",
-  recommendations: "settings.homepage.sections.recommendations",
-  today: "settings.homepage.sections.today",
-  upcoming: "settings.homepage.sections.upcoming",
-};
-
-function HomepageLayoutSection() {
-  const { t } = useTranslation();
-  const [layout, setLayout] = useState<HomepageSection[]>(DEFAULT_HOMEPAGE_LAYOUT);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const dragIndexRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    api.getHomepageLayout()
-      .then((res) => setLayout(res.homepage_layout))
-      .catch(() => {});
-  }, []);
-
-  async function save(newLayout: HomepageSection[]) {
-    setSaving(true);
-    setSaved(false);
-    try {
-      const res = await api.updateHomepageLayout(newLayout);
-      setLayout(res.homepage_layout);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // silently ignore
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function toggleEnabled(id: string) {
-    const updated = layout.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
-    setLayout(updated);
-    save(updated);
-  }
-
-  function handleDragStart(index: number) {
-    dragIndexRef.current = index;
-  }
-
-  function handleDragOver(e: React.DragEvent, index: number) {
-    e.preventDefault();
-    const from = dragIndexRef.current;
-    if (from === null || from === index) return;
-    const updated = [...layout];
-    const [moved] = updated.splice(from, 1);
-    updated.splice(index, 0, moved);
-    dragIndexRef.current = index;
-    setLayout(updated);
-  }
-
-  function handleDrop() {
-    dragIndexRef.current = null;
-    save(layout);
-  }
-
-  return (
-    <section>
-      <h2 className="text-lg font-semibold mb-1">{t("settings.homepage.title")}</h2>
-      <p className="text-sm text-zinc-400 mb-4">{t("settings.homepage.description")}</p>
-      <div className="space-y-2">
-        {layout.map((section, index) => (
-          <div
-            key={section.id}
-            draggable
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDrop={handleDrop}
-            className="flex items-center gap-3 bg-zinc-900 border border-white/[0.06] rounded-lg px-4 py-3 cursor-grab active:cursor-grabbing select-none"
-          >
-            <GripVertical size={16} className="text-zinc-500 flex-shrink-0" aria-hidden="true" />
-            <span className="flex-1 text-sm text-zinc-100">{t(SECTION_LABELS[section.id] ?? section.id)}</span>
-            <button
-              onClick={() => toggleEnabled(section.id)}
-              className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              aria-label={section.enabled ? t("settings.homepage.hideSection") : t("settings.homepage.showSection")}
-            >
-              {section.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
-            </button>
-          </div>
-        ))}
-      </div>
-      {saved && <p className="text-xs text-emerald-400 mt-2">{t("settings.homepage.saved")}</p>}
-      {saving && <p className="text-xs text-zinc-400 mt-2">{t("settings.homepage.saving")}</p>}
-    </section>
-  );
-}
 
 function PlexSection() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
@@ -1986,7 +1570,6 @@ function PlexSection() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  // Server picker form state
   const [selectedServer, setSelectedServer] = useState<PlexServer | null>(null);
   const [selectedUri, setSelectedUri] = useState("");
   const [syncMovies, setSyncMovies] = useState(true);
@@ -2003,7 +1586,6 @@ function PlexSection() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Auto-poll PIN status while waiting
   useEffect(() => {
     if (step.type !== "waiting") return;
     const timer = setInterval(async () => {
@@ -2061,7 +1643,6 @@ function PlexSection() {
       const { servers } = await api.refreshPlexServers(step.authToken);
       setStep({ type: "pick_server", authToken: step.authToken, servers });
       if (servers.length > 0) {
-        // Re-select current server if it still exists, otherwise pick first
         const current = selectedServer
           ? servers.find((s) => s.clientIdentifier === selectedServer.clientIdentifier)
           : null;
@@ -2157,190 +1738,186 @@ function PlexSection() {
   if (loading) return null;
 
   return (
-    <section>
-      <h2 className="text-xl font-bold text-white mb-1">Plex</h2>
-      <p className="text-zinc-400 text-sm mb-4">Connect your Plex server to automatically sync your watched history.</p>
+    <SCard
+      title="Plex"
+      subtitle="Connect your Plex server to automatically sync your watched history."
+    >
+      <div className="space-y-3">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
 
-      {msg && (
-        <div className="mb-4 p-3 rounded-lg bg-green-900/50 border border-green-700 text-green-200 text-sm">{msg}</div>
-      )}
-      {err && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">{err}</div>
-      )}
-
-      {/* Connected integrations */}
-      {integrations.length > 0 && (
-        <div className="space-y-3 mb-4">
-          {integrations.map((integration) => (
-            <div key={integration.id} className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-medium">{integration.name}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                    integration.enabled ? "bg-green-900/50 text-green-300" : "bg-zinc-700 text-zinc-400"
-                  }`}>
-                    {integration.enabled ? "Enabled" : "Disabled"}
-                  </span>
+        {integrations.length > 0 && (
+          <div className="space-y-2">
+            {integrations.map((integration) => (
+              <div
+                key={integration.id}
+                className="p-3.5 bg-zinc-800 border border-white/[0.08] rounded-[10px] flex flex-col sm:flex-row sm:items-center gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <div className="text-sm font-bold text-zinc-100 truncate">
+                      {integration.name}
+                    </div>
+                    <SStatusPill kind={integration.enabled ? "ok" : "neutral"}>
+                      {integration.enabled ? "Enabled" : "Disabled"}
+                    </SStatusPill>
+                  </div>
+                  <div className="text-[11px] text-zinc-500 font-mono space-y-0.5">
+                    <div className="truncate">{integration.config.serverUrl}</div>
+                    <div>
+                      Last sync: {formatSyncTime(integration.last_sync_at)}
+                    </div>
+                    {integration.last_sync_error && (
+                      <div className="text-red-400">
+                        Error: {integration.last_sync_error}
+                      </div>
+                    )}
+                    <div className="flex gap-3 pt-1">
+                      <span className={integration.config.syncMovies ? "text-zinc-300" : "text-zinc-600"}>Movies</span>
+                      <span className={integration.config.syncEpisodes ? "text-zinc-300" : "text-zinc-600"}>Episodes</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
+                <div className="flex flex-wrap gap-1.5 shrink-0">
+                  <SButton
+                    variant="ghost"
+                    small
                     onClick={() => handleToggle(integration)}
                     disabled={toggling === integration.id}
-                    className="text-xs text-zinc-400 hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     {toggling === integration.id ? "..." : integration.enabled ? "Disable" : "Enable"}
-                  </button>
-                  <button
+                  </SButton>
+                  <SButton
+                    small
                     onClick={() => handleSync(integration.id)}
                     disabled={syncing === integration.id || !integration.enabled}
-                    className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     {syncing === integration.id ? "Syncing..." : "Sync now"}
-                  </button>
-                  <button
+                  </SButton>
+                  <SButton
+                    variant="outline"
+                    small
+                    danger
                     onClick={() => handleDelete(integration.id)}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
                   >
                     Disconnect
-                  </button>
+                  </SButton>
                 </div>
               </div>
-              <div className="text-xs text-zinc-500 space-y-0.5">
-                <div>Server: <span className="text-zinc-400">{integration.config.serverUrl}</span></div>
-                <div>Last sync: <span className="text-zinc-400">{formatSyncTime(integration.last_sync_at)}</span></div>
-                {integration.last_sync_error && (
-                  <div className="text-red-400">Error: {integration.last_sync_error}</div>
-                )}
-                <div className="flex gap-3 mt-1">
-                  <span className={integration.config.syncMovies ? "text-zinc-400" : "text-zinc-600"}>Movies</span>
-                  <span className={integration.config.syncEpisodes ? "text-zinc-400" : "text-zinc-600"}>Episodes</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Connect flow */}
-      {step.type === "idle" && (
-        <button
-          onClick={handleConnect}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors cursor-pointer"
-        >
-          Connect Plex
-        </button>
-      )}
-
-      {step.type === "waiting" && (
-        <div className="bg-zinc-900 rounded-lg p-4 space-y-3">
-          <p className="text-sm text-zinc-300">
-            Waiting for authorization&hellip; Sign in and authorize Remindarr in the Plex popup.
-          </p>
-          <p className="text-xs text-zinc-500">
-            Popup blocked?{" "}
-            <a href={step.authUrl} target="plex_auth" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400">
-              Open authorization page
-            </a>
-          </p>
-          <button
-            onClick={handleCancelConnect}
-            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
-      {step.type === "pick_server" && (
-        <div className="bg-zinc-900 rounded-lg p-4 space-y-4">
-          <h3 className="text-white font-medium">Select a Plex server</h3>
-
-          {/* Server selection */}
-          <div className="space-y-2">
-            {step.servers.map((server) => (
-              <label key={server.clientIdentifier} className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="plex_server"
-                  checked={selectedServer?.clientIdentifier === server.clientIdentifier}
-                  onChange={() => selectServer(server)}
-                  className="accent-amber-500"
-                />
-                <span className="text-white text-sm">{server.name}</span>
-              </label>
             ))}
           </div>
+        )}
 
-          {/* Connection URL */}
-          {selectedServer && (
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <label className="text-xs text-zinc-400">Connection URL</label>
-                <button
-                  onClick={handleRefreshServers}
-                  disabled={refreshingServers}
-                  className="text-xs text-amber-500 hover:text-amber-400 transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {refreshingServers ? "Refreshing..." : "Refresh"}
-                </button>
-              </div>
-              <select
-                value={selectedUri}
-                onChange={(e) => setSelectedUri(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+        {step.type === "idle" && (
+          <SButton onClick={handleConnect}>Connect Plex</SButton>
+        )}
+
+        {step.type === "waiting" && (
+          <SHint kind="amber">
+            <div className="mb-2">
+              Waiting for authorization&hellip; Sign in and authorize Remindarr in the Plex popup.
+            </div>
+            <div className="text-[11px] text-zinc-400 mb-3">
+              Popup blocked?{" "}
+              <a
+                href={step.authUrl}
+                target="plex_auth"
+                rel="noopener noreferrer"
+                className="text-amber-400 hover:text-amber-300 underline"
               >
-                {selectedServer.connections.map((conn) => (
-                  <option key={conn.uri} value={conn.uri}>
-                    {conn.uri}{conn.local ? " (local)" : conn.relay ? " (relay)" : ""}
-                  </option>
-                ))}
-              </select>
+                Open authorization page
+              </a>
             </div>
-          )}
-
-          {/* Sync options */}
-          <div>
-            <label className="block text-xs text-zinc-400 mb-2">Sync options</label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-zinc-300">
-                <input
-                  type="checkbox"
-                  checked={syncMovies}
-                  onChange={(e) => setSyncMovies(e.target.checked)}
-                  className="accent-amber-500"
-                />
-                Sync watched movies
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-zinc-300">
-                <input
-                  type="checkbox"
-                  checked={syncEpisodes}
-                  onChange={(e) => setSyncEpisodes(e.target.checked)}
-                  className="accent-amber-500"
-                />
-                Sync watched episodes
-              </label>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleSaveServer}
-              disabled={saving || !selectedServer || !selectedUri}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg text-sm transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {saving ? "Connecting..." : "Connect"}
-            </button>
-            <button
-              onClick={handleCancelConnect}
-              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm transition-colors cursor-pointer"
-            >
+            <SButton variant="ghost" small onClick={handleCancelConnect}>
               Cancel
-            </button>
+            </SButton>
+          </SHint>
+        )}
+
+        {step.type === "pick_server" && (
+          <div className="bg-zinc-800 rounded-[10px] p-4 space-y-4">
+            <div className="text-sm font-semibold text-zinc-100">Select a Plex server</div>
+
+            <div className="space-y-2">
+              {step.servers.map((server) => (
+                <label
+                  key={server.clientIdentifier}
+                  className="flex items-center gap-3 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="plex_server"
+                    checked={selectedServer?.clientIdentifier === server.clientIdentifier}
+                    onChange={() => selectServer(server)}
+                    className="accent-amber-400"
+                  />
+                  <span className="text-sm text-zinc-100">{server.name}</span>
+                </label>
+              ))}
+            </div>
+
+            {selectedServer && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <SLabel>Connection URL</SLabel>
+                  <button
+                    onClick={handleRefreshServers}
+                    disabled={refreshingServers}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {refreshingServers ? "Refreshing..." : "Refresh"}
+                  </button>
+                </div>
+                <select
+                  value={selectedUri}
+                  onChange={(e) => setSelectedUri(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                >
+                  {selectedServer.connections.map((conn) => (
+                    <option key={conn.uri} value={conn.uri}>
+                      {conn.uri}{conn.local ? " (local)" : conn.relay ? " (relay)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <SLabel>Sync options</SLabel>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm text-zinc-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={syncMovies}
+                    onChange={(e) => setSyncMovies(e.target.checked)}
+                    className="accent-amber-400"
+                  />
+                  Sync watched movies
+                </label>
+                <label className="flex items-center gap-2 text-sm text-zinc-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={syncEpisodes}
+                    onChange={(e) => setSyncEpisodes(e.target.checked)}
+                    className="accent-amber-400"
+                  />
+                  Sync watched episodes
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <SButton onClick={handleSaveServer} disabled={saving || !selectedServer || !selectedUri}>
+                {saving ? "Connecting..." : "Connect"}
+              </SButton>
+              <SButton variant="ghost" onClick={handleCancelConnect}>
+                Cancel
+              </SButton>
+            </div>
           </div>
-        </div>
-      )}
-    </section>
+        )}
+      </div>
+    </SCard>
   );
 }
 
@@ -2377,46 +1954,597 @@ function CalendarFeedSection() {
   }
 
   return (
-    <section className="bg-zinc-900 rounded-xl p-6 space-y-4">
-      <h2 className="text-lg font-semibold">{t("feed.title")}</h2>
-      <p className="text-sm text-zinc-400">{t("feed.description")}</p>
+    <SCard title={t("feed.title")} subtitle={t("feed.description")}>
       {loadingToken ? (
         <p className="text-sm text-zinc-500">{t("common.loading")}</p>
       ) : token ? (
         <div className="space-y-3">
-          <div className="flex gap-2">
-            <input
-              type="text"
+          <div className="flex flex-col sm:flex-row gap-2">
+            <SInput
               value={feedUrl!}
+              mono
               readOnly
               aria-label={t("feed.title")}
-              className="flex-1 min-w-0 bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-xs text-zinc-300 font-mono focus:outline-none"
             />
-            <button
-              onClick={handleCopy}
-              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer whitespace-nowrap"
-            >
-              {copied ? t("feed.copied") : t("feed.copyUrl")}
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <SButton variant="ghost" small onClick={handleCopy}>
+                {copied ? t("feed.copied") : t("feed.copyUrl")}
+              </SButton>
+              <SButton
+                variant="ghost"
+                small
+                onClick={handleRegenerate}
+                disabled={regenerating}
+              >
+                {regenerating ? t("feed.regenerating") : t("feed.regenerate")}
+              </SButton>
+            </div>
           </div>
-          <p className="text-xs text-zinc-500">{t("feed.warning")}</p>
-          <button
-            onClick={handleRegenerate}
-            disabled={regenerating}
-            className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {regenerating ? t("feed.regenerating") : t("feed.regenerate")}
-          </button>
+          <SHint kind="info">{t("feed.warning")}</SHint>
         </div>
       ) : (
-        <button
-          onClick={handleRegenerate}
-          disabled={regenerating}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-medium text-sm rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-        >
+        <SButton onClick={handleRegenerate} disabled={regenerating}>
           {regenerating ? t("feed.generating") : t("feed.generate")}
-        </button>
+        </SButton>
       )}
-    </section>
+    </SCard>
   );
 }
+
+function WatchlistSection() {
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const { t } = useTranslation();
+
+  async function handleExport() {
+    setMsg("");
+    setErr("");
+    setExporting(true);
+    try {
+      await api.exportWatchlist();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMsg("");
+    setErr("");
+    setImporting(true);
+    try {
+      const result = await api.importWatchlist(file);
+      setMsg(t("profile.importComplete", {
+        imported: result.imported,
+        skippedText: result.skipped > 0 ? t("profile.importSkipped", { count: result.skipped }) : "",
+      }));
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <SCard
+      title={t("profile.watchlist")}
+      subtitle="Back up your tracked titles and watch history as JSON. Importing merges, never overwrites."
+    >
+      <div className="space-y-3">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="p-4 bg-zinc-800 border border-white/[0.08] rounded-[10px]">
+            <div className="text-sm font-bold text-zinc-100 mb-1">
+              {t("profile.exportWatchlist")}
+            </div>
+            <div className="text-xs text-zinc-500 mb-3 leading-relaxed">
+              {t("profile.exportDescription")}
+            </div>
+            <SButton icon="↓" onClick={handleExport} disabled={exporting}>
+              {exporting ? t("profile.exporting") : t("profile.export")}
+            </SButton>
+          </div>
+          <div className="p-4 bg-zinc-800 border border-white/[0.08] rounded-[10px]">
+            <div className="text-sm font-bold text-zinc-100 mb-1">
+              {t("profile.importWatchlist")}
+            </div>
+            <div className="text-xs text-zinc-500 mb-3 leading-relaxed">
+              {t("profile.importDescription")}
+            </div>
+            <label
+              className={cn(
+                "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-lg bg-white/[0.06] text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1] transition-colors cursor-pointer",
+                importing && "opacity-50 pointer-events-none",
+              )}
+            >
+              <span>↑</span>
+              {importing ? t("profile.importing") : t("profile.import")}
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={handleImport}
+                className="hidden"
+                disabled={importing}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+    </SCard>
+  );
+}
+
+function CsvImportSection() {
+  const [importing, setImporting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const { t } = useTranslation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setMsg("");
+    setErr("");
+    setImporting(true);
+    try {
+      const result = await api.importCsv(file);
+      const parts: string[] = [`${result.imported} title${result.imported !== 1 ? "s" : ""} imported`];
+      if (result.failed > 0) parts.push(`${result.failed} failed`);
+      if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
+      setMsg(parts.join(", ") + ".");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) void handleFile(file);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) void handleFile(file);
+  }
+
+  return (
+    <SCard title={t("import.title")} subtitle={t("import.description")}>
+      <div className="space-y-3.5">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          {[
+            { n: "Letterboxd", hint: t("import.letterboxdHint") },
+            { n: "IMDB", hint: t("import.imdbHint") },
+            { n: "Trakt", hint: t("import.traktHint") },
+          ].map((s) => (
+            <div key={s.n} className="p-3.5 bg-zinc-800 border border-white/[0.08] rounded-[10px]">
+              <div className="text-[13px] font-bold text-zinc-100 mb-1">{s.n}</div>
+              <div className="text-[11px] text-zinc-500 font-mono leading-relaxed">{s.hint}</div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          className={cn(
+            "p-10 text-center border-2 border-dashed rounded-xl transition-colors cursor-pointer",
+            dragOver
+              ? "border-amber-400 bg-amber-400/10"
+              : "border-zinc-700 hover:border-zinc-500 bg-white/[0.015]",
+            importing && "opacity-50 pointer-events-none",
+          )}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="w-11 h-11 mx-auto mb-3 rounded-[10px] bg-zinc-800 text-amber-400 font-mono text-xl flex items-center justify-center">
+            ↓
+          </div>
+          <div className="text-sm font-semibold text-zinc-100 mb-1">
+            {t("import.dropHint")}
+          </div>
+          <div className="text-[11px] text-zinc-500 font-mono">.csv</div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleInputChange}
+            className="hidden"
+            disabled={importing}
+          />
+        </div>
+
+        <div>
+          <label
+            className={cn(
+              "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-lg bg-amber-400 text-black hover:bg-amber-300 transition-colors cursor-pointer",
+              importing && "opacity-50 pointer-events-none",
+            )}
+          >
+            {importing ? t("import.importing") : t("import.chooseFile")}
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleInputChange}
+              className="hidden"
+              disabled={importing}
+            />
+          </label>
+        </div>
+      </div>
+    </SCard>
+  );
+}
+
+// ─── Admin tab sections ──────────────────────────────────────────────────────
+
+function formatJobName(name: string): string {
+  return name
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function formatDate(date: string | null): string {
+  if (!date) return "Never";
+  const d = new Date(date + (date.endsWith("Z") ? "" : "Z"));
+  return d.toLocaleString();
+}
+
+function BackgroundJobsSection() {
+  const [data, setData] = useState<JobsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [triggering, setTriggering] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const refresh = useCallback(() => {
+    api.getJobs().then((d) => {
+      setData(d);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const interval = setInterval(refresh, 15000);
+    return () => clearInterval(interval);
+  }, [refresh]);
+
+  async function handleTrigger(name: string) {
+    setMsg("");
+    setErr("");
+    setTriggering(name);
+    try {
+      await api.triggerJob(name);
+      setMsg(`Job "${formatJobName(name)}" queued successfully`);
+      refresh();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTriggering(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <SCard title="Background jobs" subtitle="Cron + queue workers.">
+        <div className="text-zinc-500 text-sm">Loading jobs...</div>
+      </SCard>
+    );
+  }
+
+  return (
+    <SCard
+      title="Background jobs"
+      subtitle="Remindarr's cron + queue workers. Auto-refreshes every 15 seconds."
+    >
+      <div className="space-y-3">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
+
+        {data?.crons.length === 0 && (
+          <p className="text-zinc-500 text-sm">No scheduled jobs configured.</p>
+        )}
+
+        {data && data.crons.length > 0 && (
+          <>
+            <div className="hidden lg:grid grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-3 px-3.5 pb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+              <div>Job</div>
+              <div>Schedule</div>
+              <div>Last run</div>
+              <div>Status</div>
+              <div />
+            </div>
+            <div className="space-y-1">
+              {data.crons.map((cron) => {
+                const stats = data.stats[cron.name];
+                const isRunning = stats?.running > 0;
+                const failed = stats && stats.failed > 0;
+                const pillKind = !cron.enabled ? "neutral" : isRunning ? "amber" : failed ? "error" : "ok";
+                const pillText = !cron.enabled ? "Off" : isRunning ? "Running" : failed ? "Fail" : "OK";
+                return (
+                  <div
+                    key={cron.name}
+                    className="px-3.5 py-3 bg-zinc-800 border border-white/[0.08] rounded-[10px] grid grid-cols-1 lg:grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-2 lg:gap-3 lg:items-center"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-zinc-100 truncate">
+                        {formatJobName(cron.name)}
+                      </div>
+                      <div className="text-[11px] text-zinc-500 font-mono truncate lg:hidden">
+                        {cron.cron}
+                      </div>
+                    </div>
+                    <code className="hidden lg:block text-[12px] text-zinc-400 font-mono truncate">
+                      {cron.cron}
+                    </code>
+                    <div className="text-[11px] text-zinc-400 font-mono">
+                      <div>Last: {formatDate(cron.last_run)}</div>
+                      <div className="text-zinc-500">Next: {formatDate(cron.next_run)}</div>
+                      {stats && (stats.pending > 0 || stats.running > 0 || stats.failed > 0) && (
+                        <div className="flex gap-2 mt-0.5">
+                          {stats.pending > 0 && (
+                            <span className="text-yellow-400">{stats.pending} pending</span>
+                          )}
+                          {stats.running > 0 && (
+                            <span className="text-blue-400">{stats.running} running</span>
+                          )}
+                          {stats.failed > 0 && (
+                            <span className="text-red-400">{stats.failed} failed</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <SStatusPill kind={pillKind}>{pillText}</SStatusPill>
+                    </div>
+                    <div>
+                      <SButton
+                        variant="ghost"
+                        small
+                        onClick={() => handleTrigger(cron.name)}
+                        disabled={triggering === cron.name}
+                      >
+                        {triggering === cron.name ? "Queuing..." : "Run now"}
+                      </SButton>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {data?.recentJobs && data.recentJobs.length > 0 && (
+          <>
+            <SDivider label="Recent history" />
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left">
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Job</th>
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Status</th>
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Started</th>
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Completed</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {data.recentJobs.map((job) => (
+                    <tr key={job.id}>
+                      <td className="py-2 px-2 text-zinc-100 text-sm">{formatJobName(job.name)}</td>
+                      <td className="py-2 px-2">
+                        <JobStatusBadge status={job.status} />
+                      </td>
+                      <td className="py-2 px-2 text-zinc-400 text-xs font-mono">
+                        {formatDate(job.started_at)}
+                      </td>
+                      <td className="py-2 px-2 text-zinc-400 text-xs font-mono">
+                        {formatDate(job.completed_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </SCard>
+  );
+}
+
+function JobStatusBadge({ status }: { status: string }) {
+  const kindMap: Record<string, "ok" | "amber" | "neutral" | "error"> = {
+    pending: "amber",
+    running: "amber",
+    completed: "ok",
+    failed: "error",
+  };
+  return (
+    <SStatusPill kind={kindMap[status] ?? "neutral"}>{status}</SStatusPill>
+  );
+}
+
+function AdminSection() {
+  const [settings, setSettings] = useState<AdminSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const [issuerUrl, setIssuerUrl] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [redirectUri, setRedirectUri] = useState("");
+
+  useEffect(() => {
+    api.getAdminSettings().then((data) => {
+      setSettings(data);
+      setIssuerUrl(data.oidc.issuer_url.source !== "env" ? data.oidc.issuer_url.value : "");
+      setClientId(data.oidc.client_id.source !== "env" ? data.oidc.client_id.value : "");
+      setClientSecret("");
+      setRedirectUri(
+        data.oidc.redirect_uri.source !== "env"
+          ? data.oidc.redirect_uri.value || `${window.location.origin}/api/auth/oidc/callback`
+          : ""
+      );
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg("");
+    setErr("");
+    setSaving(true);
+    try {
+      const body: Record<string, string> = {
+        oidc_issuer_url: issuerUrl,
+        oidc_client_id: clientId,
+        oidc_redirect_uri: redirectUri,
+      };
+      if (clientSecret) {
+        body.oidc_client_secret = clientSecret;
+      }
+      const result = await api.updateAdminSettings(body);
+      setMsg(result.oidc_configured ? "OIDC configured successfully" : "Settings saved");
+      const data = await api.getAdminSettings();
+      setSettings(data);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <SCard title="Admin settings" subtitle="Server and user management">
+        <div className="text-zinc-500 text-sm">Loading settings...</div>
+      </SCard>
+    );
+  }
+
+  return (
+    <SCard
+      title="OpenID Connect"
+      subtitle="Configure OIDC to enable SSO login. Values already set via environment variable are locked."
+      action={
+        <div className="flex items-center gap-2">
+          <SStatusPill kind={settings?.oidc_configured ? "ok" : "neutral"}>
+            {settings?.oidc_configured ? "Configured" : "Not configured"}
+          </SStatusPill>
+          <Link
+            to="/admin/users"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold rounded-lg bg-white/[0.06] text-zinc-300 border border-white/[0.08] hover:bg-white/[0.1] transition-colors"
+          >
+            Manage users →
+          </Link>
+        </div>
+      }
+    >
+      <form onSubmit={handleSave} className="space-y-3.5">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
+
+        <SettingField
+          label="Issuer URL"
+          value={issuerUrl}
+          onChange={setIssuerUrl}
+          placeholder="https://auth.example.com"
+          source={settings?.oidc.issuer_url.source}
+          envValue={settings?.oidc.issuer_url.source === "env" ? settings.oidc.issuer_url.value : undefined}
+        />
+        <SettingField
+          label="Client ID"
+          value={clientId}
+          onChange={setClientId}
+          placeholder="my-client-id"
+          source={settings?.oidc.client_id.source}
+          envValue={settings?.oidc.client_id.source === "env" ? settings.oidc.client_id.value : undefined}
+        />
+        <SettingField
+          label="Client Secret"
+          value={clientSecret}
+          onChange={setClientSecret}
+          placeholder={settings?.oidc.client_secret.source !== "unset" ? "••••••••  (leave blank to keep)" : ""}
+          type="password"
+          source={settings?.oidc.client_secret.source}
+          envValue={settings?.oidc.client_secret.source === "env" ? "********" : undefined}
+        />
+        <SettingField
+          label="Redirect URI"
+          value={redirectUri}
+          onChange={setRedirectUri}
+          placeholder={`${window.location.origin}/api/auth/oidc/callback`}
+          source={settings?.oidc.redirect_uri.source}
+          envValue={settings?.oidc.redirect_uri.source === "env" ? settings.oidc.redirect_uri.value : undefined}
+        />
+
+        <div>
+          <SButton type="submit" disabled={saving}>
+            {saving ? "Saving..." : "Save OIDC settings"}
+          </SButton>
+        </div>
+      </form>
+    </SCard>
+  );
+}
+
+function SettingField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  source,
+  envValue,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  source?: string;
+  envValue?: string;
+}) {
+  const isEnv = source === "env";
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-1.5">
+        <SLabel>{label}</SLabel>
+        {isEnv && <SStatusPill kind="amber">ENV</SStatusPill>}
+      </div>
+      {isEnv ? (
+        <div className="px-3 py-2.5 bg-zinc-800/50 border border-white/[0.08] rounded-lg text-zinc-400 text-[13px]">
+          {envValue} <span className="text-zinc-600">(set via environment variable)</span>
+        </div>
+      ) : (
+        <SInput
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+        />
+      )}
+    </div>
+  );
+}
+
