@@ -1,9 +1,24 @@
 import { Hono } from "hono";
-import { getUserPublicProfile, updateProfilePublic, searchUsers } from "../db/repository";
+import { z } from "zod";
+import { getUserPublicProfile, updateProfilePublic, searchUsers, updateUserBio } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const app = new Hono<AppEnv>();
+
+const bioSchema = z.object({
+  bio: z.string().max(280).nullable(),
+});
+
+app.patch("/me/bio", zValidator("json", bioSchema), async (c) => {
+  const user = c.get("user");
+  if (!user) return err(c, "Authentication required", 401);
+  const { bio } = c.req.valid("json");
+  const normalized = bio === null ? null : bio.trim() || null;
+  await updateUserBio(user.id, normalized);
+  return ok(c, { bio: normalized });
+});
 
 app.get("/search", async (c) => {
   const user = c.get("user");

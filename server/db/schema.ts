@@ -161,6 +161,7 @@ export const users = sqliteTable(
     profileVisibility: text("profile_visibility").notNull().default("private"),
     homepageLayout: text("homepage_layout"),
     feedToken: text("feed_token"),
+    bio: text("bio"),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(

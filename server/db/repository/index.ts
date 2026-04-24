@@ -70,7 +70,7 @@ export type { UserStatus, NotificationMode } from "./tracked";
 
 export { getTagsForUser, getTagsForTitle, setTags } from "./tags";
 
-export { getUserPublicProfile, updateProfilePublic } from "./profile";
+export { getUserPublicProfile, updateProfilePublic, updateUserBio } from "./profile";
 export type { ProfileVisibility } from "./profile";
 
 export {
@@ -140,7 +140,25 @@ export {
   areMutualFollowers,
   getFollowerCount,
   getFollowingCount,
+  getMutualFollowers,
 } from "./follows";
+export type { MutualFollower } from "./follows";
+
+export {
+  getStatsOverview,
+  getUserGenreBreakdown,
+  getUserLanguageBreakdown,
+  getMonthlyActivity,
+  getShowsByStatus,
+  buildMonthRange,
+} from "./stats";
+export type {
+  StatsOverview,
+  GenreCount,
+  LanguageCount,
+  MonthlyActivity,
+  ShowsByStatus,
+} from "./stats";
 
 export {
   rateTitle,

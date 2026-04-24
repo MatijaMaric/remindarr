@@ -106,3 +106,38 @@ export async function getFollowingCount(userId: string): Promise<number> {
     return row?.count ?? 0;
   });
 }
+
+export interface MutualFollower {
+  id: string;
+  username: string;
+  display_name: string | null;
+  image: string | null;
+  since: string | null;
+}
+
+/**
+ * Returns users who both follow and are followed by `userId`, ordered by the
+ * later of the two follow timestamps (most recent mutual first).
+ */
+export async function getMutualFollowers(userId: string, limit = 4): Promise<MutualFollower[]> {
+  return traceDbQuery("getMutualFollowers", async () => {
+    const db = getDb();
+    return db.all<MutualFollower>(sql`
+      SELECT
+        u.id AS id,
+        u.username AS username,
+        u.name AS display_name,
+        u.image AS image,
+        MAX(COALESCE(f_in.created_at, f_out.created_at)) AS since
+      FROM follows f_in
+      INNER JOIN follows f_out
+        ON f_out.follower_id = f_in.following_id
+       AND f_out.following_id = f_in.follower_id
+      INNER JOIN users u ON u.id = f_in.follower_id
+      WHERE f_in.following_id = ${userId}
+      GROUP BY u.id, u.username, u.name, u.image
+      ORDER BY since DESC
+      LIMIT ${limit}
+    `);
+  });
+}
