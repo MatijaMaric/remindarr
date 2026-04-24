@@ -67,7 +67,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <PageHeader kicker="Your preferences" title="Settings" className="px-0 pt-4 pb-4" />
+      <PageHeader kicker="Your preferences" title="Settings" />
 
       <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 sm:gap-8">
         {/* Sidebar — pill row on mobile, vertical list on desktop */}

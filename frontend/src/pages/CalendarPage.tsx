@@ -747,7 +747,6 @@ function GridCalendar({
         kicker={`Month view · ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
         title={monthTitle}
         right={headerRight}
-        className="px-0 pt-4 pb-4"
       />
 
       {/* Stats bar */}

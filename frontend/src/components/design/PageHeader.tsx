@@ -12,7 +12,7 @@ export function PageHeader({ kicker, title, right, className }: PageHeaderProps)
   return (
     <div
       className={cn(
-        "px-6 md:px-16 pt-10 pb-6 flex items-end justify-between gap-4",
+        "pt-4 pb-4 flex items-end justify-between gap-4",
         className
       )}
     >

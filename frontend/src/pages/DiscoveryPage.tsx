@@ -368,7 +368,7 @@ export default function DiscoveryPage() {
 
   return (
     <div className="space-y-0">
-      <PageHeader kicker="Based on what you watch" title="For you" className="px-0 pt-4 pb-4" />
+      <PageHeader kicker="Based on what you watch" title="For you" />
 
       {/* Tab toggle */}
       <div className="flex gap-2 mb-6">
