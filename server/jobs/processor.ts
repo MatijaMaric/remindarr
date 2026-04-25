@@ -22,6 +22,7 @@ import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
+import { getCurrentTimeInTimezone } from "./time-utils";
 
 const log = logger.child({ module: "job-processor" });
 
@@ -55,37 +56,13 @@ async function handleSyncShowEpisodes(data: string | null): Promise<void> {
   log.info("Synced show episodes via job", { title: parsed.title, episodes: count });
 }
 
-function getCurrentTimeInTimezone(tz: string): { time: string; date: string } {
-  const now = new Date();
-  const timeFormatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: tz,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const dateFormatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return {
-    time: timeFormatter.format(now),
-    date: dateFormatter.format(now),
-  };
-}
-
 async function handleSendNotifications(): Promise<void> {
   const timezones = await getDistinctNotifierTimezones();
   if (timezones.length === 0) return;
 
   const timesByTimezone = new Map<string, { time: string; date: string }>();
   for (const tz of timezones) {
-    try {
-      timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
-    } catch {
-      log.warn("Invalid timezone", { timezone: tz });
-    }
+    timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
   }
 
   const dueNotifiers = await getDueNotifiers(timesByTimezone);

@@ -7,6 +7,7 @@
  */
 import { logger } from "../logger";
 import { getEnabledNotifierSchedules } from "../db/repository";
+import { getCurrentTimeInTimezone } from "./time-utils";
 
 const log = logger.child({ module: "schedule" });
 
@@ -32,20 +33,17 @@ export function convertToLocalTime(
 ): { hour: number; minute: number } {
   const [h, m] = time.split(":").map(Number);
 
-  // Get current time in source timezone
-  const tzFormatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: fromTz,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  // Get current time in source timezone (with UTC fallback for invalid TZ)
+  const { time: tzTime } = getCurrentTimeInTimezone(fromTz, now);
+
+  // Get current time in server-local timezone
   const localFormatter = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 
-  const [tzH, tzM] = tzFormatter.format(now).split(":").map(Number);
+  const [tzH, tzM] = tzTime.split(":").map(Number);
   const [localH, localM] = localFormatter.format(now).split(":").map(Number);
 
   // Offset = source_tz - server_local (in minutes)
