@@ -1,14 +1,21 @@
-import { useMemo, useState, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import * as api from "../api";
-import TitleList from "../components/TitleList";
-import ProfileBanner from "../components/ProfileBanner";
-import FollowButton from "../components/FollowButton";
+import ProfileHero from "../components/profile/ProfileHero";
+import BioCard from "../components/profile/BioCard";
+import ProgressCard from "../components/profile/ProgressCard";
+import TopGenresCard from "../components/profile/TopGenresCard";
+import FriendsCard from "../components/profile/FriendsCard";
+import MonthlyActivityCard from "../components/profile/MonthlyActivityCard";
+import StatusBreakdown from "../components/profile/StatusBreakdown";
+import WatchlistTabs, {
+  useWatchlistFilters,
+  type WatchlistTab,
+} from "../components/profile/WatchlistTabs";
+import WatchlistGrid from "../components/profile/WatchlistGrid";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
-import { groupShowsByStatus } from "../lib/groupShows";
 
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -18,31 +25,29 @@ export default function UserProfilePage() {
     [username],
   );
 
-  const shows = useMemo(() => data?.shows ?? [], [data]);
-  const showGroups = useMemo(() => groupShowsByStatus(shows), [shows]);
-
-  // Track optimistic adjustment to follower count (resets on refetch)
   const [followerAdjust, setFollowerAdjust] = useState(0);
+  const [activeTab, setActiveTab] = useState<WatchlistTab>("watching");
+  const [localBio, setLocalBio] = useState<string | null | undefined>(undefined);
 
   const handleFollowToggle = useCallback((isNowFollowing: boolean) => {
     setFollowerAdjust((prev) => prev + (isNowFollowing ? 1 : -1));
   }, []);
 
-  const followerCount = (data?.follower_count ?? 0) + followerAdjust;
+  const shows = useMemo(() => data?.shows ?? [], [data]);
+  const movies = useMemo(() => data?.movies ?? [], [data]);
+  const { counts, lists } = useWatchlistFilters(shows, movies);
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-zinc-800 rounded" />
-          <div className="h-4 w-32 bg-zinc-800 rounded" />
-          <div className="grid grid-cols-3 gap-4">
-            <div className="h-20 bg-zinc-800 rounded-lg" />
-            <div className="h-20 bg-zinc-800 rounded-lg" />
-            <div className="h-20 bg-zinc-800 rounded-lg" />
+      <div className="space-y-8">
+        <div className="h-[360px] bg-zinc-900 animate-pulse rounded-xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 max-w-7xl mx-auto px-4">
+          <div className="space-y-4">
+            <div className="h-24 bg-zinc-900 animate-pulse rounded-xl" />
+            <div className="h-64 bg-zinc-900 animate-pulse rounded-xl" />
           </div>
+          <TitleGridSkeleton />
         </div>
-        <TitleGridSkeleton />
       </div>
     );
   }
@@ -55,86 +60,96 @@ export default function UserProfilePage() {
     );
   }
 
-  const { user, stats, movies, is_own_profile, show_watchlist, profile_visibility, backdrops, following_count, is_following } = data;
+  const {
+    user,
+    overview,
+    genres,
+    monthly,
+    shows_by_status,
+    friends,
+    is_own_profile,
+    show_watchlist,
+    profile_visibility,
+    backdrops,
+    follower_count,
+    following_count,
+    is_following,
+  } = data;
 
-  async function handleVisibilityToggle(titleId: string, isPublic: boolean) {
-    try {
-      await api.updateTitleVisibility(titleId, isPublic);
-      toast.success(isPublic ? "Visible on profile" : "Hidden from profile");
-      refetch();
-    } catch {
-      toast.error("Failed to update visibility");
-    }
-  }
+  const bio = localBio === undefined ? user.bio : localBio;
+  const displayedFollowerCount = follower_count + followerAdjust;
+  const activeList = lists[activeTab];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* Banner with overlaid user info and stats */}
-      <ProfileBanner backdrops={backdrops} user={user} stats={stats} isOwnProfile={is_own_profile} />
+    <div className="space-y-8">
+      <ProfileHero
+        user={{ ...user, bio }}
+        backdrops={backdrops}
+        followerCount={displayedFollowerCount}
+        followingCount={following_count}
+        isFollowing={is_following}
+        isOwnProfile={is_own_profile}
+        onFollowToggle={handleFollowToggle}
+      />
 
-      {/* Social bar: follower/following counts + follow button */}
-      <div className="flex items-center gap-3" data-testid="social-bar">
-        <span className="text-zinc-400 text-sm">
-          <span className="text-white font-medium">{followerCount}</span> {t("userProfile.followers")}
-        </span>
-        <span className="text-zinc-600">&middot;</span>
-        <span className="text-zinc-400 text-sm">
-          <span className="text-white font-medium">{following_count}</span> {t("userProfile.following")}
-        </span>
-        {!is_own_profile && (
-          <FollowButton userId={user.id} initialIsFollowing={is_following} onToggle={handleFollowToggle} />
-        )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10">
+          {/* Sidebar */}
+          <aside className="flex flex-col gap-4 min-w-0">
+            <BioCard
+              bio={bio}
+              isOwnProfile={is_own_profile}
+              onBioUpdated={(next) => {
+                setLocalBio(next);
+                refetch();
+              }}
+            />
+            {show_watchlist && <ProgressCard overview={overview} />}
+            {show_watchlist && genres.length > 0 && <TopGenresCard genres={genres} limit={6} />}
+            {show_watchlist && friends.length > 0 && (
+              <FriendsCard
+                friends={friends}
+                profileUsername={user.username}
+                totalFriends={friends.length}
+              />
+            )}
+          </aside>
+
+          {/* Main column */}
+          <main className="flex flex-col gap-4 min-w-0">
+            {show_watchlist ? (
+              <>
+                {monthly.length > 0 && <MonthlyActivityCard monthly={monthly} />}
+                <StatusBreakdown byStatus={shows_by_status} />
+                <WatchlistTabs
+                  active={activeTab}
+                  onChange={setActiveTab}
+                  counts={counts}
+                />
+                <WatchlistGrid titles={activeList} />
+              </>
+            ) : (
+              <div className="bg-zinc-900 border border-white/[0.06] rounded-xl p-8 text-center">
+                <p className="text-zinc-400">
+                  {is_own_profile
+                    ? t("userProfile.watchlistHiddenOwn")
+                    : profile_visibility === "friends_only"
+                      ? t("userProfile.watchlistFriendsOnly")
+                      : t("userProfile.watchlistHidden")}
+                </p>
+                {is_own_profile && (
+                  <Link
+                    to="/settings"
+                    className="inline-block mt-3 text-amber-400 hover:text-amber-300 text-sm"
+                  >
+                    {t("userProfile.enableInSettings")}
+                  </Link>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
       </div>
-
-      {/* Watchlist */}
-      {show_watchlist && (movies.length > 0 || shows.length > 0) && (
-        <div className="space-y-8">
-          {shows.length > 0 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-white">
-                {t("userProfile.tvShows")} <span className="text-zinc-500 font-normal text-base">({shows.length})</span>
-              </h2>
-              {showGroups.map((group) => (
-                <div key={group.key}>
-                  <h3 className="text-sm font-semibold text-zinc-400 mb-3">
-                    {t(group.labelKey)} ({group.titles.length})
-                  </h3>
-                  <TitleList titles={group.titles} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} hideTypeBadge showProgressBar maxRows={is_own_profile ? undefined : 1} />
-                </div>
-              ))}
-            </div>
-          )}
-          {movies.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-white mb-4">
-                {t("userProfile.movies")} <span className="text-zinc-500 font-normal text-base">({movies.length})</span>
-              </h2>
-              <TitleList titles={movies} onTrackToggle={refetch} showVisibilityToggle={is_own_profile} onVisibilityToggle={handleVisibilityToggle} maxRows={is_own_profile ? undefined : 1} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {show_watchlist && movies.length === 0 && shows.length === 0 && (
-        <p className="text-zinc-500 text-center py-8">{t("userProfile.noTitles")}</p>
-      )}
-
-      {!show_watchlist && !is_own_profile && (
-        <p className="text-zinc-500 text-center py-8">
-          {profile_visibility === "friends_only"
-            ? t("userProfile.watchlistFriendsOnly")
-            : t("userProfile.watchlistHidden")}
-        </p>
-      )}
-
-      {!show_watchlist && is_own_profile && (
-        <div className="text-center py-8">
-          <p className="text-zinc-500">{t("userProfile.watchlistHiddenOwn")}</p>
-          <Link to="/settings" className="text-amber-500 hover:text-amber-400 text-sm mt-2 inline-block">
-            {t("userProfile.enableInSettings")}
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

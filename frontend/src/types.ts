@@ -484,6 +484,7 @@ export interface UserProfileUser {
   display_name: string | null;
   image: string | null;
   member_since: string | null;
+  bio: string | null;
 }
 
 export interface UserProfileStats {
@@ -494,6 +495,42 @@ export interface UserProfileStats {
   shows_total: number;
   total_watched_episodes: number;
   total_released_episodes: number;
+}
+
+export interface UserProfileOverview extends UserProfileStats {
+  tracked_movies: number;
+  tracked_shows: number;
+  watch_time_minutes: number;
+}
+
+export interface ProfileGenreCount {
+  genre: string;
+  count: number;
+}
+
+export interface ProfileMonthlyActivity {
+  month: string;
+  movies_watched: number;
+  episodes_watched: number;
+}
+
+export interface ProfileShowsByStatus {
+  watching: number;
+  caught_up: number;
+  completed: number;
+  not_started: number;
+  unreleased: number;
+  on_hold: number;
+  dropped: number;
+  plan_to_watch: number;
+}
+
+export interface ProfileFriend {
+  id: string;
+  username: string;
+  display_name: string | null;
+  image: string | null;
+  since: string | null;
 }
 
 export interface ProfileBackdrop {
@@ -507,6 +544,11 @@ export type ProfileVisibility = "public" | "friends_only" | "private";
 export interface UserProfileResponse {
   user: UserProfileUser;
   stats: UserProfileStats;
+  overview: UserProfileOverview;
+  genres: ProfileGenreCount[];
+  monthly: ProfileMonthlyActivity[];
+  shows_by_status: ProfileShowsByStatus;
+  friends: ProfileFriend[];
   movies: Title[];
   shows: Title[];
   show_watchlist: boolean;

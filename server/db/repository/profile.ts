@@ -3,7 +3,24 @@ import { getDb } from "../schema";
 import { users, watchedTitles, watchedEpisodes, episodes, titles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getPublicTrackedTitles, getPublicTrackedCount, getTrackedTitles } from "./tracked";
-import { getFollowerCount, getFollowingCount, isFollowing, areMutualFollowers } from "./follows";
+import {
+  getFollowerCount,
+  getFollowingCount,
+  isFollowing,
+  areMutualFollowers,
+  getMutualFollowers,
+  type MutualFollower,
+} from "./follows";
+import {
+  getStatsOverview,
+  getUserGenreBreakdown,
+  getMonthlyActivity,
+  getShowsByStatus,
+  type GenreCount,
+  type MonthlyActivity,
+  type ShowsByStatus,
+  type StatsOverview,
+} from "./stats";
 
 export type ProfileVisibility = "public" | "friends_only" | "private";
 
@@ -18,6 +35,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         display_name: users.name,
         image: users.image,
         member_since: users.createdAt,
+        bio: users.bio,
         profile_public: users.profilePublic,
         profile_visibility: users.profileVisibility,
       })
@@ -40,7 +58,33 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       showWatchlist = false;
     }
 
-    const [trackedCount, watchedMoviesRow, watchedEpisodesRow, allTitles, backdrops, followerCount, followingCount, viewerIsFollowing] = await Promise.all([
+    const emptyStatsOverview: StatsOverview = {
+      tracked_movies: 0,
+      tracked_shows: 0,
+      watched_movies: 0,
+      watched_episodes: 0,
+      watch_time_minutes: 0,
+    };
+    const emptyShowsByStatus: ShowsByStatus = {
+      watching: 0, caught_up: 0, completed: 0, not_started: 0,
+      unreleased: 0, on_hold: 0, dropped: 0, plan_to_watch: 0,
+    };
+
+    const [
+      trackedCount,
+      watchedMoviesRow,
+      watchedEpisodesRow,
+      allTitles,
+      backdrops,
+      followerCount,
+      followingCount,
+      viewerIsFollowing,
+      statsOverview,
+      genres,
+      monthly,
+      showsByStatus,
+      friends,
+    ] = await Promise.all([
       showWatchlist ? getPublicTrackedCount(user.id) : Promise.resolve(0),
       db
         .select({ count: sql<number>`COUNT(*)` })
@@ -63,6 +107,11 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       getFollowerCount(user.id),
       getFollowingCount(user.id),
       viewerId && !isOwnProfile ? isFollowing(viewerId, user.id) : Promise.resolve(false),
+      showWatchlist ? getStatsOverview(user.id) : Promise.resolve(emptyStatsOverview),
+      showWatchlist ? getUserGenreBreakdown(user.id, 6) : Promise.resolve([] as GenreCount[]),
+      showWatchlist ? getMonthlyActivity(user.id, 12) : Promise.resolve([] as MonthlyActivity[]),
+      showWatchlist ? getShowsByStatus(user.id) : Promise.resolve(emptyShowsByStatus),
+      showWatchlist ? getMutualFollowers(user.id, 4) : Promise.resolve([] as MutualFollower[]),
     ]);
 
     const shows = allTitles.filter(t => t.object_type === "SHOW");
@@ -113,6 +162,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         display_name: user.display_name,
         image: user.image,
         member_since: user.member_since,
+        bio: user.bio,
       },
       stats: {
         tracked_count: trackedCount,
@@ -123,6 +173,22 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         total_watched_episodes: totalWatchedEpisodes,
         total_released_episodes: totalReleasedEpisodes,
       },
+      overview: {
+        tracked_count: trackedCount,
+        tracked_movies: statsOverview.tracked_movies,
+        tracked_shows: statsOverview.tracked_shows,
+        watched_movies: watchedMoviesRow?.count ?? 0,
+        watched_episodes: watchedEpisodesRow?.count ?? 0,
+        watch_time_minutes: statsOverview.watch_time_minutes,
+        shows_completed: showsCompleted,
+        shows_total: showsTotal,
+        total_watched_episodes: totalWatchedEpisodes,
+        total_released_episodes: totalReleasedEpisodes,
+      },
+      genres,
+      monthly,
+      shows_by_status: showsByStatus,
+      friends,
       show_watchlist: showWatchlist,
       profile_visibility: visibility,
       follower_count: followerCount,
@@ -132,6 +198,16 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       shows,
       backdrops,
     };
+  });
+}
+
+export async function updateUserBio(userId: string, bio: string | null) {
+  return traceDbQuery("updateUserBio", async () => {
+    const db = getDb();
+    await db.update(users)
+      .set({ bio })
+      .where(eq(users.id, userId))
+      .run();
   });
 }
 

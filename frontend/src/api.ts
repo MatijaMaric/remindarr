@@ -206,6 +206,13 @@ export async function getUserProfile(username: string): Promise<UserProfileRespo
   return fetchJson(`/user/${encodeURIComponent(username)}`);
 }
 
+export async function updateMyBio(bio: string | null): Promise<{ bio: string | null }> {
+  return fetchJson("/user/me/bio", {
+    method: "PATCH",
+    body: JSON.stringify({ bio }),
+  });
+}
+
 export async function updateProfileVisibility(visibility: string): Promise<void> {
   await fetchJson("/track/profile-visibility", {
     method: "PATCH",

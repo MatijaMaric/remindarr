@@ -535,3 +535,123 @@ describe("GET /user/search", () => {
     expect(user).toHaveProperty("image");
   });
 });
+
+describe("PATCH /user/me/bio", () => {
+  it("updates the current user's bio", async () => {
+    const res = await app.request("/user/me/bio", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: "Tracking 42 shows." }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.bio).toBe("Tracking 42 shows.");
+
+    const profileRes = await app.request("/user/testuser", { headers: authHeaders() });
+    const profile = await profileRes.json();
+    expect(profile.user.bio).toBe("Tracking 42 shows.");
+  });
+
+  it("accepts null to clear the bio", async () => {
+    await app.request("/user/me/bio", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: "something" }),
+    });
+    const res = await app.request("/user/me/bio", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: null }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.bio).toBeNull();
+  });
+
+  it("normalizes empty/whitespace bios to null", async () => {
+    const res = await app.request("/user/me/bio", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: "   " }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.bio).toBeNull();
+  });
+
+  it("returns 400 when bio exceeds 280 characters", async () => {
+    const longBio = "a".repeat(281);
+    const res = await app.request("/user/me/bio", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: longBio }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("returns 401 without authentication", async () => {
+    const res = await app.request("/user/me/bio", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: "test" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /user/:username — extended dossier fields", () => {
+  it("includes overview, genres, monthly, shows_by_status, friends on own profile", async () => {
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user).toHaveProperty("bio");
+    expect(body.overview).toMatchObject({
+      tracked_count: 0,
+      tracked_movies: 0,
+      tracked_shows: 0,
+      watched_movies: 0,
+      watched_episodes: 0,
+      watch_time_minutes: 0,
+    });
+    expect(body.genres).toEqual([]);
+    expect(body.monthly).toHaveLength(12);
+    expect(body.monthly[0]).toHaveProperty("month");
+    expect(body.monthly[0]).toHaveProperty("movies_watched");
+    expect(body.monthly[0]).toHaveProperty("episodes_watched");
+    expect(body.shows_by_status).toMatchObject({
+      watching: 0,
+      completed: 0,
+      plan_to_watch: 0,
+      on_hold: 0,
+      dropped: 0,
+    });
+    expect(body.friends).toEqual([]);
+  });
+
+  it("returns mutual followers in friends list", async () => {
+    const aliceId = await createUser("alice", "hash", "Alice");
+    await follow(aliceId, userId);
+    await follow(userId, aliceId);
+
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    const body = await res.json();
+    expect(body.friends).toHaveLength(1);
+    expect(body.friends[0].username).toBe("alice");
+  });
+
+  it("omits dossier fields when viewing a private profile", async () => {
+    const privateId = await createUser("secret", "hash", "Secret User");
+    await updateProfilePublic(privateId, "private");
+
+    const res = await app.request("/user/secret");
+    const body = await res.json();
+    expect(body.show_watchlist).toBe(false);
+    expect(body.genres).toEqual([]);
+    expect(body.monthly).toEqual([]);
+    expect(body.friends).toEqual([]);
+    expect(body.shows_by_status.watching).toBe(0);
+  });
+});

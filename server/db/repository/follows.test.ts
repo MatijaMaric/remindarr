@@ -10,6 +10,7 @@ import {
   areMutualFollowers,
   getFollowerCount,
   getFollowingCount,
+  getMutualFollowers,
 } from "./follows";
 
 let userA: string;
@@ -125,6 +126,35 @@ describe("areMutualFollowers", () => {
 
   it("returns false when neither follows the other", async () => {
     expect(await areMutualFollowers(userA, userB)).toBe(false);
+  });
+});
+
+describe("getMutualFollowers", () => {
+  it("returns users who both follow and are followed by the subject", async () => {
+    await follow(userA, userB); // A follows B
+    await follow(userB, userA); // B follows A — mutual
+    await follow(userA, userC); // A follows C (not mutual)
+
+    const mutual = await getMutualFollowers(userA);
+    expect(mutual).toHaveLength(1);
+    expect(mutual[0]!.username).toBe("bob");
+  });
+
+  it("returns empty list when no mutual followers exist", async () => {
+    await follow(userA, userB);
+    const mutual = await getMutualFollowers(userA);
+    expect(mutual).toHaveLength(0);
+  });
+
+  it("respects the limit argument", async () => {
+    const userD = await createUser("dave", "hash");
+    const userE = await createUser("erin", "hash");
+    for (const other of [userB, userC, userD, userE]) {
+      await follow(userA, other);
+      await follow(other, userA);
+    }
+    const mutual = await getMutualFollowers(userA, 2);
+    expect(mutual).toHaveLength(2);
   });
 });
 

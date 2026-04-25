@@ -281,7 +281,10 @@
   },
   "userProfile": {
     "memberSince": "Member since {{date}}",
+    "memberSinceKicker": "Member · since {{date}}",
     "editSettings": "Settings",
+    "editProfile": "Edit profile",
+    "share": "Share",
     "trackedTitles": "Tracked",
     "watchedMovies": "Movies Watched",
     "watchedEpisodes": "Episodes Watched",
@@ -297,7 +300,41 @@
     "showsCompleted": "Shows Completed",
     "episodesWatched": "Episodes Watched",
     "followers": "followers",
-    "following": "following"
+    "following": "following",
+    "dossier": {
+      "bio": "Bio",
+      "bioEmptyOwn": "Add a short bio to tell people what you're into.",
+      "bioEmpty": "No bio yet.",
+      "bioSave": "Save",
+      "bioCancel": "Cancel",
+      "bioPlaceholder": "Tracking 42 shows. Bad at finishing them.",
+      "bioCharCount": "{{count}}/280",
+      "progress": "Progress",
+      "watchTime": "Watch time",
+      "watchTimeSub": "movies only",
+      "topGenres": "Top genres",
+      "friendsCount": "Friends · {{count}}",
+      "seeAll": "See all",
+      "followedSince": "following since {{date}}",
+      "activity12m": "12-month activity",
+      "activitySummary": "{{episodes}} episodes · {{movies}} movies",
+      "legendEpisodes": "Episodes",
+      "legendMovies": "Movies",
+      "tabWatching": "Watching",
+      "tabCompleted": "Completed",
+      "tabPlanToWatch": "Plan to watch",
+      "tabOnHold": "On hold",
+      "tabMovies": "Movies",
+      "emptyTab": "Nothing here yet.",
+      "status": {
+        "watching": "Watching",
+        "caughtUp": "Caught up",
+        "completed": "Completed",
+        "onHold": "On hold",
+        "planToWatch": "Plan to watch",
+        "dropped": "Dropped"
+      }
+    }
   },
   "settings": {
     "title": "Settings",
