@@ -1,4 +1,5 @@
 import { traceHttp } from "../tracing";
+import { formatProviderNames, groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 const TELEGRAM_API = "https://api.telegram.org";
@@ -57,24 +58,19 @@ export class TelegramProvider implements NotificationProvider {
 
     const lines: string[] = [`<b>📺 Remindarr — ${parts.join(" and ")} today (${date})</b>`, ""];
 
-    const showMap = new Map<string, typeof episodes>();
-    for (const ep of episodes) {
-      const existing = showMap.get(ep.showTitle) ?? [];
-      existing.push(ep);
-      showMap.set(ep.showTitle, existing);
-    }
+    const showMap = groupEpisodesByShow(episodes);
 
     for (const [showTitle, eps] of showMap) {
       const codes = eps.map(
         (ep) => `S${String(ep.seasonNumber).padStart(2, "0")}E${String(ep.episodeNumber).padStart(2, "0")}`
       );
-      const providers = [...new Set(eps[0].offers.map((o) => o.providerName))].join(", ");
+      const providers = formatProviderNames(eps[0].offers);
       const providerStr = providers ? ` <i>(${providers})</i>` : "";
       lines.push(`🎬 <b>${escapeHtml(showTitle)}</b> — ${codes.join(", ")}${providerStr}`);
     }
 
     for (const movie of movies) {
-      const providers = [...new Set(movie.offers.map((o) => o.providerName))].join(", ");
+      const providers = formatProviderNames(movie.offers);
       const providerStr = providers ? ` <i>(${providers})</i>` : "";
       const label = movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title;
       lines.push(`🎥 <b>${escapeHtml(label)}</b>${providerStr}`);
