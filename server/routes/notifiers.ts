@@ -270,12 +270,13 @@ app.post("/:id/test", async (c) => {
   try {
     await providerImpl.send(notifier.config, content);
     return c.json({ success: true, message: "Test notification sent" });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (!(err instanceof SubscriptionExpiredError)) {
       Sentry.captureException(err);
     }
+    const message = err instanceof Error ? err.message : String(err);
     return c.json(
-      { success: false, message: err.message || "Failed to send" },
+      { success: false, message: message || "Failed to send" },
     );
   }
 });

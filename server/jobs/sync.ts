@@ -19,6 +19,7 @@ import { migrateOffers } from "./migrate-offers";
 import { enrichTitleDeepLinks } from "../streaming-availability/enrich";
 import { RateLimitError } from "../streaming-availability/types";
 import { getTitlesNeedingSaEnrichment } from "../db/repository";
+import { syncEachWithDelay } from "../tmdb/sync-utils";
 
 export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -112,8 +113,11 @@ export function registerSyncJobs() {
     log.info("Starting deep link sync", { count: titleRows.length });
     let enriched = 0;
     let processed = 0;
-    for (const t of titleRows) {
-      try {
+    await syncEachWithDelay(titleRows, {
+      delayMs: 500,
+      label: "sync-deep-links",
+      log,
+      onItem: async (t) => {
         const count = await enrichTitleDeepLinks(
           t.id,
           Number(t.tmdbId),
@@ -121,15 +125,15 @@ export function registerSyncJobs() {
         );
         enriched += count;
         processed++;
-      } catch (err) {
+      },
+      onError: (err, t) => {
         if (err instanceof RateLimitError) {
           log.warn("SA rate limit hit, stopping early", { processed, enriched });
-          break;
+          return "stop";
         }
         log.error("SA enrichment failed", { titleId: t.id, err });
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+      },
+    });
     log.info("Deep link sync complete", { processed, enriched });
   });
 
