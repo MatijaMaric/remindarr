@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { logger } from "../logger";
+import { groupEpisodesByShow } from "./format";
 import { getVapidKeys } from "./vapid";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -76,12 +77,7 @@ export class WebPushProvider implements NotificationProvider {
 
     const lines: string[] = [];
     // Group episodes by show
-    const showMap = new Map<string, typeof episodes>();
-    for (const ep of episodes) {
-      const existing = showMap.get(ep.showTitle) || [];
-      existing.push(ep);
-      showMap.set(ep.showTitle, existing);
-    }
+    const showMap = groupEpisodesByShow(episodes);
 
     for (const [showTitle, eps] of showMap) {
       const codes = eps.map(
