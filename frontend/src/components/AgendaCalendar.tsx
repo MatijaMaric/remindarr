@@ -217,17 +217,19 @@ interface AgendaMonth {
   episodes: Episode[];
 }
 
-export default function AgendaCalendar({
-  viewMode,
-  onViewModeChange,
-  searchParams,
-  setSearchParams,
-}: {
+interface AgendaCalendarProps {
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
-}) {
+}
+
+function AgendaCalendarImpl({
+  viewMode,
+  onViewModeChange,
+  searchParams,
+  setSearchParams,
+}: AgendaCalendarProps) {
   const [typeFilter, setTypeFilter] = useCalendarParam(
     searchParams,
     setSearchParams,
@@ -530,17 +532,51 @@ export default function AgendaCalendar({
   const isEpisodeReleased = (ep: Episode) =>
     ep.air_date ? ep.air_date <= today : false;
 
-  // Condense empty day ranges
+  // Condense empty day ranges + precompute per-day projections so the render
+  // loop doesn't re-run filter/map/groupByShow/toLocaleDateString every time
+  // an unrelated piece of parent state (active date sidebar, popover open, etc.)
+  // changes. The result is regenerated only when the underlying day data does.
   const condensedEntries = useMemo(() => {
     const entries = Array.from(agendaItems.entries());
     const result: (
-      | { type: "day"; dateKey: string; items: CalendarItem[] }
+      | {
+          type: "day";
+          dateKey: string;
+          items: CalendarItem[];
+          dateLabel: string;
+          dayEpisodes: Episode[];
+          dayTitles: Title[];
+          episodesByShow: Map<string, Episode[]>;
+        }
       | { type: "gap"; from: string; to: string }
     )[] = [];
 
     for (let i = 0; i < entries.length; i++) {
       const [dateKey, items] = entries[i];
-      result.push({ type: "day", dateKey, items });
+      const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString(
+        undefined,
+        { weekday: "short", month: "short", day: "numeric" }
+      );
+      const dayEpisodes = items
+        .filter(
+          (i): i is CalendarItem & { type: "episode" } => i.type === "episode"
+        )
+        .map((i) => i.data);
+      const dayTitles = items
+        .filter(
+          (i): i is CalendarItem & { type: "title" } => i.type === "title"
+        )
+        .map((i) => i.data);
+      const episodesByShow = groupByShow(dayEpisodes);
+      result.push({
+        type: "day",
+        dateKey,
+        items,
+        dateLabel,
+        dayEpisodes,
+        dayTitles,
+        episodesByShow,
+      });
 
       // Check gap to next entry
       if (i < entries.length - 1) {
@@ -730,29 +766,15 @@ export default function AgendaCalendar({
                     );
                   }
 
-                  const { dateKey, items } = entry;
+                  const {
+                    dateKey,
+                    items,
+                    dateLabel,
+                    dayEpisodes,
+                    dayTitles,
+                    episodesByShow,
+                  } = entry;
                   const isDateToday = dateKey === today;
-                  const dateLabel = new Date(
-                    dateKey + "T00:00:00"
-                  ).toLocaleDateString(undefined, {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  });
-
-                  const dayEpisodes = items
-                    .filter(
-                      (i): i is CalendarItem & { type: "episode" } =>
-                        i.type === "episode"
-                    )
-                    .map((i) => i.data);
-                  const dayTitles = items
-                    .filter(
-                      (i): i is CalendarItem & { type: "title" } =>
-                        i.type === "title"
-                    )
-                    .map((i) => i.data);
-                  const episodesByShow = groupByShow(dayEpisodes);
 
                   return (
                     <div
@@ -874,3 +896,11 @@ export default function AgendaCalendar({
     </div>
   );
 }
+
+// React.memo with default shallow equality. CalendarPage re-renders frequently
+// as URL search params and other page state change; skipping the agenda's
+// expensive month/agenda-item recomputations when none of its props changed
+// is the primary win. `searchParams` is the URLSearchParams instance returned
+// by react-router, which keeps a stable reference across unrelated re-renders.
+const AgendaCalendar = memo(AgendaCalendarImpl);
+export default AgendaCalendar;

@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { memo, useRef, useState, useCallback, useEffect } from "react";
 
 interface ScrollableRowProps {
   children: React.ReactNode;
@@ -8,7 +8,7 @@ interface ScrollableRowProps {
   scrollSnap?: boolean;
 }
 
-export default function ScrollableRow({
+function ScrollableRowImpl({
   children,
   className,
   scrollSnap = false,
@@ -37,7 +37,7 @@ export default function ScrollableRow({
     };
   }, [updateScrollButtons]);
 
-  const scroll = (direction: "left" | "right") => {
+  const scroll = useCallback((direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
     const amount = el.clientWidth;
@@ -45,7 +45,7 @@ export default function ScrollableRow({
       left: direction === "left" ? -amount : amount,
       behavior: "smooth",
     });
-  };
+  }, []);
 
   return (
     <div className="relative group/scroll">
@@ -99,3 +99,11 @@ export default function ScrollableRow({
     </div>
   );
 }
+
+// React.memo with default shallow equality. The biggest win is when callers
+// stabilize `children` (via useMemo) — we then skip the entire scroll-button
+// state machine on unrelated parent re-renders. Even without stabilized
+// children, the cost of a shallow prop check is negligible compared to
+// re-running the effects.
+const ScrollableRow = memo(ScrollableRowImpl);
+export default ScrollableRow;
