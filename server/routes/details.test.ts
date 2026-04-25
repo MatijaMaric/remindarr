@@ -49,7 +49,7 @@ function getSpy(name: keyof typeof tmdbClient) {
 
 describe("GET /details/movie/:id", () => {
   it("returns title from DB without TMDB fallback", async () => {
-    upsertTitles([makeParsedTitle({ id: "movie-123", title: "DB Movie", tmdbId: "123" })]);
+    await upsertTitles([makeParsedTitle({ id: "movie-123", title: "DB Movie", tmdbId: "123" })]);
 
     const res = await app.request("/details/movie/movie-123");
     expect(res.status).toBe(200);
@@ -88,7 +88,7 @@ describe("GET /details/movie/:id", () => {
 
 describe("GET /details/show/:id", () => {
   it("returns title from DB without TMDB fallback", async () => {
-    upsertTitles([makeParsedTitle({ id: "tv-456", objectType: "SHOW", title: "DB Show", tmdbId: "456" })]);
+    await upsertTitles([makeParsedTitle({ id: "tv-456", objectType: "SHOW", title: "DB Show", tmdbId: "456" })]);
 
     const res = await app.request("/details/show/tv-456");
     expect(res.status).toBe(200);
@@ -136,7 +136,7 @@ describe("GET /details/show/:id/season/:season", () => {
   });
 
   it("returns 400 for non-numeric season param", async () => {
-    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
 
     const res = await app.request("/details/show/tv-555/season/abc");
     expect(res.status).toBe(400);
@@ -145,7 +145,7 @@ describe("GET /details/show/:id/season/:season", () => {
   });
 
   it("includes seasons array from show details", async () => {
-    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
 
     (tmdbClient.fetchShowFullDetails as any).mockResolvedValueOnce({
       seasons: [
@@ -167,7 +167,7 @@ describe("GET /details/show/:id/season/:season", () => {
   });
 
   it("returns empty seasons array when show details fetch fails", async () => {
-    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
 
     (tmdbClient.fetchShowFullDetails as any).mockRejectedValueOnce(new Error("TMDB error"));
 
@@ -181,7 +181,7 @@ describe("GET /details/show/:id/season/:season", () => {
 
 describe("GET /details/show/:id/season/:season/episode/:episode", () => {
   it("returns 400 for non-numeric season param", async () => {
-    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
 
     const res = await app.request("/details/show/tv-555/season/abc/episode/1");
     expect(res.status).toBe(400);
@@ -190,7 +190,7 @@ describe("GET /details/show/:id/season/:season/episode/:episode", () => {
   });
 
   it("returns 400 for non-numeric episode param", async () => {
-    upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
 
     const res = await app.request("/details/show/tv-555/season/1/episode/abc");
     expect(res.status).toBe(400);
