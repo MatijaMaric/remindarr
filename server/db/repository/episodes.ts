@@ -314,6 +314,11 @@ export async function unwatchEpisode(episodeId: number, userId: string) {
   });
 }
 
+// Cloudflare D1 caps bound parameters per statement at 100. With 3 columns
+// per row (episode_id, user_id, watched_at) a chunk of 30 rows uses 90 params,
+// leaving headroom for future columns.
+const BULK_WATCHED_CHUNK_SIZE = 30;
+
 export async function watchEpisodesBulk(
   episodeIds: number[],
   userId: string,
@@ -322,15 +327,18 @@ export async function watchEpisodesBulk(
   return traceDbQuery("watchEpisodesBulk", async () => {
     if (episodeIds.length === 0) return;
     const db = getDb();
-    await db.insert(watchedEpisodes)
-      .values(
-        episodeIds.map((episodeId) => {
-          const watchedAt = watchedAtByEpisodeId?.get(episodeId);
-          return watchedAt ? { episodeId, userId, watchedAt } : { episodeId, userId };
-        })
-      )
-      .onConflictDoNothing()
-      .run();
+    for (let i = 0; i < episodeIds.length; i += BULK_WATCHED_CHUNK_SIZE) {
+      const chunk = episodeIds.slice(i, i + BULK_WATCHED_CHUNK_SIZE);
+      await db.insert(watchedEpisodes)
+        .values(
+          chunk.map((episodeId) => {
+            const watchedAt = watchedAtByEpisodeId?.get(episodeId);
+            return watchedAt ? { episodeId, userId, watchedAt } : { episodeId, userId };
+          })
+        )
+        .onConflictDoNothing()
+        .run();
+    }
   });
 }
 
@@ -338,9 +346,12 @@ export async function unwatchEpisodesBulk(episodeIds: number[], userId: string) 
   return traceDbQuery("unwatchEpisodesBulk", async () => {
     if (episodeIds.length === 0) return;
     const db = getDb();
-    await db.delete(watchedEpisodes)
-      .where(and(eq(watchedEpisodes.userId, userId), inArray(watchedEpisodes.episodeId, episodeIds)))
-      .run();
+    for (let i = 0; i < episodeIds.length; i += BULK_WATCHED_CHUNK_SIZE) {
+      const chunk = episodeIds.slice(i, i + BULK_WATCHED_CHUNK_SIZE);
+      await db.delete(watchedEpisodes)
+        .where(and(eq(watchedEpisodes.userId, userId), inArray(watchedEpisodes.episodeId, chunk)))
+        .run();
+    }
   });
 }
 
