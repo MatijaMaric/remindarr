@@ -23,6 +23,15 @@ interface UndoAction {
   wasCaughtUp: boolean;
 }
 
+function adjustWatchedCount(episodes: Episode[], delta: number): Episode[] {
+  return episodes.map((ep) => {
+    if (ep.watched_episodes_count == null) return ep;
+    const max = ep.total_episodes ?? Number.POSITIVE_INFINITY;
+    const next = Math.max(0, Math.min(max, ep.watched_episodes_count + delta));
+    return { ...ep, watched_episodes_count: next };
+  });
+}
+
 export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
   const grouped = new Map<string, Episode[]>();
   for (const ep of episodes) {
@@ -213,11 +222,12 @@ export default function ReelsPage() {
         const ep = c.episodes[c.currentIndex];
         if (!ep) return c;
 
+        const bumpedEpisodes = adjustWatchedCount(c.episodes, 1);
         const nextIndex = c.currentIndex + 1;
         if (nextIndex >= c.episodes.length) {
-          return { ...c, caughtUp: true };
+          return { ...c, episodes: bumpedEpisodes, caughtUp: true };
         }
-        return { ...c, currentIndex: nextIndex };
+        return { ...c, episodes: bumpedEpisodes, currentIndex: nextIndex };
       });
     });
 
@@ -234,10 +244,11 @@ export default function ReelsPage() {
       setCards((prev) =>
         prev.map((c) => {
           if (c.titleId !== titleId) return c;
+          const restoredEpisodes = adjustWatchedCount(c.episodes, -1);
           if (c.caughtUp) {
-            return { ...c, caughtUp: false, currentIndex: c.episodes.length - 1 };
+            return { ...c, episodes: restoredEpisodes, caughtUp: false, currentIndex: c.episodes.length - 1 };
           }
-          return { ...c, currentIndex: Math.max(0, c.currentIndex - 1) };
+          return { ...c, episodes: restoredEpisodes, currentIndex: Math.max(0, c.currentIndex - 1) };
         })
       );
       setUndoAction(null);
@@ -274,6 +285,7 @@ export default function ReelsPage() {
         if (c.titleId !== undoAction.titleId) return c;
         return {
           ...c,
+          episodes: adjustWatchedCount(c.episodes, -1),
           currentIndex: undoAction.previousIndex,
           caughtUp: false,
         };
