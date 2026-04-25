@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags } from "../db/repository";
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
@@ -8,6 +9,7 @@ import { jobs } from "../db/schema";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok } from "./response";
+import { zValidator } from "../lib/validator";
 
 /** Insert a job using the platform-agnostic Drizzle db (avoids bun:sqlite import). */
 async function enqueueJobDrizzle(name: string, data?: Record<string, unknown>) {
@@ -37,46 +39,92 @@ app.get("/", async (c) => {
   });
 });
 
-interface FrontendOffer {
-  provider_id: number;
-  provider_name: string;
-  provider_technical_name: string;
-  provider_icon_url: string;
-  monetization_type: string;
-  presentation_type: string;
-  price_value: number | null;
-  price_currency: string | null;
-  url: string;
-  available_to: string | null;
-}
+const VALID_USER_STATUSES = ["plan_to_watch", "watching", "on_hold", "dropped", "completed"] as const;
+const VALID_NOTIFICATION_MODES = ["all", "premieres_only", "none"] as const;
 
-interface FrontendTitle {
-  id: string;
-  object_type: string;
-  title: string;
-  original_title?: string | null;
-  release_year?: number | null;
-  release_date?: string | null;
-  runtime_minutes?: number | null;
-  short_description?: string | null;
-  genres?: string[];
-  original_language?: string | null;
-  imdb_id?: string | null;
-  tmdb_id?: string | null;
-  poster_url?: string | null;
-  age_certification?: string | null;
-  tmdb_url?: string | null;
-  imdb_score?: number | null;
-  imdb_votes?: number | null;
-  tmdb_score?: number | null;
-  offers?: FrontendOffer[];
-}
+const frontendOfferSchema = z.object({
+  provider_id: z.number(),
+  provider_name: z.string(),
+  provider_technical_name: z.string(),
+  provider_icon_url: z.string(),
+  monetization_type: z.string(),
+  presentation_type: z.string(),
+  price_value: z.number().nullable(),
+  price_currency: z.string().nullable(),
+  url: z.string(),
+  available_to: z.string().nullable(),
+});
+
+const frontendTitleSchema = z.object({
+  id: z.string(),
+  object_type: z.enum(["MOVIE", "SHOW"]),
+  title: z.string(),
+  original_title: z.string().nullish(),
+  release_year: z.number().nullish(),
+  release_date: z.string().nullish(),
+  runtime_minutes: z.number().nullish(),
+  short_description: z.string().nullish(),
+  genres: z.array(z.string()).optional(),
+  original_language: z.string().nullish(),
+  imdb_id: z.string().nullish(),
+  tmdb_id: z.string().nullish(),
+  poster_url: z.string().nullish(),
+  age_certification: z.string().nullish(),
+  tmdb_url: z.string().nullish(),
+  imdb_score: z.number().nullish(),
+  imdb_votes: z.number().nullish(),
+  tmdb_score: z.number().nullish(),
+  offers: z.array(frontendOfferSchema).optional(),
+});
+
+type FrontendOffer = z.infer<typeof frontendOfferSchema>;
+type FrontendTitle = z.infer<typeof frontendTitleSchema>;
+
+const trackPostBodySchema = z.object({
+  titleData: frontendTitleSchema.optional(),
+  notes: z.string().nullish(),
+});
+
+const importBodySchema = z.object({
+  titles: z.array(z.unknown()),
+});
+
+const profileVisibilitySchema = z
+  .object({
+    visibility: z.enum(["public", "friends_only", "private"]).optional(),
+    public: z.boolean().optional(),
+  })
+  .refine((v) => v.visibility !== undefined || v.public !== undefined, {
+    message: "Either 'visibility' or 'public' must be provided",
+  });
+
+const visibilitySchema = z.object({
+  public: z.boolean(),
+});
+
+const statusSchema = z.object({
+  status: z.enum(VALID_USER_STATUSES).nullable(),
+});
+
+const notesSchema = z.object({
+  notes: z.string().max(500).nullable(),
+});
+
+const tagsSchema = z.object({
+  tags: z
+    .array(z.string().refine((t) => t.trim().length <= 30, { message: "Each tag must be 30 characters or fewer" }))
+    .max(10, "Maximum 10 tags allowed"),
+});
+
+const notificationModeSchema = z.object({
+  mode: z.enum(VALID_NOTIFICATION_MODES).nullable(),
+});
 
 // Convert frontend Title (snake_case) to ParsedTitle (camelCase) for upsert
 function toParsedTitle(t: FrontendTitle): ParsedTitle {
   return {
     id: t.id,
-    objectType: t.object_type as "MOVIE" | "SHOW",
+    objectType: t.object_type,
     title: t.title,
     originalTitle: t.original_title ?? null,
     releaseYear: t.release_year ?? null,
@@ -148,24 +196,37 @@ app.get("/export", async (c) => {
   return c.json(exportData);
 });
 
-app.post("/import", async (c) => {
+// Per-row shape is intentionally validated leniently — bad rows are skipped,
+// not rejected. Only the wrapping `{ titles: [...] }` shape is strict so
+// callers get a clear 400 when posting the wrong envelope.
+app.post("/import", zValidator("json", importBodySchema), async (c) => {
   const user = c.get("user")!;
-
-  let data: any;
-  try {
-    data = await c.req.json();
-  } catch {
-    return c.json({ error: "Invalid JSON" }, 400);
-  }
-
-  if (!data || typeof data !== "object" || !Array.isArray(data.titles)) {
-    return c.json({ error: "Invalid export format: expected { titles: [...] }" }, 400);
-  }
+  const data = c.req.valid("json");
 
   let imported = 0;
   let skipped = 0;
 
-  for (const item of data.titles) {
+  for (const raw of data.titles) {
+    const item = (raw ?? {}) as {
+      id?: string;
+      title?: string;
+      object_type?: "MOVIE" | "SHOW";
+      original_title?: string | null;
+      release_year?: number | null;
+      release_date?: string | null;
+      runtime_minutes?: number | null;
+      short_description?: string | null;
+      genres?: string[];
+      original_language?: string | null;
+      imdb_id?: string | null;
+      tmdb_id?: string | null;
+      poster_url?: string | null;
+      age_certification?: string | null;
+      tmdb_url?: string | null;
+      notes?: string | null;
+      is_watched?: boolean;
+      watched_episodes?: Array<{ season: number; episode: number }>;
+    };
     if (!item.id || !item.title || !item.object_type) {
       skipped++;
       continue;
@@ -222,7 +283,7 @@ app.post("/import", async (c) => {
           jobData.userId = user.id;
         }
         await enqueueJobDrizzle("sync-show-episodes", jobData);
-      } else if (hasWatched) {
+      } else if (hasWatched && item.watched_episodes) {
         const episodeIds = await getEpisodeIdsBySE(item.id, item.watched_episodes);
         if (episodeIds.length > 0) {
           await watchEpisodesBulk(episodeIds, user.id);
@@ -239,17 +300,28 @@ app.post("/import", async (c) => {
   return c.json({ success: true, imported, skipped });
 });
 
+// `trackPostBodySchema` is `.optional()` per-field, so an empty body `{}` is
+// valid. We safe-parse against an empty-object fallback so a totally absent
+// body (no Content-Type, no payload) is still accepted.
 app.post("/:id", async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("id");
-  const body = await c.req.json().catch(() => ({}));
+  const raw = await c.req.json().catch(() => ({}));
+  const parsed = trackPostBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      400,
+    );
+  }
+  const body = parsed.data;
 
   // If title data is provided (e.g. from search results), upsert it first
   if (body.titleData) {
     await upsertTitles([toParsedTitle(body.titleData)]);
   }
 
-  await trackTitle(titleId, user.id, body.notes);
+  await trackTitle(titleId, user.id, body.notes ?? undefined);
 
   // Queue episode sync for shows with a TMDB ID
   if (CONFIG.TMDB_API_KEY) {
@@ -263,84 +335,62 @@ app.post("/:id", async (c) => {
   return ok(c, { message: `Tracking ${titleId}` });
 });
 
-app.patch("/profile-visibility", async (c) => {
-  const user = c.get("user")!;
-  const body = await c.req.json<{ public?: boolean; visibility?: string }>();
-  if (body.visibility && ["public", "friends_only", "private"].includes(body.visibility)) {
-    await updateProfilePublic(user.id, body.visibility as "public" | "friends_only" | "private");
-  } else if (body.public !== undefined) {
-    await updateProfilePublic(user.id, body.public);
-  }
-  return ok(c, { message: "Profile visibility updated" });
-});
+app.patch(
+  "/profile-visibility",
+  zValidator("json", profileVisibilitySchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const body = c.req.valid("json");
+    if (body.visibility) {
+      await updateProfilePublic(user.id, body.visibility);
+    } else if (body.public !== undefined) {
+      await updateProfilePublic(user.id, body.public);
+    }
+    return ok(c, { message: "Profile visibility updated" });
+  },
+);
 
-app.patch("/visibility", async (c) => {
+app.patch("/visibility", zValidator("json", visibilitySchema), async (c) => {
   const user = c.get("user")!;
-  const body = await c.req.json<{ public: boolean }>();
-  await updateAllTrackedVisibility(user.id, body.public);
+  const { public: isPublic } = c.req.valid("json");
+  await updateAllTrackedVisibility(user.id, isPublic);
   return ok(c, { message: "Visibility updated" });
 });
 
-app.patch("/:id/visibility", async (c) => {
+app.patch(
+  "/:id/visibility",
+  zValidator("json", visibilitySchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const titleId = c.req.param("id");
+    const { public: isPublic } = c.req.valid("json");
+    await updateTrackedVisibility(titleId, user.id, isPublic);
+    return ok(c, { message: "Visibility updated" });
+  },
+);
+
+app.patch("/:id/status", zValidator("json", statusSchema), async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("id");
-  const body = await c.req.json<{ public: boolean }>();
-  await updateTrackedVisibility(titleId, user.id, body.public);
-  return ok(c, { message: "Visibility updated" });
-});
-
-const VALID_USER_STATUSES = new Set<string>(["plan_to_watch", "watching", "on_hold", "dropped", "completed"]);
-
-app.patch("/:id/status", async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("id");
-  const body = await c.req.json<{ status: string | null }>();
-
-  if (body.status !== null && !VALID_USER_STATUSES.has(body.status)) {
-    return c.json({ error: "Invalid status value" }, 400);
-  }
-
-  await updateTrackedStatus(titleId, user.id, body.status as UserStatus | null);
+  const { status } = c.req.valid("json");
+  await updateTrackedStatus(titleId, user.id, status as UserStatus | null);
   return ok(c, { message: "Status updated" });
 });
 
-app.patch("/:id/notes", async (c) => {
+app.patch("/:id/notes", zValidator("json", notesSchema), async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("id");
-  const body = await c.req.json<{ notes: string | null }>().catch(() => null);
-  if (body === null || !("notes" in body)) {
-    return c.json({ error: "Missing notes field" }, 400);
-  }
-  if (body.notes !== null && typeof body.notes !== "string") {
-    return c.json({ error: "notes must be a string or null" }, 400);
-  }
-  if (body.notes !== null && body.notes.length > 500) {
-    return c.json({ error: "notes must be 500 characters or fewer" }, 400);
-  }
-  await updateTrackedNotes(titleId, user.id, body.notes);
+  const { notes } = c.req.valid("json");
+  await updateTrackedNotes(titleId, user.id, notes);
   return ok(c, { message: "Notes updated" });
 });
 
-app.patch("/:id/tags", async (c) => {
+app.patch("/:id/tags", zValidator("json", tagsSchema), async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("id");
-  const body = await c.req.json<{ tags: string[] }>().catch(() => null);
-  if (body === null || !Array.isArray(body.tags)) {
-    return c.json({ error: "tags must be an array" }, 400);
-  }
-  if (body.tags.length > 10) {
-    return c.json({ error: "Maximum 10 tags allowed" }, 400);
-  }
-  for (const tag of body.tags) {
-    if (typeof tag !== "string") {
-      return c.json({ error: "Each tag must be a string" }, 400);
-    }
-    if (tag.trim().length > 30) {
-      return c.json({ error: "Each tag must be 30 characters or fewer" }, 400);
-    }
-  }
+  const { tags } = c.req.valid("json");
   // Normalize: trim, lowercase, deduplicate
-  const normalized = [...new Set(body.tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0))];
+  const normalized = [...new Set(tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0))];
   await setTags(user.id, titleId, normalized);
   return ok(c, { message: "Tags updated" });
 });
@@ -352,19 +402,16 @@ app.delete("/:id", async (c) => {
   return ok(c, { message: `Untracked ${titleId}` });
 });
 
-const VALID_NOTIFICATION_MODES = new Set<string>(["all", "premieres_only", "none"]);
-
-app.patch("/:id/notification", async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("id");
-  const body = await c.req.json<{ mode: string | null }>();
-
-  if (body.mode !== null && !VALID_NOTIFICATION_MODES.has(body.mode)) {
-    return c.json({ error: "Invalid notification mode" }, 400);
-  }
-
-  await updateNotificationMode(titleId, user.id, body.mode as NotificationMode | null);
-  return ok(c, { message: "Notification mode updated" });
-});
+app.patch(
+  "/:id/notification",
+  zValidator("json", notificationModeSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const titleId = c.req.param("id");
+    const { mode } = c.req.valid("json");
+    await updateNotificationMode(titleId, user.id, mode as NotificationMode | null);
+    return ok(c, { message: "Notification mode updated" });
+  },
+);
 
 export default app;

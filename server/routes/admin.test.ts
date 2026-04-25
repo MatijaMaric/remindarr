@@ -301,6 +301,19 @@ describe("validation", () => {
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
+
+  it("rejects PUT /users/:id/ban with non-string reason", async () => {
+    const userId = await createUser("banzodcheck", "hash");
+    const res = await app.request(`/admin/users/${userId}/ban`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: 12345 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
 });
 
 describe("PUT /admin/users/:id/role", () => {

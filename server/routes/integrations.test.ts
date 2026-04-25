@@ -230,6 +230,63 @@ describe("DELETE /integrations/:id", () => {
   });
 });
 
+describe("validation", () => {
+  it("rejects POST /integrations with missing config", async () => {
+    const res = await app.request("/integrations", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ provider: "plex" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as any;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /integrations with missing plex config fields", async () => {
+    const res = await app.request("/integrations", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ provider: "plex", config: { plexToken: "x" } }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as any;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /integrations/plex/servers without authToken", async () => {
+    const res = await app.request("/integrations/plex/servers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as any;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PUT /integrations/:id with non-boolean enabled", async () => {
+    const createRes = await app.request("/integrations", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validPlexIntegration),
+    });
+    const { integration } = await createRes.json() as any;
+
+    const res = await app.request(`/integrations/${integration.id}`, {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ enabled: "yes" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as any;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});
+
 describe("POST /integrations/plex/pin", () => {
   it("creates a Plex PIN and returns authUrl", async () => {
     const pinSpy = spyOn(plexClient, "createPin").mockResolvedValue({

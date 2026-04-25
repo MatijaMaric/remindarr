@@ -5,14 +5,23 @@
  * Cron schedules are hardcoded to mirror wrangler.toml triggers — keep in sync.
  */
 import { Hono } from "hono";
+import { z } from "zod";
 import { eq, desc, sql, inArray } from "drizzle-orm";
 import { parseExpression } from "cron-parser";
 import { getDb, jobs } from "../db/schema";
 import { enqueueJobReturningId } from "../jobs/processor";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 import type { AppEnv } from "../types";
 
 const app = new Hono<AppEnv>();
+
+// Shape-only validation; the handler checks against `VALID_JOB_NAMES` for the
+// allowed CF cron names. This split mirrors the project pattern: zod for
+// shape, business logic in the handler.
+const jobNameParamSchema = z.object({
+  name: z.string().min(1),
+});
 
 /**
  * Static cron schedule map — mirrors wrangler.toml [triggers].crons and the
@@ -103,8 +112,8 @@ app.get("/", async (c) => {
 });
 
 // POST /api/jobs/:name — manually trigger a job
-app.post("/:name", async (c) => {
-  const name = c.req.param("name");
+app.post("/:name", zValidator("param", jobNameParamSchema), async (c) => {
+  const { name } = c.req.valid("param");
   if (!VALID_JOB_NAMES.has(name)) {
     return err(c, `Unknown job: ${name}`, 400);
   }

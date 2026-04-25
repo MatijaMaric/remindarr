@@ -1,18 +1,20 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import * as resolver from "../imdb/resolver";
 import { upsertTitles, trackTitle } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const app = new Hono<AppEnv>();
 
-app.post("/", async (c) => {
+const imdbBodySchema = z.object({
+  url: z.string().min(1),
+});
+
+app.post("/", zValidator("json", imdbBodySchema), async (c) => {
   const user = c.get("user")!;
-  const body = await c.req.json().catch(() => ({}));
-  const url = body.url;
-  if (!url) {
-    return err(c, "url is required");
-  }
+  const { url } = c.req.valid("json");
 
   const imdbId = resolver.extractImdbId(url);
   if (!imdbId) {
