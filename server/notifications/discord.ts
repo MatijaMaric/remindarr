@@ -1,5 +1,6 @@
 import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
+import { formatProviderNames, groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 const DISCORD_WEBHOOK_PATTERN =
@@ -80,15 +81,7 @@ export class DiscordProvider implements NotificationProvider {
     }
 
     // Episode embeds (grouped by show)
-    const showMap = new Map<
-      string,
-      typeof episodes
-    >();
-    for (const ep of episodes) {
-      const existing = showMap.get(ep.showTitle) || [];
-      existing.push(ep);
-      showMap.set(ep.showTitle, existing);
-    }
+    const showMap = groupEpisodesByShow(episodes);
 
     for (const [showTitle, eps] of showMap) {
       const episodeLines = eps.map((ep) => {
@@ -98,7 +91,7 @@ export class DiscordProvider implements NotificationProvider {
           : `**${code}**`;
       });
 
-      const providers = this.formatProviders(eps[0].offers);
+      const providers = formatProviderNames(eps[0].offers);
 
       const embed: any = {
         title: showTitle,
@@ -121,7 +114,7 @@ export class DiscordProvider implements NotificationProvider {
 
     // Movie embeds
     for (const movie of movies) {
-      const providers = this.formatProviders(movie.offers);
+      const providers = formatProviderNames(movie.offers);
       const embed: any = {
         title: movie.title,
         description: movie.releaseYear
@@ -160,12 +153,5 @@ export class DiscordProvider implements NotificationProvider {
 
     // Discord has a limit of 10 embeds per message
     return embeds.slice(0, 10);
-  }
-
-  private formatProviders(
-    offers: Array<{ providerName: string; providerIconUrl: string | null }>
-  ): string {
-    const unique = [...new Set(offers.map((o) => o.providerName))];
-    return unique.join(", ");
   }
 }

@@ -1,4 +1,5 @@
 import { traceHttp } from "../tracing";
+import { groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 export class WebhookProvider implements NotificationProvider {
@@ -53,12 +54,7 @@ export class WebhookProvider implements NotificationProvider {
     const { episodes, movies, date, streamingAlerts = [] } = content;
 
     const summaryLines: string[] = [];
-    const showMap = new Map<string, typeof episodes>();
-    for (const ep of episodes) {
-      const existing = showMap.get(ep.showTitle) ?? [];
-      existing.push(ep);
-      showMap.set(ep.showTitle, existing);
-    }
+    const showMap = groupEpisodesByShow(episodes);
     for (const [showTitle, eps] of showMap) {
       const codes = eps.map(
         (ep) => `S${String(ep.seasonNumber).padStart(2, "0")}E${String(ep.episodeNumber).padStart(2, "0")}`
