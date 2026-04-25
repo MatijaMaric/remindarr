@@ -216,6 +216,83 @@ describe("ReelsPage swipe to open season panel", () => {
   });
 });
 
+describe("ReelsPage progress bar updates after marking watched", () => {
+  const baseEpisode = {
+    ...sampleEpisode,
+    title_id: "show-progress",
+    show_title: "Progress Show",
+    total_episodes: 10,
+    watched_episodes_count: 5,
+  };
+  const ep1 = { ...baseEpisode, id: 501, season_number: 1, episode_number: 1 };
+  const ep2 = { ...baseEpisode, id: 502, season_number: 1, episode_number: 2 };
+
+  it("advances progress bar when episode is marked watched", async () => {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
+    );
+    mockWatchEpisode.mockImplementation(() => Promise.resolve());
+
+    render(<ReelsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Progress Show")).toBeDefined());
+    expect(screen.getByText("50% CAUGHT UP")).toBeDefined();
+    expect(screen.getByText("5 OF 10")).toBeDefined();
+
+    await act(async () => {
+      screen.getByText("Mark as Watched").click();
+    });
+
+    await waitFor(() => expect(screen.getByText("60% CAUGHT UP")).toBeDefined());
+    expect(screen.getByText("6 OF 10")).toBeDefined();
+  });
+
+  it("rewinds progress bar when undo is clicked", async () => {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
+    );
+    mockWatchEpisode.mockImplementation(() => Promise.resolve());
+    mockUnwatchEpisode.mockImplementation(() => Promise.resolve());
+
+    render(<ReelsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Progress Show")).toBeDefined());
+
+    await act(async () => {
+      screen.getByText("Mark as Watched").click();
+    });
+    await waitFor(() => expect(screen.getByText("60% CAUGHT UP")).toBeDefined());
+
+    await act(async () => {
+      screen.getByLabelText("Undo").click();
+    });
+
+    await waitFor(() => expect(screen.getByText("50% CAUGHT UP")).toBeDefined());
+    expect(screen.getByText("5 OF 10")).toBeDefined();
+  });
+
+  it("rewinds progress bar when watchEpisode API fails", async () => {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
+    );
+    mockWatchEpisode.mockImplementation(() =>
+      Promise.reject(new Error("Network error"))
+    );
+
+    render(<ReelsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Progress Show")).toBeDefined());
+
+    await act(async () => {
+      screen.getByText("Mark as Watched").click();
+    });
+
+    await waitFor(() => expect(screen.getByText("Network error")).toBeDefined());
+    expect(screen.getByText("50% CAUGHT UP")).toBeDefined();
+    expect(screen.getByText("5 OF 10")).toBeDefined();
+  });
+});
+
 describe("getFirstUnwatchedPerShow", () => {
   it("groups episodes by show and returns first unwatched per show", () => {
     const episodes = [
