@@ -7,6 +7,7 @@ import { titles, episodes, tracked } from "../db/schema";
 import { upsertEpisodes } from "../db/repository";
 import { fetchShowDetails, fetchSeasonEpisodes } from "./client";
 import { eq, and, count, isNotNull } from "drizzle-orm";
+import { syncEachWithDelay } from "./sync-utils";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -105,20 +106,21 @@ export async function syncEpisodes(): Promise<{ synced: number; shows: number }>
   let totalSynced = 0;
   let showsProcessed = 0;
 
-  for (const show of trackedShows) {
-    try {
+  await syncEachWithDelay(trackedShows, {
+    delayMs: CONFIG.EPISODE_SYNC_DELAY_MS,
+    label: "sync-episodes",
+    log,
+    onItem: async (show) => {
       const synced = await syncEpisodesForShow(show.id, show.tmdb_id, show.title);
       if (synced >= 0) {
         totalSynced += synced;
         showsProcessed++;
       }
-    } catch (err) {
+    },
+    onError: (err, show) => {
       log.error("Failed to sync show", { title: show.title, tmdbId: show.tmdb_id, err });
-    }
-
-    // Rate limit delay
-    await delay(CONFIG.EPISODE_SYNC_DELAY_MS);
-  }
+    },
+  });
 
   return { synced: totalSynced, shows: showsProcessed };
 }

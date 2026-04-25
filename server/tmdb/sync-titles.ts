@@ -17,10 +17,7 @@ import {
   parseDiscoverTv,
   type ParsedTitle,
 } from "./parser";
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { syncEachWithDelay } from "./sync-utils";
 
 function dateString(daysBack: number): string {
   const d = new Date();
@@ -53,17 +50,18 @@ export async function fetchNewReleases(options: {
       if (result.results.length === 0) break;
 
       // Fetch full details for each movie (includes watch providers)
-      for (const movie of result.results) {
-        try {
-          const details = await fetchMovieDetails(movie.id);
-          allTitles.push(parseMovieDetails(details));
-        } catch (err) {
+      const { results: parsed } = await syncEachWithDelay(result.results, {
+        delayMs: CONFIG.PAGE_DELAY_MS,
+        label: "sync-titles:movie",
+        log,
+        onItem: async (movie) => parseMovieDetails(await fetchMovieDetails(movie.id)),
+        onError: (err, movie) => {
           // Fallback to discover data without watch providers
           log.error("Failed to fetch movie details", { movieId: movie.id, err });
-          allTitles.push(parseDiscoverMovie(movie, movieGenres));
-        }
-        await delay(CONFIG.PAGE_DELAY_MS);
-      }
+          return { result: parseDiscoverMovie(movie, movieGenres) };
+        },
+      });
+      allTitles.push(...parsed);
 
       if (page >= result.total_pages) break;
     }
@@ -83,16 +81,17 @@ export async function fetchNewReleases(options: {
       if (result.results.length === 0) break;
 
       // Fetch full details for each show (includes watch providers)
-      for (const show of result.results) {
-        try {
-          const details = await fetchTvDetails(show.id);
-          allTitles.push(parseTvDetails(details));
-        } catch (err) {
+      const { results: parsed } = await syncEachWithDelay(result.results, {
+        delayMs: CONFIG.PAGE_DELAY_MS,
+        label: "sync-titles:show",
+        log,
+        onItem: async (show) => parseTvDetails(await fetchTvDetails(show.id)),
+        onError: (err, show) => {
           log.error("Failed to fetch TV details", { showId: show.id, err });
-          allTitles.push(parseDiscoverTv(show, tvGenres));
-        }
-        await delay(CONFIG.PAGE_DELAY_MS);
-      }
+          return { result: parseDiscoverTv(show, tvGenres) };
+        },
+      });
+      allTitles.push(...parsed);
 
       if (page >= result.total_pages) break;
     }
