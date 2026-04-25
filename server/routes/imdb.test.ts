@@ -95,7 +95,9 @@ describe("POST /imdb", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("url is required");
+    // Now handled by zod, returns standard validation error shape
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns 400 for invalid IMDB URL", async () => {
@@ -163,8 +165,6 @@ describe("POST /imdb", () => {
       body: "not json",
     });
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("url is required");
   });
 
   it("accepts raw IMDB ID", async () => {
@@ -182,5 +182,37 @@ describe("POST /imdb", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.title).toBeDefined();
+  });
+});
+
+describe("validation", () => {
+  it("rejects POST /imdb with empty url string", async () => {
+    const res = await app.request("/imdb", {
+      method: "POST",
+      headers: {
+        Cookie: userCookie,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url: "" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /imdb with non-string url", async () => {
+    const res = await app.request("/imdb", {
+      method: "POST",
+      headers: {
+        Cookie: userCookie,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url: 12345 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import type { AppEnv } from "../types";
 import {
   createIntegration,
@@ -12,7 +13,38 @@ import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
 import { enqueueJobReturningId } from "../jobs/processor";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 import Sentry from "../sentry";
+
+const plexServersSchema = z.object({
+  authToken: z.string().min(1),
+});
+
+// `provider` is currently always "plex" in the handler, but we keep it as a
+// string here so a future provider can be added without rejecting the request
+// at the validator boundary. The handler still returns 400 if the provider
+// is unknown.
+const plexConfigSchema = z.object({
+  plexToken: z.string().min(1),
+  serverUrl: z.string().min(1),
+  serverId: z.string().min(1),
+  serverName: z.string().min(1),
+  plexUsername: z.string().optional(),
+  syncMovies: z.boolean().optional(),
+  syncEpisodes: z.boolean().optional(),
+});
+
+const createIntegrationSchema = z.object({
+  provider: z.string().min(1),
+  name: z.string().optional(),
+  config: plexConfigSchema,
+});
+
+const updateIntegrationSchema = z.object({
+  name: z.string().optional(),
+  enabled: z.boolean().optional(),
+  config: plexConfigSchema.partial().optional(),
+});
 
 const app = new Hono<AppEnv>();
 
@@ -73,10 +105,8 @@ app.post("/plex/pin/:pinId", async (c) => {
 });
 
 // POST /plex/servers — refresh server list with an existing token
-app.post("/plex/servers", async (c) => {
-  const body = await c.req.json();
-  const { authToken } = body;
-  if (!authToken) return err(c, "authToken is required");
+app.post("/plex/servers", zValidator("json", plexServersSchema), async (c) => {
+  const { authToken } = c.req.valid("json");
 
   try {
     const servers = await getServers(authToken);
@@ -94,18 +124,15 @@ app.post("/plex/servers", async (c) => {
 });
 
 // POST / — save a new integration
-app.post("/", async (c) => {
+app.post("/", zValidator("json", createIntegrationSchema), async (c) => {
   const user = c.get("user")!;
-  const body = await c.req.json();
+  const { provider, name, config } = c.req.valid("json");
 
-  const { provider, name, config } = body;
-  if (!provider || !config) return err(c, "provider and config are required");
+  // Provider-level routing: only "plex" is supported today. Zod has already
+  // verified the Plex config shape, so we just need to gate the provider.
   if (provider !== "plex") return err(c, `Unknown provider: ${provider}`);
 
   const { plexToken, serverUrl, serverId, serverName, plexUsername } = config;
-  if (!plexToken || !serverUrl || !serverId || !serverName) {
-    return err(c, "Plex config requires: plexToken, serverUrl, serverId, serverName");
-  }
 
   const integrationName = name || serverName;
   const integrationConfig = {
@@ -128,23 +155,24 @@ app.post("/", async (c) => {
 });
 
 // PUT /:id — update integration
-app.put("/:id", async (c) => {
+app.put("/:id", zValidator("json", updateIntegrationSchema), async (c) => {
   const user = c.get("user")!;
   const id = c.req.param("id");
-  const body = await c.req.json();
+  const body = c.req.valid("json");
 
   const existing = await getIntegrationById(id, user.id);
   if (!existing) return err(c, "Integration not found", 404);
 
   const updates: Parameters<typeof updateIntegration>[2] = {};
   if (body.name !== undefined) updates.name = body.name;
-  if (body.enabled !== undefined) updates.enabled = Boolean(body.enabled);
+  if (body.enabled !== undefined) updates.enabled = body.enabled;
   if (body.config !== undefined) {
-    updates.config = {
+    const merged = {
       ...existing.config,
       ...body.config,
       serverUrl: (body.config.serverUrl ?? existing.config.serverUrl).replace(/\/$/, ""),
-    } as any;
+    };
+    updates.config = merged;
   }
 
   await updateIntegration(id, user.id, updates);

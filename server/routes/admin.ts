@@ -46,6 +46,10 @@ const updateRoleSchema = z.object({
   role: z.enum(["admin", "user"]),
 });
 
+const banUserSchema = z.object({
+  reason: z.string().nullish(),
+});
+
 /**
  * Callback to recreate the auth instance after OIDC settings change.
  * Registered by the entry point (index.ts on Bun, no-op on CF Workers).
@@ -175,6 +179,10 @@ app.put("/users/:id/role", zValidator("json", updateRoleSchema), async (c) => {
 });
 
 // PUT /api/admin/users/:id/ban  { reason?: string }
+//
+// `reason` is optional and can be omitted entirely (no body), so we safe-parse
+// against an empty-object fallback rather than wiring `zValidator` as
+// middleware (which would 400 on missing Content-Length).
 app.put("/users/:id/ban", async (c) => {
   const id = c.req.param("id");
   const actingUser = c.get("user")!;
@@ -186,8 +194,15 @@ app.put("/users/:id/ban", async (c) => {
   const target = await getUserById(id);
   if (!target) return c.json({ error: "User not found" }, 404);
 
-  const body = await c.req.json<{ reason?: string }>().catch(() => ({ reason: undefined }));
-  const reason = "reason" in body ? (body.reason ?? null) : null;
+  const raw = await c.req.json().catch(() => ({}));
+  const parsed = banUserSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      400,
+    );
+  }
+  const reason = parsed.data.reason ?? null;
   await banUser(id, reason, null);
   log.info("User banned", { targetUserId: id, reason, by: actingUser.id });
   return ok(c, { message: "User banned" });

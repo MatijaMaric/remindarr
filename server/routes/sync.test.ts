@@ -101,8 +101,6 @@ describe("POST /sync", () => {
     });
 
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toBe("Invalid JSON in request body");
     expect(syncTitles.fetchNewReleases).not.toHaveBeenCalled();
   });
 
@@ -156,5 +154,44 @@ describe("POST /sync", () => {
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBe("TMDB API down");
+  });
+});
+
+describe("validation", () => {
+  it("rejects POST /sync with non-numeric daysBack", async () => {
+    const res = await authedApp.request("/sync", {
+      method: "POST",
+      headers: { ...adminHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ daysBack: "many" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(syncTitles.fetchNewReleases).not.toHaveBeenCalled();
+  });
+
+  it("rejects POST /sync with invalid type enum", async () => {
+    const res = await authedApp.request("/sync", {
+      method: "POST",
+      headers: { ...adminHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "BOOK" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /sync with negative maxPages", async () => {
+    const res = await authedApp.request("/sync", {
+      method: "POST",
+      headers: { ...adminHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ maxPages: -5 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });

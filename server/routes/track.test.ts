@@ -1033,3 +1033,120 @@ describe("PATCH /track/:id/tags", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("validation", () => {
+  beforeEach(async () => {
+    await upsertTitles([makeParsedTitle()]);
+  });
+
+  it("rejects PATCH /track/:id/status with invalid enum", async () => {
+    const res = await app.request("/track/movie-123/status", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "wat" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PATCH /track/:id/notes with notes too long", async () => {
+    const res = await app.request("/track/movie-123/notes", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "x".repeat(501) }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PATCH /track/:id/notes with non-string notes", async () => {
+    const res = await app.request("/track/movie-123/notes", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: 123 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PATCH /track/:id/tags with too many tags", async () => {
+    const tags = Array.from({ length: 11 }, (_, i) => `tag${i}`);
+    const res = await app.request("/track/movie-123/tags", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ tags }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PATCH /track/:id/notification with invalid mode", async () => {
+    const res = await app.request("/track/movie-123/notification", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "always" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PATCH /track/:id/visibility without public field", async () => {
+    const res = await app.request("/track/movie-123/visibility", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects PATCH /track/profile-visibility with neither field", async () => {
+    const res = await app.request("/track/profile-visibility", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /track/import with non-array titles", async () => {
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titles: "not-an-array" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /track/:id with invalid object_type in titleData", async () => {
+    const res = await app.request("/track/movie-999", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleData: { id: "movie-999", object_type: "BOOK", title: "x" },
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});

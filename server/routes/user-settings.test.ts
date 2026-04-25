@@ -137,3 +137,77 @@ describe("PUT /user/settings/homepage-layout", () => {
     expect(body.homepage_layout[1].id).toBe("unwatched");
   });
 });
+
+describe("validation", () => {
+  it("returns 400 + issues array for non-array payload", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/homepage-layout", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ homepage_layout: "invalid" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues array for unknown section id", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/homepage-layout", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ homepage_layout: [{ id: "garbage", enabled: true }] }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues array for duplicate section ids", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/homepage-layout", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        homepage_layout: [
+          { id: "today", enabled: true },
+          { id: "today", enabled: false },
+        ],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues array when homepage_layout is missing", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/homepage-layout", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues array when enabled is not a boolean", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/homepage-layout", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        homepage_layout: [{ id: "today", enabled: "yes" }],
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});

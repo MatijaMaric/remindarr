@@ -1,20 +1,23 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import * as syncTitles from "../tmdb/sync-titles";
 import { upsertTitles } from "../db/repository";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const app = new Hono();
 
-app.post("/", async (c) => {
-  let body: Record<string, unknown>;
-  try {
-    body = await c.req.json();
-  } catch {
-    return err(c, "Invalid JSON in request body");
-  }
-  const daysBack = (body.daysBack as number) || 30;
-  const objectType = body.type as "MOVIE" | "SHOW" | undefined;
-  const maxPages = (body.maxPages as number) || 10;
+const syncBodySchema = z.object({
+  daysBack: z.number().int().positive().optional(),
+  type: z.enum(["MOVIE", "SHOW"]).optional(),
+  maxPages: z.number().int().positive().optional(),
+});
+
+app.post("/", zValidator("json", syncBodySchema), async (c) => {
+  const body = c.req.valid("json");
+  const daysBack = body.daysBack ?? 30;
+  const objectType = body.type;
+  const maxPages = body.maxPages ?? 10;
 
   try {
     const titles = await syncTitles.fetchNewReleases({ daysBack, objectType, maxPages });
