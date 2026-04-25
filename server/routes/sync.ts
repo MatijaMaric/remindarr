@@ -20,8 +20,9 @@ app.post("/", async (c) => {
     const titles = await syncTitles.fetchNewReleases({ daysBack, objectType, maxPages });
     const count = await upsertTitles(titles);
     return ok(c, { count, message: `Synced ${count} titles` });
-  } catch (e: any) {
-    return err(c, e.message, 500);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return err(c, message, 500);
   }
 });
 
