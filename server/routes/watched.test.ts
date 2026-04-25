@@ -256,7 +256,10 @@ describe("POST /watched/bulk", () => {
     expect(res.status).toBe(200);
   });
 
-  it("returns 400 for empty episodeIds", async () => {
+});
+
+describe("POST /watched/bulk validation", () => {
+  it("returns 400 with issues array for empty episodeIds", async () => {
     const app = makeAuthedApp();
     const res = await app.request("/watched/bulk", {
       method: "POST",
@@ -265,10 +268,12 @@ describe("POST /watched/bulk", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("episodeIds");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues.length).toBeGreaterThan(0);
   });
 
-  it("returns 400 when episodeIds is missing", async () => {
+  it("returns 400 with issues array when episodeIds is missing", async () => {
     const app = makeAuthedApp();
     const res = await app.request("/watched/bulk", {
       method: "POST",
@@ -277,7 +282,32 @@ describe("POST /watched/bulk", () => {
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("episodeIds");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 when watched is not a boolean", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [1], watched: "yes" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+  });
+
+  it("returns 400 when useAirDate is not a boolean", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [1], watched: true, useAirDate: "yes" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
   });
 });
 
@@ -371,6 +401,72 @@ describe("Watch history logging", () => {
     const row = db.prepare("SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?")
       .get(userId, "movie-hist-1") as { cnt: number };
     expect(row.cnt).toBe(1);
+  });
+
+  it("bulk watch with useAirDate sets watched_at to each episode's air date", async () => {
+    const date1 = "2024-01-15";
+    const date2 = "2024-02-20";
+
+    await upsertTitles([makeParsedTitle({ id: "show-air-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-air-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: date1, still_path: null },
+      { title_id: "show-air-1", season_number: 1, episode_number: 2, name: "Ep2", overview: null, air_date: date2, still_path: null },
+    ]);
+    const ep1Id = await getEpisodeId("show-air-1", 1, 1);
+    const ep2Id = await getEpisodeId("show-air-1", 1, 2);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [ep1Id, ep2Id], watched: true, useAirDate: true }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const ep1Row = db.prepare("SELECT watched_at FROM watched_episodes WHERE episode_id = ? AND user_id = ?")
+      .get(ep1Id, userId) as { watched_at: string };
+    const ep2Row = db.prepare("SELECT watched_at FROM watched_episodes WHERE episode_id = ? AND user_id = ?")
+      .get(ep2Id, userId) as { watched_at: string };
+    expect(ep1Row.watched_at).toBe(`${date1} 00:00:00`);
+    expect(ep2Row.watched_at).toBe(`${date2} 00:00:00`);
+
+    // Watch history should also use the air date
+    const histRow1 = db.prepare("SELECT watched_at FROM watch_history WHERE user_id = ? AND episode_id = ?")
+      .get(userId, ep1Id) as { watched_at: string };
+    const histRow2 = db.prepare("SELECT watched_at FROM watch_history WHERE user_id = ? AND episode_id = ?")
+      .get(userId, ep2Id) as { watched_at: string };
+    expect(histRow1.watched_at).toBe(`${date1} 00:00:00`);
+    expect(histRow2.watched_at).toBe(`${date2} 00:00:00`);
+  });
+
+  it("bulk watch without useAirDate uses current timestamp", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-air-2", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-air-2", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: yesterdayStr, still_path: null },
+    ]);
+    const ep1Id = await getEpisodeId("show-air-2", 1, 1);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: [ep1Id], watched: true }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const row = db.prepare("SELECT watched_at FROM watched_episodes WHERE episode_id = ? AND user_id = ?")
+      .get(ep1Id, userId) as { watched_at: string };
+    // Default is datetime('now') — should not equal the air date
+    expect(row.watched_at).not.toBe(`${yesterdayStr} 00:00:00`);
+    // Should be today's UTC date
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    expect(row.watched_at.startsWith(todayUtc)).toBe(true);
   });
 
   it("bulk watch logs history for each released episode", async () => {

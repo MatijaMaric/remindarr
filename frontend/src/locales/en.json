@@ -260,7 +260,16 @@
     "markAsUnwatched": "Mark as unwatched",
     "watched": "Watched",
     "watch": "Watch",
-    "markWatchedShort": "Mark watched"
+    "markWatchedShort": "Mark watched",
+    "markAllWatched": "Mark all watched",
+    "markAllUnwatched": "Mark all unwatched",
+    "markAllWatchedToday": "Mark all watched today",
+    "markAllWatchedOnAirDate": "Mark watched on air date",
+    "markAllWatchedOnAirDateHint": "Backdate to keep stats accurate",
+    "markAllWatchedOptions": "Mark all watched options",
+    "watchedError": "Failed to update watched status",
+    "moreActions": "More actions",
+    "viewDetails": "View details"
   },
   "calendar": {
     "all": "All",

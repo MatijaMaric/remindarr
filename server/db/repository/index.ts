@@ -33,6 +33,7 @@ export {
   getEpisodeTitleId,
   getEpisodeTitleIds,
   getReleasedEpisodeIds,
+  getReleasedEpisodesWithAirDate,
   watchEpisode,
   unwatchEpisode,
   watchEpisodesBulk,

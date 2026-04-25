@@ -225,7 +225,7 @@ describe("SeasonDetailPage", () => {
     await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
 
     // Should show "Mark all watched" since not all released are watched
-    const markAllBtn = screen.getByText(/mark all watched/i);
+    const markAllBtn = screen.getByRole("button", { name: "Mark all watched" });
     expect(markAllBtn).toBeDefined();
 
     await act(async () => {
@@ -233,7 +233,27 @@ describe("SeasonDetailPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true);
+      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true, undefined);
+    });
+  });
+
+  it("offers an option to mark all watched on air date", async () => {
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const optionsBtn = screen.getByRole("button", { name: /mark all watched options/i });
+    await act(async () => {
+      fireEvent.click(optionsBtn);
+    });
+
+    const airDateOption = screen.getByRole("menuitem", { name: /mark watched on air date/i });
+    await act(async () => {
+      fireEvent.click(airDateOption);
+    });
+
+    await waitFor(() => {
+      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true, { useAirDate: true });
     });
   });
 
