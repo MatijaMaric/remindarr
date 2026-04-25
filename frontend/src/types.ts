@@ -388,6 +388,8 @@ export interface StatsResponse {
     watched_movies: number;
     watched_episodes: number;
     watch_time_minutes: number;
+    watch_time_minutes_movies: number;
+    watch_time_minutes_shows: number;
   };
   genres: { genre: string; count: number }[];
   languages: { language: string; count: number }[];
@@ -501,6 +503,8 @@ export interface UserProfileOverview extends UserProfileStats {
   tracked_movies: number;
   tracked_shows: number;
   watch_time_minutes: number;
+  watch_time_minutes_movies: number;
+  watch_time_minutes_shows: number;
 }
 
 export interface ProfileGenreCount {

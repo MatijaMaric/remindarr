@@ -615,6 +615,8 @@ describe("GET /user/:username — extended dossier fields", () => {
       watched_movies: 0,
       watched_episodes: 0,
       watch_time_minutes: 0,
+      watch_time_minutes_movies: 0,
+      watch_time_minutes_shows: 0,
     });
     expect(body.genres).toEqual([]);
     expect(body.monthly).toHaveLength(12);

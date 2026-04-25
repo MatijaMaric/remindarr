@@ -45,6 +45,8 @@ describe("GET /stats", () => {
     expect(body.overview.tracked_movies).toBe(0);
     expect(body.overview.tracked_shows).toBe(0);
     expect(body.overview.watch_time_minutes).toBe(0);
+    expect(body.overview.watch_time_minutes_movies).toBe(0);
+    expect(body.overview.watch_time_minutes_shows).toBe(0);
     expect(body.genres).toHaveLength(0);
     expect(body.languages).toHaveLength(0);
     expect(body.monthly).toHaveLength(13);
@@ -81,10 +83,12 @@ describe("GET /stats", () => {
     const body = await res.json();
     expect(body.overview.watched_movies).toBe(2);
     expect(body.overview.watch_time_minutes).toBe(210);
+    expect(body.overview.watch_time_minutes_movies).toBe(210);
+    expect(body.overview.watch_time_minutes_shows).toBe(0);
   });
 
-  it("counts watched episodes", async () => {
-    await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW" })]);
+  it("counts watched episodes and calculates show watch time", async () => {
+    await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW", runtimeMinutes: 45 })]);
     const today = new Date().toISOString().slice(0, 10);
     await upsertEpisodes([
       { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
@@ -100,6 +104,31 @@ describe("GET /stats", () => {
     const res = await app.request("/stats");
     const body = await res.json();
     expect(body.overview.watched_episodes).toBe(2);
+    expect(body.overview.watch_time_minutes_shows).toBe(90);
+    expect(body.overview.watch_time_minutes_movies).toBe(0);
+    expect(body.overview.watch_time_minutes).toBe(90);
+  });
+
+  it("sums movie and show watch time into watch_time_minutes", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", runtimeMinutes: 120 }),
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", runtimeMinutes: 30 }),
+    ]);
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
+    ]);
+    const db = getRawDb();
+    db.prepare("INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run("movie-1", userId);
+    const ep = db.prepare("SELECT id FROM episodes WHERE title_id = ?").get("show-1") as { id: number };
+    await watchEpisode(ep.id, userId);
+
+    const app = makeAuthedApp();
+    const res = await app.request("/stats");
+    const body = await res.json();
+    expect(body.overview.watch_time_minutes_movies).toBe(120);
+    expect(body.overview.watch_time_minutes_shows).toBe(30);
+    expect(body.overview.watch_time_minutes).toBe(150);
   });
 
   it("returns monthly data with 13 months", async () => {

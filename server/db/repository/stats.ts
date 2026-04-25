@@ -8,6 +8,8 @@ export interface StatsOverview {
   watched_movies: number;
   watched_episodes: number;
   watch_time_minutes: number;
+  watch_time_minutes_movies: number;
+  watch_time_minutes_shows: number;
 }
 
 export interface GenreCount {
@@ -40,7 +42,7 @@ export interface ShowsByStatus {
 export async function getStatsOverview(userId: string): Promise<StatsOverview> {
   return traceDbQuery("getStatsOverview", async () => {
     const db = getDb();
-    const rows = await db.all<StatsOverview>(sql`
+    const rows = await db.all<Omit<StatsOverview, "watch_time_minutes">>(sql`
       SELECT
         (SELECT COUNT(*) FROM tracked t INNER JOIN titles ti ON ti.id = t.title_id
          WHERE t.user_id = ${userId} AND ti.object_type = 'MOVIE') AS tracked_movies,
@@ -50,14 +52,23 @@ export async function getStatsOverview(userId: string): Promise<StatsOverview> {
         (SELECT COUNT(*) FROM watched_episodes WHERE user_id = ${userId}) AS watched_episodes,
         (SELECT COALESCE(SUM(ti.runtime_minutes), 0) FROM watched_titles wt
          INNER JOIN titles ti ON ti.id = wt.title_id
-         WHERE wt.user_id = ${userId} AND ti.runtime_minutes IS NOT NULL) AS watch_time_minutes
+         WHERE wt.user_id = ${userId} AND ti.runtime_minutes IS NOT NULL) AS watch_time_minutes_movies,
+        (SELECT COALESCE(SUM(ti.runtime_minutes), 0) FROM watched_episodes we
+         INNER JOIN episodes e ON e.id = we.episode_id
+         INNER JOIN titles ti ON ti.id = e.title_id
+         WHERE we.user_id = ${userId} AND ti.runtime_minutes IS NOT NULL) AS watch_time_minutes_shows
     `);
-    return rows[0] ?? {
+    const row = rows[0] ?? {
       tracked_movies: 0,
       tracked_shows: 0,
       watched_movies: 0,
       watched_episodes: 0,
-      watch_time_minutes: 0,
+      watch_time_minutes_movies: 0,
+      watch_time_minutes_shows: 0,
+    };
+    return {
+      ...row,
+      watch_time_minutes: row.watch_time_minutes_movies + row.watch_time_minutes_shows,
     };
   });
 }

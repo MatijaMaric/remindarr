@@ -139,10 +139,20 @@ export function StatsView() {
         <OverviewCard label="Episodes Watched" value={overview.watched_episodes} />
         <OverviewCard label="Shows Tracked" value={overview.tracked_shows} />
         <OverviewCard label="Movies Tracked" value={overview.tracked_movies} />
+        <OverviewCard label="Watch Time" value={formatTime(overview.watch_time_minutes)} sub="total" />
+      </div>
+
+      {/* Watch time breakdown */}
+      <div className="grid grid-cols-2 gap-4">
         <OverviewCard
-          label="Watch Time"
-          value={formatTime(overview.watch_time_minutes)}
-          sub="movies only"
+          label="TV Watch Time"
+          value={formatTime(overview.watch_time_minutes_shows)}
+          sub={`${overview.watched_episodes} episodes`}
+        />
+        <OverviewCard
+          label="Movie Watch Time"
+          value={formatTime(overview.watch_time_minutes_movies)}
+          sub={`${overview.watched_movies} movies`}
         />
       </div>
 

@@ -60,9 +60,17 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
             label={t("userProfile.dossier.watchTime")}
             sub={t("userProfile.dossier.watchTimeSub")}
           />
-          <StatBlock value={overview.watched_movies} label={t("userProfile.movies")} />
           <StatBlock value={overview.tracked_count} label={t("userProfile.trackedTitles")} />
-          <StatBlock value={overview.watched_episodes} label={t("userProfile.dossier.legendEpisodes")} />
+          <StatBlock
+            value={formatWatchTime(overview.watch_time_minutes_shows)}
+            label={t("userProfile.dossier.watchTimeShows")}
+            sub={`${overview.watched_episodes} ${t("userProfile.dossier.legendEpisodes").toLowerCase()}`}
+          />
+          <StatBlock
+            value={formatWatchTime(overview.watch_time_minutes_movies)}
+            label={t("userProfile.dossier.watchTimeMovies")}
+            sub={`${overview.watched_movies} ${t("userProfile.movies").toLowerCase()}`}
+          />
         </div>
       </div>
     </DossierCard>
