@@ -228,6 +228,89 @@ describe("POST /watched/bulk", () => {
     expect(body.error).toContain("unreleased");
   });
 
+  it("handles bulk insert larger than D1's 100-param limit (38 episodes × 3 cols = 114 binds)", async () => {
+    // Regression: pre-fix this triggered "Failed query" on D1 because the
+    // single INSERT exceeded SQLITE_LIMIT_VARIABLE_NUMBER. The repo function
+    // now chunks the insert; this test seeds a season with 38 aired episodes
+    // and asserts every row is written.
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-bulk-large", objectType: "SHOW" })]);
+    const eps = Array.from({ length: 38 }, (_, i) => ({
+      title_id: "show-bulk-large",
+      season_number: 1,
+      episode_number: i + 1,
+      name: `Ep${i + 1}`,
+      overview: null,
+      air_date: yesterdayStr,
+      still_path: null,
+    }));
+    await upsertEpisodes(eps);
+    const ids: number[] = [];
+    for (let i = 1; i <= 38; i++) {
+      ids.push(await getEpisodeId("show-bulk-large", 1, i));
+    }
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: ids, watched: true, useAirDate: true }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const row = db.prepare("SELECT COUNT(*) as cnt FROM watched_episodes WHERE user_id = ?")
+      .get(userId) as { cnt: number };
+    expect(row.cnt).toBe(38);
+
+    const histRow = db.prepare("SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?")
+      .get(userId, "show-bulk-large") as { cnt: number };
+    expect(histRow.cnt).toBe(38);
+  });
+
+  it("bulk unwatch handles >30 episodes (chunked)", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([makeParsedTitle({ id: "show-bulk-unwatch", objectType: "SHOW" })]);
+    const eps = Array.from({ length: 35 }, (_, i) => ({
+      title_id: "show-bulk-unwatch",
+      season_number: 1,
+      episode_number: i + 1,
+      name: `Ep${i + 1}`,
+      overview: null,
+      air_date: yesterdayStr,
+      still_path: null,
+    }));
+    await upsertEpisodes(eps);
+    const ids: number[] = [];
+    for (let i = 1; i <= 35; i++) {
+      ids.push(await getEpisodeId("show-bulk-unwatch", 1, i));
+    }
+
+    const app = makeAuthedApp();
+    await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: ids, watched: true }),
+    });
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeIds: ids, watched: false }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const row = db.prepare("SELECT COUNT(*) as cnt FROM watched_episodes WHERE user_id = ?")
+      .get(userId) as { cnt: number };
+    expect(row.cnt).toBe(0);
+  });
+
   it("bulk unwatch succeeds for released and unreleased episodes", async () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
