@@ -204,8 +204,14 @@ function createApp(env: Env) {
         const password = crypto.randomUUID().slice(0, 16);
         const hash = await platform.hashPassword(password);
         await createUser("admin", hash, "Admin", "local", undefined, true);
-        logger.info("Admin account created", { username: "admin" });
-        console.log(`\n  Default admin password: ${password}\n  Change it after first login.\n`);
+        // Keep the password inline in the human-readable message only —
+        // do NOT pass it as a structured field so it isn't indexed by log
+        // aggregators. The operator still sees it once in dev/server logs.
+        const bootstrapLog = logger.child({ module: "worker-bootstrap" });
+        bootstrapLog.warn(
+          `Admin account created — default password: ${password} (change it after first login)`,
+          { username: "admin" }
+        );
       }
     }
 
