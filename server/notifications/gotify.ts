@@ -1,4 +1,5 @@
 import { traceHttp } from "../tracing";
+import { formatProviderNames, groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 export class GotifyProvider implements NotificationProvider {
@@ -58,23 +59,18 @@ export class GotifyProvider implements NotificationProvider {
     const { streamingAlerts = [] } = content;
     const lines: string[] = [];
 
-    const showMap = new Map<string, typeof content.episodes>();
-    for (const ep of content.episodes) {
-      const existing = showMap.get(ep.showTitle) ?? [];
-      existing.push(ep);
-      showMap.set(ep.showTitle, existing);
-    }
+    const showMap = groupEpisodesByShow(content.episodes);
 
     for (const [showTitle, eps] of showMap) {
       const codes = eps.map(
         (ep) => `S${String(ep.seasonNumber).padStart(2, "0")}E${String(ep.episodeNumber).padStart(2, "0")}`
       );
-      const providers = [...new Set(eps[0].offers.map((o) => o.providerName))].join(", ");
+      const providers = formatProviderNames(eps[0].offers);
       lines.push(`${showTitle} ${codes.join(", ")}${providers ? ` (${providers})` : ""}`);
     }
 
     for (const movie of content.movies) {
-      const providers = [...new Set(movie.offers.map((o) => o.providerName))].join(", ");
+      const providers = formatProviderNames(movie.offers);
       const label = movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title;
       lines.push(`${label}${providers ? ` (${providers})` : ""}`);
     }
