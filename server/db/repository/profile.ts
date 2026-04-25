@@ -64,6 +64,8 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       watched_movies: 0,
       watched_episodes: 0,
       watch_time_minutes: 0,
+      watch_time_minutes_movies: 0,
+      watch_time_minutes_shows: 0,
     };
     const emptyShowsByStatus: ShowsByStatus = {
       watching: 0, caught_up: 0, completed: 0, not_started: 0,
@@ -180,6 +182,8 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         watched_movies: watchedMoviesRow?.count ?? 0,
         watched_episodes: watchedEpisodesRow?.count ?? 0,
         watch_time_minutes: statsOverview.watch_time_minutes,
+        watch_time_minutes_movies: statsOverview.watch_time_minutes_movies,
+        watch_time_minutes_shows: statsOverview.watch_time_minutes_shows,
         shows_completed: showsCompleted,
         shows_total: showsTotal,
         total_watched_episodes: totalWatchedEpisodes,
