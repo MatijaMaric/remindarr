@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
+import { memo, useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import type { Title } from "../types";
 import TitleCard from "./TitleCard";
@@ -40,7 +40,7 @@ interface Props {
   viewAllLabel?: string;
 }
 
-export default function TitleList({
+function TitleListImpl({
   titles,
   onTrackToggle,
   emptyMessage = "No titles found",
@@ -57,9 +57,13 @@ export default function TitleList({
   viewAllHref,
   viewAllLabel,
 }: Props) {
-  // Limit items to fill maxRows at the largest breakpoint (6 columns on xl)
+  // Limit items to fill maxRows at the largest breakpoint (xl columns)
   const maxItems = maxRows ? maxRows * BREAKPOINT_COLS.xl : undefined;
-  const displayTitles = maxItems ? titles.slice(0, maxItems) : titles;
+  // Memoize the slice so a referentially-stable list doesn't produce a new array each render.
+  const displayTitles = useMemo(
+    () => (maxItems ? titles.slice(0, maxItems) : titles),
+    [titles, maxItems]
+  );
   const isTruncated = maxItems ? titles.length > maxItems : false;
   const shouldVirtualize = !maxRows && displayTitles.length > VIRTUAL_THRESHOLD;
 
@@ -108,22 +112,38 @@ export default function TitleList({
     scrollMargin,
   });
 
+  // Stable card-prop bag so memoized TitleCard children only see a new object
+  // when one of these flags actually changes.
+  const cardProps = useMemo(
+    () => ({
+      onTrackToggle,
+      showVisibilityToggle,
+      onVisibilityToggle,
+      hideTypeBadge,
+      showProgressBar,
+      showStatusPicker,
+      showNotificationPicker,
+      showTags,
+      showProviderBadge,
+      showRating,
+    }),
+    [
+      onTrackToggle,
+      showVisibilityToggle,
+      onVisibilityToggle,
+      hideTypeBadge,
+      showProgressBar,
+      showStatusPicker,
+      showNotificationPicker,
+      showTags,
+      showProviderBadge,
+      showRating,
+    ]
+  );
+
   if (titles.length === 0) {
     return <div className="text-center py-12 text-zinc-500">{emptyMessage}</div>;
   }
-
-  const cardProps = {
-    onTrackToggle,
-    showVisibilityToggle,
-    onVisibilityToggle,
-    hideTypeBadge,
-    showProgressBar,
-    showStatusPicker,
-    showNotificationPicker,
-    showTags,
-    showProviderBadge,
-    showRating,
-  };
 
   return (
     <div>
@@ -177,3 +197,11 @@ export default function TitleList({
     </div>
   );
 }
+
+// React.memo with default shallow equality:
+// - `titles` is generally a stable reference from caller state
+// - all other props are primitives, scalars, or stable callbacks (`onTrackToggle`,
+//   `onVisibilityToggle` are typically `useCallback`'d in callers like TrackedPage/NewReleases)
+// so we skip the entire re-render (including the virtualizer hooks) when nothing changed.
+const TitleList = memo(TitleListImpl);
+export default TitleList;
