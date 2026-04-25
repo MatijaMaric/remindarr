@@ -219,9 +219,11 @@ app.get("/", async (c) => {
       .map((l) => l.code);
 
     return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages, regionProviderIds, priorityLanguageCodes });
-  } catch (e: any) {
-    log.error("Browse error", { error: e.message, stack: e.stack });
-    return err(c, e.message, 500);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    const stack = e instanceof Error ? e.stack : undefined;
+    log.error("Browse error", { error: message, stack });
+    return err(c, message, 500);
   }
 });
 

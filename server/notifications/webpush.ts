@@ -51,12 +51,21 @@ export class WebPushProvider implements NotificationProvider {
 
     try {
       await webpush.sendNotification(subscription, JSON.stringify(payload));
-    } catch (err: any) {
-      if (err.statusCode === 410 || err.statusCode === 404) {
+    } catch (err: unknown) {
+      const statusCode =
+        typeof err === "object" && err !== null && "statusCode" in err
+          ? (err as { statusCode?: number }).statusCode
+          : undefined;
+      if (statusCode === 410 || statusCode === 404) {
         throw new SubscriptionExpiredError(config.endpoint);
       }
+      const body =
+        typeof err === "object" && err !== null && "body" in err
+          ? (err as { body?: string }).body
+          : undefined;
+      const message = err instanceof Error ? err.message : String(err);
       throw new Error(
-        `Web push failed (${err.statusCode || "unknown"}): ${err.body || err.message}`
+        `Web push failed (${statusCode ?? "unknown"}): ${body || message}`
       );
     }
   }
