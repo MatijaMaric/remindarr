@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
 import { toast } from "sonner";
@@ -395,6 +395,39 @@ export default function HomePage() {
     }
   }, []);
 
+  // Stable slice for the unauthenticated landing page so TitleList sees the
+  // same array reference on unrelated re-renders.
+  const popularTitlesPreview = useMemo(
+    () => popularTitles.slice(0, 12),
+    [popularTitles]
+  );
+
+  const unwatchedCards = useMemo(() => buildUnwatchedCards(unwatched), [unwatched]);
+
+  // Group upcoming episodes by air_date — pre-iterating array of N entries
+  // every render gets wasteful when state like `confirmingTitleId` flips below.
+  // Also pre-group each day by show so the FullBleedCarousel children don't
+  // have to recompute groupByShow on every parent render.
+  const upcomingByDateEntries = useMemo(() => {
+    const map = new Map<string, Episode[]>();
+    for (const ep of upcoming) {
+      if (!ep.air_date) continue;
+      if (!map.has(ep.air_date)) map.set(ep.air_date, []);
+      map.get(ep.air_date)!.push(ep);
+    }
+    return Array.from(map.entries()).map(([date, eps]) => ({
+      date,
+      dateLabel: formatUpcomingDate(date),
+      byShow: Array.from(groupByShow(eps).entries()),
+    }));
+  }, [upcoming]);
+
+  // Pre-group today's episodes by show — same reasoning as above.
+  const todayByShowEntries = useMemo(
+    () => Array.from(groupByShow(today).entries()),
+    [today]
+  );
+
   if (authLoading || loading) {
     return <EpisodeListSkeleton />;
   }
@@ -436,7 +469,7 @@ export default function HomePage() {
           {loading ? (
             <TitleGridSkeleton count={12} />
           ) : (
-            <TitleList titles={popularTitles.slice(0, 12)} />
+            <TitleList titles={popularTitlesPreview} />
           )}
         </section>
       </div>
@@ -453,15 +486,6 @@ export default function HomePage() {
 
   if (isMobile && user) {
     return <MobileFeedHome user={user} today={today} upcoming={upcoming} unwatched={unwatched} />;
-  }
-
-  const unwatchedCards = buildUnwatchedCards(unwatched);
-
-  const upcomingByDate = new Map<string, Episode[]>();
-  for (const ep of upcoming) {
-    if (!ep.air_date) continue;
-    if (!upcomingByDate.has(ep.air_date)) upcomingByDate.set(ep.air_date, []);
-    upcomingByDate.get(ep.air_date)!.push(ep);
   }
 
   const noEpisodes = today.length === 0 && upcoming.length === 0 && unwatched.length === 0;
@@ -584,7 +608,7 @@ export default function HomePage() {
               </p>
             ) : (
               <FullBleedCarousel>
-                {Array.from(groupByShow(today).entries()).map(([titleId, eps]) => (
+                {todayByShowEntries.map(([titleId, eps]) => (
                   <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
                     <DeckCardWrapper episodeCount={eps.length}>
                       <EpisodeShowCard
@@ -610,27 +634,23 @@ export default function HomePage() {
               <Link to="/calendar" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">Open calendar →</Link>
             </div>
             <div className="space-y-4">
-              {Array.from(upcomingByDate.entries()).map(([date, eps]) => {
-                const byShow = groupByShow(eps);
-                const dateLabel = formatUpcomingDate(date);
-                return (
-                  <div key={date}>
-                    <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
-                    <FullBleedCarousel>
-                      {Array.from(byShow.entries()).map(([titleId, showEps]) => (
-                        <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-                          <DeckCardWrapper episodeCount={showEps.length}>
-                            <EpisodeShowCard
-                              episode={showEps[0]}
-                              episodeCount={showEps.length}
-                            />
-                          </DeckCardWrapper>
-                        </div>
-                      ))}
-                    </FullBleedCarousel>
-                  </div>
-                );
-              })}
+              {upcomingByDateEntries.map(({ date, dateLabel, byShow }) => (
+                <div key={date}>
+                  <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
+                  <FullBleedCarousel>
+                    {byShow.map(([titleId, showEps]) => (
+                      <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+                        <DeckCardWrapper episodeCount={showEps.length}>
+                          <EpisodeShowCard
+                            episode={showEps[0]}
+                            episodeCount={showEps.length}
+                          />
+                        </DeckCardWrapper>
+                      </div>
+                    ))}
+                  </FullBleedCarousel>
+                </div>
+              ))}
             </div>
           </section>
         ) : null;
