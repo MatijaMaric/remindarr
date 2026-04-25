@@ -14,6 +14,10 @@ import { PageHeader, Pill } from "../components/design";
 import BackdateWatchedButton from "../components/BackdateWatchedButton";
 import { StatsView } from "./StatsPage";
 
+// Module-scope empty array so the empty-state TitleList sees a stable
+// reference and React.memo can short-circuit re-renders.
+const EMPTY_TITLES: Title[] = [];
+
 function TrackedStatsBand({ titles }: { titles: Title[] }) {
   const watching = titles.filter(t => t.show_status === 'watching' || t.user_status === 'watching').length;
   const completed = titles.filter(t => t.show_status === 'completed' || t.user_status === 'completed').length;
@@ -165,7 +169,7 @@ export default function TrackedPage() {
       ) : loading ? (
         <TitleGridSkeleton />
       ) : filteredTitles.length === 0 ? (
-        <TitleList titles={[]} onTrackToggle={refetch} emptyMessage={t("tracked.empty")} />
+        <TitleList titles={EMPTY_TITLES} onTrackToggle={refetch} emptyMessage={t("tracked.empty")} />
       ) : view === 'list' ? (
         <TrackedTable titles={sortedFilteredTitles} onRefetch={refetch} />
       ) : statusFilter !== 'all' ? (

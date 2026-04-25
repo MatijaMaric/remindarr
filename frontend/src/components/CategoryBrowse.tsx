@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
@@ -192,6 +192,13 @@ export default function CategoryBrowse({
     return () => observer.disconnect();
   }, [page, totalPages, loadingMore, fetchTitles]);
 
+  // Stabilize the titles array passed into TitleList so React.memo can short-
+  // circuit re-renders when neither `titles` nor `hideTracked` changed.
+  const visibleTitles = useMemo(
+    () => (hideTracked ? titles.filter((t) => !t.is_tracked) : titles),
+    [titles, hideTracked]
+  );
+
   return (
     <div className="space-y-4">
       {!hideFilterBar && (
@@ -227,7 +234,7 @@ export default function CategoryBrowse({
       ) : (
         <>
           <TitleList
-            titles={hideTracked ? titles.filter((t) => !t.is_tracked) : titles}
+            titles={visibleTitles}
             emptyMessage="No titles found."
             showProviderBadge={showProviderBadge}
             showRating={showRating}
