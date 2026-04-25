@@ -103,6 +103,28 @@ export default function SeasonDetailPage() {
     }
   };
 
+  const markEpisodeOnAirDate = async (episodeNumber: number) => {
+    const status = statusMap.get(episodeNumber);
+    if (!status) return;
+
+    setStatusMap((prev) => {
+      const next = new Map(prev);
+      next.set(episodeNumber, { ...status, is_watched: true });
+      return next;
+    });
+
+    try {
+      await api.watchEpisodesBulk([status.id], true, { useAirDate: true });
+    } catch {
+      setStatusMap((prev) => {
+        const next = new Map(prev);
+        next.set(episodeNumber, { ...status, is_watched: status.is_watched });
+        return next;
+      });
+      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+    }
+  };
+
   const toggleAllWatched = async (options?: { useAirDate?: boolean }) => {
     const episodes = data?.tmdb?.episodes || [];
     const releasedEps = episodes.filter((ep) => isReleased(ep.air_date));
@@ -379,6 +401,8 @@ export default function SeasonDetailPage() {
                         episodeNumber={ep.episode_number}
                         episodeName={ep.name}
                         showTitle={title.title}
+                        canMarkOnAirDate={released && !!status && !watched && !!ep.air_date}
+                        onMarkOnAirDate={() => markEpisodeOnAirDate(ep.episode_number)}
                       />
                     </div>
                   </div>
@@ -542,12 +566,16 @@ function EpisodeOverflowMenu({
   episodeNumber,
   episodeName,
   showTitle,
+  canMarkOnAirDate,
+  onMarkOnAirDate,
 }: {
   titleId: string;
   seasonNumber: number;
   episodeNumber: number;
   episodeName: string;
   showTitle: string;
+  canMarkOnAirDate?: boolean;
+  onMarkOnAirDate?: () => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -615,6 +643,19 @@ function EpisodeOverflowMenu({
           >
             {t("episodes.viewDetails", "View details")}
           </button>
+          {canMarkOnAirDate && onMarkOnAirDate && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                void onMarkOnAirDate();
+              }}
+              className="w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+            >
+              <CalendarDays size={13} aria-hidden="true" />
+              {t("episodes.markWatchedOnAirDate", "Mark watched on air date")}
+            </button>
+          )}
           <button
             role="menuitem"
             onClick={handleShare}

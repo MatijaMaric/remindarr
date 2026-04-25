@@ -312,6 +312,15 @@ export async function watchEpisodesBulk(
   });
 }
 
+export async function backdateWatchedToAirDate(
+  titleId?: string,
+): Promise<{ updated: number }> {
+  return fetchJson<{ updated: number }>("/watched/backdate", {
+    method: "POST",
+    body: JSON.stringify(titleId ? { titleId } : {}),
+  });
+}
+
 // ─── Watched Movies ──────────────────────────────────────────────────────────
 
 export async function watchMovie(titleId: string): Promise<void> {

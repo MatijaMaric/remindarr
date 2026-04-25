@@ -4,6 +4,7 @@ import {
   watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk,
   getEpisodeAirDate, getReleasedEpisodeIds, getReleasedEpisodesWithAirDate,
   watchTitle, unwatchTitle, getEpisodeTitleId, getEpisodeTitleIds,
+  backdateWatchedEpisodesToAirDate,
 } from "../db/repository";
 import { logWatch, getTitlePlayCount, getTitleWatchHistory } from "../db/repository/watch-history";
 import { localDateForTimezone } from "../utils/timezone";
@@ -66,6 +67,17 @@ app.post("/bulk", zValidator("json", bulkWatchedSchema), async (c) => {
   }
 
   return ok(c, {});
+});
+
+const backdateSchema = z.object({
+  titleId: z.string().min(1).optional(),
+});
+
+app.post("/backdate", zValidator("json", backdateSchema), async (c) => {
+  const user = c.get("user")!;
+  const { titleId } = c.req.valid("json");
+  const updated = await backdateWatchedEpisodesToAirDate(user.id, titleId);
+  return ok(c, { updated });
 });
 
 app.get("/history/:titleId", async (c) => {

@@ -269,7 +269,19 @@
     "markAllWatchedOptions": "Mark all watched options",
     "watchedError": "Failed to update watched status",
     "moreActions": "More actions",
-    "viewDetails": "View details"
+    "viewDetails": "View details",
+    "markWatchedOnAirDate": "Mark watched on air date",
+    "backdateAction": "Backdate to air dates",
+    "backdateAllAction": "Backdate to air dates",
+    "backdateConfirmTitle": "Backdate watched episodes?",
+    "backdateConfirmDescription": "Set the watched timestamp of every watched episode for this show to its air date. This affects monthly stats.",
+    "backdateAllConfirmTitle": "Backdate all watched episodes?",
+    "backdateAllConfirmDescription": "Set the watched timestamp of every watched episode across your tracked shows to that episode's air date. This affects monthly stats.",
+    "backdateConfirm": "Backdate",
+    "backdateSuccess_one": "Backdated {{count}} episode to air date",
+    "backdateSuccess_other": "Backdated {{count}} episodes to air dates",
+    "backdateNoChanges": "No watched episodes to backdate",
+    "backdateError": "Failed to backdate watched episodes"
   },
   "calendar": {
     "all": "All",

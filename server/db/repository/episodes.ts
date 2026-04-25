@@ -344,6 +344,38 @@ export async function unwatchEpisodesBulk(episodeIds: number[], userId: string) 
   });
 }
 
+// Re-stamps `watched_episodes.watched_at` for already-watched episodes to the
+// episode's air date. When `titleId` is provided, scope is restricted to that
+// title; otherwise applies to every watched episode for the user.
+// Episodes without an `air_date` are skipped. Returns rows affected.
+export async function backdateWatchedEpisodesToAirDate(
+  userId: string,
+  titleId?: string,
+): Promise<number> {
+  return traceDbQuery("backdateWatchedEpisodesToAirDate", async () => {
+    const db = getDb();
+    const titleFilter = titleId ? sql`AND ${episodes.titleId} = ${titleId}` : sql``;
+    const result = await db.run(sql`
+      UPDATE watched_episodes
+      SET watched_at = (
+        SELECT ${episodes.airDate} || ' 00:00:00'
+        FROM ${episodes}
+        WHERE ${episodes.id} = watched_episodes.episode_id
+      )
+      WHERE watched_episodes.user_id = ${userId}
+        AND EXISTS (
+          SELECT 1 FROM ${episodes}
+          WHERE ${episodes.id} = watched_episodes.episode_id
+            AND ${episodes.airDate} IS NOT NULL
+            ${titleFilter}
+        )
+    `);
+    return typeof result === "object" && result !== null && "changes" in result
+      ? Number((result as { changes: number }).changes)
+      : 0;
+  });
+}
+
 export async function getSeasonEpisodeStatus(
   titleId: string,
   seasonNumber: number,

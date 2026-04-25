@@ -38,6 +38,7 @@ export {
   unwatchEpisode,
   watchEpisodesBulk,
   unwatchEpisodesBulk,
+  backdateWatchedEpisodesToAirDate,
   getSeasonEpisodeStatus,
   getWatchedEpisodesForExport,
   getEpisodeIdsBySE,
