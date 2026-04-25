@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins/username";
 import { admin } from "better-auth/plugins/admin";
@@ -86,7 +86,7 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
   const pendingOidcAdminStatus = new Map<string, boolean>(); // nonce → isAdmin
   const pendingNoncesByAccountId = new Map<string, string[]>(); // sub → nonce queue
 
-  const plugins: any[] = [
+  const plugins: BetterAuthPlugin[] = [
     username({
       minUsernameLength: 1,
       maxUsernameLength: 100,
