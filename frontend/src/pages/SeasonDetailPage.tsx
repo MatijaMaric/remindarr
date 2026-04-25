@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { CheckCircle, Circle, MoreHorizontal, Share2 } from "lucide-react";
+import { CalendarDays, CheckCircle, ChevronDown, Circle, MoreHorizontal, Share2 } from "lucide-react";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
 import type { SeasonDetailsResponse, RatingValue } from "../types";
@@ -103,7 +103,7 @@ export default function SeasonDetailPage() {
     }
   };
 
-  const toggleAllWatched = async () => {
+  const toggleAllWatched = async (options?: { useAirDate?: boolean }) => {
     const episodes = data?.tmdb?.episodes || [];
     const releasedEps = episodes.filter((ep) => isReleased(ep.air_date));
     const releasedStatuses = releasedEps
@@ -127,7 +127,7 @@ export default function SeasonDetailPage() {
     });
 
     try {
-      await api.watchEpisodesBulk(ids, newWatched);
+      await api.watchEpisodesBulk(ids, newWatched, newWatched ? options : undefined);
     } catch {
       setStatusMap(prevMap);
       toast.error(t("episodes.watchedError", "Failed to update watched status"));
@@ -238,14 +238,16 @@ export default function SeasonDetailPage() {
                 </span>
               )}
               {hasStatus && releasedWithStatus.length > 0 && (
-                <button
-                  onClick={toggleAllWatched}
-                  className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  {allReleasedWatched
-                    ? t("episodes.markAllUnwatched", "Mark all unwatched")
-                    : t("episodes.markAllWatched", "Mark all watched")}
-                </button>
+                allReleasedWatched ? (
+                  <button
+                    onClick={() => toggleAllWatched()}
+                    className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {t("episodes.markAllUnwatched", "Mark all unwatched")}
+                  </button>
+                ) : (
+                  <MarkAllWatchedMenu onMarkAll={toggleAllWatched} />
+                )
               )}
             </div>
           </div>
@@ -452,6 +454,85 @@ function EpisodeWatchedPill({
         {watched ? t("episodes.watched", "Watched") : t("episodes.markWatchedShort", "Mark")}
       </span>
     </button>
+  );
+}
+
+function MarkAllWatchedMenu({
+  onMarkAll,
+}: {
+  onMarkAll: (options?: { useAirDate?: boolean }) => void | Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-flex items-stretch">
+      <button
+        onClick={() => onMarkAll()}
+        className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer pr-1"
+      >
+        {t("episodes.markAllWatched", "Mark all watched")}
+      </button>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t("episodes.markAllWatchedOptions", "Mark all watched options")}
+        className="inline-flex items-center justify-center w-6 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+      >
+        <ChevronDown size={14} aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1 z-20 min-w-[240px] rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl py-1"
+        >
+          <button
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onMarkAll();
+            }}
+            className="w-full text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+          >
+            {t("episodes.markAllWatchedToday", "Mark all watched today")}
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onMarkAll({ useAirDate: true });
+            }}
+            className="w-full flex items-start gap-2 text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+          >
+            <CalendarDays size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
+            <span className="flex flex-col">
+              <span>{t("episodes.markAllWatchedOnAirDate", "Mark watched on air date")}</span>
+              <span className="text-[11px] text-zinc-500">
+                {t("episodes.markAllWatchedOnAirDateHint", "Backdate to keep stats accurate")}
+              </span>
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

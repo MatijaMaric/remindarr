@@ -301,10 +301,14 @@ export async function unwatchEpisode(episodeId: number): Promise<void> {
   await fetchJson(`/watched/${episodeId}`, { method: "DELETE" });
 }
 
-export async function watchEpisodesBulk(episodeIds: number[], watched: boolean): Promise<void> {
+export async function watchEpisodesBulk(
+  episodeIds: number[],
+  watched: boolean,
+  options?: { useAirDate?: boolean },
+): Promise<void> {
   await fetchJson("/watched/bulk", {
     method: "POST",
-    body: JSON.stringify({ episodeIds, watched }),
+    body: JSON.stringify({ episodeIds, watched, useAirDate: options?.useAirDate }),
   });
 }
 

@@ -4,7 +4,12 @@ import { watchHistory } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { randomUUID } from "node:crypto";
 
-export async function logWatch(userId: string, titleId: string, episodeId?: number): Promise<void> {
+export async function logWatch(
+  userId: string,
+  titleId: string,
+  episodeId?: number,
+  watchedAt?: string,
+): Promise<void> {
   return traceDbQuery("logWatch", async () => {
     const db = getDb();
     await db.insert(watchHistory)
@@ -13,6 +18,7 @@ export async function logWatch(userId: string, titleId: string, episodeId?: numb
         userId,
         titleId,
         episodeId: episodeId ?? null,
+        ...(watchedAt ? { watchedAt } : {}),
       })
       .run();
   });

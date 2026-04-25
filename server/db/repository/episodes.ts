@@ -271,6 +271,30 @@ export async function getReleasedEpisodeIds(episodeIds: number[], timezone = "UT
   });
 }
 
+export async function getReleasedEpisodesWithAirDate(
+  episodeIds: number[],
+  timezone = "UTC"
+): Promise<Array<{ id: number; airDate: string }>> {
+  return traceDbQuery("getReleasedEpisodesWithAirDate", async () => {
+    if (episodeIds.length === 0) return [];
+    const today = localDateForTimezone(timezone);
+    const db = getDb();
+    const rows = await db
+      .select({ id: episodes.id, airDate: episodes.airDate })
+      .from(episodes)
+      .where(
+        and(
+          inArray(episodes.id, episodeIds),
+          sql`${episodes.airDate} IS NOT NULL`,
+          sql`${episodes.airDate} <= ${today}`
+        )
+      )
+      .all();
+    return rows
+      .filter((r): r is { id: number; airDate: string } => r.airDate !== null);
+  });
+}
+
 export async function watchEpisode(episodeId: number, userId: string) {
   return traceDbQuery("watchEpisode", async () => {
     const db = getDb();
@@ -290,12 +314,21 @@ export async function unwatchEpisode(episodeId: number, userId: string) {
   });
 }
 
-export async function watchEpisodesBulk(episodeIds: number[], userId: string) {
+export async function watchEpisodesBulk(
+  episodeIds: number[],
+  userId: string,
+  watchedAtByEpisodeId?: Map<number, string>
+) {
   return traceDbQuery("watchEpisodesBulk", async () => {
     if (episodeIds.length === 0) return;
     const db = getDb();
     await db.insert(watchedEpisodes)
-      .values(episodeIds.map((episodeId) => ({ episodeId, userId })))
+      .values(
+        episodeIds.map((episodeId) => {
+          const watchedAt = watchedAtByEpisodeId?.get(episodeId);
+          return watchedAt ? { episodeId, userId, watchedAt } : { episodeId, userId };
+        })
+      )
       .onConflictDoNothing()
       .run();
   });
