@@ -1,12 +1,13 @@
 import { eq, and, or, sql, gte, lt, desc, asc, exists, notExists, inArray, like } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, providers, offers, scores, tracked, titleGenres, watchedTitles } from "../schema";
-import type { ParsedTitle } from "../../tmdb/parser";
+import type { ParsedTitle, ParsedOffer, ParsedProvider, ParsedScores } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
 import { getOffersWithPlex } from "./offers";
 import { toCanonicalGenre } from "../../genres";
 import { canonicalProviderId } from "../../streaming-availability/provider-map";
+import type { DrizzleDb } from "../../platform/types";
 
 // ─── Filter caches (genres & languages change only on sync) ──────────────────
 
@@ -27,135 +28,209 @@ export function invalidateFilterCaches(): void {
 
 // ─── Title / Offer / Score upserts ───────────────────────────────────────────
 
+/**
+ * Upsert provider rows. Idempotent — any conflict on `id` updates the
+ * descriptive fields. Used as the first step of `upsertTitles` so that
+ * subsequent offer rows can satisfy their FK to `providers`.
+ */
+export async function upsertProviderRows(
+  providerList: ParsedProvider[],
+  tx: DrizzleDb,
+): Promise<void> {
+  for (const p of providerList) {
+    await tx.insert(providers)
+      .values({
+        id: p.id,
+        name: p.name,
+        technicalName: p.technicalName,
+        iconUrl: p.iconUrl,
+      })
+      .onConflictDoUpdate({
+        target: providers.id,
+        set: {
+          name: sql`excluded.name`,
+          technicalName: sql`excluded.technical_name`,
+          iconUrl: sql`excluded.icon_url`,
+        },
+      })
+      .run();
+  }
+}
+
+/**
+ * Upsert a single title row, refreshing all mutable fields and bumping
+ * `updated_at`. Existing rows are matched by primary key.
+ */
+export async function upsertTitleRow(
+  t: ParsedTitle,
+  tx: DrizzleDb,
+): Promise<void> {
+  await tx.insert(titles)
+    .values({
+      id: t.id,
+      objectType: t.objectType,
+      title: t.title,
+      originalTitle: t.originalTitle,
+      releaseYear: t.releaseYear,
+      releaseDate: t.releaseDate,
+      runtimeMinutes: t.runtimeMinutes,
+      shortDescription: t.shortDescription,
+      originalLanguage: t.originalLanguage,
+      imdbId: t.imdbId,
+      tmdbId: t.tmdbId,
+      posterUrl: t.posterUrl,
+      backdropUrl: t.backdropUrl,
+      ageCertification: t.ageCertification,
+      tmdbUrl: t.tmdbUrl,
+      updatedAt: sql`datetime('now')`,
+    })
+    .onConflictDoUpdate({
+      target: titles.id,
+      set: {
+        title: sql`excluded.title`,
+        originalTitle: sql`excluded.original_title`,
+        releaseYear: sql`excluded.release_year`,
+        releaseDate: sql`excluded.release_date`,
+        runtimeMinutes: sql`excluded.runtime_minutes`,
+        shortDescription: sql`excluded.short_description`,
+        originalLanguage: sql`excluded.original_language`,
+        imdbId: sql`excluded.imdb_id`,
+        tmdbId: sql`excluded.tmdb_id`,
+        posterUrl: sql`excluded.poster_url`,
+        backdropUrl: sql`excluded.backdrop_url`,
+        ageCertification: sql`excluded.age_certification`,
+        tmdbUrl: sql`excluded.tmdb_url`,
+        updatedAt: sql`datetime('now')`,
+      },
+    })
+    .run();
+}
+
+/**
+ * Replace the title's genre membership with the provided list. The
+ * existing rows are deleted first so the set ends up exactly equal to
+ * `genres` (deduplicated via `onConflictDoNothing` on the composite key).
+ */
+export async function upsertTitleGenres(
+  titleId: string,
+  genres: string[] | undefined,
+  tx: DrizzleDb,
+): Promise<void> {
+  await tx.delete(titleGenres).where(eq(titleGenres.titleId, titleId)).run();
+  for (const genre of (genres ?? [])) {
+    await tx.insert(titleGenres)
+      .values({ titleId, genre })
+      .onConflictDoNothing()
+      .run();
+  }
+}
+
+/**
+ * Replace the title's offers, preserving previously stored deep links
+ * keyed by (providerId, monetizationType). When a duplicate provider ID
+ * has been remapped to a canonical ID, the canonical key is also indexed
+ * so the deep link survives the remap.
+ *
+ * Caller is expected to skip this when `newOffers` is empty — that case
+ * is treated as "no new offer data" and we deliberately leave existing
+ * offers untouched (prevents sync fallbacks from wiping availability).
+ */
+export async function mergeOffers(
+  titleId: string,
+  newOffers: ParsedOffer[],
+  tx: DrizzleDb,
+): Promise<void> {
+  if (newOffers.length === 0) return;
+
+  // Preserve deep links: build a map of (providerId, monetizationType) → deepLink
+  const existingOffers = await tx
+    .select({
+      providerId: offers.providerId,
+      monetizationType: offers.monetizationType,
+      deepLink: offers.deepLink,
+    })
+    .from(offers)
+    .where(eq(offers.titleId, titleId))
+    .all();
+  const deepLinkMap = new Map<string, string>();
+  for (const o of existingOffers) {
+    if (o.deepLink && o.providerId != null) {
+      deepLinkMap.set(`${o.providerId}:${o.monetizationType}`, o.deepLink);
+      // Also index by canonical ID so remapped duplicate providers keep their deep links
+      const canonical = canonicalProviderId(o.providerId);
+      if (canonical !== o.providerId) {
+        deepLinkMap.set(`${canonical}:${o.monetizationType}`, o.deepLink);
+      }
+    }
+  }
+
+  await tx.delete(offers).where(eq(offers.titleId, titleId)).run();
+  for (const o of newOffers) {
+    const preservedDeepLink = deepLinkMap.get(`${o.providerId}:${o.monetizationType}`) ?? null;
+    await tx.insert(offers)
+      .values({
+        titleId: o.titleId,
+        providerId: o.providerId,
+        monetizationType: o.monetizationType,
+        presentationType: o.presentationType,
+        priceValue: o.priceValue,
+        priceCurrency: o.priceCurrency,
+        url: o.url,
+        deepLink: preservedDeepLink,
+        availableTo: o.availableTo,
+      })
+      .run();
+  }
+}
+
+/**
+ * Upsert a single title's score row. Conflict on `title_id` updates all
+ * three score columns from the incoming payload.
+ */
+export async function upsertScores(
+  titleId: string,
+  parsedScores: ParsedScores,
+  tx: DrizzleDb,
+): Promise<void> {
+  await tx.insert(scores)
+    .values({
+      titleId,
+      imdbScore: parsedScores.imdbScore,
+      imdbVotes: parsedScores.imdbVotes,
+      tmdbScore: parsedScores.tmdbScore,
+    })
+    .onConflictDoUpdate({
+      target: scores.titleId,
+      set: {
+        imdbScore: sql`excluded.imdb_score`,
+        imdbVotes: sql`excluded.imdb_votes`,
+        tmdbScore: sql`excluded.tmdb_score`,
+      },
+    })
+    .run();
+}
+
+/**
+ * Top-level orchestrator: upserts providers (FK targets), then for each
+ * title upserts the title row, replaces genre membership, merges offers
+ * (preserving deep links), and upserts scores. The filter caches are
+ * invalidated once at the end. Behaviour is identical to the prior
+ * monolithic implementation; the helpers exist for testability and
+ * clearer error origin.
+ */
 export async function upsertTitles(parsedTitles: ParsedTitle[]) {
   return traceDbQuery("upsertTitles", async () => {
     const db = getDb();
 
-    // Extract and upsert providers first
+    // Extract and upsert providers first so offer FKs are satisfied
     const providerList = extractProviders(parsedTitles);
-
-    for (const p of providerList) {
-      await db.insert(providers)
-        .values({
-          id: p.id,
-          name: p.name,
-          technicalName: p.technicalName,
-          iconUrl: p.iconUrl,
-        })
-        .onConflictDoUpdate({
-          target: providers.id,
-          set: {
-            name: sql`excluded.name`,
-            technicalName: sql`excluded.technical_name`,
-            iconUrl: sql`excluded.icon_url`,
-          },
-        })
-        .run();
-    }
+    await upsertProviderRows(providerList, db);
 
     for (const t of parsedTitles) {
-      await db.insert(titles)
-        .values({
-          id: t.id,
-          objectType: t.objectType,
-          title: t.title,
-          originalTitle: t.originalTitle,
-          releaseYear: t.releaseYear,
-          releaseDate: t.releaseDate,
-          runtimeMinutes: t.runtimeMinutes,
-          shortDescription: t.shortDescription,
-          originalLanguage: t.originalLanguage,
-          imdbId: t.imdbId,
-          tmdbId: t.tmdbId,
-          posterUrl: t.posterUrl,
-          backdropUrl: t.backdropUrl,
-          ageCertification: t.ageCertification,
-          tmdbUrl: t.tmdbUrl,
-          updatedAt: sql`datetime('now')`,
-        })
-        .onConflictDoUpdate({
-          target: titles.id,
-          set: {
-            title: sql`excluded.title`,
-            originalTitle: sql`excluded.original_title`,
-            releaseYear: sql`excluded.release_year`,
-            releaseDate: sql`excluded.release_date`,
-            runtimeMinutes: sql`excluded.runtime_minutes`,
-            shortDescription: sql`excluded.short_description`,
-            originalLanguage: sql`excluded.original_language`,
-            imdbId: sql`excluded.imdb_id`,
-            tmdbId: sql`excluded.tmdb_id`,
-            posterUrl: sql`excluded.poster_url`,
-            backdropUrl: sql`excluded.backdrop_url`,
-            ageCertification: sql`excluded.age_certification`,
-            tmdbUrl: sql`excluded.tmdb_url`,
-            updatedAt: sql`datetime('now')`,
-          },
-        })
-        .run();
-
-      // Replace genres
-      await db.delete(titleGenres).where(eq(titleGenres.titleId, t.id)).run();
-      for (const genre of (t.genres ?? [])) {
-        await db.insert(titleGenres).values({ titleId: t.id, genre }).onConflictDoNothing().run();
-      }
-
-      // Replace offers only when new data includes them (prevents sync fallback from wiping existing offers)
-      if (t.offers.length > 0) {
-        // Preserve deep links: build a map of (providerId, monetizationType) → deepLink
-        const existingOffers = await db
-          .select({ providerId: offers.providerId, monetizationType: offers.monetizationType, deepLink: offers.deepLink })
-          .from(offers)
-          .where(eq(offers.titleId, t.id))
-          .all();
-        const deepLinkMap = new Map<string, string>();
-        for (const o of existingOffers) {
-          if (o.deepLink && o.providerId != null) {
-            deepLinkMap.set(`${o.providerId}:${o.monetizationType}`, o.deepLink);
-            // Also index by canonical ID so remapped duplicate providers keep their deep links
-            const canonical = canonicalProviderId(o.providerId);
-            if (canonical !== o.providerId) {
-              deepLinkMap.set(`${canonical}:${o.monetizationType}`, o.deepLink);
-            }
-          }
-        }
-
-        await db.delete(offers).where(eq(offers.titleId, t.id)).run();
-        for (const o of t.offers) {
-          const preservedDeepLink = deepLinkMap.get(`${o.providerId}:${o.monetizationType}`) ?? null;
-          await db.insert(offers)
-            .values({
-              titleId: o.titleId,
-              providerId: o.providerId,
-              monetizationType: o.monetizationType,
-              presentationType: o.presentationType,
-              priceValue: o.priceValue,
-              priceCurrency: o.priceCurrency,
-              url: o.url,
-              deepLink: preservedDeepLink,
-              availableTo: o.availableTo,
-            })
-            .run();
-        }
-      }
-
-      // Upsert scores
-      await db.insert(scores)
-        .values({
-          titleId: t.id,
-          imdbScore: t.scores.imdbScore,
-          imdbVotes: t.scores.imdbVotes,
-          tmdbScore: t.scores.tmdbScore,
-        })
-        .onConflictDoUpdate({
-          target: scores.titleId,
-          set: {
-            imdbScore: sql`excluded.imdb_score`,
-            imdbVotes: sql`excluded.imdb_votes`,
-            tmdbScore: sql`excluded.tmdb_score`,
-          },
-        })
-        .run();
+      await upsertTitleRow(t, db);
+      await upsertTitleGenres(t.id, t.genres, db);
+      await mergeOffers(t.id, t.offers, db);
+      await upsertScores(t.id, t.scores, db);
     }
 
     invalidateFilterCaches();

@@ -1,9 +1,16 @@
-import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle, makeParsedOffer } from "../../test-utils/fixtures";
-import { upsertTitles } from "./titles";
+import {
+  upsertTitles,
+  upsertProviderRows,
+  upsertTitleRow,
+  upsertTitleGenres,
+  mergeOffers,
+  upsertScores,
+} from "./titles";
 import { getDb } from "../schema";
-import { titleGenres } from "../schema";
+import { titles, providers, offers, scores, titleGenres } from "../schema";
 import { eq } from "drizzle-orm";
 
 beforeEach(() => {
@@ -108,5 +115,260 @@ describe("upsertTitles", () => {
     ];
     const count = await upsertTitles(titles);
     expect(count).toBe(3);
+  });
+});
+
+describe("upsertProviderRows", () => {
+  it("inserts new providers", async () => {
+    const db = getDb();
+    await upsertProviderRows(
+      [
+        { id: 8, name: "Netflix", technicalName: "netflix", iconUrl: "n.png" },
+        { id: 9, name: "Prime", technicalName: "prime", iconUrl: "p.png" },
+      ],
+      db,
+    );
+
+    const rows = await db.select().from(providers).all();
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    expect(byId.get(8)?.name).toBe("Netflix");
+    expect(byId.get(8)?.technicalName).toBe("netflix");
+    expect(byId.get(9)?.name).toBe("Prime");
+  });
+
+  it("updates existing providers on conflict", async () => {
+    const db = getDb();
+    await upsertProviderRows(
+      [{ id: 8, name: "Netflix", technicalName: "netflix", iconUrl: "n1.png" }],
+      db,
+    );
+    await upsertProviderRows(
+      [{ id: 8, name: "Netflix Renamed", technicalName: "nf", iconUrl: "n2.png" }],
+      db,
+    );
+
+    const row = await db.select().from(providers).where(eq(providers.id, 8)).get();
+    expect(row?.name).toBe("Netflix Renamed");
+    expect(row?.technicalName).toBe("nf");
+    expect(row?.iconUrl).toBe("n2.png");
+  });
+
+  it("is a no-op for an empty list", async () => {
+    const db = getDb();
+    await upsertProviderRows([], db);
+    const rows = await db.select().from(providers).all();
+    expect(rows).toHaveLength(0);
+  });
+});
+
+describe("upsertTitleRow", () => {
+  it("inserts a new title row", async () => {
+    const db = getDb();
+    const title = makeParsedTitle({ id: "movie-row-1", title: "Row Test" });
+    await upsertTitleRow(title, db);
+
+    const row = await db.select().from(titles).where(eq(titles.id, "movie-row-1")).get();
+    expect(row?.title).toBe("Row Test");
+    expect(row?.objectType).toBe("MOVIE");
+  });
+
+  it("updates an existing title on conflict and refreshes mutable fields", async () => {
+    const db = getDb();
+    await upsertTitleRow(
+      makeParsedTitle({ id: "movie-row-2", title: "Original", shortDescription: "old" }),
+      db,
+    );
+    await upsertTitleRow(
+      makeParsedTitle({ id: "movie-row-2", title: "Renamed", shortDescription: "new" }),
+      db,
+    );
+
+    const row = await db.select().from(titles).where(eq(titles.id, "movie-row-2")).get();
+    expect(row?.title).toBe("Renamed");
+    expect(row?.shortDescription).toBe("new");
+  });
+});
+
+describe("upsertTitleGenres", () => {
+  it("inserts genres for a title", async () => {
+    const db = getDb();
+    await upsertTitleRow(makeParsedTitle({ id: "movie-g-1" }), db);
+    await upsertTitleGenres("movie-g-1", ["Action", "Drama"], db);
+
+    const rows = await db
+      .select({ genre: titleGenres.genre })
+      .from(titleGenres)
+      .where(eq(titleGenres.titleId, "movie-g-1"))
+      .all();
+    expect(rows.map((r) => r.genre).sort()).toEqual(["Action", "Drama"]);
+  });
+
+  it("replaces existing genres rather than appending", async () => {
+    const db = getDb();
+    await upsertTitleRow(makeParsedTitle({ id: "movie-g-2" }), db);
+    await upsertTitleGenres("movie-g-2", ["Action"], db);
+    await upsertTitleGenres("movie-g-2", ["Comedy", "Romance"], db);
+
+    const rows = await db
+      .select({ genre: titleGenres.genre })
+      .from(titleGenres)
+      .where(eq(titleGenres.titleId, "movie-g-2"))
+      .all();
+    expect(rows.map((r) => r.genre).sort()).toEqual(["Comedy", "Romance"]);
+  });
+
+  it("clears all genres when given an empty list", async () => {
+    const db = getDb();
+    await upsertTitleRow(makeParsedTitle({ id: "movie-g-3" }), db);
+    await upsertTitleGenres("movie-g-3", ["Action"], db);
+    await upsertTitleGenres("movie-g-3", [], db);
+
+    const rows = await db
+      .select({ genre: titleGenres.genre })
+      .from(titleGenres)
+      .where(eq(titleGenres.titleId, "movie-g-3"))
+      .all();
+    expect(rows).toHaveLength(0);
+  });
+
+  it("treats undefined genres the same as an empty list", async () => {
+    const db = getDb();
+    await upsertTitleRow(makeParsedTitle({ id: "movie-g-4" }), db);
+    await upsertTitleGenres("movie-g-4", ["Action"], db);
+    await upsertTitleGenres("movie-g-4", undefined, db);
+
+    const rows = await db
+      .select({ genre: titleGenres.genre })
+      .from(titleGenres)
+      .where(eq(titleGenres.titleId, "movie-g-4"))
+      .all();
+    expect(rows).toHaveLength(0);
+  });
+});
+
+describe("mergeOffers", () => {
+  it("inserts offers for a title", async () => {
+    const db = getDb();
+    await upsertProviderRows(
+      [{ id: 8, name: "Netflix", technicalName: "netflix", iconUrl: "n.png" }],
+      db,
+    );
+    await upsertTitleRow(makeParsedTitle({ id: "movie-o-1" }), db);
+
+    const offer = makeParsedOffer({ titleId: "movie-o-1", providerId: 8, monetizationType: "FLATRATE" });
+    await mergeOffers("movie-o-1", [offer], db);
+
+    const rows = await db.select().from(offers).where(eq(offers.titleId, "movie-o-1")).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].providerId).toBe(8);
+    expect(rows[0].monetizationType).toBe("FLATRATE");
+  });
+
+  it("preserves existing deep links across merges", async () => {
+    const db = getDb();
+    await upsertProviderRows(
+      [{ id: 8, name: "Netflix", technicalName: "netflix", iconUrl: "n.png" }],
+      db,
+    );
+    await upsertTitleRow(makeParsedTitle({ id: "movie-o-2" }), db);
+
+    const offer = makeParsedOffer({ titleId: "movie-o-2", providerId: 8, monetizationType: "FLATRATE" });
+    await mergeOffers("movie-o-2", [offer], db);
+
+    // Stamp a deep link as if the SA enrichment had filled it in
+    const rawDb = (await import("../bun-db")).getRawDb();
+    rawDb
+      .prepare("UPDATE offers SET deep_link = 'plex://movie/4' WHERE title_id = 'movie-o-2'")
+      .run();
+
+    // Re-merge with the same offer payload — deep link must survive
+    await mergeOffers("movie-o-2", [offer], db);
+
+    const row = rawDb
+      .prepare("SELECT deep_link FROM offers WHERE title_id = 'movie-o-2'")
+      .get() as { deep_link: string | null };
+    expect(row?.deep_link).toBe("plex://movie/4");
+  });
+
+  it("preserves deep links across canonical provider remaps", async () => {
+    const db = getDb();
+    // Seed both the duplicate (1899) and canonical (384) HBO Max IDs
+    await upsertProviderRows(
+      [
+        { id: 1899, name: "HBO Max", technicalName: "hbo_max", iconUrl: "h.png" },
+        { id: 384, name: "HBO Max", technicalName: "hbo", iconUrl: "h.png" },
+      ],
+      db,
+    );
+    await upsertTitleRow(makeParsedTitle({ id: "movie-o-3" }), db);
+
+    const dupOffer = makeParsedOffer({ titleId: "movie-o-3", providerId: 1899, monetizationType: "FLATRATE" });
+    await mergeOffers("movie-o-3", [dupOffer], db);
+
+    const rawDb = (await import("../bun-db")).getRawDb();
+    rawDb
+      .prepare("UPDATE offers SET deep_link = 'plex://movie/hbo' WHERE title_id = 'movie-o-3'")
+      .run();
+
+    // Now the parser produces the canonical ID — the deep link should still be picked up
+    const canonicalOffer = makeParsedOffer({ titleId: "movie-o-3", providerId: 384, monetizationType: "FLATRATE" });
+    await mergeOffers("movie-o-3", [canonicalOffer], db);
+
+    const row = rawDb
+      .prepare("SELECT deep_link FROM offers WHERE title_id = 'movie-o-3'")
+      .get() as { deep_link: string | null };
+    expect(row?.deep_link).toBe("plex://movie/hbo");
+  });
+
+  it("is a no-op when newOffers is empty (preserves existing offers)", async () => {
+    const db = getDb();
+    await upsertProviderRows(
+      [{ id: 8, name: "Netflix", technicalName: "netflix", iconUrl: "n.png" }],
+      db,
+    );
+    await upsertTitleRow(makeParsedTitle({ id: "movie-o-4" }), db);
+    const offer = makeParsedOffer({ titleId: "movie-o-4", providerId: 8 });
+    await mergeOffers("movie-o-4", [offer], db);
+
+    await mergeOffers("movie-o-4", [], db);
+
+    const rows = await db.select().from(offers).where(eq(offers.titleId, "movie-o-4")).all();
+    expect(rows).toHaveLength(1);
+  });
+});
+
+describe("upsertScores", () => {
+  it("inserts a new score row", async () => {
+    const db = getDb();
+    await upsertTitleRow(makeParsedTitle({ id: "movie-s-1" }), db);
+    await upsertScores("movie-s-1", { imdbScore: 7.5, imdbVotes: 100, tmdbScore: 6.9 }, db);
+
+    const row = await db.select().from(scores).where(eq(scores.titleId, "movie-s-1")).get();
+    expect(row?.imdbScore).toBe(7.5);
+    expect(row?.imdbVotes).toBe(100);
+    expect(row?.tmdbScore).toBe(6.9);
+  });
+
+  it("updates existing scores on conflict", async () => {
+    const db = getDb();
+    await upsertTitleRow(makeParsedTitle({ id: "movie-s-2" }), db);
+    await upsertScores("movie-s-2", { imdbScore: 6.0, imdbVotes: 50, tmdbScore: 5.5 }, db);
+    await upsertScores("movie-s-2", { imdbScore: 8.1, imdbVotes: 999, tmdbScore: 8.0 }, db);
+
+    const row = await db.select().from(scores).where(eq(scores.titleId, "movie-s-2")).get();
+    expect(row?.imdbScore).toBe(8.1);
+    expect(row?.imdbVotes).toBe(999);
+    expect(row?.tmdbScore).toBe(8.0);
+  });
+
+  it("accepts null score values", async () => {
+    const db = getDb();
+    await upsertTitleRow(makeParsedTitle({ id: "movie-s-3" }), db);
+    await upsertScores("movie-s-3", { imdbScore: null, imdbVotes: null, tmdbScore: null }, db);
+
+    const row = await db.select().from(scores).where(eq(scores.titleId, "movie-s-3")).get();
+    expect(row?.imdbScore).toBeNull();
+    expect(row?.imdbVotes).toBeNull();
+    expect(row?.tmdbScore).toBeNull();
   });
 });
