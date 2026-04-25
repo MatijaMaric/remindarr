@@ -25,6 +25,7 @@ import WatchButtonGroup from "../components/WatchButtonGroup";
 import VisibilityButton from "../components/VisibilityButton";
 import ShareButton from "../components/ShareButton";
 import RecommendButton from "../components/RecommendButton";
+import BackdateWatchedButton from "../components/BackdateWatchedButton";
 import { getProviderColor } from "../data/providerColors";
 import { Kicker, Chip } from "../components/design";
 
@@ -893,7 +894,11 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
       {/* Seasons */}
       {seasons.length > 0 && (
-        <Section title="Seasons">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-[18px] font-semibold text-white tracking-tight leading-tight">Seasons</h2>
+            <BackdateWatchedButton scope="title" titleId={title.id} variant="ghost" />
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {seasons.map((s: SeasonSummary) => {
               const airingToday = isToday(s.air_date);
@@ -937,7 +942,7 @@ function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               );
             })}
           </div>
-        </Section>
+        </section>
       )}
 
       {/* Streaming Availability */}

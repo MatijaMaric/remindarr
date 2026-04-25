@@ -11,6 +11,7 @@ import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
+import BackdateWatchedButton from "../components/BackdateWatchedButton";
 import { StatsView } from "./StatsPage";
 
 function TrackedStatsBand({ titles }: { titles: Title[] }) {
@@ -114,7 +115,8 @@ export default function TrackedPage() {
         kicker={`Your library · ${allTitles.length} title${allTitles.length === 1 ? '' : 's'}`}
         title="Tracked"
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <BackdateWatchedButton scope="all" variant="ghost" />
             <Pill active={view === 'grid'} onClick={() => setView('grid')}>Grid</Pill>
             <Pill active={view === 'list'} onClick={() => setView('list')}>List</Pill>
             <Pill active={view === 'stats'} onClick={() => setView('stats')}>Stats</Pill>
