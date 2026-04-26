@@ -562,8 +562,8 @@ export default function KioskPage() {
         setError(true);
         return;
       }
-      const json = await res.json() as { data: KioskData };
-      setData(json.data);
+      const json = await res.json() as KioskData;
+      setData(json);
     } catch {
       setError(true);
     }
