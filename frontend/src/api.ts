@@ -781,22 +781,65 @@ export async function regenerateFeedToken(): Promise<{ token: string }> {
 
 // ─── Kiosk ────────────────────────────────────────────────────────────────────
 
-export interface WatchingTitle extends Title {
-  watched_episodes_count?: number;
-  released_episodes_count?: number;
-  total_episodes?: number;
-  next_episode_air_date?: string | null;
+export type KioskFidelity = "rich" | "lite" | "epaper";
+
+export interface KioskAiringSlot {
+  id: number;
+  title_id: string;
+  show_title: string;
+  poster_url: string | null;
+  backdrop_url: string | null;
+  season_number: number;
+  episode_number: number;
+  ep_title: string | null;
+  air_date: string | null;
+  provider: string | null;
+}
+
+export interface KioskRelease {
+  id: number;
+  title_id: string;
+  show_title: string;
+  poster_url: string | null;
+  backdrop_url: string | null;
+  season_number: number;
+  episode_number: number;
+  ep_title: string | null;
+  air_date: string | null;
+  provider: string | null;
+  kind: "series" | "episode";
+}
+
+export interface KioskQueueItem {
+  id: number;
+  title_id: string;
+  show_title: string;
+  poster_url: string | null;
+  season_number: number;
+  episode_number: number;
+  ep_title: string | null;
+  air_date: string | null;
+  provider: string | null;
+  left: number;
+}
+
+export interface KioskMeta {
+  household: string;
+  fidelity: KioskFidelity;
+  refresh_interval_seconds: number;
+  generated_at: string;
 }
 
 export interface KioskData {
-  tonight: Episode[];
-  week: Episode[];
-  recent: Title[];
-  watching: WatchingTitle[];
+  meta: KioskMeta;
+  airing_now: KioskAiringSlot | null;
+  releasing_today: KioskRelease[];
+  unwatched_queue: KioskQueueItem[];
 }
 
-export async function getKioskData(token: string): Promise<KioskData> {
-  return fetchJson(`/kiosk/${encodeURIComponent(token)}`);
+export async function getKioskData(token: string, display?: KioskFidelity): Promise<KioskData> {
+  const params = display ? `?display=${encodeURIComponent(display)}` : "";
+  return fetchJson(`/kiosk/${encodeURIComponent(token)}${params}`);
 }
 
 export async function getKioskToken(): Promise<{ token: string | null }> {
