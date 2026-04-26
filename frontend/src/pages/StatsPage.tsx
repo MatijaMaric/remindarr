@@ -113,7 +113,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 export function StatsView() {
-  const { data, loading } = useApiCall(() => api.getStats(), []);
+  const { data, loading } = useApiCall((signal) => api.getStats(signal), []);
 
   if (loading || !data) {
     return (

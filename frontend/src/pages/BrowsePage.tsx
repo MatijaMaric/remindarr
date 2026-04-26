@@ -109,13 +109,17 @@ export default function BrowsePage() {
   const [filterPriorityLanguageCodes, setFilterPriorityLanguageCodes] = useState<string[]>([]);
 
   useEffect(() => {
-    loadFilters().then(({ genres, providers, languages, regionProviderIds, priorityLanguageCodes }) => {
-      setFilterGenres(genres);
-      setFilterProviders(providers);
-      setFilterLanguages(languages);
-      setFilterRegionProviderIds(regionProviderIds);
-      setFilterPriorityLanguageCodes(priorityLanguageCodes);
+    const controller = new AbortController();
+    loadFilters(controller.signal).then(({ genres, providers, languages, regionProviderIds, priorityLanguageCodes }) => {
+      if (!controller.signal.aborted) {
+        setFilterGenres(genres);
+        setFilterProviders(providers);
+        setFilterLanguages(languages);
+        setFilterRegionProviderIds(regionProviderIds);
+        setFilterPriorityLanguageCodes(priorityLanguageCodes);
+      }
     }).catch(() => { /* ignore */ });
+    return () => controller.abort();
   }, []);
 
   // ── Advanced search filter state ────────────────────────────────────────────
@@ -128,17 +132,21 @@ export default function BrowsePage() {
 
   // Load languages once for the dropdown
   useEffect(() => {
-    api.getLanguages().then(({ languages }) => {
-      setAvailableLanguages(
-        languages.map((code) => {
-          let label = code;
-          try {
-            label = new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
-          } catch { /* noop */ }
-          return { code, label };
-        }).sort((a, b) => a.label.localeCompare(b.label))
-      );
+    const controller = new AbortController();
+    api.getLanguages(controller.signal).then(({ languages }) => {
+      if (!controller.signal.aborted) {
+        setAvailableLanguages(
+          languages.map((code) => {
+            let label = code;
+            try {
+              label = new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+            } catch { /* noop */ }
+            return { code, label };
+          }).sort((a, b) => a.label.localeCompare(b.label))
+        );
+      }
     }).catch(() => { /* ignore */ });
+    return () => controller.abort();
   }, []);
 
   // Current search query ref so we can re-run when filters change while results are shown

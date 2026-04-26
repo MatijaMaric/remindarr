@@ -295,33 +295,38 @@ export default function HomePage() {
 
   useEffect(() => {
     if (authLoading) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+
     if (!user) {
-      api.browseTitles({ category: "popular", page: 1 })
-        .then((res) => setPopularTitles(res.titles.map(normalizeSearchTitle)))
+      api.browseTitles({ category: "popular", page: 1 }, signal)
+        .then((res) => { if (!signal.aborted) setPopularTitles(res.titles.map(normalizeSearchTitle)); })
         .catch(() => {})
-        .finally(() => setLoading(false));
-      return;
+        .finally(() => { if (!signal.aborted) setLoading(false); });
+      return () => controller.abort();
     }
 
     async function load() {
       try {
         const [episodeData, recData, layoutData] = await Promise.all([
-          api.getUpcomingEpisodes(),
-          api.getRecommendations(6).catch(() => ({ recommendations: [], count: 0 })),
-          (api.getHomepageLayout?.() ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
+          api.getUpcomingEpisodes(signal),
+          api.getRecommendations(6, undefined, signal).catch(() => ({ recommendations: [], count: 0 })),
+          (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
         ]);
+        if (signal.aborted) return;
         setToday(episodeData.today);
         setUpcoming(episodeData.upcoming);
         setUnwatched(episodeData.unwatched);
         setRecommendations(recData.recommendations);
         setLayout(layoutData.homepage_layout);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : String(err));
+        if (!signal.aborted) setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     }
     load();
+    return () => controller.abort();
   }, [user, authLoading]);
 
   // Cleanup confirmation timer

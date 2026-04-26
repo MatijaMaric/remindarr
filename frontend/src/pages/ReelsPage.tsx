@@ -88,17 +88,20 @@ export default function ReelsPage() {
   const visibleCardIndexRef = useRef(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     async function load() {
       try {
-        const data = await api.getUpcomingEpisodes();
-        setCards(getFirstUnwatchedPerShow(data.unwatched));
+        const data = await api.getUpcomingEpisodes(signal);
+        if (!signal.aborted) setCards(getFirstUnwatchedPerShow(data.unwatched));
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : String(err));
+        if (!signal.aborted) setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     }
     load();
+    return () => controller.abort();
   }, []);
 
   // Track visible card via scroll position

@@ -177,7 +177,7 @@ describe("HomePage — unauthenticated landing", () => {
       expect(screen.getByText("Title 1")).toBeDefined();
     });
 
-    expect(mockBrowseTitles).toHaveBeenCalledWith({ category: "popular", page: 1 });
+    expect(mockBrowseTitles).toHaveBeenCalledWith({ category: "popular", page: 1 }, expect.any(AbortSignal));
     expect(screen.getByText("Popular Right Now")).toBeDefined();
   });
 
@@ -275,7 +275,7 @@ describe("HomePage — authenticated recommendations", () => {
     render(<HomePage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(mockGetRecommendations).toHaveBeenCalledWith(6);
+      expect(mockGetRecommendations).toHaveBeenCalledWith(6, undefined, expect.any(AbortSignal));
     });
   });
 
