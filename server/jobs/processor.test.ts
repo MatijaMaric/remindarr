@@ -211,6 +211,22 @@ describe("processPendingJobs", () => {
     expect(count).toBe(1); // Still completes, just skips the actual sync
     expect(mockSyncEpisodes).not.toHaveBeenCalled();
   });
+
+  it("claims jobs atomically — handler runs at most once if two invocations race on the same pending job", async () => {
+    let callCount = 0;
+    mockFetchNewReleases.mockImplementation(async () => {
+      callCount++;
+      return [];
+    });
+    mockUpsertTitles.mockResolvedValue(0);
+
+    await insertJob("sync-titles");
+
+    const [c1, c2] = await Promise.all([processPendingJobs(), processPendingJobs()]);
+
+    expect(callCount).toBe(1);
+    expect(c1 + c2).toBe(1);
+  });
 });
 
 // ─── enqueueCronJob ──────────────────────────────────────────────────────────

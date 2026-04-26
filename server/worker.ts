@@ -278,8 +278,9 @@ function createApp(env: Env) {
   app.use("/api/search", optionalAuth);
   app.route("/api/search", searchRoutes);
 
-  app.use("/api/browse/*", optionalAuth);
-  app.use("/api/browse", optionalAuth);
+  const browseRateLimiter = rateLimiter({ limit: 30, windowMs: 60_000 });
+  app.use("/api/browse/*", browseRateLimiter, optionalAuth);
+  app.use("/api/browse", browseRateLimiter, optionalAuth);
   app.route("/api/browse", browseRoutes);
 
   app.use("/api/calendar/*", optionalAuth);
@@ -300,8 +301,9 @@ function createApp(env: Env) {
   app.route("/api/social", socialRoutes);
 
   // Ratings routes — optionalAuth base, POST/DELETE check auth internally
-  app.use("/api/ratings/*", optionalAuth);
-  app.use("/api/ratings", optionalAuth);
+  const ratingsRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+  app.use("/api/ratings/*", ratingsRateLimiter, optionalAuth);
+  app.use("/api/ratings", ratingsRateLimiter, optionalAuth);
   app.route("/api/ratings", ratingsRoutes);
 
   // Recommendations routes
@@ -365,8 +367,9 @@ function createApp(env: Env) {
   app.route("/api/jobs", jobsCfRoutes);
 
   // Detail pages
-  app.use("/api/details/*", optionalAuth);
-  app.use("/api/details", optionalAuth);
+  const detailsRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+  app.use("/api/details/*", detailsRateLimiter, optionalAuth);
+  app.use("/api/details", detailsRateLimiter, optionalAuth);
   app.route("/api/details", detailsRoutes);
 
   // Sync (admin only — rate limited + require admin)
