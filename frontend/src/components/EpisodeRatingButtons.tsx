@@ -144,7 +144,7 @@ export default function EpisodeRatingButtons({ episodeId }: EpisodeRatingButtons
             onChange={(e) => setReviewText(e.target.value.slice(0, 500))}
             placeholder="Add a short review… (optional)"
             rows={2}
-            className="w-full bg-zinc-800 text-zinc-200 text-sm rounded-lg border border-white/[0.06] px-3 py-2 placeholder-zinc-600 focus:border-amber-500/50 focus:outline-none resize-none"
+            className="w-full bg-zinc-800 text-zinc-200 text-sm rounded-lg border border-white/[0.06] px-3 py-2 placeholder-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-amber-500/50 resize-none"
           />
           <div className="flex items-center justify-between">
             <span className="text-xs text-zinc-600">{reviewText.length}/500</span>

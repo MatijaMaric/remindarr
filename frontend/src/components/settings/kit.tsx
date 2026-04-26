@@ -452,7 +452,7 @@ export function SInput({
       autoComplete={autoComplete}
       aria-label={ariaLabel}
       className={cn(
-        "w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 placeholder-zinc-500 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-transparent disabled:opacity-50",
+        "w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 placeholder-zinc-500 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:border-transparent disabled:opacity-50",
         mono && "font-mono",
         className,
       )}

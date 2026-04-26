@@ -111,7 +111,7 @@ export default function RecommendButton({ titleId }: Props) {
                 placeholder="Why should people watch this?"
                 maxLength={280}
                 rows={3}
-                className="w-full bg-zinc-800 text-white rounded-md px-3 py-2 text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500 border border-zinc-700 resize-none"
+                className="w-full bg-zinc-800 text-white rounded-md px-3 py-2 text-sm placeholder:text-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 border border-zinc-700 resize-none"
                 data-testid="recommend-message"
               />
               <div className="text-xs text-zinc-500 text-right mt-1">
