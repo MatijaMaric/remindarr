@@ -1,12 +1,21 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router";
+import { createContext, useContext } from "react";
 
 import "../i18n";
 
 let mockIsMobile = false;
 mock.module("../hooks/useIsMobile", () => ({
   useIsMobile: () => mockIsMobile,
+}));
+
+// Provide a real React context so <AuthContext value={...}> works in React 19
+// even when an earlier test file has leaked a broken mock.module for AuthContext.
+const MockAuthContext = createContext<any>(null);
+mock.module("../context/AuthContext", () => ({
+  useAuth: () => useContext(MockAuthContext) ?? { user: null, providers: null, loading: false },
+  AuthContext: MockAuthContext,
 }));
 
 const { default: HomeRoute } = await import("./HomeRoute");

@@ -409,10 +409,14 @@ export async function setKioskToken(userId: string, token: string | null): Promi
   });
 }
 
-export async function getUserByKioskToken(token: string): Promise<{ id: string } | null> {
+export async function getUserByKioskToken(token: string): Promise<{ id: string; username: string; displayUsername: string | null } | null> {
   return traceDbQuery("getUserByKioskToken", async () => {
     const db = getDb();
-    const row = await db.select({ id: users.id }).from(users).where(eq(users.kioskToken, token)).get();
+    const row = await db
+      .select({ id: users.id, username: users.username, displayUsername: users.displayUsername })
+      .from(users)
+      .where(eq(users.kioskToken, token))
+      .get();
     return row ?? null;
   });
 }

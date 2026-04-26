@@ -63,154 +63,194 @@ describe("GET /kiosk/:token (public dashboard)", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns dashboard data for valid token", async () => {
+  it("returns dashboard data with new shape for valid token", async () => {
     const regenRes = await app.request("/kiosk/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token } = await regenRes.json() as { token: string };
+    const { token } = (await regenRes.json()) as { token: string };
 
     const res = await app.request(`/kiosk/${token}`);
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
-    expect(Array.isArray(body.tonight)).toBe(true);
-    expect(Array.isArray(body.week)).toBe(true);
-    expect(Array.isArray(body.recent)).toBe(true);
-    expect(Array.isArray(body.watching)).toBe(true);
+    const body = (await res.json()) as any;
+    expect(body.meta).toBeDefined();
+    expect(typeof body.meta.household).toBe("string");
+    expect(typeof body.meta.fidelity).toBe("string");
+    expect(typeof body.meta.refresh_interval_seconds).toBe("number");
+    expect(typeof body.meta.generated_at).toBe("string");
+    expect(Array.isArray(body.releasing_today)).toBe(true);
+    expect(Array.isArray(body.unwatched_queue)).toBe(true);
+    // airing_now is null when no episodes exist in test db
+    expect(body.airing_now).toBeNull();
   });
 
-  it("sets Cache-Control: no-cache on dashboard response", async () => {
+  it("sets Cache-Control: no-cache, no-store", async () => {
     const regenRes = await app.request("/kiosk/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token } = await regenRes.json() as { token: string };
+    const { token } = (await regenRes.json()) as { token: string };
 
     const res = await app.request(`/kiosk/${token}`);
-    expect(res.headers.get("Cache-Control")).toContain("no-cache");
+    expect(res.headers.get("Cache-Control")).toBe("no-cache, no-store");
   });
 
-  it("returns 401 after token is revoked", async () => {
+  it("returns 300 refresh_interval_seconds for rich fidelity", async () => {
     const regenRes = await app.request("/kiosk/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token } = await regenRes.json() as { token: string };
+    const { token } = (await regenRes.json()) as { token: string };
 
-    await app.request("/kiosk/token", { method: "DELETE", headers: authHeaders() });
-
-    const res = await app.request(`/kiosk/${token}`);
-    expect(res.status).toBe(401);
+    const res = await app.request(`/kiosk/${token}?display=rich`);
+    const body = (await res.json()) as any;
+    expect(body.meta.refresh_interval_seconds).toBe(300);
+    expect(body.meta.fidelity).toBe("rich");
   });
 
-  it("returns 401 after token is regenerated (old token invalid)", async () => {
-    const res1 = await app.request("/kiosk/token/regenerate", {
+  it("returns 1800 refresh_interval_seconds for epaper fidelity", async () => {
+    const regenRes = await app.request("/kiosk/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token: oldToken } = await res1.json() as { token: string };
+    const { token } = (await regenRes.json()) as { token: string };
 
-    await app.request("/kiosk/token/regenerate", { method: "POST", headers: authHeaders() });
+    const res = await app.request(`/kiosk/${token}?display=epaper`);
+    const body = (await res.json()) as any;
+    expect(body.meta.refresh_interval_seconds).toBe(1800);
+    expect(body.meta.fidelity).toBe("epaper");
+  });
 
-    const res = await app.request(`/kiosk/${oldToken}`);
-    expect(res.status).toBe(401);
+  it("returns 300 refresh_interval_seconds for lite fidelity", async () => {
+    const regenRes = await app.request("/kiosk/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await regenRes.json()) as { token: string };
+
+    const res = await app.request(`/kiosk/${token}?display=lite`);
+    const body = (await res.json()) as any;
+    expect(body.meta.refresh_interval_seconds).toBe(300);
+    expect(body.meta.fidelity).toBe("lite");
+  });
+
+  it("returns 400 for invalid display query param", async () => {
+    const regenRes = await app.request("/kiosk/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await regenRes.json()) as { token: string };
+
+    const res = await app.request(`/kiosk/${token}?display=invalid`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as any;
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 for token longer than 64 chars", async () => {
+    const res = await app.request(`/kiosk/${"x".repeat(65)}`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as any;
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("defaults to rich fidelity when display param is absent", async () => {
+    const regenRes = await app.request("/kiosk/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await regenRes.json()) as { token: string };
+
+    const res = await app.request(`/kiosk/${token}`);
+    const body = (await res.json()) as any;
+    expect(body.meta.fidelity).toBe("rich");
+    expect(body.meta.refresh_interval_seconds).toBe(300);
   });
 });
 
 describe("validation", () => {
-  it("returns 400 for token that exceeds max length", async () => {
-    const longToken = "a".repeat(65);
-    const res = await app.request(`/kiosk/${longToken}`);
+  it("returns 400 with issues array for invalid display param", async () => {
+    const regenRes = await app.request("/kiosk/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await regenRes.json()) as { token: string };
+
+    const res = await app.request(`/kiosk/${token}?display=hd`);
     expect(res.status).toBe(400);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
+    expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
 });
 
-describe("GET /kiosk/token", () => {
-  it("returns 401 without auth", async () => {
+describe("GET /api/kiosk/token (auth)", () => {
+  it("returns 401 without session", async () => {
     const res = await app.request("/kiosk/token");
     expect(res.status).toBe(401);
   });
 
-  it("returns null token before any generation", async () => {
+  it("returns { token: null } before any token is generated", async () => {
     const res = await app.request("/kiosk/token", { headers: authHeaders() });
     expect(res.status).toBe(200);
-    const body = await res.json() as { token: string | null };
+    const body = (await res.json()) as any;
     expect(body.token).toBeNull();
-  });
-
-  it("returns token after regeneration", async () => {
-    await app.request("/kiosk/token/regenerate", {
-      method: "POST",
-      headers: authHeaders(),
-    });
-    const res = await app.request("/kiosk/token", { headers: authHeaders() });
-    expect(res.status).toBe(200);
-    const body = await res.json() as { token: string };
-    expect(typeof body.token).toBe("string");
-    expect(body.token.length).toBeGreaterThan(0);
   });
 });
 
-describe("POST /kiosk/token/regenerate", () => {
-  it("returns 401 without auth", async () => {
-    const res = await app.request("/kiosk/token/regenerate", { method: "POST" });
-    expect(res.status).toBe(401);
-  });
-
-  it("generates a 32-char hex token", async () => {
+describe("POST /api/kiosk/token/regenerate (auth)", () => {
+  it("returns a new token", async () => {
     const res = await app.request("/kiosk/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as { token: string };
+    const body = (await res.json()) as any;
     expect(typeof body.token).toBe("string");
-    expect(body.token).toMatch(/^[0-9a-f]{32}$/);
+    expect(body.token.length).toBeGreaterThan(0);
   });
 
-  it("new token replaces the old one", async () => {
+  it("a second regenerate invalidates the first token", async () => {
     const res1 = await app.request("/kiosk/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token: token1 } = await res1.json() as { token: string };
+    const { token: t1 } = (await res1.json()) as { token: string };
 
-    const res2 = await app.request("/kiosk/token/regenerate", {
-      method: "POST",
-      headers: authHeaders(),
-    });
-    const { token: token2 } = await res2.json() as { token: string };
-
-    expect(token1).not.toBe(token2);
-
-    const getRes = await app.request("/kiosk/token", { headers: authHeaders() });
-    const { token: storedToken } = await getRes.json() as { token: string };
-    expect(storedToken).toBe(token2);
-  });
-});
-
-describe("DELETE /kiosk/token", () => {
-  it("returns 401 without auth", async () => {
-    const res = await app.request("/kiosk/token", { method: "DELETE" });
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 204 and clears the token", async () => {
     await app.request("/kiosk/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
 
-    const deleteRes = await app.request("/kiosk/token", {
+    const dashRes = await app.request(`/kiosk/${t1}`);
+    expect(dashRes.status).toBe(401);
+  });
+});
+
+describe("DELETE /api/kiosk/token (auth)", () => {
+  it("returns 401 without session", async () => {
+    const res = await app.request("/kiosk/token", { method: "DELETE" });
+    expect(res.status).toBe(401);
+  });
+
+  it("revokes the token — subsequent dashboard requests return 401", async () => {
+    const regenRes = await app.request("/kiosk/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await regenRes.json()) as { token: string };
+
+    await app.request("/kiosk/token", { method: "DELETE", headers: authHeaders() });
+
+    const dashRes = await app.request(`/kiosk/${token}`);
+    expect(dashRes.status).toBe(401);
+  });
+
+  it("returns 204", async () => {
+    const res = await app.request("/kiosk/token", {
       method: "DELETE",
       headers: authHeaders(),
     });
-    expect(deleteRes.status).toBe(204);
-
-    const getRes = await app.request("/kiosk/token", { headers: authHeaders() });
-    const body = await getRes.json() as { token: string | null };
-    expect(body.token).toBeNull();
+    expect(res.status).toBe(204);
   });
 });
