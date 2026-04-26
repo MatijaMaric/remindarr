@@ -4,7 +4,6 @@ import { registerRoute, NavigationRoute } from "workbox-routing";
 import { StaleWhileRevalidate, NetworkFirst, NetworkOnly } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { BackgroundSyncPlugin } from "workbox-background-sync";
-
 declare let self: ServiceWorkerGlobalScope;
 
 // Precache all assets built by Vite
@@ -18,6 +17,28 @@ const navigationRoute = new NavigationRoute(
 );
 registerRoute(navigationRoute);
 
+const CACHE_PREFIXES = [
+  "api-static-v",
+  "api-titles-v",
+  "api-tracked-v",
+  "api-episodes-v",
+  "api-details-v",
+  "api-calendar-v",
+  "api-auth-v",
+];
+
+const CURRENT_CACHES = new Set([
+  `api-static-v${__APP_VERSION__}`,
+  `api-titles-v${__APP_VERSION__}`,
+  `api-tracked-v${__APP_VERSION__}`,
+  `api-episodes-v${__APP_VERSION__}`,
+  `api-details-v${__APP_VERSION__}`,
+  `api-calendar-v${__APP_VERSION__}`,
+  `api-auth-v${__APP_VERSION__}`,
+]);
+
+const lastFetchTime = new Map<string, number>();
+
 // Cache static/infrequently-changing API data (providers, genres, languages)
 registerRoute(
   ({ url }) =>
@@ -25,7 +46,7 @@ registerRoute(
     url.pathname === "/api/titles/genres" ||
     url.pathname === "/api/titles/languages",
   new StaleWhileRevalidate({
-    cacheName: "api-static",
+    cacheName: `api-static-v${__APP_VERSION__}`,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 7 * 24 * 60 * 60, maxEntries: 10 }),
     ],
@@ -36,9 +57,14 @@ registerRoute(
 registerRoute(
   ({ url }) => url.pathname === "/api/titles",
   new StaleWhileRevalidate({
-    cacheName: "api-titles",
+    cacheName: `api-titles-v${__APP_VERSION__}`,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 30 }),
+      {
+        cacheDidUpdate: async () => {
+          lastFetchTime.set(`api-titles-v${__APP_VERSION__}`, Date.now());
+        },
+      },
     ],
   })
 );
@@ -47,7 +73,7 @@ registerRoute(
 registerRoute(
   ({ url }) => url.pathname === "/api/track",
   new NetworkFirst({
-    cacheName: "api-tracked",
+    cacheName: `api-tracked-v${__APP_VERSION__}`,
     networkTimeoutSeconds: 5,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 20 }),
@@ -59,7 +85,7 @@ registerRoute(
 registerRoute(
   ({ url }) => url.pathname === "/api/episodes/upcoming",
   new NetworkFirst({
-    cacheName: "api-episodes",
+    cacheName: `api-episodes-v${__APP_VERSION__}`,
     networkTimeoutSeconds: 5,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 10 }),
@@ -71,7 +97,7 @@ registerRoute(
 registerRoute(
   ({ url }) => url.pathname.startsWith("/api/details/"),
   new StaleWhileRevalidate({
-    cacheName: "api-details",
+    cacheName: `api-details-v${__APP_VERSION__}`,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 7 * 24 * 60 * 60, maxEntries: 200 }),
     ],
@@ -82,7 +108,7 @@ registerRoute(
 registerRoute(
   ({ url }) => url.pathname === "/api/calendar",
   new NetworkFirst({
-    cacheName: "api-calendar",
+    cacheName: `api-calendar-v${__APP_VERSION__}`,
     networkTimeoutSeconds: 5,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 12 }),
@@ -94,7 +120,7 @@ registerRoute(
 registerRoute(
   ({ url }) => url.pathname === "/api/auth/me",
   new NetworkFirst({
-    cacheName: "api-auth",
+    cacheName: `api-auth-v${__APP_VERSION__}`,
     networkTimeoutSeconds: 5,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 60 * 60, maxEntries: 5 }),
@@ -136,8 +162,15 @@ registerRoute(
   "DELETE"
 );
 
-// Pre-cache a tracked title's detail data on demand
+// Message handler: pre-cache a tracked title's detail data on demand + cache age queries
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "GET_CACHE_AGE") {
+    const ts = lastFetchTime.get(event.data.cacheName as string) ?? null;
+    const ageMs = ts !== null ? Date.now() - ts : null;
+    event.ports[0]?.postMessage({ ageMs });
+    return;
+  }
+
   if (event.data?.type !== "PRECACHE_TITLE") return;
   const { titleId, objectType } = event.data as { titleId: string; objectType: "MOVIE" | "SHOW" };
   const path =
@@ -145,14 +178,27 @@ self.addEventListener("message", (event) => {
       ? `/api/details/movie/${encodeURIComponent(titleId)}`
       : `/api/details/show/${encodeURIComponent(titleId)}`;
   event.waitUntil(
-    caches.open("api-details").then((c) => c.add(path)).catch(() => {})
+    caches.open(`api-details-v${__APP_VERSION__}`).then((c) => c.add(path)).catch(() => {})
   );
 });
 
-// Activate immediately
+// Skip waiting so the new SW activates immediately on update
 self.skipWaiting();
+
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter(
+            (k) =>
+              CACHE_PREFIXES.some((p) => k.startsWith(p)) &&
+              !CURRENT_CACHES.has(k)
+          )
+          .map((k) => caches.delete(k))
+      )
+    ).then(() => (self as ServiceWorkerGlobalScope).clients.claim())
+  );
 });
 
 // Push notification handler
