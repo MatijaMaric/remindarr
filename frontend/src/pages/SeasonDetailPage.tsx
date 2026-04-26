@@ -42,7 +42,7 @@ export default function SeasonDetailPage() {
   const navigate = useNavigate();
 
   const { data, loading, error } = useApiCall<SeasonDetailsResponse>(
-    () => api.getSeasonDetails(id!, Number(season)),
+    (signal) => api.getSeasonDetails(id!, Number(season), signal),
     [id, season],
   );
 
@@ -50,8 +50,8 @@ export default function SeasonDetailPage() {
   const [episodeRatings, setEpisodeRatings] = useState<Record<number, Record<RatingValue, number>>>({});
 
   useApiCall(
-    () => user && id && season
-      ? api.getSeasonEpisodeStatus(id, Number(season))
+    (signal) => user && id && season
+      ? api.getSeasonEpisodeStatus(id, Number(season), signal)
       : Promise.resolve({ episodes: [] }),
     [user, id, season],
     {
@@ -66,8 +66,8 @@ export default function SeasonDetailPage() {
   );
 
   useApiCall(
-    () => id && season
-      ? api.getSeasonEpisodeRatings(id, Number(season))
+    (signal) => id && season
+      ? api.getSeasonEpisodeRatings(id, Number(season), signal)
       : Promise.resolve({ ratings: {} }),
     [id, season],
     {

@@ -27,7 +27,7 @@ async function sleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 async function fetchWithRetry<T>(
-  fetcher: () => Promise<T>,
+  fetcher: (signal: AbortSignal) => Promise<T>,
   retries: number,
   retryDelay: number,
   signal: AbortSignal,
@@ -36,7 +36,7 @@ async function fetchWithRetry<T>(
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (signal.aborted) throw new DOMException("Aborted", "AbortError");
     try {
-      return await fetcher();
+      return await fetcher(signal);
     } catch (err) {
       lastError = err;
       if (signal.aborted) throw err;
@@ -49,7 +49,7 @@ async function fetchWithRetry<T>(
 }
 
 export function useApiCall<T>(
-  fetcher: () => Promise<T>,
+  fetcher: (signal: AbortSignal) => Promise<T>,
   deps: DependencyList,
   options?: UseApiCallOptions<T>,
 ): UseApiCallResult<T> {

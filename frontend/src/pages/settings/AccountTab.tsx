@@ -393,20 +393,23 @@ function ProfileVisibilitySection() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [err, setErr] = useState("");
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await api.getTrackedTitles();
+      const data = await api.getTrackedTitles(signal);
+      if (signal?.aborted) return;
       setVisibility(data.profile_visibility || (data.profile_public ? "public" : "private"));
       setTitles(data.titles);
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    const controller = new AbortController();
+    refresh(controller.signal);
+    return () => controller.abort();
   }, [refresh]);
 
   async function handleVisibilityChange(newVisibility: string) {
@@ -548,19 +551,22 @@ function ActivityStreamSection() {
   });
   const [err, setErr] = useState("");
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await api.getActivitySettings();
+      const data = await api.getActivitySettings(signal);
+      if (signal?.aborted) return;
       setSettings(data);
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    const controller = new AbortController();
+    refresh(controller.signal);
+    return () => controller.abort();
   }, [refresh]);
 
   async function handleToggle(next: boolean) {
