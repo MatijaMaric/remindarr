@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import { Routes, Route, NavLink, Link, Navigate, useLocation, useNavigate } from "react-router";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -16,26 +16,7 @@ import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
 import { useKeyboardShortcut } from "./hooks/useKeyboardShortcut";
 import { useTheme } from "./hooks/useTheme";
-
-const LAZY_RETRY_KEY = "__lazy_retry";
-
-// Retry dynamic imports on failure (handles stale chunks after deploy).
-// Uses sessionStorage to cap retries and prevent infinite reload loops.
-function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>) {
-  return lazy(() =>
-    factory().catch((importError: unknown) => {
-      const retries = parseInt(sessionStorage.getItem(LAZY_RETRY_KEY) ?? "0", 10);
-      if (retries < 2) {
-        sessionStorage.setItem(LAZY_RETRY_KEY, String(retries + 1));
-        window.location.reload();
-        // Return a never-resolving promise so React doesn't render before reload
-        return new Promise<never>(() => {});
-      }
-      sessionStorage.removeItem(LAZY_RETRY_KEY);
-      throw importError;
-    })
-  );
-}
+import { lazyWithRetry } from "./lib/lazyWithRetry";
 
 const HomeRoute = lazyWithRetry(() => import("./routes/HomeRoute"));
 const BrowsePage = lazyWithRetry(() => import("./pages/BrowsePage"));
