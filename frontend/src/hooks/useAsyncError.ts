@@ -18,6 +18,7 @@ export function useAsyncError(): UseAsyncErrorResult {
     fn: () => Promise<T>,
     opts?: { silent?: boolean },
   ): Promise<T | undefined> => {
+    await Promise.resolve(); // defer setState to avoid react-hooks/set-state-in-effect
     setPending(true);
     setError(null);
     try {

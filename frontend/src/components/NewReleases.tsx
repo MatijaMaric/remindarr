@@ -48,8 +48,7 @@ export default function NewReleases({
 }: Props) {
   const { t } = useTranslation();
   const [titles, setTitles] = useState<Title[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { run, error } = useAsyncError();
+  const { run, error, pending: loading } = useAsyncError();
 
   const [genres, setGenres] = useState<string[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -67,22 +66,18 @@ export default function NewReleases({
     });
   }, []);
 
-  const fetchTitles = useCallback(async () => {
-    setLoading(true);
-    await run(async () => {
-      const res = await api.getTitles({
-        daysBack,
-        type: type.length ? type.join(",") : undefined,
-        genre: genre.length ? genre.join(",") : undefined,
-        provider: provider.length ? provider.join(",") : undefined,
-        language: language.length ? language.join(",") : undefined,
-        excludeTracked: hideTracked || undefined,
-      });
-      setTitles(res.titles);
-      onResultsCount?.(res.titles.length);
+  const fetchTitles = useCallback(() => run(async () => {
+    const res = await api.getTitles({
+      daysBack,
+      type: type.length ? type.join(",") : undefined,
+      genre: genre.length ? genre.join(",") : undefined,
+      provider: provider.length ? provider.join(",") : undefined,
+      language: language.length ? language.join(",") : undefined,
+      excludeTracked: hideTracked || undefined,
     });
-    setLoading(false);
-  }, [daysBack, type, genre, provider, language, hideTracked, onResultsCount, run]);
+    setTitles(res.titles);
+    onResultsCount?.(res.titles.length);
+  }), [run, daysBack, type, genre, provider, language, hideTracked, onResultsCount]);
 
   useEffect(() => {
     fetchTitles();

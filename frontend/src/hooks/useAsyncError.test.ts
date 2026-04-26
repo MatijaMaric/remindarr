@@ -33,6 +33,9 @@ describe("useAsyncError", () => {
       runPromise = result.current.run(fn);
     });
 
+    // Flush the microtask that defers setPending(true)
+    await act(async () => { await Promise.resolve(); });
+
     expect(result.current.pending).toBe(true);
 
     await act(async () => {
