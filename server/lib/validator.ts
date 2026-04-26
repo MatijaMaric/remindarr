@@ -1,6 +1,9 @@
 import { zValidator as baseValidator } from "@hono/zod-validator";
 import type { ValidationTargets } from "hono";
 import type { ZodType } from "zod";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "validator" });
 
 /**
  * Standard route validator.
@@ -31,6 +34,12 @@ export function zValidator<
 >(target: T, schema: S) {
   return baseValidator(target, schema, (result, c) => {
     if (!result.success) {
+      log.warn("Request validation failed", {
+        target,
+        method: c.req.method,
+        path: c.req.path,
+        issues: result.error.issues,
+      });
       return c.json(
         { error: "Validation failed", issues: result.error.issues },
         400,

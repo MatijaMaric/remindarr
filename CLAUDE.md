@@ -254,6 +254,7 @@ Inventory is large (~45 components). Broad groups:
 - Supported targets: `"json"`, `"query"`, `"param"`, `"form"`, `"header"`, `"cookie"`. For multipart `File` uploads, parse `FormData` manually and feed into `schema.safeParse(...)` (see `server/routes/import.ts`) — `instanceof File` is unreliable in the Bun test env, duck-type the upload instead.
 - Provider- or business-level validation (e.g. notifier `validateConfig`, timezone semantics, uniqueness) runs AFTER zod inside the handler. Zod only validates shape/types.
 - Tests for every migrated route should include a `describe("validation", ...)` block asserting `res.status === 400` and that the response body exposes an `issues` array.
+- **Happy-path requirement**: also include at least one test that sends the smallest realistic body the frontend actually sends and asserts `res.status === 200`. This prevents schema regressions (e.g. zod 3→4 semantic changes) from slipping past a rejection-only test suite. If the frontend can omit any optional field, the happy-path test must exercise that minimal shape. (Background: #577 / #578 — a silent HTTP 400 regression ran in prod undetected because only rejection cases were tested.)
 
 ### API Routes
 Grouped by middleware. All routes are under `/api` except `/metrics`.
