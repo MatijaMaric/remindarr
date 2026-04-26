@@ -403,7 +403,7 @@ function CheckboxList({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("filter.search")}
             autoFocus
-            className="w-full bg-zinc-700 text-zinc-200 text-xs px-3 py-2 border-0 outline-none placeholder-zinc-500"
+            className="w-full bg-zinc-700 text-zinc-200 text-xs px-3 py-2 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
           />
           {selected.length > 0 && (
             <button
@@ -472,7 +472,7 @@ function YearRangeInput({
           placeholder="From"
           min={1900}
           max={2100}
-          className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none placeholder-zinc-500 focus:ring-1 focus:ring-zinc-500"
+          className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
         />
         <span className="text-zinc-500 text-xs">–</span>
         <input
@@ -483,7 +483,7 @@ function YearRangeInput({
           placeholder="To"
           min={1900}
           max={2100}
-          className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none placeholder-zinc-500 focus:ring-1 focus:ring-zinc-500"
+          className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
         />
       </div>
       <div className="flex flex-wrap gap-1">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useTranslation } from "react-i18next";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -95,6 +96,7 @@ function SlideOverPanel({
   onToggleWatched: (id: number, watched: boolean) => void;
   onBulkToggle: (ids: number[], watched: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const today = formatDateKey(new Date());
   const dateLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(
     undefined,
@@ -136,7 +138,8 @@ function SlideOverPanel({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            aria-label={t("calendar.close")}
+            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           >
             <XIcon className="size-5" />
           </button>

@@ -148,7 +148,7 @@ export default function MultiSelectDropdown({
         onClick={handleToggleOpen}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="bg-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-1.5 border-0 outline-none cursor-pointer hover:text-white focus:ring-1 focus:ring-zinc-600 flex items-center gap-1"
+        className="bg-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-1.5 border-0 outline-none cursor-pointer hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 flex items-center gap-1"
       >
         {summary}
         <svg
@@ -170,7 +170,7 @@ export default function MultiSelectDropdown({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("filter.search")}
-              className="w-full bg-zinc-700 text-zinc-300 text-xs rounded-t-lg px-3 py-1.5 border-0 outline-none placeholder-zinc-500"
+              className="w-full bg-zinc-700 text-zinc-300 text-xs rounded-t-lg px-3 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
             />
             {selected.length > 0 && (
               <button

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useTranslation } from "react-i18next";
 import ScrollableRow from "./ScrollableRow";
 import {
   CalendarIcon,
@@ -134,11 +135,14 @@ export function ViewToggle({
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center bg-zinc-800 rounded-lg p-0.5">
       <button
         onClick={() => onViewModeChange("grid")}
-        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+        aria-label={t("calendar.gridView")}
+        aria-pressed={viewMode === "grid"}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
           viewMode === "grid"
             ? "bg-amber-500 text-zinc-950"
             : "text-zinc-400 hover:text-white"
@@ -149,7 +153,9 @@ export function ViewToggle({
       </button>
       <button
         onClick={() => onViewModeChange("agenda")}
-        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+        aria-label={t("calendar.agendaView")}
+        aria-pressed={viewMode === "agenda"}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
           viewMode === "agenda"
             ? "bg-amber-500 text-zinc-950"
             : "text-zinc-400 hover:text-white"
@@ -232,6 +238,7 @@ function AgendaCalendarImpl({
   searchParams,
   setSearchParams,
 }: AgendaCalendarProps) {
+  const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useCalendarParam(
     searchParams,
     setSearchParams,
@@ -625,7 +632,8 @@ function AgendaCalendarImpl({
               <button
                 key={dateKey}
                 onClick={() => scrollToDate(dateKey)}
-                className={`w-8 h-8 rounded-full text-xs font-medium flex items-center justify-center transition-all cursor-pointer ${
+                aria-label={t("calendar.goToDay", { date: dateKey })}
+                className={`w-8 h-8 rounded-full text-xs font-medium flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950 ${
                   isTodayDate
                     ? "bg-amber-500 text-zinc-950 font-bold"
                     : isActive
@@ -723,7 +731,9 @@ function AgendaCalendarImpl({
             ))}
             <button
               onClick={() => setHideWatched((v) => !v)}
-              className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              aria-label={t("calendar.hideWatched")}
+              aria-pressed={hideWatched}
+              className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
                 hideWatched
                   ? "bg-amber-500 text-zinc-950"
                   : "text-zinc-400 hover:text-white hover:bg-zinc-800"
