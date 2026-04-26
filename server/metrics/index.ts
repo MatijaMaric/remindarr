@@ -51,6 +51,27 @@ export const activeSessionsGauge = new Gauge(
   "Number of currently active (non-expired) user sessions",
 );
 
+// ─── Sync Failure Counter ────────────────────────────────────────────────────
+
+export const syncFailureTotal = new Counter(
+  "sync_failure_total",
+  "Per-item sync failures",
+);
+
+// ─── Outbound HTTP Retry Metrics ─────────────────────────────────────────────
+
+export const httpRetryTotal = new Counter(
+  "http_retry_total",
+  "Outbound HTTP retries",
+);
+
+// ─── Error Metrics ───────────────────────────────────────────────────────────
+
+export const errorsByCategory = new Counter(
+  "http_errors_by_category_total",
+  "Unhandled HTTP errors classified by category",
+);
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 const allMetrics = [
@@ -62,6 +83,9 @@ const allMetrics = [
   tmdbRequestsTotal,
   tmdbRequestDurationSeconds,
   activeSessionsGauge,
+  syncFailureTotal,
+  httpRetryTotal,
+  errorsByCategory,
 ];
 
 export function renderMetrics(): string {

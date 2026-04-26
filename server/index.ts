@@ -38,6 +38,8 @@ import kioskRoutes from "./routes/kiosk";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
+import { classifyError } from "./lib/error-classifier";
+import { errorsByCategory } from "./metrics";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { registerBackupJob } from "./jobs/backup";
@@ -131,12 +133,28 @@ app.use("*", async (c, next) => {
   await next();
 });
 
+const log = logger.child({ module: "index" });
+
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
     return err.getResponse();
   }
+  const category = classifyError(err);
+  errorsByCategory.inc({ category });
+
+  const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
+
+  (Sentry.addBreadcrumb as (opts: { message: string; data: Record<string, string> }) => void)?.({
+    message: "Unhandled error",
+    data: { category, requestId },
+  });
   Sentry.captureException(err);
-  return c.json({ error: "Internal server error" }, 500);
+
+  log.error("Unhandled error", { category, requestId, err });
+
+  return c.json({ error: "Internal server error" }, 500, {
+    "X-Request-Id": requestId,
+  });
 });
 
 // CORS — restricted to explicit origins via CORS_ORIGIN env var (comma-separated).
