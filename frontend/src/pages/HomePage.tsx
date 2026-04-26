@@ -502,7 +502,7 @@ export default function HomePage() {
         return unwatched.length > 0 ? (
           <>
             <div className="-mt-6">
-              <HeroBanner episodes={unwatched} />
+              <HeroBanner episodes={unwatched} onToggleWatched={toggleWatched} />
             </div>
             <section key="unwatched">
               <div className="flex items-baseline justify-between mb-4">

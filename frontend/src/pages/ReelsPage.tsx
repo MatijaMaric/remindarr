@@ -238,7 +238,10 @@ export default function ReelsPage() {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoAction(action);
     setReelsRating(null);
-    undoTimerRef.current = setTimeout(() => setUndoAction(null), 5000);
+    undoTimerRef.current = setTimeout(() => {
+      setUndoAction(null);
+      setCards((prev) => prev.filter((c) => !(c.titleId === titleId && c.caughtUp)));
+    }, 5000);
 
     try {
       await api.watchEpisode(episode.id);
