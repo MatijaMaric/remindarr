@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useReducer } from "react";
 import { Card } from "../components/ui/card";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
@@ -10,7 +10,7 @@ import * as api from "../api";
 import type { Episode, Title, Recommendation, HomepageSection } from "../types";
 import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import TitleList from "../components/TitleList";
-import { TitleGridSkeleton, EpisodeListSkeleton } from "../components/SkeletonComponents";
+import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
 import { EpisodeShowCard, DeckCardWrapper } from "../components/EpisodeShowCard";
 import HeroBanner from "../components/HeroBanner";
@@ -73,6 +73,59 @@ export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
   });
 
   return entries;
+}
+
+type HomeState =
+  | { status: "loading" }
+  | { status: "anon"; popularTitles: Title[] }
+  | { status: "auth"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[] }
+  | { status: "error"; message: string };
+
+type HomeAction =
+  | { type: "LOAD_ANON_SUCCESS"; popularTitles: Title[] }
+  | { type: "LOAD_AUTH_SUCCESS"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[] }
+  | { type: "LOAD_ERROR"; message: string }
+  | { type: "TOGGLE_WATCHED"; episodeId: number; currentlyWatched: boolean }
+  | { type: "TOGGLE_WATCHED_REVERT"; episodeId: number; currentlyWatched: boolean }
+  | { type: "REPLACE_UNWATCHED"; unwatched: Episode[] }
+  | { type: "MARK_ALL_WATCHED"; episodeIds: number[] };
+
+function homeReducer(state: HomeState, action: HomeAction): HomeState {
+  switch (action.type) {
+    case "LOAD_ANON_SUCCESS":
+      return { status: "anon", popularTitles: action.popularTitles };
+    case "LOAD_AUTH_SUCCESS":
+      return { status: "auth", today: action.today, upcoming: action.upcoming, unwatched: action.unwatched, recommendations: action.recommendations, layout: action.layout };
+    case "LOAD_ERROR":
+      return { status: "error", message: action.message };
+    case "TOGGLE_WATCHED": {
+      if (state.status !== "auth") return state;
+      const update = (ep: Episode) => ep.id === action.episodeId ? { ...ep, is_watched: !action.currentlyWatched } : ep;
+      return {
+        ...state,
+        today: state.today.map(update),
+        upcoming: state.upcoming.map(update),
+        unwatched: !action.currentlyWatched
+          ? state.unwatched.filter((ep) => ep.id !== action.episodeId)
+          : state.unwatched,
+      };
+    }
+    case "TOGGLE_WATCHED_REVERT": {
+      if (state.status !== "auth") return state;
+      const revert = (ep: Episode) => ep.id === action.episodeId ? { ...ep, is_watched: action.currentlyWatched } : ep;
+      return { ...state, today: state.today.map(revert), upcoming: state.upcoming.map(revert) };
+    }
+    case "REPLACE_UNWATCHED":
+      if (state.status !== "auth") return state;
+      return { ...state, unwatched: action.unwatched };
+    case "MARK_ALL_WATCHED": {
+      if (state.status !== "auth") return state;
+      const idSet = new Set(action.episodeIds);
+      return { ...state, unwatched: state.unwatched.filter((ep) => !idSet.has(ep.id)) };
+    }
+    default:
+      return state;
+  }
 }
 
 function getGreeting(): string {
@@ -283,14 +336,7 @@ export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
   const isMobile = useIsMobile();
   const { t } = useTranslation();
-  const [today, setToday] = useState<Episode[]>([]);
-  const [upcoming, setUpcoming] = useState<Episode[]>([]);
-  const [unwatched, setUnwatched] = useState<Episode[]>([]);
-  const [popularTitles, setPopularTitles] = useState<Title[]>([]);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [layout, setLayout] = useState<HomepageSection[]>(DEFAULT_HOMEPAGE_LAYOUT);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [state, dispatch] = useReducer(homeReducer, { status: "loading" });
   const [confirmingTitleId, setConfirmingTitleId] = useState<string | null>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -301,9 +347,8 @@ export default function HomePage() {
 
     if (!user) {
       api.browseTitles({ category: "popular", page: 1 }, signal)
-        .then((res) => { if (!signal.aborted) setPopularTitles(res.titles.map(normalizeSearchTitle)); })
-        .catch(() => {})
-        .finally(() => { if (!signal.aborted) setLoading(false); });
+        .then((res) => { if (!signal.aborted) dispatch({ type: "LOAD_ANON_SUCCESS", popularTitles: res.titles.map(normalizeSearchTitle) }); })
+        .catch(() => { if (!signal.aborted) dispatch({ type: "LOAD_ANON_SUCCESS", popularTitles: [] }); });
       return () => controller.abort();
     }
 
@@ -315,15 +360,9 @@ export default function HomePage() {
           (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
         ]);
         if (signal.aborted) return;
-        setToday(episodeData.today);
-        setUpcoming(episodeData.upcoming);
-        setUnwatched(episodeData.unwatched);
-        setRecommendations(recData.recommendations);
-        setLayout(layoutData.homepage_layout);
+        dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout });
       } catch (err: unknown) {
-        if (!signal.aborted) setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (!signal.aborted) setLoading(false);
+        if (!signal.aborted) dispatch({ type: "LOAD_ERROR", message: err instanceof Error ? err.message : String(err) });
       }
     }
     load();
@@ -338,20 +377,7 @@ export default function HomePage() {
   }, []);
 
   const toggleWatched = useCallback(async (episodeId: number, currentlyWatched: boolean) => {
-    const updateAll = (eps: Episode[]) =>
-      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
-    const revertAll = (eps: Episode[]) =>
-      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep));
-
-    setToday((prev) => updateAll(prev));
-    setUpcoming((prev) => updateAll(prev));
-    setUnwatched((prev) => {
-      if (!currentlyWatched) {
-        return prev.filter((ep) => ep.id !== episodeId);
-      }
-      return prev;
-    });
-
+    dispatch({ type: "TOGGLE_WATCHED", episodeId, currentlyWatched });
     try {
       if (currentlyWatched) {
         await api.unwatchEpisode(episodeId);
@@ -359,16 +385,29 @@ export default function HomePage() {
         await api.watchEpisode(episodeId);
       }
     } catch (err) {
-      setToday((prev) => revertAll(prev));
-      setUpcoming((prev) => revertAll(prev));
+      dispatch({ type: "TOGGLE_WATCHED_REVERT", episodeId, currentlyWatched });
       if (!currentlyWatched) {
         try {
           const data = await api.getUpcomingEpisodes();
-          setUnwatched(data.unwatched);
+          dispatch({ type: "REPLACE_UNWATCHED", unwatched: data.unwatched });
         } catch { /* ignore refetch failure */ }
       }
       console.error("Failed to toggle watched:", err);
       toast.error("Failed to update watched status — please try again");
+    }
+  }, []);
+
+  const markAllWatched = useCallback(async (episodeIds: number[]) => {
+    dispatch({ type: "MARK_ALL_WATCHED", episodeIds });
+    try {
+      await api.watchEpisodesBulk(episodeIds, true);
+    } catch (err) {
+      try {
+        const data = await api.getUpcomingEpisodes();
+        dispatch({ type: "REPLACE_UNWATCHED", unwatched: data.unwatched });
+      } catch { /* ignore refetch failure */ }
+      console.error("Failed to bulk mark watched:", err);
+      toast.error("Failed to mark episodes as watched — please try again");
     }
   }, []);
 
@@ -384,29 +423,22 @@ export default function HomePage() {
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
       confirmTimerRef.current = setTimeout(() => setConfirmingTitleId(null), 3000);
     }
-  }, [confirmingTitleId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [confirmingTitleId, markAllWatched]);
 
-  const markAllWatched = useCallback(async (episodeIds: number[]) => {
-    const idSet = new Set(episodeIds);
-    setUnwatched((prev) => prev.filter((ep) => !idSet.has(ep.id)));
-
-    try {
-      await api.watchEpisodesBulk(episodeIds, true);
-    } catch (err) {
-      try {
-        const data = await api.getUpcomingEpisodes();
-        setUnwatched(data.unwatched);
-      } catch { /* ignore refetch failure */ }
-      console.error("Failed to bulk mark watched:", err);
-      toast.error("Failed to mark episodes as watched — please try again");
+  // Derived data from reducer state — wrapped in useMemo so downstream deps
+  // get stable array references when state.status !== "auth".
+  const { today, upcoming, unwatched, recommendations, layout } = useMemo(() => {
+    if (state.status === "auth") {
+      return { today: state.today, upcoming: state.upcoming, unwatched: state.unwatched, recommendations: state.recommendations, layout: state.layout };
     }
-  }, []);
+    return { today: [] as Episode[], upcoming: [] as Episode[], unwatched: [] as Episode[], recommendations: [] as Recommendation[], layout: DEFAULT_HOMEPAGE_LAYOUT };
+  }, [state]);
 
   // Stable slice for the unauthenticated landing page so TitleList sees the
   // same array reference on unrelated re-renders.
   const popularTitlesPreview = useMemo(
-    () => popularTitles.slice(0, 12),
-    [popularTitles]
+    () => state.status === "anon" ? state.popularTitles.slice(0, 12) : [],
+    [state]
   );
 
   const unwatchedCards = useMemo(() => buildUnwatchedCards(unwatched), [unwatched]);
@@ -435,7 +467,7 @@ export default function HomePage() {
     [today]
   );
 
-  if (authLoading || loading) {
+  if (authLoading || state.status === "loading") {
     return <EpisodeListSkeleton />;
   }
 
@@ -473,20 +505,16 @@ export default function HomePage() {
               {t("landing.discoverMore")} →
             </Link>
           </div>
-          {loading ? (
-            <TitleGridSkeleton count={12} />
-          ) : (
-            <TitleList titles={popularTitlesPreview} />
-          )}
+          <TitleList titles={popularTitlesPreview} />
         </section>
       </div>
     );
   }
 
-  if (error) {
+  if (state.status === "error") {
     return (
       <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
-        {error}
+        {state.message}
       </div>
     );
   }

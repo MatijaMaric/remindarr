@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useReducer } from "react";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import SearchBar from "../components/SearchBar";
@@ -83,6 +83,28 @@ function useQueryParamArray(
 
 export const FILTER_KEYS = ["type", "genre", "provider", "language", "daysBack", "yearMin", "yearMax", "minRating"] as const;
 
+type SearchAdvanced = { type: "" | "MOVIE" | "SHOW"; yearMin: string; yearMax: string; minRating: string; language: string };
+type SearchState = { status: "idle" | "loading" | "done"; results: Title[] | null; lastQuery: string | null; advanced: SearchAdvanced };
+type SearchAction =
+  | { type: "SEARCH_START"; query: string }
+  | { type: "SEARCH_SUCCESS"; results: Title[] }
+  | { type: "SEARCH_ERROR" }
+  | { type: "CLEAR_SEARCH" }
+  | { type: "SET_ADVANCED"; key: keyof SearchAdvanced; value: string };
+
+const SEARCH_INIT: SearchState = { status: "idle", results: null, lastQuery: null, advanced: { type: "", yearMin: "", yearMax: "", minRating: "", language: "" } };
+
+function searchReducer(state: SearchState, action: SearchAction): SearchState {
+  switch (action.type) {
+    case "SEARCH_START": return { ...state, status: "loading", lastQuery: action.query };
+    case "SEARCH_SUCCESS": return { ...state, status: "done", results: action.results };
+    case "SEARCH_ERROR": return { ...state, status: "idle" };
+    case "CLEAR_SEARCH": return SEARCH_INIT;
+    case "SET_ADVANCED": return { ...state, advanced: { ...state.advanced, [action.key]: action.value } };
+    default: return state;
+  }
+}
+
 export function buildCategoryParams(prev: URLSearchParams, cat: BrowseCategory): URLSearchParams {
   const next = new URLSearchParams(prev);
   if (cat === "popular") {
@@ -95,8 +117,7 @@ export function buildCategoryParams(prev: URLSearchParams, cat: BrowseCategory):
 
 export default function BrowsePage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchResults, setSearchResults] = useState<Title[] | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [search, searchDispatch] = useReducer(searchReducer, SEARCH_INIT);
   const [resultsCount, setResultsCount] = useState<number | null>(null);
   const { run: runAsync, error: searchError, reset: resetSearchError } = useAsyncError();
   const { t } = useTranslation();
@@ -124,12 +145,13 @@ export default function BrowsePage() {
     return () => controller.abort();
   }, []);
 
-  // ── Advanced search filter state ────────────────────────────────────────────
-  const [searchType, setSearchType] = useState<"" | "MOVIE" | "SHOW">("");
-  const [yearMin, setYearMin] = useState<string>("");
-  const [yearMax, setYearMax] = useState<string>("");
-  const [minRating, setMinRating] = useState<string>("");
-  const [searchLanguage, setSearchLanguage] = useState<string>("");
+  // ── Derived search state ────────────────────────────────────────────────────
+  const searchResults = search.results;
+  const searchLoading = search.status === "loading";
+  const lastQuery = search.lastQuery;
+  const { type: searchType, yearMin, yearMax, minRating, language: searchLanguage } = search.advanced;
+
+  // ── Advanced search language options (loaded once) ──────────────────────────
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string; label: string }[]>([]);
 
   // Load languages once for the dropdown
@@ -150,9 +172,6 @@ export default function BrowsePage() {
     }).catch(() => { /* ignore */ });
     return () => controller.abort();
   }, []);
-
-  // Current search query ref so we can re-run when filters change while results are shown
-  const [lastQuery, setLastQuery] = useState<string | null>(null);
 
   const rawCategory = searchParams.get("category") || "popular";
   const category: BrowseCategory = VALID_CATEGORIES.includes(rawCategory as BrowseCategory)
@@ -210,7 +229,8 @@ export default function BrowsePage() {
     query: string,
     overrides?: { type?: "" | "MOVIE" | "SHOW"; yearMin?: string; yearMax?: string; minRating?: string; language?: string }
   ) {
-    setSearchLoading(true);
+    searchDispatch({ type: "SEARCH_START", query });
+    let succeeded = false;
     await runAsync(async () => {
       const effectiveType = overrides?.type !== undefined ? overrides.type : searchType;
       const effectiveYearMin = overrides?.yearMin !== undefined ? overrides.yearMin : yearMin;
@@ -225,36 +245,32 @@ export default function BrowsePage() {
         language: effectiveLanguage || undefined,
       };
       const res = await api.searchTitles(query, filters);
-      setSearchResults(res.titles.map(normalizeSearchTitle));
+      searchDispatch({ type: "SEARCH_SUCCESS", results: res.titles.map(normalizeSearchTitle) });
+      succeeded = true;
     });
-    setSearchLoading(false);
+    if (!succeeded) searchDispatch({ type: "SEARCH_ERROR" });
   }
 
   async function handleSearch(query: string) {
-    setLastQuery(query);
     await runSearch(query);
   }
 
   async function handleImdb(url: string) {
-    setSearchLoading(true);
+    searchDispatch({ type: "SEARCH_START", query: "" });
+    let succeeded = false;
     await runAsync(async () => {
       const res = await api.resolveImdb(url);
       if (res.title) {
-        setSearchResults([normalizeSearchTitle(res.title)]);
+        searchDispatch({ type: "SEARCH_SUCCESS", results: [normalizeSearchTitle(res.title)] });
+        succeeded = true;
       }
     });
-    setSearchLoading(false);
+    if (!succeeded) searchDispatch({ type: "SEARCH_ERROR" });
   }
 
   function clearSearch() {
-    setSearchResults(null);
+    searchDispatch({ type: "CLEAR_SEARCH" });
     resetSearchError();
-    setLastQuery(null);
-    setSearchType("");
-    setYearMin("");
-    setYearMax("");
-    setMinRating("");
-    setSearchLanguage("");
   }
 
 
@@ -293,19 +309,19 @@ export default function BrowsePage() {
             <div className="flex items-center gap-1">
               <button
                 className={`${pillBase} ${searchType === "" ? pillActive : pillInactive}`}
-                onClick={() => { setSearchType(""); void runSearch(lastQuery, { type: "" }); }}
+                onClick={() => { searchDispatch({ type: "SET_ADVANCED", key: "type", value: "" }); void runSearch(lastQuery!, { type: "" }); }}
               >
                 {t("filter.all")}
               </button>
               <button
                 className={`${pillBase} ${searchType === "MOVIE" ? pillActive : pillInactive}`}
-                onClick={() => { setSearchType("MOVIE"); void runSearch(lastQuery, { type: "MOVIE" }); }}
+                onClick={() => { searchDispatch({ type: "SET_ADVANCED", key: "type", value: "MOVIE" }); void runSearch(lastQuery!, { type: "MOVIE" }); }}
               >
                 {t("filter.movies")}
               </button>
               <button
                 className={`${pillBase} ${searchType === "SHOW" ? pillActive : pillInactive}`}
-                onClick={() => { setSearchType("SHOW"); void runSearch(lastQuery, { type: "SHOW" }); }}
+                onClick={() => { searchDispatch({ type: "SET_ADVANCED", key: "type", value: "SHOW" }); void runSearch(lastQuery!, { type: "SHOW" }); }}
               >
                 {t("filter.shows")}
               </button>
@@ -319,8 +335,8 @@ export default function BrowsePage() {
                 value={yearMin}
                 min={1900}
                 max={2100}
-                onChange={(e) => setYearMin(e.target.value)}
-                onBlur={() => void runSearch(lastQuery)}
+                onChange={(e) => searchDispatch({ type: "SET_ADVANCED", key: "yearMin", value: e.target.value })}
+                onBlur={() => void runSearch(lastQuery!)}
               />
               <span className="text-zinc-500 text-sm">–</span>
               <input
@@ -330,8 +346,8 @@ export default function BrowsePage() {
                 value={yearMax}
                 min={1900}
                 max={2100}
-                onChange={(e) => setYearMax(e.target.value)}
-                onBlur={() => void runSearch(lastQuery)}
+                onChange={(e) => searchDispatch({ type: "SET_ADVANCED", key: "yearMax", value: e.target.value })}
+                onBlur={() => void runSearch(lastQuery!)}
               />
             </div>
             {/* Min rating */}
@@ -339,7 +355,7 @@ export default function BrowsePage() {
               <select
                 className={selectCls}
                 value={minRating}
-                onChange={(e) => { setMinRating(e.target.value); void runSearch(lastQuery, { minRating: e.target.value }); }}
+                onChange={(e) => { searchDispatch({ type: "SET_ADVANCED", key: "minRating", value: e.target.value }); void runSearch(lastQuery!, { minRating: e.target.value }); }}
               >
                 <option value="">{t("filter.anyRating")}</option>
                 {RATING_OPTIONS.map((v) => (
@@ -355,7 +371,7 @@ export default function BrowsePage() {
                 <select
                   className={selectCls}
                   value={searchLanguage}
-                  onChange={(e) => { setSearchLanguage(e.target.value); void runSearch(lastQuery, { language: e.target.value }); }}
+                  onChange={(e) => { searchDispatch({ type: "SET_ADVANCED", key: "language", value: e.target.value }); void runSearch(lastQuery!, { language: e.target.value }); }}
                 >
                   <option value="">{t("filter.allLanguages")}</option>
                   {availableLanguages.map(({ code, label }) => (
