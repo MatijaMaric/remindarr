@@ -3,6 +3,9 @@ import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
+// Initialize i18n before anything else (avoids mock.module leak)
+import "../i18n";
+
 // Mock useIsMobile hook
 let mockIsMobile = false;
 mock.module("../hooks/useIsMobile", () => ({
@@ -127,5 +130,40 @@ describe("CalendarPage", () => {
     const toggle = screen.getByTitle("Show watched");
     expect(toggle).toBeDefined();
     expect(toggle.className).toContain("bg-amber-500");
+  });
+
+  it("view toggle buttons have aria-label attributes", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    const gridBtn = screen.getByRole("button", { name: /grid view/i });
+    const agendaBtn = screen.getByRole("button", { name: /agenda view/i });
+    expect(gridBtn).toBeDefined();
+    expect(agendaBtn).toBeDefined();
+  });
+
+  it("view toggle buttons have correct aria-pressed state", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    // Default is grid view
+    expect(screen.getByRole("button", { name: /grid view/i }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /agenda view/i }).getAttribute("aria-pressed")).toBe("false");
+
+    // Switch to agenda
+    fireEvent.click(screen.getByRole("button", { name: /agenda view/i }));
+
+    // Re-query after state update
+    expect(screen.getByRole("button", { name: /grid view/i }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: /agenda view/i }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("hide watched button has aria-label attribute", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    // Switch to agenda to show hide-watched toggle
+    fireEvent.click(screen.getByTitle("Agenda view"));
+
+    const toggle = screen.getByRole("button", { name: /hide watched/i });
+    expect(toggle).toBeDefined();
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
   });
 });

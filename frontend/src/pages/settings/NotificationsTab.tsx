@@ -695,7 +695,7 @@ function NotificationsSection() {
                 <select
                   value={formDigestDay}
                   onChange={(e) => setFormDigestDay(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
                 >
                   <option value={0}>Sunday</option>
                   <option value={1}>Monday</option>

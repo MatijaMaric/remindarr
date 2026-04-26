@@ -154,7 +154,7 @@ export default function TrackedPage() {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none mb-0.5"
+            className="font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 mb-0.5"
           >
             <option value="last_aired">sort: last aired</option>
             <option value="title">sort: title</option>

@@ -179,7 +179,7 @@ export default function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
                   placeholder={usernamePlaceholder}
                   autoComplete="username webauthn"
                   required
@@ -195,7 +195,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
                   autoComplete="current-password"
                   required
                 />

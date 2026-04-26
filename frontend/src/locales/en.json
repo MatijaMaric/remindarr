@@ -48,7 +48,8 @@
     "signIn": "Sign In",
     "settings": "Settings",
     "discovery": "Discovery",
-    "stats": "Stats"
+    "stats": "Stats",
+    "search": "Search"
   },
   "bottomNav": {
     "home": "Home",
@@ -288,7 +289,9 @@
     "hideWatched": "Hide watched",
     "showWatched": "Show watched",
     "gridView": "Grid view",
-    "agendaView": "Agenda view"
+    "agendaView": "Agenda view",
+    "close": "Close",
+    "goToDay": "Go to {{date}}"
   },
   "landing": {
     "tagline": "Track movies & TV shows you love",

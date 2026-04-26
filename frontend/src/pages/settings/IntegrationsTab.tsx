@@ -333,7 +333,7 @@ function PlexSection() {
                 <select
                   value={selectedUri}
                   onChange={(e) => setSelectedUri(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
                 >
                   {selectedServer.connections.map((conn) => (
                     <option key={conn.uri} value={conn.uri}>
