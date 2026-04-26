@@ -140,7 +140,7 @@ export default function AdminUsersPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("admin.users.searchPlaceholder")}
             aria-label={t("admin.users.searchPlaceholder")}
-            className="w-full bg-zinc-900 border border-white/[0.06] rounded-lg pl-8 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full bg-zinc-900 border border-white/[0.06] rounded-lg pl-8 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
           />
         </div>
         <div className="flex gap-1">
@@ -173,7 +173,7 @@ export default function AdminUsersPage() {
               value={banReason}
               onChange={(e) => setBanReason(e.target.value)}
               placeholder={t("admin.users.banReasonPlaceholder")}
-              className="w-full bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="w-full bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
             />
             <div className="flex gap-2">
               <button

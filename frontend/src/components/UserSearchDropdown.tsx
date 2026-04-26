@@ -107,7 +107,7 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search users..."
-          className="w-full bg-zinc-800 text-white rounded-md pl-9 pr-3 py-2 text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-amber-500 border border-zinc-700"
+          className="w-full bg-zinc-800 text-white rounded-md pl-9 pr-3 py-2 text-sm placeholder:text-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 border border-zinc-700"
           data-testid="user-search-input"
         />
       </div>

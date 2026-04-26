@@ -41,7 +41,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
     <article aria-label={title.title} className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>
       {/* Poster — clickable link to detail page */}
       <div className="aspect-[2/3] bg-zinc-800 relative">
-        <Link to={`/title/${title.id}`} data-title-link className="block w-full h-full focus:outline-none focus:ring-2 focus:ring-amber-500/70 focus:ring-inset">
+        <Link to={`/title/${title.id}`} data-title-link className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/70 focus-visible:ring-inset">
           {title.poster_url ? (
             <img
               src={title.poster_url}

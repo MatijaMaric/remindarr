@@ -52,7 +52,7 @@ export function EditBioModal({ initialValue, onClose, onSaved }: EditBioModalPro
           rows={4}
           autoFocus
           placeholder={t("userProfile.dossier.bioPlaceholder")}
-          className="w-full px-3 py-2 bg-zinc-950 border border-white/[0.08] rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-400/60 resize-none"
+          className="w-full px-3 py-2 bg-zinc-950 border border-white/[0.08] rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:border-amber-400/60 resize-none"
           data-testid="bio-textarea"
         />
         <div className="flex items-center justify-between">
