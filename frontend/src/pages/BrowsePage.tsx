@@ -15,6 +15,7 @@ import { normalizeSearchTitle } from "../types";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader } from "../components/design";
+import { useAsyncError } from "../hooks/useAsyncError";
 
 const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
 
@@ -95,8 +96,8 @@ export default function BrowsePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchResults, setSearchResults] = useState<Title[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState("");
   const [resultsCount, setResultsCount] = useState<number | null>(null);
+  const { run: runAsync, error: searchError, reset: resetSearchError } = useAsyncError();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   useGridNavigation();
@@ -209,8 +210,7 @@ export default function BrowsePage() {
     overrides?: { type?: "" | "MOVIE" | "SHOW"; yearMin?: string; yearMax?: string; minRating?: string; language?: string }
   ) {
     setSearchLoading(true);
-    setSearchError("");
-    try {
+    await runAsync(async () => {
       const effectiveType = overrides?.type !== undefined ? overrides.type : searchType;
       const effectiveYearMin = overrides?.yearMin !== undefined ? overrides.yearMin : yearMin;
       const effectiveYearMax = overrides?.yearMax !== undefined ? overrides.yearMax : yearMax;
@@ -225,11 +225,8 @@ export default function BrowsePage() {
       };
       const res = await api.searchTitles(query, filters);
       setSearchResults(res.titles.map(normalizeSearchTitle));
-    } catch (err: unknown) {
-      setSearchError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSearchLoading(false);
-    }
+    });
+    setSearchLoading(false);
   }
 
   async function handleSearch(query: string) {
@@ -239,22 +236,18 @@ export default function BrowsePage() {
 
   async function handleImdb(url: string) {
     setSearchLoading(true);
-    setSearchError("");
-    try {
+    await runAsync(async () => {
       const res = await api.resolveImdb(url);
       if (res.title) {
         setSearchResults([normalizeSearchTitle(res.title)]);
       }
-    } catch (err: unknown) {
-      setSearchError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSearchLoading(false);
-    }
+    });
+    setSearchLoading(false);
   }
 
   function clearSearch() {
     setSearchResults(null);
-    setSearchError("");
+    resetSearchError();
     setLastQuery(null);
     setSearchType("");
     setYearMin("");

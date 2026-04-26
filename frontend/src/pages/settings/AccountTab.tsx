@@ -7,6 +7,7 @@ import * as api from "../../api";
 import type { Title, ActivitySettings, ActivityType, ActivityKindVisibility } from "../../types";
 import { authClient } from "../../lib/auth-client";
 import { UserPlus } from "lucide-react";
+import { useAsyncError } from "../../hooks/useAsyncError";
 import {
   SCard,
   SFormRow,
@@ -40,15 +41,12 @@ function UserSection() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordMsg, setPasswordMsg] = useState("");
-  const [passwordErr, setPasswordErr] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { run, error: passwordErr, pending: loading } = useAsyncError();
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     setPasswordMsg("");
-    setPasswordErr("");
-    setLoading(true);
-    try {
+    await run(async () => {
       const result = await authClient.changePassword({
         currentPassword,
         newPassword,
@@ -59,11 +57,7 @@ function UserSection() {
       setPasswordMsg(t("profile.passwordChanged"));
       setCurrentPassword("");
       setNewPassword("");
-    } catch (err: unknown) {
-      setPasswordErr(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   const strength = passwordStrength(newPassword);

@@ -5,6 +5,7 @@ import type { Title, Provider } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 import { loadFilters } from "./loadFilters";
+import { useAsyncError } from "../hooks/useAsyncError";
 
 interface Props {
   type: string[];
@@ -47,8 +48,7 @@ export default function NewReleases({
 }: Props) {
   const { t } = useTranslation();
   const [titles, setTitles] = useState<Title[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { run, error, pending: loading } = useAsyncError();
 
   const [genres, setGenres] = useState<string[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -66,26 +66,18 @@ export default function NewReleases({
     });
   }, []);
 
-  const fetchTitles = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await api.getTitles({
-        daysBack,
-        type: type.length ? type.join(",") : undefined,
-        genre: genre.length ? genre.join(",") : undefined,
-        provider: provider.length ? provider.join(",") : undefined,
-        language: language.length ? language.join(",") : undefined,
-        excludeTracked: hideTracked || undefined,
-      });
-      setTitles(res.titles);
-      onResultsCount?.(res.titles.length);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [daysBack, type, genre, provider, language, hideTracked, onResultsCount]);
+  const fetchTitles = useCallback(() => run(async () => {
+    const res = await api.getTitles({
+      daysBack,
+      type: type.length ? type.join(",") : undefined,
+      genre: genre.length ? genre.join(",") : undefined,
+      provider: provider.length ? provider.join(",") : undefined,
+      language: language.length ? language.join(",") : undefined,
+      excludeTracked: hideTracked || undefined,
+    });
+    setTitles(res.titles);
+    onResultsCount?.(res.titles.length);
+  }), [run, daysBack, type, genre, provider, language, hideTracked, onResultsCount]);
 
   useEffect(() => {
     fetchTitles();

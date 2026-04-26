@@ -5,6 +5,7 @@ import { Search, Shield, ShieldOff, Trash2, ChevronLeft, ChevronRight } from "lu
 import * as api from "../api";
 import type { AdminUser, AdminUsersResponse } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useAsyncError } from "../hooks/useAsyncError";
 import {
   AlertDialog,
   AlertDialogPopup,
@@ -47,7 +48,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(1);
-  const [actionError, setActionError] = useState("");
+  const { run: runAction, error: actionError } = useAsyncError();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [banReason, setBanReason] = useState("");
   const [banTarget, setBanTarget] = useState<string | null>(null);
@@ -75,47 +76,35 @@ export default function AdminUsersPage() {
   }, [search, filter]);
 
   async function handleRoleToggle(user: AdminUser) {
-    setActionError("");
     const newRole = user.role === "admin" || user.is_admin === 1 ? "user" : "admin";
-    try {
+    await runAction(async () => {
       await api.setAdminUserRole(user.id, newRole);
       await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : String(e));
-    }
+    });
   }
 
   async function handleBan(userId: string) {
-    setActionError("");
-    try {
+    await runAction(async () => {
       await api.banAdminUser(userId, banReason || undefined);
       setBanTarget(null);
       setBanReason("");
       await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : String(e));
-    }
+    });
   }
 
   async function handleUnban(userId: string) {
-    setActionError("");
-    try {
+    await runAction(async () => {
       await api.unbanAdminUser(userId);
       await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : String(e));
-    }
+    });
   }
 
   async function handleDelete(userId: string) {
-    setActionError("");
-    try {
+    await runAction(async () => {
       await api.deleteAdminUser(userId);
       setConfirmDelete(null);
       await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : String(e));
-    }
+    });
   }
 
   if (!me?.is_admin) {

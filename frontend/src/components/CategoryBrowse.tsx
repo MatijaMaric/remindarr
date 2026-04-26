@@ -5,6 +5,7 @@ import { normalizeSearchTitle } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 import type { BrowseCategory } from "./CategoryBar";
+import { useAsyncError } from "../hooks/useAsyncError";
 
 export function filterBrowseTitles(
   titles: Title[],
@@ -101,11 +102,10 @@ export default function CategoryBrowse({
   onResultsCount,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
-  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState("");
+  const { run, error, pending: loading } = useAsyncError();
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
 
   const [availableProviders, setAvailableProviders] = useState<{ id: number; name: string; iconUrl: string }[]>([]);
@@ -113,61 +113,57 @@ export default function CategoryBrowse({
   const [regionProviderIds, setRegionProviderIds] = useState<number[]>([]);
   const [priorityLanguageCodes, setPriorityLanguageCodes] = useState<string[]>([]);
 
-  const fetchTitles = useCallback(async (pageNum: number, append: boolean) => {
-    if (append) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
-    setError("");
-    try {
-      const yearMinNum = yearMin ? parseInt(yearMin, 10) : undefined;
-      const yearMaxNum = yearMax ? parseInt(yearMax, 10) : undefined;
-      const minRatingNum = minRating ? parseFloat(minRating) : undefined;
-      const res = await api.browseTitles({
-        category,
-        type: type.length ? type.join(",") : undefined,
-        page: pageNum,
-        genre: genre.length ? genre.join(",") : undefined,
-        provider: provider.length ? provider.join(",") : undefined,
-        language: language.length ? language.join(",") : undefined,
-        yearMin: yearMinNum != null && Number.isFinite(yearMinNum) ? yearMinNum : undefined,
-        yearMax: yearMaxNum != null && Number.isFinite(yearMaxNum) ? yearMaxNum : undefined,
-        minRating: minRatingNum != null && Number.isFinite(minRatingNum) ? minRatingNum : undefined,
-      });
-      const normalized = res.titles.map(normalizeSearchTitle);
+  const fetchTitles = useCallback((pageNum: number, append: boolean) => {
+    return run(async () => {
       if (append) {
-        setTitles((prev) => [...prev, ...normalized]);
-      } else {
-        setTitles(normalized);
+        setLoadingMore(true);
       }
-      if (res.availableGenres) {
-        setAvailableGenres(res.availableGenres);
+      try {
+        const yearMinNum = yearMin ? parseInt(yearMin, 10) : undefined;
+        const yearMaxNum = yearMax ? parseInt(yearMax, 10) : undefined;
+        const minRatingNum = minRating ? parseFloat(minRating) : undefined;
+        const res = await api.browseTitles({
+          category,
+          type: type.length ? type.join(",") : undefined,
+          page: pageNum,
+          genre: genre.length ? genre.join(",") : undefined,
+          provider: provider.length ? provider.join(",") : undefined,
+          language: language.length ? language.join(",") : undefined,
+          yearMin: yearMinNum != null && Number.isFinite(yearMinNum) ? yearMinNum : undefined,
+          yearMax: yearMaxNum != null && Number.isFinite(yearMaxNum) ? yearMaxNum : undefined,
+          minRating: minRatingNum != null && Number.isFinite(minRatingNum) ? minRatingNum : undefined,
+        });
+        const normalized = res.titles.map(normalizeSearchTitle);
+        if (append) {
+          setTitles((prev) => [...prev, ...normalized]);
+        } else {
+          setTitles(normalized);
+        }
+        if (res.availableGenres) {
+          setAvailableGenres(res.availableGenres);
+        }
+        if (res.availableProviders) {
+          setAvailableProviders(res.availableProviders);
+        }
+        if (res.availableLanguages) {
+          setAvailableLanguages(res.availableLanguages);
+        }
+        if (res.regionProviderIds) {
+          setRegionProviderIds(res.regionProviderIds);
+        }
+        if (res.priorityLanguageCodes) {
+          setPriorityLanguageCodes(res.priorityLanguageCodes);
+        }
+        setTotalPages(res.totalPages);
+        if (!append) {
+          onResultsCount?.(res.totalResults);
+        }
+        setPage(pageNum);
+      } finally {
+        setLoadingMore(false);
       }
-      if (res.availableProviders) {
-        setAvailableProviders(res.availableProviders);
-      }
-      if (res.availableLanguages) {
-        setAvailableLanguages(res.availableLanguages);
-      }
-      if (res.regionProviderIds) {
-        setRegionProviderIds(res.regionProviderIds);
-      }
-      if (res.priorityLanguageCodes) {
-        setPriorityLanguageCodes(res.priorityLanguageCodes);
-      }
-      setTotalPages(res.totalPages);
-      if (!append) {
-        onResultsCount?.(res.totalResults);
-      }
-      setPage(pageNum);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [category, type, genre, provider, language, yearMin, yearMax, minRating, onResultsCount]);
+    });
+  }, [run, category, type, genre, provider, language, yearMin, yearMax, minRating, onResultsCount]);
 
   useEffect(() => {
     fetchTitles(1, false);
