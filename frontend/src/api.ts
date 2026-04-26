@@ -25,6 +25,7 @@ import type {
   InvitationItem,
   HomepageSection,
   WatchHistoryEntry,
+  ActivitySettings,
 } from "./types";
 
 const BASE = "/api";
@@ -222,6 +223,32 @@ export async function updateMyBio(bio: string | null): Promise<{ bio: string | n
   return fetchJson("/user/me/bio", {
     method: "PATCH",
     body: JSON.stringify({ bio }),
+  });
+}
+
+export async function getActivitySettings(): Promise<ActivitySettings> {
+  return fetchJson("/user/me/activity-settings");
+}
+
+export async function updateActivitySettings(
+  settings: Partial<ActivitySettings>,
+): Promise<ActivitySettings> {
+  return fetchJson("/user/me/activity-settings", {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function hideActivityEvent(eventKind: string, eventKey: string): Promise<void> {
+  await fetchJson("/user/me/activity/hide", {
+    method: "POST",
+    body: JSON.stringify({ event_kind: eventKind, event_key: eventKey }),
+  });
+}
+
+export async function unhideActivityEvent(eventKind: string, eventKey: string): Promise<void> {
+  await fetchJson(`/user/me/activity/hide/${encodeURIComponent(eventKind)}/${encodeURIComponent(eventKey)}`, {
+    method: "DELETE",
   });
 }
 

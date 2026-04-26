@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "bun:test";
+import { describe, it, expect, afterEach, mock } from "bun:test";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
@@ -132,5 +132,35 @@ describe("RecentActivityCard", () => {
       const link = screen.getByRole("link", { name: "Halcyon Drift" });
       expect(link.getAttribute("href")).toBe("/title/movie-1");
     });
+  });
+
+  it("does not show hide button when isOwnProfile is false", async () => {
+    const { fetcher } = makeFetcher([
+      { activities: [event({ id: "rt:movie-1" })], has_more: false, next_cursor: null },
+    ]);
+    render(<RecentActivityCard username="testuser" fetcher={fetcher} />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText("Halcyon Drift")).toBeDefined());
+    expect(screen.queryByRole("button", { name: "Hide this event" })).toBeNull();
+  });
+
+  it("shows hide button when isOwnProfile is true and removes event on click", async () => {
+    const hideSpy = mock(async () => {});
+    mock.module("../../api", () => ({
+      getUserActivity: async () => ({ activities: [], has_more: false, next_cursor: null }),
+      hideActivityEvent: hideSpy,
+    }));
+
+    const { fetcher } = makeFetcher([
+      { activities: [event({ id: "rt:movie-1" })], has_more: false, next_cursor: null },
+    ]);
+    render(<RecentActivityCard username="testuser" isOwnProfile fetcher={fetcher} />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText("Halcyon Drift")).toBeDefined());
+
+    const hideBtn = screen.getByRole("button", { name: "Hide this event" });
+    expect(hideBtn).toBeDefined();
+    fireEvent.click(hideBtn);
+
+    await waitFor(() => expect(screen.queryByText("Halcyon Drift")).toBeNull());
+    expect(hideSpy).toHaveBeenCalledWith("rating_title", "rt:movie-1");
   });
 });

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import * as api from "../../api";
-import type { Title } from "../../types";
+import type { Title, ActivitySettings, ActivityType, ActivityKindVisibility } from "../../types";
 import { authClient } from "../../lib/auth-client";
 import { UserPlus } from "lucide-react";
 import {
@@ -13,6 +13,7 @@ import {
   SRadioCard,
   SMessage,
   SDivider,
+  SSwitch,
   SButton,
   SInput,
   SLabel,
@@ -520,6 +521,147 @@ function ProfileVisibilitySection() {
   );
 }
 
+const ACTIVITY_KIND_LABELS: Record<ActivityType, string> = {
+  rating_title: "Movie/show ratings",
+  rating_episode: "Episode ratings",
+  watched_title: "Watched movies/shows",
+  watched_episode: "Watched episodes",
+  tracked: "Watchlist additions",
+  recommendation: "Recommendations sent",
+};
+
+const ACTIVITY_KINDS: ActivityType[] = [
+  "rating_title",
+  "rating_episode",
+  "watched_title",
+  "watched_episode",
+  "tracked",
+  "recommendation",
+];
+
+const KIND_VIS_OPTIONS: Array<{ value: "public" | "friends_only" | "private"; label: string }> = [
+  { value: "public", label: "Everyone" },
+  { value: "friends_only", label: "Friends only" },
+  { value: "private", label: "Only me" },
+];
+
+function ActivityStreamSection() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState<ActivitySettings>({
+    enabled: false,
+    kind_visibility: {},
+  });
+  const [err, setErr] = useState("");
+
+  const refresh = useCallback(async () => {
+    try {
+      const data = await api.getActivitySettings();
+      setSettings(data);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  async function handleToggle(next: boolean) {
+    setSaving(true);
+    setErr("");
+    try {
+      const updated = await api.updateActivitySettings({ enabled: next });
+      setSettings(updated);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleKindChange(kind: ActivityType, value: "public" | "friends_only" | "private") {
+    const next: ActivityKindVisibility = { ...settings.kind_visibility, [kind]: value };
+    setSettings((prev) => ({ ...prev, kind_visibility: next }));
+    setSaving(true);
+    setErr("");
+    try {
+      const updated = await api.updateActivitySettings({ kind_visibility: next });
+      setSettings(updated);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <SCard title="Activity stream" subtitle="Share your activity on your public profile.">
+        <div className="text-zinc-500 text-sm">Loading…</div>
+      </SCard>
+    );
+  }
+
+  return (
+    <SCard
+      title="Activity stream"
+      subtitle="Share your recent activity (ratings, watches, recommendations) on your profile. Off by default."
+    >
+      {err && (
+        <div className="mb-4">
+          <SMessage kind="error">{err}</SMessage>
+        </div>
+      )}
+      <SSwitch
+        label="Show activity on profile"
+        sub={settings.enabled ? "Visitors who can see your profile will see your activity feed." : "Activity feed is hidden from other users."}
+        on={settings.enabled}
+        onChange={handleToggle}
+        disabled={saving}
+      />
+      {settings.enabled && (
+        <>
+          <SDivider label="Per-kind visibility" />
+          <p className="text-xs text-zinc-500 mb-3">
+            Override who can see each type of activity. Falls back to your profile visibility when set to "Everyone".
+          </p>
+          <div className="space-y-2">
+            {ACTIVITY_KINDS.map((kind) => {
+              const current = settings.kind_visibility[kind] ?? "public";
+              return (
+                <div key={kind} className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-b-0">
+                  <span className="text-sm text-zinc-300">{ACTIVITY_KIND_LABELS[kind]}</span>
+                  <div className="flex items-center gap-1">
+                    {KIND_VIS_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={saving}
+                        onClick={() => handleKindChange(kind, opt.value)}
+                        className={cn(
+                          "text-[11px] font-mono px-2 py-1 rounded-md transition-colors disabled:opacity-50",
+                          current === opt.value
+                            ? "bg-amber-400/15 text-amber-400 font-semibold"
+                            : "text-zinc-500 hover:text-zinc-300",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </SCard>
+  );
+}
+
 function SocialSection() {
   const { t } = useTranslation();
 
@@ -560,6 +702,7 @@ export default function AccountTab() {
       <UserSection />
       <PasskeySection />
       <ProfileVisibilitySection />
+      <ActivityStreamSection />
       <SocialSection />
     </>
   );

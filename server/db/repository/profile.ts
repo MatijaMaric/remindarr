@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../schema";
-import { users, watchedTitles, watchedEpisodes, episodes, titles } from "../schema";
+import { users, watchedTitles, watchedEpisodes, episodes, titles, activityKindVisibility } from "../schema";
+import type { ActivityType, ActivityKindVisibilityMap } from "./activity";
 import { traceDbQuery } from "../../tracing";
 import { getPublicTrackedTitles, getPublicTrackedCount, getTrackedTitles } from "./tracked";
 import {
@@ -38,6 +39,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         bio: users.bio,
         profile_public: users.profilePublic,
         profile_visibility: users.profileVisibility,
+        activity_stream_enabled: users.activityStreamEnabled,
       })
       .from(users)
       .where(sql`lower(${users.username}) = lower(${username})`)
@@ -195,6 +197,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       friends,
       show_watchlist: showWatchlist,
       profile_visibility: visibility,
+      activity_stream_enabled: Boolean(user.activity_stream_enabled),
       follower_count: followerCount,
       following_count: followingCount,
       is_following: viewerIsFollowing,
@@ -214,6 +217,7 @@ export async function getUserVisibilityByUsername(username: string) {
         username: users.username,
         profile_public: users.profilePublic,
         profile_visibility: users.profileVisibility,
+        activity_stream_enabled: users.activityStreamEnabled,
       })
       .from(users)
       .where(sql`lower(${users.username}) = lower(${username})`)
@@ -221,7 +225,91 @@ export async function getUserVisibilityByUsername(username: string) {
     if (!row) return null;
     const visibility = (row.profile_visibility
       || (row.profile_public ? "public" : "private")) as ProfileVisibility;
-    return { id: row.id, username: row.username, visibility };
+    return {
+      id: row.id,
+      username: row.username,
+      visibility,
+      activity_stream_enabled: Boolean(row.activity_stream_enabled),
+    };
+  });
+}
+
+export async function getActivityKindVisibilityMap(userId: string): Promise<ActivityKindVisibilityMap> {
+  return traceDbQuery("getActivityKindVisibilityMap", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({ kind: activityKindVisibility.kind, visibility: activityKindVisibility.visibility })
+      .from(activityKindVisibility)
+      .where(eq(activityKindVisibility.userId, userId))
+      .all();
+    const map: ActivityKindVisibilityMap = {};
+    for (const row of rows) {
+      map[row.kind as ActivityType] = row.visibility as "public" | "friends_only" | "private";
+    }
+    return map;
+  });
+}
+
+export async function setActivitySettings(
+  userId: string,
+  data: { enabled?: boolean; kindVisibility?: ActivityKindVisibilityMap },
+): Promise<void> {
+  return traceDbQuery("setActivitySettings", async () => {
+    const db = getDb();
+    const ops: Promise<unknown>[] = [];
+
+    if (data.enabled !== undefined) {
+      ops.push(
+        db.update(users)
+          .set({ activityStreamEnabled: data.enabled ? 1 : 0 })
+          .where(eq(users.id, userId))
+          .run(),
+      );
+    }
+
+    if (data.kindVisibility) {
+      for (const [kind, visibility] of Object.entries(data.kindVisibility)) {
+        if (visibility === undefined) continue;
+        ops.push(
+          db.insert(activityKindVisibility)
+            .values({ userId, kind, visibility })
+            .onConflictDoUpdate({
+              target: [activityKindVisibility.userId, activityKindVisibility.kind],
+              set: { visibility },
+            })
+            .run(),
+        );
+      }
+    }
+
+    await Promise.all(ops);
+  });
+}
+
+export async function getActivitySettings(userId: string): Promise<{
+  enabled: boolean;
+  kind_visibility: ActivityKindVisibilityMap;
+}> {
+  return traceDbQuery("getActivitySettings", async () => {
+    const db = getDb();
+    const [userRow, kindRows] = await Promise.all([
+      db.select({ activity_stream_enabled: users.activityStreamEnabled })
+        .from(users)
+        .where(eq(users.id, userId))
+        .get(),
+      db.select({ kind: activityKindVisibility.kind, visibility: activityKindVisibility.visibility })
+        .from(activityKindVisibility)
+        .where(eq(activityKindVisibility.userId, userId))
+        .all(),
+    ]);
+    const kind_visibility: ActivityKindVisibilityMap = {};
+    for (const row of kindRows) {
+      kind_visibility[row.kind as ActivityType] = row.visibility as "public" | "friends_only" | "private";
+    }
+    return {
+      enabled: Boolean(userRow?.activity_stream_enabled),
+      kind_visibility,
+    };
   });
 }
 

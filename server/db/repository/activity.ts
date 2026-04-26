@@ -49,10 +49,22 @@ export interface ActivityEvent {
   status?: UserStatus | null;
 }
 
+export type ActivityKindVisibilityMap = Partial<Record<ActivityType, "public" | "friends_only" | "private">>;
+
 interface ActivityQueryOptions {
   limit?: number;
   before?: string | null;
+  /** Per-kind visibility overrides. Kinds absent from the map are shown to everyone. */
+  kindVisibility?: ActivityKindVisibilityMap;
+  /** Viewer's relationship to the profile owner: "self" | "friend" | "public" */
+  viewerRelation?: "self" | "friend" | "public";
+  /** Composite keys ("kind::eventKey") the owner has hidden. */
+  hiddenKeys?: Set<string>;
 }
+
+// Watch events use watched_titles / watched_episodes (unique watch markers) rather than
+// watch_history (append-only play log). This is intentional: the feed shows "watched once"
+// semantics, not repeated-play counts. See server/db/repository/watch-history.ts.
 
 /**
  * Builds a chronological mixed-source activity feed for a user.
@@ -320,8 +332,20 @@ export async function getUserActivity(userId: string, options: ActivityQueryOpti
 
     merged.sort((a, b) => b.created_at.localeCompare(a.created_at));
 
-    const page = merged.slice(0, limit);
-    const hasMore = merged.length > limit;
+    const { kindVisibility, viewerRelation, hiddenKeys } = options;
+
+    const filtered = merged.filter((event) => {
+      if (hiddenKeys?.has(`${event.type}::${event.id}`)) return false;
+      if (kindVisibility && viewerRelation && viewerRelation !== "self") {
+        const kindVis = kindVisibility[event.type];
+        if (kindVis === "private") return false;
+        if (kindVis === "friends_only" && viewerRelation !== "friend") return false;
+      }
+      return true;
+    });
+
+    const page = filtered.slice(0, limit);
+    const hasMore = filtered.length > limit;
     const nextCursor = hasMore && page.length > 0 ? page[page.length - 1].created_at : null;
 
     return {
