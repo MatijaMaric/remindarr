@@ -13,6 +13,7 @@ import { WatchedIcon } from "../components/EpisodeComponents";
 import ShareButton from "../components/ShareButton";
 import EpisodeRatingButtons from "../components/EpisodeRatingButtons";
 import { stillUrl as mkStillUrl } from "../lib/tmdb-images";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -168,10 +169,12 @@ export default function EpisodeDetailPage() {
 
       {/* Rating */}
       {released && episodeStatus && (
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-white">Rate this episode</h2>
-          <EpisodeRatingButtons episodeId={episodeStatus.id} />
-        </section>
+        <SectionErrorBoundary label="ratings">
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold text-white">Rate this episode</h2>
+            <EpisodeRatingButtons episodeId={episodeStatus.id} />
+          </section>
+        </SectionErrorBoundary>
       )}
 
       {/* Overview */}
@@ -184,35 +187,39 @@ export default function EpisodeDetailPage() {
 
       {/* Key Crew */}
       {(directors.length > 0 || writers.length > 0) && (
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-white">Crew</h2>
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            {directors.length > 0 && (
-              <div>
-                <span className="text-zinc-400">Directed by: </span>
-                <span className="text-white">{directors.map(d => d.name).join(", ")}</span>
-              </div>
-            )}
-            {writers.length > 0 && (
-              <div>
-                <span className="text-zinc-400">Written by: </span>
-                <span className="text-white">{writers.map(w => w.name).join(", ")}</span>
-              </div>
-            )}
-          </div>
-        </section>
+        <SectionErrorBoundary label="crew">
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold text-white">Crew</h2>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+              {directors.length > 0 && (
+                <div>
+                  <span className="text-zinc-400">Directed by: </span>
+                  <span className="text-white">{directors.map(d => d.name).join(", ")}</span>
+                </div>
+              )}
+              {writers.length > 0 && (
+                <div>
+                  <span className="text-zinc-400">Written by: </span>
+                  <span className="text-white">{writers.map(w => w.name).join(", ")}</span>
+                </div>
+              )}
+            </div>
+          </section>
+        </SectionErrorBoundary>
       )}
 
       {/* Guest Stars / Cast */}
       {allCast.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">Cast</h2>
-          <ScrollableRow className="gap-4 pb-2">
-            {allCast.slice(0, 20).map((c) => (
-              <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
-            ))}
-          </ScrollableRow>
-        </section>
+        <SectionErrorBoundary label="cast">
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-white">Cast</h2>
+            <ScrollableRow className="gap-4 pb-2">
+              {allCast.slice(0, 20).map((c) => (
+                <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
+              ))}
+            </ScrollableRow>
+          </section>
+        </SectionErrorBoundary>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import ShowHero from "../../components/title-detail/ShowHero";
 import { Section } from "../../components/title-detail/Section";
 import { posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { formatDate, isToday } from "../../components/title-detail/utils";
+import SectionErrorBoundary from "../../components/SectionErrorBoundary";
 
 export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   const { title, tmdb, country } = data;
@@ -61,20 +62,26 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       )}
 
       {/* Rating & Social */}
-      <RatingsSection titleId={title.id} shareTitle={tmdb?.name || title.title} />
+      <SectionErrorBoundary label="ratings">
+        <RatingsSection titleId={title.id} shareTitle={tmdb?.name || title.title} />
+      </SectionErrorBoundary>
 
       {/* Creators & Cast */}
       {creators.length > 0 && (
-        <Section title="Created By">
-          <div className="flex gap-4">
-            {creators.map((c) => (
-              <PersonCard key={c.id} id={c.id} name={c.name} role="Creator" profilePath={c.profile_path} />
-            ))}
-          </div>
-        </Section>
+        <SectionErrorBoundary label="creators">
+          <Section title="Created By">
+            <div className="flex gap-4">
+              {creators.map((c) => (
+                <PersonCard key={c.id} id={c.id} name={c.name} role="Creator" profilePath={c.profile_path} />
+              ))}
+            </div>
+          </Section>
+        </SectionErrorBoundary>
       )}
 
-      <Cast cast={cast} />
+      <SectionErrorBoundary label="cast">
+        <Cast cast={cast} />
+      </SectionErrorBoundary>
 
       {/* Seasons */}
       {seasons.length > 0 && (
@@ -136,7 +143,9 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       )}
 
       {/* Streaming Availability */}
-      <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
+      <SectionErrorBoundary label="streaming providers">
+        <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
+      </SectionErrorBoundary>
 
       {/* External Links */}
       {tmdb && (

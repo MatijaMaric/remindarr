@@ -18,6 +18,7 @@ import RatingsSection from "../../components/title-detail/RatingsSection";
 import ReleaseDates from "../../components/title-detail/ReleaseDates";
 import { Section } from "../../components/title-detail/Section";
 import { formatCurrency } from "../../components/title-detail/utils";
+import SectionErrorBoundary from "../../components/SectionErrorBoundary";
 
 export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { t } = useTranslation();
@@ -162,17 +163,27 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       )}
 
       {/* Rating & Social */}
-      <RatingsSection titleId={title.id} shareTitle={tmdb?.title || title.title} />
+      <SectionErrorBoundary label="ratings">
+        <RatingsSection titleId={title.id} shareTitle={tmdb?.title || title.title} />
+      </SectionErrorBoundary>
 
       {/* Cast & Crew */}
-      <Crew directors={directors} writers={writers} />
-      <Cast cast={cast} />
+      <SectionErrorBoundary label="crew">
+        <Crew directors={directors} writers={writers} />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary label="cast">
+        <Cast cast={cast} />
+      </SectionErrorBoundary>
 
       {/* Release Dates */}
-      <ReleaseDates releaseDates={releaseDates} />
+      <SectionErrorBoundary label="release dates">
+        <ReleaseDates releaseDates={releaseDates} />
+      </SectionErrorBoundary>
 
       {/* Streaming Availability */}
-      <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
+      <SectionErrorBoundary label="streaming providers">
+        <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
+      </SectionErrorBoundary>
 
       {/* External Links */}
       {tmdb && (
