@@ -1,4 +1,5 @@
 import { traceHttp } from "../tracing";
+import { httpFetch } from "../lib/http";
 import { formatProviderNames, groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -33,7 +34,7 @@ export class GotifyProvider implements NotificationProvider {
     const url = `${base}/message`;
 
     await traceHttp("POST", url, async () => {
-      const response = await fetch(url, {
+      const response = await httpFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Gotify-Key": config.token },
         body: JSON.stringify({ title, message, priority: 5 }),

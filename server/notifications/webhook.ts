@@ -1,4 +1,5 @@
 import { traceHttp } from "../tracing";
+import { httpFetch } from "../lib/http";
 import { groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -37,7 +38,7 @@ export class WebhookProvider implements NotificationProvider {
     }
 
     await traceHttp("POST", config.url, async () => {
-      const response = await fetch(config.url, {
+      const response = await httpFetch(config.url, {
         method: "POST",
         headers,
         body,

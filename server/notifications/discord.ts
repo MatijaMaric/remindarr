@@ -1,5 +1,6 @@
 import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
+import { httpFetch } from "../lib/http";
 import { formatProviderNames, groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -34,7 +35,7 @@ export class DiscordProvider implements NotificationProvider {
     if (embeds.length === 0) return;
 
     await traceHttp("POST", config.webhookUrl, async () => {
-      const response = await fetch(config.webhookUrl, {
+      const response = await httpFetch(config.webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
