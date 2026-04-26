@@ -18,6 +18,7 @@ import {
   follow,
   setActivitySettings,
   hideActivityEvent,
+  getActivityKindVisibilityMap,
 } from "../db/repository";
 import { optionalAuth } from "../middleware/auth";
 import { getDb, episodes, ratings, episodeRatings, watchedTitles, watchedEpisodes, tracked, recommendations, users } from "../db/schema";
@@ -376,5 +377,77 @@ describe("GET /user/:username/activity", () => {
     const body = await res.json();
     expect(body.activities).toHaveLength(1);
     expect(body.activities[0].title.id).toBe("m2");
+  });
+});
+
+describe("PATCH /user/me/activity-settings", () => {
+  it("accepts toggle-only body", async () => {
+    const res = await app.request("/user/me/activity-settings", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.enabled).toBe(true);
+  });
+
+  it("accepts a partial kind_visibility map (regression: zod partialRecord)", async () => {
+    const res = await app.request("/user/me/activity-settings", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ kind_visibility: { rating_title: "private" } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.kind_visibility.rating_title).toBe("private");
+
+    const stored = await getActivityKindVisibilityMap(userId);
+    expect(stored.rating_title).toBe("private");
+  });
+
+  it("accepts a full kind_visibility map", async () => {
+    const full = {
+      rating_title: "private",
+      rating_episode: "friends_only",
+      watched_title: "public",
+      watched_episode: "private",
+      tracked: "friends_only",
+      recommendation: "public",
+    };
+    const res = await app.request("/user/me/activity-settings", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ kind_visibility: full }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.kind_visibility).toMatchObject(full);
+  });
+
+  describe("validation", () => {
+    it("rejects an unknown activity kind", async () => {
+      const res = await app.request("/user/me/activity-settings", {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ kind_visibility: { not_a_kind: "public" } }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects an invalid visibility value", async () => {
+      const res = await app.request("/user/me/activity-settings", {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ kind_visibility: { rating_title: "nope" } }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
   });
 });
