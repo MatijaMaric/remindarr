@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import * as api from "../../api";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface EditBioModalProps {
   initialValue: string;
@@ -15,6 +16,9 @@ export function EditBioModal({ initialValue, onClose, onSaved }: EditBioModalPro
   const { t } = useTranslation();
   const [value, setValue] = useState(initialValue);
   const [saving, setSaving] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Always open while mounted — the parent unmounts us on close
+  useFocusTrap(dialogRef, true);
 
   const tooLong = value.length > MAX_LEN;
 
@@ -36,21 +40,24 @@ export function EditBioModal({ initialValue, onClose, onSaved }: EditBioModalPro
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      data-testid="edit-bio-modal"
+      aria-hidden="true"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md bg-zinc-900 border border-white/[0.08] rounded-xl p-6 space-y-4">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        data-testid="edit-bio-modal"
+        className="w-full max-w-md bg-zinc-900 border border-white/[0.08] rounded-xl p-6 space-y-4"
+      >
         <h2 className="text-lg font-semibold text-white">{t("userProfile.dossier.bio")}</h2>
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
           maxLength={MAX_LEN + 40 /* tolerate paste, block on save */}
           rows={4}
-          autoFocus
           placeholder={t("userProfile.dossier.bioPlaceholder")}
           className="w-full px-3 py-2 bg-zinc-950 border border-white/[0.08] rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-400/60 resize-none"
           data-testid="bio-textarea"

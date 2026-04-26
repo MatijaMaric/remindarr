@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface Props {
   open: boolean;
@@ -22,6 +23,8 @@ const SHORTCUTS: Shortcut[] = [
 
 export default function KeyboardShortcutsModal({ open, onClose }: Props) {
   const { t } = useTranslation();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -45,6 +48,7 @@ export default function KeyboardShortcutsModal({ open, onClose }: Props) {
         aria-hidden="true"
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="shortcuts-title"
