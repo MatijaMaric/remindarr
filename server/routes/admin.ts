@@ -118,7 +118,18 @@ app.put("/settings", zValidator("json", updateSettingsSchema), async (c) => {
 
   // On Bun, recreate auth instance to pick up new OIDC config
   if (_onOidcSettingsChanged) {
-    await _onOidcSettingsChanged();
+    try {
+      await _onOidcSettingsChanged();
+    } catch (err) {
+      log.error("OIDC settings reload failed", { error: err });
+      return c.json(
+        {
+          error: "oidc_reload_failed",
+          message: `Settings saved but OIDC reload failed: ${(err as Error).message}. Restart the server to recover.`,
+        },
+        500,
+      );
+    }
   }
 
   return ok(c, { oidc_configured: await isOidcConfigured() });

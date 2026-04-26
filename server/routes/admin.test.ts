@@ -10,7 +10,7 @@ import {
   getUserById,
 } from "../db/repository";
 import { requireAuth, requireAdmin } from "../middleware/auth";
-import adminApp from "./admin";
+import adminApp, { setOnOidcSettingsChanged } from "./admin";
 import type { AppEnv } from "../types";
 
 function createMockAuth() {
@@ -429,5 +429,42 @@ describe("DELETE /admin/users/:id", () => {
       headers: { Cookie: adminCookie },
     });
     expect(res.status).toBe(400);
+  });
+});
+
+describe("PUT /admin/settings — OIDC reload callback error handling", () => {
+  it("returns 500 with oidc_reload_failed when the callback throws", async () => {
+    setOnOidcSettingsChanged(async () => {
+      throw new Error("discovery doc unreachable");
+    });
+
+    const res = await app.request("/admin/settings", {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ oidc_issuer_url: "https://auth.example.com" }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("oidc_reload_failed");
+    expect(typeof body.message).toBe("string");
+    expect(body.message).toContain("discovery doc unreachable");
+
+    // Settings must still have been persisted despite the reload failure
+    expect(await getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
+  });
+
+  it("returns 200 when callback succeeds", async () => {
+    let called = false;
+    setOnOidcSettingsChanged(async () => { called = true; });
+
+    const res = await app.request("/admin/settings", {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ oidc_issuer_url: "https://auth.example.com" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(called).toBe(true);
   });
 });
