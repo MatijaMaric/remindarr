@@ -70,6 +70,7 @@ export default function UserProfilePage() {
     friends,
     is_own_profile,
     show_watchlist,
+    activity_stream_enabled,
     profile_visibility,
     backdrops,
     follower_count,
@@ -122,7 +123,9 @@ export default function UserProfilePage() {
               <>
                 {monthly.length > 0 && <MonthlyActivityCard monthly={monthly} />}
                 <StatusBreakdown byStatus={shows_by_status} />
-                <RecentActivityCard username={user.username} />
+                {(is_own_profile || activity_stream_enabled) && (
+                  <RecentActivityCard username={user.username} isOwnProfile={is_own_profile} />
+                )}
                 <WatchlistTabs
                   active={activeTab}
                   onChange={setActiveTab}

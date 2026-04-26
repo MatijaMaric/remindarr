@@ -360,6 +360,7 @@
         "empty": "Nothing here yet.",
         "loadMore": "Load more →",
         "loading": "Loading…",
+        "hideEvent": "Hide this event",
         "badge": {
           "rating": "Rating",
           "watched": "Watched",

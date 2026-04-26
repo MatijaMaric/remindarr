@@ -72,7 +72,15 @@ export type { UserStatus, NotificationMode } from "./tracked";
 
 export { getTagsForUser, getTagsForTitle, setTags } from "./tags";
 
-export { getUserPublicProfile, updateProfilePublic, updateUserBio, getUserVisibilityByUsername } from "./profile";
+export {
+  getUserPublicProfile,
+  updateProfilePublic,
+  updateUserBio,
+  getUserVisibilityByUsername,
+  getActivityKindVisibilityMap,
+  setActivitySettings,
+  getActivitySettings,
+} from "./profile";
 export type { ProfileVisibility } from "./profile";
 
 export {
@@ -192,7 +200,9 @@ export {
 } from "./recommendations";
 
 export { getUserActivity } from "./activity";
-export type { ActivityEvent, ActivityType, ActivityTitleRef, ActivityEpisodeRef } from "./activity";
+export type { ActivityEvent, ActivityType, ActivityTitleRef, ActivityEpisodeRef, ActivityKindVisibilityMap } from "./activity";
+
+export { hideActivityEvent, unhideActivityEvent, getHiddenActivityEventKeys } from "./hidden-activity";
 
 export {
   createInvitation,

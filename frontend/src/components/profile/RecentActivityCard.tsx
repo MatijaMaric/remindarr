@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { BookmarkPlus, Play, Quote, Star } from "lucide-react";
+import { BookmarkPlus, Play, Quote, Star, X } from "lucide-react";
 import { DossierCard } from "./atoms/DossierCard";
 import { Kicker } from "../design/Kicker";
 import * as api from "../../api";
@@ -14,6 +14,7 @@ type ActivityFetcher = (
 
 interface RecentActivityCardProps {
   username: string;
+  isOwnProfile?: boolean;
   pageSize?: number;
   /** Override for tests. Defaults to the real API client. */
   fetcher?: ActivityFetcher;
@@ -133,9 +134,11 @@ const BADGE_LABEL_KEY = {
 
 interface ActivityRowProps {
   event: ActivityEvent;
+  isOwnProfile?: boolean;
+  onHide?: (event: ActivityEvent) => void;
 }
 
-function ActivityRow({ event }: ActivityRowProps) {
+function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
   const { t } = useTranslation();
   const relative = useRelativeTime(event.created_at);
   const titleHref = `/title/${encodeURIComponent(event.title.id)}`;
@@ -219,7 +222,7 @@ function ActivityRow({ event }: ActivityRowProps) {
   }
 
   return (
-    <li className="flex items-start gap-3.5 py-3.5 border-b border-white/[0.04] last:border-b-0">
+    <li className="group flex items-start gap-3.5 py-3.5 border-b border-white/[0.04] last:border-b-0">
       <ActivityIcon type={event.type} />
       <div className="flex-1 min-w-0 pt-0.5">
         <div className="flex items-baseline gap-2 flex-wrap">
@@ -236,25 +239,46 @@ function ActivityRow({ event }: ActivityRowProps) {
         {summary && <p className="text-[13px] text-zinc-400 mt-0.5 truncate">{summary}</p>}
         {detail}
       </div>
-      <span className="font-mono text-[11px] text-zinc-500 shrink-0 pt-1">{relative}</span>
+      <div className="flex items-center gap-2 shrink-0 pt-1">
+        <span className="font-mono text-[11px] text-zinc-500">{relative}</span>
+        {isOwnProfile && onHide && (
+          <button
+            type="button"
+            aria-label={t("userProfile.dossier.activity.hideEvent")}
+            onClick={() => onHide(event)}
+            className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-zinc-600 hover:text-zinc-300 transition-opacity"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
     </li>
   );
 }
 
-export default function RecentActivityCard({ username, pageSize = 10, fetcher }: RecentActivityCardProps) {
+export default function RecentActivityCard({ username, isOwnProfile, pageSize = 10, fetcher }: RecentActivityCardProps) {
   // Reset internal state when the username changes by remounting via key —
   // avoids the "setState in effect body" lint rule and makes cancellation
   // trivially correct.
-  return <ActivityFeed key={username} username={username} pageSize={pageSize} fetcher={fetcher ?? api.getUserActivity} />;
+  return (
+    <ActivityFeed
+      key={username}
+      username={username}
+      isOwnProfile={isOwnProfile}
+      pageSize={pageSize}
+      fetcher={fetcher ?? api.getUserActivity}
+    />
+  );
 }
 
 interface ActivityFeedProps {
   username: string;
+  isOwnProfile?: boolean;
   pageSize: number;
   fetcher: ActivityFetcher;
 }
 
-function ActivityFeed({ username, pageSize, fetcher }: ActivityFeedProps) {
+function ActivityFeed({ username, isOwnProfile, pageSize, fetcher }: ActivityFeedProps) {
   const { t } = useTranslation();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -280,6 +304,15 @@ function ActivityFeed({ username, pageSize, fetcher }: ActivityFeedProps) {
       });
     return () => controller.abort();
   }, [username, pageSize, fetcher]);
+
+  const handleHide = useCallback((event: ActivityEvent) => {
+    setEvents((prev) => prev.filter((e) => e.id !== event.id));
+    api.hideActivityEvent(event.type, event.id).catch(() => {
+      setEvents((prev) =>
+        [...prev, event].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      );
+    });
+  }, []);
 
   const loadMore = useCallback(() => {
     if (!cursor || loadingMore) return;
@@ -322,7 +355,12 @@ function ActivityFeed({ username, pageSize, fetcher }: ActivityFeedProps) {
         <>
           <ul className="-mt-1">
             {events.map((event) => (
-              <ActivityRow key={event.id} event={event} />
+              <ActivityRow
+                key={event.id}
+                event={event}
+                isOwnProfile={isOwnProfile}
+                onHide={handleHide}
+              />
             ))}
           </ul>
           {hasMore && (

@@ -557,6 +557,7 @@ export interface UserProfileResponse {
   shows: Title[];
   show_watchlist: boolean;
   profile_visibility: ProfileVisibility;
+  activity_stream_enabled: boolean;
   is_own_profile: boolean;
   backdrops: ProfileBackdrop[];
   follower_count: number;
@@ -573,6 +574,13 @@ export type ActivityType =
   | "watched_episode"
   | "tracked"
   | "recommendation";
+
+export type ActivityKindVisibility = Partial<Record<ActivityType, "public" | "friends_only" | "private">>;
+
+export interface ActivitySettings {
+  enabled: boolean;
+  kind_visibility: ActivityKindVisibility;
+}
 
 export interface ActivityTitleRef {
   id: string;

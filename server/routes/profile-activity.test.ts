@@ -16,9 +16,11 @@ import {
   createRecommendation,
   updateProfilePublic,
   follow,
+  setActivitySettings,
+  hideActivityEvent,
 } from "../db/repository";
 import { optionalAuth } from "../middleware/auth";
-import { getDb, episodes, ratings, episodeRatings, watchedTitles, watchedEpisodes, tracked, recommendations } from "../db/schema";
+import { getDb, episodes, ratings, episodeRatings, watchedTitles, watchedEpisodes, tracked, recommendations, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import profileApp from "./profile";
 import type { AppEnv } from "../types";
@@ -57,6 +59,7 @@ beforeEach(async () => {
   userId = await createUser("activeuser", "hash", "Active User");
   userToken = await createSession(userId);
   await updateProfilePublic(userId, "public");
+  await setActivitySettings(userId, { enabled: true });
 
   app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
@@ -291,5 +294,87 @@ describe("GET /user/:username/activity", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.activities).toHaveLength(1);
+  });
+
+  it("non-owner sees empty activity when stream is disabled", async () => {
+    await setActivitySettings(userId, { enabled: false });
+    await upsertTitles([makeParsedTitle({ id: "m1", title: "Invisible" })]);
+    await rateTitle(userId, "m1", "LOVE");
+
+    const res = await app.request("/user/activeuser/activity");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.activities).toEqual([]);
+  });
+
+  it("owner still sees their own activity when stream is disabled", async () => {
+    await setActivitySettings(userId, { enabled: false });
+    await upsertTitles([makeParsedTitle({ id: "m1", title: "Mine Only" })]);
+    await rateTitle(userId, "m1", "LOVE");
+
+    const res = await app.request("/user/activeuser/activity", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.activities).toHaveLength(1);
+  });
+
+  it("per-kind visibility: private kind excluded from public viewer", async () => {
+    await setActivitySettings(userId, { kindVisibility: { rating_title: "private" } });
+    await upsertTitles([makeParsedTitle({ id: "m1", title: "Rating Hidden" })]);
+    await rateTitle(userId, "m1", "LIKE");
+    await trackTitle("m1", userId);
+    await getDb().update(tracked).set({ public: 1 })
+      .where(and(eq(tracked.userId, userId), eq(tracked.titleId, "m1"))).run();
+
+    const res = await app.request("/user/activeuser/activity");
+    const body = await res.json();
+    const types = body.activities.map((a: any) => a.type);
+    expect(types).not.toContain("rating_title");
+    expect(types).toContain("tracked");
+  });
+
+  it("per-kind visibility: friends_only kind excluded from public viewer but visible to friend", async () => {
+    await updateProfilePublic(userId, "public");
+    await setActivitySettings(userId, { kindVisibility: { rating_title: "friends_only" } });
+    await upsertTitles([makeParsedTitle({ id: "m1", title: "Friend Rating" })]);
+    await rateTitle(userId, "m1", "LOVE");
+
+    const publicRes = await app.request("/user/activeuser/activity");
+    expect((await publicRes.json()).activities).toEqual([]);
+
+    const friendId = await createUser("friend2", "hash");
+    const friendToken = await createSession(friendId);
+    await follow(userId, friendId);
+    await follow(friendId, userId);
+
+    const friendRes = await app.request("/user/activeuser/activity", { headers: authHeaders(friendToken) });
+    expect((await friendRes.json()).activities).toHaveLength(1);
+  });
+
+  it("owner can hide an individual event", async () => {
+    await upsertTitles([makeParsedTitle({ id: "m1", title: "Hidden Movie" })]);
+    await rateTitle(userId, "m1", "LIKE");
+
+    await hideActivityEvent(userId, "rating_title", "rt:m1");
+
+    const res = await app.request("/user/activeuser/activity", { headers: authHeaders() });
+    const body = await res.json();
+    expect(body.activities).toEqual([]);
+  });
+
+  it("hidden events are hidden for owner, not other activities", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "m1", title: "Rating Hidden" }),
+      makeParsedTitle({ id: "m2", title: "Still Visible" }),
+    ]);
+    await rateTitle(userId, "m1", "LIKE");
+    await rateTitle(userId, "m2", "LOVE");
+
+    await hideActivityEvent(userId, "rating_title", "rt:m1");
+
+    const res = await app.request("/user/activeuser/activity", { headers: authHeaders() });
+    const body = await res.json();
+    expect(body.activities).toHaveLength(1);
+    expect(body.activities[0].title.id).toBe("m2");
   });
 });

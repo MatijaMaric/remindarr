@@ -163,6 +163,7 @@ export const users = sqliteTable(
     feedToken: text("feed_token"),
     kioskToken: text("kiosk_token"),
     bio: text("bio"),
+    activityStreamEnabled: integer("activity_stream_enabled").notNull().default(0),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(
@@ -506,6 +507,30 @@ export const watchHistory = sqliteTable(
   ]
 );
 
+export const activityKindVisibility = sqliteTable(
+  "activity_kind_visibility",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    visibility: text("visibility").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.kind] }),
+  ]
+);
+
+export const hiddenActivityEvents = sqliteTable(
+  "hidden_activity_events",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    eventKind: text("event_kind").notNull(),
+    eventKey: text("event_key").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.eventKind, table.eventKey] }),
+  ]
+);
+
 export const episodeRatings = sqliteTable(
   "episode_ratings",
   {
@@ -665,7 +690,7 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
   follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
-  watchHistory, streamingAlerts,
+  watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
