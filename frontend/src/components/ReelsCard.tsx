@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { Episode, RatingValue } from "../types";
 import WatchButtonGroup from "./WatchButtonGroup";
 import ReelsUndoBar from "./ReelsUndoBar";
+import { backdropUrl as mkBackdropUrl } from "../lib/tmdb-images";
 
 function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
@@ -48,7 +49,7 @@ async function shareEpisode(episode: Episode) {
 
 export function getBackgroundImageUrl(episode: Episode): string | null {
   if (episode.still_path) {
-    return `https://image.tmdb.org/t/p/w1280${episode.still_path}`;
+    return mkBackdropUrl(episode.still_path, "w1280");
   }
   if (episode.poster_url) {
     return episode.poster_url;
@@ -91,6 +92,8 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
+          width={1280}
+          height={720}
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950" />

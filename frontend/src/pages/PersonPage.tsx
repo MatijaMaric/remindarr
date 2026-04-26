@@ -6,8 +6,8 @@ import type { PersonDetailsResponse, PersonCastCredit, PersonCrewCredit } from "
 import ExternalLinks from "../components/ExternalLinks";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
+import { profileUrl, posterUrl as mkPosterUrl } from "../lib/tmdb-images";
 
-const TMDB_IMG = "https://image.tmdb.org/t/p";
 const BIO_TRUNCATE_LENGTH = 600;
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -58,10 +58,12 @@ function CreditCard({ credit, subtitle }: { credit: PersonCastCredit | PersonCre
       <div className="aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 mb-2">
         {credit.poster_path ? (
           <img
-            src={`${TMDB_IMG}/w342${credit.poster_path}`}
+            src={mkPosterUrl(credit.poster_path, "w342") ?? ""}
             alt={creditTitle(credit)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             loading="lazy"
+            width={342}
+            height={513}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm px-2 text-center">
@@ -121,9 +123,12 @@ export default function PersonPage() {
           <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden bg-zinc-800">
             {person.profile_path ? (
               <img
-                src={`${TMDB_IMG}/w300${person.profile_path}`}
+                src={profileUrl(person.profile_path, "w185") ?? ""}
                 alt={person.name}
                 className="w-full h-full object-cover"
+                loading="eager"
+                width={185}
+                height={278}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-zinc-600 text-5xl">

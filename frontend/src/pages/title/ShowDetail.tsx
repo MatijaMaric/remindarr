@@ -8,7 +8,8 @@ import ProvidersSection from "../../components/title-detail/ProvidersSection";
 import RatingsSection from "../../components/title-detail/RatingsSection";
 import ShowHero from "../../components/title-detail/ShowHero";
 import { Section } from "../../components/title-detail/Section";
-import { TMDB_IMG, formatDate, isToday } from "../../components/title-detail/utils";
+import { posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
+import { formatDate, isToday } from "../../components/title-detail/utils";
 
 export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   const { title, tmdb, country } = data;
@@ -98,10 +99,12 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                   <div className="aspect-[2/3] bg-zinc-800">
                     {s.poster_path ? (
                       <img
-                        src={`${TMDB_IMG}/w342${s.poster_path}`}
+                        src={mkPosterUrl(s.poster_path, "w342") ?? ""}
                         alt={s.name}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        width={342}
+                        height={513}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
