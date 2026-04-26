@@ -56,7 +56,7 @@ const visibilityEnum = z.enum(["public", "friends_only", "private"]);
 
 const activitySettingsSchema = z.object({
   enabled: z.boolean().optional(),
-  kind_visibility: z.record(activityKindEnum, visibilityEnum).optional(),
+  kind_visibility: z.partialRecord(activityKindEnum, visibilityEnum).optional(),
 });
 
 app.get("/me/activity-settings", async (c) => {
@@ -72,7 +72,7 @@ app.patch("/me/activity-settings", zValidator("json", activitySettingsSchema), a
   const { enabled, kind_visibility } = c.req.valid("json");
   await setActivitySettings(user.id, {
     enabled,
-    kindVisibility: kind_visibility as ActivityKindVisibilityMap | undefined,
+    kindVisibility: kind_visibility,
   });
   const updated = await getActivitySettings(user.id);
   return ok(c, updated);
