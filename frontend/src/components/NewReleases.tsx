@@ -5,6 +5,7 @@ import type { Title, Provider } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 import { loadFilters } from "./loadFilters";
+import { useAsyncError } from "../hooks/useAsyncError";
 
 interface Props {
   type: string[];
@@ -48,7 +49,7 @@ export default function NewReleases({
   const { t } = useTranslation();
   const [titles, setTitles] = useState<Title[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { run, error } = useAsyncError();
 
   const [genres, setGenres] = useState<string[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -68,8 +69,7 @@ export default function NewReleases({
 
   const fetchTitles = useCallback(async () => {
     setLoading(true);
-    setError("");
-    try {
+    await run(async () => {
       const res = await api.getTitles({
         daysBack,
         type: type.length ? type.join(",") : undefined,
@@ -80,12 +80,9 @@ export default function NewReleases({
       });
       setTitles(res.titles);
       onResultsCount?.(res.titles.length);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [daysBack, type, genre, provider, language, hideTracked, onResultsCount]);
+    });
+    setLoading(false);
+  }, [daysBack, type, genre, provider, language, hideTracked, onResultsCount, run]);
 
   useEffect(() => {
     fetchTitles();

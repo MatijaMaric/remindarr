@@ -5,6 +5,7 @@ import { normalizeSearchTitle } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 import type { BrowseCategory } from "./CategoryBar";
+import { useAsyncError } from "../hooks/useAsyncError";
 
 export function filterBrowseTitles(
   titles: Title[],
@@ -105,7 +106,7 @@ export default function CategoryBrowse({
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState("");
+  const { run, error } = useAsyncError();
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
 
   const [availableProviders, setAvailableProviders] = useState<{ id: number; name: string; iconUrl: string }[]>([]);
@@ -119,8 +120,7 @@ export default function CategoryBrowse({
     } else {
       setLoading(true);
     }
-    setError("");
-    try {
+    await run(async () => {
       const yearMinNum = yearMin ? parseInt(yearMin, 10) : undefined;
       const yearMaxNum = yearMax ? parseInt(yearMax, 10) : undefined;
       const minRatingNum = minRating ? parseFloat(minRating) : undefined;
@@ -161,13 +161,10 @@ export default function CategoryBrowse({
         onResultsCount?.(res.totalResults);
       }
       setPage(pageNum);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [category, type, genre, provider, language, yearMin, yearMax, minRating, onResultsCount]);
+    });
+    setLoading(false);
+    setLoadingMore(false);
+  }, [category, type, genre, provider, language, yearMin, yearMax, minRating, onResultsCount, run]);
 
   useEffect(() => {
     fetchTitles(1, false);
