@@ -8,6 +8,9 @@ import type { PlexConfig } from "./integrations";
 // Reserved provider ID for Plex (out-of-range for TMDB provider IDs)
 export const PLEX_PROVIDER_ID = 9999;
 
+// D1 caps bound parameters at 100 per statement; userId takes 1 slot.
+const PLEX_TITLEIDS_CHUNK_SIZE = 99;
+
 export type PlexLibraryItem = {
   integrationId: string;
   userId: string;
@@ -104,23 +107,29 @@ export async function getPlexOffersForUser(
     if (titleIds.length === 0) return new Map();
 
     const db = getDb();
-    const rows = await db
-      .select({
-        titleId: plexLibraryItems.titleId,
-        ratingKey: plexLibraryItems.ratingKey,
-        mediaType: plexLibraryItems.mediaType,
-        plexSlug: plexLibraryItems.plexSlug,
-        config: integrations.config,
-      })
-      .from(plexLibraryItems)
-      .innerJoin(integrations, eq(plexLibraryItems.integrationId, integrations.id))
-      .where(
-        and(
-          eq(plexLibraryItems.userId, userId),
-          inArray(plexLibraryItems.titleId, titleIds)
+    const allRows: Array<{ titleId: string; ratingKey: string; mediaType: string; plexSlug: string | null; config: string }> = [];
+    for (let i = 0; i < titleIds.length; i += PLEX_TITLEIDS_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + PLEX_TITLEIDS_CHUNK_SIZE);
+      const rows = await db
+        .select({
+          titleId: plexLibraryItems.titleId,
+          ratingKey: plexLibraryItems.ratingKey,
+          mediaType: plexLibraryItems.mediaType,
+          plexSlug: plexLibraryItems.plexSlug,
+          config: integrations.config,
+        })
+        .from(plexLibraryItems)
+        .innerJoin(integrations, eq(plexLibraryItems.integrationId, integrations.id))
+        .where(
+          and(
+            eq(plexLibraryItems.userId, userId),
+            inArray(plexLibraryItems.titleId, chunk)
+          )
         )
-      )
-      .all();
+        .all();
+      allRows.push(...rows);
+    }
+    const rows = allRows;
 
     const result = new Map<string, SyntheticOffer[]>();
     for (const row of rows) {
