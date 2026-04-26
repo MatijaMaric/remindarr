@@ -385,6 +385,20 @@ describe("getRecentTitles", () => {
     expect(results).toHaveLength(2);
   });
 
+  it("excludes titles with release dates in the future", async () => {
+    const past = new Date();
+    past.setDate(past.getDate() - 1);
+    const future = new Date();
+    future.setDate(future.getDate() + 365);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-past", title: "Past Movie", releaseDate: past.toISOString().slice(0, 10) }),
+      makeParsedTitle({ id: "movie-future", title: "Future Movie", releaseDate: future.toISOString().slice(0, 10) }),
+    ]);
+    const results = await getRecentTitles({ daysBack: 0 });
+    expect(results.some((r) => r.id === "movie-future")).toBe(false);
+    expect(results.some((r) => r.id === "movie-past")).toBe(true);
+  });
+
   it("returns is_tracked=false without userId", async () => {
     await upsertTitles([makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" })]);
     const results = await getRecentTitles({ daysBack: 0 });
