@@ -4,6 +4,7 @@ import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGe
 import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
 import { getTrackedTitleIds, upsertTitles } from "../db/repository";
 import { logger } from "../logger";
+import { syncFailureTotal } from "../metrics";
 
 const log = logger.child({ module: "search" });
 import { ok, err } from "./response";
@@ -74,7 +75,9 @@ app.get("/", async (c) => {
             } else {
               return parseTvDetails(await fetchTvDetails(tmdbId));
             }
-          } catch {
+          } catch (err) {
+            log.warn("TMDB enrichment failed for title", { titleId: t.tmdbId, err });
+            syncFailureTotal.inc({ source: "search_enrichment" });
             return t; // Fallback to basic data without watch providers
           }
         })

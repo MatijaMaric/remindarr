@@ -72,6 +72,7 @@ export const errorsByCategory = new Counter(
   "Unhandled HTTP errors classified by category",
 );
 
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 const allMetrics = [

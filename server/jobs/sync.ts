@@ -4,6 +4,7 @@ import { getEnabledIntegrationsByProvider } from "../db/repository";
 import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
 import { checkStreamingAlerts } from "./check-streaming-alerts";
+import { syncFailureTotal } from "../metrics";
 
 const log = logger.child({ module: "sync" });
 import { registerCron, enqueueJob, hasActiveJob } from "./queue";
@@ -153,10 +154,14 @@ export function registerSyncJobs() {
           integrationId: integration.id,
           moviesMarked: result.moviesMarked,
           episodesMarked: result.episodesMarked,
+          succeeded: result.succeeded,
+          failedCount: result.failed.length,
         });
         synced++;
-      } catch {
+      } catch (err) {
         failed++;
+        log.warn("Plex sync item failed", { err });
+        syncFailureTotal.inc({ source: "plex" });
       }
     }
     log.info("Plex watched sync complete", { synced, failed });
@@ -180,8 +185,10 @@ export function registerSyncJobs() {
           showsAdded: result.showsAdded,
         });
         synced++;
-      } catch {
+      } catch (err) {
         failed++;
+        log.warn("Plex sync item failed", { err });
+        syncFailureTotal.inc({ source: "plex" });
       }
     }
     log.info("Plex library sync complete", { synced, failed });

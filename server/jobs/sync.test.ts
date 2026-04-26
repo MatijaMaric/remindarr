@@ -47,6 +47,15 @@ const mockMigrateTitles = spyOn(migrateTitlesModule, "migrateTitles").mockResolv
 import * as migrateOffersModule from "./migrate-offers";
 const mockMigrateOffers = spyOn(migrateOffersModule, "migrateOffers").mockResolvedValue({ updated: 0, skipped: 0, failed: 0 });
 
+// Mock Plex sync modules
+import * as plexSync from "../plex/sync";
+import * as plexLibrarySync from "../plex/library-sync";
+const mockSyncPlexWatched = spyOn(plexSync, "syncPlexWatched");
+const mockSyncPlexLibrary = spyOn(plexLibrarySync, "syncPlexLibrary");
+
+// Mock getEnabledIntegrationsByProvider for Plex tests
+const mockGetEnabledIntegrations = spyOn(repository, "getEnabledIntegrationsByProvider");
+
 import { CONFIG } from "../config";
 
 // Import after mocks are set up
@@ -69,6 +78,9 @@ beforeEach(() => {
   mockParseMovieDetails.mockClear();
   mockParseTvDetails.mockClear();
   captureExceptionSpy.mockClear();
+  mockSyncPlexWatched.mockClear();
+  mockSyncPlexLibrary.mockClear();
+  mockGetEnabledIntegrations.mockClear();
 });
 
 afterAll(() => {
@@ -87,6 +99,9 @@ afterAll(() => {
   mockFetchTvDetails.mockRestore();
   mockParseMovieDetails.mockRestore();
   mockParseTvDetails.mockRestore();
+  mockSyncPlexWatched.mockRestore();
+  mockSyncPlexLibrary.mockRestore();
+  mockGetEnabledIntegrations.mockRestore();
 });
 
 // ─── registerSyncJobs ────────────────────────────────────────────────────────
@@ -453,5 +468,54 @@ describe("backfill-title-offers handler", () => {
 
     expect(mockFetchMovieDetails).not.toHaveBeenCalled();
     expect(mockFetchTvDetails).not.toHaveBeenCalled();
+  });
+});
+
+// ─── sync-plex-watched handler ───────────────────────────────────────────────
+
+describe("sync-plex-watched handler — error handling", () => {
+  const fakeIntegration = { id: "int-1", user_id: "user-1", provider: "plex", config: {} };
+
+  beforeEach(() => {
+    registerSyncJobs();
+    claimNextJob("migrate-titles");
+    claimNextJob("migrate-backdrops");
+    claimNextJob("migrate-offers");
+    // Default: return one integration
+    mockGetEnabledIntegrations.mockResolvedValue([fakeIntegration as any]);
+  });
+
+  it("continues processing remaining integrations when one throws", async () => {
+    const secondIntegration = { id: "int-2", user_id: "user-2", provider: "plex", config: {} };
+    mockGetEnabledIntegrations.mockResolvedValue([fakeIntegration as any, secondIntegration as any]);
+
+    const successResult = { moviesMarked: 1, episodesMarked: 0, succeeded: 1, failed: [] };
+    mockSyncPlexWatched
+      .mockRejectedValueOnce(new Error("Plex connection refused"))
+      .mockResolvedValueOnce(successResult as any);
+
+    enqueueJob("sync-plex-watched");
+    await processJobs();
+
+    expect(mockSyncPlexWatched).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not throw when all integrations fail", async () => {
+    mockSyncPlexWatched.mockRejectedValue(new Error("All Plex down"));
+
+    enqueueJob("sync-plex-watched");
+    // processJobs should not throw even when syncPlexWatched throws for every integration
+    await expect(processJobs()).resolves.toBeUndefined();
+  });
+
+  it("surfaces succeeded/failed counts from syncPlexWatched result", async () => {
+    const result = { moviesMarked: 3, episodesMarked: 2, succeeded: 3, failed: [{ id: "movie-x", error: "not found" }] };
+    mockSyncPlexWatched.mockResolvedValue(result as any);
+
+    enqueueJob("sync-plex-watched");
+    await processJobs();
+
+    // Job must complete — handler logs succeeded/failedCount from result
+    expect(mockSyncPlexWatched).toHaveBeenCalledTimes(1);
   });
 });

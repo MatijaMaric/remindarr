@@ -231,3 +231,22 @@ describe("GET /search — filter params", () => {
     expect(Array.isArray(body.titles)).toBe(true);
   });
 });
+
+describe("GET /search — enrichment graceful degradation", () => {
+  it("returns HTTP 200 with base title data when TMDB detail fetch throws", async () => {
+    const movie = makeTmdbSearchMultiMovie({ id: 55 });
+    (tmdbClient.searchMulti as any).mockResolvedValueOnce({
+      results: [movie], total_pages: 1, total_results: 1, page: 1,
+    });
+    // Simulate TMDB enrichment failure
+    (tmdbClient.fetchMovieDetails as any).mockRejectedValueOnce(new Error("TMDB rate limit"));
+
+    const res = await app.request("/search?q=test");
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // Should still return the basic title (graceful degradation)
+    expect(Array.isArray(body.titles)).toBe(true);
+    expect(body.titles.length).toBe(1);
+  });
+});

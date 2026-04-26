@@ -217,3 +217,36 @@ describe("syncPlexWatched — error handling", () => {
     expect(row?.last_sync_error).toBe("Network error");
   });
 });
+
+describe("syncPlexWatched — per-title failure summary", () => {
+  it("returns correct { succeeded, failed } shape when all titles succeed", async () => {
+    insertTitle("movie-101", "MOVIE", "101");
+    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetWatchedMovies.mockResolvedValue([
+      { ratingKey: "1", title: "Movie A", viewCount: 1, Guid: [{ id: "tmdb://101" }] },
+    ]);
+    mockGetWatchedEpisodes.mockResolvedValue([]);
+
+    const result = await syncPlexWatched(integration());
+
+    expect(result.succeeded).toBe(1);
+    expect(result.failed).toEqual([]);
+    expect(result.moviesMarked).toBe(1);
+  });
+
+  it("does not throw and returns { succeeded, failed } shape when a title is not in DB", async () => {
+    // movie-9999 does not exist in DB — watchTitle will throw a FK constraint error
+    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetWatchedMovies.mockResolvedValue([
+      { ratingKey: "3", title: "Unknown", viewCount: 1, Guid: [{ id: "tmdb://9999" }] },
+    ]);
+    mockGetWatchedEpisodes.mockResolvedValue([]);
+
+    const result = await syncPlexWatched(integration());
+
+    // Must not throw; the title is not in DB so it ends up in failed[]
+    expect(result.succeeded).toBe(0);
+    expect(result.failed.length).toBe(1);
+    expect(result.failed[0].id).toBe("movie-9999");
+  });
+});
