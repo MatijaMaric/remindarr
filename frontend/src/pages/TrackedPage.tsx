@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Card } from "../components/ui/card";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
@@ -34,13 +35,13 @@ function TrackedStatsBand({ titles }: { titles: Title[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       {stats.map(s => (
-        <div key={s.label} className="bg-zinc-900 border border-white/[0.06] rounded-xl p-[18px]">
+        <Card key={s.label} padding="none" className="p-[18px]">
           <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2">{s.label}</div>
           <div className="flex items-baseline gap-2">
             <div className="text-[30px] sm:text-[36px] font-extrabold tracking-[-0.03em] leading-none">{s.value}</div>
             <div className="font-mono text-[11px] text-zinc-500">{s.sub}</div>
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

@@ -6,6 +6,7 @@ import * as api from "../api";
 import type { Recommendation } from "../types";
 import { useApiCall } from "../hooks/useApiCall";
 import { Skeleton } from "../components/ui/skeleton";
+import { Card } from "../components/ui/card";
 import { PageHeader, Kicker, Pill, Chip } from "../components/design";
 import { posterUrl } from "../lib/tmdb-images";
 
@@ -184,7 +185,7 @@ function HeroCard({
   const typeLabel = rec.title.object_type === "SHOW" ? "TV Series" : "Movie";
 
   return (
-    <div className="bg-zinc-900 border border-white/[0.06] rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-[280px_1fr] lg:grid-cols-[360px_1fr] gap-6 sm:gap-8 items-stretch">
+    <Card radius="2xl" padding="lg" className="mb-8 grid grid-cols-1 sm:grid-cols-[280px_1fr] lg:grid-cols-[360px_1fr] gap-6 sm:gap-8 items-stretch">
       {/* Poster */}
       <div className="aspect-[2/3] rounded-[10px] overflow-hidden max-w-[220px] sm:max-w-none mx-auto sm:mx-0 shadow-2xl">
         {posterSrc ? (
@@ -255,7 +256,7 @@ function HeroCard({
           </button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 

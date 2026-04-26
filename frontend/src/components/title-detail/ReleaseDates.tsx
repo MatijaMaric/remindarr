@@ -1,4 +1,5 @@
 import type { ReleaseDatesResult } from "../../types";
+import { Card } from "@/components/ui/card";
 import { Section } from "./Section";
 import { RELEASE_TYPE_LABELS, formatDate } from "./utils";
 
@@ -10,7 +11,7 @@ export default function ReleaseDates({ releaseDates }: ReleaseDatesProps) {
   if (!releaseDates || releaseDates.release_dates.length === 0) return null;
   return (
     <Section title={`Release Dates (${releaseDates.iso_3166_1})`}>
-      <div className="bg-zinc-900 rounded-xl border border-white/[0.06] overflow-hidden">
+      <Card padding="none" className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/[0.06]">
@@ -37,7 +38,7 @@ export default function ReleaseDates({ releaseDates }: ReleaseDatesProps) {
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
     </Section>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import type {
@@ -102,7 +103,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
   const watchHistoryPanel =
     historyOpen && watchHistory.length > 0 ? (
-      <div className="mt-3 rounded-lg bg-zinc-900/60 border border-white/[0.06] overflow-hidden">
+      <Card tone="translucent" radius="lg" padding="none" className="mt-3 overflow-hidden">
         <div className="px-3 py-2 text-xs font-medium text-zinc-400 border-b border-white/[0.06]">
           Watch History
         </div>
@@ -125,7 +126,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             </li>
           ))}
         </ul>
-      </div>
+      </Card>
     ) : null;
 
   return (

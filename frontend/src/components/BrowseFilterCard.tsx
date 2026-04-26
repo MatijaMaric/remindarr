@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from "react";
+import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 
 interface ProviderOption {
@@ -145,7 +146,7 @@ export default function BrowseFilterCard(props: Props) {
   return (
     <div className="space-y-3">
       {/* Primary: 4 dropdown fields + Clear */}
-      <div className="rounded-xl bg-zinc-900 border border-white/[0.06] p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[repeat(4,1fr)_auto] gap-3 items-end">
+      <Card className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[repeat(4,1fr)_auto] gap-3 items-end">
         <FilterField label="Genre" summary={genreSummary}>
           <CheckboxList
             sections={[{ options: genres.map((g) => ({ value: g, label: g })) }]}
@@ -183,7 +184,7 @@ export default function BrowseFilterCard(props: Props) {
         >
           Clear
         </button>
-      </div>
+      </Card>
 
       {/* Secondary chip row: Type / Language / Hide tracked */}
       <div className="flex flex-wrap items-center gap-2">

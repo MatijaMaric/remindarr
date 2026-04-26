@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import * as api from "../../api";
@@ -45,12 +46,13 @@ export function EditBioModal({ initialValue, onClose, onSaved }: EditBioModalPro
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
+      <Card
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         data-testid="edit-bio-modal"
-        className="w-full max-w-md bg-zinc-900 border border-white/[0.08] rounded-xl p-6 space-y-4"
+        padding="lg"
+        className="w-full max-w-md space-y-4"
       >
         <h2 className="text-lg font-semibold text-white">{t("userProfile.dossier.bio")}</h2>
         <textarea
@@ -88,7 +90,7 @@ export function EditBioModal({ initialValue, onClose, onSaved }: EditBioModalPro
             </button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

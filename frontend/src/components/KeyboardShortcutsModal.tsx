@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Card } from "@/components/ui/card";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useFocusTrap } from "../hooks/useFocusTrap";
@@ -47,12 +48,14 @@ export default function KeyboardShortcutsModal({ open, onClose }: Props) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div
+      <Card
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="shortcuts-title"
-        className="relative bg-zinc-900 border border-white/[0.08] rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+        radius="2xl"
+        padding="lg"
+        className="relative max-w-sm w-full shadow-2xl"
       >
         <div className="flex items-center justify-between mb-5">
           <h2 id="shortcuts-title" className="text-base font-semibold">
@@ -76,7 +79,7 @@ export default function KeyboardShortcutsModal({ open, onClose }: Props) {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

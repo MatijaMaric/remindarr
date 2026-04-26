@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export interface SettingsTabDef {
   value: string;
@@ -79,14 +80,14 @@ export function SettingsSidebar({
           })}
         </nav>
         {buildInfo && (
-          <div className="mt-6 p-3.5 bg-zinc-900 border border-white/[0.06] rounded-[10px]">
+          <Card padding="none" className="mt-6 p-3.5 rounded-[10px]">
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 mb-2">
               Build
             </div>
             <div className="font-mono text-xs text-zinc-300 leading-relaxed">
               {buildInfo}
             </div>
-          </div>
+          </Card>
         )}
       </aside>
     </>

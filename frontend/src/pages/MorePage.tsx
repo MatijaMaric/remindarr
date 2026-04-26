@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router";
+import { Card } from "../components/ui/card";
 import { ChevronRight, Sparkles, BarChart2, User, Settings, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -8,9 +9,9 @@ function MoreGroup({ label, children }: { label: string; children: React.ReactNo
       <div className="px-5 pb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-semibold">
         {label}
       </div>
-      <div className="mx-4 bg-zinc-900 border border-white/[0.05] rounded-2xl overflow-hidden">
+      <Card radius="2xl" padding="none" className="mx-4 overflow-hidden">
         {children}
-      </div>
+      </Card>
     </div>
   );
 }
