@@ -391,3 +391,28 @@ export async function getUserByFeedToken(token: string): Promise<{ id: string } 
     return row ?? null;
   });
 }
+
+// ─── Kiosk share token ────────────────────────────────────────────────────────
+
+export async function getKioskToken(userId: string): Promise<string | null> {
+  return traceDbQuery("getKioskToken", async () => {
+    const db = getDb();
+    const row = await db.select({ kioskToken: users.kioskToken }).from(users).where(eq(users.id, userId)).get();
+    return row?.kioskToken ?? null;
+  });
+}
+
+export async function setKioskToken(userId: string, token: string | null): Promise<void> {
+  return traceDbQuery("setKioskToken", async () => {
+    const db = getDb();
+    await db.update(users).set({ kioskToken: token }).where(eq(users.id, userId)).run();
+  });
+}
+
+export async function getUserByKioskToken(token: string): Promise<{ id: string } | null> {
+  return traceDbQuery("getUserByKioskToken", async () => {
+    const db = getDb();
+    const row = await db.select({ id: users.id }).from(users).where(eq(users.kioskToken, token)).get();
+    return row ?? null;
+  });
+}

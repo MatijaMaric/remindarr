@@ -112,6 +112,9 @@ mock.module("../api", () => ({
   triggerPlexSync: mock(() => Promise.resolve({ success: true })),
   getFeedToken: mock(() => Promise.resolve({ token: "test-token" })),
   regenerateFeedToken: mock(() => Promise.resolve({ token: "new-token" })),
+  getKioskToken: mock(() => Promise.resolve({ token: null })),
+  regenerateKioskToken: mock(() => Promise.resolve({ token: "kiosk-token-123" })),
+  revokeKioskToken: mock(() => Promise.resolve()),
 }));
 
 // Import after mocks
@@ -246,5 +249,35 @@ describe("Settings tabs", () => {
 
     // Account-tab content should not be rendered
     expect(screen.queryByText("Profile Visibility")).toBeNull();
+  });
+});
+
+describe("KioskSection", () => {
+  it("renders the Kiosk Display section in the integrations tab", async () => {
+    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=integrations") });
+    await waitFor(() => {
+      expect(screen.getByText("Kiosk Display")).toBeDefined();
+    });
+  });
+
+  it("shows generate button when no token exists", async () => {
+    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=integrations") });
+    await waitFor(() => {
+      expect(screen.getByText("Generate Kiosk URL")).toBeDefined();
+    });
+  });
+
+  it("shows kiosk URL and action buttons when token exists", async () => {
+    const { getKioskToken } = await import("../api") as any;
+    getKioskToken.mockImplementation(() => Promise.resolve({ token: "existingtoken123" }));
+
+    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=integrations") });
+    await waitFor(() => {
+      expect(screen.getByText("Copy URL")).toBeDefined();
+      expect(screen.getByText("Regenerate")).toBeDefined();
+      expect(screen.getByText("Revoke")).toBeDefined();
+    });
+
+    getKioskToken.mockImplementation(() => Promise.resolve({ token: null }));
   });
 });

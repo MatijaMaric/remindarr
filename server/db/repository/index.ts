@@ -99,6 +99,9 @@ export {
   getFeedToken,
   setFeedToken,
   getUserByFeedToken,
+  getKioskToken,
+  setKioskToken,
+  getUserByKioskToken,
 } from "./users";
 
 export {

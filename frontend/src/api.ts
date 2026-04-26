@@ -779,6 +779,38 @@ export async function regenerateFeedToken(): Promise<{ token: string }> {
   return fetchJson("/feed/token/regenerate", { method: "POST" });
 }
 
+// ─── Kiosk ────────────────────────────────────────────────────────────────────
+
+export interface WatchingTitle extends Title {
+  watched_episodes_count?: number;
+  released_episodes_count?: number;
+  total_episodes?: number;
+  next_episode_air_date?: string | null;
+}
+
+export interface KioskData {
+  tonight: Episode[];
+  week: Episode[];
+  recent: Title[];
+  watching: WatchingTitle[];
+}
+
+export async function getKioskData(token: string): Promise<KioskData> {
+  return fetchJson(`/kiosk/${encodeURIComponent(token)}`);
+}
+
+export async function getKioskToken(): Promise<{ token: string | null }> {
+  return fetchJson("/kiosk/token");
+}
+
+export async function regenerateKioskToken(): Promise<{ token: string }> {
+  return fetchJson("/kiosk/token/regenerate", { method: "POST" });
+}
+
+export async function revokeKioskToken(): Promise<void> {
+  await doFetch("/kiosk/token", { method: "DELETE" });
+}
+
 // ─── Title Notes & Tags ───────────────────────────────────────────────────────
 
 export async function updateTrackedNotes(titleId: string, notes: string | null): Promise<void> {

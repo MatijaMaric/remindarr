@@ -34,6 +34,7 @@ import metricsRoutes from "./routes/metrics";
 import statsRoutes from "./routes/stats";
 import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
+import kioskRoutes from "./routes/kiosk";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -266,6 +267,10 @@ app.route("/api/user/settings", userSettingsRoutes);
 // Calendar feed — /calendar.ics is public (token-authenticated); /token endpoints require session
 app.use("/api/feed/token*", requireAuth);
 app.route("/api/feed", feedRoutes);
+
+// Kiosk — /:token is public (token-authenticated); /token endpoints require session
+app.use("/api/kiosk/token*", requireAuth);
+app.route("/api/kiosk", kioskRoutes);
 
 // Admin routes
 app.use("/api/admin/*", requireAuth, requireAdmin);

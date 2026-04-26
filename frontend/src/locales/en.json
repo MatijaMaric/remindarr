@@ -471,6 +471,19 @@
     "copied": "Copied!",
     "warning": "Keep this URL private — anyone with it can see your upcoming releases."
   },
+  "kiosk": {
+    "title": "Kiosk Display",
+    "description": "A read-only dashboard for a TV or shared screen. Anyone with the URL can view tonight's airings, this week's calendar, and what you're watching — no login required.",
+    "generate": "Generate Kiosk URL",
+    "generating": "Generating...",
+    "regenerate": "Regenerate",
+    "regenerating": "Regenerating...",
+    "revoke": "Revoke",
+    "revoking": "Revoking...",
+    "copyUrl": "Copy URL",
+    "copied": "Copied!",
+    "warning": "Anyone with this URL can view your kiosk dashboard. Keep it private."
+  },
   "tags": {
     "placeholder": "Add tag...",
     "tooMany": "Max 10 tags",
