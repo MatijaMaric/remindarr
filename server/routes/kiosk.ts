@@ -11,7 +11,10 @@ import { requireAuth } from "../middleware/auth";
 import { zValidator } from "../lib/validator";
 import { localDateForTimezone, addDays } from "../utils/timezone";
 import { ok, err } from "./response";
+import { logger } from "../logger";
 import type { AppEnv } from "../types";
+
+const log = logger.child({ module: "kiosk" });
 
 const app = new Hono<AppEnv>();
 
@@ -88,6 +91,14 @@ app.get(
       getEpisodesByDateRange(today, tomorrow, user.id),
       getUnwatchedEpisodes(user.id, timezone),
     ]);
+
+    log.debug("kiosk dashboard query", {
+      userId: user.id,
+      timezone,
+      today,
+      todayCount: todayEpisodes.length,
+      unwatchedCount: allUnwatched.length,
+    });
 
     // airing_now — first unwatched today, fall back to first today
     const airingNow = todayEpisodes.find((e) => !e.is_watched) ?? todayEpisodes[0] ?? null;

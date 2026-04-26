@@ -70,7 +70,7 @@ function makeQueueItem(overrides: Partial<KioskQueueItem> = {}): KioskQueueItem 
   };
 }
 
-const mockFetch = mock((_url: string) =>
+const mockFetch = mock((_url: string, _init?: RequestInit) =>
   Promise.resolve({
     ok: true,
     json: () => Promise.resolve({ data: makeData() }),
@@ -140,10 +140,10 @@ describe("KioskPage", () => {
     });
   });
 
-  it("shows empty hero when airing_now is null", async () => {
+  it("shows empty hero when airing_now is null and no releases or queue", async () => {
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getByText("Nothing airing today")).toBeTruthy();
+      expect(screen.getByText("Nothing on the slate today")).toBeTruthy();
     });
   });
 
@@ -254,5 +254,46 @@ describe("KioskPage", () => {
       expect(screen.getByText(/releasing today/i)).toBeTruthy();
       expect(screen.getByText(/up next in your queue/i)).toBeTruthy();
     });
+  });
+
+  it("sends X-Timezone header on fetch", async () => {
+    mockFetch.mockClear();
+    render(<Wrapper />);
+    await waitFor(() => {
+      expect(screen.getByText("Remindarr")).toBeTruthy();
+    });
+    const calls = mockFetch.mock.calls as [string, RequestInit?][];
+    const init = calls[0]?.[1];
+    const headers = init?.headers as Record<string, string> | undefined;
+    expect(headers?.["X-Timezone"]).toBeTruthy();
+  });
+
+  it("shows fallback hero from releasing_today when airing_now is null", async () => {
+    mockFetch.mockImplementation((_url: string, _init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: makeData({ airing_now: null, releasing_today: [makeRelease()] }) }),
+      } as Response)
+    );
+    render(<Wrapper />);
+    await waitFor(() => {
+      expect(screen.getAllByText("Releasing Show").length).toBeGreaterThan(0);
+    });
+    // The hero kicker for a releasing_today fallback
+    expect(screen.getAllByText(/releasing today/i).length).toBeGreaterThan(0);
+  });
+
+  it("shows fallback hero from unwatched_queue when airing_now and releasing_today are empty", async () => {
+    mockFetch.mockImplementation((_url: string, _init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: makeData({ airing_now: null, releasing_today: [], unwatched_queue: [makeQueueItem()] }) }),
+      } as Response)
+    );
+    render(<Wrapper />);
+    await waitFor(() => {
+      expect(screen.getAllByText("Queued Show").length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText(/up next in your queue/i).length).toBeGreaterThan(0);
   });
 });

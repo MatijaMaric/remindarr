@@ -272,6 +272,95 @@ function HeroCard({ C, epaper, breathe, slot }: {
   );
 }
 
+type FeaturedItem = {
+  show_title: string;
+  season_number: number;
+  episode_number: number;
+  ep_title: string | null;
+  poster_url: string | null;
+  backdrop_url?: string | null;
+  provider: string | null;
+};
+
+function HeroFeatured({ C, epaper, breathe, item, kicker }: {
+  C: KioskPalette;
+  epaper: boolean;
+  breathe: boolean;
+  item: FeaturedItem;
+  kicker: string;
+}) {
+  const Mono: React.CSSProperties = { fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace" };
+  const backdropSrc = posterUrl(item.backdrop_url ?? item.poster_url, "w780");
+
+  return (
+    <div style={{
+      position: "relative", margin: "24px 56px 0",
+      height: 360, borderRadius: epaper ? 0 : 14, overflow: "hidden",
+      border: `${epaper ? 3 : 1}px solid ${epaper ? C.border : C.borderSoft}`,
+      background: C.surface,
+      animation: breathe ? "kfade 0.6s ease both" : "none",
+    }}>
+      {/* Backdrop */}
+      {!epaper && backdropSrc && (
+        <div style={{ position: "absolute", inset: 0, opacity: 0.85 }}>
+          <img src={backdropSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `linear-gradient(90deg, ${C.bg} 0%, ${C.bg}ee 35%, transparent 75%), linear-gradient(0deg, ${C.bg} 0%, transparent 55%)`,
+          }} />
+        </div>
+      )}
+      {/* E-paper hatched fill */}
+      {epaper && (
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `repeating-linear-gradient(45deg, ${C.text} 0 1px, transparent 1px 5px)`,
+          opacity: 0.08,
+        }} />
+      )}
+
+      <div style={{ position: "absolute", inset: 0, padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <span style={{
+            width: 10, height: 10, borderRadius: "50%", background: C.accent,
+            boxShadow: epaper ? "none" : "0 0 0 4px rgba(251,191,36,0.18)",
+            flexShrink: 0,
+          }} />
+          <div style={{ ...Mono, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: C.accent }}>
+            {kicker}{item.provider ? ` · ${item.provider}` : ""}
+          </div>
+        </div>
+
+        <div style={{ fontSize: 80, fontWeight: 800, letterSpacing: -3, lineHeight: 0.92, marginBottom: 16, color: C.text }}>
+          {item.show_title}
+        </div>
+
+        <div style={{ fontSize: 18, color: C.dim, marginBottom: 22, maxWidth: 760, lineHeight: 1.5 }}>
+          S{item.season_number}·E{item.episode_number}
+          {item.ep_title && (
+            <> · <span style={{ color: C.text, fontWeight: 600 }}>{item.ep_title}</span></>
+          )}
+        </div>
+
+        {/* Cast button — decorative only (design note 3: deferred until streaming-device registry) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            aria-hidden="true"
+            style={{
+              background: C.accent, color: C.accentInk,
+              padding: "12px 22px", borderRadius: epaper ? 0 : 8,
+              border: epaper ? `2px solid ${C.text}` : "none",
+              fontWeight: 700, fontSize: 15, display: "inline-flex", alignItems: "center", gap: 8,
+              opacity: 0.5, cursor: "default",
+            }}>
+            <CastIcon color={C.accentInk} /> Cast to TV
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HeroEmpty({ C, epaper }: { C: KioskPalette; epaper: boolean }) {
   return (
     <div style={{
@@ -281,7 +370,7 @@ function HeroEmpty({ C, epaper }: { C: KioskPalette; epaper: boolean }) {
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <div style={{ fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace", fontSize: 13, color: C.veryDim, letterSpacing: 2, textTransform: "uppercase" }}>
-        Nothing airing today
+        Nothing on the slate today
       </div>
     </div>
   );
@@ -465,7 +554,10 @@ export default function KioskPage() {
     try {
       // Bypass the global auth:unauthorized event for this public endpoint
       const params = fidelity !== "rich" ? `?display=${encodeURIComponent(fidelity)}` : "";
-      const res = await fetch(`/api/kiosk/${encodeURIComponent(token!)}${params}`);
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const res = await fetch(`/api/kiosk/${encodeURIComponent(token!)}${params}`, {
+        headers: { "X-Timezone": tz },
+      });
       if (!res.ok) {
         setError(true);
         return;
@@ -531,6 +623,18 @@ export default function KioskPage() {
   const refreshSec = data?.meta.refresh_interval_seconds ?? (fidelity === "epaper" ? 1800 : 300);
   const refreshLabel = refreshSec >= 1800 ? `Auto-refreshes every ${Math.round(refreshSec / 60)} min` : "Auto-refreshes every 5 min";
 
+  let heroFallbackItem: FeaturedItem | null = null;
+  let heroFallbackKicker = "";
+  if (data && !data.airing_now) {
+    if (data.releasing_today.length > 0) {
+      heroFallbackItem = data.releasing_today[0];
+      heroFallbackKicker = "Releasing today";
+    } else if (data.unwatched_queue.length > 0) {
+      heroFallbackItem = data.unwatched_queue[0];
+      heroFallbackKicker = "Up next in your queue";
+    }
+  }
+
   return (
     <div style={{
       width: "100vw", height: "100dvh",
@@ -560,6 +664,8 @@ export default function KioskPage() {
 
       {data?.airing_now ? (
         <HeroCard C={C} epaper={epaper} breathe={breathe} slot={data.airing_now} />
+      ) : heroFallbackItem ? (
+        <HeroFeatured C={C} epaper={epaper} breathe={breathe} item={heroFallbackItem} kicker={heroFallbackKicker} />
       ) : (
         data !== null && <HeroEmpty C={C} epaper={epaper} />
       )}
