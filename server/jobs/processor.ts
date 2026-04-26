@@ -70,6 +70,21 @@ async function handleSendNotifications(): Promise<void> {
 
   log.info("Processing due notifiers", { count: dueNotifiers.length });
 
+  // Per-invocation cache keyed by "userId|date" — local to this job run, not global.
+  // For N notifiers sharing the same user+date, DB queries drop from 2N to 2.
+  const contentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
+
+  async function getContentCached(userId: string, date: string) {
+    const key = `${userId}|${date}`;
+    if (contentCache.has(key)) {
+      log.debug("Notification content cache hit", { userId, date });
+      return contentCache.get(key)!;
+    }
+    const result = await buildNotificationContent(userId, date);
+    contentCache.set(key, result);
+    return result;
+  }
+
   for (const notifier of dueNotifiers) {
     try {
       const provider = getProvider(notifier.provider);
@@ -78,7 +93,7 @@ async function handleSendNotifications(): Promise<void> {
         continue;
       }
 
-      const content = await buildNotificationContent(notifier.user_id, notifier.todayDate);
+      const content = await getContentCached(notifier.user_id, notifier.todayDate);
 
       if (content.episodes.length === 0 && content.movies.length === 0) {
         await markNotifierSent(notifier.id, notifier.todayDate);
@@ -94,11 +109,11 @@ async function handleSendNotifications(): Promise<void> {
         await disableNotifier(notifier.id);
         continue;
       }
-      const message = err instanceof Error ? err.message : String(err);
       log.error("Failed to send notification", {
         provider: notifier.provider,
         notifierId: notifier.id,
-        error: message,
+        userId: notifier.user_id,
+        err,
       });
     }
   }
@@ -249,7 +264,7 @@ export async function processPendingJobs(): Promise<number> {
           attempt: newAttempts,
           maxAttempts: job.maxAttempts,
           retryAt,
-          error: message,
+          err,
         });
       } else {
         await db
@@ -260,7 +275,7 @@ export async function processPendingJobs(): Promise<number> {
           name: job.name,
           jobId: job.id,
           attempts: newAttempts,
-          error: message,
+          err,
         });
       }
     }

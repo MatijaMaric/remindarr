@@ -36,6 +36,33 @@ export async function registerNotificationJobs() {
 
       log.info("Processing due notifiers", { count: dueNotifiers.length });
 
+      // Per-invocation caches keyed by "userId|date" — local to this job run, not global.
+      // For N notifiers sharing the same user+date, DB queries drop from 2N to 2.
+      const dailyContentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
+      const weeklyContentCache = new Map<string, Awaited<ReturnType<typeof buildWeeklyDigestContent>>>();
+
+      async function getDailyContentCached(userId: string, date: string) {
+        const key = `${userId}|${date}`;
+        if (dailyContentCache.has(key)) {
+          log.debug("Notification content cache hit", { userId, date });
+          return dailyContentCache.get(key)!;
+        }
+        const result = await buildNotificationContent(userId, date);
+        dailyContentCache.set(key, result);
+        return result;
+      }
+
+      async function getWeeklyContentCached(userId: string, startDate: string, endDate: string) {
+        const key = `${userId}|${startDate}|${endDate}`;
+        if (weeklyContentCache.has(key)) {
+          log.debug("Weekly digest content cache hit", { userId, startDate, endDate });
+          return weeklyContentCache.get(key)!;
+        }
+        const result = await buildWeeklyDigestContent(userId, startDate, endDate);
+        weeklyContentCache.set(key, result);
+        return result;
+      }
+
       for (const notifier of dueNotifiers) {
         try {
           const provider = getProvider(notifier.provider);
@@ -49,18 +76,24 @@ export async function registerNotificationJobs() {
             const tzInfo = timesByTimezone.get(notifier.timezone);
             if (!tzInfo) continue;
 
-            const todayDayOfWeek = new Date(tzInfo.date + "T00:00:00Z").getUTCDay();
+            let todayDayOfWeek = 0;
+            let endDateStr = "";
+            try {
+              todayDayOfWeek = new Date(tzInfo.date + "T00:00:00Z").getUTCDay();
+              const endDate = new Date(tzInfo.date + "T00:00:00Z");
+              endDate.setUTCDate(endDate.getUTCDate() + 7);
+              endDateStr = endDate.toISOString().slice(0, 10);
+            } catch (err) {
+              log.warn("Failed to parse timezone date, skipping notifier", { tz: notifier.timezone, notifierId: notifier.id, err });
+              continue;
+            }
+
             if (notifier.digest_day !== todayDayOfWeek) {
               // Not the right day — skip without marking sent so we retry tomorrow
               continue;
             }
 
-            // Build content for the next 7 days
-            const endDate = new Date(tzInfo.date + "T00:00:00Z");
-            endDate.setUTCDate(endDate.getUTCDate() + 7);
-            const endDateStr = endDate.toISOString().slice(0, 10);
-
-            const content = await buildWeeklyDigestContent(
+            const content = await getWeeklyContentCached(
               notifier.user_id,
               tzInfo.date,
               endDateStr
@@ -84,7 +117,7 @@ export async function registerNotificationJobs() {
           }
 
           // Default daily behavior
-          const content = await buildNotificationContent(
+          const content = await getDailyContentCached(
             notifier.user_id,
             notifier.todayDate
           );
@@ -104,8 +137,7 @@ export async function registerNotificationJobs() {
             await disableNotifier(notifier.id);
             continue;
           }
-          const message = err instanceof Error ? err.message : String(err);
-          log.error("Failed to send notification", { provider: notifier.provider, notifierId: notifier.id, error: message });
+          log.error("Failed to send notification", { provider: notifier.provider, notifierId: notifier.id, userId: notifier.user_id, err });
         }
       }
     });
