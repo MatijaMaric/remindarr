@@ -16,6 +16,7 @@ import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader } from "../components/design";
 import { useAsyncError } from "../hooks/useAsyncError";
+import { Card } from "../components/ui/card";
 
 const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
 
@@ -417,7 +418,7 @@ export default function BrowsePage() {
           </div>
         ) : category === "new_releases" ? (
           // new_releases keeps the legacy FilterBar so the daysBack toggle stays available.
-          <div className="rounded-xl bg-zinc-900 border border-white/[0.06] p-4">
+          <Card>
             <FilterBar
               type={type}
               onTypeChange={setType}
@@ -439,7 +440,7 @@ export default function BrowsePage() {
               hideTracked={hideTracked}
               onHideTrackedChange={setHideTracked}
             />
-          </div>
+          </Card>
         ) : (
           <BrowseFilterCard
             genre={genre}

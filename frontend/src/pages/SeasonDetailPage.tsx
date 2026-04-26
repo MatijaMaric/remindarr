@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Card } from "../components/ui/card";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -532,9 +533,11 @@ function MarkAllWatchedMenu({
         <ChevronDown size={14} aria-hidden="true" />
       </button>
       {open && (
-        <div
+        <Card
           role="menu"
-          className="absolute right-0 top-full mt-1 z-20 min-w-[240px] rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl py-1"
+          radius="lg"
+          padding="none"
+          className="absolute right-0 top-full mt-1 z-20 min-w-[240px] shadow-xl py-1"
         >
           <button
             role="menuitem"
@@ -562,7 +565,7 @@ function MarkAllWatchedMenu({
               </span>
             </span>
           </button>
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -637,9 +640,11 @@ function EpisodeOverflowMenu({
         <MoreHorizontal size={16} aria-hidden="true" />
       </button>
       {open && (
-        <div
+        <Card
           role="menu"
-          className="absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl py-1"
+          radius="lg"
+          padding="none"
+          className="absolute right-0 top-full mt-1 z-20 min-w-[180px] shadow-xl py-1"
         >
           <button
             role="menuitem"
@@ -672,7 +677,7 @@ function EpisodeOverflowMenu({
             <Share2 size={13} aria-hidden="true" />
             {t("share.share", "Share")}
           </button>
-        </div>
+        </Card>
       )}
     </div>
   );

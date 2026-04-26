@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 export function SCard({
   title,
@@ -17,11 +18,9 @@ export function SCard({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "bg-zinc-900 border border-white/[0.06] rounded-xl p-6 mb-4",
-        className,
-      )}
+    <Card
+      padding="lg"
+      className={cn("mb-4", className)}
     >
       {(title || subtitle || action) && (
         <div className="mb-5 flex justify-between gap-4">
@@ -46,7 +45,7 @@ export function SCard({
           {footer}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

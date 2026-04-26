@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { Card } from "../components/ui/card";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
 import { toast } from "sonner";
@@ -186,7 +187,7 @@ function MobileFeedHome({
           <div className="px-5 flex flex-col gap-2.5">
             {alsoAiring.slice(0, 4).map((ep) => (
               <Link key={ep.id} to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}>
-                <div className="flex gap-3 items-center bg-zinc-900 border border-white/[0.05] rounded-[14px] p-2.5">
+                <Card padding="sm" className="flex gap-3 items-center rounded-[14px]">
                   <div className="w-[54px] h-[72px] rounded-lg overflow-hidden shrink-0 bg-zinc-800">
                     {ep.poster_url && <img src={ep.poster_url} alt="" className="w-full h-full object-cover" loading="lazy" />}
                   </div>
@@ -200,7 +201,7 @@ function MobileFeedHome({
                     </div>
                   </div>
                   <span className="text-zinc-500 text-base">›</span>
-                </div>
+                </Card>
               </Link>
             ))}
           </div>

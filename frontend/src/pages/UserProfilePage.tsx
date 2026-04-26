@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { Card } from "../components/ui/card";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
@@ -134,7 +135,7 @@ export default function UserProfilePage() {
                 <WatchlistGrid titles={activeList} />
               </>
             ) : (
-              <div className="bg-zinc-900 border border-white/[0.06] rounded-xl p-8 text-center">
+              <Card padding="xl" className="text-center">
                 <p className="text-zinc-400">
                   {is_own_profile
                     ? t("userProfile.watchlistHiddenOwn")
@@ -150,7 +151,7 @@ export default function UserProfilePage() {
                     {t("userProfile.enableInSettings")}
                   </Link>
                 )}
-              </div>
+              </Card>
             )}
           </main>
         </div>
