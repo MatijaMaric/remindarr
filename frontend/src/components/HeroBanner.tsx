@@ -5,7 +5,6 @@ import type { Episode } from "../types";
 import { formatEpisodeCode } from "./EpisodeComponents";
 import { useDominantColors } from "./useDominantColor";
 import WatchButtonGroup from "./WatchButtonGroup";
-import * as api from "../api";
 import { backdropUrl as mkBackdropUrl } from "../lib/tmdb-images";
 
 export interface HeroBannerSlide {
@@ -29,6 +28,11 @@ export function getHeroBannerSlides(unwatched: Episode[]): HeroBannerSlide[] {
 
   const slides: HeroBannerSlide[] = [];
   for (const [, eps] of showMap) {
+    eps.sort((a, b) =>
+      a.season_number !== b.season_number
+        ? a.season_number - b.season_number
+        : a.episode_number - b.episode_number
+    );
     const featured = eps[0];
     slides.push({
       featured,
@@ -62,7 +66,13 @@ export function getHeroImageUrl(episode: Episode): string | null {
   return null;
 }
 
-export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[]; onWatched?: () => void }) {
+export default function HeroBanner({
+  episodes,
+  onToggleWatched,
+}: {
+  episodes: Episode[];
+  onToggleWatched?: (episodeId: number, currentlyWatched: boolean) => void;
+}) {
   const slides = getHeroBannerSlides(episodes);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -74,6 +84,9 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
     [slides]
   );
   const colors = useDominantColors(imageUrls);
+
+  // Clamp to valid range without mutating state (avoids extra re-render)
+  const safeIndex = slides.length > 0 ? Math.min(activeIndex, slides.length - 1) : 0;
 
   const goTo = useCallback(
     (index: number) => {
@@ -93,21 +106,18 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
     };
   }, [slides.length, isPaused]);
 
-  const handleMarkWatched = useCallback(async () => {
-    const ep = slides[activeIndex]?.featured;
+  const handleMarkWatched = useCallback(() => {
+    const ep = slides[safeIndex]?.featured;
     if (!ep || markingWatched) return;
     setMarkingWatched(true);
-    try {
-      await api.watchEpisode(ep.id);
-      onWatched?.();
-    } finally {
-      setMarkingWatched(false);
-    }
-  }, [slides, activeIndex, markingWatched, onWatched]);
+    onToggleWatched?.(ep.id, false);
+    // Clear the spinner on the next microtask so the button briefly shows "Marking…"
+    Promise.resolve().then(() => setMarkingWatched(false));
+  }, [slides, safeIndex, markingWatched, onToggleWatched]);
 
   if (slides.length === 0) return null;
 
-  const current = slides[activeIndex];
+  const current = slides[safeIndex];
 
   return (
     <div
@@ -121,7 +131,7 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
           key={`bg-${slide.featured.title_id}`}
           className="absolute inset-0 transition-opacity duration-700"
           style={{
-            opacity: i === activeIndex ? 1 : 0,
+            opacity: i === safeIndex ? 1 : 0,
             backgroundColor: colors[i]?.color ?? "rgb(24, 24, 27)",
           }}
         />
@@ -135,7 +145,7 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
           <div
             key={`img-${slide.featured.title_id}`}
             className="absolute inset-0 transition-opacity duration-700"
-            style={{ opacity: i === activeIndex ? 1 : 0 }}
+            style={{ opacity: i === safeIndex ? 1 : 0 }}
           >
             <img
               src={url}
@@ -197,7 +207,7 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
               ▶ Play S{current.featured.season_number}·E{current.featured.episode_number}
             </Link>
             <button
-              onClick={() => void handleMarkWatched()}
+              onClick={handleMarkWatched}
               disabled={markingWatched}
               className="bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
             >
@@ -220,7 +230,7 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
                   key={i}
                   onClick={() => goTo(i)}
                   className={`h-1 rounded-full transition-all cursor-pointer ${
-                    i === activeIndex ? "w-6 bg-amber-400" : "w-2 bg-white/30 hover:bg-white/50"
+                    i === safeIndex ? "w-6 bg-amber-400" : "w-2 bg-white/30 hover:bg-white/50"
                   }`}
                 />
               ))}
@@ -233,13 +243,13 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
         {slides.length > 1 && (
           <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
-              onClick={() => goTo(activeIndex - 1)}
+              onClick={() => goTo(safeIndex - 1)}
               className="bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
             >
               <ChevronLeft size={18} />
             </button>
             <button
-              onClick={() => goTo(activeIndex + 1)}
+              onClick={() => goTo(safeIndex + 1)}
               className="bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
             >
               <ChevronRight size={18} />

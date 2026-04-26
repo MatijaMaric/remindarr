@@ -40,6 +40,26 @@ describe("getHeroBannerSlides", () => {
     expect(slides[1].remainingCount).toBe(1);
   });
 
+  it("sorts episodes within a show so lowest season/episode is featured", () => {
+    const episodes = [
+      makeEpisode({ id: 2, title_id: "tv-1", season_number: 1, episode_number: 3, show_title: "Show A" }),
+      makeEpisode({ id: 1, title_id: "tv-1", season_number: 1, episode_number: 1, show_title: "Show A" }),
+      makeEpisode({ id: 3, title_id: "tv-1", season_number: 1, episode_number: 2, show_title: "Show A" }),
+    ];
+    const slides = getHeroBannerSlides(episodes);
+    expect(slides[0].featured.episode_number).toBe(1);
+  });
+
+  it("sorts across seasons: earlier season beats higher episode number of later season", () => {
+    const episodes = [
+      makeEpisode({ id: 1, title_id: "tv-1", season_number: 2, episode_number: 1, show_title: "Show A" }),
+      makeEpisode({ id: 2, title_id: "tv-1", season_number: 1, episode_number: 5, show_title: "Show A" }),
+    ];
+    const slides = getHeroBannerSlides(episodes);
+    expect(slides[0].featured.season_number).toBe(1);
+    expect(slides[0].featured.episode_number).toBe(5);
+  });
+
   it("limits to 6 slides max", () => {
     const episodes = Array.from({ length: 10 }, (_, i) =>
       makeEpisode({ id: i, title_id: `tv-${i}`, show_title: `Show ${i}` })
