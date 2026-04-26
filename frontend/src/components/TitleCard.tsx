@@ -48,6 +48,8 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
               alt={title.title}
               className="w-full h-full object-cover"
               loading="lazy"
+              width={342}
+              height={513}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">

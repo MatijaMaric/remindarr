@@ -5,6 +5,13 @@ import { Search, Shield, ShieldOff, Trash2, ChevronLeft, ChevronRight } from "lu
 import * as api from "../api";
 import type { AdminUser, AdminUsersResponse } from "../types";
 import { useAuth } from "../context/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogPopup,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogClose,
+} from "../components/ui/alert-dialog";
 
 type Filter = "all" | "active" | "banned";
 
@@ -163,60 +170,71 @@ export default function AdminUsersPage() {
       )}
 
       {/* Ban reason modal */}
-      {banTarget && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setBanTarget(null)} aria-hidden="true" />
-          <div role="dialog" aria-modal="true" className="relative bg-zinc-900 border border-white/[0.08] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <h2 className="text-base font-semibold">{t("admin.users.banTitle")}</h2>
-            <input
-              type="text"
-              value={banReason}
-              onChange={(e) => setBanReason(e.target.value)}
-              placeholder={t("admin.users.banReasonPlaceholder")}
-              className="w-full bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleBan(banTarget)}
-                className="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
-              >
-                {t("admin.users.banConfirm")}
-              </button>
-              <button
-                onClick={() => { setBanTarget(null); setBanReason(""); }}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer"
-              >
-                {t("admin.cancel")}
-              </button>
-            </div>
+      <AlertDialog
+        open={banTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBanTarget(null);
+            setBanReason("");
+          }
+        }}
+      >
+        <AlertDialogPopup className="max-w-sm space-y-4 bg-zinc-900 border-white/[0.08]">
+          <AlertDialogTitle className="text-base font-semibold text-white">
+            {t("admin.users.banTitle")}
+          </AlertDialogTitle>
+          <input
+            type="text"
+            value={banReason}
+            onChange={(e) => setBanReason(e.target.value)}
+            placeholder={t("admin.users.banReasonPlaceholder")}
+            className="w-full bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+          />
+          <div className="flex gap-2">
+            <AlertDialogClose
+              onClick={() => { if (banTarget) void handleBan(banTarget); }}
+              className="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+            >
+              {t("admin.users.banConfirm")}
+            </AlertDialogClose>
+            <AlertDialogClose
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer"
+            >
+              {t("admin.cancel")}
+            </AlertDialogClose>
           </div>
-        </div>
-      )}
+        </AlertDialogPopup>
+      </AlertDialog>
 
       {/* Delete confirmation modal */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} aria-hidden="true" />
-          <div role="dialog" aria-modal="true" className="relative bg-zinc-900 border border-white/[0.08] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <h2 className="text-base font-semibold text-red-400">{t("admin.users.deleteTitle")}</h2>
-            <p className="text-sm text-zinc-400">{t("admin.users.deleteConfirm")}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleDelete(confirmDelete)}
-                className="flex-1 py-2 bg-red-800 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
-              >
-                {t("admin.users.deleteConfirmButton")}
-              </button>
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer"
-              >
-                {t("admin.cancel")}
-              </button>
-            </div>
+      <AlertDialog
+        open={confirmDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDelete(null);
+        }}
+      >
+        <AlertDialogPopup className="max-w-sm space-y-4 bg-zinc-900 border-white/[0.08]">
+          <AlertDialogTitle className="text-base font-semibold text-red-400">
+            {t("admin.users.deleteTitle")}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("admin.users.deleteConfirm")}
+          </AlertDialogDescription>
+          <div className="flex gap-2">
+            <AlertDialogClose
+              onClick={() => { if (confirmDelete) void handleDelete(confirmDelete); }}
+              className="flex-1 py-2 bg-red-800 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+            >
+              {t("admin.users.deleteConfirmButton")}
+            </AlertDialogClose>
+            <AlertDialogClose
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer"
+            >
+              {t("admin.cancel")}
+            </AlertDialogClose>
           </div>
-        </div>
-      )}
+        </AlertDialogPopup>
+      </AlertDialog>
 
       {/* User table */}
       {loading ? (

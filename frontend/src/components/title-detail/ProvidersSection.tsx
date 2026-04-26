@@ -2,7 +2,8 @@ import type { Title, WatchProviderCountry } from "../../types";
 import { PLEX_PROVIDER_ID, getPlexPlatform, plexDeepLink } from "../WatchButton";
 import { getProviderColor } from "../../data/providerColors";
 import { Section } from "./Section";
-import { MONETIZATION_ORDER, TMDB_IMG, type MonetizationType } from "./utils";
+import { logoUrl } from "../../lib/tmdb-images";
+import { MONETIZATION_ORDER, type MonetizationType } from "./utils";
 
 function OfferChip({ offer }: { offer: Title["offers"][number] }) {
   const color = getProviderColor(offer.provider_id);
@@ -44,9 +45,12 @@ function TmdbProviderChip({
       style={{ backgroundColor: `${color.bg}20`, borderLeft: `3px solid ${color.bg}` }}
     >
       <img
-        src={`${TMDB_IMG}/w45${provider.logo_path}`}
+        src={logoUrl(provider.logo_path, "w45") ?? ""}
         alt={provider.provider_name}
         className="w-6 h-6 rounded"
+        loading="lazy"
+        width={45}
+        height={45}
       />
       <span className="text-sm text-zinc-300">{provider.provider_name}</span>
     </div>

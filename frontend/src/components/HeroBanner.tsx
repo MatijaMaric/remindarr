@@ -6,6 +6,7 @@ import { formatEpisodeCode } from "./EpisodeComponents";
 import { useDominantColors } from "./useDominantColor";
 import WatchButtonGroup from "./WatchButtonGroup";
 import * as api from "../api";
+import { backdropUrl as mkBackdropUrl } from "../lib/tmdb-images";
 
 export interface HeroBannerSlide {
   featured: Episode;
@@ -56,8 +57,7 @@ export function getHeroBannerSlides(unwatched: Episode[]): HeroBannerSlide[] {
 
 export function getHeroImageUrl(episode: Episode): string | null {
   if (episode.backdrop_url) return episode.backdrop_url;
-  if (episode.still_path)
-    return `https://image.tmdb.org/t/p/w1280${episode.still_path}`;
+  if (episode.still_path) return mkBackdropUrl(episode.still_path, "w1280");
   if (episode.poster_url) return episode.poster_url;
   return null;
 }
@@ -147,6 +147,8 @@ export default function HeroBanner({ episodes, onWatched }: { episodes: Episode[
                 WebkitMaskImage:
                   "linear-gradient(to right, transparent 0%, black 25%)",
               }}
+              width={1280}
+              height={720}
               loading={i === 0 ? "eager" : "lazy"}
             />
           </div>

@@ -7,6 +7,7 @@ import type { Recommendation } from "../types";
 import { useApiCall } from "../hooks/useApiCall";
 import { Skeleton } from "../components/ui/skeleton";
 import { PageHeader, Kicker, Pill, Chip } from "../components/design";
+import { posterUrl } from "../lib/tmdb-images";
 
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
@@ -85,9 +86,7 @@ function RecommendationCard({
   }, [rec, onMarkRead]);
 
   const isUnread = !rec.read_at;
-  const posterSrc = rec.title.poster_url
-    ? `https://image.tmdb.org/t/p/w92${rec.title.poster_url}`
-    : null;
+  const posterSrc = posterUrl(rec.title.poster_url, "w92");
 
   const senderName = rec.from_user.display_name ?? rec.from_user.username;
   const senderInitial = (senderName || "?")[0].toUpperCase();
@@ -123,6 +122,8 @@ function RecommendationCard({
               alt={rec.title.title}
               className="w-12 h-18 rounded object-cover"
               loading="lazy"
+              width={92}
+              height={138}
             />
           ) : (
             <div className="w-12 h-18 rounded bg-zinc-800 flex items-center justify-center text-zinc-600 text-xs">
@@ -177,9 +178,7 @@ function HeroCard({
   onDismiss: (rec: Recommendation) => void;
 }) {
   const { t } = useTranslation();
-  const posterSrc = rec.title.poster_url
-    ? `https://image.tmdb.org/t/p/w342${rec.title.poster_url}`
-    : null;
+  const posterSrc = posterUrl(rec.title.poster_url, "w342");
 
   const senderName = rec.from_user.display_name ?? rec.from_user.username;
   const typeLabel = rec.title.object_type === "SHOW" ? "TV Series" : "Movie";
@@ -193,6 +192,9 @@ function HeroCard({
             src={posterSrc}
             alt={rec.title.title}
             className="w-full h-full object-cover"
+            loading="lazy"
+            width={342}
+            height={513}
           />
         ) : (
           <div className="w-full h-full bg-zinc-800" />
@@ -267,9 +269,7 @@ function RailCard({
   onDismiss: (rec: Recommendation) => void;
 }) {
   const { t } = useTranslation();
-  const posterSrc = rec.title.poster_url
-    ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`
-    : null;
+  const posterSrc = posterUrl(rec.title.poster_url, "w185");
 
   return (
     <div className="w-[118px] sm:w-[140px] shrink-0 flex flex-col gap-2">
@@ -280,6 +280,8 @@ function RailCard({
             alt={rec.title.title}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
             loading="lazy"
+            width={185}
+            height={278}
           />
         ) : (
           <div className="w-full h-full bg-zinc-800" />

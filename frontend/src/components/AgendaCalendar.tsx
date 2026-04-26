@@ -196,6 +196,8 @@ const DayHeader = memo(function DayHeader({
           alt=""
           className="w-10 h-15 rounded object-cover flex-shrink-0"
           loading="lazy"
+          width={40}
+          height={60}
         />
       )}
       <div className="flex-1 min-w-0">

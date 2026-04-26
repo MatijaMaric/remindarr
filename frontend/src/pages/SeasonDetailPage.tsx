@@ -11,8 +11,7 @@ import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 import { useAuth } from "../context/AuthContext";
 import ShareButton from "../components/ShareButton";
-
-const TMDB_IMG = "https://image.tmdb.org/t/p";
+import { posterUrl as mkPosterUrl, stillUrl as mkStillUrl } from "../lib/tmdb-images";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -169,7 +168,7 @@ export default function SeasonDetailPage() {
   }
 
   const { title, tmdb, seasonNumber, seasons } = data;
-  const posterUrl = tmdb?.poster_path ? `${TMDB_IMG}/w500${tmdb.poster_path}` : title.poster_url;
+  const posterUrl = mkPosterUrl(tmdb?.poster_path, "w500") ?? title.poster_url;
   const episodes = tmdb?.episodes || [];
 
   const hasStatus = statusMap.size > 0;
@@ -189,7 +188,14 @@ export default function SeasonDetailPage() {
       <div className="flex flex-col sm:flex-row gap-6">
         <div className="w-40 shrink-0 mx-auto sm:mx-0">
           {posterUrl ? (
-            <img src={posterUrl} alt={tmdb?.name || `Season ${seasonNumber}`} className="w-full rounded-xl shadow-xl" />
+            <img
+              src={posterUrl}
+              alt={tmdb?.name || `Season ${seasonNumber}`}
+              className="w-full rounded-xl shadow-xl"
+              width={500}
+              height={750}
+              loading="eager"
+            />
           ) : (
             <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">
               Season {seasonNumber}
@@ -311,10 +317,12 @@ export default function SeasonDetailPage() {
                       <div className="shrink-0 w-24 sm:w-[180px] aspect-video bg-zinc-800 rounded-md overflow-hidden self-center">
                         {ep.still_path ? (
                           <img
-                            src={`${TMDB_IMG}/w300${ep.still_path}`}
+                            src={mkStillUrl(ep.still_path, "w300") ?? ""}
                             alt={ep.name}
                             className="w-full h-full object-cover"
                             loading="lazy"
+                            width={300}
+                            height={169}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-zinc-600 text-[11px] font-mono">
