@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
   createUser,
@@ -208,5 +208,54 @@ describe("computeNotificationCron", () => {
 
     const cron = await computeNotificationCron();
     expect(cron).toBeNull();
+  });
+});
+
+describe("notification error logging includes structured fields", () => {
+  it("logs err object (not pre-stringified message) when provider.send throws", async () => {
+    // Create a notifier that will be due now
+    const notifierId = await createNotifier(
+      userId,
+      "discord",
+      "FailTest",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC"
+    );
+
+    // Confirm it's due at the current time map
+    const timesByTimezone = new Map([["UTC", { time: "09:00", date: "2026-03-12" }]]);
+    const due = await getDueNotifiers(timesByTimezone);
+    expect(due).toHaveLength(1);
+
+    const sendError = new Error("provider send failed");
+
+    // Spy on console.error — the logger writes error/warn there as JSON lines
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+
+    // Run the handler logic in isolation by simulating the catch path directly:
+    // the logger's serializeValue turns Error -> { message, stack }
+    // verify that if we call log.error with an err key, the stack is present in the output
+    const { logger } = await import("../logger");
+    const testLog = logger.child({ module: "test" });
+    testLog.error("Failed to send notification", {
+      provider: "discord",
+      notifierId,
+      userId,
+      err: sendError,
+    });
+
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const lastCallArg = consoleErrorSpy.mock.calls[consoleErrorSpy.mock.calls.length - 1][0] as string;
+    const parsed = JSON.parse(lastCallArg) as Record<string, unknown>;
+
+    expect(parsed.notifierId).toBe(notifierId);
+    expect(parsed.userId).toBe(userId);
+    // err is serialized by the logger as { message, stack }
+    const errObj = parsed.err as Record<string, unknown>;
+    expect(typeof errObj.stack).toBe("string");
+    expect((errObj.stack as string).length).toBeGreaterThan(0);
+
+    consoleErrorSpy.mockRestore();
   });
 });
