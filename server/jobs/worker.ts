@@ -66,7 +66,7 @@ export async function processJobs() {
       const duration = (performance.now() - jobStart) / 1000;
       jobsTotal.inc({ name, status: "failed" });
       jobDurationSeconds.observe({ name }, duration);
-      log.error("Failed job", { name, jobId: job.id, attempt: job.attempts, maxAttempts: job.max_attempts, error: message });
+      log.error("Failed job", { name, jobId: job.id, attempt: job.attempts, maxAttempts: job.max_attempts, err });
     }
   }
 }

@@ -285,3 +285,58 @@ describe("cleanupOldJobs", () => {
     expect(allJobs.length).toBe(1);
   });
 });
+
+describe("processor error logging includes stack traces", () => {
+  it("logs raw err object on retry so stack is preserved", async () => {
+    // Spy on console.error — the logger routes error/warn there as JSON
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+
+    mockFetchNewReleases.mockRejectedValueOnce(new Error("TMDB timeout with stack"));
+
+    await insertJob("sync-titles");
+    await processPendingJobs();
+
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const warnCalls = consoleErrorSpy.mock.calls
+      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
+      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "warn");
+
+    const retryLog = warnCalls.find((obj) => obj.msg === "Job failed, will retry");
+    expect(retryLog).toBeDefined();
+    // err must be the serialized Error object, not a plain string
+    const errObj = retryLog!.err as Record<string, unknown>;
+    expect(typeof errObj.stack).toBe("string");
+    expect((errObj.stack as string).length).toBeGreaterThan(0);
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("logs raw err object on permanent failure so stack is preserved", async () => {
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+
+    mockFetchNewReleases.mockRejectedValueOnce(new Error("Permanent failure"));
+
+    const db = getDb();
+    await db.insert(jobs).values({
+      name: "sync-titles",
+      status: "pending",
+      attempts: 2, // Already at max-1
+      maxAttempts: 3,
+      runAt: new Date().toISOString(),
+    });
+
+    await processPendingJobs();
+
+    const errorCalls = consoleErrorSpy.mock.calls
+      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
+      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
+
+    const permanentLog = errorCalls.find((obj) => obj.msg === "Job failed permanently");
+    expect(permanentLog).toBeDefined();
+    const errObj = permanentLog!.err as Record<string, unknown>;
+    expect(typeof errObj.stack).toBe("string");
+    expect((errObj.stack as string).length).toBeGreaterThan(0);
+
+    consoleErrorSpy.mockRestore();
+  });
+});

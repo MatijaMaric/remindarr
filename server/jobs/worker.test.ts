@@ -82,3 +82,32 @@ describe("worker Sentry monitoring", () => {
     expect(captureExceptionSpy).toHaveBeenCalledWith(jobError);
   });
 });
+
+describe("worker error logging includes stack traces", () => {
+  it("logs raw err object so the stack is preserved", async () => {
+    // Child loggers write to console.error for error/warn level
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+
+    const jobError = new Error("stack trace test");
+    registerHandler("stack-trace-job", async () => {
+      throw jobError;
+    });
+    enqueueJob("stack-trace-job");
+
+    await processJobs();
+
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const errorCalls = consoleErrorSpy.mock.calls
+      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
+      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
+
+    const failedLog = errorCalls.find((obj) => obj.msg === "Failed job");
+    expect(failedLog).toBeDefined();
+    // err is serialized as { message, stack } by the logger's serializeValue
+    const errObj = failedLog!.err as Record<string, unknown>;
+    expect(typeof errObj.stack).toBe("string");
+    expect((errObj.stack as string).length).toBeGreaterThan(0);
+
+    consoleErrorSpy.mockRestore();
+  });
+});
