@@ -1,5 +1,3 @@
-export const TMDB_IMG = "https://image.tmdb.org/t/p";
-
 export const RELEASE_TYPE_LABELS: Record<number, string> = {
   1: "Premiere",
   2: "Theatrical (Limited)",

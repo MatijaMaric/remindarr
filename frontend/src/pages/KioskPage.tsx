@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "react-router";
 import type { KioskData, KioskFidelity, KioskAiringSlot, KioskRelease, KioskQueueItem } from "../api";
+import { posterUrl as tmdbPosterUrl, backdropUrl as tmdbBackdropUrl } from "../lib/tmdb-images";
 
 const FIDELITY_VALUES: KioskFidelity[] = ["rich", "lite", "epaper"];
 
@@ -80,10 +81,12 @@ function airedAgo(airDate: string | null, nowMs: number): number | null {
   return Math.max(1, Math.round(ms / 86_400_000));
 }
 
-function posterUrl(path: string | null, size: "w185" | "w780"): string | null {
+function kioskImageUrl(path: string | null, size: "w185" | "w780"): string | null {
   if (!path) return null;
   if (path.startsWith("http")) return path;
-  return `https://image.tmdb.org/t/p/${size}${path.startsWith("/") ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (size === "w780") return tmdbBackdropUrl(normalizedPath, "w780");
+  return tmdbPosterUrl(normalizedPath, "w185");
 }
 
 function hashHue(str: string): number {
@@ -112,7 +115,7 @@ function StripePoster({ title, tone }: { title: string; tone: "dark" | "paper" }
 }
 
 function Poster({ path, title, size, epaper }: { path: string | null; title: string; size: "w185" | "w780"; epaper: boolean }) {
-  const url = posterUrl(path, size);
+  const url = kioskImageUrl(path, size);
   if (url) {
     return <img src={url} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />;
   }
@@ -197,7 +200,7 @@ function HeroCard({ C, epaper, breathe, slot }: {
   slot: KioskAiringSlot;
 }) {
   const Mono: React.CSSProperties = { fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace" };
-  const backdropUrl = posterUrl(slot.backdrop_url ?? slot.poster_url, "w780");
+  const backdropUrl = kioskImageUrl(slot.backdrop_url ?? slot.poster_url, "w780");
 
   return (
     <div style={{
@@ -290,7 +293,7 @@ function HeroFeatured({ C, epaper, breathe, item, kicker }: {
   kicker: string;
 }) {
   const Mono: React.CSSProperties = { fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace" };
-  const backdropSrc = posterUrl(item.backdrop_url ?? item.poster_url, "w780");
+  const backdropSrc = kioskImageUrl(item.backdrop_url ?? item.poster_url, "w780");
 
   return (
     <div style={{
