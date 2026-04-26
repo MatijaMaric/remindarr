@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { pLimit } from "../lib/p-limit";
 import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGenres } from "../tmdb/client";
 import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
 import { getTrackedTitleIds, upsertTitles } from "../db/repository";
@@ -61,20 +62,23 @@ app.get("/", async (c) => {
       basicTitles = basicTitles.filter((t) => t.originalLanguage === languageParam);
     }
 
-    // Fetch watch providers for each result
+    // Fetch watch providers for each result — capped at 5 concurrent requests.
+    const limit = pLimit(5);
     const titles = await Promise.all(
-      basicTitles.slice(0, 20).map(async (t) => {
-        try {
-          const tmdbId = parseInt(t.tmdbId || "0", 10);
-          if (t.objectType === "MOVIE") {
-            return parseMovieDetails(await fetchMovieDetails(tmdbId));
-          } else {
-            return parseTvDetails(await fetchTvDetails(tmdbId));
+      basicTitles.slice(0, 20).map((t) =>
+        limit(async () => {
+          try {
+            const tmdbId = parseInt(t.tmdbId || "0", 10);
+            if (t.objectType === "MOVIE") {
+              return parseMovieDetails(await fetchMovieDetails(tmdbId));
+            } else {
+              return parseTvDetails(await fetchTvDetails(tmdbId));
+            }
+          } catch {
+            return t; // Fallback to basic data without watch providers
           }
-        } catch {
-          return t; // Fallback to basic data without watch providers
-        }
-      })
+        })
+      )
     );
 
     // Apply rating filter only after fetching details (TMDB search results lack ratings;

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { pLimit } from "../lib/p-limit";
 import {
   discoverMovies,
   discoverTv,
@@ -163,20 +164,24 @@ app.get("/", async (c) => {
       totalResults = movieRes.total_results + tvRes.total_results;
     }
 
-    // Fetch full details with watch providers for each result
+    // Fetch full details with watch providers for each result — capped at 5
+    // concurrent requests to avoid bursting TMDB's rate limit.
+    const limit = pLimit(5);
     const titles = await Promise.all(
-      basicTitles.map(async (t) => {
-        try {
-          const tmdbId = parseInt(t.tmdbId || "0", 10);
-          if (t.objectType === "MOVIE") {
-            return parseMovieDetails(await fetchMovieDetails(tmdbId));
-          } else {
-            return parseTvDetails(await fetchTvDetails(tmdbId));
+      basicTitles.map((t) =>
+        limit(async () => {
+          try {
+            const tmdbId = parseInt(t.tmdbId || "0", 10);
+            if (t.objectType === "MOVIE") {
+              return parseMovieDetails(await fetchMovieDetails(tmdbId));
+            } else {
+              return parseTvDetails(await fetchTvDetails(tmdbId));
+            }
+          } catch {
+            return t;
           }
-        } catch {
-          return t;
-        }
-      })
+        })
+      )
     );
 
     // Persist titles with offers to DB so stream buttons appear on subsequent views
