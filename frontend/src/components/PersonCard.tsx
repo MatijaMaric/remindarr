@@ -1,6 +1,5 @@
 import { Link } from "react-router";
-
-const TMDB_IMG = "https://image.tmdb.org/t/p";
+import { profileUrl } from "../lib/tmdb-images";
 
 interface PersonCardProps {
   id: number;
@@ -14,7 +13,7 @@ export default function PersonCard({ id, name, role, profilePath }: PersonCardPr
     <Link to={`/person/${id}`} className="flex-shrink-0 w-28 text-center group">
       <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-zinc-800 mb-2 group-hover:ring-2 group-hover:ring-amber-400 transition-all">
         {profilePath ? (
-          <img src={`${TMDB_IMG}/w185${profilePath}`} alt={name} className="w-full h-full object-cover" loading="lazy" />
+          <img src={profileUrl(profilePath, "w185") ?? ""} alt={name} className="w-full h-full object-cover" loading="lazy" width={185} height={278} />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-zinc-600 text-2xl">
             {name.charAt(0)}

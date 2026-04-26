@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TMDB_IMG } from "./utils";
+import { logoUrl } from "../../lib/tmdb-images";
 
 const NETWORK_DISPLAY_LIMIT = 5;
 
@@ -17,9 +17,12 @@ export function NetworkList({
         <div key={n.id} className="flex items-center gap-1.5">
           {n.logo_path && (
             <img
-              src={`${TMDB_IMG}/w92${n.logo_path}`}
+              src={logoUrl(n.logo_path, "w92") ?? ""}
               alt={n.name}
               className="h-5 object-contain brightness-0 invert opacity-70"
+              loading="lazy"
+              width={92}
+              height={20}
             />
           )}
           <span className="text-sm text-zinc-400">{n.name}</span>

@@ -5,7 +5,8 @@ import VisibilityButton from "../VisibilityButton";
 import WatchButtonGroup from "../WatchButtonGroup";
 import { Chip, Kicker } from "../design";
 import { RatingBadge } from "./RatingBadge";
-import { TMDB_IMG, formatRuntime } from "./utils";
+import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
+import { formatRuntime } from "./utils";
 
 export interface MovieHeroProps {
   title: Title;
@@ -19,8 +20,8 @@ export interface MovieHeroProps {
 export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPanel }: MovieHeroProps) {
   const genres = tmdb?.genres?.map((g) => g.name) || title.genres;
   const certification = title.age_certification;
-  const backdropUrl = tmdb?.backdrop_path ? `${TMDB_IMG}/w1280${tmdb.backdrop_path}` : null;
-  const posterUrl = tmdb?.poster_path ? `${TMDB_IMG}/w500${tmdb.poster_path}` : title.poster_url;
+  const backdropUrl = mkBackdropUrl(tmdb?.backdrop_path, "w1280") ?? null;
+  const posterUrl = mkPosterUrl(tmdb?.poster_path, "w500") ?? title.poster_url;
   const displayTitle = tmdb?.title || title.title;
   const originalTitle = tmdb?.original_title || title.original_title;
 
@@ -45,6 +46,9 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
               src={posterUrl}
               alt={title.title}
               className="w-full rounded-xl shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-white/[0.08]"
+              width={500}
+              height={750}
+              loading="eager"
             />
           ) : (
             <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">

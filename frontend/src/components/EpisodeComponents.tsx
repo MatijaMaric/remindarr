@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { Episode, Offer } from "../types";
 import WatchButtonGroup from "./WatchButtonGroup";
 import WatchedToggleButton from "./WatchedToggleButton";
+import { backdropUrl } from "../lib/tmdb-images";
 
 export function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
@@ -43,7 +44,7 @@ export function formatUpcomingDate(dateStr: string): string {
 }
 
 export function getEpisodeCardImageUrl(episode: Episode): string | null {
-  if (episode.still_path) return `https://image.tmdb.org/t/p/w780${episode.still_path}`;
+  if (episode.still_path) return backdropUrl(episode.still_path, "w780");
   if (episode.backdrop_url) return episode.backdrop_url;
   if (episode.poster_url) return episode.poster_url;
   return null;
@@ -72,6 +73,8 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
               alt={episode.show_title}
               className="w-10 h-15 rounded object-cover"
               loading="lazy"
+              width={40}
+              height={60}
             />
           </Link>
         )}
@@ -108,6 +111,8 @@ export function EpisodeCard({ episode, compact, onToggleWatched }: { episode: Ep
               alt={episode.show_title}
               className="w-16 h-24 rounded-lg object-cover"
               loading="lazy"
+              width={64}
+              height={96}
             />
           </Link>
         )}
@@ -156,7 +161,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
       <div className="flex items-center gap-3 bg-zinc-900 rounded-lg p-3">
         {posterUrl && (
           <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
-            <img src={posterUrl} alt={showTitle} className="w-10 h-15 rounded object-cover" loading="lazy" />
+            <img src={posterUrl} alt={showTitle} className="w-10 h-15 rounded object-cover" loading="lazy" width={40} height={60} />
           </Link>
         )}
         <div className="flex-1 min-w-0">
@@ -188,7 +193,7 @@ export function ShowEpisodeGroup({ showTitle, episodes, posterUrl, compact, onTo
       <div className="flex gap-4 p-4">
         {posterUrl && (
           <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
-            <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover" loading="lazy" />
+            <img src={posterUrl} alt={showTitle} className="w-16 h-24 rounded-lg object-cover" loading="lazy" width={64} height={96} />
           </Link>
         )}
         <div className="flex-1 min-w-0">

@@ -98,6 +98,8 @@ export default function WatchButton({
           alt={providerName}
           className="w-7 h-7 rounded-md"
           loading="lazy"
+          width={28}
+          height={28}
         />
       </a>
     );
@@ -124,6 +126,8 @@ export default function WatchButton({
         alt={providerName}
         className="w-5 h-5 rounded"
         loading="lazy"
+        width={20}
+        height={20}
       />
       <ExternalLink size={14} className="opacity-60" />
     </a>

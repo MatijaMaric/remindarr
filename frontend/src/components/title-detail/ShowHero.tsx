@@ -6,7 +6,8 @@ import WatchButtonGroup from "../WatchButtonGroup";
 import { Chip, Kicker } from "../design";
 import { NetworkList } from "./NetworkList";
 import { RatingBadge } from "./RatingBadge";
-import { TMDB_IMG, getCertification } from "./utils";
+import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
+import { getCertification } from "./utils";
 
 export interface ShowHeroProps {
   title: Title;
@@ -19,8 +20,8 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
   const genres = tmdb?.genres?.map((g) => g.name) || title.genres;
   const certification =
     getCertification(tmdb?.content_ratings?.results, country) || title.age_certification;
-  const backdropUrl = tmdb?.backdrop_path ? `${TMDB_IMG}/w1280${tmdb.backdrop_path}` : null;
-  const posterUrl = tmdb?.poster_path ? `${TMDB_IMG}/w500${tmdb.poster_path}` : title.poster_url;
+  const backdropUrl = mkBackdropUrl(tmdb?.backdrop_path, "w1280") ?? null;
+  const posterUrl = mkPosterUrl(tmdb?.poster_path, "w500") ?? title.poster_url;
   const firstOfferUrl = title.offers[0]?.url ?? null;
   const displayTitle = tmdb?.name || title.title;
   const originalTitle = tmdb?.original_name || title.original_title;
@@ -46,7 +47,14 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
           <div className="absolute bottom-0 left-0 right-0 flex items-end gap-4 px-4 pb-5">
             <div className="w-[108px] shrink-0">
               {posterUrl ? (
-                <img src={posterUrl} alt={title.title} className="w-full rounded-xl shadow-2xl" />
+                <img
+                  src={posterUrl}
+                  alt={title.title}
+                  className="w-full rounded-xl shadow-2xl"
+                  width={500}
+                  height={750}
+                  loading="eager"
+                />
               ) : (
                 <div className="aspect-[2/3] bg-zinc-800 rounded-xl" />
               )}
@@ -117,6 +125,9 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               src={posterUrl}
               alt={title.title}
               className="w-full rounded-xl shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-white/[0.08]"
+              width={500}
+              height={750}
+              loading="eager"
             />
           ) : (
             <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">
