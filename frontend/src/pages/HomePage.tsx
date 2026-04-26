@@ -15,6 +15,7 @@ import { EpisodeShowCard, DeckCardWrapper } from "../components/EpisodeShowCard"
 import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
 import { Kicker } from "../components/design";
+import { posterUrl } from "../lib/tmdb-images";
 
 export interface UnwatchedCardEntry {
   episode: Episode;
@@ -551,9 +552,7 @@ export default function HomePage() {
             </div>
             <FullBleedCarousel>
               {recommendations.map((rec) => {
-                const posterSrc = rec.title.poster_url
-                  ? `https://image.tmdb.org/t/p/w185${rec.title.poster_url}`
-                  : null;
+                const posterSrc = posterUrl(rec.title.poster_url, "w185");
                 const isUnread = !rec.read_at;
                 return (
                   <Link
@@ -569,6 +568,8 @@ export default function HomePage() {
                           alt={rec.title.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           loading="lazy"
+                          width={185}
+                          height={278}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">

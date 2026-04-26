@@ -12,8 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { WatchedIcon } from "../components/EpisodeComponents";
 import ShareButton from "../components/ShareButton";
 import EpisodeRatingButtons from "../components/EpisodeRatingButtons";
-
-const TMDB_IMG = "https://image.tmdb.org/t/p";
+import { stillUrl as mkStillUrl } from "../lib/tmdb-images";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -84,7 +83,7 @@ export default function EpisodeDetailPage() {
   }
 
   const { title, tmdb, seasonNumber, episodeNumber } = data;
-  const stillUrl = tmdb?.still_path ? `${TMDB_IMG}/w780${tmdb.still_path}` : null;
+  const stillUrl = mkStillUrl(tmdb?.still_path, "w780");
   const released = isReleased(tmdb?.air_date);
 
   // Merge guest_stars and credits.cast, deduplicating by id
@@ -117,7 +116,14 @@ export default function EpisodeDetailPage() {
       {/* Still image */}
       {stillUrl && (
         <div className="rounded-xl overflow-hidden">
-          <img src={stillUrl} alt={tmdb?.name || `Episode ${episodeNumber}`} className="w-full" />
+          <img
+            src={stillUrl}
+            alt={tmdb?.name || `Episode ${episodeNumber}`}
+            className="w-full"
+            width={780}
+            height={439}
+            loading="eager"
+          />
         </div>
       )}
 

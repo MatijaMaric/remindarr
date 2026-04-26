@@ -104,6 +104,8 @@ export default function WatchlistCard({ title }: WatchlistCardProps) {
             alt={title.title}
             className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
             loading="lazy"
+            width={342}
+            height={513}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-950" />
