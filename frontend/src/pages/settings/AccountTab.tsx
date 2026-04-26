@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useReducer } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../../i18n";
@@ -179,46 +179,73 @@ interface PasskeyItem {
   createdAt: string | Date | null;
 }
 
+type PasskeyState = {
+  status: "loading" | "idle" | "adding" | "deleting";
+  passkeys: PasskeyItem[];
+  message: string;
+  error: string;
+  pendingId: string | null;
+};
+
+type PasskeyAction =
+  | { type: "LOAD_SUCCESS"; passkeys: PasskeyItem[] }
+  | { type: "LOAD_DONE" }
+  | { type: "ADD_START" }
+  | { type: "DELETE_START"; id: string }
+  | { type: "OP_DONE"; passkeys: PasskeyItem[]; message: string }
+  | { type: "OP_ERROR"; error: string };
+
+function passkeyReducer(state: PasskeyState, action: PasskeyAction): PasskeyState {
+  switch (action.type) {
+    case "LOAD_SUCCESS":
+      return { ...state, status: "idle", passkeys: action.passkeys };
+    case "LOAD_DONE":
+      return { ...state, status: "idle" };
+    case "ADD_START":
+      return { ...state, status: "adding", message: "", error: "" };
+    case "DELETE_START":
+      return { ...state, status: "deleting", message: "", error: "", pendingId: action.id };
+    case "OP_DONE":
+      return { status: "idle", passkeys: action.passkeys, message: action.message, error: "", pendingId: null };
+    case "OP_ERROR":
+      return { ...state, status: "idle", error: action.error, pendingId: null };
+    default:
+      return state;
+  }
+}
+
 function PasskeySection() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [passkeys, setPasskeys] = useState<PasskeyItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [pkState, dispatch] = useReducer(passkeyReducer, {
+    status: "loading",
+    passkeys: [],
+    message: "",
+    error: "",
+    pendingId: null,
+  });
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [passkeyName, setPasskeyName] = useState("");
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
+
+  const { status, passkeys, message: msg, error: err, pendingId } = pkState;
+  const loading = status === "loading";
+  const adding = status === "adding";
 
   const webauthnSupported = typeof window !== "undefined" && !!window.PublicKeyCredential;
 
-  const loadPasskeys = useCallback(async () => {
-    try {
-      const result = await authClient.passkey.listUserPasskeys();
-      if (result.data) {
-        setPasskeys(result.data as PasskeyItem[]);
-      }
-    } catch {
-      // Passkeys may not be available
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (webauthnSupported) {
-      loadPasskeys();
-    } else {
-      setLoading(false);
-    }
-  }, [webauthnSupported, loadPasskeys]);
+    if (!webauthnSupported) { dispatch({ type: "LOAD_DONE" }); return; }
+    authClient.passkey.listUserPasskeys()
+      .then((result) => {
+        if (result.data) dispatch({ type: "LOAD_SUCCESS", passkeys: result.data as PasskeyItem[] });
+        else dispatch({ type: "LOAD_DONE" });
+      })
+      .catch(() => dispatch({ type: "LOAD_DONE" }));
+  }, [webauthnSupported]);
 
   async function handleAddPasskey() {
-    setMsg("");
-    setErr("");
-    setAdding(true);
+    dispatch({ type: "ADD_START" });
     try {
       const result = await authClient.passkey.addPasskey({
         name: passkeyName || user?.username || undefined,
@@ -226,51 +253,45 @@ function PasskeySection() {
       if (result?.error) {
         throw new Error(String(result.error.message || t("profile.passkeyAddFailed")));
       }
-      setMsg(t("profile.passkeyAdded"));
+      const listResult = await authClient.passkey.listUserPasskeys();
+      dispatch({ type: "OP_DONE", passkeys: (listResult.data as PasskeyItem[]) ?? [], message: t("profile.passkeyAdded") });
       setPasskeyName("");
-      await loadPasskeys();
     } catch (e: unknown) {
       if (!(e instanceof Error) || e.name !== "NotAllowedError") {
-        setErr(e instanceof Error ? e.message : String(e));
+        dispatch({ type: "OP_ERROR", error: e instanceof Error ? e.message : String(e) });
+      } else {
+        dispatch({ type: "OP_ERROR", error: "" });
       }
-    } finally {
-      setAdding(false);
     }
   }
 
   async function handleDeletePasskey(id: string) {
-    setMsg("");
-    setErr("");
-    setDeleting(id);
+    dispatch({ type: "DELETE_START", id });
     try {
       const result = await authClient.passkey.deletePasskey({ id });
       if (result?.error) {
         throw new Error(String(result.error.message || "Failed to delete passkey"));
       }
-      setMsg(t("profile.passkeyDeleted"));
-      await loadPasskeys();
+      const listResult = await authClient.passkey.listUserPasskeys();
+      dispatch({ type: "OP_DONE", passkeys: (listResult.data as PasskeyItem[]) ?? [], message: t("profile.passkeyDeleted") });
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setDeleting(null);
+      dispatch({ type: "OP_ERROR", error: e instanceof Error ? e.message : String(e) });
     }
   }
 
   async function handleRenamePasskey(id: string) {
     if (!editName.trim()) return;
-    setMsg("");
-    setErr("");
     try {
       const result = await authClient.passkey.updatePasskey({ id, name: editName.trim() });
       if (result?.error) {
         throw new Error(String(result.error.message || "Failed to rename passkey"));
       }
-      setMsg(t("profile.passkeyRenamed"));
+      const listResult = await authClient.passkey.listUserPasskeys();
+      dispatch({ type: "OP_DONE", passkeys: (listResult.data as PasskeyItem[]) ?? [], message: t("profile.passkeyRenamed") });
       setEditing(null);
       setEditName("");
-      await loadPasskeys();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
+      dispatch({ type: "OP_ERROR", error: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -350,10 +371,10 @@ function PasskeySection() {
                           variant="outline"
                           small
                           danger
-                          disabled={deleting === pk.id}
+                          disabled={status === "deleting" && pendingId === pk.id}
                           onClick={() => handleDeletePasskey(pk.id)}
                         >
-                          {deleting === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
+                          {status === "deleting" && pendingId === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
                         </SButton>
                       </>
                     )}

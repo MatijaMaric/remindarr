@@ -1,5 +1,5 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
@@ -31,8 +31,9 @@ mock.module("../lib/auth-client", () => ({
     changePassword: mock(() => Promise.resolve({})),
     passkey: {
       addPasskey: mock(() => Promise.resolve({})),
-      listPasskeys: mock(() => Promise.resolve([])),
-      deletePasskey: mock(() => Promise.resolve()),
+      listUserPasskeys: mock(() => Promise.resolve({ data: [] })),
+      deletePasskey: mock(() => Promise.resolve({})),
+      updatePasskey: mock(() => Promise.resolve({})),
     },
   },
 }));
@@ -249,6 +250,107 @@ describe("Settings tabs", () => {
 
     // Account-tab content should not be rendered
     expect(screen.queryByText("Profile Visibility")).toBeNull();
+  });
+});
+
+describe("PasskeySection", () => {
+  beforeEach(() => {
+    // Simulate WebAuthn support so PasskeySection renders (not null)
+    (globalThis as any).PublicKeyCredential = class {};
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).PublicKeyCredential;
+  });
+
+  it("delete success: shows success message and removes passkey from list", async () => {
+    const { authClient } = await import("../lib/auth-client") as any;
+    authClient.passkey.listUserPasskeys
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "My Key", createdAt: null }] }))
+      .mockImplementationOnce(() => Promise.resolve({ data: [] }));
+    authClient.passkey.deletePasskey.mockImplementationOnce(() => Promise.resolve({}));
+
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("My Key")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(screen.getByText("Passkey deleted")).toBeDefined());
+
+    expect(screen.queryByText("Passkey deleted")).toBeDefined();
+    expect(screen.queryByText("My Key")).toBeNull();
+    expect(screen.queryByText(/network error|failed/i)).toBeNull();
+  });
+
+  it("delete error: shows error message, clears success, list unchanged", async () => {
+    const { authClient } = await import("../lib/auth-client") as any;
+    authClient.passkey.listUserPasskeys
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "My Key", createdAt: null }] }));
+    authClient.passkey.deletePasskey.mockImplementationOnce(() =>
+      Promise.resolve({ error: { message: "Network error" } })
+    );
+
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("My Key")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(screen.getByText("Network error")).toBeDefined());
+
+    expect(screen.queryByText("Passkey deleted")).toBeNull();
+    expect(screen.getByText("My Key")).toBeDefined();
+  });
+
+  it("rename success: shows success message and exits edit mode", async () => {
+    const { authClient } = await import("../lib/auth-client") as any;
+    authClient.passkey.listUserPasskeys
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "Old Name", createdAt: null }] }))
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "New Name", createdAt: null }] }));
+    authClient.passkey.updatePasskey.mockImplementationOnce(() => Promise.resolve({}));
+
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Old Name")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+
+    const editInput = screen.getByRole("textbox", { name: "Passkey name" });
+    fireEvent.change(editInput, { target: { value: "New Name" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.getByText("Passkey renamed")).toBeDefined());
+
+    // Edit input closed after success
+    expect(screen.queryByRole("textbox", { name: "Passkey name" })).toBeNull();
+  });
+
+  it("rename error: shows error and keeps edit mode open for retry", async () => {
+    const { authClient } = await import("../lib/auth-client") as any;
+    authClient.passkey.listUserPasskeys
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "Old Name", createdAt: null }] }));
+    authClient.passkey.updatePasskey.mockImplementationOnce(() =>
+      Promise.resolve({ error: { message: "Rename failed" } })
+    );
+
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Old Name")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+
+    const editInput = screen.getByRole("textbox", { name: "Passkey name" });
+    fireEvent.change(editInput, { target: { value: "New Name" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.getByText("Rename failed")).toBeDefined());
+
+    // Edit input stays visible so user can retry
+    expect(screen.getByRole("textbox", { name: "Passkey name" })).toBeDefined();
+    expect(screen.queryByText("Passkey renamed")).toBeNull();
   });
 });
 
