@@ -1,6 +1,7 @@
 import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
 import { getCache } from "../cache";
+import { httpFetch } from "../lib/http";
 import type {
   TmdbShowDetails,
   TmdbSeasonResponse,
@@ -32,7 +33,7 @@ async function tmdbRequest<T>(path: string, params?: Record<string, string>): Pr
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), CONFIG.TMDB_API_TIMEOUT_MS);
     try {
-      const res = await fetch(url.toString(), {
+      const res = await httpFetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${CONFIG.TMDB_API_KEY}`,
           "Content-Type": "application/json",

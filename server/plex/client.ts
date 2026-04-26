@@ -1,5 +1,6 @@
 import { CONFIG } from "../config";
 import { logger } from "../logger";
+import { httpFetch } from "../lib/http";
 
 const log = logger.child({ module: "plex" });
 
@@ -35,7 +36,7 @@ export class PlexApiError extends Error {
 }
 
 async function plexFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(url, options);
+  const res = await httpFetch(url, options);
   if (res.status === 401) throw new PlexAuthError("Plex token is invalid or revoked");
   if (!res.ok) throw new PlexApiError(`Plex API error: ${res.status} ${res.statusText}`, res.status);
   return res.json() as Promise<T>;

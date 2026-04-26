@@ -73,17 +73,21 @@ describe("tmdbRequest error handling", () => {
   });
 
   it("throws on 5xx response", async () => {
-    fetchSpy.mockResolvedValueOnce(textResponse("Internal Server Error", 500));
+    // httpFetch retries on 500; mock all attempts to return 500 so the TMDB
+    // client still sees a 500 error after retries are exhausted.
+    fetchSpy.mockResolvedValue(textResponse("Internal Server Error", 500));
     await expect(fetchShowDetails("123")).rejects.toThrow("TMDB API error 500: Internal Server Error");
   });
 
   it("throws on 404 response", async () => {
+    // 404 is not retried by httpFetch, so a single mock is sufficient.
     fetchSpy.mockResolvedValueOnce(textResponse("Not Found", 404));
     await expect(fetchMovieDetails(999)).rejects.toThrow("TMDB API error 404: Not Found");
   });
 
   it("throws on 429 rate limit response", async () => {
-    fetchSpy.mockResolvedValueOnce(textResponse("Rate limit exceeded", 429));
+    // httpFetch retries on 429; mock all attempts so TMDB client sees the error.
+    fetchSpy.mockResolvedValue(textResponse("Rate limit exceeded", 429));
     await expect(searchMulti("test")).rejects.toThrow("TMDB API error 429: Rate limit exceeded");
   });
 

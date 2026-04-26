@@ -2,6 +2,7 @@ import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
 import { logger } from "../logger";
 import { getCache } from "../cache";
+import { httpFetch } from "../lib/http";
 import type { SAShow, SAStreamingOption } from "./types";
 import { RateLimitError } from "./types";
 
@@ -33,13 +34,18 @@ export async function fetchStreamingOptions(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), CONFIG.TMDB_API_TIMEOUT_MS);
     try {
-      const res = await fetch(url.toString(), {
-        headers: {
-          "X-RapidAPI-Key": CONFIG.STREAMING_AVAILABILITY_API_KEY,
-          "X-RapidAPI-Host": "streaming-availability.p.rapidapi.com",
+      // maxRetries: 0 — SA has custom 429/403 handling; don't retry at the httpFetch layer
+      const res = await httpFetch(
+        url.toString(),
+        {
+          headers: {
+            "X-RapidAPI-Key": CONFIG.STREAMING_AVAILABILITY_API_KEY,
+            "X-RapidAPI-Host": "streaming-availability.p.rapidapi.com",
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        { maxRetries: 0 }
+      );
 
       if (res.status === 404) {
         log.debug("Title not found on SA", { tmdbId, objectType });
