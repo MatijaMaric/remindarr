@@ -182,6 +182,22 @@ describe("getPlexOffersForUser", () => {
     expect(result.size).toBe(0);
   });
 
+  it("handles more than 99 titleIds without hitting D1 param limit", async () => {
+    insertIntegration("int-1", userId, "srv-1");
+    const titleIds: string[] = [];
+    for (let i = 1; i <= 120; i++) {
+      const id = `movie-bulk-${i}`;
+      insertTitle(id);
+      titleIds.push(id);
+      getRawDb()
+        .prepare(`INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type) VALUES (?, ?, ?, ?, ?)`)
+        .run("int-1", userId, id, `rk-${i}`, "movie");
+    }
+
+    const result = await getPlexOffersForUser(titleIds, userId);
+    expect(result.size).toBe(120);
+  });
+
   it("does not return offers for another user", async () => {
     insertTitle("movie-1");
     insertIntegration("int-1", userId, "srv-1");

@@ -241,10 +241,8 @@
     "advancedFilters": "Filters"
   },
   "releases": {
-    "syncing": "Syncing...",
-    "sync": "Sync New Releases",
     "loading": "Loading...",
-    "empty": "No releases found. Click 'Sync New Releases' to fetch data from TMDB."
+    "empty": "No releases found."
   },
   "track": {
     "track": "Track",
