@@ -22,6 +22,7 @@ import {
 import { getTrackedTitleIds, upsertTitles } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
+import { syncFailureTotal } from "../metrics";
 import { ok, err } from "./response";
 import { toCanonicalGenre, expandGenreIds } from "../genres";
 import { CONFIG } from "../config";
@@ -177,7 +178,9 @@ app.get("/", async (c) => {
             } else {
               return parseTvDetails(await fetchTvDetails(tmdbId));
             }
-          } catch {
+          } catch (err) {
+            log.warn("TMDB enrichment failed for title", { titleId: t.tmdbId, err });
+            syncFailureTotal.inc({ source: "tmdb" });
             return t;
           }
         })

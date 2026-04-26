@@ -10,12 +10,15 @@ import { parsePlexGuids, parseLegacyGuid, toRemindarrTitleId } from "./guid";
 import { watchTitle, watchEpisodesBulk, getEpisodeIdsBySE } from "../db/repository";
 import { updateIntegrationSyncStatus, disableIntegration } from "../db/repository";
 import type { PlexConfig } from "../db/repository/integrations";
+import { syncFailureTotal } from "../metrics";
 
 const log = logger.child({ module: "plex-sync" });
 
 export type SyncResult = {
   moviesMarked: number;
   episodesMarked: number;
+  succeeded: number;
+  failed: Array<{ id: string | number; error: string }>;
 };
 
 type IntegrationRow = {
@@ -30,6 +33,8 @@ export async function syncPlexWatched(integration: IntegrationRow): Promise<Sync
 
   let moviesMarked = 0;
   let episodesMarked = 0;
+  let succeeded = 0;
+  const failed: Array<{ id: string | number; error: string }> = [];
 
   try {
     const sections = await getLibrarySections(serverUrl, plexToken);
@@ -46,8 +51,11 @@ export async function syncPlexWatched(integration: IntegrationRow): Promise<Sync
           try {
             await watchTitle(titleId, userId);
             moviesMarked++;
-          } catch {
-            // Title not in Remindarr DB — skip silently
+            succeeded++;
+          } catch (err) {
+            log.warn("Plex title sync failed", { titleId, err });
+            failed.push({ id: titleId, error: err instanceof Error ? err.message : String(err) });
+            syncFailureTotal.inc({ source: "plex" });
           }
         }
       }
@@ -92,8 +100,8 @@ export async function syncPlexWatched(integration: IntegrationRow): Promise<Sync
     }
 
     await updateIntegrationSyncStatus(integrationId, new Date().toISOString(), null);
-    log.info("Plex sync complete", { integrationId, moviesMarked, episodesMarked });
-    return { moviesMarked, episodesMarked };
+    log.info("Plex sync complete", { integrationId, moviesMarked, episodesMarked, succeeded, failedCount: failed.length });
+    return { moviesMarked, episodesMarked, succeeded, failed };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
 
