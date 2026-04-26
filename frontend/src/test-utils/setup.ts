@@ -1,5 +1,8 @@
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
+// Polyfill Vite define constants for the test environment
+(globalThis as unknown as Record<string, unknown>)["__APP_VERSION__"] = "test";
+
 // Save Bun's native implementations before happy-dom overwrites them
 const nativeFetch = globalThis.fetch;
 const nativeRequest = globalThis.Request;

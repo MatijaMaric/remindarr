@@ -44,6 +44,11 @@ export const pwaOptions: Partial<VitePWAOptions> = {
 };
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(
+      process.env.VITE_SENTRY_RELEASE ?? `dev-${Date.now()}`
+    ),
+  },
   plugins: [
     react(),
     tailwindcss(),

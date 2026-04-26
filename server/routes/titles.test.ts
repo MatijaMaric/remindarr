@@ -234,6 +234,12 @@ describe("GET /titles/genres", () => {
     expect(body.genres).not.toContain("Action");
     expect(body.genres).toContain("Drama");
   });
+
+  it("sets Cache-Control header", async () => {
+    const res = await app.request("/titles/genres");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toContain("max-age=86400");
+  });
 });
 
 describe("GET /titles/languages", () => {
@@ -247,6 +253,12 @@ describe("GET /titles/languages", () => {
 
     const body = await res.json();
     expect(body.languages).toContain("en");
+  });
+
+  it("sets Cache-Control header", async () => {
+    const res = await app.request("/titles/languages");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toContain("max-age=86400");
   });
 });
 
@@ -266,5 +278,11 @@ describe("GET /titles/providers", () => {
     expect(body.providers[0].name).toBe("Netflix");
     expect(body.regionProviderIds).toBeDefined();
     expect(body.regionProviderIds).toContain(8);
+  });
+
+  it("sets Cache-Control header", async () => {
+    const res = await app.request("/titles/providers");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toContain("max-age=86400");
   });
 });
