@@ -8,6 +8,7 @@ import ProgressCard from "../components/profile/ProgressCard";
 import TopGenresCard from "../components/profile/TopGenresCard";
 import FriendsCard from "../components/profile/FriendsCard";
 import MonthlyActivityCard from "../components/profile/MonthlyActivityCard";
+import RecentActivityCard from "../components/profile/RecentActivityCard";
 import StatusBreakdown from "../components/profile/StatusBreakdown";
 import WatchlistTabs, {
   useWatchlistFilters,
@@ -121,6 +122,7 @@ export default function UserProfilePage() {
               <>
                 {monthly.length > 0 && <MonthlyActivityCard monthly={monthly} />}
                 <StatusBreakdown byStatus={shows_by_status} />
+                <RecentActivityCard username={user.username} />
                 <WatchlistTabs
                   active={activeTab}
                   onChange={setActiveTab}

@@ -15,6 +15,7 @@ import type {
   AdminUser,
   AdminUsersResponse,
   UserProfileResponse,
+  ActivityFeedResponse,
   UserSummary,
   TitleRatingResponse,
   EpisodeRatingResponse,
@@ -204,6 +205,17 @@ export async function importCsv(file: File): Promise<{ imported: number; failed:
 
 export async function getUserProfile(username: string): Promise<UserProfileResponse> {
   return fetchJson(`/user/${encodeURIComponent(username)}`);
+}
+
+export async function getUserActivity(
+  username: string,
+  options: { limit?: number; before?: string } = {},
+): Promise<ActivityFeedResponse> {
+  const params = new URLSearchParams();
+  if (options.limit) params.set("limit", String(options.limit));
+  if (options.before) params.set("before", options.before);
+  const qs = params.toString();
+  return fetchJson(`/user/${encodeURIComponent(username)}/activity${qs ? `?${qs}` : ""}`);
 }
 
 export async function updateMyBio(bio: string | null): Promise<{ bio: string | null }> {

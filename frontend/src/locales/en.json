@@ -354,6 +354,44 @@
         "onHold": "On hold",
         "planToWatch": "Plan to watch",
         "dropped": "Dropped"
+      },
+      "activity": {
+        "title": "Recent activity",
+        "empty": "Nothing here yet.",
+        "loadMore": "Load more →",
+        "loading": "Loading…",
+        "badge": {
+          "rating": "Rating",
+          "watched": "Watched",
+          "review": "Review",
+          "track": "Track",
+          "recommendation": "Recommended"
+        },
+        "summary": {
+          "ratedTitle": "rated {{title}}",
+          "ratedEpisode": "rated S{{season}}·E{{episode}}{{episodeName}}",
+          "watchedTitle": "watched {{title}}{{runtime}}",
+          "watchedEpisode": "watched S{{season}}·E{{episode}}{{episodeName}}{{runtime}}",
+          "trackedDefault": "added to watchlist",
+          "trackedStatus": "added to {{status}}",
+          "recommendationDefault": "recommended {{title}}"
+        },
+        "ratingLabel": {
+          "HATE": "hated it",
+          "DISLIKE": "didn't like it",
+          "LIKE": "liked it",
+          "LOVE": "loved it"
+        },
+        "runtimeMinutes": "· {{minutes}} min",
+        "time": {
+          "now": "just now",
+          "minutes": "{{count}}m ago",
+          "hours": "{{count}}h ago",
+          "days": "{{count}}d ago",
+          "weeks": "{{count}}w ago",
+          "months": "{{count}}mo ago",
+          "years": "{{count}}y ago"
+        }
       }
     }
   },

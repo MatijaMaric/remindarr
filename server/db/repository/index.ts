@@ -72,7 +72,7 @@ export type { UserStatus, NotificationMode } from "./tracked";
 
 export { getTagsForUser, getTagsForTitle, setTags } from "./tags";
 
-export { getUserPublicProfile, updateProfilePublic, updateUserBio } from "./profile";
+export { getUserPublicProfile, updateProfilePublic, updateUserBio, getUserVisibilityByUsername } from "./profile";
 export type { ProfileVisibility } from "./profile";
 
 export {
@@ -190,6 +190,9 @@ export {
   deleteRecommendation,
   getUnreadCount,
 } from "./recommendations";
+
+export { getUserActivity } from "./activity";
+export type { ActivityEvent, ActivityType, ActivityTitleRef, ActivityEpisodeRef } from "./activity";
 
 export {
   createInvitation,
