@@ -56,6 +56,7 @@ const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
 const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
+const KioskPage = lazyWithRetry(() => import("./pages/KioskPage"));
 
 // Wraps a route element in an inline ErrorBoundary so a single page crash
 // shows a contained fallback instead of taking down the whole shell.
@@ -78,6 +79,7 @@ export default function App() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const isReelsPage = location.pathname === "/reels";
+  const isKioskPage = location.pathname.startsWith("/kiosk/");
   usePushSubscriptionSync();
 
   const { theme } = useTheme();
@@ -87,7 +89,7 @@ export default function App() {
 
   return (
     <div
-      className={`bg-zinc-950 text-zinc-100 ${isReelsPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}
+      className={`bg-zinc-950 text-zinc-100 ${isReelsPage || isKioskPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}
       style={{ background: "var(--bg-app)", color: "var(--text-app)" }}
     >
       {/* Skip to main content link */}
@@ -97,8 +99,8 @@ export default function App() {
       >
         {t("nav.skipToMain")}
       </a>
-      {/* Hide top nav on reels page for mobile */}
-      <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isReelsPage ? "hidden sm:block" : ""}`}>
+      {/* Hide top nav on reels page (mobile) and kiosk page (all sizes) */}
+      <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isKioskPage ? "hidden" : isReelsPage ? "hidden sm:block" : ""}`}>
         <div className="max-w-[1440px] mx-auto px-4 flex items-center gap-8 h-14">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
@@ -196,9 +198,9 @@ export default function App() {
         </div>
       </nav>
       <ScrollToTop />
-      <InstallPrompt />
-      <main id="main-content" className={isReelsPage ? "" : "max-w-[1440px] mx-auto px-4 py-6 pb-20 sm:pb-6"}>
-        {user && <NotificationPrompt />}
+      {!isKioskPage && <InstallPrompt />}
+      <main id="main-content" className={isReelsPage || isKioskPage ? "" : "max-w-[1440px] mx-auto px-4 py-6 pb-20 sm:pb-6"}>
+        {user && !isKioskPage && <NotificationPrompt />}
         <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
           <Routes>
             <Route path="/" element={<HomeRoute />} />
@@ -221,11 +223,12 @@ export default function App() {
             <Route path="/title/:id/season/:season" element={<Page><SeasonDetailPage /></Page>} />
             <Route path="/title/:id/season/:season/episode/:episode" element={<Page><EpisodeDetailPage /></Page>} />
             <Route path="/person/:personId" element={<Page><PersonPage /></Page>} />
+            <Route path="/kiosk/:token" element={<Page><KioskPage /></Page>} />
             <Route path="*" element={<Page><NotFoundPage /></Page>} />
           </Routes>
         </Suspense>
       </main>
-      <footer className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage ? "hidden" : "hidden sm:block"}`}>
+      <footer className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden sm:block"}`}>
         <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>
           <a
@@ -239,7 +242,7 @@ export default function App() {
           </a>
         </div>
       </footer>
-      <BottomTabBar />
+      {!isKioskPage && <BottomTabBar />}
       <OfflineIndicator />
       <Toaster theme={theme === "light" ? "light" : "dark"} position="bottom-center" richColors />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

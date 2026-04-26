@@ -218,6 +218,13 @@
       "when": 1777680000000,
       "tag": "0030_users_bio",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1777766400000,
+      "tag": "0031_users_kiosk_token",
+      "breakpoints": true
     }
   ]
 }

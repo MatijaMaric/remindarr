@@ -151,6 +151,7 @@ function IntegrationsTab() {
     <>
       <PlexSection />
       <CalendarFeedSection />
+      <KioskSection />
       <WatchlistSection />
       <CsvImportSection />
     </>
@@ -1985,6 +1986,95 @@ function CalendarFeedSection() {
       ) : (
         <SButton onClick={handleRegenerate} disabled={regenerating}>
           {regenerating ? t("feed.generating") : t("feed.generate")}
+        </SButton>
+      )}
+    </SCard>
+  );
+}
+
+function KioskSection() {
+  const { t } = useTranslation();
+  const [token, setToken] = useState<string | null>(null);
+  const [loadingToken, setLoadingToken] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    api.getKioskToken()
+      .then(({ token: tok }) => { setToken(tok); setLoadingToken(false); })
+      .catch(() => setLoadingToken(false));
+  }, []);
+
+  const kioskUrl = token ? `${window.location.origin}/kiosk/${token}` : null;
+
+  async function handleRegenerate() {
+    setRegenerating(true);
+    try {
+      const { token: newToken } = await api.regenerateKioskToken();
+      setToken(newToken);
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  async function handleRevoke() {
+    setRevoking(true);
+    try {
+      await api.revokeKioskToken();
+      setToken(null);
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!kioskUrl) return;
+    await navigator.clipboard.writeText(kioskUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <SCard title={t("kiosk.title")} subtitle={t("kiosk.description")}>
+      {loadingToken ? (
+        <p className="text-sm text-zinc-500">{t("common.loading")}</p>
+      ) : token ? (
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <SInput
+              value={kioskUrl!}
+              mono
+              readOnly
+              aria-label={t("kiosk.title")}
+            />
+            <div className="flex gap-2 shrink-0">
+              <SButton variant="ghost" small onClick={handleCopy}>
+                {copied ? t("kiosk.copied") : t("kiosk.copyUrl")}
+              </SButton>
+              <SButton
+                variant="ghost"
+                small
+                onClick={handleRegenerate}
+                disabled={regenerating}
+              >
+                {regenerating ? t("kiosk.regenerating") : t("kiosk.regenerate")}
+              </SButton>
+              <SButton
+                variant="ghost"
+                small
+                onClick={handleRevoke}
+                disabled={revoking}
+              >
+                {revoking ? t("kiosk.revoking") : t("kiosk.revoke")}
+              </SButton>
+            </div>
+          </div>
+          <SHint kind="info">{t("kiosk.warning")}</SHint>
+        </div>
+      ) : (
+        <SButton onClick={handleRegenerate} disabled={regenerating}>
+          {regenerating ? t("kiosk.generating") : t("kiosk.generate")}
         </SButton>
       )}
     </SCard>

@@ -68,6 +68,7 @@ import healthRoutes from "./routes/health";
 import statsRoutes from "./routes/stats";
 import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
+import kioskRoutes from "./routes/kiosk";
 import importRoutes from "./routes/import";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
@@ -348,6 +349,10 @@ function createApp(env: Env) {
   // Calendar feed
   app.use("/api/feed/token*", requireAuth);
   app.route("/api/feed", feedRoutes);
+
+  // Kiosk — /:token is public (token-authenticated); /token endpoints require session
+  app.use("/api/kiosk/token*", requireAuth);
+  app.route("/api/kiosk", kioskRoutes);
 
   // Admin routes
   app.use("/api/admin/*", requireAuth, requireAdmin);

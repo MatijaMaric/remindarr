@@ -161,6 +161,7 @@ export const users = sqliteTable(
     profileVisibility: text("profile_visibility").notNull().default("private"),
     homepageLayout: text("homepage_layout"),
     feedToken: text("feed_token"),
+    kioskToken: text("kiosk_token"),
     bio: text("bio"),
   },
   (table) => [
@@ -169,6 +170,7 @@ export const users = sqliteTable(
       table.providerSubject
     ),
     uniqueIndex("users_feed_token_idx").on(table.feedToken),
+    uniqueIndex("users_kiosk_token_idx").on(table.kioskToken),
   ]
 );
 
