@@ -205,6 +205,26 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
   });
 }
 
+export async function getUserVisibilityByUsername(username: string) {
+  return traceDbQuery("getUserVisibilityByUsername", async () => {
+    const db = getDb();
+    const row = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        profile_public: users.profilePublic,
+        profile_visibility: users.profileVisibility,
+      })
+      .from(users)
+      .where(sql`lower(${users.username}) = lower(${username})`)
+      .get();
+    if (!row) return null;
+    const visibility = (row.profile_visibility
+      || (row.profile_public ? "public" : "private")) as ProfileVisibility;
+    return { id: row.id, username: row.username, visibility };
+  });
+}
+
 export async function updateUserBio(userId: string, bio: string | null) {
   return traceDbQuery("updateUserBio", async () => {
     const db = getDb();

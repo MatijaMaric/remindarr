@@ -1,6 +1,14 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getUserPublicProfile, updateProfilePublic, searchUsers, updateUserBio } from "../db/repository";
+import {
+  getUserPublicProfile,
+  updateProfilePublic,
+  searchUsers,
+  updateUserBio,
+  getUserActivity,
+  getUserVisibilityByUsername,
+  areMutualFollowers,
+} from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
@@ -51,6 +59,41 @@ app.get("/:username", async (c) => {
     ...profile,
     is_own_profile: isOwnProfile,
   });
+});
+
+const activityQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+  before: z.string().min(1).optional(),
+});
+
+app.get("/:username/activity", zValidator("query", activityQuerySchema), async (c) => {
+  const username = c.req.param("username");
+  const viewer = c.get("user");
+  const profileUser = await getUserVisibilityByUsername(username);
+  if (!profileUser) {
+    return err(c, "User not found", 404);
+  }
+
+  const isOwnProfile = viewer?.id === profileUser.id;
+
+  let canView: boolean;
+  if (isOwnProfile) {
+    canView = true;
+  } else if (profileUser.visibility === "public") {
+    canView = true;
+  } else if (profileUser.visibility === "friends_only" && viewer?.id) {
+    canView = await areMutualFollowers(viewer.id, profileUser.id);
+  } else {
+    canView = false;
+  }
+
+  if (!canView) {
+    return ok(c, { activities: [], has_more: false, next_cursor: null });
+  }
+
+  const { limit, before } = c.req.valid("query");
+  const result = await getUserActivity(profileUser.id, { limit, before });
+  return ok(c, result);
 });
 
 export default app;
