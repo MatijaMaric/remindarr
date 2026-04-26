@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn, afterEach } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle, makeParsedOffer } from "../../test-utils/fixtures";
 import {
@@ -8,10 +8,14 @@ import {
   upsertTitleGenres,
   mergeOffers,
   upsertScores,
+  getGenres,
+  getLanguages,
+  invalidateFilterCaches,
 } from "./titles";
 import { getDb } from "../schema";
 import { titles, providers, offers, scores, titleGenres } from "../schema";
 import { eq } from "drizzle-orm";
+import * as tracing from "../../tracing";
 
 beforeEach(() => {
   setupTestDb();
@@ -370,5 +374,40 @@ describe("upsertScores", () => {
     expect(row?.imdbScore).toBeNull();
     expect(row?.imdbVotes).toBeNull();
     expect(row?.tmdbScore).toBeNull();
+  });
+});
+
+describe("getGenres / getLanguages — single-flight cache stampede prevention", () => {
+  let traceSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    invalidateFilterCaches();
+    traceSpy = spyOn(tracing, "traceDbQuery").mockImplementation(
+      (_name: any, fn: any) => fn(),
+    );
+  });
+
+  afterEach(() => {
+    traceSpy.mockRestore();
+    invalidateFilterCaches();
+  });
+
+  it("getGenres: 10 concurrent callers with empty cache trigger exactly one DB query", async () => {
+    const calls = Array.from({ length: 10 }, () => getGenres());
+    await Promise.all(calls);
+    expect(traceSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("getLanguages: 10 concurrent callers with empty cache trigger exactly one DB query", async () => {
+    const calls = Array.from({ length: 10 }, () => getLanguages());
+    await Promise.all(calls);
+    expect(traceSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("getGenres: returns cached value on second call without hitting DB", async () => {
+    await getGenres(); // prime the cache
+    traceSpy.mockClear();
+    await getGenres();
+    expect(traceSpy).not.toHaveBeenCalled();
   });
 });

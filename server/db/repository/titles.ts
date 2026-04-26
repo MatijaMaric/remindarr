@@ -21,6 +21,11 @@ interface FilterCache<T> {
 let genresCache: FilterCache<string[]> | null = null;
 let languagesCache: FilterCache<string[]> | null = null;
 
+// In-flight promise refs prevent thundering-herd: concurrent callers that
+// arrive while the cache is expired all await the same refresh promise.
+let genresInflight: Promise<string[]> | null = null;
+let languagesInflight: Promise<string[]> | null = null;
+
 export function invalidateFilterCaches(): void {
   genresCache = null;
   languagesCache = null;
@@ -670,13 +675,14 @@ export async function getProviders() {
   });
 }
 
-export async function getGenres(): Promise<string[]> {
+export function getGenres(): Promise<string[]> {
   const now = Date.now();
   if (genresCache && now < genresCache.expiresAt) {
-    return genresCache.value;
+    return Promise.resolve(genresCache.value);
   }
+  if (genresInflight) return genresInflight;
 
-  const result = await traceDbQuery("getGenres", async () => {
+  genresInflight = traceDbQuery("getGenres", async () => {
     const db = getDb();
     const rows = await db
       .selectDistinct({ genre: titleGenres.genre })
@@ -685,19 +691,24 @@ export async function getGenres(): Promise<string[]> {
       .all();
     const rawGenres = rows.map((r) => r.genre);
     return [...new Set(rawGenres.map(toCanonicalGenre))].sort();
+  }).then((result) => {
+    genresCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
+    return result;
+  }).finally(() => {
+    genresInflight = null;
   });
 
-  genresCache = { value: result, expiresAt: now + CACHE_TTL_MS };
-  return result;
+  return genresInflight;
 }
 
-export async function getLanguages(): Promise<string[]> {
+export function getLanguages(): Promise<string[]> {
   const now = Date.now();
   if (languagesCache && now < languagesCache.expiresAt) {
-    return languagesCache.value;
+    return Promise.resolve(languagesCache.value);
   }
+  if (languagesInflight) return languagesInflight;
 
-  const result = await traceDbQuery("getLanguages", async () => {
+  languagesInflight = traceDbQuery("getLanguages", async () => {
     const db = getDb();
     const rows = await db
       .selectDistinct({ original_language: titles.originalLanguage })
@@ -706,8 +717,12 @@ export async function getLanguages(): Promise<string[]> {
       .orderBy(asc(titles.originalLanguage))
       .all();
     return rows.map((r) => r.original_language!);
+  }).then((result) => {
+    languagesCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
+    return result;
+  }).finally(() => {
+    languagesInflight = null;
   });
 
-  languagesCache = { value: result, expiresAt: now + CACHE_TTL_MS };
-  return result;
+  return languagesInflight;
 }
