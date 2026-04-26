@@ -473,56 +473,68 @@ export default function BrowsePage() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">Active</span>
           {type.map((t) => (
-            <span
+            <button
               key={t}
+              type="button"
               onClick={() => setType(type.filter((v) => v !== t))}
+              aria-label={`Remove ${t === "MOVIE" ? "Movies" : "Shows"} filter`}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
             >
               {t === "MOVIE" ? "Movies" : "Shows"} ×
-            </span>
+            </button>
           ))}
           {genre.map((g) => (
-            <span
+            <button
               key={g}
+              type="button"
               onClick={() => setGenre(genre.filter((v) => v !== g))}
+              aria-label={`Remove ${g} filter`}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
             >
               {g} ×
-            </span>
+            </button>
           ))}
           {provider.map((p) => (
-            <span
+            <button
               key={p}
+              type="button"
               onClick={() => setProvider(provider.filter((v) => v !== p))}
+              aria-label={`Remove ${filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} filter`}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
             >
               {filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} ×
-            </span>
+            </button>
           ))}
           {language.map((l) => (
-            <span
+            <button
               key={l}
+              type="button"
               onClick={() => setLanguage(language.filter((v) => v !== l))}
+              aria-label={`Remove ${l} language filter`}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
             >
               {l} ×
-            </span>
+            </button>
           ))}
           {(browseYearMin !== "" || browseYearMax !== "") && (
-            <span
+            <button
+              type="button"
               onClick={() => setBrowseYearRange("", "")}
+              aria-label="Remove year range filter"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
             >
               {browseYearMin || "…"}–{browseYearMax || "…"} ×
-            </span>
+            </button>
           )}
           {browseMinRating !== "" && (
-            <span
+            <button
+              type="button"
               onClick={() => setBrowseMinRating("")}
+              aria-label="Remove minimum rating filter"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
             >
               ★ {browseMinRating}+ ×
-            </span>
+            </button>
           )}
         </div>
       )}
