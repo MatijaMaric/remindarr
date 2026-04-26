@@ -13,6 +13,7 @@ import { useApiCall } from "../hooks/useApiCall";
 import { useAuth } from "../context/AuthContext";
 import ShareButton from "../components/ShareButton";
 import { posterUrl as mkPosterUrl, stillUrl as mkStillUrl } from "../lib/tmdb-images";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -424,14 +425,16 @@ export default function SeasonDetailPage() {
 
       {/* Season Cast */}
       {tmdb?.credits?.cast && tmdb.credits.cast.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">Season Cast</h2>
-          <ScrollableRow className="gap-4 pb-2">
-            {tmdb.credits.cast.slice(0, 15).map((c) => (
-              <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
-            ))}
-          </ScrollableRow>
-        </section>
+        <SectionErrorBoundary label="cast">
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-white">Season Cast</h2>
+            <ScrollableRow className="gap-4 pb-2">
+              {tmdb.credits.cast.slice(0, 15).map((c) => (
+                <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
+              ))}
+            </ScrollableRow>
+          </section>
+        </SectionErrorBoundary>
       )}
     </div>
   );
