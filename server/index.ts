@@ -207,8 +207,9 @@ app.use("/api/search/*", optionalAuth);
 app.use("/api/search", optionalAuth);
 app.route("/api/search", searchRoutes);
 
-app.use("/api/browse/*", optionalAuth);
-app.use("/api/browse", optionalAuth);
+const browseRateLimiter = rateLimiter({ limit: 30, windowMs: 60_000 });
+app.use("/api/browse/*", browseRateLimiter, optionalAuth);
+app.use("/api/browse", browseRateLimiter, optionalAuth);
 app.route("/api/browse", browseRoutes);
 
 app.use("/api/calendar/*", optionalAuth);
@@ -300,8 +301,9 @@ app.use("/api/jobs", requireAuth, requireAdmin);
 app.route("/api/jobs", jobsRoutes);
 
 // Detail pages (optionalAuth for is_tracked)
-app.use("/api/details/*", optionalAuth);
-app.use("/api/details", optionalAuth);
+const detailsRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+app.use("/api/details/*", detailsRateLimiter, optionalAuth);
+app.use("/api/details", detailsRateLimiter, optionalAuth);
 app.route("/api/details", detailsRoutes);
 
 // Sync (admin only — rate limited + require admin)

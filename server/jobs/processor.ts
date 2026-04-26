@@ -232,11 +232,21 @@ export async function processPendingJobs(): Promise<number> {
       continue;
     }
 
-    // Claim the job
-    await db
+    // Claim the job atomically — the status check in WHERE prevents a second
+    // concurrent CF scheduled invocation from executing the same job if both
+    // selected it as "pending" before either claimed it. .returning() is used
+    // instead of rowsAffected because the bun:sqlite Drizzle driver doesn't
+    // populate rowsAffected reliably; an empty result means 0 rows matched.
+    const [claimed] = await db
       .update(jobs)
       .set({ status: "running", startedAt: now, attempts: job.attempts + 1 })
-      .where(eq(jobs.id, job.id));
+      .where(and(eq(jobs.id, job.id), eq(jobs.status, "pending")))
+      .returning({ id: jobs.id });
+
+    if (!claimed) {
+      log.info("Job already claimed by concurrent invocation, skipping", { name: job.name, jobId: job.id });
+      continue;
+    }
 
     try {
       await handler(job.data);
@@ -303,7 +313,7 @@ export async function enqueueJobReturningId(name: string): Promise<number | null
     .get();
 
   if (existing) {
-    log.debug("Cron job already pending/running, skipping", { name });
+    log.info("Cron job already pending/running, skipping", { name });
     return null;
   }
 
