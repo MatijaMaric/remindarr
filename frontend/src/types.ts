@@ -564,6 +564,49 @@ export interface UserProfileResponse {
   is_following: boolean;
 }
 
+// ─── Activity Feed ───────────────────────────────────────────────────────────
+
+export type ActivityType =
+  | "rating_title"
+  | "rating_episode"
+  | "watched_title"
+  | "watched_episode"
+  | "tracked"
+  | "recommendation";
+
+export interface ActivityTitleRef {
+  id: string;
+  title: string;
+  object_type: "MOVIE" | "SHOW" | string;
+  poster_url: string | null;
+  runtime_minutes: number | null;
+}
+
+export interface ActivityEpisodeRef {
+  id: number;
+  season_number: number;
+  episode_number: number;
+  name: string | null;
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityType;
+  created_at: string;
+  title: ActivityTitleRef;
+  episode?: ActivityEpisodeRef;
+  rating?: "HATE" | "DISLIKE" | "LIKE" | "LOVE";
+  review?: string | null;
+  message?: string | null;
+  status?: "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null;
+}
+
+export interface ActivityFeedResponse {
+  activities: ActivityEvent[];
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
 // ─── Rating Types ────────────────────────────────────────────────────────────
 
 export type RatingValue = "HATE" | "DISLIKE" | "LIKE" | "LOVE";
