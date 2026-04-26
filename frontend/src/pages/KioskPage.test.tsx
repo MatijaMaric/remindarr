@@ -73,7 +73,7 @@ function makeQueueItem(overrides: Partial<KioskQueueItem> = {}): KioskQueueItem 
 const mockFetch = mock((_url: string, _init?: RequestInit) =>
   Promise.resolve({
     ok: true,
-    json: () => Promise.resolve({ data: makeData() }),
+    json: () => Promise.resolve(makeData()),
   } as Response)
 );
 
@@ -94,7 +94,7 @@ beforeEach(() => {
   mockFetch.mockImplementation((_url: string) =>
     Promise.resolve({
       ok: true,
-      json: () => Promise.resolve({ data: makeData() }),
+      json: () => Promise.resolve(makeData()),
     } as Response)
   );
 });
@@ -118,7 +118,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ meta: { household: "The Test Manor", fidelity: "rich", refresh_interval_seconds: 300, generated_at: new Date().toISOString() } }) }),
+        json: () => Promise.resolve(makeData({ meta: { household: "The Test Manor", fidelity: "rich", refresh_interval_seconds: 300, generated_at: new Date().toISOString() } })),
       } as Response)
     );
     render(<Wrapper />);
@@ -131,7 +131,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ airing_now: makeSlot() }) }),
+        json: () => Promise.resolve(makeData({ airing_now: makeSlot() })),
       } as Response)
     );
     render(<Wrapper />);
@@ -151,7 +151,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ releasing_today: [makeRelease()] }) }),
+        json: () => Promise.resolve(makeData({ releasing_today: [makeRelease()] })),
       } as Response)
     );
     render(<Wrapper />);
@@ -164,7 +164,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ unwatched_queue: [makeQueueItem()] }) }),
+        json: () => Promise.resolve(makeData({ unwatched_queue: [makeQueueItem()] })),
       } as Response)
     );
     render(<Wrapper />);
@@ -178,7 +178,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ unwatched_queue: [makeQueueItem({ air_date: oldDate })] }) }),
+        json: () => Promise.resolve(makeData({ unwatched_queue: [makeQueueItem({ air_date: oldDate })] })),
       } as Response)
     );
     render(<Wrapper />);
@@ -192,7 +192,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ unwatched_queue: [makeQueueItem({ air_date: recentDate })] }) }),
+        json: () => Promise.resolve(makeData({ unwatched_queue: [makeQueueItem({ air_date: recentDate })] })),
       } as Response)
     );
     render(<Wrapper />);
@@ -205,7 +205,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ meta: { household: "House", fidelity: "epaper", refresh_interval_seconds: 1800, generated_at: new Date().toISOString() } }) }),
+        json: () => Promise.resolve(makeData({ meta: { household: "House", fidelity: "epaper", refresh_interval_seconds: 1800, generated_at: new Date().toISOString() } })),
       } as Response)
     );
     render(<Wrapper search="?display=epaper" />);
@@ -218,7 +218,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ airing_now: makeSlot() }) }),
+        json: () => Promise.resolve(makeData({ airing_now: makeSlot() })),
       } as Response)
     );
     render(<Wrapper />);
@@ -272,7 +272,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string, _init?: RequestInit) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ airing_now: null, releasing_today: [makeRelease()] }) }),
+        json: () => Promise.resolve(makeData({ airing_now: null, releasing_today: [makeRelease()] })),
       } as Response)
     );
     render(<Wrapper />);
@@ -287,7 +287,7 @@ describe("KioskPage", () => {
     mockFetch.mockImplementation((_url: string, _init?: RequestInit) =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: makeData({ airing_now: null, releasing_today: [], unwatched_queue: [makeQueueItem()] }) }),
+        json: () => Promise.resolve(makeData({ airing_now: null, releasing_today: [], unwatched_queue: [makeQueueItem()] })),
       } as Response)
     );
     render(<Wrapper />);
