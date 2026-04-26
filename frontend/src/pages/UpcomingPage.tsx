@@ -22,7 +22,7 @@ export default function UpcomingPage() {
   const isMobile = useIsMobile();
 
   const { loading, error } = useApiCall(
-    () => api.getUpcomingEpisodes(),
+    (signal) => api.getUpcomingEpisodes(signal),
     [],
     {
       onSuccess: (data) => {

@@ -37,16 +37,21 @@ function PlexSection() {
   const [syncMovies, setSyncMovies] = useState(true);
   const [syncEpisodes, setSyncEpisodes] = useState(true);
 
-  const refresh = useCallback(() => {
-    api.getIntegrations()
+  const refresh = useCallback((signal?: AbortSignal) => {
+    api.getIntegrations(signal)
       .then((r) => {
+        if (signal?.aborted) return;
         setIntegrations(r.integrations.filter((i) => i.provider === "plex"));
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { if (!signal?.aborted) setLoading(false); });
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    const controller = new AbortController();
+    refresh(controller.signal);
+    return () => controller.abort();
+  }, [refresh]);
 
   useEffect(() => {
     if (step.type !== "waiting") return;
@@ -391,9 +396,11 @@ function CalendarFeedSection() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    api.getFeedToken()
-      .then(({ token: tok }) => { setToken(tok); setLoadingToken(false); })
-      .catch(() => setLoadingToken(false));
+    const controller = new AbortController();
+    api.getFeedToken(controller.signal)
+      .then(({ token: tok }) => { if (!controller.signal.aborted) { setToken(tok); setLoadingToken(false); } })
+      .catch(() => { if (!controller.signal.aborted) setLoadingToken(false); });
+    return () => controller.abort();
   }, []);
 
   const feedUrl = token ? `${window.location.origin}/api/feed/calendar.ics?token=${token}` : null;
@@ -462,9 +469,11 @@ function KioskSection() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    api.getKioskToken()
-      .then(({ token: tok }) => { setToken(tok); setLoadingToken(false); })
-      .catch(() => setLoadingToken(false));
+    const controller = new AbortController();
+    api.getKioskToken(controller.signal)
+      .then(({ token: tok }) => { if (!controller.signal.aborted) { setToken(tok); setLoadingToken(false); } })
+      .catch(() => { if (!controller.signal.aborted) setLoadingToken(false); });
+    return () => controller.abort();
   }, []);
 
   const kioskUrl = token ? `${window.location.origin}/kiosk/${token}` : null;

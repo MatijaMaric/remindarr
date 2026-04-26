@@ -34,15 +34,15 @@ export default function EpisodeDetailPage() {
   const { t } = useTranslation();
 
   const { data, loading, error } = useApiCall<EpisodeDetailsResponse>(
-    () => api.getEpisodeDetails(id!, Number(season), Number(episode)),
+    (signal) => api.getEpisodeDetails(id!, Number(season), Number(episode), signal),
     [id, season, episode],
   );
 
   const [episodeStatus, setEpisodeStatus] = useState<{ id: number; is_watched: boolean } | null>(null);
 
   useApiCall(
-    () => user && id && season
-      ? api.getSeasonEpisodeStatus(id, Number(season))
+    (signal) => user && id && season
+      ? api.getSeasonEpisodeStatus(id, Number(season), signal)
       : Promise.resolve({ episodes: [] }),
     [user, id, season, episode],
     {

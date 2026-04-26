@@ -22,7 +22,7 @@ export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { t } = useTranslation();
   const { data, loading, error, refetch } = useApiCall(
-    () => api.getUserProfile(username!),
+    (signal) => api.getUserProfile(username!, signal),
     [username],
   );
 

@@ -12,7 +12,7 @@ export default function BottomTabBar() {
   const { t } = useTranslation();
 
   const { data: countData } = useApiCall(
-    () => (user ? api.getUnreadRecommendationCount() : Promise.resolve({ count: 0 })),
+    (signal) => (user ? api.getUnreadRecommendationCount(signal) : Promise.resolve({ count: 0 })),
     [user?.id],
   );
 

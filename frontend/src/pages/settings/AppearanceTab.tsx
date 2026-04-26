@@ -36,9 +36,11 @@ function HomepageLayoutSection() {
   const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
-    api.getHomepageLayout()
-      .then((res) => setLayout(res.homepage_layout))
+    const controller = new AbortController();
+    api.getHomepageLayout(controller.signal)
+      .then((res) => { if (!controller.signal.aborted) setLayout(res.homepage_layout); })
       .catch(() => {});
+    return () => controller.abort();
   }, []);
 
   async function save(newLayout: HomepageSection[]) {

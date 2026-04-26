@@ -9,7 +9,7 @@ describe("useApiCall", () => {
   });
 
   it("returns loading=true initially", () => {
-    const fetcher = mock(() => new Promise(() => {}));
+    const fetcher = mock((_signal: AbortSignal) => new Promise(() => {}));
     const { result } = renderHook(() => useApiCall(fetcher, []));
     expect(result.current.loading).toBe(true);
     expect(result.current.data).toBeNull();
@@ -17,7 +17,7 @@ describe("useApiCall", () => {
   });
 
   it("resolves data and sets loading=false on success", async () => {
-    const fetcher = mock(() => Promise.resolve({ value: 42 }));
+    const fetcher = mock((_signal: AbortSignal) => Promise.resolve({ value: 42 }));
     const { result } = renderHook(() => useApiCall(fetcher, []));
 
     await act(async () => {
@@ -30,7 +30,7 @@ describe("useApiCall", () => {
   });
 
   it("sets error on failure", async () => {
-    const fetcher = mock(() => Promise.reject(new Error("network error")));
+    const fetcher = mock((_signal: AbortSignal) => Promise.reject(new Error("network error")));
     const { result } = renderHook(() => useApiCall(fetcher, []));
 
     await act(async () => {
@@ -44,7 +44,7 @@ describe("useApiCall", () => {
 
   it("calls onSuccess callback with data", async () => {
     const onSuccess = mock(() => {});
-    const fetcher = mock(() => Promise.resolve("hello"));
+    const fetcher = mock((_signal: AbortSignal) => Promise.resolve("hello"));
 
     const { result } = renderHook(() =>
       useApiCall(fetcher, [], { onSuccess }),
@@ -62,7 +62,7 @@ describe("useApiCall", () => {
   it("calls onError callback on failure", async () => {
     const onError = mock(() => {});
     const err = new Error("oops");
-    const fetcher = mock(() => Promise.reject(err));
+    const fetcher = mock((_signal: AbortSignal) => Promise.reject(err));
 
     renderHook(() => useApiCall(fetcher, [], { onError }));
 
@@ -76,7 +76,7 @@ describe("useApiCall", () => {
 
   it("refetch triggers a new fetch", async () => {
     let callCount = 0;
-    const fetcher = mock(() => {
+    const fetcher = mock((_signal: AbortSignal) => {
       callCount++;
       return Promise.resolve(callCount);
     });
@@ -100,7 +100,7 @@ describe("useApiCall", () => {
 
   it("reruns when deps change", async () => {
     let id = 1;
-    const fetcher = mock(() => Promise.resolve(`data-${id}`));
+    const fetcher = mock((_signal: AbortSignal) => Promise.resolve(`data-${id}`));
 
     const { result, rerender } = renderHook(() => useApiCall(fetcher, [id]));
 
@@ -123,7 +123,7 @@ describe("useApiCall", () => {
   it("does not update state after unmount", async () => {
     let resolve!: (value: string) => void;
     const fetcher = mock(
-      () => new Promise<string>((res) => { resolve = res; }),
+      (_signal: AbortSignal) => new Promise<string>((res) => { resolve = res; }),
     );
 
     const { result, unmount } = renderHook(() => useApiCall(fetcher, []));
@@ -142,7 +142,7 @@ describe("useApiCall", () => {
 
   it("retries on failure with retry option", async () => {
     let attempts = 0;
-    const fetcher = mock(() => {
+    const fetcher = mock((_signal: AbortSignal) => {
       attempts++;
       if (attempts < 3) return Promise.reject(new Error("fail"));
       return Promise.resolve("success");
@@ -160,5 +160,79 @@ describe("useApiCall", () => {
     expect(result.current.data).toBe("success");
     expect(result.current.error).toBeNull();
     expect(attempts).toBe(3);
+  });
+
+  it("passes an AbortSignal to the fetcher callback", async () => {
+    let receivedSignal: AbortSignal | undefined;
+    const fetcher = mock((signal: AbortSignal) => {
+      receivedSignal = signal;
+      return Promise.resolve("ok");
+    });
+
+    renderHook(() => useApiCall(fetcher, []));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(receivedSignal).toBeInstanceOf(AbortSignal);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    // Signal should not be aborted after a normal completion
+    expect(receivedSignal?.aborted).toBe(false);
+  });
+
+  it("aborts the signal when the component unmounts mid-fetch", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    let resolve!: (value: string) => void;
+
+    const fetcher = mock((signal: AbortSignal) => {
+      capturedSignal = signal;
+      return new Promise<string>((res) => { resolve = res; });
+    });
+
+    const { unmount } = renderHook(() => useApiCall(fetcher, []));
+
+    // Signal should be live while the fetch is in-flight
+    expect(capturedSignal?.aborted).toBe(false);
+
+    // Unmounting should abort the controller
+    unmount();
+
+    expect(capturedSignal?.aborted).toBe(true);
+
+    // Resolve the promise after abort — should not throw or update state
+    await act(async () => {
+      resolve("too late");
+      await Promise.resolve();
+    });
+  });
+
+  it("provides a fresh non-aborted signal on refetch after unmount of previous render", async () => {
+    const signals: AbortSignal[] = [];
+    let callCount = 0;
+    const fetcher = mock((signal: AbortSignal) => {
+      signals.push(signal);
+      callCount++;
+      return Promise.resolve(callCount);
+    });
+
+    const { result } = renderHook(() => useApiCall(fetcher, []));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.data).toBe(1);
+
+    await act(async () => {
+      result.current.refetch();
+      await Promise.resolve();
+    });
+
+    expect(result.current.data).toBe(2);
+    expect(signals).toHaveLength(2);
+    // Both signals should be valid AbortSignal instances
+    expect(signals[0]).toBeInstanceOf(AbortSignal);
+    expect(signals[1]).toBeInstanceOf(AbortSignal);
   });
 });

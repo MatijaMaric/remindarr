@@ -45,17 +45,19 @@ function BackgroundJobsSection() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  const refresh = useCallback(() => {
-    api.getJobs().then((d) => {
+  const refresh = useCallback((signal?: AbortSignal) => {
+    api.getJobs(signal).then((d) => {
+      if (signal?.aborted) return;
       setData(d);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { if (!signal?.aborted) setLoading(false); });
   }, []);
 
   useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 15000);
-    return () => clearInterval(interval);
+    const controller = new AbortController();
+    refresh(controller.signal);
+    const interval = setInterval(() => refresh(), 15000);
+    return () => { controller.abort(); clearInterval(interval); };
   }, [refresh]);
 
   async function handleTrigger(name: string) {
@@ -255,7 +257,9 @@ function AdminSection() {
   const [redirectUri, setRedirectUri] = useState("");
 
   useEffect(() => {
-    api.getAdminSettings().then((data) => {
+    const controller = new AbortController();
+    api.getAdminSettings(controller.signal).then((data) => {
+      if (controller.signal.aborted) return;
       setSettings(data);
       setIssuerUrl(data.oidc.issuer_url.source !== "env" ? data.oidc.issuer_url.value : "");
       setClientId(data.oidc.client_id.source !== "env" ? data.oidc.client_id.value : "");
@@ -266,7 +270,8 @@ function AdminSection() {
           : ""
       );
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   async function handleSave(e: React.FormEvent) {

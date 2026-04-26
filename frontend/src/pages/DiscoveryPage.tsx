@@ -312,7 +312,7 @@ export default function DiscoveryPage() {
   const [tab, setTab] = useState<"foryou" | "activity">("foryou");
 
   const { loading, error } = useApiCall(
-    () => api.getRecommendations(),
+    (signal) => api.getRecommendations(undefined, undefined, signal),
     [],
     {
       onSuccess: (data) => {
@@ -322,7 +322,7 @@ export default function DiscoveryPage() {
   );
 
   const { data: countData } = useApiCall(
-    () => api.getUnreadRecommendationCount(),
+    (signal) => api.getUnreadRecommendationCount(signal),
     [],
   );
 

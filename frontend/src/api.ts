@@ -77,7 +77,7 @@ export async function getTitles(params: {
   excludeTracked?: boolean;
   limit?: number;
   offset?: number;
-} = {}): Promise<{ titles: Title[]; count: number }> {
+} = {}, signal?: AbortSignal): Promise<{ titles: Title[]; count: number }> {
   const qs = new URLSearchParams();
   if (params.daysBack != null) qs.set("daysBack", String(params.daysBack));
   if (params.type) qs.set("type", params.type);
@@ -87,7 +87,7 @@ export async function getTitles(params: {
   if (params.excludeTracked) qs.set("excludeTracked", "1");
   if (params.limit != null) qs.set("limit", String(params.limit));
   if (params.offset != null) qs.set("offset", String(params.offset));
-  return fetchJson(`/titles?${qs}`);
+  return fetchJson(`/titles?${qs}`, { signal });
 }
 
 export async function searchTitles(
@@ -98,7 +98,8 @@ export async function searchTitles(
     minRating?: number;
     language?: string;
     type?: "MOVIE" | "SHOW";
-  }
+  },
+  signal?: AbortSignal,
 ): Promise<{ titles: SearchTitle[]; count: number }> {
   const qs = new URLSearchParams();
   qs.set("q", query);
@@ -107,7 +108,7 @@ export async function searchTitles(
   if (filters?.minRating != null) qs.set("min_rating", String(filters.minRating));
   if (filters?.language) qs.set("language", filters.language);
   if (filters?.type) qs.set("type", filters.type);
-  return fetchJson(`/search?${qs}`);
+  return fetchJson(`/search?${qs}`, { signal });
 }
 
 export async function browseTitles(params: {
@@ -120,7 +121,7 @@ export async function browseTitles(params: {
   yearMin?: number;
   yearMax?: number;
   minRating?: number;
-}): Promise<{
+}, signal?: AbortSignal): Promise<{
   titles: SearchTitle[];
   page: number;
   totalPages: number;
@@ -141,7 +142,7 @@ export async function browseTitles(params: {
   if (params.yearMin != null) qs.set("year_min", String(params.yearMin));
   if (params.yearMax != null) qs.set("year_max", String(params.yearMax));
   if (params.minRating != null) qs.set("min_rating", String(params.minRating));
-  return fetchJson(`/browse?${qs}`);
+  return fetchJson(`/browse?${qs}`, { signal });
 }
 
 export async function syncReleases(daysBack = 30, type?: string): Promise<{ success: boolean; count: number; message: string }> {
@@ -171,8 +172,8 @@ export async function untrackTitle(id: string): Promise<void> {
   });
 }
 
-export async function getTrackedTitles(): Promise<{ titles: (Title & { public: boolean })[]; count: number; profile_public: boolean; profile_visibility: string }> {
-  return fetchJson("/track");
+export async function getTrackedTitles(signal?: AbortSignal): Promise<{ titles: (Title & { public: boolean })[]; count: number; profile_public: boolean; profile_visibility: string }> {
+  return fetchJson("/track", { signal });
 }
 
 export async function exportWatchlist(): Promise<void> {
@@ -204,19 +205,20 @@ export async function importCsv(file: File): Promise<{ imported: number; failed:
 
 // ─── User Profile ──────────────────────────────────────────────────────────
 
-export async function getUserProfile(username: string): Promise<UserProfileResponse> {
-  return fetchJson(`/user/${encodeURIComponent(username)}`);
+export async function getUserProfile(username: string, signal?: AbortSignal): Promise<UserProfileResponse> {
+  return fetchJson(`/user/${encodeURIComponent(username)}`, { signal });
 }
 
 export async function getUserActivity(
   username: string,
   options: { limit?: number; before?: string } = {},
+  signal?: AbortSignal,
 ): Promise<ActivityFeedResponse> {
   const params = new URLSearchParams();
   if (options.limit) params.set("limit", String(options.limit));
   if (options.before) params.set("before", options.before);
   const qs = params.toString();
-  return fetchJson(`/user/${encodeURIComponent(username)}/activity${qs ? `?${qs}` : ""}`);
+  return fetchJson(`/user/${encodeURIComponent(username)}/activity${qs ? `?${qs}` : ""}`, { signal });
 }
 
 export async function updateMyBio(bio: string | null): Promise<{ bio: string | null }> {
@@ -226,8 +228,8 @@ export async function updateMyBio(bio: string | null): Promise<{ bio: string | n
   });
 }
 
-export async function getActivitySettings(): Promise<ActivitySettings> {
-  return fetchJson("/user/me/activity-settings");
+export async function getActivitySettings(signal?: AbortSignal): Promise<ActivitySettings> {
+  return fetchJson("/user/me/activity-settings", { signal });
 }
 
 export async function updateActivitySettings(
@@ -291,43 +293,44 @@ export async function resolveImdb(url: string): Promise<{ success: boolean; titl
   });
 }
 
-export async function getProviders(): Promise<{ providers: Provider[]; regionProviderIds: number[] }> {
-  return fetchJson("/titles/providers");
+export async function getProviders(signal?: AbortSignal): Promise<{ providers: Provider[]; regionProviderIds: number[] }> {
+  return fetchJson("/titles/providers", { signal });
 }
 
-export async function getGenres(): Promise<{ genres: string[] }> {
-  return fetchJson("/titles/genres");
+export async function getGenres(signal?: AbortSignal): Promise<{ genres: string[] }> {
+  return fetchJson("/titles/genres", { signal });
 }
 
-export async function getLanguages(): Promise<{ languages: string[]; priorityLanguageCodes: string[] }> {
-  return fetchJson("/titles/languages");
+export async function getLanguages(signal?: AbortSignal): Promise<{ languages: string[]; priorityLanguageCodes: string[] }> {
+  return fetchJson("/titles/languages", { signal });
 }
 
 export async function getCalendarTitles(params: {
   month: string;
   type?: string;
   provider?: string;
-}): Promise<{ titles: Title[]; episodes: Episode[]; count: number }> {
+}, signal?: AbortSignal): Promise<{ titles: Title[]; episodes: Episode[]; count: number }> {
   const qs = new URLSearchParams();
   qs.set("month", params.month);
   if (params.type) qs.set("type", params.type);
   if (params.provider) qs.set("provider", params.provider);
-  return fetchJson(`/calendar?${qs}`);
+  return fetchJson(`/calendar?${qs}`, { signal });
 }
 
 export async function syncEpisodes(): Promise<{ success: boolean; synced: number; shows: number; message: string }> {
   return fetchJson("/episodes/sync", { method: "POST" });
 }
 
-export async function getUpcomingEpisodes(): Promise<{ today: Episode[]; upcoming: Episode[]; unwatched: Episode[] }> {
-  return fetchJson("/episodes/upcoming");
+export async function getUpcomingEpisodes(signal?: AbortSignal): Promise<{ today: Episode[]; upcoming: Episode[]; unwatched: Episode[] }> {
+  return fetchJson("/episodes/upcoming", { signal });
 }
 
 export async function getSeasonEpisodeStatus(
   titleId: string,
   season: number,
+  signal?: AbortSignal,
 ): Promise<{ episodes: Array<{ episode_number: number; id: number; is_watched: boolean }> }> {
-  return fetchJson(`/episodes/status/${encodeURIComponent(titleId)}/${season}`);
+  return fetchJson(`/episodes/status/${encodeURIComponent(titleId)}/${season}`, { signal });
 }
 
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
@@ -372,30 +375,30 @@ export async function unwatchMovie(titleId: string): Promise<void> {
 
 // ─── Watch History ───────────────────────────────────────────────────────────
 
-export async function getWatchHistory(titleId: string): Promise<{ history: WatchHistoryEntry[]; playCount: number }> {
-  return fetchJson(`/watched/history/${encodeURIComponent(titleId)}`);
+export async function getWatchHistory(titleId: string, signal?: AbortSignal): Promise<{ history: WatchHistoryEntry[]; playCount: number }> {
+  return fetchJson(`/watched/history/${encodeURIComponent(titleId)}`, { signal });
 }
 
 // ─── Details ────────────────────────────────────────────────────────────────
 
-export async function getMovieDetails(titleId: string): Promise<MovieDetailsResponse> {
-  return fetchJson(`/details/movie/${encodeURIComponent(titleId)}`);
+export async function getMovieDetails(titleId: string, signal?: AbortSignal): Promise<MovieDetailsResponse> {
+  return fetchJson(`/details/movie/${encodeURIComponent(titleId)}`, { signal });
 }
 
-export async function getShowDetails(titleId: string): Promise<ShowDetailsResponse> {
-  return fetchJson(`/details/show/${encodeURIComponent(titleId)}`);
+export async function getShowDetails(titleId: string, signal?: AbortSignal): Promise<ShowDetailsResponse> {
+  return fetchJson(`/details/show/${encodeURIComponent(titleId)}`, { signal });
 }
 
-export async function getSeasonDetails(titleId: string, season: number): Promise<SeasonDetailsResponse> {
-  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}`);
+export async function getSeasonDetails(titleId: string, season: number, signal?: AbortSignal): Promise<SeasonDetailsResponse> {
+  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}`, { signal });
 }
 
-export async function getEpisodeDetails(titleId: string, season: number, episode: number): Promise<EpisodeDetailsResponse> {
-  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}/episode/${episode}`);
+export async function getEpisodeDetails(titleId: string, season: number, episode: number, signal?: AbortSignal): Promise<EpisodeDetailsResponse> {
+  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}/episode/${episode}`, { signal });
 }
 
-export async function getPersonDetails(personId: number): Promise<PersonDetailsResponse> {
-  return fetchJson(`/details/person/${personId}`);
+export async function getPersonDetails(personId: number, signal?: AbortSignal): Promise<PersonDetailsResponse> {
+  return fetchJson(`/details/person/${personId}`, { signal });
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -409,8 +412,8 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 
-export async function getAdminSettings(): Promise<AdminSettings> {
-  return fetchJson("/admin/settings");
+export async function getAdminSettings(signal?: AbortSignal): Promise<AdminSettings> {
+  return fetchJson("/admin/settings", { signal });
 }
 
 export async function updateAdminSettings(settings: AdminSettingsUpdateRequest): Promise<AdminSettingsUpdateResponse> {
@@ -446,8 +449,8 @@ export interface JobsResponse {
   recentJobs: RecentJob[];
 }
 
-export async function getJobs(): Promise<JobsResponse> {
-  return fetchJson("/jobs");
+export async function getJobs(signal?: AbortSignal): Promise<JobsResponse> {
+  return fetchJson("/jobs", { signal });
 }
 
 export async function triggerJob(name: string): Promise<{ success: boolean; jobId: number }> {
@@ -473,16 +476,16 @@ export interface Notifier {
   updated_at: string;
 }
 
-export async function getVapidPublicKey(): Promise<{ publicKey: string }> {
-  return fetchJson("/notifiers/vapid-public-key");
+export async function getVapidPublicKey(signal?: AbortSignal): Promise<{ publicKey: string }> {
+  return fetchJson("/notifiers/vapid-public-key", { signal });
 }
 
-export async function getNotifiers(): Promise<{ notifiers: Notifier[] }> {
-  return fetchJson("/notifiers");
+export async function getNotifiers(signal?: AbortSignal): Promise<{ notifiers: Notifier[] }> {
+  return fetchJson("/notifiers", { signal });
 }
 
-export async function getNotifierProviders(): Promise<{ providers: string[] }> {
-  return fetchJson("/notifiers/providers");
+export async function getNotifierProviders(signal?: AbortSignal): Promise<{ providers: string[] }> {
+  return fetchJson("/notifiers/providers", { signal });
 }
 
 export async function createNotifier(data: {
@@ -546,18 +549,18 @@ export async function unfollowUser(userId: string): Promise<void> {
   });
 }
 
-export async function getFollowers(userId?: string): Promise<{ followers: UserSummary[]; count: number }> {
+export async function getFollowers(userId?: string, signal?: AbortSignal): Promise<{ followers: UserSummary[]; count: number }> {
   const path = userId
     ? `/social/followers/${encodeURIComponent(userId)}`
     : "/social/followers";
-  return fetchJson(path);
+  return fetchJson(path, { signal });
 }
 
-export async function getFollowing(userId?: string): Promise<{ following: UserSummary[]; count: number }> {
+export async function getFollowing(userId?: string, signal?: AbortSignal): Promise<{ following: UserSummary[]; count: number }> {
   const path = userId
     ? `/social/following/${encodeURIComponent(userId)}`
     : "/social/following";
-  return fetchJson(path);
+  return fetchJson(path, { signal });
 }
 
 // ─── Ratings ─────────────────────────────────────────────────────────────────
@@ -575,8 +578,8 @@ export async function unrateTitle(titleId: string): Promise<void> {
   });
 }
 
-export async function getTitleRating(titleId: string): Promise<TitleRatingResponse> {
-  return fetchJson(`/ratings/${encodeURIComponent(titleId)}`);
+export async function getTitleRating(titleId: string, signal?: AbortSignal): Promise<TitleRatingResponse> {
+  return fetchJson(`/ratings/${encodeURIComponent(titleId)}`, { signal });
 }
 
 export async function rateEpisode(episodeId: number, rating: string, review?: string): Promise<void> {
@@ -592,12 +595,12 @@ export async function unrateEpisode(episodeId: number): Promise<void> {
   });
 }
 
-export async function getEpisodeRating(episodeId: number): Promise<EpisodeRatingResponse> {
-  return fetchJson(`/ratings/episode/${episodeId}`);
+export async function getEpisodeRating(episodeId: number, signal?: AbortSignal): Promise<EpisodeRatingResponse> {
+  return fetchJson(`/ratings/episode/${episodeId}`, { signal });
 }
 
-export async function getSeasonEpisodeRatings(titleId: string, season: number): Promise<{ ratings: Record<number, Record<RatingValue, number>> }> {
-  return fetchJson(`/ratings/season/${encodeURIComponent(titleId)}/${season}`);
+export async function getSeasonEpisodeRatings(titleId: string, season: number, signal?: AbortSignal): Promise<{ ratings: Record<number, Record<RatingValue, number>> }> {
+  return fetchJson(`/ratings/season/${encodeURIComponent(titleId)}/${season}`, { signal });
 }
 
 // ─── Recommendations ──────────────────────────────────────────────────────────
@@ -609,20 +612,20 @@ export async function sendRecommendation(titleId: string, message?: string): Pro
   });
 }
 
-export async function checkRecommendation(titleId: string): Promise<{ recommended: boolean; id: string | null }> {
-  return fetchJson(`/recommendations/check/${encodeURIComponent(titleId)}`);
+export async function checkRecommendation(titleId: string, signal?: AbortSignal): Promise<{ recommended: boolean; id: string | null }> {
+  return fetchJson(`/recommendations/check/${encodeURIComponent(titleId)}`, { signal });
 }
 
-export async function getRecommendations(limit?: number, offset?: number): Promise<RecommendationsResponse> {
+export async function getRecommendations(limit?: number, offset?: number, signal?: AbortSignal): Promise<RecommendationsResponse> {
   const qs = new URLSearchParams();
   if (limit != null) qs.set("limit", String(limit));
   if (offset != null) qs.set("offset", String(offset));
   const query = qs.toString();
-  return fetchJson(`/recommendations${query ? `?${query}` : ""}`);
+  return fetchJson(`/recommendations${query ? `?${query}` : ""}`, { signal });
 }
 
-export async function getSentRecommendations(): Promise<{ recommendations: SentRecommendation[] }> {
-  return fetchJson("/recommendations/sent");
+export async function getSentRecommendations(signal?: AbortSignal): Promise<{ recommendations: SentRecommendation[] }> {
+  return fetchJson("/recommendations/sent", { signal });
 }
 
 export async function markRecommendationRead(id: string): Promise<void> {
@@ -637,8 +640,8 @@ export async function deleteRecommendation(id: string): Promise<void> {
   });
 }
 
-export async function getUnreadRecommendationCount(): Promise<{ count: number }> {
-  return fetchJson("/recommendations/count");
+export async function getUnreadRecommendationCount(signal?: AbortSignal): Promise<{ count: number }> {
+  return fetchJson("/recommendations/count", { signal });
 }
 
 // ─── Invitations ──────────────────────────────────────────────────────────
@@ -647,8 +650,8 @@ export async function createInvitation(): Promise<{ id: string; code: string; ex
   return fetchJson("/invitations", { method: "POST" });
 }
 
-export async function getInvitations(): Promise<{ invitations: InvitationItem[] }> {
-  return fetchJson("/invitations");
+export async function getInvitations(signal?: AbortSignal): Promise<{ invitations: InvitationItem[] }> {
+  return fetchJson("/invitations", { signal });
 }
 
 export async function redeemInvitation(code: string): Promise<{ success: boolean; inviter: UserSummary }> {
@@ -689,8 +692,8 @@ export interface PlexServer {
   connections: Array<{ uri: string; local: boolean; relay: boolean }>;
 }
 
-export async function getIntegrations(): Promise<{ integrations: Integration[] }> {
-  return fetchJson("/integrations");
+export async function getIntegrations(signal?: AbortSignal): Promise<{ integrations: Integration[] }> {
+  return fetchJson("/integrations", { signal });
 }
 
 export async function createIntegration(data: {
@@ -746,15 +749,15 @@ export async function triggerPlexSync(
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
-export async function getStats(): Promise<StatsResponse> {
-  return fetchJson("/stats");
+export async function getStats(signal?: AbortSignal): Promise<StatsResponse> {
+  return fetchJson("/stats", { signal });
 }
 
 
 // ─── User settings ────────────────────────────────────────────────────────────
 
-export async function getHomepageLayout(): Promise<{ homepage_layout: HomepageSection[] }> {
-  return fetchJson("/user/settings/homepage-layout");
+export async function getHomepageLayout(signal?: AbortSignal): Promise<{ homepage_layout: HomepageSection[] }> {
+  return fetchJson("/user/settings/homepage-layout", { signal });
 }
 
 export async function updateHomepageLayout(layout: HomepageSection[]): Promise<{ homepage_layout: HomepageSection[] }> {
@@ -767,17 +770,17 @@ export async function updateHomepageLayout(layout: HomepageSection[]): Promise<{
 
 // ─── Admin user management ────────────────────────────────────────────────────
 
-export async function getAdminUsers(opts: { search?: string; filter?: string; page?: number } = {}): Promise<AdminUsersResponse> {
+export async function getAdminUsers(opts: { search?: string; filter?: string; page?: number } = {}, signal?: AbortSignal): Promise<AdminUsersResponse> {
   const params = new URLSearchParams();
   if (opts.search) params.set("search", opts.search);
   if (opts.filter) params.set("filter", opts.filter);
   if (opts.page) params.set("page", String(opts.page));
   const qs = params.toString();
-  return fetchJson(`/admin/users${qs ? `?${qs}` : ""}`);
+  return fetchJson(`/admin/users${qs ? `?${qs}` : ""}`, { signal });
 }
 
-export async function getAdminUser(userId: string): Promise<{ user: AdminUser }> {
-  return fetchJson(`/admin/users/${encodeURIComponent(userId)}`);
+export async function getAdminUser(userId: string, signal?: AbortSignal): Promise<{ user: AdminUser }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}`, { signal });
 }
 
 export async function setAdminUserRole(userId: string, role: "admin" | "user"): Promise<{ message: string }> {
@@ -810,8 +813,8 @@ export async function deleteAdminUser(userId: string): Promise<{ message: string
 
 // ─── Calendar feed ────────────────────────────────────────────────────────────
 
-export async function getFeedToken(): Promise<{ token: string | null }> {
-  return fetchJson("/feed/token");
+export async function getFeedToken(signal?: AbortSignal): Promise<{ token: string | null }> {
+  return fetchJson("/feed/token", { signal });
 }
 
 export async function regenerateFeedToken(): Promise<{ token: string }> {
@@ -876,13 +879,13 @@ export interface KioskData {
   unwatched_queue: KioskQueueItem[];
 }
 
-export async function getKioskData(token: string, display?: KioskFidelity): Promise<KioskData> {
+export async function getKioskData(token: string, display?: KioskFidelity, signal?: AbortSignal): Promise<KioskData> {
   const params = display ? `?display=${encodeURIComponent(display)}` : "";
-  return fetchJson(`/kiosk/${encodeURIComponent(token)}${params}`);
+  return fetchJson(`/kiosk/${encodeURIComponent(token)}${params}`, { signal });
 }
 
-export async function getKioskToken(): Promise<{ token: string | null }> {
-  return fetchJson("/kiosk/token");
+export async function getKioskToken(signal?: AbortSignal): Promise<{ token: string | null }> {
+  return fetchJson("/kiosk/token", { signal });
 }
 
 export async function regenerateKioskToken(): Promise<{ token: string }> {

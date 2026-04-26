@@ -1,7 +1,7 @@
 import * as api from "../api";
 import type { Provider } from "../types";
 
-export async function loadFilters(): Promise<{
+export async function loadFilters(signal?: AbortSignal): Promise<{
   genres: string[];
   providers: Provider[];
   languages: string[];
@@ -10,9 +10,9 @@ export async function loadFilters(): Promise<{
 }> {
   const [genresResult, providersResult, languagesResult] =
     await Promise.allSettled([
-      api.getGenres(),
-      api.getProviders(),
-      api.getLanguages(),
+      api.getGenres(signal),
+      api.getProviders(signal),
+      api.getLanguages(signal),
     ]);
 
   return {

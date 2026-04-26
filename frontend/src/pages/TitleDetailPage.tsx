@@ -16,7 +16,8 @@ export default function TitleDetailPage() {
   useEffect(() => {
     if (!id) return;
     const titleId = id;
-    let cancelled = false;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     // Determine type from the ID prefix (e.g. "movie-123" or "tv-456")
     // to avoid making two API calls for shows.
@@ -27,22 +28,22 @@ export default function TitleDetailPage() {
       setError(null);
       try {
         if (isShow) {
-          const data = await api.getShowDetails(titleId);
-          if (!cancelled) setShowData(data);
+          const data = await api.getShowDetails(titleId, signal);
+          if (!signal.aborted) setShowData(data);
         } else {
-          const data = await api.getMovieDetails(titleId);
-          if (!cancelled) setMovieData(data);
+          const data = await api.getMovieDetails(titleId, signal);
+          if (!signal.aborted) setMovieData(data);
         }
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load details");
+        if (!signal.aborted) setError(e instanceof Error ? e.message : "Failed to load details");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     }
 
     load();
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [id]);
 

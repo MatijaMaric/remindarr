@@ -348,17 +348,18 @@ function MobileCalendar({
 
   useEffect(() => {
     if (mobileView !== "month") return;
-    let cancelled = false;
+    const controller = new AbortController();
+    const { signal } = controller;
     void (async () => {
       setLoadingMonth(true);
       try {
-        const data = await getCalendarTitles({ month: formatMonth(currentMonth) });
-        if (!cancelled) setEpisodes(data.episodes || []);
+        const data = await getCalendarTitles({ month: formatMonth(currentMonth) }, signal);
+        if (!signal.aborted) setEpisodes(data.episodes || []);
       } catch { /* ignore */ } finally {
-        if (!cancelled) setLoadingMonth(false);
+        if (!signal.aborted) setLoadingMonth(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [mobileView, currentMonth]);
 
   const dotDates = useMemo(() => {
@@ -518,17 +519,22 @@ function GridCalendar({
   const month = currentMonth.getMonth();
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     setLoading(true);
     getCalendarTitles({
       month: formatMonth(currentMonth),
       type: typeFilter || undefined,
-    })
+    }, signal)
       .then((data) => {
-        setTitles(data.titles);
-        setEpisodes(data.episodes || []);
+        if (!signal.aborted) {
+          setTitles(data.titles);
+          setEpisodes(data.episodes || []);
+        }
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((err) => { if (!signal.aborted) console.error(err); })
+      .finally(() => { if (!signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [currentMonth, typeFilter]);
 
   const itemsByDate = useMemo(() => {

@@ -79,7 +79,7 @@ function sortTitles(titles: Title[], sort: SortKey): Title[] {
 }
 
 export default function TrackedPage() {
-  const { data, loading, refetch } = useApiCall(() => api.getTrackedTitles(), []);
+  const { data, loading, refetch } = useApiCall((signal) => api.getTrackedTitles(signal), []);
   const allTitles: Title[] = useMemo(() => data?.titles ?? [], [data]);
   useScrollRestoration("tracked", !loading);
   const { t } = useTranslation();

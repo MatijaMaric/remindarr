@@ -85,7 +85,7 @@ export default function PersonPage() {
   const [bioExpanded, setBioExpanded] = useState(false);
 
   const { data, loading, error } = useApiCall<PersonDetailsResponse>(
-    () => api.getPersonDetails(Number(personId)),
+    (signal) => api.getPersonDetails(Number(personId), signal),
     [personId],
   );
 

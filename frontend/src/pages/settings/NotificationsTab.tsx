@@ -51,12 +51,13 @@ function PushNotificationsSection() {
   const [err, setErr] = useState("");
   const [testing, setTesting] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       const [{ notifiers }, subscription] = await Promise.all([
-        api.getNotifiers(),
+        api.getNotifiers(signal),
         getExistingSubscription(),
       ]);
+      if (signal?.aborted) return;
       const webpushNotifier = notifiers.find((n) => n.provider === "webpush") || null;
 
       if (webpushNotifier && !webpushNotifier.enabled) {
@@ -77,12 +78,14 @@ function PushNotificationsSection() {
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    const controller = new AbortController();
+    refresh(controller.signal);
+    return () => controller.abort();
   }, [refresh]);
 
   async function handleEnable() {
@@ -272,18 +275,21 @@ function NotificationsSection() {
   const [formStreamingAlerts, setFormStreamingAlerts] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const refresh = useCallback(() => {
-    Promise.all([api.getNotifiers(), api.getNotifierProviders()])
+  const refresh = useCallback((signal?: AbortSignal) => {
+    Promise.all([api.getNotifiers(signal), api.getNotifierProviders(signal)])
       .then(([n, p]) => {
+        if (signal?.aborted) return;
         setNotifiers(n.notifiers.filter((x) => x.provider !== "webpush"));
         setProviders(p.providers.filter((x) => x !== "webpush"));
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { if (!signal?.aborted) setLoading(false); });
   }, []);
 
   useEffect(() => {
-    refresh();
+    const controller = new AbortController();
+    refresh(controller.signal);
+    return () => controller.abort();
   }, [refresh]);
 
   function resetForm() {
