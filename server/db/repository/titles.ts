@@ -1,4 +1,4 @@
-import { eq, and, or, sql, gte, lt, desc, asc, exists, notExists, inArray, like } from "drizzle-orm";
+import { eq, and, or, sql, gte, lte, lt, desc, asc, exists, notExists, inArray, like } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, providers, offers, scores, tracked, titleGenres, watchedTitles } from "../schema";
 import type { ParsedTitle, ParsedOffer, ParsedProvider, ParsedScores } from "../../tmdb/parser";
@@ -339,6 +339,8 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
 
     const conditions: ReturnType<typeof eq>[] = [];
 
+    const todayStr = new Date().toISOString().slice(0, 10);
+    conditions.push(lte(titles.releaseDate, todayStr));
     if (daysBack) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - daysBack);
