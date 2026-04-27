@@ -1,14 +1,12 @@
 /**
  * Durable Object job queue for Cloudflare Workers.
  *
+ * Powered by @cloudflare/actors/alarms for cron scheduling and alarm dispatch.
  * One DO instance per job name (e.g. "sync-titles") for cron singletons,
  * or per "name:partitionKey" (e.g. "sync-show-episodes:42") for ad-hoc work.
- * DO Alarms drive execution; wrangler.toml cron triggers call armCron() as
- * a keep-alive in case DO storage is wiped.
- *
  * The Bun runtime never imports this file.
  */
-import { parseExpression } from "cron-parser";
+import { Alarms } from "@cloudflare/actors/alarms";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql } from "drizzle-orm";
 import { runWithDb, schemaExports, titles } from "../db/schema";
@@ -97,11 +95,19 @@ export class JobQueueDO {
   private ctx: DurableObjectState;
   private env: DOEnv;
   private initialized = false;
+  // Cast to any: Alarms<P> requires P extends DurableObject, but P only needs
+  // callable methods by name at runtime. The constraint is TS-only.
+  alarms: Alarms<JobQueueDO>;
 
   constructor(ctx: DurableObjectState, env: DOEnv) {
     this.ctx = ctx;
     this.env = env;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.alarms = new Alarms(ctx, this as any);
   }
+
+  /** Required stub — Alarms calls setName() on the parent before each callback. */
+  setName(_name: string): void {}
 
   // ─── Schema bootstrap ────────────────────────────────────────────────────
 
@@ -178,14 +184,19 @@ export class JobQueueDO {
     }
   }
 
-  // ─── Alarm: claim + run one job, then re-arm ─────────────────────────────
+  // ─── CF alarm handler — delegates to Alarms dispatcher ───────────────────
 
   async alarm(): Promise<void> {
     this.initSchema();
+    await this.alarms.alarm();
+  }
+
+  // ─── Job execution: invoked by Alarms when a cron or delayed schedule fires
+
+  async runJob(_payload: unknown = null): Promise<void> {
     const name = await this.ctx.storage.get<string>("name");
     if (!name) return;
-
-    const cron = await this.ctx.storage.get<string>("cron");
+    const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
     const now = new Date().toISOString();
 
     let rows = this.ctx.storage.sql
@@ -217,7 +228,7 @@ export class JobQueueDO {
         }
       }
       if (rows.length === 0) {
-        await this.scheduleNextAlarm();
+        await this.rearmIfPending(cron);
         return;
       }
     }
@@ -239,7 +250,6 @@ export class JobQueueDO {
       : new MemoryCache();
 
     try {
-      // Use job.name (from the DB row) so any DO can run any handler type.
       if (job.name === "cleanup") {
         await runWithCache(cache, () => runWithDb(db, () => this.runCleanup()));
       } else {
@@ -252,7 +262,7 @@ export class JobQueueDO {
             new Date().toISOString(),
             job.id,
           );
-          await this.scheduleNextAlarm();
+          await this.rearmIfPending(cron);
           return;
         }
         log.info("Running job", { name: job.name, jobId: job.id });
@@ -311,26 +321,23 @@ export class JobQueueDO {
       }
     }
 
-    await this.scheduleNextAlarm();
+    await this.rearmIfPending(cron);
   }
 
   // ─── Internal methods (also used by tests via subclass) ──────────────────
 
-  /** Arm this DO as a cron singleton. Stores name + cron, sets first alarm. */
+  /** Arm this DO as a cron singleton. Idempotent — only schedules if no cron alarm exists. */
   async armCron(name: string, cron: string): Promise<void> {
     this.initSchema();
     await this.ctx.storage.put("name", name);
     await this.ctx.storage.put("cron", cron);
-    // Only set alarm if none is already scheduled — the alarm handler manages re-arming.
-    // Calling scheduleNextAlarm() on every cron trigger would push the alarm forward and
-    // cause the job to be skipped at the current tick.
-    const existing = await this.ctx.storage.getAlarm();
-    if (existing === null) {
-      await this.scheduleNextAlarm(cron);
+    const existing = this.alarms.getSchedules({ type: "cron" });
+    if (!existing.some((s) => s.callback === "runJob")) {
+      await this.alarms.schedule(cron, "runJob" as keyof JobQueueDO, null);
     }
   }
 
-  /** Insert a job row and schedule an immediate alarm. */
+  /** Insert a job row and schedule an alarm to fire within 1 second. */
   async enqueue(
     name: string,
     data: string | null,
@@ -350,10 +357,10 @@ export class JobQueueDO {
       )
       .toArray() as Array<{ id: number }>;
 
-    // Schedule alarm as soon as possible (CF dedupes alarms within a DO)
-    const currentAlarm = await this.ctx.storage.getAlarm();
-    if (currentAlarm === null || currentAlarm > Date.now() + 1000) {
-      await this.ctx.storage.setAlarm(Date.now());
+    // Only schedule if no delayed runJob alarm is already pending
+    const existing = this.alarms.getSchedules({ type: "delayed" });
+    if (!existing.some((s) => s.callback === "runJob")) {
+      await this.alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
     }
     return rows[0].id;
   }
@@ -422,13 +429,12 @@ export class JobQueueDO {
   async getCronInfo(): Promise<{ cron: string | null; nextRun: string | null; lastRun: string | null }> {
     this.initSchema();
     const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
+    // nextRun is read from the Alarms table (authoritative next execution time)
     let nextRun: string | null = null;
-    if (cron) {
-      try {
-        nextRun = parseExpression(cron).next().toDate().toISOString();
-      } catch {
-        // invalid expression
-      }
+    const cronSchedules = this.alarms.getSchedules({ type: "cron" });
+    if (cronSchedules.length > 0) {
+      const schedule = cronSchedules[0] as { time: number };
+      nextRun = new Date(schedule.time * 1000).toISOString();
     }
     const lastRows = this.ctx.storage.sql
       .exec(
@@ -440,19 +446,21 @@ export class JobQueueDO {
 
   // ─── Private helpers ─────────────────────────────────────────────────────
 
-  private async scheduleNextAlarm(cron?: string): Promise<void> {
-    const cronExpr = cron ?? (await this.ctx.storage.get<string>("cron")) ?? null;
-    if (cronExpr) {
-      const next = parseExpression(cronExpr).next().toDate().getTime();
-      await this.ctx.storage.setAlarm(next);
-      return;
-    }
-    // Ad-hoc DO: re-arm only if there are still pending jobs
+  /**
+   * For ad-hoc DOs: re-arm with a 1-second delayed alarm if pending jobs remain.
+   * Cron DOs are re-armed automatically by the Alarms framework (cron type schedules
+   * update their own next-execution time after each run).
+   */
+  private async rearmIfPending(cron: string | null): Promise<void> {
+    if (cron) return;
     const rows = this.ctx.storage.sql
       .exec("SELECT COUNT(*) as count FROM jobs WHERE status = 'pending'")
       .toArray() as Array<{ count: number }>;
     if ((rows[0]?.count ?? 0) > 0) {
-      await this.ctx.storage.setAlarm(Date.now());
+      const existing = this.alarms.getSchedules({ type: "delayed" });
+      if (!existing.some((s) => s.callback === "runJob")) {
+        await this.alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
+      }
     }
   }
 
