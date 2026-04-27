@@ -16,8 +16,11 @@ import {
   cleanupOldJobs,
 } from "./processor";
 import { parseExpression } from "cron-parser";
+import { logger } from "../logger";
 import type { DOJobRow } from "./durable-object";
 import { CRON_JOB_NAMES } from "./durable-object";
+
+const log = logger.child({ module: "job-backend" });
 
 // ─── CF env shape ────────────────────────────────────────────────────────────
 
@@ -289,11 +292,15 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
   }
 
   const doNames = [...CRON_JOB_NAMES, "cleanup"] as string[];
+  const emptyStats: JobStats = { pending: 0, running: 0, completed: 0, failed: 0 };
+  const emptyCronInfo = { cron: null, nextRun: null, lastRun: null };
 
   const [statsResults, cronInfoResults, recentResults] = await Promise.all([
     Promise.all(
       doNames.map((name) =>
-        doFetch<JobStats>(env, name, "/stats", "GET").then((s) => ({ name, stats: s })),
+        doFetch<JobStats>(env, name, "/stats", "GET")
+          .then((s) => ({ name, stats: s }))
+          .catch((err) => { log.warn("DO stats unavailable", { name, err }); return { name, stats: emptyStats }; }),
       ),
     ),
     Promise.all(
@@ -303,14 +310,16 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
           name,
           "/cron-info",
           "GET",
-        ).then((info) => ({ name, info })),
+        )
+          .then((info) => ({ name, info }))
+          .catch((err) => { log.warn("DO cron-info unavailable", { name, err }); return { name, info: emptyCronInfo }; }),
       ),
     ),
     Promise.all(
       doNames.map((name) =>
-        doFetch<DOJobRow[]>(env, name, "/recent-jobs?limit=5", "GET").then((rows) =>
-          rows.map((r) => ({ ...r, name })),
-        ),
+        doFetch<DOJobRow[]>(env, name, "/recent-jobs?limit=5", "GET")
+          .then((rows) => rows.map((r) => ({ ...r, name })))
+          .catch((err) => { log.warn("DO recent-jobs unavailable", { name, err }); return [] as DOJobRow[]; }),
       ),
     ),
   ]);

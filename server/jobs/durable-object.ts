@@ -127,11 +127,11 @@ export class JobQueueDO {
   // ─── HTTP RPC surface ────────────────────────────────────────────────────
 
   async fetch(request: Request): Promise<Response> {
-    this.initSchema();
     const url = new URL(request.url);
     const path = url.pathname;
 
     try {
+      this.initSchema();
       if (request.method === "GET" && path === "/stats") {
         return Response.json(this.getStats());
       }
