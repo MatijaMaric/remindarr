@@ -143,9 +143,10 @@ async function handleBackfillTitleOffers(data: string | null): Promise<void> {
 async function handleMigrateOffers(): Promise<void> {
   const { migrateOffers } = await import("./migrate-offers");
   const result = await migrateOffers();
-  if (result.hasMore) {
+  if (result.hasMore && CONFIG.JOB_QUEUE_BACKEND !== "durable-object") {
     // Direct insert bypasses enqueueOneTimeMigration's "any row" sentinel so the
-    // backfill continues across multiple cron ticks.
+    // backfill continues across multiple cron ticks. In DO mode the alarm() handler
+    // re-enqueues the next batch in DO SQLite instead.
     const db = getDb();
     await db.insert(jobs).values({ name: "migrate-offers", runAt: new Date().toISOString(), maxAttempts: 1 });
     log.info("migrate-offers batch done, re-enqueued for next tick");
