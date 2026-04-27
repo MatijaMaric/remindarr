@@ -12,6 +12,7 @@
 
 // CF Workers types — these are provided by @cloudflare/workers-types at deploy time.
 // Declared here so the file compiles with bun's tsc too.
+// DurableObject types are also declared in server/jobs/durable-object.ts (merged).
 declare global {
   interface D1Database {
     prepare(query: string): any;
@@ -39,7 +40,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { drizzle } from "drizzle-orm/d1";
 import { getDb, runWithDb, schemaExports } from "./db/schema";
-import { getUserCount, createUser, deleteExpiredSessions, isOidcConfigured, getOidcConfig } from "./db/repository";
+import { getUserCount, createUser, isOidcConfigured, getOidcConfig } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -72,11 +73,13 @@ import kioskRoutes from "./routes/kiosk";
 import importRoutes from "./routes/import";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
-import { patchConfig } from "./config";
+import { patchConfig, CONFIG } from "./config";
 import Sentry from "./sentry";
 import { withSentry } from "@sentry/cloudflare";
 import { CloudflarePlatform } from "./platform/cloudflare";
-import { processPendingJobs, enqueueCronJob, enqueueOneTimeMigration, cleanupOldJobs, recoverStaleJobs } from "./jobs/processor";
+import { enqueueOnce } from "./jobs/backend";
+import { armCron, processPending, recoverStale, runWithEnv, CRON_BY_EXPRESSION } from "./jobs/backend";
+export { JobQueueDO } from "./jobs/durable-object";
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
 import type { DrizzleDb } from "./platform/types";
@@ -87,6 +90,8 @@ import { MemoryCache } from "./cache/memory";
 interface Env {
   DB: D1Database;
   CACHE_KV?: KVNamespace;
+  JOB_QUEUE_DO?: DurableObjectNamespace;
+  JOB_QUEUE_BACKEND?: string;
   ASSETS?: { fetch: typeof fetch };
   TMDB_API_KEY?: string;
   TMDB_COUNTRY?: string;
@@ -146,6 +151,7 @@ function patchConfigFromEnv(env: Env): void {
     PASSKEY_RP_NAME: env.PASSKEY_RP_NAME || undefined,
     PASSKEY_ORIGIN: env.PASSKEY_ORIGIN || undefined,
     STREAMING_AVAILABILITY_API_KEY: env.STREAMING_AVAILABILITY_API_KEY || "",
+    JOB_QUEUE_BACKEND: (env.JOB_QUEUE_BACKEND as "d1" | "durable-object") || "d1",
   });
 
   // Reinitialize logger in case LOG_LEVEL changed
@@ -434,22 +440,29 @@ const handler = {
         ? new CloudflareKvCache(env.CACHE_KV)
         : new MemoryCache();
 
-      const response = await runWithCache(cache, () =>
-        runWithDb(db, () => honoApp.fetch(request, env, ctx as any))
+      const cfEnv = env as unknown as import("./jobs/backend").CFEnv;
+      const response = await runWithEnv(cfEnv, () =>
+        runWithCache(cache, () =>
+          runWithDb(db, () => honoApp.fetch(request, env, ctx as any))
+        )
       );
 
-      // Process pending jobs in the background after each request.
-      // This ensures ad-hoc jobs (e.g. sync-show-episodes queued on track)
-      // are picked up promptly without waiting for the next cron trigger.
-      ctx.waitUntil(
-        runWithCache(cache, () =>
-          runWithDb(db, () => processPendingJobs())
-        ).catch((err) => {
-          logger.error("Background job processing error", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-        })
-      );
+      // In D1 mode, drain ad-hoc jobs (e.g. sync-show-episodes queued on track)
+      // in the background so they run without waiting for the next cron trigger.
+      // In DO mode, DOs self-drive via alarms — no drain needed here.
+      if (CONFIG.JOB_QUEUE_BACKEND !== "durable-object") {
+        ctx.waitUntil(
+          runWithEnv(cfEnv, () =>
+            runWithCache(cache, () =>
+              runWithDb(db, () => processPending())
+            )
+          ).catch((err) => {
+            logger.error("Background job processing error", {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          })
+        );
+      }
 
       return response;
     } catch (err) {
@@ -473,44 +486,28 @@ const handler = {
         ? new CloudflareKvCache(env.CACHE_KV)
         : new MemoryCache();
 
-      await runWithCache(cache, () => runWithDb(db, async () => {
+      const cfEnv = env as unknown as import("./jobs/backend").CFEnv;
+      await runWithEnv(cfEnv, () => runWithCache(cache, () => runWithDb(db, async () => {
         const cron = event.cron;
         logger.info("Scheduled event", { cron });
 
-        // Map cron triggers to job names and enqueue if not already pending
-        switch (cron) {
-          case "0 3 * * *":
-            await enqueueCronJob("sync-titles");
-            break;
-          case "30 3 * * *":
-            await enqueueCronJob("sync-episodes");
-            break;
-          case "0 4 * * *":
-            await enqueueCronJob("sync-deep-links");
-            break;
-          case "*/5 * * * *":
-            await enqueueCronJob("send-notifications");
-            break;
-          case "0 0 * * *":
-            await deleteExpiredSessions();
-            await cleanupOldJobs(30);
-            logger.info("Cleanup complete");
-            break;
+        // Arm the DO (DO mode) or enqueue job (D1 mode) for the firing cron
+        const jobName = CRON_BY_EXPRESSION[cron];
+        if (jobName) {
+          await armCron(cfEnv, jobName, cron);
         }
 
-        // One-time migrations: enqueue if no job exists at all for this name
-        await enqueueOneTimeMigration("migrate-offers");
-        await enqueueOneTimeMigration("sync-deep-links");
+        // One-time migrations always run through D1 regardless of backend
+        await enqueueOnce("migrate-offers");
+        await enqueueOnce("sync-deep-links");
 
-        // Recover jobs stuck in "running" (e.g. killed by CF CPU limit)
-        await recoverStaleJobs(15);
-
-        // Process all pending jobs (cron-triggered + ad-hoc like sync-show-episodes)
-        const processed = await processPendingJobs();
+        // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
+        await recoverStale(cfEnv, 15);
+        const processed = await processPending();
         if (processed > 0) {
           logger.info("Processed jobs", { count: processed, cron });
         }
-      }));
+      })));
     } catch (err) {
       Sentry.captureException(err);
       logger.error("Worker scheduled error", {

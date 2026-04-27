@@ -182,7 +182,12 @@ async function handleSyncDeepLinks(): Promise<void> {
 
 // ─── Job Dispatcher ────────────────────────────────────────────────────────
 
-const handlers: Record<string, (data: string | null) => Promise<void>> = {
+async function handleCleanup() {
+  await deleteExpiredSessions();
+  await cleanupOldJobs(30);
+}
+
+export const handlers: Record<string, (data: string | null) => Promise<void>> = {
   "sync-titles": () => handleSyncTitles(),
   "sync-episodes": () => handleSyncEpisodes(),
   "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
@@ -190,9 +195,10 @@ const handlers: Record<string, (data: string | null) => Promise<void>> = {
   "backfill-title-offers": (data) => handleBackfillTitleOffers(data),
   "migrate-offers": () => handleMigrateOffers(),
   "sync-deep-links": () => handleSyncDeepLinks(),
+  "cleanup": () => handleCleanup(),
 };
 
-interface JobRow {
+export interface JobRow {
   id: number;
   name: string;
   data: string | null;

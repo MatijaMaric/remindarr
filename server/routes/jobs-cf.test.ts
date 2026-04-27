@@ -65,7 +65,7 @@ describe("GET /jobs (CF)", () => {
     const body = await res.json();
     expect(body.stats).toBeDefined();
     expect(body.crons).toBeArray();
-    expect(body.crons).toHaveLength(4);
+    expect(body.crons).toHaveLength(5);
 
     const names = body.crons.map((c: any) => c.name);
     expect(names).toContain("sync-titles");
