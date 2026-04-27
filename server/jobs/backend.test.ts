@@ -134,10 +134,27 @@ describe("recoverStale (D1 mode)", () => {
 });
 
 describe("enqueueOnce", () => {
-  it("always delegates to enqueueOneTimeMigration regardless of backend", async () => {
-    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+  it("delegates to enqueueOneTimeMigration in D1 mode", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "d1";
     await enqueueOnce("migrate-offers");
     expect(mockEnqueueOneTimeMigration).toHaveBeenCalledWith("migrate-offers");
+  });
+
+  it("enqueues directly in the named DO in DO mode", async () => {
+    const fetchCalls: { path: string; body: unknown }[] = [];
+    const doEnv = {
+      DB: {} as D1Database,
+      JOB_QUEUE_DO: makeFakeDoNamespace((_path, _method, body) => {
+        fetchCalls.push({ path: _path, body });
+        return { id: 1 };
+      }),
+    };
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    await runWithEnv(doEnv as any, () => enqueueOnce("migrate-offers"));
+    expect(mockEnqueueOneTimeMigration).not.toHaveBeenCalled();
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0].path).toBe("/enqueue");
+    expect((fetchCalls[0].body as any).maxAttempts).toBe(1);
   });
 });
 

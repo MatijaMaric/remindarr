@@ -172,11 +172,16 @@ describe("JobQueueDO", () => {
     expect(rows[0].completed_at).not.toBeNull();
   });
 
-  it("alarm does nothing when no pending jobs exist", async () => {
+  it("alarm auto-creates and runs a job for cron DOs when no pending rows exist", async () => {
+    let called = false;
+    processorModule.handlers["sync-titles"] = async () => { called = true; };
     await do_.armCron("sync-titles", "0 3 * * *");
-    await do_.alarm(); // no rows inserted
+    await do_.alarm(); // no rows pre-inserted — auto-create kicks in
+
+    expect(called).toBe(true);
     const rows = do_.getRecentJobs();
-    expect(rows).toHaveLength(0);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("completed");
   });
 
   it("alarm skips jobs not yet ready (future run_at)", async () => {
@@ -194,12 +199,13 @@ describe("JobQueueDO", () => {
   it("two concurrent alarm() calls process a job at most once (single-writer guarantee)", async () => {
     let callCount = 0;
     processorModule.handlers["sync-titles"] = async () => { callCount++; };
-    await do_.armCron("sync-titles", "0 3 * * *");
+    // No armCron — use bare enqueue so cron is null and auto-create doesn't kick in.
+    // enqueue() sets the "name" key so alarm() still identifies the DO.
     await do_.enqueue("sync-titles", null);
 
     // In the DO model, only one alarm fires at a time — simulate two concurrent
-    // invocations; the second should find no pending work.
-    const [, ] = await Promise.all([do_.alarm(), do_.alarm()]);
+    // invocations; the second should find no pending work (job already claimed).
+    await Promise.all([do_.alarm(), do_.alarm()]);
     expect(callCount).toBe(1);
   });
 
@@ -252,6 +258,19 @@ describe("JobQueueDO", () => {
 
   // ── armCron + alarm re-arm ────────────────────────────────────────────────
 
+  it("armCron does not reset the alarm if one is already scheduled", async () => {
+    await do_.armCron("sync-titles", "0 3 * * *");
+    const firstAlarm = await state.storage.getAlarm();
+    expect(firstAlarm).not.toBeNull();
+
+    // Second armCron call (as the CF scheduled handler would do) should NOT push
+    // the alarm forward — doing so would cause the current tick's job to be skipped.
+    await do_.armCron("sync-titles", "0 3 * * *");
+    const secondAlarm = await state.storage.getAlarm();
+    expect(secondAlarm).toBe(firstAlarm); // unchanged
+    expect(state.storage.alarmHistory).toHaveLength(1); // set only once
+  });
+
   it("armCron sets the cron expression and schedules an alarm", async () => {
     await do_.armCron("sync-titles", "0 3 * * *");
     const cronInfo = await do_.getCronInfo();
@@ -271,6 +290,21 @@ describe("JobQueueDO", () => {
     expect(state.storage.alarmHistory.length).toBeGreaterThan(beforeAlarmCount);
     const newAlarm = state.storage.scheduledAlarm!;
     expect(newAlarm).toBeGreaterThan(Date.now());
+  });
+
+  it("ad-hoc DO (no cron) does NOT auto-create when no pending rows exist", async () => {
+    const { do_: adHocDo, state: adHocState } = makeDO("sync-show-episodes:99");
+    // Enqueue then manually mark it completed, so the DO has a "name" but no pending rows
+    await adHocDo.enqueue("sync-show-episodes", null);
+    adHocState.rawDb.prepare("UPDATE jobs SET status='completed', completed_at=? WHERE status='pending'")
+      .run(new Date().toISOString());
+
+    const alarmsBefore = adHocState.storage.alarmHistory.length;
+    await adHocDo.alarm();
+    // No auto-create for ad-hoc DOs — alarm just re-arms check and exits
+    expect(adHocDo.getRecentJobs().filter((r) => r.status === "pending")).toHaveLength(0);
+    expect(adHocState.storage.alarmHistory.length).toBe(alarmsBefore); // no new alarm
+    adHocState.close();
   });
 
   it("ad-hoc DO (no cron) re-arms only when pending rows remain", async () => {

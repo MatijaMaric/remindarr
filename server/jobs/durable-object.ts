@@ -10,7 +10,8 @@
  */
 import { parseExpression } from "cron-parser";
 import { drizzle } from "drizzle-orm/d1";
-import { runWithDb, schemaExports } from "../db/schema";
+import { eq, sql } from "drizzle-orm";
+import { runWithDb, schemaExports, titles } from "../db/schema";
 import { runWithCache } from "../cache";
 import { CloudflareKvCache } from "../cache/cloudflare-kv";
 import { MemoryCache } from "../cache/memory";
@@ -184,8 +185,10 @@ export class JobQueueDO {
     const name = await this.ctx.storage.get<string>("name");
     if (!name) return;
 
+    const cron = await this.ctx.storage.get<string>("cron");
     const now = new Date().toISOString();
-    const rows = this.ctx.storage.sql
+
+    let rows = this.ctx.storage.sql
       .exec(
         "SELECT id, name, data, attempts, max_attempts FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
         now,
@@ -193,8 +196,30 @@ export class JobQueueDO {
       .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts">[];
 
     if (rows.length === 0) {
-      await this.scheduleNextAlarm();
-      return;
+      if (cron) {
+        // Cron singleton: alarm fires at each scheduled tick. Auto-create the job for
+        // this tick if no pending rows exist (including future-scheduled ones).
+        const anyPending = this.ctx.storage.sql
+          .exec("SELECT 1 FROM jobs WHERE status = 'pending' LIMIT 1")
+          .toArray().length > 0;
+        if (!anyPending) {
+          this.ctx.storage.sql.exec(
+            "INSERT INTO jobs (name, run_at, max_attempts) VALUES (?, ?, 3)",
+            name,
+            now,
+          );
+          rows = this.ctx.storage.sql
+            .exec(
+              "SELECT id, name, data, attempts, max_attempts FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
+              now,
+            )
+            .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts">[];
+        }
+      }
+      if (rows.length === 0) {
+        await this.scheduleNextAlarm();
+        return;
+      }
     }
 
     const job = rows[0];
@@ -214,22 +239,23 @@ export class JobQueueDO {
       : new MemoryCache();
 
     try {
-      if (name === "cleanup") {
+      // Use job.name (from the DB row) so any DO can run any handler type.
+      if (job.name === "cleanup") {
         await runWithCache(cache, () => runWithDb(db, () => this.runCleanup()));
       } else {
-        const handler = handlers[name];
+        const handler = handlers[job.name];
         if (!handler) {
-          log.warn("Unknown job type, marking failed", { name, jobId: job.id });
+          log.warn("Unknown job type, marking failed", { name: job.name, jobId: job.id });
           this.ctx.storage.sql.exec(
             "UPDATE jobs SET status = 'failed', error = ?, completed_at = ? WHERE id = ?",
-            `Unknown job type: ${name}`,
+            `Unknown job type: ${job.name}`,
             new Date().toISOString(),
             job.id,
           );
           await this.scheduleNextAlarm();
           return;
         }
-        log.info("Running job", { name, jobId: job.id });
+        log.info("Running job", { name: job.name, jobId: job.id });
         await runWithCache(cache, () => runWithDb(db, () => handler(job.data)));
       }
 
@@ -238,13 +264,33 @@ export class JobQueueDO {
         new Date().toISOString(),
         job.id,
       );
-      log.info("Completed job", { name, jobId: job.id });
+      log.info("Completed job", { name: job.name, jobId: job.id });
+
+      // migrate-offers: re-enqueue next batch in this DO's SQLite when more titles remain.
+      // In D1 mode this is handled by handleMigrateOffers inserting a D1 row directly;
+      // in DO mode the handler skips that and we do it here instead.
+      if (job.name === "migrate-offers") {
+        const remaining = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(titles)
+          .where(eq(titles.offersChecked, 0))
+          .get();
+        if (remaining && remaining.count > 0) {
+          this.ctx.storage.sql.exec(
+            "INSERT INTO jobs (name, run_at, max_attempts) VALUES ('migrate-offers', ?, 1)",
+            new Date().toISOString(),
+          );
+          log.info("migrate-offers batch done, re-queued in DO", { remaining: remaining.count });
+        } else {
+          log.info("migrate-offers migration complete");
+        }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const newAttempts = job.attempts + 1;
 
       if (newAttempts < job.max_attempts) {
-        // Exponential backoff: 2^attempts × 30 s — mirrors processor.ts:264
+        // Exponential backoff: 2^attempts × 30 s — mirrors processor.ts
         const delaySec = Math.pow(2, newAttempts) * 30;
         const retryAt = new Date(Date.now() + delaySec * 1000).toISOString();
         this.ctx.storage.sql.exec(
@@ -253,7 +299,7 @@ export class JobQueueDO {
           retryAt,
           job.id,
         );
-        log.warn("Job failed, will retry", { name, jobId: job.id, attempt: newAttempts, retryAt, err });
+        log.warn("Job failed, will retry", { name: job.name, jobId: job.id, attempt: newAttempts, retryAt, err });
       } else {
         this.ctx.storage.sql.exec(
           "UPDATE jobs SET status = 'failed', error = ?, completed_at = ? WHERE id = ?",
@@ -261,7 +307,7 @@ export class JobQueueDO {
           new Date().toISOString(),
           job.id,
         );
-        log.error("Job failed permanently", { name, jobId: job.id, attempts: newAttempts, err });
+        log.error("Job failed permanently", { name: job.name, jobId: job.id, attempts: newAttempts, err });
       }
     }
 
@@ -275,7 +321,13 @@ export class JobQueueDO {
     this.initSchema();
     await this.ctx.storage.put("name", name);
     await this.ctx.storage.put("cron", cron);
-    await this.scheduleNextAlarm(cron);
+    // Only set alarm if none is already scheduled — the alarm handler manages re-arming.
+    // Calling scheduleNextAlarm() on every cron trigger would push the alarm forward and
+    // cause the job to be skipped at the current tick.
+    const existing = await this.ctx.storage.getAlarm();
+    if (existing === null) {
+      await this.scheduleNextAlarm(cron);
+    }
   }
 
   /** Insert a job row and schedule an immediate alarm. */
