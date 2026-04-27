@@ -24,7 +24,7 @@
     "sentry:release:upload-maps": "bunx sentry-cli sourcemaps inject frontend/dist && bunx sentry-cli sourcemaps upload --project remindarr-fe --release=\"$VERSION\" frontend/dist",
     "sentry:release:finalize": "bunx sentry-cli releases set-commits \"$VERSION\" --auto && bunx sentry-cli releases finalize \"$VERSION\"",
     "deploy:cf": "bun run sentry:env-check && bun run db:migrate:cf && export VERSION=$(bunx sentry-cli releases propose-version) && export VITE_SENTRY_RELEASE=\"$VERSION\" && bun run build && bun run sentry:release:new && bun run sentry:release:upload-maps && bunx wrangler deploy --var SENTRY_RELEASE:\"$VERSION\" && bun run sentry:release:finalize",
-    "deploy:cf:version": "bun run sentry:env-check && bun run db:migrate:cf && bunx wrangler deploy"
+    "deploy:cf:version": "bun run sentry:env-check && bun run db:migrate:cf && (bunx wrangler versions upload || bunx wrangler deploy)"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.5.6",
