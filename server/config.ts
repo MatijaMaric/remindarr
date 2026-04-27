@@ -74,6 +74,11 @@ export const CONFIG = {
   // (intended for home-lab deploys behind a trusted reverse proxy).
   METRICS_TOKEN: process.env.METRICS_TOKEN || "",
 
+  // Job queue backend (CF Workers only; Bun always uses queue.ts)
+  JOB_QUEUE_BACKEND: (process.env.JOB_QUEUE_BACKEND || "d1") as
+    | "d1"
+    | "durable-object",
+
   // Cache
   CACHE_BACKEND: (process.env.CACHE_BACKEND || "memory") as
     | "memory"

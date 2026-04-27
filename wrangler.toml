@@ -28,6 +28,16 @@ migrations_dir = "drizzle"
 binding = "CACHE_KV"
 id = "c41afddb53d045738dc0ffd1b082b46b"
 
+# Durable Object job queue — one instance per job name (or name:partitionKey)
+# Feature-flagged: set JOB_QUEUE_BACKEND=durable-object to activate
+[[durable_objects.bindings]]
+name = "JOB_QUEUE_DO"
+class_name = "JobQueueDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["JobQueueDO"]
+
 # Non-secret config (override via wrangler.toml or dashboard)
 [vars]
 TMDB_COUNTRY = "HR"

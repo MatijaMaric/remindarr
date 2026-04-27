@@ -11,7 +11,7 @@ import {
 import { createPin, checkPin, buildPlexAuthUrl, getServers } from "../plex/client";
 import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
-import { enqueueJobReturningId } from "../jobs/processor";
+import { enqueueAdhoc } from "../jobs/backend";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 import Sentry from "../sentry";
@@ -149,7 +149,7 @@ app.post("/", zValidator("json", createIntegrationSchema), async (c) => {
   const integration = await getIntegrationById(id, user.id);
 
   // Trigger an immediate library scan so Plex content shows up right away
-  enqueueJobReturningId("sync-plex-library");
+  void enqueueAdhoc("sync-plex-library");
 
   return c.json({ integration: sanitize(integration!) }, 201);
 });

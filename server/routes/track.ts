@@ -4,22 +4,11 @@ import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpi
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
-import { getDb } from "../db/schema";
-import { jobs } from "../db/schema";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
-
-/** Insert a job using the platform-agnostic Drizzle db (avoids bun:sqlite import). */
-async function enqueueJobDrizzle(name: string, data?: Record<string, unknown>) {
-  const db = getDb();
-  await db.insert(jobs).values({
-    name,
-    data: data ? JSON.stringify(data) : null,
-    runAt: new Date().toISOString(),
-  });
-}
+import { enqueueAdhoc } from "../jobs/backend";
 
 const log = logger.child({ module: "track" });
 
@@ -263,7 +252,7 @@ app.post("/import", zValidator("json", importBodySchema), async (c) => {
 
       // Backfill watch provider offers from TMDB
       if (item.tmdb_id && CONFIG.TMDB_API_KEY) {
-        await enqueueJobDrizzle("backfill-title-offers", {
+        await enqueueAdhoc("backfill-title-offers", {
           tmdbId: item.tmdb_id,
           objectType: item.object_type,
         });
@@ -282,7 +271,7 @@ app.post("/import", zValidator("json", importBodySchema), async (c) => {
           jobData.watchedEpisodes = item.watched_episodes;
           jobData.userId = user.id;
         }
-        await enqueueJobDrizzle("sync-show-episodes", jobData);
+        await enqueueAdhoc("sync-show-episodes", jobData);
       } else if (hasWatched && item.watched_episodes) {
         const episodeIds = await getEpisodeIdsBySE(item.id, item.watched_episodes);
         if (episodeIds.length > 0) {
@@ -327,7 +316,7 @@ app.post("/:id", async (c) => {
   if (CONFIG.TMDB_API_KEY) {
     const titleData = body.titleData;
     if (titleData?.object_type === "SHOW" && titleData?.tmdb_id) {
-      await enqueueJobDrizzle("sync-show-episodes", { titleId, tmdbId: titleData.tmdb_id, title: titleData.title });
+      await enqueueAdhoc("sync-show-episodes", { titleId, tmdbId: titleData.tmdb_id, title: titleData.title });
       log.info("Queued episode sync", { title: titleData.title, titleId });
     }
   }
