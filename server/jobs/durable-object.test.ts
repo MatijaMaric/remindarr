@@ -3,6 +3,12 @@
  *
  * Uses a fake DurableObjectState whose storage.sql is backed by bun:sqlite
  * in-memory so tests run under the standard bun:test runner without Miniflare.
+ *
+ * Tests that exercise job-processing logic (retry, backoff, single-writer) call
+ * runJob() directly — bypassing the Alarms timestamp dispatch so tests don't
+ * depend on wall-clock timing. Tests that exercise alarm scheduling (armCron
+ * idempotency, re-arm after processing) call alarm() and manipulate the
+ * _actor_alarms table directly.
  */
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Database } from "bun:sqlite";
@@ -12,6 +18,31 @@ import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 
 // ─── Fake CF storage ──────────────────────────────────────────────────────────
 
+class FakeSqlCursor {
+  private rows: Record<string, unknown>[];
+
+  constructor(rows: Record<string, unknown>[]) {
+    this.rows = rows;
+  }
+
+  toArray(): Record<string, unknown>[] {
+    return this.rows;
+  }
+
+  one(): Record<string, unknown> {
+    return this.rows[0];
+  }
+
+  // Iterable so spread ([...cursor]) works — required by @cloudflare/actors/alarms internals
+  [Symbol.iterator](): IterableIterator<Record<string, unknown>> {
+    return this.rows[Symbol.iterator]();
+  }
+
+  // Stub row-count properties used by SQLSchemaMigrations (unused here but satisfies types)
+  rowsRead = 0;
+  rowsWritten = 0;
+}
+
 class FakeSqlStorage {
   private db: Database;
 
@@ -19,10 +50,10 @@ class FakeSqlStorage {
     this.db = db;
   }
 
-  exec(sql: string, ...params: (string | number | boolean | null)[]): { toArray(): Record<string, unknown>[] } {
+  exec(sql: string, ...params: (string | number | boolean | null)[]): FakeSqlCursor {
     const stmt = this.db.prepare(sql);
     const rows = stmt.all(...params) as Record<string, unknown>[];
-    return { toArray: () => rows };
+    return new FakeSqlCursor(rows);
   }
 }
 
@@ -146,6 +177,7 @@ describe("JobQueueDO", () => {
     expect(rows[0].status).toBe("pending");
     expect(rows[0].name).toBe("sync-titles");
 
+    // Alarms.schedule() calls _scheduleNextAlarm() → setAlarm()
     const alarm = await state.storage.getAlarm();
     expect(alarm).not.toBeNull();
   });
@@ -157,14 +189,15 @@ describe("JobQueueDO", () => {
     expect(rows[0].data).toBe(data);
   });
 
-  // ── alarm: basic execution ────────────────────────────────────────────────
+  // ── runJob: basic execution ───────────────────────────────────────────────
+  // Tests below call runJob() directly to exercise processing logic without
+  // depending on Alarms dispatch timing (which uses integer-second precision).
 
-  it("alarm processes a pending job and marks it completed", async () => {
+  it("runJob processes a pending job and marks it completed", async () => {
     let called = false;
     processorModule.handlers["sync-titles"] = async () => { called = true; };
-    await do_.armCron("sync-titles", "0 3 * * *");
     await do_.enqueue("sync-titles", null);
-    await do_.alarm();
+    await do_.runJob(null);
 
     expect(called).toBe(true);
     const rows = do_.getRecentJobs();
@@ -172,11 +205,11 @@ describe("JobQueueDO", () => {
     expect(rows[0].completed_at).not.toBeNull();
   });
 
-  it("alarm auto-creates and runs a job for cron DOs when no pending rows exist", async () => {
+  it("runJob auto-creates and runs a job for cron DOs when no pending rows exist", async () => {
     let called = false;
     processorModule.handlers["sync-titles"] = async () => { called = true; };
     await do_.armCron("sync-titles", "0 3 * * *");
-    await do_.alarm(); // no rows pre-inserted — auto-create kicks in
+    await do_.runJob(null); // no rows pre-inserted — auto-create kicks in
 
     expect(called).toBe(true);
     const rows = do_.getRecentJobs();
@@ -184,41 +217,40 @@ describe("JobQueueDO", () => {
     expect(rows[0].status).toBe("completed");
   });
 
-  it("alarm skips jobs not yet ready (future run_at)", async () => {
+  it("runJob skips jobs not yet ready (future run_at)", async () => {
     let called = false;
-    processorModule.handlers["sync-titles"] = async () => { called = true; };
-    await do_.armCron("sync-titles", "0 3 * * *");
-    const future = new Date(Date.now() + 60_000).toISOString();
-    await do_.enqueue("sync-titles", null, future);
-    await do_.alarm();
+    processorModule.handlers["sync-show-episodes"] = async () => { called = true; };
+    // Ad-hoc DO (no armCron) — no auto-create when nothing is pending
+    await do_.enqueue("sync-show-episodes", null, new Date(Date.now() + 60_000).toISOString());
+    await do_.runJob(null);
     expect(called).toBe(false);
   });
 
-  // ── alarm: single-writer atomicity ────────────────────────────────────────
+  // ── single-writer atomicity ───────────────────────────────────────────────
 
-  it("two concurrent alarm() calls process a job at most once (single-writer guarantee)", async () => {
+  it("two concurrent runJob() calls process a job at most once (single-writer guarantee)", async () => {
     let callCount = 0;
     processorModule.handlers["sync-titles"] = async () => { callCount++; };
-    // No armCron — use bare enqueue so cron is null and auto-create doesn't kick in.
-    // enqueue() sets the "name" key so alarm() still identifies the DO.
+    // No armCron — bare enqueue so cron is null and auto-create doesn't kick in.
+    // enqueue() sets the "name" key so runJob() still identifies the DO.
     await do_.enqueue("sync-titles", null);
 
-    // In the DO model, only one alarm fires at a time — simulate two concurrent
-    // invocations; the second should find no pending work (job already claimed).
-    await Promise.all([do_.alarm(), do_.alarm()]);
+    // In the DO model, single-writer guarantees exclusion. In tests, runJob() claims
+    // via UPDATE before any await on the handler, so the second concurrent call finds
+    // no pending work after the first claims the row.
+    await Promise.all([do_.runJob(null), do_.runJob(null)]);
     expect(callCount).toBe(1);
   });
 
-  // ── alarm: exponential backoff ────────────────────────────────────────────
+  // ── exponential backoff ───────────────────────────────────────────────────
 
   it("retries a failed job with exponential backoff", async () => {
     processorModule.handlers["sync-titles"] = async () => {
       throw new Error("transient error");
     };
-    await do_.armCron("sync-titles", "0 3 * * *");
     await do_.enqueue("sync-titles", null, undefined, 3);
     const before = Date.now();
-    await do_.alarm();
+    await do_.runJob(null);
 
     const rows = do_.getRecentJobs();
     expect(rows[0].status).toBe("pending");
@@ -233,10 +265,9 @@ describe("JobQueueDO", () => {
     processorModule.handlers["sync-titles"] = async () => {
       throw new Error("fatal error");
     };
-    await do_.armCron("sync-titles", "0 3 * * *");
     // Insert with maxAttempts=1 so first failure is permanent
     await do_.enqueue("sync-titles", null, undefined, 1);
-    await do_.alarm();
+    await do_.runJob(null);
 
     const rows = do_.getRecentJobs();
     expect(rows[0].status).toBe("failed");
@@ -244,49 +275,53 @@ describe("JobQueueDO", () => {
     expect(rows[0].completed_at).not.toBeNull();
   });
 
-  // ── alarm: unknown handler ────────────────────────────────────────────────
+  // ── unknown handler ───────────────────────────────────────────────────────
 
   it("marks unknown job types as failed without running a handler", async () => {
-    await do_.armCron("nonexistent-job", "0 3 * * *");
     await do_.enqueue("nonexistent-job", null);
-    await do_.alarm();
+    await do_.runJob(null);
 
     const rows = do_.getRecentJobs();
     expect(rows[0].status).toBe("failed");
     expect(rows[0].error).toContain("Unknown job type");
   });
 
-  // ── armCron + alarm re-arm ────────────────────────────────────────────────
+  // ── armCron ───────────────────────────────────────────────────────────────
 
   it("armCron does not reset the alarm if one is already scheduled", async () => {
     await do_.armCron("sync-titles", "0 3 * * *");
     const firstAlarm = await state.storage.getAlarm();
     expect(firstAlarm).not.toBeNull();
 
-    // Second armCron call (as the CF scheduled handler would do) should NOT push
-    // the alarm forward — doing so would cause the current tick's job to be skipped.
+    // Second armCron call (as the CF scheduled handler does each cron tick) must NOT
+    // push the alarm forward — doing so would cause the current tick's job to be skipped.
     await do_.armCron("sync-titles", "0 3 * * *");
     const secondAlarm = await state.storage.getAlarm();
     expect(secondAlarm).toBe(firstAlarm); // unchanged
-    expect(state.storage.alarmHistory).toHaveLength(1); // set only once
+    // Only one alarm was set (by the first armCron call)
+    expect(state.storage.alarmHistory).toHaveLength(1);
   });
 
   it("armCron sets the cron expression and schedules an alarm", async () => {
     await do_.armCron("sync-titles", "0 3 * * *");
     const cronInfo = await do_.getCronInfo();
     expect(cronInfo.cron).toBe("0 3 * * *");
+    expect(cronInfo.nextRun).not.toBeNull();
     const alarm = await state.storage.getAlarm();
     expect(alarm).not.toBeNull();
     expect(alarm!).toBeGreaterThan(Date.now());
   });
 
-  it("alarm re-arms to the next cron tick after processing", async () => {
+  it("alarm() re-arms to the next cron tick after processing", async () => {
     processorModule.handlers["sync-titles"] = async () => {};
     await do_.armCron("sync-titles", "0 3 * * *");
-    await do_.enqueue("sync-titles", null);
+    // Force the cron schedule to be due (past time) so alarm() actually dispatches it
+    state.rawDb.prepare("UPDATE _actor_alarms SET time = 0 WHERE callback = 'runJob'").run();
+
     const beforeAlarmCount = state.storage.alarmHistory.length;
     await do_.alarm();
-    // A new alarm should have been scheduled after the job ran
+
+    // After processing, Alarms framework updates the cron row and calls _scheduleNextAlarm
     expect(state.storage.alarmHistory.length).toBeGreaterThan(beforeAlarmCount);
     const newAlarm = state.storage.scheduledAlarm!;
     expect(newAlarm).toBeGreaterThan(Date.now());
@@ -300,29 +335,36 @@ describe("JobQueueDO", () => {
       .run(new Date().toISOString());
 
     const alarmsBefore = adHocState.storage.alarmHistory.length;
-    await adHocDo.alarm();
-    // No auto-create for ad-hoc DOs — alarm just re-arms check and exits
+    await adHocDo.runJob(null);
+    // No auto-create for ad-hoc DOs — runJob exits without creating a new job row
     expect(adHocDo.getRecentJobs().filter((r) => r.status === "pending")).toHaveLength(0);
-    expect(adHocState.storage.alarmHistory.length).toBe(alarmsBefore); // no new alarm
+    // rearmIfPending finds no pending work → no new alarm scheduled
+    expect(adHocState.storage.alarmHistory.length).toBe(alarmsBefore);
     adHocState.close();
   });
 
   it("ad-hoc DO (no cron) re-arms only when pending rows remain", async () => {
-    // No armCron call — pure ad-hoc DO
     processorModule.handlers["sync-show-episodes"] = async () => {};
     const { do_: adHocDo, state: adHocState } = makeDO("sync-show-episodes:42");
     await adHocDo.enqueue("sync-show-episodes", null);
     await adHocDo.enqueue("sync-show-episodes", null); // second job
 
-    await adHocDo.alarm(); // processes first
-    // Still pending job → alarm should be re-set
-    expect(adHocState.storage.scheduledAlarm).not.toBeNull();
+    const alarmsAfterEnqueue = adHocState.storage.alarmHistory.length;
 
-    await adHocDo.alarm(); // processes second
-    // Now both processed → no more pending → alarm stays at last set (no new re-arm)
-    const lastAlarmCount = adHocState.storage.alarmHistory.length;
-    await adHocDo.alarm(); // no-op
-    expect(adHocState.storage.alarmHistory.length).toBe(lastAlarmCount); // no new alarm after empty
+    await adHocDo.runJob(null); // processes first
+    // Second job still pending → re-arm check: a delayed schedule should exist
+    const hasDelayedSchedule = adHocDo.alarms.getSchedules({ type: "delayed" }).some(
+      (s) => s.callback === "runJob",
+    );
+    expect(hasDelayedSchedule).toBe(true);
+
+    await adHocDo.runJob(null); // processes second
+
+    // After all jobs done, another runJob call should not schedule a new alarm
+    const alarmsBeforeFinal = adHocState.storage.alarmHistory.length;
+    await adHocDo.runJob(null); // no-op
+    expect(adHocState.storage.alarmHistory.length).toBe(alarmsBeforeFinal);
+
     adHocState.close();
   });
 
@@ -341,8 +383,8 @@ describe("JobQueueDO", () => {
     await do1.enqueue("sync-show-episodes", JSON.stringify({ titleId: 1 }));
     await do2.enqueue("sync-show-episodes", JSON.stringify({ titleId: 2 }));
 
-    await do1.alarm();
-    await do2.alarm();
+    await do1.runJob(null);
+    await do2.runJob(null);
 
     expect(calls).toContain(1);
     expect(calls).toContain(2);
@@ -491,3 +533,6 @@ describe("JobQueueDO", () => {
     expect(resp.status).toBe(404);
   });
 });
+
+// Suppress unused-variable warning for the spy (it suppresses console output in tests)
+void mockSyncTitles;
