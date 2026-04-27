@@ -1,6 +1,5 @@
-import { getDb } from "../db/schema";
-import { titles, offers } from "../db/schema";
-import { isNotNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { getDb, titles, offers } from "../db/schema";
 import { logger } from "../logger";
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
@@ -21,6 +20,9 @@ function delay(ms: number): Promise<void> {
  * for all existing titles that have no offers in the database.
  *
  * Processes at most `batchSize` titles per call to stay within CF CPU limits.
+ * Sets `offers_checked = 1` on each title after processing (regardless of
+ * whether offers were found) so titles with no streaming availability are
+ * not retried on every subsequent run.
  * Returns `hasMore: true` when the batch was full — callers should re-enqueue.
  */
 export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{ updated: number; skipped: number; failed: number; hasMore: boolean }> {
@@ -34,7 +36,7 @@ export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{ u
     .select({ id: titles.id, objectType: titles.objectType, tmdbId: titles.tmdbId })
     .from(titles)
     .where(
-      sql`${titles.tmdbId} IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ${offers} WHERE ${offers.titleId} = ${titles.id})`
+      sql`${titles.tmdbId} IS NOT NULL AND ${titles.offersChecked} = 0`
     )
     .limit(batchSize)
     .all();
@@ -70,6 +72,9 @@ export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{ u
       log.error("Failed to migrate offers", { titleId: row.id, err });
       failed++;
     }
+
+    // Mark as checked regardless of outcome so it isn't retried on the next run.
+    await db.update(titles).set({ offersChecked: 1 }).where(eq(titles.id, row.id));
 
     await delay(DELAY_MS);
   }

@@ -232,6 +232,13 @@
       "when": 1777852800000,
       "tag": "0032_activity_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1777939200000,
+      "tag": "0033_titles_offers_checked",
+      "breakpoints": true
     }
   ]
 }
