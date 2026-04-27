@@ -10,6 +10,7 @@ import { CONFIG } from "../config";
 const log = logger.child({ module: "migrate-offers" });
 
 const DELAY_MS = 500;
+const DEFAULT_BATCH_SIZE = 20;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -18,11 +19,14 @@ function delay(ms: number): Promise<void> {
 /**
  * One-time migration: fetches watch provider offers from TMDB
  * for all existing titles that have no offers in the database.
+ *
+ * Processes at most `batchSize` titles per call to stay within CF CPU limits.
+ * Returns `hasMore: true` when the batch was full — callers should re-enqueue.
  */
-export async function migrateOffers(): Promise<{ updated: number; skipped: number; failed: number }> {
+export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{ updated: number; skipped: number; failed: number; hasMore: boolean }> {
   if (!CONFIG.TMDB_API_KEY) {
     log.info("Skipping offers migration", { reason: "TMDB_API_KEY not configured" });
-    return { updated: 0, skipped: 0, failed: 0 };
+    return { updated: 0, skipped: 0, failed: 0, hasMore: false };
   }
 
   const db = getDb();
@@ -32,14 +36,17 @@ export async function migrateOffers(): Promise<{ updated: number; skipped: numbe
     .where(
       sql`${titles.tmdbId} IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ${offers} WHERE ${offers.titleId} = ${titles.id})`
     )
+    .limit(batchSize)
     .all();
 
   if (rows.length === 0) {
     log.info("No titles need offers migration");
-    return { updated: 0, skipped: 0, failed: 0 };
+    return { updated: 0, skipped: 0, failed: 0, hasMore: false };
   }
 
-  log.info("Migrating offers", { count: rows.length });
+  // A full batch means there are likely more rows beyond this page.
+  const hasMore = rows.length === batchSize;
+  log.info("Migrating offers batch", { count: rows.length, hasMore });
   let updated = 0;
   let skipped = 0;
   let failed = 0;
@@ -67,6 +74,6 @@ export async function migrateOffers(): Promise<{ updated: number; skipped: numbe
     await delay(DELAY_MS);
   }
 
-  log.info("Offers migration complete", { updated, skipped, failed });
-  return { updated, skipped, failed };
+  log.info("Offers migration batch complete", { updated, skipped, failed, hasMore });
+  return { updated, skipped, failed, hasMore };
 }

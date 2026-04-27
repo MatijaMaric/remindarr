@@ -82,7 +82,7 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0 });
+    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0, hasMore: false });
     expect(mockFetchMovieDetails).not.toHaveBeenCalled();
     expect(mockFetchTvDetails).not.toHaveBeenCalled();
   });
@@ -90,7 +90,7 @@ describe("migrateOffers", () => {
   it("returns zeros when no titles exist", async () => {
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0 });
+    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0, hasMore: false });
   });
 
   it("skips titles that already have offers", async () => {
@@ -99,7 +99,7 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0 });
+    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0, hasMore: false });
     expect(mockFetchMovieDetails).not.toHaveBeenCalled();
   });
 
@@ -116,7 +116,7 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 1, skipped: 0, failed: 0 });
+    expect(result).toEqual({ updated: 1, skipped: 0, failed: 0, hasMore: false });
     expect(mockFetchMovieDetails).toHaveBeenCalledWith(200);
     expect(countOffers("movie-200")).toBe(1);
   });
@@ -135,7 +135,7 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 1, skipped: 0, failed: 0 });
+    expect(result).toEqual({ updated: 1, skipped: 0, failed: 0, hasMore: false });
     expect(mockFetchTvDetails).toHaveBeenCalledWith(300);
     expect(countOffers("tv-300")).toBe(1);
   });
@@ -148,7 +148,7 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 1, failed: 0 });
+    expect(result).toEqual({ updated: 0, skipped: 1, failed: 0, hasMore: false });
     expect(countOffers("movie-400")).toBe(0);
   });
 
@@ -159,7 +159,7 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 1 });
+    expect(result).toEqual({ updated: 0, skipped: 0, failed: 1, hasMore: false });
   });
 
   it("continues after a failure and processes remaining titles", async () => {
@@ -177,6 +177,19 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 1, skipped: 0, failed: 1 });
+    expect(result).toEqual({ updated: 1, skipped: 0, failed: 1, hasMore: false });
+  });
+
+  it("returns hasMore: true when the batch is full and more titles remain", async () => {
+    insertTitle("movie-701", "MOVIE", "701");
+    insertTitle("movie-702", "MOVIE", "702");
+
+    mockFetchMovieDetails.mockRejectedValue(new Error("API error"));
+
+    // batchSize=1 so only movie-701 is processed; movie-702 remains
+    const result = await migrateOffers(1);
+
+    expect(result).toMatchObject({ hasMore: true });
+    expect(mockFetchMovieDetails).toHaveBeenCalledTimes(1);
   });
 });
