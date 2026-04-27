@@ -49,6 +49,12 @@ function countOffers(titleId: string): number {
   return row.cnt;
 }
 
+function getOffersChecked(titleId: string): number {
+  const db = getRawDb();
+  const row = db.prepare("SELECT offers_checked FROM titles WHERE id = ?").get(titleId) as any;
+  return row.offers_checked;
+}
+
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
 const originalApiKey = CONFIG.TMDB_API_KEY;
@@ -93,9 +99,9 @@ describe("migrateOffers", () => {
     expect(result).toEqual({ updated: 0, skipped: 0, failed: 0, hasMore: false });
   });
 
-  it("skips titles that already have offers", async () => {
+  it("skips titles that are already marked as checked", async () => {
     insertTitle("movie-100", "MOVIE", "100");
-    insertOffer("movie-100");
+    getRawDb().prepare("UPDATE titles SET offers_checked = 1 WHERE id = ?").run("movie-100");
 
     const result = await migrateOffers();
 
@@ -150,6 +156,31 @@ describe("migrateOffers", () => {
 
     expect(result).toEqual({ updated: 0, skipped: 1, failed: 0, hasMore: false });
     expect(countOffers("movie-400")).toBe(0);
+  });
+
+  it("marks offers_checked = 1 after processing, even when no offers found", async () => {
+    insertTitle("movie-450", "MOVIE", "450");
+
+    mockFetchMovieDetails.mockResolvedValueOnce({} as any);
+    mockParseMovieDetails.mockReturnValueOnce(makeParsedTitle({ id: "movie-450", offers: [] }));
+
+    await migrateOffers();
+
+    expect(getOffersChecked("movie-450")).toBe(1);
+    // Second run should not re-fetch
+    mockFetchMovieDetails.mockClear();
+    await migrateOffers();
+    expect(mockFetchMovieDetails).not.toHaveBeenCalled();
+  });
+
+  it("marks offers_checked = 1 even when TMDB fetch fails", async () => {
+    insertTitle("movie-460", "MOVIE", "460");
+
+    mockFetchMovieDetails.mockRejectedValueOnce(new Error("TMDB error"));
+
+    await migrateOffers();
+
+    expect(getOffersChecked("movie-460")).toBe(1);
   });
 
   it("counts failures when TMDB fetch throws", async () => {

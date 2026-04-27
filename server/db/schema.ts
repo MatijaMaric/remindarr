@@ -46,6 +46,7 @@ export const titles = sqliteTable(
     originalLanguage: text("original_language"),
     tmdbUrl: text("tmdb_url"),
     saFetchedAt: text("sa_fetched_at"),
+    offersChecked: integer("offers_checked").notNull().default(0),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [
