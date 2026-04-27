@@ -45,7 +45,7 @@ const mockMigrateTitles = spyOn(migrateTitlesModule, "migrateTitles").mockResolv
 
 // Mock migrate-offers — use spyOn
 import * as migrateOffersModule from "./migrate-offers";
-const mockMigrateOffers = spyOn(migrateOffersModule, "migrateOffers").mockResolvedValue({ updated: 0, skipped: 0, failed: 0 });
+const mockMigrateOffers = spyOn(migrateOffersModule, "migrateOffers").mockResolvedValue({ updated: 0, skipped: 0, failed: 0, hasMore: false });
 
 // Mock Plex sync modules
 import * as plexSync from "../plex/sync";

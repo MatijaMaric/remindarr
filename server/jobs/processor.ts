@@ -142,7 +142,14 @@ async function handleBackfillTitleOffers(data: string | null): Promise<void> {
 
 async function handleMigrateOffers(): Promise<void> {
   const { migrateOffers } = await import("./migrate-offers");
-  await migrateOffers();
+  const result = await migrateOffers();
+  if (result.hasMore) {
+    // Direct insert bypasses enqueueOneTimeMigration's "any row" sentinel so the
+    // backfill continues across multiple cron ticks.
+    const db = getDb();
+    await db.insert(jobs).values({ name: "migrate-offers", runAt: new Date().toISOString(), maxAttempts: 1 });
+    log.info("migrate-offers batch done, re-enqueued for next tick");
+  }
 }
 
 async function handleSyncDeepLinks(): Promise<void> {
