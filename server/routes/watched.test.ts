@@ -19,6 +19,20 @@ function makeAuthedApp() {
   return a;
 }
 
+/** Simulates requireAuth by returning 401 when no user is set. */
+function makeUnauthApp() {
+  const a = new Hono<AppEnv>();
+  a.use("*", async (c, next) => {
+    const user = c.get("user");
+    if (!user) {
+      return c.json({ error: "Session expired" }, 401);
+    }
+    await next();
+  });
+  a.route("/watched", watchedApp);
+  return a;
+}
+
 async function getEpisodeId(titleId: string, season: number, episode: number): Promise<number> {
   const db = getRawDb();
   const row = db
@@ -756,7 +770,7 @@ describe("Watch history logging", () => {
 });
 
 describe("GET /watched/history/:titleId", () => {
-  it("returns empty history and 0 play count for a title with no watches", async () => {
+  it("returns 200 with empty history and playCount 0 for authenticated user with no watches", async () => {
     await upsertTitles([makeParsedTitle({ id: "movie-nowatch", objectType: "MOVIE" })]);
 
     const app = makeAuthedApp();
@@ -765,6 +779,12 @@ describe("GET /watched/history/:titleId", () => {
     const body = await res.json();
     expect(body.playCount).toBe(0);
     expect(body.history).toEqual([]);
+  });
+
+  it("returns 401 for unauthenticated requests", async () => {
+    const app = makeUnauthApp();
+    const res = await app.request("/watched/history/some-title-id");
+    expect(res.status).toBe(401);
   });
 
   it("returns correct history and play count after watching a movie", async () => {
