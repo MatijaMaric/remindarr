@@ -252,6 +252,50 @@ describe("enqueueAdhoc (DO mode)", () => {
   });
 });
 
+// ─── scheduled() bootstrap pattern — arm all CRON_JOBS ───────────────────────
+//
+// Verifies the pattern used by server/worker.ts scheduled() handler:
+// iterate CRON_JOBS and call armCron for each one, regardless of which Worker
+// cron expression fired. This ensures any daily bootstrap tick arms every
+// cron-singleton DO, not just the one whose expression matches event.cron.
+
+describe("scheduled() bootstrap pattern (DO mode)", () => {
+  it("arms every CRON_JOBS entry with one /arm request each", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const fetchCalls: FetchCall[] = [];
+    const ns = makeFakeDoNamespace((path, method, body) => {
+      fetchCalls.push({ path, method, body });
+      return { ok: true };
+    });
+    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+
+    // Mirror what worker.ts scheduled() now does
+    for (const { name, cron } of CRON_JOBS) {
+      await armCron(env, name, cron);
+    }
+
+    const armCalls = fetchCalls.filter((c) => c.path === "/arm");
+    expect(armCalls).toHaveLength(CRON_JOBS.length);
+    for (const { name, cron } of CRON_JOBS) {
+      expect(armCalls).toContainEqual(
+        expect.objectContaining({ path: "/arm", body: expect.objectContaining({ name, cron }) }),
+      );
+    }
+  });
+
+  it("does not call enqueueCronJob (D1 path) in DO mode", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace(() => ({ ok: true }));
+    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+
+    for (const { name, cron } of CRON_JOBS) {
+      await armCron(env, name, cron);
+    }
+
+    expect(mockEnqueueCronJob).not.toHaveBeenCalled();
+  });
+});
+
 // ─── runWithEnv ───────────────────────────────────────────────────────────────
 
 describe("runWithEnv", () => {

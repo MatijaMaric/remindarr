@@ -65,12 +65,10 @@ head_sampling_rate = 1
 persist = true
 invocation_logs = true
 
-# Cron triggers for background jobs
+# Cron triggers — bootstrap window only. Per-job sub-daily schedules
+# (e.g. send-notifications every 5 min) live in CRON_JOBS in
+# server/jobs/backend.ts and are driven by Durable Object alarms via
+# @cloudflare/actors/alarms. This single daily tick arms every cron DO
+# (idempotent), runs stale-job recovery, and enqueues one-time migrations.
 [triggers]
-crons = [
-  "0 3 * * *",      # sync-titles
-  "30 3 * * *",     # sync-episodes
-  "0 4 * * *",      # sync-deep-links (Streaming Availability API)
-  "*/5 * * * *",    # send-notifications (check every 5 min)
-  "0 0 * * *",      # cleanup (expired sessions, old jobs)
-]
+crons = ["0 0 * * *"]
