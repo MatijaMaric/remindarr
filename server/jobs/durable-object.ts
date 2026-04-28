@@ -160,8 +160,9 @@ export class JobQueueDO {
           data?: string | null;
           runAt?: string;
           maxAttempts?: number;
+          idempotent?: boolean;
         };
-        const id = await this.enqueue(body.name, body.data ?? null, body.runAt, body.maxAttempts);
+        const id = await this.enqueue(body.name, body.data ?? null, body.runAt, body.maxAttempts, body.idempotent);
         return Response.json({ id });
       }
       if (request.method === "POST" && path === "/recover") {
@@ -337,16 +338,26 @@ export class JobQueueDO {
     }
   }
 
-  /** Insert a job row and schedule an alarm to fire within 1 second. */
+  /** Insert a job row and schedule an alarm to fire within 1 second.
+   *  When idempotent is true, skips insert if a pending row for this name already exists. */
   async enqueue(
     name: string,
     data: string | null,
     runAt?: string,
     maxAttempts?: number,
+    idempotent?: boolean,
   ): Promise<number> {
     this.initSchema();
     await this.ctx.storage.put("name", name);
     const now = new Date().toISOString();
+
+    if (idempotent) {
+      const existing = this.ctx.storage.sql
+        .exec("SELECT id FROM jobs WHERE name = ? AND status = 'pending' LIMIT 1", name)
+        .toArray() as Array<{ id: number }>;
+      if (existing.length > 0) return existing[0].id;
+    }
+
     const rows = this.ctx.storage.sql
       .exec(
         "INSERT INTO jobs (name, data, run_at, max_attempts) VALUES (?, ?, ?, ?) RETURNING id",
@@ -358,8 +369,8 @@ export class JobQueueDO {
       .toArray() as Array<{ id: number }>;
 
     // Only schedule if no delayed runJob alarm is already pending
-    const existing = this.alarms.getSchedules({ type: "delayed" });
-    if (!existing.some((s) => s.callback === "runJob")) {
+    const existingAlarms = this.alarms.getSchedules({ type: "delayed" });
+    if (!existingAlarms.some((s) => s.callback === "runJob")) {
       await this.alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
     }
     return rows[0].id;
@@ -447,12 +458,12 @@ export class JobQueueDO {
   // ─── Private helpers ─────────────────────────────────────────────────────
 
   /**
-   * For ad-hoc DOs: re-arm with a 1-second delayed alarm if pending jobs remain.
-   * Cron DOs are re-armed automatically by the Alarms framework (cron type schedules
-   * update their own next-execution time after each run).
+   * Re-arm with a 1-second delayed alarm if pending jobs remain.
+   * Applies to both cron and ad-hoc DOs — cron alarms only fire on their schedule
+   * (e.g. once per day), so extra pending rows inserted via enqueue() must still
+   * drain promptly via a delayed alarm.
    */
-  private async rearmIfPending(cron: string | null): Promise<void> {
-    if (cron) return;
+  private async rearmIfPending(_cron: string | null): Promise<void> {
     const rows = this.ctx.storage.sql
       .exec("SELECT COUNT(*) as count FROM jobs WHERE status = 'pending'")
       .toArray() as Array<{ count: number }>;

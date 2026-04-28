@@ -137,15 +137,15 @@ export async function enqueueAdhoc(
 }
 
 /**
- * Enqueue a one-time migration job (idempotent — skips if any row exists).
+ * Enqueue a one-time migration job (idempotent — skips if any pending row exists).
  * In D1 mode the D1 jobs table row is the dedup sentinel.
- * In DO mode we enqueue directly in the named DO (the DO's own SQLite is the sentinel).
+ * In DO mode the DO's own SQLite is the sentinel (enforced by the idempotent flag).
  */
 export async function enqueueOnce(name: string): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     const env = getEnvOrNull();
     if (env?.JOB_QUEUE_DO) {
-      await doFetch(env, name, "/enqueue", "POST", { name, maxAttempts: 1 });
+      await doFetch(env, name, "/enqueue", "POST", { name, maxAttempts: 1, idempotent: true });
     }
     return;
   }

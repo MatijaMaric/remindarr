@@ -499,7 +499,6 @@ const handler = {
 
         // One-time migrations always run through D1 regardless of backend
         await enqueueOnce("migrate-offers");
-        await enqueueOnce("sync-deep-links");
 
         // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
         await recoverStale(cfEnv, 15);
