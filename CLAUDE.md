@@ -49,6 +49,12 @@ docker compose up --build
 bun run deploy:cf            # Deploy to Cloudflare
 ```
 
+## Branch naming
+
+- Claude-authored branches: `claude/NNN-short-description` where NNN is the issue number (e.g. `claude/524-pinned-favorites`)
+- Human-authored branches use `feat/`, `fix/`, or `refactor/` prefixes (e.g. `fix/498-semantic-button-chips`)
+- Never create branches without a prefix — bare names like `pinned-favorites` or `notification-log` are non-standard
+
 ## Testing Rules
 
 **Every change must include tests.** New features need unit tests. Bug fixes need regression tests.
