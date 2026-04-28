@@ -54,6 +54,8 @@ export interface Title {
   tracked_at?: string;
   notes?: string;
   tags?: string[];
+  remaining_minutes?: number | null;
+  eta_days?: number | null;
 }
 
 export interface Episode {
@@ -407,6 +409,10 @@ export interface StatsResponse {
     on_hold: number;
     dropped: number;
     plan_to_watch: number;
+  };
+  pace?: {
+    minutesPerDay: number | null;
+    watchlistEtaDays: number | null;
   };
 }
 
