@@ -9,6 +9,7 @@ import { NetworkList } from "./NetworkList";
 import { RatingBadge } from "./RatingBadge";
 import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { getCertification } from "./utils";
+import { formatEta } from "../../pages/StatsPage";
 
 export interface ShowHeroProps {
   title: Title;
@@ -103,6 +104,11 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
           <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
           <PinButton titleId={title.id} />
         </div>
+        {title.is_tracked && title.eta_days != null && (
+          <div className="text-xs text-zinc-400 text-center">
+            Finish in ~{formatEta(title.eta_days)} at your current pace
+          </div>
+        )}
       </>
     );
   }
@@ -219,6 +225,11 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             />
             <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
           </div>
+          {title.is_tracked && title.eta_days != null && (
+            <div className="text-xs text-zinc-400">
+              Finish in ~{formatEta(title.eta_days)} at your current pace
+            </div>
+          )}
         </div>
       </div>
     </div>

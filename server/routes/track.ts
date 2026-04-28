@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle } from "../db/repository";
+import { getUserPace, computeEta } from "../db/repository/stats";
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
@@ -16,13 +17,19 @@ const app = new Hono<AppEnv>();
 
 app.get("/", async (c) => {
   const user = c.get("user")!;
-  const [titles, fullUser] = await Promise.all([
+  const [titles, fullUser, pace] = await Promise.all([
     getTrackedTitles(user.id),
     getUserById(user.id),
+    getUserPace(user.id),
   ]);
+  const titlesWithEta = titles.map((t) => ({
+    ...t,
+    remaining_minutes: t.remaining_runtime_minutes ?? null,
+    eta_days: computeEta(t.remaining_runtime_minutes ?? 0, pace.minutesPerDay),
+  }));
   return ok(c, {
-    titles,
-    count: titles.length,
+    titles: titlesWithEta,
+    count: titlesWithEta.length,
     profile_public: Boolean(fullUser?.profile_public),
     profile_visibility: fullUser?.profile_visibility ?? (fullUser?.profile_public ? "public" : "private"),
   });

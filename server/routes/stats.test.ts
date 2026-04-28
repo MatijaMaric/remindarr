@@ -51,6 +51,10 @@ describe("GET /stats", () => {
     expect(body.languages).toHaveLength(0);
     expect(body.monthly).toHaveLength(13);
     expect(body.monthly[0].movies_watched).toBe(0);
+    // pace field should be present with nulls when no watch history
+    expect(body.pace).toBeDefined();
+    expect(body.pace.minutesPerDay).toBeNull();
+    expect(body.pace.watchlistEtaDays).toBeNull();
     expect(body.monthly[0].episodes_watched).toBe(0);
   });
 

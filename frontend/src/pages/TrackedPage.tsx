@@ -14,7 +14,7 @@ import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
 import BackdateWatchedButton from "../components/BackdateWatchedButton";
-import { StatsView } from "./StatsPage";
+import { StatsView, formatEta } from "./StatsPage";
 import {
   AlertDialog,
   AlertDialogPopup,
@@ -388,6 +388,9 @@ function TrackedTable({ titles, onRefetch, selectMode = false, selectedIds = new
                     <span className="font-mono text-[10px] text-zinc-400 shrink-0">{watched}/{total}</span>
                   </div>
                 )}
+                {title.eta_days != null && (
+                  <span className="font-mono text-[10px] text-zinc-500">ETA: {formatEta(title.eta_days)}</span>
+                )}
               </div>
             </>
           );
@@ -525,6 +528,9 @@ function TrackedTable({ titles, onRefetch, selectMode = false, selectedIds = new
                     </div>
                     <span className="font-mono text-[11px] text-zinc-400 shrink-0">{watched}/{total}</span>
                   </div>
+                  {title.eta_days != null && (
+                    <span className="font-mono text-[10px] text-zinc-500">ETA: {formatEta(title.eta_days)}</span>
+                  )}
                 </div>
               ) : (
                 <div className="font-mono text-[11px] text-zinc-600">—</div>
