@@ -65,7 +65,7 @@ export function rateLimiter(options: RateLimitOptions) {
     bucket.lastRefill = now;
 
     if (bucket.tokens < 1) {
-      log.warn("Rate limit exceeded", { key, path: c.req.path });
+      log.info("Rate limit exceeded", { key, path: c.req.path });
       c.header("Retry-After", String(Math.ceil(windowMs / 1000)));
       return c.json({ error: "Too many requests" }, 429);
     }

@@ -135,8 +135,13 @@ export function requestLogger(): MiddlewareHandler {
     const method = c.req.method;
     const route = normalizeRoutePath(c.req.path);
 
+    // 5xx → error; 401/403 auth failures → info (expected from bots/expired sessions);
+    // other 4xx → warn; 2xx/3xx → info
     const level: LogLevel =
-      status >= 500 ? "error" : status >= 400 ? "warn" : "info";
+      status >= 500 ? "error"
+      : status === 401 || status === 403 ? "info"
+      : status >= 400 ? "warn"
+      : "info";
     log[level](`${method} ${c.req.path}`, { status, duration: Math.round(durationMs) });
 
     const statusStr = String(status);
