@@ -92,6 +92,18 @@ export async function getTrackedTitles(userId: string) {
         released_episodes_count: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
         latest_released_air_date: sql<string | null>`(SELECT MAX(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
         next_episode_air_date: sql<string | null>`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
+        remaining_runtime_minutes: sql<number | null>`(
+          CASE WHEN ${titles.runtimeMinutes} IS NULL THEN NULL
+          ELSE (
+            SELECT COUNT(e2.id) * ${titles.runtimeMinutes}
+            FROM episodes e2
+            WHERE e2.title_id = ${titles.id}
+              AND e2.air_date <= date('now')
+              AND e2.id NOT IN (
+                SELECT we2.episode_id FROM watched_episodes we2 WHERE we2.user_id = ${userId}
+              )
+          ) END
+        )`,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))

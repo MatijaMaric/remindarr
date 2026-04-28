@@ -14,6 +14,9 @@ import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { getUserPace, computeEta } from "../db/repository/stats";
+import { getDb } from "../db/schema";
+import { sql } from "drizzle-orm";
 
 const log = logger.child({ module: "details" });
 
@@ -73,7 +76,8 @@ app.get("/movie/:id", async (c) => {
 
 app.get("/show/:id", async (c) => {
   const user = c.get("user");
-  const title = await getOrFetchTitle(c.req.param("id"), user?.id);
+  const titleId = c.req.param("id");
+  const title = await getOrFetchTitle(titleId, user?.id);
   if (!title) return err(c, "Title not found", 404);
 
   let tmdb = null;
@@ -85,7 +89,34 @@ app.get("/show/:id", async (c) => {
     }
   }
 
-  return ok(c, { title, tmdb, country });
+  let etaDays: number | null = null;
+  if (user && title.is_tracked) {
+    try {
+      const db = getDb();
+      // Episodes don't store per-episode runtime; use the title's runtime_minutes as proxy
+      const remainingRows = await db.all<{ remaining_minutes: number }>(sql`
+        SELECT COALESCE(
+          (SELECT COUNT(e.id) FROM episodes e
+           WHERE e.title_id = ${titleId}
+             AND e.air_date <= date('now')
+             AND e.id NOT IN (
+               SELECT we.episode_id FROM watched_episodes we WHERE we.user_id = ${user.id}
+             )
+          ) * (SELECT t.runtime_minutes FROM titles t WHERE t.id = ${titleId}),
+          0
+        ) AS remaining_minutes
+      `);
+      const remainingMinutes = remainingRows[0]?.remaining_minutes ?? 0;
+      if (remainingMinutes > 0) {
+        const pace = await getUserPace(user.id);
+        etaDays = computeEta(remainingMinutes, pace.minutesPerDay);
+      }
+    } catch (e) {
+      log.error("ETA computation failed", { titleId, err: e });
+    }
+  }
+
+  return ok(c, { title: { ...title, eta_days: etaDays }, tmdb, country });
 });
 
 app.get("/show/:id/season/:season", async (c) => {

@@ -200,6 +200,39 @@ export async function getShowsByStatus(userId: string): Promise<ShowsByStatus> {
   });
 }
 
+export interface UserPace {
+  minutesPerDay: number | null;
+}
+
+export async function getUserPace(userId: string): Promise<UserPace> {
+  return traceDbQuery("getUserPace", async () => {
+    const db = getDb();
+    // Episodes don't have per-episode runtime; use the parent title's runtime_minutes
+    // as a proxy for each episode's duration (typical for shows).
+    const rows = await db.all<{ total_minutes: number }>(sql`
+      SELECT COALESCE(SUM(ti.runtime_minutes), 0) AS total_minutes
+      FROM (
+        SELECT episode_id FROM watch_history
+        WHERE user_id = ${userId} AND watched_at >= datetime('now', '-30 days')
+        UNION
+        SELECT episode_id FROM watched_episodes
+        WHERE user_id = ${userId} AND watched_at >= datetime('now', '-30 days')
+      ) watched
+      JOIN episodes e ON e.id = watched.episode_id
+      JOIN titles ti ON ti.id = e.title_id
+      WHERE ti.runtime_minutes IS NOT NULL
+    `);
+    const total = rows[0]?.total_minutes ?? 0;
+    if (total === 0) return { minutesPerDay: null };
+    return { minutesPerDay: total / 30 };
+  });
+}
+
+export function computeEta(remainingMinutes: number, minutesPerDay: number | null): number | null {
+  if (!minutesPerDay || minutesPerDay <= 0) return null;
+  return Math.ceil(remainingMinutes / minutesPerDay);
+}
+
 /** Returns an array of YYYY-MM strings for the last N months (oldest first). */
 export function buildMonthRange(count: number): string[] {
   const months: string[] = [];
