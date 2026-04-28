@@ -40,6 +40,13 @@ export const pwaOptions: Partial<VitePWAOptions> = {
         purpose: "maskable",
       },
     ],
+    shortcuts: [
+      {
+        name: "Airing Soon",
+        url: "/calendar",
+        description: "See upcoming episodes",
+      },
+    ],
   },
 };
 

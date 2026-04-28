@@ -13,6 +13,7 @@ import TitleList from "../components/TitleList";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
 import { EpisodeShowCard, DeckCardWrapper } from "../components/EpisodeShowCard";
+import EpisodeCountdown from "../components/EpisodeCountdown";
 import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
 import { Kicker } from "../components/design";
@@ -467,6 +468,24 @@ export default function HomePage() {
     [today]
   );
 
+  // For "Airing Soon": one card per show, earliest upcoming episode, sorted by air_date.
+  const airingEntries = useMemo(() => {
+    const byShow = new Map<string, Episode>();
+    for (const ep of upcoming) {
+      if (!ep.air_date) continue;
+      const existing = byShow.get(ep.title_id);
+      if (!existing || ep.air_date < existing.air_date!) {
+        byShow.set(ep.title_id, ep);
+      }
+    }
+    return Array.from(byShow.values()).sort((a, b) => {
+      if (!a.air_date && !b.air_date) return 0;
+      if (!a.air_date) return 1;
+      if (!b.air_date) return -1;
+      return a.air_date.localeCompare(b.air_date);
+    });
+  }, [upcoming]);
+
   if (authLoading || state.status === "loading") {
     return <EpisodeListSkeleton />;
   }
@@ -689,6 +708,43 @@ export default function HomePage() {
             </div>
           </section>
         ) : null;
+
+      case "airing_soon":
+        return airingEntries.length > 0 ? (
+          <section key="airing_soon">
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <Kicker>Coming up</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.airingSoon.title")}</h2>
+              </div>
+              <Link to="/calendar" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">Open calendar →</Link>
+            </div>
+            <FullBleedCarousel>
+              {airingEntries.map((ep) => (
+                <div key={ep.id} className="w-80 flex-shrink-0 relative" style={{ scrollSnapAlign: "start" }}>
+                  <DeckCardWrapper episodeCount={1}>
+                    <EpisodeShowCard episode={ep} episodeCount={1} />
+                  </DeckCardWrapper>
+                  {ep.air_date && (
+                    <div className="absolute bottom-4 left-3 z-10">
+                      <EpisodeCountdown airDate={ep.air_date} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </FullBleedCarousel>
+          </section>
+        ) : (
+          <section key="airing_soon">
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <Kicker>Coming up</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.airingSoon.title")}</h2>
+              </div>
+            </div>
+            <p className="text-zinc-500 text-sm">{t("home.airingSoon.empty")}</p>
+          </section>
+        );
 
       default:
         return null;

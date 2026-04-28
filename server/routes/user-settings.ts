@@ -5,7 +5,7 @@ import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
 
-export const HOMEPAGE_SECTION_IDS = ["unwatched", "recommendations", "today", "upcoming"] as const;
+export const HOMEPAGE_SECTION_IDS = ["unwatched", "recommendations", "today", "upcoming", "airing_soon"] as const;
 export type HomepageSectionId = (typeof HOMEPAGE_SECTION_IDS)[number];
 
 export interface HomepageSection {
@@ -18,6 +18,7 @@ export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "recommendations", enabled: true },
   { id: "today", enabled: true },
   { id: "upcoming", enabled: true },
+  { id: "airing_soon", enabled: false },
 ];
 
 // Discriminated union: each known section id is its own member with a fixed
@@ -28,6 +29,7 @@ const homepageSectionSchema = z.discriminatedUnion("id", [
   z.object({ id: z.literal("recommendations"), enabled: z.boolean().default(true) }),
   z.object({ id: z.literal("today"), enabled: z.boolean().default(true) }),
   z.object({ id: z.literal("upcoming"), enabled: z.boolean().default(true) }),
+  z.object({ id: z.literal("airing_soon"), enabled: z.boolean().default(false) }),
 ]);
 
 const updateHomepageLayoutSchema = z.object({
@@ -72,7 +74,7 @@ function parseLayout(raw: string | null): HomepageSection[] {
     // Append any sections that weren't in the saved layout (new sections added later)
     for (const def of DEFAULT_HOMEPAGE_LAYOUT) {
       if (!seen.has(def.id)) {
-        valid.push({ id: def.id, enabled: true });
+        valid.push({ id: def.id, enabled: def.enabled });
       }
     }
     return valid.length > 0 ? valid : DEFAULT_HOMEPAGE_LAYOUT;
