@@ -189,6 +189,22 @@ describe("JobQueueDO", () => {
     expect(rows[0].data).toBe(data);
   });
 
+  it("enqueue with idempotent=true skips insert when a pending row for that name already exists", async () => {
+    const id1 = await do_.enqueue("sync-titles", null, undefined, 1, true);
+    const id2 = await do_.enqueue("sync-titles", null, undefined, 1, true);
+    expect(id2).toBe(id1);
+    expect(do_.getRecentJobs()).toHaveLength(1);
+  });
+
+  it("enqueue with idempotent=true inserts when existing row is not pending", async () => {
+    await do_.enqueue("sync-titles", null, undefined, 1, true);
+    await do_.runJob(null); // consumes the row → status = completed
+    const id2 = await do_.enqueue("sync-titles", null, undefined, 1, true);
+    expect(id2).toBeGreaterThan(0);
+    const rows = do_.getRecentJobs();
+    expect(rows.filter((r) => r.status === "pending")).toHaveLength(1);
+  });
+
   // ── runJob: basic execution ───────────────────────────────────────────────
   // Tests below call runJob() directly to exercise processing logic without
   // depending on Alarms dispatch timing (which uses integer-second precision).
@@ -341,6 +357,22 @@ describe("JobQueueDO", () => {
     // rearmIfPending finds no pending work → no new alarm scheduled
     expect(adHocState.storage.alarmHistory.length).toBe(alarmsBefore);
     adHocState.close();
+  });
+
+  it("cron DO re-arms when extra pending rows remain after runJob", async () => {
+    processorModule.handlers["sync-titles"] = async () => {};
+    await do_.armCron("sync-titles", "0 3 * * *");
+    // Enqueue two extra rows on top of the cron singleton (mimics enqueueOnce calls)
+    await do_.enqueue("sync-titles", null);
+    await do_.enqueue("sync-titles", null);
+
+    await do_.runJob(null); // processes one
+
+    // Two rows still pending → rearmIfPending must schedule a delayed alarm
+    const hasDelayedSchedule = do_.alarms.getSchedules({ type: "delayed" }).some(
+      (s) => s.callback === "runJob",
+    );
+    expect(hasDelayedSchedule).toBe(true);
   });
 
   it("ad-hoc DO (no cron) re-arms only when pending rows remain", async () => {
