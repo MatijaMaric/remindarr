@@ -246,6 +246,13 @@
       "when": 1778025600000,
       "tag": "0034_pinned_titles",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1778112000000,
+      "tag": "0035_notification_log",
+      "breakpoints": true
     }
   ]
 }

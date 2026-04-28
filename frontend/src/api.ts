@@ -26,6 +26,7 @@ import type {
   HomepageSection,
   WatchHistoryEntry,
   ActivitySettings,
+  NotifierHistoryResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -548,6 +549,12 @@ export async function testNotifier(
   return fetchJson(`/notifiers/${encodeURIComponent(id)}/test`, {
     method: "POST",
   });
+}
+
+export async function getNotifierHistory(
+  id: string
+): Promise<NotifierHistoryResponse> {
+  return fetchJson<NotifierHistoryResponse>(`/notifiers/${encodeURIComponent(id)}/history`);
 }
 
 // ─── Social (Follow/Unfollow) ────────────────────────────────────────────────

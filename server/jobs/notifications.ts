@@ -5,6 +5,7 @@ import {
   getDistinctNotifierTimezones,
   markNotifierSent,
   disableNotifier,
+  recordDelivery,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 import { buildNotificationContent, buildWeeklyDigestContent } from "../notifications/content";
@@ -104,7 +105,14 @@ export async function registerNotificationJobs() {
               continue;
             }
 
-            await provider.send(notifier.config, content);
+            const weeklyStart = Date.now();
+            try {
+              await provider.send(notifier.config, content);
+              await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - weeklyStart, eventKind: "digest" });
+            } catch (sendErr) {
+              await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - weeklyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "digest" });
+              throw sendErr;
+            }
             await markNotifierSent(notifier.id, notifier.todayDate);
             log.info("Sent weekly digest notification", { provider: notifier.provider, userId: notifier.user_id });
             continue;
@@ -128,7 +136,14 @@ export async function registerNotificationJobs() {
             continue;
           }
 
-          await provider.send(notifier.config, content);
+          const dailyStart = Date.now();
+          try {
+            await provider.send(notifier.config, content);
+            await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - dailyStart, eventKind: "episode_air" });
+          } catch (sendErr) {
+            await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - dailyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "episode_air" });
+            throw sendErr;
+          }
           await markNotifierSent(notifier.id, notifier.todayDate);
           log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
         } catch (err) {
