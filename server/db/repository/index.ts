@@ -238,3 +238,11 @@ export {
   isPinnedTitle,
 } from "./pinned";
 export type { PinnedTitle } from "./pinned";
+
+export {
+  recordDelivery,
+  getRecentForNotifier,
+  getSuccessRateForNotifier,
+  pruneOldRows,
+} from "./notification-log";
+export type { NotificationLogRow } from "./notification-log";
