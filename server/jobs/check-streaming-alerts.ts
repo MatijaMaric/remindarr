@@ -6,6 +6,7 @@ import {
   markAlerted,
   getStreamingAlertNotifiersForUser,
   getTitleById,
+  recordDelivery,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 
@@ -82,8 +83,10 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
           for (const notifier of userNotifiers) {
             const notifierProvider = getProvider(notifier.provider);
             if (!notifierProvider) continue;
+            const alertStart = Date.now();
             try {
               await notifierProvider.send(notifier.config, content);
+              await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - alertStart, eventKind: "streaming_arrival" });
               log.info("Sent streaming alert", {
                 userId,
                 titleId,
@@ -92,6 +95,7 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
               });
             } catch (err) {
               const message = err instanceof Error ? err.message : String(err);
+              await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - alertStart, errorMessage: message, eventKind: "streaming_arrival" });
               log.error("Failed to send streaming alert", {
                 notifierId: notifier.id,
                 userId,
