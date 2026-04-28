@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import ProfileHero from "../components/profile/ProfileHero";
 import BioCard from "../components/profile/BioCard";
+import PinnedFavoritesCard from "../components/PinnedFavoritesCard";
 import ProgressCard from "../components/profile/ProgressCard";
 import TopGenresCard from "../components/profile/TopGenresCard";
 import FriendsCard from "../components/profile/FriendsCard";
@@ -77,6 +78,7 @@ export default function UserProfilePage() {
     follower_count,
     following_count,
     is_following,
+    pinned,
   } = data;
 
   const bio = localBio === undefined ? user.bio : localBio;
@@ -107,6 +109,13 @@ export default function UserProfilePage() {
                 refetch();
               }}
             />
+            {(pinned.length > 0 || is_own_profile) && (
+              <PinnedFavoritesCard
+                pinned={pinned}
+                isOwnProfile={is_own_profile}
+                onPinnedChanged={refetch}
+              />
+            )}
             {show_watchlist && <ProgressCard overview={overview} />}
             {show_watchlist && genres.length > 0 && <TopGenresCard genres={genres} limit={6} />}
             {show_watchlist && friends.length > 0 && (

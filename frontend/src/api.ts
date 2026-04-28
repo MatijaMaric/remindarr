@@ -254,6 +254,21 @@ export async function unhideActivityEvent(eventKind: string, eventKey: string): 
   });
 }
 
+export async function pinTitle(titleId: string): Promise<{ pinned: boolean }> {
+  return fetchJson(`/user/me/pinned/${encodeURIComponent(titleId)}`, { method: "POST" });
+}
+
+export async function unpinTitle(titleId: string): Promise<{ pinned: boolean }> {
+  return fetchJson(`/user/me/pinned/${encodeURIComponent(titleId)}`, { method: "DELETE" });
+}
+
+export async function reorderPinnedTitles(titleIds: string[]): Promise<{ ok: boolean }> {
+  return fetchJson("/user/me/pinned/order", {
+    method: "PUT",
+    body: JSON.stringify({ titleIds }),
+  });
+}
+
 export async function updateProfileVisibility(visibility: string): Promise<void> {
   await fetchJson("/track/profile-visibility", {
     method: "PATCH",

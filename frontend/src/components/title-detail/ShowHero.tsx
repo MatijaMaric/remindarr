@@ -1,6 +1,7 @@
 import type { ShowDetailsResponse, Title } from "../../types";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import TrackButton from "../TrackButton";
+import PinButton from "../PinButton";
 import VisibilityButton from "../VisibilityButton";
 import WatchButtonGroup from "../WatchButtonGroup";
 import { Chip, Kicker } from "../design";
@@ -100,6 +101,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             </div>
           )}
           <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+          <PinButton titleId={title.id} />
         </div>
       </>
     );
@@ -209,6 +211,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
 
           <div className="pt-2 flex flex-wrap items-center gap-2">
             <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+            <PinButton titleId={title.id} />
             <VisibilityButton
               titleId={title.id}
               isPublic={title.is_public ?? true}

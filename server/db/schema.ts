@@ -493,6 +493,20 @@ export const titleTags = sqliteTable(
   ]
 );
 
+export const pinnedTitles = sqliteTable(
+  "pinned_titles",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.titleId] }),
+    index("idx_pinned_titles_user_id").on(table.userId),
+  ]
+);
+
 export const watchHistory = sqliteTable(
   "watch_history",
   {

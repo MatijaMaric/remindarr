@@ -14,11 +14,19 @@ import {
   hideActivityEvent,
   unhideActivityEvent,
   getHiddenActivityEventKeys,
+  getPinnedTitles,
+  pinTitle,
+  unpinTitle,
+  reorderPinnedTitles,
 } from "../db/repository";
 import type { AppEnv } from "../types";
 import type { ActivityType, ActivityKindVisibilityMap } from "../db/repository";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
+import { requireAuth } from "../middleware/auth";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "profile" });
 
 const ACTIVITY_KINDS: ActivityType[] = [
   "rating_title",
@@ -129,9 +137,12 @@ app.get("/:username", async (c) => {
     return err(c, "User not found", 404);
   }
 
+  const pinned = await getPinnedTitles(profile.user.id);
+
   return ok(c, {
     ...profile,
     is_own_profile: isOwnProfile,
+    pinned,
   });
 });
 
@@ -193,6 +204,54 @@ app.get("/:username/activity", zValidator("query", activityQuerySchema), async (
     hiddenKeys,
   });
   return ok(c, result);
+});
+
+const reorderSchema = z.object({
+  titleIds: z.array(z.string().min(1)).min(0).max(8),
+});
+
+/** Helper: resolve a username to its user id via the profile, checking ownership. */
+async function resolveProfileOwner(username: string, viewerUserId: string) {
+  const profile = await getUserPublicProfile(username, false, null);
+  if (!profile) return { profile: null, owned: false };
+  const owned = profile.user.id === viewerUserId;
+  return { profile, owned };
+}
+
+// POST /me/pinned/:titleId — pin a title (auth required)
+app.post("/me/pinned/:titleId", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("titleId");
+
+  const result = await pinTitle(user.id, titleId);
+  if (!result.ok) {
+    return err(c, result.error, 400);
+  }
+
+  log.info("Title pinned", { userId: user.id, titleId });
+  return ok(c, { pinned: true });
+});
+
+// DELETE /me/pinned/:titleId — unpin a title (auth required)
+app.delete("/me/pinned/:titleId", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("titleId");
+
+  await unpinTitle(user.id, titleId);
+
+  log.info("Title unpinned", { userId: user.id, titleId });
+  return ok(c, { pinned: false });
+});
+
+// PUT /me/pinned/order — reorder pinned titles (auth required)
+app.put("/me/pinned/order", requireAuth, zValidator("json", reorderSchema), async (c) => {
+  const user = c.get("user")!;
+  const { titleIds } = c.req.valid("json");
+
+  await reorderPinnedTitles(user.id, titleIds);
+
+  log.info("Pinned titles reordered", { userId: user.id, count: titleIds.length });
+  return ok(c, { ok: true });
 });
 
 export { ACTIVITY_KINDS };
