@@ -100,7 +100,11 @@
     "noEpisodesToday": "No episodes airing today.",
     "comingUp": "Coming Up",
     "recommendedForYou": "Recommended for You",
-    "seeAll": "See all"
+    "seeAll": "See all",
+    "airingSoon": {
+      "title": "Airing Soon",
+      "empty": "No upcoming episodes from tracked shows"
+    }
   },
   "tracked": {
     "title": "Tracked Titles ({{count}})",
@@ -426,7 +430,8 @@
         "unwatched": "Unwatched Episodes",
         "recommendations": "Recommended for You",
         "today": "Today's Episodes",
-        "upcoming": "Coming Up"
+        "upcoming": "Coming Up",
+        "airing_soon": "Airing Soon"
       }
     },
     "profileVisibility": "Profile Visibility",

@@ -4,6 +4,7 @@ import TrackButton from "../TrackButton";
 import PinButton from "../PinButton";
 import VisibilityButton from "../VisibilityButton";
 import WatchButtonGroup from "../WatchButtonGroup";
+import EpisodeCountdown from "../EpisodeCountdown";
 import { Chip, Kicker } from "../design";
 import { NetworkList } from "./NetworkList";
 import { RatingBadge } from "./RatingBadge";
@@ -107,6 +108,12 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
         {title.is_tracked && title.eta_days != null && (
           <div className="text-xs text-zinc-400 text-center">
             Finish in ~{formatEta(title.eta_days)} at your current pace
+          </div>
+        )}
+        {title.next_episode_air_date && (
+          <div className="flex items-center justify-center gap-2 text-xs text-zinc-400">
+            <span>Next episode</span>
+            <EpisodeCountdown airDate={title.next_episode_air_date} />
           </div>
         )}
       </>
@@ -228,6 +235,12 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
           {title.is_tracked && title.eta_days != null && (
             <div className="text-xs text-zinc-400">
               Finish in ~{formatEta(title.eta_days)} at your current pace
+            </div>
+          )}
+          {title.next_episode_air_date && (
+            <div className="flex items-center gap-2 text-xs text-zinc-400">
+              <span>Next episode</span>
+              <EpisodeCountdown airDate={title.next_episode_air_date} />
             </div>
           )}
         </div>

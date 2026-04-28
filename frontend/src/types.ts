@@ -688,7 +688,7 @@ export interface InvitationItem {
   used_by: UserSummary | null;
 }
 
-export type HomepageSectionId = "unwatched" | "recommendations" | "today" | "upcoming";
+export type HomepageSectionId = "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon";
 
 export interface HomepageSection {
   id: HomepageSectionId;
@@ -700,6 +700,7 @@ export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "recommendations", enabled: true },
   { id: "today", enabled: true },
   { id: "upcoming", enabled: true },
+  { id: "airing_soon", enabled: false },
 ];
 
 // Normalize search results to same shape as DB titles

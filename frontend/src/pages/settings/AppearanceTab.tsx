@@ -13,6 +13,7 @@ const SECTION_LABELS: Record<string, string> = {
   recommendations: "settings.homepage.sections.recommendations",
   today: "settings.homepage.sections.today",
   upcoming: "settings.homepage.sections.upcoming",
+  airing_soon: "settings.homepage.sections.airing_soon",
 };
 
 function ThemeSection() {
