@@ -128,3 +128,5 @@ Requires [Bun](https://bun.sh) v1.0+.
 - **Frontend**: React 19, Vite, Tailwind CSS 4, shadcn/ui
 - **Database**: SQLite via Drizzle ORM
 - **Auth**: better-auth (local, OIDC, passkeys)
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y61YL4CM)
