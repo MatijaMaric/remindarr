@@ -3,6 +3,7 @@ import { Card } from "../components/ui/card";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
+import type { PinnedTitle } from "../types";
 import ProfileHero from "../components/profile/ProfileHero";
 import BioCard from "../components/profile/BioCard";
 import PinnedFavoritesCard from "../components/PinnedFavoritesCard";
@@ -31,6 +32,7 @@ export default function UserProfilePage() {
   const [followerAdjust, setFollowerAdjust] = useState(0);
   const [activeTab, setActiveTab] = useState<WatchlistTab>("watching");
   const [localBio, setLocalBio] = useState<string | null | undefined>(undefined);
+  const [localPinned, setLocalPinned] = useState<PinnedTitle[] | null>(null);
 
   const handleFollowToggle = useCallback((isNowFollowing: boolean) => {
     setFollowerAdjust((prev) => prev + (isNowFollowing ? 1 : -1));
@@ -82,6 +84,7 @@ export default function UserProfilePage() {
   } = data;
 
   const bio = localBio === undefined ? user.bio : localBio;
+  const pinnedDisplay = localPinned ?? pinned;
   const displayedFollowerCount = follower_count + followerAdjust;
   const activeList = lists[activeTab];
 
@@ -109,11 +112,11 @@ export default function UserProfilePage() {
                 refetch();
               }}
             />
-            {(pinned.length > 0 || is_own_profile) && (
+            {(pinnedDisplay.length > 0 || is_own_profile) && (
               <PinnedFavoritesCard
-                pinned={pinned}
+                pinned={pinnedDisplay}
                 isOwnProfile={is_own_profile}
-                onPinnedChanged={refetch}
+                onPinnedChanged={(next) => setLocalPinned(next)}
               />
             )}
             {show_watchlist && <ProgressCard overview={overview} />}
