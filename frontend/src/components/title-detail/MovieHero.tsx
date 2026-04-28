@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { MovieDetailsResponse, Title } from "../../types";
 import TrackButton from "../TrackButton";
+import PinButton from "../PinButton";
 import VisibilityButton from "../VisibilityButton";
 import WatchButtonGroup from "../WatchButtonGroup";
 import { Chip, Kicker } from "../design";
@@ -114,6 +115,7 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
 
           <div className="pt-2 flex flex-wrap items-center gap-2">
             <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+            <PinButton titleId={title.id} />
             <VisibilityButton
               titleId={title.id}
               isPublic={title.is_public ?? true}

@@ -545,6 +545,14 @@ export interface ProfileBackdrop {
 
 export type ProfileVisibility = "public" | "friends_only" | "private";
 
+export interface PinnedTitle {
+  id: string;
+  title: string;
+  poster_url: string | null;
+  object_type: string;
+  position: number;
+}
+
 export interface UserProfileResponse {
   user: UserProfileUser;
   stats: UserProfileStats;
@@ -563,6 +571,7 @@ export interface UserProfileResponse {
   follower_count: number;
   following_count: number;
   is_following: boolean;
+  pinned: PinnedTitle[];
 }
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────
