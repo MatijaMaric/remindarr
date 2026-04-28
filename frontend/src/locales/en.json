@@ -87,6 +87,12 @@
   "home": {
     "welcomeTitle": "Welcome to Remindarr",
     "welcomeMessage": "Sign in to see your upcoming episodes.",
+    "upNext": {
+      "title": "Up Next",
+      "empty": "Nothing queued — track a show to start your queue",
+      "inProgress": "In Progress",
+      "newEpisodes": "New Episodes"
+    },
     "unwatched": "Unwatched",
     "reels": "Reels",
     "markAllWatched": "Mark all watched",
@@ -427,6 +433,7 @@
       "showSection": "Show section",
       "hideSection": "Hide section",
       "sections": {
+        "up_next": "Up Next",
         "unwatched": "Unwatched Episodes",
         "recommendations": "Recommended for You",
         "today": "Today's Episodes",

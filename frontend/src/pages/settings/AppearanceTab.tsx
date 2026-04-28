@@ -9,6 +9,7 @@ import { SCard } from "../../components/settings/kit";
 import { cn } from "@/lib/utils";
 
 const SECTION_LABELS: Record<string, string> = {
+  up_next: "settings.homepage.sections.up_next",
   unwatched: "settings.homepage.sections.unwatched",
   recommendations: "settings.homepage.sections.recommendations",
   today: "settings.homepage.sections.today",

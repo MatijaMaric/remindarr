@@ -5,7 +5,7 @@ import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
 
-export const HOMEPAGE_SECTION_IDS = ["unwatched", "recommendations", "today", "upcoming", "airing_soon"] as const;
+export const HOMEPAGE_SECTION_IDS = ["up_next", "unwatched", "recommendations", "today", "upcoming", "airing_soon"] as const;
 export type HomepageSectionId = (typeof HOMEPAGE_SECTION_IDS)[number];
 
 export interface HomepageSection {
@@ -14,6 +14,7 @@ export interface HomepageSection {
 }
 
 export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
+  { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
   { id: "recommendations", enabled: true },
   { id: "today", enabled: true },
@@ -25,6 +26,7 @@ export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
 // `id` literal. This gives precise TypeScript narrowing and rejects unknown
 // section ids at the validator boundary instead of inside the handler.
 const homepageSectionSchema = z.discriminatedUnion("id", [
+  z.object({ id: z.literal("up_next"), enabled: z.boolean().default(true) }),
   z.object({ id: z.literal("unwatched"), enabled: z.boolean().default(true) }),
   z.object({ id: z.literal("recommendations"), enabled: z.boolean().default(true) }),
   z.object({ id: z.literal("today"), enabled: z.boolean().default(true) }),

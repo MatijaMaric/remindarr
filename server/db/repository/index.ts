@@ -29,6 +29,8 @@ export {
   getEpisodesByDateRange,
   deleteEpisodesForTitle,
   getUnwatchedEpisodes,
+  getNextUnwatchedEpisode,
+  getLastWatchedAtPerShow,
   getEpisodeAirDate,
   getEpisodeTitleId,
   getEpisodeTitleIds,

@@ -17,6 +17,8 @@ import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
 import { Kicker } from "../components/design";
 import { posterUrl } from "../lib/tmdb-images";
+import UpNextRow from "../components/UpNextRow";
+import type { UpNextItem } from "../api";
 
 export interface UnwatchedCardEntry {
   episode: Episode;
@@ -78,24 +80,25 @@ export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
 type HomeState =
   | { status: "loading" }
   | { status: "anon"; popularTitles: Title[] }
-  | { status: "auth"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[] }
+  | { status: "auth"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[] }
   | { status: "error"; message: string };
 
 type HomeAction =
   | { type: "LOAD_ANON_SUCCESS"; popularTitles: Title[] }
-  | { type: "LOAD_AUTH_SUCCESS"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[] }
+  | { type: "LOAD_AUTH_SUCCESS"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[] }
   | { type: "LOAD_ERROR"; message: string }
   | { type: "TOGGLE_WATCHED"; episodeId: number; currentlyWatched: boolean }
   | { type: "TOGGLE_WATCHED_REVERT"; episodeId: number; currentlyWatched: boolean }
   | { type: "REPLACE_UNWATCHED"; unwatched: Episode[] }
-  | { type: "MARK_ALL_WATCHED"; episodeIds: number[] };
+  | { type: "MARK_ALL_WATCHED"; episodeIds: number[] }
+  | { type: "REMOVE_UP_NEXT_EPISODE"; episodeId: number };
 
 function homeReducer(state: HomeState, action: HomeAction): HomeState {
   switch (action.type) {
     case "LOAD_ANON_SUCCESS":
       return { status: "anon", popularTitles: action.popularTitles };
     case "LOAD_AUTH_SUCCESS":
-      return { status: "auth", today: action.today, upcoming: action.upcoming, unwatched: action.unwatched, recommendations: action.recommendations, layout: action.layout };
+      return { status: "auth", today: action.today, upcoming: action.upcoming, unwatched: action.unwatched, recommendations: action.recommendations, layout: action.layout, upNextItems: action.upNextItems };
     case "LOAD_ERROR":
       return { status: "error", message: action.message };
     case "TOGGLE_WATCHED": {
@@ -122,6 +125,13 @@ function homeReducer(state: HomeState, action: HomeAction): HomeState {
       if (state.status !== "auth") return state;
       const idSet = new Set(action.episodeIds);
       return { ...state, unwatched: state.unwatched.filter((ep) => !idSet.has(ep.id)) };
+    }
+    case "REMOVE_UP_NEXT_EPISODE": {
+      if (state.status !== "auth") return state;
+      return {
+        ...state,
+        upNextItems: state.upNextItems.filter((item) => item.nextEpisodeId !== action.episodeId),
+      };
     }
     default:
       return state;
@@ -354,13 +364,14 @@ export default function HomePage() {
 
     async function load() {
       try {
-        const [episodeData, recData, layoutData] = await Promise.all([
+        const [episodeData, recData, layoutData, upNextData] = await Promise.all([
           api.getUpcomingEpisodes(signal),
           api.getRecommendations(6, undefined, signal).catch(() => ({ recommendations: [], count: 0 })),
           (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
+          api.getUpNext(12, signal).catch(() => ({ items: [] as UpNextItem[] })),
         ]);
         if (signal.aborted) return;
-        dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout });
+        dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout, upNextItems: upNextData.items });
       } catch (err: unknown) {
         if (!signal.aborted) dispatch({ type: "LOAD_ERROR", message: err instanceof Error ? err.message : String(err) });
       }
@@ -427,12 +438,23 @@ export default function HomePage() {
 
   // Derived data from reducer state — wrapped in useMemo so downstream deps
   // get stable array references when state.status !== "auth".
-  const { today, upcoming, unwatched, recommendations, layout } = useMemo(() => {
+  const { today, upcoming, unwatched, recommendations, layout, upNextItems } = useMemo(() => {
     if (state.status === "auth") {
-      return { today: state.today, upcoming: state.upcoming, unwatched: state.unwatched, recommendations: state.recommendations, layout: state.layout };
+      return { today: state.today, upcoming: state.upcoming, unwatched: state.unwatched, recommendations: state.recommendations, layout: state.layout, upNextItems: state.upNextItems };
     }
-    return { today: [] as Episode[], upcoming: [] as Episode[], unwatched: [] as Episode[], recommendations: [] as Recommendation[], layout: DEFAULT_HOMEPAGE_LAYOUT };
+    return { today: [] as Episode[], upcoming: [] as Episode[], unwatched: [] as Episode[], recommendations: [] as Recommendation[], layout: DEFAULT_HOMEPAGE_LAYOUT, upNextItems: [] as UpNextItem[] };
   }, [state]);
+
+  const handleUpNextMarkWatched = useCallback(async (episodeId: number) => {
+    dispatch({ type: "REMOVE_UP_NEXT_EPISODE", episodeId });
+    try {
+      await api.watchEpisode(episodeId);
+    } catch (err) {
+      // Optimistic removal stands; log the failure.
+      console.error("Failed to mark episode as watched:", err);
+      toast.error("Failed to mark episode as watched — please try again");
+    }
+  }, []);
 
   // Stable slice for the unauthenticated landing page so TitleList sees the
   // same array reference on unrelated re-renders.
@@ -737,6 +759,19 @@ export default function HomePage() {
               </div>
             </div>
             <p className="text-zinc-500 text-sm">{t("home.airingSoon.empty")}</p>
+          </section>
+        );
+
+      case "up_next":
+        return (
+          <section key="up_next">
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <Kicker>{t("home.upNext.inProgress")}</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.upNext.title")}</h2>
+              </div>
+            </div>
+            <UpNextRow items={upNextItems} onMarkWatched={handleUpNextMarkWatched} />
           </section>
         );
 

@@ -71,6 +71,7 @@ import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
 import importRoutes from "./routes/import";
+import upNextRoutes from "./routes/up-next";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig, CONFIG } from "./config";
@@ -349,6 +350,11 @@ function createApp(env: Env) {
   app.use("/api/stats/*", requireAuth);
   app.use("/api/stats", requireAuth);
   app.route("/api/stats", statsRoutes);
+
+  // Up Next smart queue
+  app.use("/api/up-next/*", requireAuth);
+  app.use("/api/up-next", requireAuth);
+  app.route("/api/up-next", upNextRoutes);
 
   app.use("/api/user/settings/*", requireAuth);
   app.route("/api/user/settings", userSettingsRoutes);
