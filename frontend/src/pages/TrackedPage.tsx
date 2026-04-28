@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "../components/ui/card";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import * as api from "../api";
 import type { Title } from "../types";
 import TitleList from "../components/TitleList";
@@ -14,6 +15,13 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
 import BackdateWatchedButton from "../components/BackdateWatchedButton";
 import { StatsView } from "./StatsPage";
+import {
+  AlertDialog,
+  AlertDialogPopup,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogClose,
+} from "../components/ui/alert-dialog";
 
 // Module-scope empty array so the empty-state TitleList sees a stable
 // reference and React.memo can short-circuit re-renders.
@@ -90,6 +98,10 @@ export default function TrackedPage() {
   const [view, setView] = useState<'grid' | 'list' | 'stats'>('list');
   const [sort, setSort] = useState<SortKey>('last_aired');
 
+  // Select mode state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const { showGroups, movies } = useMemo(() => {
     const shows = allTitles.filter((t) => t.object_type === "SHOW");
     const movieList = allTitles
@@ -114,6 +126,38 @@ export default function TrackedPage() {
 
   const sortedFilteredTitles = useMemo(() => sortTitles(filteredTitles, sort), [filteredTitles, sort]);
 
+  // Exit select mode and clear selection
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  // Toggle select mode
+  const toggleSelectMode = useCallback(() => {
+    if (selectMode) {
+      exitSelectMode();
+    } else {
+      setSelectMode(true);
+      setSelectedIds(new Set());
+    }
+  }, [selectMode, exitSelectMode]);
+
+  // Ctrl/Cmd+A selects all visible titles when in select mode
+  useEffect(() => {
+    if (!selectMode) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        setSelectedIds(new Set(sortedFilteredTitles.map(t => t.id)));
+      }
+      if (e.key === 'Escape') {
+        exitSelectMode();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectMode, sortedFilteredTitles, exitSelectMode]);
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -122,6 +166,7 @@ export default function TrackedPage() {
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <BackdateWatchedButton scope="all" variant="ghost" />
+            <Pill active={selectMode} onClick={toggleSelectMode}>Select</Pill>
             <Pill active={view === 'grid'} onClick={() => setView('grid')}>Grid</Pill>
             <Pill active={view === 'list'} onClick={() => setView('list')}>List</Pill>
             <Pill active={view === 'stats'} onClick={() => setView('stats')}>Stats</Pill>
@@ -172,7 +217,13 @@ export default function TrackedPage() {
       ) : filteredTitles.length === 0 ? (
         <TitleList titles={EMPTY_TITLES} onTrackToggle={refetch} emptyMessage={t("tracked.empty")} />
       ) : view === 'list' ? (
-        <TrackedTable titles={sortedFilteredTitles} onRefetch={refetch} />
+        <TrackedTable
+          titles={sortedFilteredTitles}
+          onRefetch={refetch}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+        />
       ) : statusFilter !== 'all' ? (
         <TitleList titles={sortedFilteredTitles} onTrackToggle={refetch} hideTypeBadge showProgressBar showStatusPicker showNotificationPicker showTags />
       ) : (
@@ -194,6 +245,15 @@ export default function TrackedPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectMode && (
+        <BulkActionBar
+          selectedIds={selectedIds}
+          onDone={() => { exitSelectMode(); refetch(); }}
+          onCancel={exitSelectMode}
+        />
       )}
     </div>
   );
@@ -259,8 +319,27 @@ function RowActionsMenu({ title, onRefetch }: { title: Title; onRefetch: () => v
   );
 }
 
-function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () => void }) {
+interface TrackedTableProps {
+  titles: Title[];
+  onRefetch: () => void;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
+}
+
+function TrackedTable({ titles, onRefetch, selectMode = false, selectedIds = new Set(), onSelectionChange }: TrackedTableProps) {
   const isMobile = useIsMobile();
+
+  function toggleId(id: string) {
+    if (!onSelectionChange) return;
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    onSelectionChange(next);
+  }
 
   if (isMobile) {
     return (
@@ -272,12 +351,21 @@ function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () =>
           const watched = title.watched_episodes_count ?? 0;
           const total = title.total_episodes ?? title.released_episodes_count ?? 0;
           const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
-          return (
-            <Link
-              key={title.id}
-              to={`/title/${title.id}`}
-              className="flex gap-3 items-center bg-zinc-900 border border-white/[0.05] rounded-xl p-2.5"
-            >
+          const isSelected = selectedIds.has(title.id);
+
+          const rowContent = (
+            <>
+              {selectMode && (
+                <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-amber-400 border-amber-400' : 'border-zinc-600'}`}>
+                    {isSelected && (
+                      <svg className="w-2.5 h-2.5 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="w-[48px] h-[68px] rounded-lg overflow-hidden shrink-0 bg-zinc-800">
                 {title.poster_url && (
                   <img src={title.poster_url} alt="" className="w-full h-full object-cover" loading="lazy" />
@@ -301,6 +389,29 @@ function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () =>
                   </div>
                 )}
               </div>
+            </>
+          );
+
+          if (selectMode) {
+            return (
+              <button
+                key={title.id}
+                type="button"
+                onClick={() => toggleId(title.id)}
+                className={`flex gap-3 items-center rounded-xl p-2.5 w-full text-left transition-colors ${isSelected ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-zinc-900 border border-white/[0.05]'}`}
+              >
+                {rowContent}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={title.id}
+              to={`/title/${title.id}`}
+              className="flex gap-3 items-center bg-zinc-900 border border-white/[0.05] rounded-xl p-2.5"
+            >
+              {rowContent}
             </Link>
           );
         })}
@@ -311,8 +422,33 @@ function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () =>
   return (
     <div>
       {/* Column header */}
-      <div className="grid gap-4 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500"
-        style={{ gridTemplateColumns: '50px 1fr 130px 200px 130px 90px 90px' }}>
+      <div
+        className="grid gap-4 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500"
+        style={{ gridTemplateColumns: selectMode ? '32px 50px 1fr 130px 200px 130px 90px 90px' : '50px 1fr 130px 200px 130px 90px 90px' }}
+      >
+        {selectMode && (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                if (!onSelectionChange) return;
+                if (selectedIds.size === titles.length) {
+                  onSelectionChange(new Set());
+                } else {
+                  onSelectionChange(new Set(titles.map(t => t.id)));
+                }
+              }}
+              className="w-4 h-4 rounded border-2 flex items-center justify-center transition-colors border-zinc-600 hover:border-amber-400"
+              title="Select all"
+            >
+              {selectedIds.size === titles.length && titles.length > 0 && (
+                <svg className="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          </div>
+        )}
         <div />
         <div>Show</div>
         <div>Status</div>
@@ -334,12 +470,27 @@ function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () =>
           const nextDate = title.next_episode_air_date
             ? new Date(title.next_episode_air_date).toLocaleDateString('en', { month: 'short', day: 'numeric' })
             : null;
+          const isSelected = selectedIds.has(title.id);
+
           return (
             <div
               key={title.id}
-              className="grid gap-4 px-4 py-3 items-center bg-zinc-900 hover:bg-zinc-800/60 transition-colors"
-              style={{ gridTemplateColumns: '50px 1fr 130px 200px 130px 90px 90px' }}
+              className={`grid gap-4 px-4 py-3 items-center transition-colors ${selectMode ? (isSelected ? 'bg-amber-500/10 cursor-pointer' : 'bg-zinc-900 hover:bg-zinc-800/60 cursor-pointer') : 'bg-zinc-900 hover:bg-zinc-800/60'}`}
+              style={{ gridTemplateColumns: selectMode ? '32px 50px 1fr 130px 200px 130px 90px 90px' : '50px 1fr 130px 200px 130px 90px 90px' }}
+              onClick={selectMode ? () => toggleId(title.id) : undefined}
             >
+              {/* Checkbox column */}
+              {selectMode && (
+                <div className="flex items-center justify-center">
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-amber-400 border-amber-400' : 'border-zinc-600'}`}>
+                    {isSelected && (
+                      <svg className="w-2.5 h-2.5 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Poster thumbnail */}
               <div className="w-[38px] h-[56px] rounded overflow-hidden shrink-0 bg-zinc-800">
                 {title.poster_url && (
@@ -348,9 +499,13 @@ function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () =>
               </div>
               {/* Title + meta */}
               <div>
-                <Link to={`/title/${title.id}`} className="text-sm font-semibold hover:text-amber-300 transition-colors line-clamp-1">
-                  {title.title}
-                </Link>
+                {selectMode ? (
+                  <span className="text-sm font-semibold line-clamp-1">{title.title}</span>
+                ) : (
+                  <Link to={`/title/${title.id}`} className="text-sm font-semibold hover:text-amber-300 transition-colors line-clamp-1">
+                    {title.title}
+                  </Link>
+                )}
                 <div className="font-mono text-[11px] text-zinc-500 mt-0.5">
                   {title.release_year}{title.object_type === 'SHOW' ? ' · Show' : ' · Movie'}
                   {title.offers[0] && ` · ${title.offers[0].provider_name}`}
@@ -381,19 +536,233 @@ function TrackedTable({ titles, onRefetch }: { titles: Title[]; onRefetch: () =>
                 {score ? `★ ${score.toFixed(1)}` : '—'}
               </div>
               {/* Actions */}
-              <div className="flex gap-1 justify-end">
-                <Link
-                  to={`/title/${title.id}`}
-                  className="px-2.5 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-300 hover:text-white transition-colors"
-                >
-                  Open
-                </Link>
-                <RowActionsMenu title={title} onRefetch={onRefetch} />
+              <div className="flex gap-1 justify-end" onClick={(e) => selectMode && e.stopPropagation()}>
+                {!selectMode && (
+                  <>
+                    <Link
+                      to={`/title/${title.id}`}
+                      className="px-2.5 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-300 hover:text-white transition-colors"
+                    >
+                      Open
+                    </Link>
+                    <RowActionsMenu title={title} onRefetch={onRefetch} />
+                  </>
+                )}
               </div>
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+// ─── Bulk Action Bar ──────────────────────────────────────────────────────────
+
+const BULK_STATUS_OPTIONS = [
+  { value: 'watching', label: 'Watching' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'on_hold', label: 'On Hold' },
+  { value: 'plan_to_watch', label: 'Plan to Watch' },
+  { value: 'dropped', label: 'Dropped' },
+] as const;
+
+interface BulkActionBarProps {
+  selectedIds: Set<string>;
+  onDone: () => void;
+  onCancel: () => void;
+}
+
+function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
+  const [confirmUntrack, setConfirmUntrack] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const count = selectedIds.size;
+
+  async function runBulkAction(action: Parameters<typeof api.bulkTrackAction>[0]) {
+    setLoading(true);
+    // Optimistic: get the selected ids for rollback reference
+    const titleIds = action.titleIds;
+    try {
+      await api.bulkTrackAction(action);
+      toast.success(`Updated ${titleIds.length} title${titleIds.length === 1 ? '' : 's'}`);
+      onDone();
+    } catch (err) {
+      console.error('Bulk action failed', err);
+      toast.error('Bulk action failed — please try again');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleUntrack() {
+    setConfirmUntrack(false);
+    await runBulkAction({ titleIds: Array.from(selectedIds), action: 'untrack' });
+  }
+
+  async function handleSetStatus(status: string) {
+    setStatusOpen(false);
+    await runBulkAction({ titleIds: Array.from(selectedIds), action: 'set_status', payload: { status } });
+  }
+
+  async function handleAddTag() {
+    const tag = tagInput.trim().toLowerCase();
+    if (!tag) return;
+    setTagOpen(false);
+    setTagInput('');
+    await runBulkAction({ titleIds: Array.from(selectedIds), action: 'add_tag', payload: { tag } });
+  }
+
+  async function handleMuteNotifications() {
+    await runBulkAction({ titleIds: Array.from(selectedIds), action: 'set_notification_mode', payload: { mode: 'none' } });
+  }
+
+  if (count === 0) {
+    return (
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 flex justify-center pointer-events-none">
+        <div className="mx-4 mb-4 max-w-xl w-full bg-zinc-900 border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl pointer-events-auto">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-zinc-400">Select titles to apply bulk actions</span>
+            <button type="button" onClick={onCancel} className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 flex justify-center">
+        <div className="mx-4 mb-4 max-w-2xl w-full bg-zinc-900 border border-white/[0.1] rounded-2xl px-4 py-3 shadow-2xl">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-mono text-[11px] text-amber-400 font-semibold shrink-0">
+              {count} selected
+            </span>
+
+            {/* Untrack */}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => count > 10 ? setConfirmUntrack(true) : void handleUntrack()}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Untrack
+            </button>
+
+            {/* Set Status */}
+            <div className="relative">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setStatusOpen(v => !v)}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Set Status ▾
+              </button>
+              {statusOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
+                  <div className="absolute bottom-full mb-2 left-0 z-20 min-w-[160px] bg-zinc-800 border border-white/[0.08] rounded-xl shadow-2xl py-1">
+                    {BULK_STATUS_OPTIONS.map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => void handleSetStatus(opt.value)}
+                        className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Add Tag */}
+            <div className="relative">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setTagOpen(v => !v)}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Add Tag
+              </button>
+              {tagOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setTagOpen(false)} />
+                  <div className="absolute bottom-full mb-2 left-0 z-20 w-[220px] bg-zinc-800 border border-white/[0.08] rounded-xl shadow-2xl p-3">
+                    <div className="flex gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={tagInput}
+                        onChange={e => setTagInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') void handleAddTag(); if (e.key === 'Escape') setTagOpen(false); }}
+                        placeholder="Tag name…"
+                        maxLength={30}
+                        className="flex-1 bg-zinc-900 border border-white/[0.08] rounded-md px-2 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus-visible:ring-1 focus-visible:ring-amber-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleAddTag()}
+                        className="px-2.5 py-1.5 text-xs font-medium bg-amber-500 text-zinc-900 rounded-md hover:bg-amber-400 transition-colors cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Mute notifications */}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleMuteNotifications()}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Mute Notifications
+            </button>
+
+            <div className="flex-1" />
+
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer shrink-0"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm bulk untrack for large selections */}
+      <AlertDialog open={confirmUntrack} onOpenChange={setConfirmUntrack}>
+        <AlertDialogPopup>
+          <AlertDialogTitle>Untrack {count} titles?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove all {count} selected titles from your watchlist. This cannot be undone.
+          </AlertDialogDescription>
+          <div className="mt-4 flex justify-end gap-2">
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
+              Cancel
+            </AlertDialogClose>
+            <button
+              onClick={() => void handleUntrack()}
+              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 cursor-pointer transition-colors"
+            >
+              Untrack all
+            </button>
+          </div>
+        </AlertDialogPopup>
+      </AlertDialog>
+    </>
   );
 }
