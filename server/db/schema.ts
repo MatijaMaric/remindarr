@@ -577,6 +577,23 @@ export const streamingAlerts = sqliteTable(
   ]
 );
 
+export const notificationLog = sqliteTable(
+  "notification_log",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    notifierId: text("notifier_id").notNull().references(() => notifiers.id, { onDelete: "cascade" }),
+    attemptedAt: integer("attempted_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    status: text("status", { enum: ["success", "failure", "skipped"] }).notNull(),
+    latencyMs: integer("latency_ms"),
+    httpStatus: integer("http_status"),
+    errorMessage: text("error_message"),
+    eventKind: text("event_kind"),
+  },
+  (table) => [
+    index("idx_notification_log_notifier").on(table.notifierId, table.attemptedAt),
+  ]
+);
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const titlesRelations = relations(titles, ({ many, one }) => ({
@@ -661,8 +678,13 @@ export const watchedTitlesRelations = relations(watchedTitles, ({ one }) => ({
   user: one(users, { fields: [watchedTitles.userId], references: [users.id] }),
 }));
 
-export const notifiersRelations = relations(notifiers, ({ one }) => ({
+export const notifiersRelations = relations(notifiers, ({ one, many }) => ({
   user: one(users, { fields: [notifiers.userId], references: [users.id] }),
+  logs: many(notificationLog),
+}));
+
+export const notificationLogRelations = relations(notificationLog, ({ one }) => ({
+  notifier: one(notifiers, { fields: [notificationLog.notifierId], references: [notifiers.id] }),
 }));
 
 export const followsRelations = relations(follows, ({ one }) => ({
@@ -705,12 +727,12 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
   follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
-  watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents,
+  watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents, notificationLog,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
   followsRelations, ratingsRelations, episodeRatingsRelations, recommendationsRelations, recommendationReadsRelations, invitationsRelations,
-  integrationsRelations, plexLibraryItemsRelations,
+  integrationsRelations, plexLibraryItemsRelations, notificationLogRelations,
 };
 
 // Re-export the union type from platform for convenience

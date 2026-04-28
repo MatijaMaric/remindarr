@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
 import type { Notifier } from "../../api";
+import type { NotificationLogRow } from "../../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../../lib/push";
 import {
   SCard,
@@ -250,6 +251,93 @@ function PushNotificationsSection() {
   );
 }
 
+type NotifierHistoryState = {
+  rows: NotificationLogRow[];
+  successRate: number;
+} | null;
+
+function statusPillKind(rate: number): "ok" | "warning" | "error" {
+  if (rate >= 90) return "ok";
+  if (rate >= 60) return "warning";
+  return "error";
+}
+
+function formatAttemptedAt(ts: number): string {
+  try {
+    return new Date(ts).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return String(ts);
+  }
+}
+
+function NotifierDeliveryHistory({ notifierId, refreshKey }: { notifierId: string; refreshKey?: number }) {
+  const [history, setHistory] = useState<NotifierHistoryState>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await api.getNotifierHistory(notifierId);
+        if (!cancelled) {
+          setHistory(data);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [notifierId, refreshKey]);
+
+  if (loading) {
+    return <div className="text-zinc-500 text-xs font-mono mt-3">Loading history...</div>;
+  }
+
+  if (!history || history.rows.length === 0) {
+    return (
+      <div className="mt-3 pt-3 border-t border-white/[0.04]">
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-1.5">Delivery History</div>
+        <div className="text-zinc-500 text-xs font-mono">No deliveries recorded yet.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-white/[0.04]">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Delivery History</div>
+        <SStatusPill kind={statusPillKind(history.successRate)}>
+          {history.successRate}% 7d
+        </SStatusPill>
+      </div>
+      <div className="space-y-1">
+        {history.rows.map((row) => (
+          <div key={row.id} className="flex items-start gap-2 text-xs font-mono py-1 border-b border-white/[0.03] last:border-b-0">
+            <span className={cn(
+              "shrink-0 w-2 h-2 rounded-full mt-0.5",
+              row.status === "success" ? "bg-emerald-400" :
+              row.status === "failure" ? "bg-red-400" : "bg-zinc-500"
+            )} />
+            <span className="text-zinc-500 shrink-0">{formatAttemptedAt(row.attemptedAt)}</span>
+            {row.eventKind && <span className="text-zinc-400 shrink-0">{row.eventKind}</span>}
+            {row.latencyMs != null && <span className="text-zinc-600 shrink-0">{row.latencyMs}ms</span>}
+            {row.status === "failure" && row.errorMessage && (
+              <span className="text-red-400 truncate" title={row.errorMessage}>{row.errorMessage}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function NotificationsSection() {
   const [notifiers, setNotifiers] = useState<Notifier[]>([]);
   const [providers, setProviders] = useState<string[]>([]);
@@ -260,6 +348,7 @@ function NotificationsSection() {
   const [err, setErr] = useState("");
   const [testing, setTesting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [historyKeys, setHistoryKeys] = useState<Record<string, number>>({});
 
   const [formProvider, setFormProvider] = useState("discord");
   const [formWebhookUrl, setFormWebhookUrl] = useState("");
@@ -413,6 +502,7 @@ function NotificationsSection() {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setTesting(null);
+      setHistoryKeys((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
     }
   }
 
@@ -522,6 +612,7 @@ function NotificationsSection() {
                   <SKeyValue k="Frequency" v={describeDigest(n)} />
                   <SKeyValue k="Last sent" v={n.last_sent_date ?? "—"} />
                 </div>
+                <NotifierDeliveryHistory notifierId={n.id} refreshKey={historyKeys[n.id] ?? 0} />
               </div>
             );
           })}

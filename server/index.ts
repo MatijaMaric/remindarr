@@ -43,6 +43,7 @@ import { errorsByCategory } from "./metrics";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { registerBackupJob } from "./jobs/backup";
+import { registerPruneNotificationLogJob } from "./jobs/prune-notification-log";
 import { startWorker, stopWorker } from "./jobs/worker";
 import { createShutdownHandler } from "./graceful-shutdown";
 import { registerCron } from "./jobs/queue";
@@ -327,6 +328,7 @@ setScheduleCallback(registerCron);
 registerSyncJobs();
 await registerNotificationJobs();
 registerBackupJob();
+registerPruneNotificationLogJob();
 startWorker();
 
 const server = Bun.serve({

@@ -589,6 +589,57 @@ describe("validation", () => {
   });
 });
 
+describe("GET /notifiers/:id/history", () => {
+  async function createDiscordNotifier() {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    const { notifier } = await res.json();
+    return notifier;
+  }
+
+  it("returns 200 with rows and successRate for own notifier", async () => {
+    const notifier = await createDiscordNotifier();
+    const res = await app.request(`/notifiers/${notifier.id}/history`, {
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.rows)).toBe(true);
+    expect(typeof body.successRate).toBe("number");
+  });
+
+  it("returns 401 without auth", async () => {
+    const notifier = await createDiscordNotifier();
+    const res = await app.request(`/notifiers/${notifier.id}/history`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 for a notifier belonging to another user", async () => {
+    const notifier = await createDiscordNotifier();
+
+    const user2Id = await createUser("otheruser2", "hash");
+    const user2Token = await createSession(user2Id);
+    const user2Headers = {
+      Cookie: `better-auth.session_token=${user2Token}`,
+    };
+
+    const res = await app.request(`/notifiers/${notifier.id}/history`, {
+      headers: user2Headers,
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for a non-existent notifier", async () => {
+    const res = await app.request("/notifiers/nonexistent-id/history", {
+      headers: headers(),
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("ownership enforcement", () => {
   it("user cannot access another user's notifier", async () => {
     // Create notifier as user 1

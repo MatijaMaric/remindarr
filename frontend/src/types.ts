@@ -735,3 +735,18 @@ export function normalizeSearchTitle(t: SearchTitle): Title {
     })),
   };
 }
+
+export interface NotificationLogRow {
+  id: number;
+  attemptedAt: number;
+  status: "success" | "failure" | "skipped";
+  latencyMs: number | null;
+  httpStatus: number | null;
+  errorMessage: string | null;
+  eventKind: string | null;
+}
+
+export interface NotifierHistoryResponse {
+  rows: NotificationLogRow[];
+  successRate: number;
+}

@@ -1,12 +1,16 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../types";
+import { requireAuth } from "../middleware/auth";
 import {
   createNotifier,
   updateNotifier,
   deleteNotifier,
   getNotifiersByUser,
   getNotifierById,
+  recordDelivery,
+  getRecentForNotifier,
+  getSuccessRateForNotifier,
 } from "../db/repository";
 import { getProvider, getAvailableProviders } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
@@ -267,10 +271,13 @@ app.post("/:id/test", async (c) => {
     };
   }
 
+  const start = Date.now();
   try {
     await providerImpl.send(notifier.config, content);
+    await recordDelivery({ notifierId: id, status: "success", latencyMs: Date.now() - start, eventKind: "test" });
     return c.json({ success: true, message: "Test notification sent" });
   } catch (err: unknown) {
+    await recordDelivery({ notifierId: id, status: "failure", latencyMs: Date.now() - start, errorMessage: err instanceof Error ? err.message : String(err), eventKind: "test" });
     if (!(err instanceof SubscriptionExpiredError)) {
       Sentry.captureException(err);
     }
@@ -279,6 +286,21 @@ app.post("/:id/test", async (c) => {
       { success: false, message: message || "Failed to send" },
     );
   }
+});
+
+// GET /:id/history — delivery history for a notifier (owner only)
+app.get("/:id/history", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  const id = c.req.param("id");
+
+  const notifier = await getNotifierById(id, user.id);
+  if (!notifier) {
+    return err(c, "Notifier not found", 404);
+  }
+
+  const rows = await getRecentForNotifier(id, 5);
+  const successRate = await getSuccessRateForNotifier(id, 7);
+  return ok(c, { rows, successRate });
 });
 
 export default app;
