@@ -12,6 +12,8 @@ import { eq } from "drizzle-orm";
 import profileApp from "./profile";
 import type { AppEnv } from "../types";
 
+type AnyRecord = Record<string, any>;
+
 function createMockAuth() {
   return {
     api: {
@@ -655,5 +657,153 @@ describe("GET /user/:username — extended dossier fields", () => {
     expect(body.monthly).toEqual([]);
     expect(body.friends).toEqual([]);
     expect(body.shows_by_status.watching).toBe(0);
+  });
+});
+
+// ─── Pinned favorites ─────────────────────────────────────────────────────────
+
+describe("POST /user/me/pinned/:titleId", () => {
+  it("pins a title for authenticated user (happy path)", async () => {
+    await upsertTitles([makeParsedTitle()]);
+
+    const res = await app.request("/user/me/pinned/movie-123", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pinned).toBe(true);
+  });
+
+  it("returns 401 without authentication", async () => {
+    await upsertTitles([makeParsedTitle()]);
+
+    const res = await app.request("/user/me/pinned/movie-123", { method: "POST" });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a 9th pin (max 8 enforced)", async () => {
+    const titleIds = Array.from({ length: 8 }, (_, i) => `movie-${i + 1}`);
+    await upsertTitles(titleIds.map((id) => makeParsedTitle({ id, title: `Movie ${id}` })));
+
+    // Pin 8 titles
+    for (const id of titleIds) {
+      const res = await app.request(`/user/me/pinned/${id}`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      expect(res.status).toBe(200);
+    }
+
+    // 9th title
+    await upsertTitles([makeParsedTitle({ id: "movie-9", title: "Movie 9" })]);
+    const res = await app.request("/user/me/pinned/movie-9", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/maximum/i);
+  });
+
+  it("pinned titles appear in GET profile response", async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/user/me/pinned/movie-123", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+
+    const res = await app.request("/user/testuser", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pinned).toHaveLength(1);
+    expect(body.pinned[0].id).toBe("movie-123");
+  });
+});
+
+describe("DELETE /user/me/pinned/:titleId", () => {
+  it("unpins a title", async () => {
+    await upsertTitles([makeParsedTitle()]);
+
+    // Pin first
+    await app.request("/user/me/pinned/movie-123", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+
+    // Then unpin
+    const res = await app.request("/user/me/pinned/movie-123", {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pinned).toBe(false);
+
+    // Profile should have no pinned
+    const profileRes = await app.request("/user/testuser", { headers: authHeaders() });
+    const profile = await profileRes.json();
+    expect(profile.pinned).toHaveLength(0);
+  });
+
+  it("returns 401 without authentication", async () => {
+    const res = await app.request("/user/me/pinned/movie-123", { method: "DELETE" });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("PUT /user/me/pinned/order", () => {
+  it("reorders pinned titles (happy path)", async () => {
+    const titleIds = ["movie-1", "movie-2", "movie-3"];
+    await upsertTitles(titleIds.map((id) => makeParsedTitle({ id, title: `Movie ${id}` })));
+
+    for (const id of titleIds) {
+      await app.request(`/user/me/pinned/${id}`, { method: "POST", headers: authHeaders() });
+    }
+
+    // Reverse order
+    const res = await app.request("/user/me/pinned/order", {
+      method: "PUT",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-3", "movie-2", "movie-1"] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+
+    // Verify order in profile
+    const profileRes = await app.request("/user/testuser", { headers: authHeaders() });
+    const profile = await profileRes.json();
+    expect(profile.pinned[0].id).toBe("movie-3");
+    expect(profile.pinned[2].id).toBe("movie-1");
+  });
+
+  it("returns 400 when body is missing titleIds", async () => {
+    const res = await app.request("/user/me/pinned/order", {
+      method: "PUT",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as AnyRecord;
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("returns 401 without authentication", async () => {
+    const res = await app.request("/user/me/pinned/order", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: [] }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /user/:username — pinned field", () => {
+  it("includes empty pinned array when no titles are pinned", async () => {
+    const res = await app.request("/user/testuser");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pinned).toEqual([]);
   });
 });

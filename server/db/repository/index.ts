@@ -229,3 +229,12 @@ export {
   getUnalertedProviders,
   markAlerted,
 } from "./streaming-alerts";
+
+export {
+  getPinnedTitles,
+  pinTitle,
+  unpinTitle,
+  reorderPinnedTitles,
+  isPinnedTitle,
+} from "./pinned";
+export type { PinnedTitle } from "./pinned";
