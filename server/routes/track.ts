@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle } from "../db/repository";
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
 import { CONFIG } from "../config";
@@ -107,6 +107,16 @@ const tagsSchema = z.object({
 
 const notificationModeSchema = z.object({
   mode: z.enum(VALID_NOTIFICATION_MODES).nullable(),
+});
+
+const bulkActionSchema = z.object({
+  titleIds: z.array(z.string()).min(1).max(200),
+  action: z.enum(["untrack", "set_status", "add_tag", "set_notification_mode"]),
+  payload: z.object({
+    status: z.string().optional(),
+    tag: z.string().optional(),
+    mode: z.string().optional(),
+  }).optional(),
 });
 
 // Convert frontend Title (snake_case) to ParsedTitle (camelCase) for upsert
@@ -287,6 +297,54 @@ app.post("/import", zValidator("json", importBodySchema), async (c) => {
   }
 
   return c.json({ success: true, imported, skipped });
+});
+
+app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
+  const user = c.get("user")!;
+  const { titleIds, action, payload } = c.req.valid("json");
+
+  let updated = 0;
+
+  if (action === "untrack") {
+    for (const titleId of titleIds) {
+      await untrackTitle(titleId, user.id);
+      updated++;
+    }
+  } else if (action === "set_status") {
+    const status = (payload?.status ?? null) as UserStatus | null;
+    if (status !== null && !VALID_USER_STATUSES.includes(status as (typeof VALID_USER_STATUSES)[number])) {
+      return c.json({ error: "Validation failed", issues: [{ message: "Invalid status value" }] }, 400);
+    }
+    for (const titleId of titleIds) {
+      await updateTrackedStatus(titleId, user.id, status);
+      updated++;
+    }
+  } else if (action === "add_tag") {
+    const tag = payload?.tag;
+    if (!tag || tag.trim().length === 0 || tag.trim().length > 30) {
+      return c.json({ error: "Validation failed", issues: [{ message: "Tag must be between 1 and 30 characters" }] }, 400);
+    }
+    const normalizedTag = tag.trim().toLowerCase();
+    for (const titleId of titleIds) {
+      const existing = await getTagsForTitle(user.id, titleId);
+      if (!existing.includes(normalizedTag) && existing.length < 10) {
+        await setTags(user.id, titleId, [...existing, normalizedTag]);
+      }
+      updated++;
+    }
+  } else if (action === "set_notification_mode") {
+    const mode = (payload?.mode ?? null) as NotificationMode | null;
+    if (mode !== null && !VALID_NOTIFICATION_MODES.includes(mode as (typeof VALID_NOTIFICATION_MODES)[number])) {
+      return c.json({ error: "Validation failed", issues: [{ message: "Invalid notification mode" }] }, 400);
+    }
+    for (const titleId of titleIds) {
+      await updateNotificationMode(titleId, user.id, mode);
+      updated++;
+    }
+  }
+
+  log.info("Bulk track action applied", { action, count: updated, userId: user.id });
+  return ok(c, { updated });
 });
 
 // `trackPostBodySchema` is `.optional()` per-field, so an empty body `{}` is

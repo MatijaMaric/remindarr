@@ -1034,6 +1034,167 @@ describe("PATCH /track/:id/tags", () => {
   });
 });
 
+describe("POST /track/bulk", () => {
+  it("bulk untracks multiple titles (happy path)", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+      makeParsedTitle({ id: "movie-3" }),
+    ]);
+    // Track all three
+    for (const id of ["movie-1", "movie-2", "movie-3"]) {
+      await app.request(`/track/${id}`, {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+    }
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-1", "movie-2", "movie-3"], action: "untrack" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.updated).toBe(3);
+
+    // Verify all untracked
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles).toHaveLength(0);
+  });
+
+  it("bulk set_status updates all selected titles", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+    ]);
+    for (const id of ["movie-1", "movie-2"]) {
+      await app.request(`/track/${id}`, {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+    }
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-1", "movie-2"], action: "set_status", payload: { status: "completed" } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.updated).toBe(2);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles.every((t: any) => t.user_status === "completed")).toBe(true);
+  });
+
+  it("bulk add_tag adds tag to all selected titles", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+    ]);
+    for (const id of ["movie-1", "movie-2"]) {
+      await app.request(`/track/${id}`, {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+    }
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-1", "movie-2"], action: "add_tag", payload: { tag: "favorite" } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.updated).toBe(2);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles.every((t: any) => t.tags?.includes("favorite"))).toBe(true);
+  });
+
+  it("bulk set_notification_mode updates all selected titles", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+    ]);
+    for (const id of ["movie-1", "movie-2"]) {
+      await app.request(`/track/${id}`, {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+    }
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-1", "movie-2"], action: "set_notification_mode", payload: { mode: "none" } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.updated).toBe(2);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles.every((t: any) => t.notification_mode === "none")).toBe(true);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-1"], action: "untrack" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  describe("validation", () => {
+    it("rejects empty titleIds array", async () => {
+      const res = await app.request("/track/bulk", {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ titleIds: [], action: "untrack" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects invalid action", async () => {
+      const res = await app.request("/track/bulk", {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ titleIds: ["movie-1"], action: "delete_everything" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects titleIds exceeding 200", async () => {
+      const titleIds = Array.from({ length: 201 }, (_, i) => `movie-${i}`);
+      const res = await app.request("/track/bulk", {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ titleIds, action: "untrack" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+  });
+});
+
 describe("validation", () => {
   beforeEach(async () => {
     await upsertTitles([makeParsedTitle()]);

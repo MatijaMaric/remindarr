@@ -25,11 +25,13 @@ mock.module("../context/AuthContext", () => ({
 const mockGetTrackedTitles = mock(() =>
   Promise.resolve({ titles: [], count: 0, profile_public: false })
 );
+const mockBulkTrackAction = mock(() => Promise.resolve({ updated: 0 }));
 
 mock.module("../api", () => ({
   getTrackedTitles: mockGetTrackedTitles,
   trackTitle: mock(() => Promise.resolve()),
   untrackTitle: mock(() => Promise.resolve()),
+  bulkTrackAction: mockBulkTrackAction,
 }));
 
 const { default: TrackedPage } = await import("./TrackedPage");
@@ -41,6 +43,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 afterEach(() => {
   cleanup();
   mockGetTrackedTitles.mockReset();
+  mockBulkTrackAction.mockReset();
 });
 
 function makeShow(id: string, status: string | null, overrides = {}) {
@@ -246,5 +249,58 @@ describe("TrackedPage", () => {
     });
 
     expect(screen.queryByText(/^Movies/)).toBeNull();
+  });
+});
+
+describe("TrackedPage select mode", () => {
+  it("shows Select toggle button", async () => {
+    mockGetTrackedTitles.mockImplementation(() =>
+      Promise.resolve({ titles: [makeMovie("m1"), makeMovie("m2")], count: 2, profile_public: false })
+    );
+    render(<TrackedPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText("Select")).toBeDefined());
+  });
+
+  it("enters select mode and shows the bulk action bar when a title is selected", async () => {
+    const titles = [makeMovie("m1"), makeMovie("m2")];
+    mockGetTrackedTitles.mockImplementation(() =>
+      Promise.resolve({ titles, count: titles.length, profile_public: false })
+    );
+
+    render(<TrackedPage />, { wrapper: Wrapper });
+
+    // Wait for data to load
+    await waitFor(() => expect(screen.getByText("Select")).toBeDefined());
+
+    // Click Select to enter select mode
+    fireEvent.click(screen.getByText("Select"));
+
+    // The "Select titles" helper message should appear (0 selected)
+    await waitFor(() =>
+      expect(screen.getByText("Select titles to apply bulk actions")).toBeDefined()
+    );
+  });
+
+  it("exits select mode when Cancel is clicked", async () => {
+    const titles = [makeMovie("m1")];
+    mockGetTrackedTitles.mockImplementation(() =>
+      Promise.resolve({ titles, count: titles.length, profile_public: false })
+    );
+
+    render(<TrackedPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText("Select")).toBeDefined());
+
+    fireEvent.click(screen.getByText("Select"));
+    await waitFor(() =>
+      expect(screen.getByText("Select titles to apply bulk actions")).toBeDefined()
+    );
+
+    // Click Cancel in the bar
+    fireEvent.click(screen.getByText("Cancel"));
+
+    // Bar should be gone
+    await waitFor(() =>
+      expect(screen.queryByText("Select titles to apply bulk actions")).toBeNull()
+    );
   });
 });

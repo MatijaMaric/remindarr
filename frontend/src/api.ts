@@ -924,3 +924,14 @@ export async function setNotificationMode(
     body: JSON.stringify({ mode }),
   });
 }
+
+export async function bulkTrackAction(payload: {
+  titleIds: string[];
+  action: "untrack" | "set_status" | "add_tag" | "set_notification_mode";
+  payload?: { status?: string; tag?: string; mode?: string };
+}): Promise<{ updated: number }> {
+  return fetchJson<{ updated: number }>("/track/bulk", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
