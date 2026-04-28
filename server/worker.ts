@@ -77,8 +77,7 @@ import { patchConfig, CONFIG } from "./config";
 import Sentry from "./sentry";
 import { withSentry } from "@sentry/cloudflare";
 import { CloudflarePlatform } from "./platform/cloudflare";
-import { enqueueOnce } from "./jobs/backend";
-import { armCron, processPending, recoverStale, runWithEnv, CRON_BY_EXPRESSION } from "./jobs/backend";
+import { armCron, enqueueOnce, processPending, recoverStale, runWithEnv, CRON_JOBS } from "./jobs/backend";
 export { JobQueueDO } from "./jobs/durable-object";
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
@@ -488,23 +487,23 @@ const handler = {
 
       const cfEnv = env as unknown as import("./jobs/backend").CFEnv;
       await runWithEnv(cfEnv, () => runWithCache(cache, () => runWithDb(db, async () => {
-        const cron = event.cron;
-        logger.info("Scheduled event", { cron });
+        logger.info("Scheduled bootstrap tick", { cron: event.cron });
 
-        // Arm the DO (DO mode) or enqueue job (D1 mode) for the firing cron
-        const jobName = CRON_BY_EXPRESSION[cron];
-        if (jobName) {
-          await armCron(cfEnv, jobName, cron);
+        // Arm every cron-singleton DO. Idempotent — the DO only schedules its
+        // alarm if no `runJob` cron schedule exists. DOs drive their own
+        // sub-daily execution via @cloudflare/actors/alarms.
+        for (const { name, cron } of CRON_JOBS) {
+          await armCron(cfEnv, name, cron);
         }
 
-        // One-time migrations always run through D1 regardless of backend
+        // One-time migrations (idempotent — no-ops once done)
         await enqueueOnce("migrate-offers");
 
         // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
         await recoverStale(cfEnv, 15);
         const processed = await processPending();
         if (processed > 0) {
-          logger.info("Processed jobs", { count: processed, cron });
+          logger.info("Processed jobs", { count: processed });
         }
       })));
     } catch (err) {

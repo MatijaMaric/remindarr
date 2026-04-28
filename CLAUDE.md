@@ -241,7 +241,7 @@ Inventory is large (~45 components). Broad groups:
 - Rate limiting uses a token bucket algorithm keyed by `x-forwarded-for` — deployments MUST terminate at a proxy that sets this header
 - Auth middleware is composable: `optionalAuth` → `requireAuth` → `requireAdmin`
 - OIDC settings have env-var precedence over DB (admin UI editable)
-- Jobs use an in-memory queue with cron scheduling on Bun; Cloudflare uses scheduled triggers
+- Jobs use an in-memory queue with cron scheduling on Bun. Cloudflare uses Durable Object alarms (`@cloudflare/actors/alarms`) for per-job scheduling; a single daily Worker cron acts as the bootstrap/recovery tick that arms DOs and runs stale-job recovery
 - Notification jobs dynamically reschedule based on user timezone preferences
 - Recommendations are 1-to-N broadcast (to followers), not 1-to-1
 - New notification providers must guard on `streamingAlerts.length` before rendering streaming-alert content
