@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle, setSnooze, setRemindOnRelease, getTitleById } from "../db/repository";
+import { getDb, jobs } from "../db/schema";
+import { and, eq, sql as dsql } from "drizzle-orm";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
@@ -114,6 +116,14 @@ const tagsSchema = z.object({
 
 const notificationModeSchema = z.object({
   mode: z.enum(VALID_NOTIFICATION_MODES).nullable(),
+});
+
+const snoozeSchema = z.object({
+  until: z.string().datetime().nullable(),
+});
+
+const remindOnReleaseSchema = z.object({
+  enabled: z.boolean(),
 });
 
 const bulkActionSchema = z.object({
@@ -465,6 +475,65 @@ app.patch(
     const { mode } = c.req.valid("json");
     await updateNotificationMode(titleId, user.id, mode as NotificationMode | null);
     return ok(c, { message: "Notification mode updated" });
+  },
+);
+
+app.patch(
+  "/:id/snooze",
+  zValidator("json", snoozeSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const titleId = c.req.param("id");
+    const { until } = c.req.valid("json");
+    await setSnooze(titleId, user.id, until);
+    log.info("Snooze updated", { titleId, userId: user.id, until });
+    return ok(c, { success: true });
+  },
+);
+
+app.patch(
+  "/:id/remind-on-release",
+  zValidator("json", remindOnReleaseSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const titleId = c.req.param("id");
+    const { enabled } = c.req.valid("json");
+    await setRemindOnRelease(titleId, user.id, enabled);
+
+    let scheduledFor: string | null = null;
+
+    if (enabled) {
+      const title = await getTitleById(titleId);
+      const releaseDate = title?.release_date ?? null;
+      if (releaseDate) {
+        const releaseDateTime = new Date(releaseDate + "T09:00:00.000Z");
+        if (releaseDateTime > new Date()) {
+          const db = getDb();
+          await db.insert(jobs).values({
+            name: "release-reminder",
+            data: JSON.stringify({ userId: user.id, titleId }),
+            status: "pending",
+            runAt: releaseDateTime.toISOString(),
+            maxAttempts: 1,
+          });
+          scheduledFor = releaseDateTime.toISOString();
+          log.info("Scheduled release reminder", { titleId, userId: user.id, scheduledFor });
+        }
+      }
+    } else {
+      const db = getDb();
+      await db.delete(jobs).where(
+        and(
+          eq(jobs.name, "release-reminder"),
+          eq(jobs.status, "pending"),
+          dsql`json_extract(${jobs.data}, '$.userId') = ${user.id}`,
+          dsql`json_extract(${jobs.data}, '$.titleId') = ${titleId}`,
+        ),
+      );
+      log.info("Cancelled release reminder", { titleId, userId: user.id });
+    }
+
+    return ok(c, { success: true, scheduledFor });
   },
 );
 

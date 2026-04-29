@@ -1311,3 +1311,146 @@ describe("validation", () => {
     expect(Array.isArray(body.issues)).toBe(true);
   });
 });
+
+describe("PATCH /track/:id/snooze", () => {
+  beforeEach(async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+  });
+
+  describe("validation", () => {
+    it("rejects missing until field", async () => {
+      const res = await app.request("/track/movie-123/snooze", {
+        method: "PATCH",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects non-ISO string for until", async () => {
+      const res = await app.request("/track/movie-123/snooze", {
+        method: "PATCH",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ until: "not-a-date" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+  });
+
+  it("happy-path: sets snooze with a future datetime", async () => {
+    const res = await app.request("/track/movie-123/snooze", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ until: "2027-01-01T00:00:00.000Z" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+
+    // Verify tracked list shows snooze_until
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].snooze_until).toBe("2027-01-01T00:00:00.000Z");
+  });
+
+  it("happy-path: clears snooze with null", async () => {
+    // Set first
+    await app.request("/track/movie-123/snooze", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ until: "2027-01-01T00:00:00.000Z" }),
+    });
+
+    // Clear
+    const res = await app.request("/track/movie-123/snooze", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ until: null }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].snooze_until).toBeNull();
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/movie-123/snooze", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ until: "2027-01-01T00:00:00.000Z" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("PATCH /track/:id/remind-on-release", () => {
+  beforeEach(async () => {
+    await upsertTitles([makeParsedTitle()]);
+    await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+  });
+
+  describe("validation", () => {
+    it("rejects non-boolean enabled", async () => {
+      const res = await app.request("/track/movie-123/remind-on-release", {
+        method: "PATCH",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: "yes" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+  });
+
+  it("happy-path: enables remind-on-release", async () => {
+    const res = await app.request("/track/movie-123/remind-on-release", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body).toHaveProperty("scheduledFor");
+  });
+
+  it("happy-path: disables remind-on-release", async () => {
+    const res = await app.request("/track/movie-123/remind-on-release", {
+      method: "PATCH",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.scheduledFor).toBeNull();
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/movie-123/remind-on-release", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    expect(res.status).toBe(401);
+  });
+});

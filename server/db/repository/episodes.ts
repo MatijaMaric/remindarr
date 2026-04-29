@@ -124,6 +124,7 @@ export async function getEpisodesByDateRange(startDate: string, endDate: string,
         poster_url: titles.posterUrl,
         backdrop_url: titles.backdropUrl,
         notification_mode: tracked.notificationMode,
+        snooze_until: tracked.snoozeUntil,
         is_watched: sql<boolean>`EXISTS(
           SELECT 1 FROM watched_episodes we
           WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}

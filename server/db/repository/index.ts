@@ -69,6 +69,8 @@ export {
   getTrackedTitlesForNotifications,
   updateTrackedNotes,
   getUsersTrackingTitles,
+  setSnooze,
+  setRemindOnRelease,
 } from "./tracked";
 export type { UserStatus, NotificationMode } from "./tracked";
 

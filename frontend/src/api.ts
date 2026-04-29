@@ -1010,3 +1010,26 @@ export async function getUpNext(limit = 12, signal?: AbortSignal): Promise<{ ite
   qs.set("limit", String(limit));
   return fetchJson(`/up-next?${qs}`, { signal });
 }
+
+export async function setTitleSnooze(
+  titleId: string,
+  until: string | null
+): Promise<{ success: boolean }> {
+  return fetchJson<{ success: boolean }>(`/track/${encodeURIComponent(titleId)}/snooze`, {
+    method: "PATCH",
+    body: JSON.stringify({ until }),
+  });
+}
+
+export async function setRemindOnRelease(
+  titleId: string,
+  enabled: boolean
+): Promise<{ success: boolean; scheduledFor: string | null }> {
+  return fetchJson<{ success: boolean; scheduledFor: string | null }>(
+    `/track/${encodeURIComponent(titleId)}/remind-on-release`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }
+  );
+}

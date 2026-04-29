@@ -22,9 +22,15 @@ import { enrichTitleDeepLinks } from "../streaming-availability/enrich";
 import { RateLimitError } from "../streaming-availability/types";
 import { getTitlesNeedingSaEnrichment } from "../db/repository";
 import { syncEachWithDelay } from "../tmdb/sync-utils";
+import { handleReleaseReminder } from "./release-reminders";
 
 export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
+
+  registerHandler("release-reminder", async (job) => {
+    const payload = job.data ? JSON.parse(job.data) as Record<string, unknown> : {};
+    await handleReleaseReminder(payload);
+  });
 
   registerHandler("sync-titles", async () => {
     const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });

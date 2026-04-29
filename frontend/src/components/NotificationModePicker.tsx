@@ -1,12 +1,18 @@
 import { useState } from "react";
-import { Bell, BellRing, BellOff } from "lucide-react";
+import { Bell, BellRing, BellOff, BellDot } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
+import SnoozePicker from "./SnoozePicker";
 
 interface Props {
   titleId: string;
   currentMode: "all" | "premieres_only" | "none" | null;
   onModeChange?: (mode: "all" | "premieres_only" | "none" | null) => void;
+  snoozeUntil?: string | null;
+  remindOnRelease?: boolean;
+  releaseDate?: string | null;
+  onSnoozed?: () => void;
+  onRemindOnReleaseChange?: (enabled: boolean) => void;
 }
 
 type NotificationMode = "all" | "premieres_only" | "none";
@@ -17,9 +23,10 @@ const MODES: { value: NotificationMode; icon: typeof Bell; labelKey: string }[] 
   { value: "none", icon: BellOff, labelKey: "notifications.none" },
 ];
 
-export default function NotificationModePicker({ titleId, currentMode, onModeChange }: Props) {
+export default function NotificationModePicker({ titleId, currentMode, onModeChange, snoozeUntil, remindOnRelease, releaseDate, onSnoozed, onRemindOnReleaseChange }: Props) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<NotificationMode | null>(currentMode ?? null);
+  const [remind, setRemind] = useState<boolean>(remindOnRelease ?? false);
 
   async function handleClick(newMode: NotificationMode) {
     const value = newMode === mode ? null : newMode;
@@ -29,6 +36,17 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
       onModeChange?.(value);
     } catch (err) {
       console.error("Failed to update notification mode", err);
+    }
+  }
+
+  async function handleRemindToggle() {
+    const newValue = !remind;
+    try {
+      await api.setRemindOnRelease(titleId, newValue);
+      setRemind(newValue);
+      onRemindOnReleaseChange?.(newValue);
+    } catch (err) {
+      console.error("Failed to update remind-on-release", err);
     }
   }
 
@@ -56,6 +74,28 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
           </button>
         );
       })}
+      <SnoozePicker
+        titleId={titleId}
+        snoozeUntil={snoozeUntil}
+        releaseDate={releaseDate}
+        onSnoozed={onSnoozed}
+      />
+      {releaseDate && new Date(releaseDate) > new Date() && (
+        <button
+          type="button"
+          title={t("snooze.remindOnRelease")}
+          aria-label={t("snooze.remindOnRelease")}
+          aria-pressed={remind}
+          onClick={handleRemindToggle}
+          className={`flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs transition-colors border ${
+            remind
+              ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+              : "text-zinc-500 hover:text-zinc-300 border-transparent hover:border-zinc-700"
+          }`}
+        >
+          <BellDot className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }

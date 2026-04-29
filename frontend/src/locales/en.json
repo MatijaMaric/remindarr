@@ -467,6 +467,15 @@
     "none": "Muted",
     "label": "Notifications"
   },
+  "snooze": {
+    "snooze": "Snooze notifications",
+    "snoozed": "Notifications snoozed",
+    "oneDay": "Snooze 1 day",
+    "oneWeek": "Snooze 1 week",
+    "untilRelease": "Until release",
+    "clear": "Clear snooze",
+    "remindOnRelease": "Remind on release day"
+  },
   "notificationPrompt": {
     "message": "Enable push notifications to get alerts about new episodes and releases.",
     "enable": "Enable",
