@@ -688,6 +688,11 @@ export interface InvitationItem {
   used_by: UserSummary | null;
 }
 
+export interface UserSettings {
+  streamingDeparturesEnabled: boolean;
+  departureAlertLeadDays: number;
+}
+
 export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon";
 
 export interface HomepageSection {

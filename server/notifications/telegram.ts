@@ -1,6 +1,7 @@
 import { traceHttp } from "../tracing";
 import { httpFetch } from "../lib/http";
 import { formatProviderNames, groupEpisodesByShow } from "./format";
+import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 const TELEGRAM_API = "https://api.telegram.org";
@@ -78,7 +79,12 @@ export class TelegramProvider implements NotificationProvider {
     }
 
     for (const alert of streamingAlerts) {
-      lines.push(`🔔 <b>${escapeHtml(alert.title)}</b> — now on <i>${escapeHtml(alert.providerName)}</i>`);
+      if (alert.kind === "departure") {
+        const copy = formatLeavingCopy(alert.providerName, alert.leavingAt);
+        lines.push(`🔕 <b>${escapeHtml(alert.title)}</b> — ${escapeHtml(copy)}`);
+      } else {
+        lines.push(`🔔 <b>${escapeHtml(alert.title)}</b> — now on <i>${escapeHtml(alert.providerName)}</i>`);
+      }
     }
 
     return lines.join("\n");

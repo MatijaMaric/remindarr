@@ -89,6 +89,8 @@ export class WebhookProvider implements NotificationProvider {
         title: a.title,
         posterUrl: a.posterUrl,
         providerName: a.providerName,
+        kind: a.kind,
+        leavingAt: a.leavingAt ?? null,
       })),
     };
   }

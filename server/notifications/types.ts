@@ -19,6 +19,8 @@ export interface NotificationStreamingAlert {
   title: string;
   posterUrl: string | null;
   providerName: string;
+  kind: "arrival" | "departure";
+  leavingAt?: string | null;
 }
 
 export interface NotificationContent {

@@ -2,6 +2,7 @@ import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
 import { httpFetch } from "../lib/http";
 import { formatProviderNames, groupEpisodesByShow } from "./format";
+import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 const DISCORD_WEBHOOK_PATTERN =
@@ -68,11 +69,17 @@ export class DiscordProvider implements NotificationProvider {
       parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
     }
 
+    const arrivalAlerts = streamingAlerts.filter((a) => a.kind === "arrival");
+    const departureAlerts = streamingAlerts.filter((a) => a.kind === "departure");
+
     if (streamingAlerts.length > 0 || parts.length > 0) {
       const descParts: string[] = [];
       if (parts.length > 0) descParts.push(`${parts.join(" and ")} releasing today`);
-      if (streamingAlerts.length > 0) {
-        descParts.push(`${streamingAlerts.length} title${streamingAlerts.length !== 1 ? "s" : ""} now streaming`);
+      if (arrivalAlerts.length > 0) {
+        descParts.push(`${arrivalAlerts.length} title${arrivalAlerts.length !== 1 ? "s" : ""} now streaming`);
+      }
+      if (departureAlerts.length > 0) {
+        descParts.push(`${departureAlerts.length} title${departureAlerts.length !== 1 ? "s" : ""} leaving soon`);
       }
       embeds.push({
         title: `📺 Releases for ${date}`,
@@ -139,9 +146,12 @@ export class DiscordProvider implements NotificationProvider {
 
     // Streaming alert embeds
     for (const alert of streamingAlerts) {
+      const description = alert.kind === "departure"
+        ? formatLeavingCopy(alert.providerName, alert.leavingAt)
+        : `Now available on **${alert.providerName}**`;
       const embed: any = {
         title: `🎬 ${alert.title}`,
-        description: `Now available on **${alert.providerName}**`,
+        description,
         color: EMBED_COLOR,
       };
       if (alert.posterUrl) {

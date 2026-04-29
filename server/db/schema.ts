@@ -166,6 +166,8 @@ export const users = sqliteTable(
     watchlistShareToken: text("watchlist_share_token"),
     bio: text("bio"),
     activityStreamEnabled: integer("activity_stream_enabled").notNull().default(0),
+    streamingDeparturesEnabled: integer("streaming_departures_enabled").notNull().default(1),
+    departureAlertLeadDays: integer("departure_alert_lead_days").notNull().default(7),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(
@@ -572,9 +574,10 @@ export const streamingAlerts = sqliteTable(
     providerId: integer("provider_id").notNull(),
     providerName: text("provider_name").notNull(),
     alertedAt: text("alerted_at").notNull().default(sql`(datetime('now'))`),
+    kind: text("kind").notNull().default("arrival"),
   },
   (table) => [
-    uniqueIndex("uq_streaming_alerts_user_title_provider").on(table.userId, table.titleId, table.providerId),
+    uniqueIndex("uq_streaming_alerts_user_title_provider_kind").on(table.userId, table.titleId, table.providerId, table.kind),
     index("idx_streaming_alerts_user_title").on(table.userId, table.titleId),
   ]
 );

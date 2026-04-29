@@ -121,7 +121,7 @@ describe("WebhookProvider.send", () => {
       date: "2026-04-05",
       episodes: [],
       movies: [],
-      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix" }],
+      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix", kind: "arrival" as const }],
     };
     await webhook.send({ url: "https://example.com/hook" }, alertContent);
     expect(fetchCalls).toHaveLength(1);

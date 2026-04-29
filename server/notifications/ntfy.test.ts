@@ -132,7 +132,7 @@ describe("NtfyProvider.send", () => {
       date: "2026-04-05",
       episodes: [],
       movies: [],
-      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix" }],
+      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix", kind: "arrival" as const }],
     };
     await ntfy.send({ url: "https://ntfy.sh/my-topic" }, alertContent);
     expect(fetchCalls).toHaveLength(1);

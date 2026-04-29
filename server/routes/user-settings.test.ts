@@ -225,3 +225,105 @@ describe("validation", () => {
     expect(body.homepage_layout.some((s: { id: string }) => s.id === "airing_soon")).toBe(true);
   });
 });
+
+// ─── Departure alert settings ──────────────────────────────────────────────────
+
+describe("GET /user/settings/departure-alerts", () => {
+  it("returns default departure settings for new user", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/departure-alerts");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.streamingDeparturesEnabled).toBe(true);
+    expect(body.departureAlertLeadDays).toBe(7);
+  });
+});
+
+describe("PUT /user/settings/departure-alerts", () => {
+  it("happy path: empty body returns 200", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/departure-alerts", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("saves streamingDeparturesEnabled and departureAlertLeadDays", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/departure-alerts", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ streamingDeparturesEnabled: false, departureAlertLeadDays: 14 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.streamingDeparturesEnabled).toBe(false);
+    expect(body.departureAlertLeadDays).toBe(14);
+
+    // GET reflects updated values
+    const getRes = await app.request("/user/settings/departure-alerts");
+    const getBody = await getRes.json();
+    expect(getBody.streamingDeparturesEnabled).toBe(false);
+    expect(getBody.departureAlertLeadDays).toBe(14);
+  });
+
+  it("can re-enable after disabling", async () => {
+    const app = makeAuthedApp();
+    await app.request("/user/settings/departure-alerts", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ streamingDeparturesEnabled: false }),
+    });
+    const res = await app.request("/user/settings/departure-alerts", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ streamingDeparturesEnabled: true }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.streamingDeparturesEnabled).toBe(true);
+  });
+});
+
+describe("validation — departure alerts", () => {
+  it("returns 400 + issues for departureAlertLeadDays = 0", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/departure-alerts", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ departureAlertLeadDays: 0 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for departureAlertLeadDays = 31", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/departure-alerts", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ departureAlertLeadDays: 31 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for non-boolean streamingDeparturesEnabled", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/departure-alerts", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ streamingDeparturesEnabled: "yes" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});

@@ -81,6 +81,39 @@ export async function getUserById(id: string) {
   });
 }
 
+export async function getUserDepartureSettings(userId: string): Promise<{ streamingDeparturesEnabled: number; departureAlertLeadDays: number } | null> {
+  return traceDbQuery("getUserDepartureSettings", async () => {
+    const db = getDb();
+    const row = await db
+      .select({
+        streamingDeparturesEnabled: users.streamingDeparturesEnabled,
+        departureAlertLeadDays: users.departureAlertLeadDays,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    return row ?? null;
+  });
+}
+
+export async function updateUserDepartureSettings(
+  userId: string,
+  settings: { streamingDeparturesEnabled?: boolean; departureAlertLeadDays?: number }
+): Promise<void> {
+  return traceDbQuery("updateUserDepartureSettings", async () => {
+    const db = getDb();
+    const patch: Record<string, number> = {};
+    if (settings.streamingDeparturesEnabled !== undefined) {
+      patch.streamingDeparturesEnabled = settings.streamingDeparturesEnabled ? 1 : 0;
+    }
+    if (settings.departureAlertLeadDays !== undefined) {
+      patch.departureAlertLeadDays = settings.departureAlertLeadDays;
+    }
+    if (Object.keys(patch).length === 0) return;
+    await db.update(users).set(patch).where(eq(users.id, userId)).run();
+  });
+}
+
 export async function getUserByProviderSubject(
   authProvider: string,
   providerSubject: string

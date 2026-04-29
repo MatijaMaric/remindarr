@@ -5,6 +5,29 @@ import {
 } from "../db/repository";
 import type { NotificationContent } from "./types";
 
+/**
+ * Formats a human-readable "leaving" copy for departure alerts.
+ * Examples:
+ *   formatLeavingCopy("Netflix", null)          → "Leaving Netflix soon"
+ *   formatLeavingCopy("Netflix", "2025-06-01")  → "Leaving Netflix on Jun 1, 2025"
+ */
+export function formatLeavingCopy(providerName: string, leavingAt: string | null | undefined): string {
+  if (!leavingAt) return `Leaving ${providerName} soon`;
+  try {
+    const date = new Date(leavingAt);
+    if (isNaN(date.getTime())) return `Leaving ${providerName} soon`;
+    const formatted = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+    return `Leaving ${providerName} on ${formatted}`;
+  } catch {
+    return `Leaving ${providerName} soon`;
+  }
+}
+
 export async function buildNotificationContent(
   userId: string,
   date: string

@@ -49,7 +49,7 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
 
     for (const userId of userIds) {
       // 4. Find providers not yet alerted for this (user, title)
-      const newProviderIds = await getUnalertedProviders(userId, titleId, providerIds);
+      const newProviderIds = await getUnalertedProviders(userId, titleId, providerIds, "arrival");
       if (newProviderIds.length === 0) continue;
 
       // 5. Get enabled streaming-alert notifiers for this user
@@ -76,6 +76,7 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
                 title: titleRow.title,
                 posterUrl: titleRow.poster_url,
                 providerName: provider.name,
+                kind: "arrival" as const,
               },
             ],
           };
@@ -108,7 +109,7 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
 
         // Mark as alerted regardless of whether we had notifiers
         // (so we don't re-send if user adds a notifier later for already-available titles)
-        await markAlerted(userId, titleId, pid, provider.name);
+        await markAlerted(userId, titleId, pid, provider.name, "arrival");
       }
     }
   }

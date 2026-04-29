@@ -115,6 +115,8 @@ export {
   getWatchlistShareToken,
   setWatchlistShareToken,
   getUserByWatchlistShareToken,
+  getUserDepartureSettings,
+  updateUserDepartureSettings,
 } from "./users";
 
 export {
@@ -233,6 +235,7 @@ export type { IntegrationConfig, PlexConfig } from "./integrations";
 export {
   getUnalertedProviders,
   markAlerted,
+  getArrivalAlertedProviders,
 } from "./streaming-alerts";
 
 export {

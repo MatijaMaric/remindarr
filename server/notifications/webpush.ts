@@ -2,6 +2,7 @@ import webpush from "web-push";
 import { logger } from "../logger";
 import { groupEpisodesByShow } from "./format";
 import { getVapidKeys } from "./vapid";
+import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 const log = logger.child({ module: "webpush" });
@@ -92,7 +93,11 @@ export class WebPushProvider implements NotificationProvider {
     }
 
     for (const alert of streamingAlerts) {
-      lines.push(`${alert.title} — now on ${alert.providerName}`);
+      if (alert.kind === "departure") {
+        lines.push(`${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt)}`);
+      } else {
+        lines.push(`${alert.title} — now on ${alert.providerName}`);
+      }
     }
 
     return {

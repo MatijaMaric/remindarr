@@ -4,6 +4,7 @@ import { getEnabledIntegrationsByProvider } from "../db/repository";
 import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
 import { checkStreamingAlerts } from "./check-streaming-alerts";
+import { checkStreamingDepartures } from "./check-streaming-departures";
 import { syncFailureTotal } from "../metrics";
 
 const log = logger.child({ module: "sync" });
@@ -31,6 +32,7 @@ export function registerSyncJobs() {
     const count = await upsertTitles(titles);
     log.info("Synced titles from TMDB", { count });
     await checkStreamingAlerts(titleIds);
+    await checkStreamingDepartures(titleIds);
   });
 
   registerHandler("sync-episodes", async () => {
