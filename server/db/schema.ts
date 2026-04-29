@@ -248,6 +248,8 @@ export const tracked = sqliteTable(
     public: integer("public").notNull().default(1),
     userStatus: text("user_status"),
     notificationMode: text("notification_mode"),
+    snoozeUntil: text("snooze_until"),
+    remindOnRelease: integer("remind_on_release").notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.titleId, table.userId] }),

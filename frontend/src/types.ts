@@ -48,6 +48,8 @@ export interface Title {
   show_status?: "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
   user_status?: "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null;
   notification_mode?: "all" | "premieres_only" | "none" | null;
+  snooze_until?: string | null;
+  remind_on_release?: boolean;
   latest_released_air_date?: string | null;
   next_episode_air_date?: string | null;
   offers: Offer[];

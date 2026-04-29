@@ -6,6 +6,7 @@ import {
   upsertEpisodes,
   createUser,
   trackTitle,
+  setSnooze,
 } from "../db/repository";
 import { buildNotificationContent, buildWeeklyDigestContent } from "./content";
 
@@ -232,5 +233,111 @@ describe("buildWeeklyDigestContent", () => {
 
     const content = await buildWeeklyDigestContent(userId, startDate, endDate);
     expect(content.movies).toHaveLength(0);
+  });
+});
+
+describe("snooze filtering", () => {
+  it("excludes a movie from digest when snooze_until is in the future", async () => {
+    const today = "2026-03-12";
+    const futureSnooze = new Date(Date.now() + 86400000).toISOString(); // 1 day in future
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-snooze-1",
+        objectType: "MOVIE",
+        title: "Snoozed Movie",
+        releaseDate: today,
+        releaseYear: 2026,
+      }),
+    ]);
+    await trackTitle("movie-snooze-1", userId);
+    await setSnooze("movie-snooze-1", userId, futureSnooze);
+
+    const content = await buildNotificationContent(userId, today);
+    expect(content.movies).toHaveLength(0);
+  });
+
+  it("includes a movie when snooze_until is in the past (expired)", async () => {
+    const today = "2026-03-12";
+    const pastSnooze = new Date(Date.now() - 86400000).toISOString(); // 1 day in past
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-expired-snooze",
+        objectType: "MOVIE",
+        title: "Expired Snooze Movie",
+        releaseDate: today,
+        releaseYear: 2026,
+      }),
+    ]);
+    await trackTitle("movie-expired-snooze", userId);
+    await setSnooze("movie-expired-snooze", userId, pastSnooze);
+
+    const content = await buildNotificationContent(userId, today);
+    expect(content.movies).toHaveLength(1);
+    expect(content.movies[0].title).toBe("Expired Snooze Movie");
+  });
+
+  it("excludes a show episode from digest when snooze_until is in the future", async () => {
+    const today = "2026-03-12";
+    const futureSnooze = new Date(Date.now() + 86400000).toISOString();
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-snooze-1",
+        objectType: "SHOW",
+        title: "Snoozed Show",
+        releaseDate: "2026-01-01",
+      }),
+    ]);
+    await trackTitle("show-snooze-1", userId);
+    await setSnooze("show-snooze-1", userId, futureSnooze);
+
+    await upsertEpisodes([
+      {
+        title_id: "show-snooze-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
+    ]);
+
+    const content = await buildNotificationContent(userId, today);
+    expect(content.episodes).toHaveLength(0);
+  });
+
+  it("includes a show episode when snooze_until is in the past (expired)", async () => {
+    const today = "2026-03-12";
+    const pastSnooze = new Date(Date.now() - 86400000).toISOString();
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-expired-snooze",
+        objectType: "SHOW",
+        title: "Expired Snooze Show",
+        releaseDate: "2026-01-01",
+      }),
+    ]);
+    await trackTitle("show-expired-snooze", userId);
+    await setSnooze("show-expired-snooze", userId, pastSnooze);
+
+    await upsertEpisodes([
+      {
+        title_id: "show-expired-snooze",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
+    ]);
+
+    const content = await buildNotificationContent(userId, today);
+    expect(content.episodes).toHaveLength(1);
+    expect(content.episodes[0].showTitle).toBe("Expired Snooze Show");
   });
 });

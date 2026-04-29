@@ -37,10 +37,14 @@ export async function buildNotificationContent(
   d.setUTCDate(d.getUTCDate() + 1);
   const nextDay = d.toISOString().slice(0, 10);
 
+  const now = new Date();
+
   // Episodes airing today for tracked shows
   const rawEpisodes = await getEpisodesByDateRange(date, nextDay, userId);
   const episodes = rawEpisodes
     .filter((ep) => {
+      // Skip snoozed titles
+      if (ep.snooze_until && new Date(ep.snooze_until) > now) return false;
       const mode = ep.notification_mode;
       if (mode === "none") return false;
       if (mode === "premieres_only") return ep.episode_number === 1;
@@ -60,15 +64,21 @@ export async function buildNotificationContent(
 
   // Tracked movies releasing today
   const rawMovies = await getTrackedMoviesByReleaseDate(date, userId);
-  const movies = rawMovies.map((m) => ({
-    title: m.title,
-    releaseYear: m.release_year,
-    posterUrl: m.poster_url,
-    offers: (m.offers || []).map((o) => ({
-      providerName: o.provider_name,
-      providerIconUrl: o.provider_icon_url,
-    })),
-  }));
+  const movies = rawMovies
+    .filter((m) => {
+      // Skip snoozed titles
+      if (m.snooze_until && new Date(m.snooze_until) > now) return false;
+      return true;
+    })
+    .map((m) => ({
+      title: m.title,
+      releaseYear: m.release_year,
+      posterUrl: m.poster_url,
+      offers: (m.offers || []).map((o) => ({
+        providerName: o.provider_name,
+        providerIconUrl: o.provider_icon_url,
+      })),
+    }));
 
   return { episodes, movies, date };
 }
@@ -82,10 +92,14 @@ export async function buildWeeklyDigestContent(
   startDate: string,
   endDate: string
 ): Promise<NotificationContent> {
+  const now = new Date();
+
   // Episodes airing in the range for tracked shows
   const rawEpisodes = await getEpisodesByDateRange(startDate, endDate, userId);
   const episodes = rawEpisodes
     .filter((ep) => {
+      // Skip snoozed titles
+      if (ep.snooze_until && new Date(ep.snooze_until) > now) return false;
       const mode = ep.notification_mode;
       if (mode === "none") return false;
       if (mode === "premieres_only") return ep.episode_number === 1;
@@ -105,15 +119,21 @@ export async function buildWeeklyDigestContent(
 
   // Tracked movies releasing in the range
   const rawMovies = await getTrackedMoviesByReleaseDateRange(startDate, endDate, userId);
-  const movies = rawMovies.map((m) => ({
-    title: m.title,
-    releaseYear: m.release_year,
-    posterUrl: m.poster_url,
-    offers: (m.offers || []).map((o) => ({
-      providerName: o.provider_name,
-      providerIconUrl: o.provider_icon_url,
-    })),
-  }));
+  const movies = rawMovies
+    .filter((m) => {
+      // Skip snoozed titles
+      if (m.snooze_until && new Date(m.snooze_until) > now) return false;
+      return true;
+    })
+    .map((m) => ({
+      title: m.title,
+      releaseYear: m.release_year,
+      posterUrl: m.poster_url,
+      offers: (m.offers || []).map((o) => ({
+        providerName: o.provider_name,
+        providerIconUrl: o.provider_icon_url,
+      })),
+    }));
 
   return { episodes, movies, date: startDate };
 }

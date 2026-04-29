@@ -85,6 +85,8 @@ export async function getTrackedTitles(userId: string) {
         public: tracked.public,
         user_status: tracked.userStatus,
         notification_mode: tracked.notificationMode,
+        snooze_until: tracked.snoozeUntil,
+        remind_on_release: tracked.remindOnRelease,
         is_tracked: sql<number>`1`,
         is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
@@ -231,6 +233,7 @@ export async function getTrackedMoviesByReleaseDate(date: string, userId: string
         release_year: titles.releaseYear,
         release_date: titles.releaseDate,
         poster_url: titles.posterUrl,
+        snooze_until: tracked.snoozeUntil,
       })
       .from(titles)
       .innerJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
@@ -335,6 +338,7 @@ export async function getTrackedMoviesByReleaseDateRange(startDate: string, endD
         release_year: titles.releaseYear,
         release_date: titles.releaseDate,
         poster_url: titles.posterUrl,
+        snooze_until: tracked.snoozeUntil,
       })
       .from(titles)
       .innerJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
@@ -375,5 +379,33 @@ export async function getUsersTrackingTitles(titleIds: string[]): Promise<Map<st
       map.set(row.titleId, list);
     }
     return map;
+  });
+}
+
+export async function setSnooze(
+  titleId: string,
+  userId: string,
+  until: string | null
+): Promise<void> {
+  return traceDbQuery("setSnooze", async () => {
+    const db = getDb();
+    await db.update(tracked)
+      .set({ snoozeUntil: until })
+      .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+      .run();
+  });
+}
+
+export async function setRemindOnRelease(
+  titleId: string,
+  userId: string,
+  enabled: boolean
+): Promise<void> {
+  return traceDbQuery("setRemindOnRelease", async () => {
+    const db = getDb();
+    await db.update(tracked)
+      .set({ remindOnRelease: enabled ? 1 : 0 })
+      .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+      .run();
   });
 }

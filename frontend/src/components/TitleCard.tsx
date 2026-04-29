@@ -26,6 +26,8 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
   const [prevTitleId, setPrevTitleId] = useState(title.id);
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
   const [notifMode, setNotifMode] = useState(title.notification_mode ?? null);
+  const [snoozeUntil, setSnoozeUntil] = useState<string | null | undefined>(title.snooze_until);
+  const [remindOnRelease, setRemindOnRelease] = useState<boolean>(title.remind_on_release ?? false);
   const [tags, setTags] = useState<string[]>(title.tags ?? []);
 
   // Re-sync local state when the card is reused for a different title.
@@ -34,8 +36,12 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
     setPrevTitleId(title.id);
     setUserStatus(title.user_status ?? null);
     setNotifMode(title.notification_mode ?? null);
+    setSnoozeUntil(title.snooze_until);
+    setRemindOnRelease(title.remind_on_release ?? false);
     setTags(title.tags ?? []);
   }
+
+  const isSnoozed = snoozeUntil != null && new Date(snoozeUntil) > new Date();
 
   return (
     <article aria-label={title.title} className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}>
@@ -154,6 +160,11 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             variant="overlay"
           />
         )}
+        {isSnoozed && showNotificationPicker && (
+          <span className="absolute top-2 right-2 bg-blue-600/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            Snoozed
+          </span>
+        )}
       </div>
 
       {/* Info */}
@@ -197,6 +208,15 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
               titleId={title.id}
               currentMode={notifMode}
               onModeChange={(m) => setNotifMode(m)}
+              snoozeUntil={snoozeUntil}
+              remindOnRelease={remindOnRelease}
+              releaseDate={title.release_date}
+              onSnoozed={() => {
+                // Refresh local snooze state — we don't know the new value until we refetch
+                // For now, trigger the parent's onTrackToggle if available, otherwise do a soft refresh
+                onTrackToggle?.();
+              }}
+              onRemindOnReleaseChange={(enabled) => setRemindOnRelease(enabled)}
             />
           )}
           {title.is_tracked && showTags && (
