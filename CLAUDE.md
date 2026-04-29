@@ -239,6 +239,16 @@ Inventory is large (~45 components). Broad groups:
 - Pass contextual data as the second argument: `log.info("message", { key: value })`
 - Frontend code may continue using `console.error`
 
+### Migration Safety Rules (Cloudflare D1)
+
+**NEVER recreate a FK-parent table via DROP TABLE on D1.** `PRAGMA foreign_keys=OFF` does not persist across `--> statement-breakpoint` boundaries on D1 — each statement runs in a separate connection context. If a migration drops a parent table (`users`, `titles`, `providers`) while child tables have `ON DELETE CASCADE` FKs, the cascade fires unconditionally and wipes all child rows.
+
+**Safe pattern for adding columns:** use `ALTER TABLE <table> ADD COLUMN <col> <type> DEFAULT <val>` instead of the table-recreate pattern (create new, insert from old, drop old, rename new). `ADD COLUMN` works for any `NOT NULL DEFAULT` column on SQLite/D1 and avoids the cascade risk entirely.
+
+The table-recreate pattern (with `PRAGMA foreign_keys=OFF`) is only safe for **child tables** (tables that reference a parent but have no FK children themselves). Examples of safe recreates: `tracked`, `watched_titles`, `watch_history`, `streaming_alerts`, `ratings`, `recommendations`.
+
+`server/db/migrations.test.ts` enforces this: it runs every migration with `foreign_keys=ON` throughout and asserts that `account`, `sessions`, and `passkey` rows seeded early survive all migrations. This test would have caught the 2026-04-29 production data-loss incident caused by migration 0037.
+
 ### Key Patterns
 - DB titles use snake_case, TMDB API search results use camelCase — `normalizeSearchTitle()` bridges the gap
 - Offers are deduplicated by provider ID with priority: FLATRATE > FREE > ADS
