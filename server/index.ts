@@ -7,7 +7,7 @@ import { CONFIG } from "./config";
 import { initBunDb, migrateTrackedData, getRawDb } from "./db/bun-db";
 import { getUserCount, createUser, getUserByWatchlistShareToken, getTrackedTitles } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
-import { rateLimiter } from "./middleware/rate-limit";
+import { rateLimiter, MemoryRateLimitStore } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
@@ -67,6 +67,9 @@ initBunDb();
 // Initialize distributed cache
 const cache = await createCache();
 initCache(cache);
+
+// Shared rate-limit store — single instance so all middleware shares the same buckets.
+const rateLimitStore = new MemoryRateLimitStore();
 
 const platform = new BunPlatform();
 
@@ -176,6 +179,13 @@ if (CONFIG.CORS_ORIGIN) {
 // Request logging
 app.use("/api/*", requestLogger());
 
+// Global per-IP cap — applies to all /api/* before any per-route limiter.
+// Prevents aggregate abuse across routes from a single client.
+app.use(
+  "/api/*",
+  rateLimiter({ store: rateLimitStore, scope: "global", limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
+);
+
 // Health check (public — used by Sentry uptime monitoring)
 app.route("/api/health", healthRoutes);
 
@@ -187,7 +197,7 @@ app.route("/metrics", metricsRoutes);
 // need a higher cap.
 app.use(
   "/api/auth/*",
-  rateLimiter({ limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
+  rateLimiter({ store: rateLimitStore, scope: "auth", limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
 );
 
 // Custom auth routes (providers endpoint) — must be before better-auth catch-all
@@ -204,13 +214,12 @@ app.use("/api/titles", optionalAuth);
 app.route("/api/titles", titlesRoutes);
 
 // Rate limit search: 30 requests per minute
-app.use("/api/search/*", rateLimiter({ limit: 30, windowMs: 60_000 }));
-app.use("/api/search", rateLimiter({ limit: 30, windowMs: 60_000 }));
-app.use("/api/search/*", optionalAuth);
-app.use("/api/search", optionalAuth);
+const searchRateLimiter = rateLimiter({ store: rateLimitStore, scope: "search", limit: 30, windowMs: 60_000 });
+app.use("/api/search/*", searchRateLimiter, optionalAuth);
+app.use("/api/search", searchRateLimiter, optionalAuth);
 app.route("/api/search", searchRoutes);
 
-const browseRateLimiter = rateLimiter({ limit: 30, windowMs: 60_000 });
+const browseRateLimiter = rateLimiter({ store: rateLimitStore, scope: "browse", limit: 30, windowMs: 60_000 });
 app.use("/api/browse/*", browseRateLimiter, optionalAuth);
 app.use("/api/browse", browseRateLimiter, optionalAuth);
 app.route("/api/browse", browseRoutes);
@@ -234,7 +243,7 @@ app.route("/api/social", socialRoutes);
 
 // Rate limit write-heavy routes: 60 requests per minute per IP.
 // Applied before requireAuth so floods are rejected cheaply.
-const writeRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+const writeRateLimiter = rateLimiter({ store: rateLimitStore, scope: "writes", limit: 60, windowMs: 60_000 });
 
 // Ratings routes — optionalAuth base, POST/DELETE check auth internally.
 // Rate-limit applies to all (reads + writes) so unauth scrapers get throttled too.
@@ -274,8 +283,9 @@ app.use("/api/integrations", writeRateLimiter, requireAuth);
 app.route("/api/integrations", integrationRoutes);
 
 // Import is more expensive per request — tighter cap.
-app.use("/api/import/*", rateLimiter({ limit: 10, windowMs: 60_000 }), requireAuth);
-app.use("/api/import", rateLimiter({ limit: 10, windowMs: 60_000 }), requireAuth);
+const importRateLimiter = rateLimiter({ store: rateLimitStore, scope: "import", limit: 10, windowMs: 60_000 });
+app.use("/api/import/*", importRateLimiter, requireAuth);
+app.use("/api/import", importRateLimiter, requireAuth);
 app.route("/api/import", importRoutes);
 
 app.use("/api/stats/*", requireAuth);
@@ -313,14 +323,15 @@ app.use("/api/jobs", requireAuth, requireAdmin);
 app.route("/api/jobs", jobsRoutes);
 
 // Detail pages (optionalAuth for is_tracked)
-const detailsRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+const detailsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "details", limit: 60, windowMs: 60_000 });
 app.use("/api/details/*", detailsRateLimiter, optionalAuth);
 app.use("/api/details", detailsRateLimiter, optionalAuth);
 app.route("/api/details", detailsRoutes);
 
 // Sync (admin only — rate limited + require admin)
-app.use("/api/sync/*", rateLimiter({ limit: 5, windowMs: 60_000 }));
-app.use("/api/sync", rateLimiter({ limit: 5, windowMs: 60_000 }));
+const syncRateLimiter = rateLimiter({ store: rateLimitStore, scope: "sync", limit: 5, windowMs: 60_000 });
+app.use("/api/sync/*", syncRateLimiter);
+app.use("/api/sync", syncRateLimiter);
 app.use("/api/sync/*", requireAuth, requireAdmin);
 app.use("/api/sync", requireAuth, requireAdmin);
 app.route("/api/sync", syncRoutes);

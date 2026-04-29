@@ -42,7 +42,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { getDb, runWithDb, schemaExports } from "./db/schema";
 import { getUserCount, createUser, isOidcConfigured, getOidcConfig, getUserByWatchlistShareToken, getTrackedTitles } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
-import { rateLimiter } from "./middleware/rate-limit";
+import { rateLimiter, MemoryRateLimitStore, KvRateLimitStore } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
@@ -195,6 +195,12 @@ async function resolveOidcConfig(): Promise<typeof cachedOidcConfig> {
 function createApp(env: Env) {
   const app = new Hono<AppEnv>();
 
+  // Shared rate-limit store — KV-backed when available so all isolates share buckets;
+  // falls back to in-memory when CACHE_KV binding is not configured.
+  const rateLimitStore = env.CACHE_KV
+    ? new KvRateLimitStore(env.CACHE_KV)
+    : new MemoryRateLimitStore();
+
   // Per-request setup: inject platform and auth into context.
   // One-time initialization (migration, admin creation, OIDC config) is
   // guarded by module-level flags so it only runs on the first request.
@@ -255,11 +261,17 @@ function createApp(env: Env) {
   // Request logging
   app.use("/api/*", requestLogger());
 
+  // Global per-IP cap — applies to all /api/* before any per-route limiter.
+  app.use(
+    "/api/*",
+    rateLimiter({ store: rateLimitStore, scope: "global", limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
+  );
+
   // Health check
   app.route("/api/health", healthRoutes);
 
   // Rate limit auth routes: 20 requests per minute to prevent brute-force attacks
-  app.use("/api/auth/*", rateLimiter({ limit: 20, windowMs: 60_000 }));
+  app.use("/api/auth/*", rateLimiter({ store: rateLimitStore, scope: "auth", limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 }));
 
   // Custom auth routes (providers endpoint) — must be before better-auth catch-all
   app.route("/api/auth/custom", authCustomRoutes);
@@ -279,13 +291,12 @@ function createApp(env: Env) {
   app.route("/api/titles", titlesRoutes);
 
   // Rate limit search
-  app.use("/api/search/*", rateLimiter({ limit: 30, windowMs: 60_000 }));
-  app.use("/api/search", rateLimiter({ limit: 30, windowMs: 60_000 }));
-  app.use("/api/search/*", optionalAuth);
-  app.use("/api/search", optionalAuth);
+  const searchRateLimiter = rateLimiter({ store: rateLimitStore, scope: "search", limit: 30, windowMs: 60_000 });
+  app.use("/api/search/*", searchRateLimiter, optionalAuth);
+  app.use("/api/search", searchRateLimiter, optionalAuth);
   app.route("/api/search", searchRoutes);
 
-  const browseRateLimiter = rateLimiter({ limit: 30, windowMs: 60_000 });
+  const browseRateLimiter = rateLimiter({ store: rateLimitStore, scope: "browse", limit: 30, windowMs: 60_000 });
   app.use("/api/browse/*", browseRateLimiter, optionalAuth);
   app.use("/api/browse", browseRateLimiter, optionalAuth);
   app.route("/api/browse", browseRoutes);
@@ -308,7 +319,7 @@ function createApp(env: Env) {
   app.route("/api/social", socialRoutes);
 
   // Ratings routes — optionalAuth base, POST/DELETE check auth internally
-  const ratingsRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+  const ratingsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "ratings", limit: 60, windowMs: 60_000 });
   app.use("/api/ratings/*", ratingsRateLimiter, optionalAuth);
   app.use("/api/ratings", ratingsRateLimiter, optionalAuth);
   app.route("/api/ratings", ratingsRoutes);
@@ -383,14 +394,15 @@ function createApp(env: Env) {
   app.route("/api/jobs", jobsCfRoutes);
 
   // Detail pages
-  const detailsRateLimiter = rateLimiter({ limit: 60, windowMs: 60_000 });
+  const detailsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "details", limit: 60, windowMs: 60_000 });
   app.use("/api/details/*", detailsRateLimiter, optionalAuth);
   app.use("/api/details", detailsRateLimiter, optionalAuth);
   app.route("/api/details", detailsRoutes);
 
   // Sync (admin only — rate limited + require admin)
-  app.use("/api/sync/*", rateLimiter({ limit: 5, windowMs: 60_000 }));
-  app.use("/api/sync", rateLimiter({ limit: 5, windowMs: 60_000 }));
+  const syncRateLimiter = rateLimiter({ store: rateLimitStore, scope: "sync", limit: 5, windowMs: 60_000 });
+  app.use("/api/sync/*", syncRateLimiter);
+  app.use("/api/sync", syncRateLimiter);
   app.use("/api/sync/*", requireAuth, requireAdmin);
   app.use("/api/sync", requireAuth, requireAdmin);
   app.route("/api/sync", syncRoutes);

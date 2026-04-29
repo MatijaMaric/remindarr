@@ -35,6 +35,8 @@ export const CONFIG = {
   // Rate limit knob for /api/auth/* — keeps brute-force protection on by
   // default but lets e2e / CI raise the cap so test flows don't 429.
   AUTH_RATE_LIMIT_PER_MINUTE: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE) || 20,
+  // Global per-IP cap across all /api/* routes — guards against aggregate abuse.
+  GLOBAL_RATE_LIMIT_PER_MINUTE: Number(process.env.GLOBAL_RATE_LIMIT_PER_MINUTE) || 300,
 
   // Passkeys (WebAuthn)
   PASSKEY_RP_ID: process.env.PASSKEY_RP_ID || "",
