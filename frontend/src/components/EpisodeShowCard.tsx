@@ -9,12 +9,14 @@ import {
   isEpisodeReleased,
 } from "./EpisodeComponents";
 import WatchButtonGroup from "./WatchButtonGroup";
+import EpisodeCountdown from "./EpisodeCountdown";
 
 /** Shared card component used across Unwatched, Today, Coming Up, and Calendar sections */
 export const EpisodeShowCard = memo(function EpisodeShowCard({
   episode,
   episodeCount,
   showActions,
+  showCountdown,
   allEpisodeIds,
   onToggleWatched,
   onMarkAllWatched,
@@ -23,6 +25,7 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
   episode: Episode;
   episodeCount: number;
   showActions?: boolean;
+  showCountdown?: boolean;
   allEpisodeIds?: number[];
   onToggleWatched?: (id: number, current: boolean) => void;
   onMarkAllWatched?: (episodeIds: number[]) => void;
@@ -64,10 +67,16 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
           </p>
         </Link>
 
-        {/* Season + progress */}
-        <p className="text-xs text-zinc-500 mt-1.5">
-          {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: episodeCount })}
-        </p>
+        {/* Season + progress / countdown */}
+        {showCountdown ? (
+          <div className="mt-1.5">
+            <EpisodeCountdown airDate={episode.air_date} />
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-500 mt-1.5">
+            {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: episodeCount })}
+          </p>
+        )}
 
         {/* Stream button — only for released episodes */}
         {isEpisodeReleased(episode) && (
