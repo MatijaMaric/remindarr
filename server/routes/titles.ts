@@ -5,6 +5,7 @@ import { expandGenreGroup } from "../genres";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
+import { setPublicCacheIfAnon } from "./cache-headers";
 
 const PRIORITY_LANGUAGES = ["en", "es", "fr", "de", "pt", "ja", "ko", "zh", "hi", "it", "ar"];
 
@@ -27,6 +28,7 @@ app.get("/", async (c) => {
   const languages = languageParam ? languageParam.split(",").filter(Boolean) : [];
 
   const titles = await getRecentTitles({ daysBack, objectTypes, providers, genres, languages, excludeTracked, limit, offset }, user?.id);
+  setPublicCacheIfAnon(c, 600);
   return ok(c, { titles, count: titles.length });
 });
 
