@@ -112,6 +112,9 @@ export {
   getKioskToken,
   setKioskToken,
   getUserByKioskToken,
+  getWatchlistShareToken,
+  setWatchlistShareToken,
+  getUserByWatchlistShareToken,
 } from "./users";
 
 export {

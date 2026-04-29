@@ -918,6 +918,24 @@ export async function revokeKioskToken(): Promise<void> {
   await doFetch("/kiosk/token", { method: "DELETE" });
 }
 
+// ─── Watchlist Share ──────────────────────────────────────────────────────────
+
+export async function getWatchlistShareToken(signal?: AbortSignal): Promise<{ token: string | null }> {
+  return fetchJson("/share/token", { signal });
+}
+
+export async function regenerateWatchlistShareToken(): Promise<{ token: string }> {
+  return fetchJson("/share/token", { method: "POST" });
+}
+
+export async function revokeWatchlistShareToken(): Promise<void> {
+  await doFetch("/share/token", { method: "DELETE" });
+}
+
+export async function getSharedWatchlist(token: string, signal?: AbortSignal): Promise<{ username: string; titles: Title[] }> {
+  return fetchJson(`/share/watchlist/${encodeURIComponent(token)}`, { signal });
+}
+
 // ─── Title Notes & Tags ───────────────────────────────────────────────────────
 
 export async function updateTrackedNotes(titleId: string, notes: string | null): Promise<void> {

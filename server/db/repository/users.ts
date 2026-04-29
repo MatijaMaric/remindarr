@@ -420,3 +420,32 @@ export async function getUserByKioskToken(token: string): Promise<{ id: string; 
     return row ?? null;
   });
 }
+
+// ─── Watchlist share token ────────────────────────────────────────────────────
+
+export async function getWatchlistShareToken(userId: string): Promise<string | null> {
+  return traceDbQuery("getWatchlistShareToken", async () => {
+    const db = getDb();
+    const row = await db.select({ watchlistShareToken: users.watchlistShareToken }).from(users).where(eq(users.id, userId)).get();
+    return row?.watchlistShareToken ?? null;
+  });
+}
+
+export async function setWatchlistShareToken(userId: string, token: string | null): Promise<void> {
+  return traceDbQuery("setWatchlistShareToken", async () => {
+    const db = getDb();
+    await db.update(users).set({ watchlistShareToken: token }).where(eq(users.id, userId)).run();
+  });
+}
+
+export async function getUserByWatchlistShareToken(token: string): Promise<{ id: string; username: string; displayUsername: string | null } | null> {
+  return traceDbQuery("getUserByWatchlistShareToken", async () => {
+    const db = getDb();
+    const row = await db
+      .select({ id: users.id, username: users.username, displayUsername: users.displayUsername })
+      .from(users)
+      .where(eq(users.watchlistShareToken, token))
+      .get();
+    return row ?? null;
+  });
+}

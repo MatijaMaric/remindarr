@@ -38,6 +38,7 @@ const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
 const KioskPage = lazyWithRetry(() => import("./pages/KioskPage"));
+const SharedWatchlistPage = lazyWithRetry(() => import("./pages/SharedWatchlistPage"));
 
 // Wraps a route element in an inline ErrorBoundary so a single page crash
 // shows a contained fallback instead of taking down the whole shell.
@@ -205,6 +206,7 @@ export default function App() {
             <Route path="/title/:id/season/:season/episode/:episode" element={<Page><EpisodeDetailPage /></Page>} />
             <Route path="/person/:personId" element={<Page><PersonPage /></Page>} />
             <Route path="/kiosk/:token" element={<Page><KioskPage /></Page>} />
+            <Route path="/share/watchlist/:token" element={<Page><SharedWatchlistPage /></Page>} />
             <Route path="*" element={<Page><NotFoundPage /></Page>} />
           </Routes>
         </Suspense>

@@ -551,6 +551,97 @@ function KioskSection() {
   );
 }
 
+function WatchlistShareSection() {
+  const { t } = useTranslation();
+  const [token, setToken] = useState<string | null>(null);
+  const [loadingToken, setLoadingToken] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    api.getWatchlistShareToken(controller.signal)
+      .then(({ token: tok }) => { if (!controller.signal.aborted) { setToken(tok); setLoadingToken(false); } })
+      .catch(() => { if (!controller.signal.aborted) setLoadingToken(false); });
+    return () => controller.abort();
+  }, []);
+
+  const shareUrl = token ? `${window.location.origin}/share/watchlist/${token}` : null;
+
+  async function handleRegenerate() {
+    setRegenerating(true);
+    try {
+      const { token: newToken } = await api.regenerateWatchlistShareToken();
+      setToken(newToken);
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  async function handleRevoke() {
+    setRevoking(true);
+    try {
+      await api.revokeWatchlistShareToken();
+      setToken(null);
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <SCard title={t("share.title")} subtitle={t("share.description")}>
+      {loadingToken ? (
+        <p className="text-sm text-zinc-500">{t("common.loading")}</p>
+      ) : token ? (
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <SInput
+              value={shareUrl!}
+              mono
+              readOnly
+              aria-label={t("share.title")}
+            />
+            <div className="flex gap-2 shrink-0">
+              <SButton variant="ghost" small onClick={handleCopy}>
+                {copied ? t("share.copied") : t("share.copyUrl")}
+              </SButton>
+              <SButton
+                variant="ghost"
+                small
+                onClick={handleRegenerate}
+                disabled={regenerating}
+              >
+                {regenerating ? t("share.regenerating") : t("share.regenerate")}
+              </SButton>
+              <SButton
+                variant="ghost"
+                small
+                onClick={handleRevoke}
+                disabled={revoking}
+              >
+                {revoking ? t("share.revoking") : t("share.revoke")}
+              </SButton>
+            </div>
+          </div>
+          <SHint kind="info">{t("share.warning")}</SHint>
+        </div>
+      ) : (
+        <SButton onClick={handleRegenerate} disabled={regenerating}>
+          {regenerating ? t("share.generating") : t("share.generate")}
+        </SButton>
+      )}
+    </SCard>
+  );
+}
+
 function WatchlistSection() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -757,6 +848,7 @@ export default function IntegrationsTab() {
       <PlexSection />
       <CalendarFeedSection />
       <KioskSection />
+      <WatchlistShareSection />
       <WatchlistSection />
       <CsvImportSection />
     </>

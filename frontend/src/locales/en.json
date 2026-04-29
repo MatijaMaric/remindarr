@@ -536,6 +536,19 @@
     "copied": "Copied!",
     "warning": "Anyone with this URL can view your kiosk dashboard. Keep it private."
   },
+  "share": {
+    "title": "Watchlist Share Link",
+    "description": "Share a read-only link to your watchlist with anyone — no account required.",
+    "copyUrl": "Copy link",
+    "copied": "Copied!",
+    "generate": "Generate link",
+    "generating": "Generating...",
+    "regenerate": "Regenerate",
+    "regenerating": "Regenerating...",
+    "revoke": "Revoke",
+    "revoking": "Revoking...",
+    "warning": "Anyone with this link can view your full tracked list. Regenerating invalidates the old link."
+  },
   "tags": {
     "placeholder": "Add tag...",
     "tooMany": "Max 10 tags",
