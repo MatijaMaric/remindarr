@@ -73,6 +73,13 @@ export const errorsByCategory = new Counter(
 );
 
 
+// ─── Circuit Breaker Metrics ─────────────────────────────────────────────────
+
+export const circuitBreakerStateChangesTotal = new Counter(
+  "circuit_breaker_state_changes_total",
+  "Circuit breaker state transitions",
+);
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 const allMetrics = [
@@ -87,6 +94,7 @@ const allMetrics = [
   syncFailureTotal,
   httpRetryTotal,
   errorsByCategory,
+  circuitBreakerStateChangesTotal,
 ];
 
 export function renderMetrics(): string {
