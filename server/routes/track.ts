@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle, setSnooze, setRemindOnRelease, getTitleById } from "../db/repository";
-import { enqueueJob } from "../jobs/queue";
-import { getRawDb } from "../db/bun-db";
+import { getDb, jobs } from "../db/schema";
+import { and, eq, sql as dsql } from "drizzle-orm";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
@@ -503,23 +503,33 @@ app.patch(
     let scheduledFor: string | null = null;
 
     if (enabled) {
-      // Look up the title's release date to schedule the reminder job
       const title = await getTitleById(titleId);
       const releaseDate = title?.release_date ?? null;
       if (releaseDate) {
         const releaseDateTime = new Date(releaseDate + "T09:00:00.000Z");
         if (releaseDateTime > new Date()) {
-          enqueueJob("release-reminder", { userId: user.id, titleId }, { runAt: releaseDateTime, maxAttempts: 1 });
+          const db = getDb();
+          await db.insert(jobs).values({
+            name: "release-reminder",
+            data: JSON.stringify({ userId: user.id, titleId }),
+            status: "pending",
+            runAt: releaseDateTime.toISOString(),
+            maxAttempts: 1,
+          });
           scheduledFor = releaseDateTime.toISOString();
           log.info("Scheduled release reminder", { titleId, userId: user.id, scheduledFor });
         }
       }
     } else {
-      // Cancel any pending release-reminder job for this (userId, titleId)
-      const db = getRawDb();
-      db.prepare(
-        `DELETE FROM jobs WHERE name = 'release-reminder' AND status = 'pending' AND json_extract(data, '$.userId') = ? AND json_extract(data, '$.titleId') = ?`
-      ).run(user.id, titleId);
+      const db = getDb();
+      await db.delete(jobs).where(
+        and(
+          eq(jobs.name, "release-reminder"),
+          eq(jobs.status, "pending"),
+          dsql`json_extract(${jobs.data}, '$.userId') = ${user.id}`,
+          dsql`json_extract(${jobs.data}, '$.titleId') = ${titleId}`,
+        ),
+      );
       log.info("Cancelled release reminder", { titleId, userId: user.id });
     }
 
