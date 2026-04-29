@@ -2,9 +2,41 @@ import { describe, it, expect, beforeEach, afterAll, afterEach } from "bun:test"
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { getDb, passkey as passkeyTable, users } from "../db/schema";
 import { sql } from "drizzle-orm";
-import { createAuth } from "./better-auth";
+import { createAuth, getPasskeyRpId, buildPasskeyOrigins } from "./better-auth";
 import { BunPlatform } from "../platform/bun";
 import { CONFIG } from "../config";
+
+describe("getPasskeyRpId", () => {
+  it("derives registrable domain from bare hostname", () => {
+    expect(getPasskeyRpId("https://remindarr.app")).toBe("remindarr.app");
+  });
+
+  it("strips www. prefix", () => {
+    expect(getPasskeyRpId("https://www.remindarr.app")).toBe("remindarr.app");
+  });
+
+  it("returns undefined for empty string", () => {
+    expect(getPasskeyRpId("")).toBeUndefined();
+  });
+
+  it("returns undefined for invalid URL", () => {
+    expect(getPasskeyRpId("not a url")).toBeUndefined();
+  });
+});
+
+describe("buildPasskeyOrigins", () => {
+  it("returns both www and non-www variants for a bare domain", () => {
+    expect(buildPasskeyOrigins("https://remindarr.app").sort()).toEqual(
+      ["https://remindarr.app", "https://www.remindarr.app"]
+    );
+  });
+
+  it("returns both www and non-www variants for a www domain", () => {
+    expect(buildPasskeyOrigins("https://www.remindarr.app").sort()).toEqual(
+      ["https://remindarr.app", "https://www.remindarr.app"]
+    );
+  });
+});
 
 describe("passkey support", () => {
   beforeEach(() => {
