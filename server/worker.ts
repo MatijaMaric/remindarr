@@ -40,7 +40,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { drizzle } from "drizzle-orm/d1";
 import { getDb, runWithDb, schemaExports } from "./db/schema";
-import { getUserCount, createUser, isOidcConfigured, getOidcConfig } from "./db/repository";
+import { getUserCount, createUser, isOidcConfigured, getOidcConfig, getUserByWatchlistShareToken, getTrackedTitles } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -70,6 +70,7 @@ import statsRoutes from "./routes/stats";
 import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
+import shareRoutes from "./routes/share";
 import importRoutes from "./routes/import";
 import upNextRoutes from "./routes/up-next";
 import type { AppEnv } from "./types";
@@ -367,6 +368,10 @@ function createApp(env: Env) {
   app.use("/api/kiosk/token*", requireAuth);
   app.route("/api/kiosk", kioskRoutes);
 
+  // Share — /watchlist/:token is public; /token endpoints require session
+  app.use("/api/share/token*", requireAuth);
+  app.route("/api/share", shareRoutes);
+
   // Admin routes
   app.use("/api/admin/*", requireAuth, requireAdmin);
   app.use("/api/admin", requireAuth, requireAdmin);
@@ -394,6 +399,54 @@ function createApp(env: Env) {
   app.use("/api/episodes/*", optionalAuth);
   app.use("/api/episodes", optionalAuth);
   app.route("/api/episodes", episodesRoutes);
+
+  // OG meta tags for shared watchlist — before the generic SPA fallback
+  app.get("/share/watchlist/:token", async (c) => {
+    const token = c.req.param("token");
+    const user = await getUserByWatchlistShareToken(token);
+    let ogTags = "";
+    if (user) {
+      const titles = await getTrackedTitles(user.id);
+      const count = titles.length;
+      const username = user.displayUsername ?? user.username;
+      const firstPoster = titles[0]?.poster_url
+        ? `https://image.tmdb.org/t/p/w342${titles[0].poster_url}`
+        : null;
+      const description = `${count} title${count !== 1 ? "s" : ""} tracked by @${username}`;
+      const imageTag = firstPoster
+        ? `<meta property="og:image" content="${firstPoster}" />`
+        : "";
+      ogTags = `
+    <meta property="og:title" content="${username}'s Watchlist — Remindarr" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:type" content="website" />
+    ${imageTag}
+    <meta name="twitter:card" content="${firstPoster ? "summary_large_image" : "summary"}" />
+    <meta name="twitter:title" content="${username}'s Watchlist — Remindarr" />
+    <meta name="twitter:description" content="${description}" />
+    ${firstPoster ? `<meta name="twitter:image" content="${firstPoster}" />` : ""}`;
+    }
+    try {
+      const assets = (c.env as unknown as Env).ASSETS;
+      if (assets?.fetch) {
+        const url = new URL("/index.html", c.req.url);
+        const resp = await assets.fetch(url.toString());
+        if (resp.ok) {
+          const html = await resp.text();
+          const injected = ogTags ? html.replace("</head>", `${ogTags}\n  </head>`) : html;
+          return new Response(injected, {
+            status: 200,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          });
+        }
+      }
+    } catch (err) {
+      logger.error("Share OG fallback error", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return c.html("<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>");
+  });
 
   // SPA fallback — serve index.html for client-side routes (mirrors serveStatic in index.ts)
   app.get("*", async (c) => {

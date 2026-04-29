@@ -5,7 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import { serveStatic } from "hono/bun";
 import { CONFIG } from "./config";
 import { initBunDb, migrateTrackedData, getRawDb } from "./db/bun-db";
-import { getUserCount, createUser } from "./db/repository";
+import { getUserCount, createUser, getUserByWatchlistShareToken, getTrackedTitles } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -36,6 +36,7 @@ import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
 import upNextRoutes from "./routes/up-next";
+import shareRoutes from "./routes/share";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -298,6 +299,10 @@ app.route("/api/feed", feedRoutes);
 app.use("/api/kiosk/token*", requireAuth);
 app.route("/api/kiosk", kioskRoutes);
 
+// Share — /watchlist/:token is public; /token endpoints require session
+app.use("/api/share/token*", requireAuth);
+app.route("/api/share", shareRoutes);
+
 // Admin routes
 app.use("/api/admin/*", requireAuth, requireAdmin);
 app.use("/api/admin", requireAuth, requireAdmin);
@@ -324,6 +329,47 @@ app.route("/api/sync", syncRoutes);
 app.use("/api/episodes/*", optionalAuth);
 app.use("/api/episodes", optionalAuth);
 app.route("/api/episodes", episodesRoutes);
+
+// OG meta tags for shared watchlist page — must be before the SPA static fallback
+app.get("/share/watchlist/:token", async (c) => {
+  const token = c.req.param("token");
+  const user = await getUserByWatchlistShareToken(token);
+  let ogTags = "";
+  if (user) {
+    const titles = await getTrackedTitles(user.id);
+    const count = titles.length;
+    const username = user.displayUsername ?? user.username;
+    const firstPoster = titles[0]?.poster_url
+      ? `https://image.tmdb.org/t/p/w342${titles[0].poster_url}`
+      : null;
+    const description = `${count} title${count !== 1 ? "s" : ""} tracked by @${username}`;
+    const imageTag = firstPoster
+      ? `<meta property="og:image" content="${firstPoster}" />`
+      : "";
+    ogTags = `
+    <meta property="og:title" content="${username}'s Watchlist — Remindarr" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:type" content="website" />
+    ${imageTag}
+    <meta name="twitter:card" content="${firstPoster ? "summary_large_image" : "summary"}" />
+    <meta name="twitter:title" content="${username}'s Watchlist — Remindarr" />
+    <meta name="twitter:description" content="${description}" />
+    ${firstPoster ? `<meta name="twitter:image" content="${firstPoster}" />` : ""}`;
+  }
+  try {
+    const indexHtml = await Bun.file("./frontend/dist/index.html").text();
+    const injected = ogTags
+      ? indexHtml.replace("</head>", `${ogTags}\n  </head>`)
+      : indexHtml;
+    return new Response(injected, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  } catch {
+    // Fall through to static serving if dist/index.html doesn't exist (dev mode)
+  }
+  return c.html("<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>");
+});
 
 // Serve frontend static files in production
 app.use("/*", serveStatic({ root: "./frontend/dist" }));

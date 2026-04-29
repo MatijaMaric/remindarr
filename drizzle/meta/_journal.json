@@ -253,6 +253,13 @@
       "when": 1778112000000,
       "tag": "0035_notification_log",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1778198400000,
+      "tag": "0036_users_watchlist_share_token",
+      "breakpoints": true
     }
   ]
 }

@@ -163,6 +163,7 @@ export const users = sqliteTable(
     homepageLayout: text("homepage_layout"),
     feedToken: text("feed_token"),
     kioskToken: text("kiosk_token"),
+    watchlistShareToken: text("watchlist_share_token"),
     bio: text("bio"),
     activityStreamEnabled: integer("activity_stream_enabled").notNull().default(0),
   },
@@ -173,6 +174,7 @@ export const users = sqliteTable(
     ),
     uniqueIndex("users_feed_token_idx").on(table.feedToken),
     uniqueIndex("users_kiosk_token_idx").on(table.kioskToken),
+    uniqueIndex("users_watchlist_share_token_idx").on(table.watchlistShareToken),
   ]
 );
 
