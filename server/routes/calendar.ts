@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { getTitlesByMonth, getEpisodesByMonth } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
+import { setPublicCacheIfAnon } from "./cache-headers";
 
 const app = new Hono<AppEnv>();
 
@@ -21,6 +22,7 @@ app.get("/", async (c) => {
 
   const titles = await getTitlesByMonth({ month, objectType, provider }, user?.id);
   const episodes = await getEpisodesByMonth({ month, objectType, provider }, user?.id);
+  setPublicCacheIfAnon(c, 1800);
   return ok(c, { titles, episodes, count: titles.length });
 });
 

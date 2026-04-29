@@ -14,6 +14,7 @@ import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { setPublicCacheIfAnon } from "./cache-headers";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import { getDb } from "../db/schema";
 import { sql } from "drizzle-orm";
@@ -71,6 +72,7 @@ app.get("/movie/:id", async (c) => {
     }
   }
 
+  setPublicCacheIfAnon(c, 3600);
   return ok(c, { title, tmdb, country });
 });
 
@@ -116,6 +118,7 @@ app.get("/show/:id", async (c) => {
     }
   }
 
+  setPublicCacheIfAnon(c, 3600);
   return ok(c, { title: { ...title, eta_days: etaDays }, tmdb, country });
 });
 
@@ -156,6 +159,7 @@ app.get("/show/:id/season/:season", async (c) => {
     }
   }
 
+  setPublicCacheIfAnon(c, 3600);
   return ok(c, { title, tmdb, seasonNumber, country, seasons });
 });
 

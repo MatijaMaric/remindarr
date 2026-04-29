@@ -467,7 +467,7 @@ function createApp(env: Env) {
             status: 200,
             headers: {
               "content-type": "text/html; charset=utf-8",
-              "cache-control": "no-cache, must-revalidate",
+              "cache-control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800",
             },
           });
         }

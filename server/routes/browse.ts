@@ -24,6 +24,7 @@ import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { syncFailureTotal } from "../metrics";
 import { ok, err } from "./response";
+import { setPublicCacheIfAnon } from "./cache-headers";
 import { toCanonicalGenre, expandGenreIds } from "../genres";
 import { CONFIG } from "../config";
 
@@ -226,6 +227,7 @@ app.get("/", async (c) => {
       .filter((l) => prioritySet.has(l.code))
       .map((l) => l.code);
 
+    setPublicCacheIfAnon(c, 1800);
     return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages, regionProviderIds, priorityLanguageCodes });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
