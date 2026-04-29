@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from "workbox-precaching";
-import { registerRoute, NavigationRoute } from "workbox-routing";
+import { precacheAndRoute, cleanupOutdatedCaches, matchPrecache } from "workbox-precaching";
+import { registerRoute, NavigationRoute, setCatchHandler } from "workbox-routing";
 import { StaleWhileRevalidate, NetworkFirst, NetworkOnly } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { BackgroundSyncPlugin } from "workbox-background-sync";
@@ -10,12 +10,29 @@ declare let self: ServiceWorkerGlobalScope;
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-// Navigation fallback — serve index.html for all navigation requests except /api/
-const navigationRoute = new NavigationRoute(
-  createHandlerBoundToURL("/index.html"),
-  { denylist: [/^\/api\//] }
+// Navigation: try fresh network first (ensures post-deploy HTML has current chunk hashes),
+// fall back to the "pages" runtime cache when offline. /api/ and /share/watchlist/ are
+// excluded — the former are API calls; the latter gets per-token OG tags injected at
+// request time by the Worker and must not be served from cache.
+const navigationStrategy = new NetworkFirst({
+  cacheName: "pages",
+  networkTimeoutSeconds: 2,
+  plugins: [new ExpirationPlugin({ maxEntries: 10 })],
+});
+registerRoute(
+  new NavigationRoute(navigationStrategy, {
+    denylist: [/^\/api\//, /^\/share\/watchlist\//],
+  }),
 );
-registerRoute(navigationRoute);
+
+// When a navigation fails (offline and no pages cache hit), serve the
+// precached index.html so the SPA shell still loads.
+setCatchHandler(async ({ request }) => {
+  if (request.destination === "document") {
+    return (await matchPrecache("/index.html")) ?? Response.error();
+  }
+  return Response.error();
+});
 
 const CACHE_PREFIXES = [
   "api-static-v",
@@ -162,8 +179,18 @@ registerRoute(
   "DELETE"
 );
 
-// Message handler: pre-cache a tracked title's detail data on demand + cache age queries
+// Message handler: SW lifecycle control + cache queries + on-demand precaching
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+
+  if (event.data?.type === "CLEAR_PAGES_CACHE") {
+    event.waitUntil(caches.delete("pages"));
+    return;
+  }
+
   if (event.data?.type === "GET_CACHE_AGE") {
     const ts = lastFetchTime.get(event.data.cacheName as string) ?? null;
     const ageMs = ts !== null ? Date.now() - ts : null;
@@ -181,9 +208,6 @@ self.addEventListener("message", (event) => {
     caches.open(`api-details-v${__APP_VERSION__}`).then((c) => c.add(path)).catch(() => {})
   );
 });
-
-// Skip waiting so the new SW activates immediately on update
-self.skipWaiting();
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
