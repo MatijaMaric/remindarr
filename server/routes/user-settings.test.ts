@@ -131,8 +131,8 @@ describe("PUT /user/settings/homepage-layout", () => {
 
     const res = await app.request("/user/settings/homepage-layout");
     const body = await res.json();
-    // All 5 sections returned; the 3 missing ones are appended
-    expect(body.homepage_layout).toHaveLength(5);
+    // All 6 sections returned; the 4 missing ones are appended
+    expect(body.homepage_layout).toHaveLength(6);
     expect(body.homepage_layout[0].id).toBe("today");
     expect(body.homepage_layout[1].id).toBe("unwatched");
   });

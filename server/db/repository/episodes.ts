@@ -213,6 +213,78 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
   });
 }
 
+/**
+ * Returns the earliest unwatched aired episode (by season then episode number)
+ * for a given show and user. Used by the Up Next queue to surface the specific
+ * next episode to watch.
+ */
+export async function getNextUnwatchedEpisode(userId: string, titleId: string, timezone = "UTC") {
+  return traceDbQuery("getNextUnwatchedEpisode", async () => {
+    const db = getDb();
+    const today = localDateForTimezone(timezone);
+
+    const row = await db
+      .select({
+        id: episodes.id,
+        title_id: episodes.titleId,
+        season_number: episodes.seasonNumber,
+        episode_number: episodes.episodeNumber,
+        name: episodes.name,
+        air_date: episodes.airDate,
+      })
+      .from(episodes)
+      .innerJoin(
+        tracked,
+        and(eq(tracked.titleId, episodes.titleId), eq(tracked.userId, userId))
+      )
+      .where(
+        and(
+          eq(episodes.titleId, titleId),
+          lte(episodes.airDate, today),
+          sql`NOT EXISTS(
+            SELECT 1 FROM watched_episodes we
+            WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
+          )`
+        )
+      )
+      .orderBy(asc(episodes.seasonNumber), asc(episodes.episodeNumber))
+      .limit(1)
+      .get();
+
+    return row ?? null;
+  });
+}
+
+/**
+ * Returns a Map<titleId, Date> of the most recent watched_at timestamp per
+ * show for the given user. Used by Up Next to sort in-progress shows by
+ * recency (most recently watched first).
+ */
+export async function getLastWatchedAtPerShow(userId: string): Promise<Map<string, Date>> {
+  return traceDbQuery("getLastWatchedAtPerShow", async () => {
+    const db = getDb();
+
+    const rows = await db
+      .select({
+        title_id: episodes.titleId,
+        last_watched_at: sql<string>`MAX(${watchedEpisodes.watchedAt})`,
+      })
+      .from(watchedEpisodes)
+      .innerJoin(episodes, eq(episodes.id, watchedEpisodes.episodeId))
+      .where(eq(watchedEpisodes.userId, userId))
+      .groupBy(episodes.titleId)
+      .all();
+
+    const result = new Map<string, Date>();
+    for (const row of rows) {
+      if (row.last_watched_at) {
+        result.set(row.title_id, new Date(row.last_watched_at));
+      }
+    }
+    return result;
+  });
+}
+
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
 
 export async function getEpisodeAirDate(episodeId: number): Promise<string | null> {

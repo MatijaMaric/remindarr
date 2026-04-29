@@ -35,6 +35,7 @@ import statsRoutes from "./routes/stats";
 import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
+import upNextRoutes from "./routes/up-next";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -279,6 +280,11 @@ app.route("/api/import", importRoutes);
 app.use("/api/stats/*", requireAuth);
 app.use("/api/stats", requireAuth);
 app.route("/api/stats", statsRoutes);
+
+// Up Next smart queue
+app.use("/api/up-next/*", requireAuth);
+app.use("/api/up-next", requireAuth);
+app.route("/api/up-next", upNextRoutes);
 
 app.use("/api/user/settings/*", requireAuth);
 app.use("/api/user/settings", requireAuth);
