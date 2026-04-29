@@ -20,6 +20,7 @@ import { migrateBackdrops } from "./migrate-backdrops";
 import { migrateOffers } from "./migrate-offers";
 import { enrichTitleDeepLinks } from "../streaming-availability/enrich";
 import { RateLimitError } from "../streaming-availability/types";
+import { BreakerOpenError } from "../lib/circuit-breaker";
 import { getTitlesNeedingSaEnrichment } from "../db/repository";
 import { syncEachWithDelay } from "../tmdb/sync-utils";
 import { handleReleaseReminder } from "./release-reminders";
@@ -138,6 +139,10 @@ export function registerSyncJobs() {
       onError: (err, t) => {
         if (err instanceof RateLimitError) {
           log.warn("SA rate limit hit, stopping early", { processed, enriched });
+          return "stop";
+        }
+        if (err instanceof BreakerOpenError) {
+          log.warn("SA breaker open, stopping early", { processed, enriched });
           return "stop";
         }
         log.error("SA enrichment failed", { titleId: t.id, err });

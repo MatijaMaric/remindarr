@@ -160,6 +160,7 @@ async function handleSyncDeepLinks(): Promise<void> {
   }
   const { enrichTitleDeepLinks } = await import("../streaming-availability/enrich");
   const { RateLimitError } = await import("../streaming-availability/types");
+  const { BreakerOpenError } = await import("../lib/circuit-breaker");
   const { getTitlesNeedingSaEnrichment } = await import("../db/repository");
 
   const titleRows = await getTitlesNeedingSaEnrichment();
@@ -179,6 +180,10 @@ async function handleSyncDeepLinks(): Promise<void> {
     } catch (err) {
       if (err instanceof RateLimitError) {
         log.warn("SA rate limit hit, stopping early", { processed, enriched });
+        break;
+      }
+      if (err instanceof BreakerOpenError) {
+        log.warn("SA breaker open, stopping early", { processed, enriched });
         break;
       }
       log.error("SA enrichment failed", { titleId: t.id, err });
