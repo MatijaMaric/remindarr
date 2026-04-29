@@ -43,6 +43,7 @@ new_sqlite_classes = ["JobQueueDO"]
 TMDB_COUNTRY = "HR"
 TMDB_LANGUAGE = "en"
 LOG_LEVEL = "info"
+BASE_URL = "https://remindarr.app"
 
 # Secrets (set via `wrangler secret put <NAME>`):
 # TMDB_API_KEY

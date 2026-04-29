@@ -86,6 +86,10 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
   const pendingOidcAdminStatus = new Map<string, boolean>(); // nonce → isAdmin
   const pendingNoncesByAccountId = new Map<string, string[]>(); // sub → nonce queue
 
+  if (!CONFIG.PASSKEY_RP_ID && !CONFIG.BASE_URL) {
+    log.warn("Passkey RP ID will fall back to localhost — set BASE_URL or PASSKEY_RP_ID for production deploys");
+  }
+
   const plugins: BetterAuthPlugin[] = [
     username({
       minUsernameLength: 1,
