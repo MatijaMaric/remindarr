@@ -13,7 +13,6 @@ import TitleList from "../components/TitleList";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
 import { EpisodeShowCard, DeckCardWrapper } from "../components/EpisodeShowCard";
-import EpisodeCountdown from "../components/EpisodeCountdown";
 import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
 import { Kicker } from "../components/design";
@@ -721,15 +720,10 @@ export default function HomePage() {
             </div>
             <FullBleedCarousel>
               {airingEntries.map((ep) => (
-                <div key={ep.id} className="w-80 flex-shrink-0 relative" style={{ scrollSnapAlign: "start" }}>
+                <div key={ep.id} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
                   <DeckCardWrapper episodeCount={1}>
-                    <EpisodeShowCard episode={ep} episodeCount={1} />
+                    <EpisodeShowCard episode={ep} episodeCount={1} showCountdown />
                   </DeckCardWrapper>
-                  {ep.air_date && (
-                    <div className="absolute bottom-4 left-3 z-10">
-                      <EpisodeCountdown airDate={ep.air_date} />
-                    </div>
-                  )}
                 </div>
               ))}
             </FullBleedCarousel>
