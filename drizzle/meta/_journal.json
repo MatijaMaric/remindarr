@@ -260,6 +260,13 @@
       "when": 1778198400000,
       "tag": "0036_users_watchlist_share_token",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1778284800000,
+      "tag": "0037_streaming_departure_alerts",
+      "breakpoints": true
     }
   ]
 }

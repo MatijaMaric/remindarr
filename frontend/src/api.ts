@@ -27,6 +27,7 @@ import type {
   WatchHistoryEntry,
   ActivitySettings,
   NotifierHistoryResponse,
+  UserSettings,
 } from "./types";
 
 const BASE = "/api";
@@ -787,6 +788,17 @@ export async function updateHomepageLayout(layout: HomepageSection[]): Promise<{
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ homepage_layout: layout }),
+  });
+}
+
+export async function getDepartureAlertSettings(signal?: AbortSignal): Promise<UserSettings> {
+  return fetchJson("/user/settings/departure-alerts", { signal });
+}
+
+export async function updateDepartureAlertSettings(settings: Partial<UserSettings>): Promise<UserSettings> {
+  return fetchJson("/user/settings/departure-alerts", {
+    method: "PUT",
+    body: JSON.stringify(settings),
   });
 }
 

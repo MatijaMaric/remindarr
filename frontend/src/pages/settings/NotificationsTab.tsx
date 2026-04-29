@@ -831,11 +831,103 @@ function NotificationsSection() {
   );
 }
 
+const DEPARTURE_LEAD_DAY_OPTIONS = [1, 3, 7, 14, 30];
+
+function DepartureAlertsSection() {
+  const [departuresEnabled, setDeparturesEnabled] = useState(true);
+  const [leadDays, setLeadDays] = useState(7);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getDepartureAlertSettings().then((s) => {
+      if (!cancelled) {
+        setDeparturesEnabled(s.streamingDeparturesEnabled);
+        setLeadDays(s.departureAlertLeadDays);
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function handleToggle(val: boolean) {
+    setMsg("");
+    setErr("");
+    setDeparturesEnabled(val);
+    try {
+      const updated = await api.updateDepartureAlertSettings({ streamingDeparturesEnabled: val });
+      setDeparturesEnabled(updated.streamingDeparturesEnabled);
+      setMsg("Settings saved");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleLeadDaysChange(val: number) {
+    setMsg("");
+    setErr("");
+    setLeadDays(val);
+    try {
+      const updated = await api.updateDepartureAlertSettings({ departureAlertLeadDays: val });
+      setLeadDays(updated.departureAlertLeadDays);
+      setMsg("Settings saved");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  if (loading) {
+    return (
+      <SCard title="Streaming departure alerts" subtitle="Get notified when a tracked title is leaving a streaming service.">
+        <div className="text-zinc-500 text-sm">Loading...</div>
+      </SCard>
+    );
+  }
+
+  return (
+    <SCard title="Streaming departure alerts" subtitle="Get notified when a tracked title is leaving a streaming service.">
+      <div className="space-y-4">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
+
+        <SSwitch
+          label="Enable departure alerts"
+          sub="Fires when a tracked title leaves a streaming provider"
+          on={departuresEnabled}
+          onChange={handleToggle}
+        />
+
+        {departuresEnabled && (
+          <SFormRow label="Alert lead time">
+            <select
+              value={leadDays}
+              onChange={(e) => handleLeadDaysChange(Number(e.target.value))}
+              className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
+            >
+              {DEPARTURE_LEAD_DAY_OPTIONS.map((d) => (
+                <option key={d} value={d}>{d} day{d !== 1 ? "s" : ""} before departure</option>
+              ))}
+            </select>
+            <div className="text-[11px] text-zinc-500 mt-1 font-mono">
+              Only applies when the provider sets a known departure date
+            </div>
+          </SFormRow>
+        )}
+      </div>
+    </SCard>
+  );
+}
+
 export default function NotificationsTab() {
   return (
     <>
       {isPushSupported() && <PushNotificationsSection />}
       <NotificationsSection />
+      <DepartureAlertsSection />
     </>
   );
 }

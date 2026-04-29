@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getHomepageLayout, setHomepageLayout } from "../db/repository";
+import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
@@ -109,6 +109,37 @@ app.put(
 
     await setHomepageLayout(user.id, JSON.stringify(layout));
     return ok(c, { homepage_layout: parseLayout(JSON.stringify(layout)) });
+  },
+);
+
+// ─── Departure alert settings ─────────────────────────────────────────────────
+
+const updateDepartureSettingsSchema = z.object({
+  streamingDeparturesEnabled: z.boolean().optional(),
+  departureAlertLeadDays: z.number().int().min(1).max(30).optional(),
+});
+
+app.get("/departure-alerts", async (c) => {
+  const user = c.get("user")!;
+  const settings = await getUserDepartureSettings(user.id);
+  return ok(c, {
+    streamingDeparturesEnabled: settings ? settings.streamingDeparturesEnabled !== 0 : true,
+    departureAlertLeadDays: settings?.departureAlertLeadDays ?? 7,
+  });
+});
+
+app.put(
+  "/departure-alerts",
+  zValidator("json", updateDepartureSettingsSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const body = c.req.valid("json");
+    await updateUserDepartureSettings(user.id, body);
+    const settings = await getUserDepartureSettings(user.id);
+    return ok(c, {
+      streamingDeparturesEnabled: settings ? settings.streamingDeparturesEnabled !== 0 : true,
+      departureAlertLeadDays: settings?.departureAlertLeadDays ?? 7,
+    });
   },
 );
 
