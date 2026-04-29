@@ -436,7 +436,10 @@ function createApp(env: Env) {
           const injected = ogTags ? html.replace("</head>", `${ogTags}\n  </head>`) : html;
           return new Response(injected, {
             status: 200,
-            headers: { "content-type": "text/html; charset=utf-8" },
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "no-cache, must-revalidate",
+            },
           });
         }
       }
@@ -462,7 +465,10 @@ function createApp(env: Env) {
         if (resp.ok) {
           return new Response(resp.body, {
             status: 200,
-            headers: { "content-type": "text/html; charset=utf-8" },
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "no-cache, must-revalidate",
+            },
           });
         }
       }
