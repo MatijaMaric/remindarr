@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router";
 import { getSharedWatchlist } from "../api";
-import type { Title } from "../api";
+import type { Title } from "../types";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
 
