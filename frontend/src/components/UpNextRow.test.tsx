@@ -1,23 +1,11 @@
-import { mock } from "bun:test";
+// Initialize real i18n so react-i18next uses the actual translation file.
+// Never mock react-i18next directly — it leaks across test files on Bun/Linux CI.
+import "../i18n";
 
-// Must use mock.module (hoisted before imports) to avoid Bun mock leak.
-// Return correct API shapes so downstream tests aren't corrupted.
-mock.module("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
+import { describe, it, expect, vi, afterEach } from "bun:test";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 
-mock.module("./FullBleedCarousel", () => ({
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="carousel">{children}</div>
-  ),
-}));
-
-mock.module("../lib/tmdb-images", () => ({
-  posterUrl: (url: string | null) => url,
-}));
-
-import { describe, it, expect, vi } from "bun:test";
-import { render, screen, fireEvent } from "@testing-library/react";
+afterEach(cleanup);
 import { MemoryRouter } from "react-router";
 import UpNextRow from "./UpNextRow";
 import type { UpNextItem } from "../api";
@@ -66,19 +54,21 @@ const recommendationItem: UpNextItem = {
 describe("UpNextRow", () => {
   it("shows empty state when items array is empty", () => {
     renderRow([]);
-    expect(screen.getByText("home.upNext.empty")).toBeTruthy();
+    expect(
+      screen.getByText("Nothing queued — track a show to start your queue"),
+    ).toBeTruthy();
   });
 
   it("renders in-progress items", () => {
     renderRow([inProgressItem]);
     expect(screen.getByText("Breaking Bad")).toBeTruthy();
-    expect(screen.getByText("home.upNext.inProgress")).toBeTruthy();
+    expect(screen.getByText("In Progress")).toBeTruthy();
   });
 
   it("renders newly-aired items", () => {
     renderRow([newlyAiredItem]);
     expect(screen.getByText("Better Call Saul")).toBeTruthy();
-    expect(screen.getByText("home.upNext.newEpisodes")).toBeTruthy();
+    expect(screen.getByText("New Episodes")).toBeTruthy();
   });
 
   it("renders recommendation items with 'from @' text", () => {
@@ -89,20 +79,19 @@ describe("UpNextRow", () => {
 
   it("renders the mark watched button on episode cards", () => {
     renderRow([inProgressItem]);
-    expect(screen.getByText("home.markWatched")).toBeTruthy();
+    expect(screen.getByText("Mark Watched")).toBeTruthy();
   });
 
   it("does not render mark watched button on recommendation cards", () => {
     renderRow([recommendationItem]);
-    // home.markWatched should not appear for recommendation items
-    const btns = screen.queryAllByText("home.markWatched");
+    const btns = screen.queryAllByText("Mark Watched");
     expect(btns.length).toBe(0);
   });
 
   it("calls onMarkWatched with the correct episodeId when button is clicked", () => {
     const onMarkWatched = vi.fn();
     renderRow([inProgressItem], onMarkWatched);
-    const btn = screen.getByText("home.markWatched");
+    const btn = screen.getByText("Mark Watched");
     fireEvent.click(btn);
     expect(onMarkWatched).toHaveBeenCalledWith(42);
   });
