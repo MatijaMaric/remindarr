@@ -1051,3 +1051,14 @@ export async function setRemindOnRelease(
     }
   );
 }
+
+// ─── Friends-loved (placeholder — endpoint ships in a sibling PR) ─────────────
+
+/**
+ * Fetches titles loved by people the current user follows.
+ * The `/api/social/friends-loved` endpoint ships in a sibling PR; until then
+ * this function will 404 and callers should treat the result as empty.
+ */
+export async function fetchFriendsLoved(signal?: AbortSignal): Promise<{ titles: SearchTitle[] }> {
+  return fetchJson("/social/friends-loved?limit=20", { signal });
+}
