@@ -193,6 +193,21 @@ export interface TmdbLanguage {
   name: string;
 }
 
+// ─── Video Types ─────────────────────────────────────────────────────────────
+
+export interface TmdbVideo {
+  id: string;
+  key: string;
+  site: "YouTube" | "Vimeo" | string;
+  type: "Trailer" | "Teaser" | "Clip" | "Featurette" | "Behind the Scenes" | "Bloopers" | string;
+  official: boolean;
+  size: number;
+  published_at: string;
+  name: string;
+  iso_639_1: string;
+  iso_3166_1: string;
+}
+
 // ─── Full Detail Types (for detail pages with credits, release dates) ───────
 
 export interface TmdbCastMember {
@@ -301,6 +316,7 @@ export interface TmdbMovieFullDetails {
   release_dates: { results: TmdbReleaseDatesResult[] };
   "watch/providers": { results: Record<string, TmdbWatchProviderCountry> };
   external_ids?: TmdbExternalIds;
+  videos?: { results: TmdbVideo[] };
 }
 
 export interface TmdbShowFullDetails {
@@ -334,6 +350,7 @@ export interface TmdbShowFullDetails {
   content_ratings: { results: TmdbContentRatingResult[] };
   "watch/providers": { results: Record<string, TmdbWatchProviderCountry> };
   external_ids?: TmdbExternalIds;
+  videos?: { results: TmdbVideo[] };
 }
 
 export interface TmdbSeasonDetails {

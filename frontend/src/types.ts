@@ -132,6 +132,17 @@ export interface WatchHistoryEntry {
   note: string | null;
 }
 
+// ─── Video Types ─────────────────────────────────────────────────────────────
+
+export interface TmdbVideo {
+  key: string;
+  site: string;
+  type: string;
+  official: boolean;
+  size: number;
+  published_at: string;
+}
+
 // ─── Detail Types ────────────────────────────────────────────────────────────
 
 export interface CastMember {
@@ -241,6 +252,7 @@ export interface MovieDetailsResponse {
     release_dates: { results: ReleaseDatesResult[] };
     "watch/providers": { results: Record<string, WatchProviderCountry> };
     external_ids?: ExternalIds;
+    videos?: { results: TmdbVideo[] };
   } | null;
   country: string;
 }
@@ -276,6 +288,7 @@ export interface ShowDetailsResponse {
     content_ratings: { results: { iso_3166_1: string; rating: string }[] };
     "watch/providers": { results: Record<string, WatchProviderCountry> };
     external_ids?: ExternalIds;
+    videos?: { results: TmdbVideo[] };
   } | null;
   country: string;
 }
