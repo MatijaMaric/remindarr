@@ -116,7 +116,16 @@ const mockGetHomepageLayout = mock(() =>
     { id: "upcoming", enabled: true },
     { id: "unwatched", enabled: true },
     { id: "recommendations", enabled: true },
+    { id: "friends_loved", enabled: true },
   ]})
+);
+
+const mockGetUpNext = mock(() =>
+  Promise.resolve({ items: [] })
+);
+
+const mockGetFriendsLoved = mock(() =>
+  Promise.resolve({ items: [] })
 );
 
 mock.module("../api", () => ({
@@ -124,6 +133,8 @@ mock.module("../api", () => ({
   getUpcomingEpisodes: mockGetUpcomingEpisodes,
   getRecommendations: mockGetRecommendations,
   getHomepageLayout: mockGetHomepageLayout,
+  getUpNext: mockGetUpNext,
+  getFriendsLoved: mockGetFriendsLoved,
 }));
 
 const { default: HomePage } = await import("./HomePage");
@@ -139,6 +150,8 @@ afterEach(() => {
   mockBrowseTitles.mockClear();
   mockGetUpcomingEpisodes.mockClear();
   mockGetRecommendations.mockClear();
+  mockGetUpNext.mockClear();
+  mockGetFriendsLoved.mockClear();
 
   // Reset defaults
   mockGetUpcomingEpisodes.mockImplementation(() =>
@@ -146,6 +159,12 @@ afterEach(() => {
   );
   mockGetRecommendations.mockImplementation(() =>
     Promise.resolve({ recommendations: [], count: 0 })
+  );
+  mockGetUpNext.mockImplementation(() =>
+    Promise.resolve({ items: [] })
+  );
+  mockGetFriendsLoved.mockImplementation(() =>
+    Promise.resolve({ items: [] })
   );
 });
 
@@ -331,5 +350,56 @@ describe("HomePage — authenticated recommendations", () => {
 
     // Recommendations section should not appear
     expect(screen.queryByText("Recommended for You")).toBeNull();
+  });
+});
+
+describe("HomePage — friends loved this week", () => {
+  it("shows the friends loved rail when items are returned", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    mockGetFriendsLoved.mockImplementation(() =>
+      Promise.resolve({
+        items: [
+          { id: "t1", title: "Loved Movie", poster_url: null, object_type: "MOVIE", love_count: 2, score: 4 },
+        ],
+      })
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Friends Loved This Week")).toBeDefined();
+    });
+
+    expect(screen.getByText("Loved Movie")).toBeDefined();
+  });
+
+  it("hides the friends loved rail when items list is empty", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    mockGetFriendsLoved.mockImplementation(() =>
+      Promise.resolve({ items: [] })
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Today")).toBeDefined();
+    });
+
+    expect(screen.queryByText("Friends Loved This Week")).toBeNull();
+  });
+
+  it("still loads the page when getFriendsLoved API fails", async () => {
+    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    mockGetFriendsLoved.mockImplementation(() =>
+      Promise.reject(new Error("network error"))
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Today")).toBeDefined();
+    });
+
+    expect(screen.queryByText("Friends Loved This Week")).toBeNull();
   });
 });

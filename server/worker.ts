@@ -310,13 +310,14 @@ function createApp(env: Env) {
   app.use("/api/user", optionalAuth);
   app.route("/api/user", profileRoutes);
 
-  // Social routes — follow/unfollow (auth), follower/following lists (public)
+  // Social routes — follow/unfollow (auth), follower/following lists (public), friends-loved (auth)
   app.use("/api/social/follow/*", requireAuth);
   app.use("/api/social/follow", requireAuth);
   app.use("/api/social/followers/*", optionalAuth);
   app.use("/api/social/followers", optionalAuth);
   app.use("/api/social/following/*", optionalAuth);
   app.use("/api/social/following", optionalAuth);
+  app.use("/api/social/friends-loved", requireAuth);
   app.route("/api/social", socialRoutes);
 
   // Ratings routes — optionalAuth base, POST/DELETE check auth internally

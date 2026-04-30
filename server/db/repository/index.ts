@@ -196,8 +196,9 @@ export {
   getEpisodeRatings,
   getFriendsEpisodeRatings,
   getSeasonEpisodeRatings,
+  getFriendsLovedThisWeek,
 } from "./ratings";
-export type { RatingValue } from "./ratings";
+export type { RatingValue, FriendsLovedTitle } from "./ratings";
 
 export {
   createRecommendation,

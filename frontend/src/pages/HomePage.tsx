@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useIsMobile } from "../hooks/useIsMobile";
 import * as api from "../api";
-import type { Episode, Title, Recommendation, HomepageSection } from "../types";
+import type { Episode, Title, Recommendation, HomepageSection, FriendsLovedItem } from "../types";
 import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import TitleList from "../components/TitleList";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
@@ -18,6 +18,7 @@ import FullBleedCarousel from "../components/FullBleedCarousel";
 import { Kicker } from "../components/design";
 import { posterUrl } from "../lib/tmdb-images";
 import UpNextRow from "../components/UpNextRow";
+import FriendsLovedRow from "../components/FriendsLovedRow";
 import type { UpNextItem } from "../api";
 
 export interface UnwatchedCardEntry {
@@ -80,12 +81,12 @@ export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
 type HomeState =
   | { status: "loading" }
   | { status: "anon"; popularTitles: Title[] }
-  | { status: "auth"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[] }
+  | { status: "auth"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[]; friendsLovedItems: FriendsLovedItem[] }
   | { status: "error"; message: string };
 
 type HomeAction =
   | { type: "LOAD_ANON_SUCCESS"; popularTitles: Title[] }
-  | { type: "LOAD_AUTH_SUCCESS"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[] }
+  | { type: "LOAD_AUTH_SUCCESS"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[]; friendsLovedItems: FriendsLovedItem[] }
   | { type: "LOAD_ERROR"; message: string }
   | { type: "TOGGLE_WATCHED"; episodeId: number; currentlyWatched: boolean }
   | { type: "TOGGLE_WATCHED_REVERT"; episodeId: number; currentlyWatched: boolean }
@@ -98,7 +99,7 @@ function homeReducer(state: HomeState, action: HomeAction): HomeState {
     case "LOAD_ANON_SUCCESS":
       return { status: "anon", popularTitles: action.popularTitles };
     case "LOAD_AUTH_SUCCESS":
-      return { status: "auth", today: action.today, upcoming: action.upcoming, unwatched: action.unwatched, recommendations: action.recommendations, layout: action.layout, upNextItems: action.upNextItems };
+      return { status: "auth", today: action.today, upcoming: action.upcoming, unwatched: action.unwatched, recommendations: action.recommendations, layout: action.layout, upNextItems: action.upNextItems, friendsLovedItems: action.friendsLovedItems };
     case "LOAD_ERROR":
       return { status: "error", message: action.message };
     case "TOGGLE_WATCHED": {
@@ -364,14 +365,15 @@ export default function HomePage() {
 
     async function load() {
       try {
-        const [episodeData, recData, layoutData, upNextData] = await Promise.all([
+        const [episodeData, recData, layoutData, upNextData, friendsLovedData] = await Promise.all([
           api.getUpcomingEpisodes(signal),
           api.getRecommendations(6, undefined, signal).catch(() => ({ recommendations: [], count: 0 })),
           (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
           api.getUpNext(12, signal).catch(() => ({ items: [] as UpNextItem[] })),
+          api.getFriendsLoved(20, signal).catch(() => ({ items: [] as FriendsLovedItem[] })),
         ]);
         if (signal.aborted) return;
-        dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout, upNextItems: upNextData.items });
+        dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout, upNextItems: upNextData.items, friendsLovedItems: friendsLovedData.items });
       } catch (err: unknown) {
         if (!signal.aborted) dispatch({ type: "LOAD_ERROR", message: err instanceof Error ? err.message : String(err) });
       }
@@ -438,11 +440,11 @@ export default function HomePage() {
 
   // Derived data from reducer state — wrapped in useMemo so downstream deps
   // get stable array references when state.status !== "auth".
-  const { today, upcoming, unwatched, recommendations, layout, upNextItems } = useMemo(() => {
+  const { today, upcoming, unwatched, recommendations, layout, upNextItems, friendsLovedItems } = useMemo(() => {
     if (state.status === "auth") {
-      return { today: state.today, upcoming: state.upcoming, unwatched: state.unwatched, recommendations: state.recommendations, layout: state.layout, upNextItems: state.upNextItems };
+      return { today: state.today, upcoming: state.upcoming, unwatched: state.unwatched, recommendations: state.recommendations, layout: state.layout, upNextItems: state.upNextItems, friendsLovedItems: state.friendsLovedItems };
     }
-    return { today: [] as Episode[], upcoming: [] as Episode[], unwatched: [] as Episode[], recommendations: [] as Recommendation[], layout: DEFAULT_HOMEPAGE_LAYOUT, upNextItems: [] as UpNextItem[] };
+    return { today: [] as Episode[], upcoming: [] as Episode[], unwatched: [] as Episode[], recommendations: [] as Recommendation[], layout: DEFAULT_HOMEPAGE_LAYOUT, upNextItems: [] as UpNextItem[], friendsLovedItems: [] as FriendsLovedItem[] };
   }, [state]);
 
   const handleUpNextMarkWatched = useCallback(async (episodeId: number) => {
@@ -774,6 +776,9 @@ export default function HomePage() {
             <UpNextRow items={upNextItems} onMarkWatched={handleUpNextMarkWatched} />
           </section>
         );
+
+      case "friends_loved":
+        return <FriendsLovedRow key="friends_loved" items={friendsLovedItems} />;
 
       default:
         return null;

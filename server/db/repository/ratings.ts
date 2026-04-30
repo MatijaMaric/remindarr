@@ -3,6 +3,15 @@ import { getDb } from "../schema";
 import { ratings, episodeRatings, follows, users, episodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
+export interface FriendsLovedTitle {
+  id: string;
+  title: string;
+  poster_url: string | null;
+  object_type: string;
+  love_count: number;
+  score: number;
+}
+
 export type RatingValue = "HATE" | "DISLIKE" | "LIKE" | "LOVE";
 
 export async function rateTitle(userId: string, titleId: string, rating: RatingValue) {
@@ -174,5 +183,39 @@ export async function getSeasonEpisodeRatings(titleId: string, seasonNumber: num
       result[row.episodeNumber][row.rating as RatingValue] = row.cnt;
     }
     return result;
+  });
+}
+
+export async function getFriendsLovedThisWeek(
+  userId: string,
+  limit = 20,
+): Promise<FriendsLovedTitle[]> {
+  return traceDbQuery("getFriendsLovedThisWeek", async () => {
+    const db = getDb();
+    return db.all<FriendsLovedTitle>(sql`
+      SELECT
+        t.id            AS id,
+        t.title         AS title,
+        t.poster_url    AS poster_url,
+        t.object_type   AS object_type,
+        COUNT(*)        AS love_count,
+        SUM(CASE WHEN r.rating = 'LOVE' THEN 2 WHEN r.rating = 'LIKE' THEN 1 ELSE 0 END) AS score
+      FROM ratings r
+      JOIN follows f ON f.following_id = r.user_id AND f.follower_id = ${userId}
+      JOIN titles t ON t.id = r.title_id
+      WHERE r.rating IN ('LOVE', 'LIKE')
+        AND r.created_at >= datetime('now', '-7 days')
+        AND NOT EXISTS (
+          SELECT 1 FROM ratings my_r
+          WHERE my_r.user_id = ${userId} AND my_r.title_id = r.title_id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM watched_titles wt
+          WHERE wt.user_id = ${userId} AND wt.title_id = r.title_id
+        )
+      GROUP BY r.title_id
+      ORDER BY score DESC, MAX(r.created_at) DESC
+      LIMIT ${limit}
+    `);
   });
 }

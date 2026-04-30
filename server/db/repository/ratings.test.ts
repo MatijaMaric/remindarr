@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser, upsertEpisodes } from "../repository";
+import { upsertTitles, createUser, upsertEpisodes, watchTitle } from "../repository";
 import { follow } from "./follows";
 import {
   rateTitle,
@@ -15,6 +15,7 @@ import {
   getEpisodeRatings,
   getFriendsEpisodeRatings,
   getSeasonEpisodeRatings,
+  getFriendsLovedThisWeek,
 } from "./ratings";
 import { getDb } from "../schema";
 import { episodes } from "../schema";
@@ -247,5 +248,77 @@ describe("getSeasonEpisodeRatings", () => {
   it("returns empty object when no ratings exist", async () => {
     const result = await getSeasonEpisodeRatings("show-1", 1);
     expect(Object.keys(result)).toHaveLength(0);
+  });
+});
+
+describe("getFriendsLovedThisWeek", () => {
+  it("returns titles rated LOVE/LIKE by followed users", async () => {
+    await follow(userA, userB);
+    await rateTitle(userB, "movie-1", "LOVE");
+    await rateTitle(userB, "movie-2", "LIKE");
+
+    const result = await getFriendsLovedThisWeek(userA);
+    expect(result.length).toBe(2);
+    const ids = result.map((r) => r.id);
+    expect(ids).toContain("movie-1");
+    expect(ids).toContain("movie-2");
+  });
+
+  it("does not return titles rated by non-followed users", async () => {
+    // userA does NOT follow userC
+    await rateTitle(userC, "movie-1", "LOVE");
+
+    const result = await getFriendsLovedThisWeek(userA);
+    expect(result.length).toBe(0);
+  });
+
+  it("does not return titles the current user has already rated", async () => {
+    await follow(userA, userB);
+    await rateTitle(userB, "movie-1", "LOVE");
+    // userA has already rated movie-1 themselves
+    await rateTitle(userA, "movie-1", "LIKE");
+
+    const result = await getFriendsLovedThisWeek(userA);
+    expect(result.length).toBe(0);
+  });
+
+  it("does not return titles the current user has watched", async () => {
+    await follow(userA, userB);
+    await rateTitle(userB, "movie-1", "LOVE");
+    await watchTitle("movie-1", userA);
+
+    const result = await getFriendsLovedThisWeek(userA);
+    expect(result.length).toBe(0);
+  });
+
+  it("returns results ordered by score descending", async () => {
+    await follow(userA, userB);
+    await follow(userA, userC);
+    // movie-1 gets 2 LOVEs (score=4), movie-2 gets 1 LIKE (score=1)
+    await rateTitle(userB, "movie-1", "LOVE");
+    await rateTitle(userC, "movie-1", "LOVE");
+    await rateTitle(userB, "movie-2", "LIKE");
+
+    const result = await getFriendsLovedThisWeek(userA);
+    expect(result.length).toBe(2);
+    expect(result[0].id).toBe("movie-1");
+    expect(result[1].id).toBe("movie-2");
+    expect(result[0].score).toBeGreaterThan(result[1].score);
+  });
+
+  it("returns empty list when user follows nobody", async () => {
+    await rateTitle(userB, "movie-1", "LOVE");
+
+    const result = await getFriendsLovedThisWeek(userA);
+    expect(result.length).toBe(0);
+  });
+
+  it("respects the limit parameter", async () => {
+    await follow(userA, userB);
+    await rateTitle(userB, "movie-1", "LOVE");
+    await rateTitle(userB, "movie-2", "LIKE");
+
+    const result = await getFriendsLovedThisWeek(userA, 1);
+    expect(result.length).toBe(1);
   });
 });
