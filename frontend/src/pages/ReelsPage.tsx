@@ -1,11 +1,67 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { Link, useSearchParams } from "react-router";
 import * as api from "../api";
-import type { Episode, RatingValue } from "../types";
+import { normalizeSearchTitle } from "../types";
+import type { Episode, RatingValue, SearchTitle, Recommendation } from "../types";
 import ReelsCard from "../components/ReelsCard";
 import type { UndoInfo } from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
 import { ReelsSkeleton } from "../components/SkeletonComponents";
+
+// ─── Source types ──────────────────────────────────────────────────────────────
+
+export type ReelsSource = "coming-soon" | "popular" | "from-your-genres" | "friends-loved";
+
+const SOURCE_LABELS: Record<ReelsSource, string> = {
+  "coming-soon": "Coming Soon",
+  "popular": "Popular",
+  "from-your-genres": "From My Genres",
+  "friends-loved": "Friends Loved",
+};
+
+const ALL_SOURCES: ReelsSource[] = ["coming-soon", "popular", "from-your-genres", "friends-loved"];
+
+// ─── Normalizer ───────────────────────────────────────────────────────────────
+
+/**
+ * Convert a Title (from browse/recommendations) into a synthetic Episode shape
+ * that ReelsCard can render. This lets non-episode sources plug into the same UI.
+ */
+export function normalizeToReelItem(input: SearchTitle | Recommendation): Episode {
+  if ("from_user" in input) {
+    // Recommendation shape
+    const rec = input as Recommendation;
+    return {
+      id: 0,
+      title_id: rec.title.id,
+      season_number: 0,
+      episode_number: 0,
+      name: rec.title.title,
+      overview: rec.message ?? null,
+      air_date: null,
+      still_path: null,
+      show_title: rec.title.title,
+      poster_url: rec.title.poster_url,
+    };
+  }
+  // SearchTitle shape
+  const t = normalizeSearchTitle(input as SearchTitle);
+  return {
+    id: 0,
+    title_id: t.id,
+    season_number: 0,
+    episode_number: 0,
+    name: t.title,
+    overview: t.short_description ?? null,
+    air_date: t.release_date ?? null,
+    still_path: null,
+    show_title: t.title,
+    poster_url: t.poster_url,
+    offers: t.offers,
+  };
+}
+
+// ─── ShowCard / helpers ───────────────────────────────────────────────────────
 
 interface ShowCard {
   titleId: string;
@@ -58,16 +114,71 @@ export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
   return cards;
 }
 
+/** Build ShowCard list from a pre-normalized Episode array (one card per item). */
+function episodesToCards(episodes: Episode[]): ShowCard[] {
+  return episodes.map((ep) => ({
+    titleId: ep.title_id,
+    showTitle: ep.show_title,
+    posterUrl: ep.poster_url,
+    episodes: [ep],
+    currentIndex: 0,
+    caughtUp: false,
+  }));
+}
+
+// ─── Fetch helpers ────────────────────────────────────────────────────────────
+
+async function fetchCardsForSource(
+  source: ReelsSource,
+  signal?: AbortSignal,
+): Promise<{ cards: ShowCard[]; friendsLovedEmpty: boolean }> {
+  switch (source) {
+    case "coming-soon": {
+      const data = await api.getUpcomingEpisodes(signal);
+      return { cards: getFirstUnwatchedPerShow(data.unwatched), friendsLovedEmpty: false };
+    }
+    case "popular": {
+      const data = await api.browseTitles({ category: "popular" }, signal);
+      const episodes = data.titles.map((t) => normalizeToReelItem(t));
+      return { cards: episodesToCards(episodes), friendsLovedEmpty: false };
+    }
+    case "from-your-genres": {
+      const data = await api.getRecommendations(20, undefined, signal);
+      const episodes = data.recommendations.map((r) => normalizeToReelItem(r));
+      return { cards: episodesToCards(episodes), friendsLovedEmpty: false };
+    }
+    case "friends-loved": {
+      try {
+        const data = await api.fetchFriendsLoved(signal);
+        const episodes = (data.titles ?? []).map((t: SearchTitle) => normalizeToReelItem(t));
+        return { cards: episodesToCards(episodes), friendsLovedEmpty: episodes.length === 0 };
+      } catch {
+        // Endpoint not yet shipped — treat as empty
+        return { cards: [], friendsLovedEmpty: true };
+      }
+    }
+  }
+}
+
+// ─── Page component ───────────────────────────────────────────────────────────
+
 export default function ReelsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawSource = searchParams.get("source") ?? "coming-soon";
+  const source: ReelsSource = ALL_SOURCES.includes(rawSource as ReelsSource)
+    ? (rawSource as ReelsSource)
+    : "coming-soon";
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<ShowCard[]>([]);
   // Ref is always derived from state — never updated independently.
   // Callbacks read from this ref to access the latest value without
   // needing to be recreated whenever `cards` changes.
   const cardsRef = useRef(cards);
-  cardsRef.current = cards;
+  useLayoutEffect(() => { cardsRef.current = cards; });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [friendsLovedEmpty, setFriendsLovedEmpty] = useState(false);
   const [actionError, setActionError] = useState("");
   const actionErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -87,22 +198,35 @@ export default function ReelsPage() {
   // Track visible card index for swipe context
   const visibleCardIndexRef = useRef(0);
 
+  // Keep a stable ref to the current source so callbacks can read it without
+  // being recreated.
+  const sourceRef = useRef(source);
+  useLayoutEffect(() => { sourceRef.current = source; });
+
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
+
     async function load() {
+      setLoading(true);
+      setError("");
+      setFriendsLovedEmpty(false);
       try {
-        const data = await api.getUpcomingEpisodes(signal);
-        if (!signal.aborted) setCards(getFirstUnwatchedPerShow(data.unwatched));
+        const { cards: c, friendsLovedEmpty: fl } = await fetchCardsForSource(source, signal);
+        if (!signal.aborted) {
+          setCards(c);
+          setFriendsLovedEmpty(fl);
+        }
       } catch (err: unknown) {
         if (!signal.aborted) setError(err instanceof Error ? err.message : String(err));
       } finally {
         if (!signal.aborted) setLoading(false);
       }
     }
-    load();
+
+    void load();
     return () => controller.abort();
-  }, []);
+  }, [source]);
 
   // Track visible card via scroll position
   useEffect(() => {
@@ -311,9 +435,10 @@ export default function ReelsPage() {
   const handleBulkWatch = useCallback(async (episodeIds: number[]) => {
     try {
       await api.watchEpisodesBulk(episodeIds, true);
-      // Reload data
-      const data = await api.getUpcomingEpisodes();
-      setCards(getFirstUnwatchedPerShow(data.unwatched));
+      // Reload data for current source
+      const { cards: c, friendsLovedEmpty: fl } = await fetchCardsForSource(sourceRef.current);
+      setCards(c);
+      setFriendsLovedEmpty(fl);
       setSeasonPanel(null);
     } catch (err: unknown) {
       if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
@@ -330,9 +455,10 @@ export default function ReelsPage() {
       } else {
         await api.watchEpisode(episodeId);
       }
-      // Reload data
-      const data = await api.getUpcomingEpisodes();
-      setCards(getFirstUnwatchedPerShow(data.unwatched));
+      // Reload data for current source
+      const { cards: c, friendsLovedEmpty: fl } = await fetchCardsForSource(sourceRef.current);
+      setCards(c);
+      setFriendsLovedEmpty(fl);
     } catch (err: unknown) {
       if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
       setActionError(err instanceof Error ? err.message : "Failed to update watched status");
@@ -356,6 +482,10 @@ export default function ReelsPage() {
     };
   };
 
+  function handleSourceChange(s: ReelsSource) {
+    setSearchParams({ source: s }, { replace: true });
+  }
+
   if (loading) {
     return <ReelsSkeleton />;
   }
@@ -373,60 +503,131 @@ export default function ReelsPage() {
     );
   }
 
-  if (cards.length === 0) {
+  // Friends-loved empty state — shown inside full Reels chrome
+  const showFriendsLovedEmpty = source === "friends-loved" && friendsLovedEmpty;
+
+  // Generic empty state (not friends-loved)
+  if (cards.length === 0 && !showFriendsLovedEmpty) {
     return (
-      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}>
-        <div className="text-center">
-          <p className="text-zinc-400 text-lg mb-2">No unwatched episodes</p>
-          <p className="text-zinc-600 text-sm mb-6">You're all caught up!</p>
-          <Link to="/upcoming" className="text-amber-400 hover:text-amber-300">
-            View Upcoming
-          </Link>
+      <>
+        {/* Source picker overlay — always visible */}
+        <div className="fixed z-40" style={{ top: "calc(8px + env(safe-area-inset-top, 0px))", left: 20, right: 20 }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Link to="/" className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent">Feed</Link>
+            <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">Reels</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {ALL_SOURCES.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleSourceChange(s)}
+                className={[
+                  "px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
+                  s === source
+                    ? "bg-amber-400 text-zinc-950 border border-amber-400"
+                    : "bg-white/[0.15] backdrop-blur-sm border border-white/[0.2] text-white/80 hover:bg-white/[0.25]",
+                ].join(" ")}
+              >
+                {SOURCE_LABELS[s]}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+        <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))", paddingTop: "calc(96px + env(safe-area-inset-top, 0px))" }}>
+          <div className="text-center">
+            <p className="text-zinc-400 text-lg mb-2">No unwatched episodes</p>
+            <p className="text-zinc-600 text-sm mb-6">You're all caught up!</p>
+            <Link to="/upcoming" className="text-amber-400 hover:text-amber-300">
+              View Upcoming
+            </Link>
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
     <>
-      {/* Feed / Reels mode switcher — fixed overlay, top-left */}
-      <div className="fixed z-40 flex items-center gap-2" style={{ top: "calc(8px + env(safe-area-inset-top, 0px))", left: 20 }}>
-        <Link to="/" className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent">Feed</Link>
-        <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">Reels</span>
+      {/* Feed / Reels mode switcher + source picker — fixed overlay, top-left */}
+      <div className="fixed z-40" style={{ top: "calc(8px + env(safe-area-inset-top, 0px))", left: 20, right: 20 }}>
+        {/* Feed / Reels toggle row */}
+        <div className="flex items-center gap-2 mb-2">
+          <Link to="/" className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent">Feed</Link>
+          <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">Reels</span>
+        </div>
+        {/* Source picker chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {ALL_SOURCES.map((s) => (
+            <button
+              key={s}
+              onClick={() => handleSourceChange(s)}
+              className={[
+                "px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
+                s === source
+                  ? "bg-amber-400 text-zinc-950 border border-amber-400"
+                  : "bg-white/[0.15] backdrop-blur-sm border border-white/[0.2] text-white/80 hover:bg-white/[0.25]",
+              ].join(" ")}
+            >
+              {SOURCE_LABELS[s]}
+            </button>
+          ))}
+        </div>
       </div>
-      <div
-        ref={scrollRef}
-        className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-        style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))", marginTop: "env(safe-area-inset-top, 0px)" }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Cards */}
-        {cards.map((card, i) => (
-          <ReelsCard
-            key={card.titleId}
-            episode={card.episodes[card.caughtUp ? card.episodes.length - 1 : card.currentIndex]}
-            caughtUp={card.caughtUp}
-            onMarkWatched={() => markWatched(card.titleId)}
-            index={i}
-            total={cards.length}
-            undoInfo={getUndoInfo(card.titleId)}
-          />
-        ))}
 
-        {/* Clone of first card for seamless loop */}
-        {cards.length > 1 && (
-          <ReelsCard
-            key="clone-first"
-            episode={cards[0].episodes[cards[0].caughtUp ? cards[0].episodes.length - 1 : cards[0].currentIndex]}
-            caughtUp={cards[0].caughtUp}
-            onMarkWatched={() => markWatched(cards[0].titleId)}
-            index={0}
-            total={cards.length}
-            undoInfo={getUndoInfo(cards[0].titleId)}
-          />
-        )}
-      </div>
+      {showFriendsLovedEmpty ? (
+        /* Friends-loved empty state — Reels chrome stays visible */
+        <div
+          className="flex items-center justify-center p-6"
+          style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))", paddingTop: "calc(96px + env(safe-area-inset-top, 0px))" }}
+        >
+          <div className="text-center max-w-xs">
+            <p className="text-zinc-300 text-lg font-semibold mb-2">Nothing here yet</p>
+            <p className="text-zinc-500 text-sm mb-6">
+              Follow some friends to see what they love this week
+            </p>
+            <Link
+              to="/discover"
+              className="inline-block px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-semibold transition-colors"
+            >
+              Find people to follow
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div
+          ref={scrollRef}
+          className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))", marginTop: "env(safe-area-inset-top, 0px)" }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Cards */}
+          {cards.map((card, i) => (
+            <ReelsCard
+              key={card.titleId}
+              episode={card.episodes[card.caughtUp ? card.episodes.length - 1 : card.currentIndex]}
+              caughtUp={card.caughtUp}
+              onMarkWatched={() => markWatched(card.titleId)}
+              index={i}
+              total={cards.length}
+              undoInfo={getUndoInfo(card.titleId)}
+            />
+          ))}
+
+          {/* Clone of first card for seamless loop */}
+          {cards.length > 1 && (
+            <ReelsCard
+              key="clone-first"
+              episode={cards[0].episodes[cards[0].caughtUp ? cards[0].episodes.length - 1 : cards[0].currentIndex]}
+              caughtUp={cards[0].caughtUp}
+              onMarkWatched={() => markWatched(cards[0].titleId)}
+              index={0}
+              total={cards.length}
+              undoInfo={getUndoInfo(cards[0].titleId)}
+            />
+          )}
+        </div>
+      )}
 
       {/* Action error banner */}
       {actionError && (

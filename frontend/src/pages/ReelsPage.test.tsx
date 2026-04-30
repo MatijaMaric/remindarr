@@ -9,12 +9,34 @@ const mockGetUpcomingEpisodes = mock(() =>
 const mockWatchEpisode = mock(() => Promise.resolve());
 const mockUnwatchEpisode = mock(() => Promise.resolve());
 const mockWatchEpisodesBulk = mock(() => Promise.resolve());
+const mockBrowseTitles = mock(() =>
+  Promise.resolve({
+    titles: [],
+    page: 1,
+    totalPages: 1,
+    totalResults: 0,
+    availableGenres: [],
+    availableProviders: [],
+    availableLanguages: [],
+    regionProviderIds: [],
+    priorityLanguageCodes: [],
+  })
+);
+const mockGetRecommendations = mock(() =>
+  Promise.resolve({ recommendations: [], count: 0 })
+);
+const mockFetchFriendsLoved = mock(() =>
+  Promise.resolve({ titles: [] })
+);
 
 mock.module("../api", () => ({
   getUpcomingEpisodes: mockGetUpcomingEpisodes,
   watchEpisode: mockWatchEpisode,
   unwatchEpisode: mockUnwatchEpisode,
   watchEpisodesBulk: mockWatchEpisodesBulk,
+  browseTitles: mockBrowseTitles,
+  getRecommendations: mockGetRecommendations,
+  fetchFriendsLoved: mockFetchFriendsLoved,
 }));
 
 const { default: ReelsPage, getFirstUnwatchedPerShow } = await import("./ReelsPage");
@@ -23,12 +45,21 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
 }
 
+function WrapperWithSearch(initialSearch: string) {
+  return function W({ children }: { children: ReactNode }) {
+    return <MemoryRouter initialEntries={[`/reels${initialSearch}`]}>{children}</MemoryRouter>;
+  };
+}
+
 afterEach(() => {
   cleanup();
   mockGetUpcomingEpisodes.mockReset();
   mockWatchEpisode.mockReset();
   mockUnwatchEpisode.mockReset();
   mockWatchEpisodesBulk.mockReset();
+  mockBrowseTitles.mockReset();
+  mockGetRecommendations.mockReset();
+  mockFetchFriendsLoved.mockReset();
 });
 
 const sampleEpisode = {
@@ -92,6 +123,124 @@ describe("ReelsPage", () => {
       });
       await waitFor(() => expect(screen.getByText("Watch failed")).toBeDefined());
     }
+  });
+});
+
+// ─── Source picker tests ───────────────────────────────────────────────────────
+
+describe("ReelsPage source picker", () => {
+  it("default (no ?source param) calls getUpcomingEpisodes", async () => {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+    );
+    render(<ReelsPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(mockGetUpcomingEpisodes).toHaveBeenCalled());
+    expect(mockBrowseTitles).not.toHaveBeenCalled();
+    expect(mockGetRecommendations).not.toHaveBeenCalled();
+  });
+
+  it("?source=coming-soon calls getUpcomingEpisodes not browseTitles", async () => {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=coming-soon") });
+    await waitFor(() => expect(mockGetUpcomingEpisodes).toHaveBeenCalled());
+    expect(mockBrowseTitles).not.toHaveBeenCalled();
+  });
+
+  it("?source=popular calls browseTitles not getUpcomingEpisodes", async () => {
+    mockBrowseTitles.mockImplementation(() =>
+      Promise.resolve({
+        titles: [
+          {
+            id: "tt100",
+            objectType: "MOVIE",
+            title: "Popular Movie",
+            originalTitle: null,
+            releaseYear: 2024,
+            releaseDate: "2024-01-01",
+            runtimeMinutes: 120,
+            shortDescription: "A popular film",
+            genres: [],
+            imdbId: null,
+            tmdbId: null,
+            posterUrl: null,
+            ageCertification: null,
+            originalLanguage: "en",
+            tmdbUrl: null,
+            offers: [],
+            scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
+            isTracked: false,
+          },
+        ],
+        page: 1,
+        totalPages: 1,
+        totalResults: 1,
+        availableGenres: [],
+        availableProviders: [],
+        availableLanguages: [],
+        regionProviderIds: [],
+        priorityLanguageCodes: [],
+      })
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=popular") });
+    await waitFor(() => expect(mockBrowseTitles).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getAllByText("Popular Movie").length).toBeGreaterThanOrEqual(1));
+    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
+  });
+
+  it("?source=from-your-genres calls getRecommendations not getUpcomingEpisodes", async () => {
+    mockGetRecommendations.mockImplementation(() =>
+      Promise.resolve({
+        recommendations: [
+          {
+            id: "rec1",
+            from_user: { id: "u1", username: "alice", display_name: null, image: null },
+            title: { id: "tt200", title: "Rec Movie", object_type: "MOVIE", poster_url: null },
+            message: "You'll love this",
+            created_at: "2024-01-01T00:00:00Z",
+            read_at: null,
+          },
+        ],
+        count: 1,
+      })
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=from-your-genres") });
+    await waitFor(() => expect(mockGetRecommendations).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getAllByText("Rec Movie").length).toBeGreaterThanOrEqual(1));
+    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
+  });
+
+  it("?source=friends-loved with empty API response renders empty state", async () => {
+    mockFetchFriendsLoved.mockImplementation(() =>
+      Promise.resolve({ titles: [] })
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=friends-loved") });
+    await waitFor(() =>
+      expect(screen.getByText("Follow some friends to see what they love this week")).toBeDefined()
+    );
+    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
+  });
+
+  it("?source=friends-loved when endpoint 404s renders empty state", async () => {
+    mockFetchFriendsLoved.mockImplementation(() =>
+      Promise.reject(new Error("Not found"))
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=friends-loved") });
+    await waitFor(() =>
+      expect(screen.getByText("Follow some friends to see what they love this week")).toBeDefined()
+    );
+  });
+
+  it("renders source picker chips", async () => {
+    mockGetUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+    );
+    render(<ReelsPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText("Coming Soon")).toBeDefined());
+    expect(screen.getByText("Popular")).toBeDefined();
+    expect(screen.getByText("From My Genres")).toBeDefined();
+    expect(screen.getByText("Friends Loved")).toBeDefined();
   });
 });
 
