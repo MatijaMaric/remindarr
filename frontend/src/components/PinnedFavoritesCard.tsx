@@ -191,9 +191,7 @@ export default function PinnedFavoritesCard({ pinned, isOwnProfile, onPinnedChan
           <div className="grid grid-cols-4 gap-2">
             {visibleItems.map((title) => (
               <div key={title.id} className="relative">
-                <Link
-                  to={`/details/${title.object_type === "MOVIE" ? "movie" : "show"}/${title.id}`}
-                >
+                <Link to={`/title/${title.id}`}>
                   {title.poster_url ? (
                     <img
                       src={title.poster_url}
