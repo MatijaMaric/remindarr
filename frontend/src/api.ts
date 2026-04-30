@@ -28,6 +28,7 @@ import type {
   ActivitySettings,
   NotifierHistoryResponse,
   UserSettings,
+  OverlapResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -1020,6 +1021,12 @@ export async function getUpNext(limit = 12, signal?: AbortSignal): Promise<{ ite
   const qs = new URLSearchParams();
   qs.set("limit", String(limit));
   return fetchJson(`/up-next?${qs}`, { signal });
+}
+
+// ─── Overlap / "Watch Together" ───────────────────────────────────────────────
+
+export async function getOverlap(friendUsername: string, signal?: AbortSignal): Promise<OverlapResponse> {
+  return fetchJson(`/overlap/${encodeURIComponent(friendUsername)}`, { signal });
 }
 
 export async function setTitleSnooze(

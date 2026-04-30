@@ -768,6 +768,33 @@ export function normalizeSearchTitle(t: SearchTitle): Title {
   };
 }
 
+// ─── Overlap / "Watch Together" Types ────────────────────────────────────────
+
+export interface OverlapTitle extends Omit<Title, "genres"> {
+  genres: string[];
+  viewer_rating: RatingValue | null;
+  friend_rating: RatingValue | null;
+}
+
+export interface OverlapFriendUser {
+  username: string;
+  displayName: string | null;
+  image: string | null;
+}
+
+export interface OverlapCounts {
+  intersection: number;
+  viewerOnly: number;
+  friendOnly: number;
+}
+
+export interface OverlapResponse {
+  titles: OverlapTitle[];
+  sharedProviders: Provider[];
+  counts: OverlapCounts;
+  friendUser: OverlapFriendUser;
+}
+
 export interface NotificationLogRow {
   id: number;
   attemptedAt: number;
