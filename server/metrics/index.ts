@@ -80,6 +80,13 @@ export const circuitBreakerStateChangesTotal = new Counter(
   "Circuit breaker state transitions",
 );
 
+// ─── Notification Metrics ────────────────────────────────────────────────────
+
+export const notificationsSentTotal = new Counter(
+  "notifications_sent_total",
+  "Notification send results, labelled by provider, kind, and outcome",
+);
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 const allMetrics = [
@@ -95,6 +102,7 @@ const allMetrics = [
   httpRetryTotal,
   errorsByCategory,
   circuitBreakerStateChangesTotal,
+  notificationsSentTotal,
 ];
 
 export function renderMetrics(): string {

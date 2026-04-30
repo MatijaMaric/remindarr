@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, afterEach, mock, spyOn } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
   createUser,
@@ -10,6 +10,19 @@ import {
   getEnabledNotifierSchedules,
 } from "../db/repository";
 import { convertToLocalTime, computeNotificationCron } from "./notifications";
+
+// ─── Spies for dispatch-metrics tests ────────────────────────────────────────
+// Must be declared before the modules that import them are imported so that
+// the live ESM binding inside notifications.ts sees the patched namespace.
+import * as contentModule from "../notifications/content";
+import * as registryModule from "../notifications/registry";
+import * as repositoryModule from "../db/repository";
+
+const getProviderSpy = spyOn(registryModule, "getProvider");
+const buildContentSpy = spyOn(contentModule, "buildNotificationContent");
+const buildWeeklyContentSpy = spyOn(contentModule, "buildWeeklyDigestContent");
+const recordDeliverySpy = spyOn(repositoryModule, "recordDelivery");
+const markNotifierSentSpy = spyOn(repositoryModule, "markNotifierSent");
 
 let userId: string;
 
@@ -257,5 +270,146 @@ describe("notification error logging includes structured fields", () => {
     expect((errObj.stack as string).length).toBeGreaterThan(0);
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+// ─── Prometheus counter tests ─────────────────────────────────────────────────
+//
+// These tests exercise the dispatch loop inside notifications.ts (Bun path) and
+// verify that notificationsSentTotal is incremented for both success and failure.
+// They use spyOn (not mock.module) to avoid cross-file mock leakage on Linux CI.
+
+import { enqueueJob } from "./queue";
+import { processJobs } from "./worker";
+import { registerNotificationJobs } from "./notifications";
+import { notificationsSentTotal, resetMetrics, renderMetrics } from "../metrics";
+import Sentry from "../sentry";
+
+// Suppress Sentry withMonitor calls from worker.ts
+const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(
+  ((_slug: string, fn: () => unknown) => fn()) as typeof Sentry.withMonitor
+);
+
+// Register the notification handler once for the whole module — the
+// handlerRegistered guard inside registerNotificationJobs makes this idempotent.
+await registerNotificationJobs();
+
+function nowUtc(): { time: string; date: string } {
+  const n = new Date();
+  const hh = n.getUTCHours().toString().padStart(2, "0");
+  const mm = n.getUTCMinutes().toString().padStart(2, "0");
+  const yyyy = n.getUTCFullYear();
+  const mo = (n.getUTCMonth() + 1).toString().padStart(2, "0");
+  const dd = n.getUTCDate().toString().padStart(2, "0");
+  return { time: `${hh}:${mm}`, date: `${yyyy}-${mo}-${dd}` };
+}
+
+const fakeContent = {
+  episodes: [
+    {
+      showTitle: "Test Show",
+      seasonNumber: 1,
+      episodeNumber: 1,
+      episodeName: "Pilot",
+      posterUrl: null,
+      offers: [],
+    },
+  ],
+  movies: [],
+  date: "2026-04-30",
+};
+
+describe("notificationsSentTotal counter", () => {
+  let metricsUserId: string;
+
+  beforeEach(async () => {
+    setupTestDb();
+    metricsUserId = await createUser("metricsuser", "hash");
+    resetMetrics();
+    getProviderSpy.mockClear();
+    buildContentSpy.mockClear();
+    buildWeeklyContentSpy.mockClear();
+    recordDeliverySpy.mockClear();
+    markNotifierSentSpy.mockClear();
+    withMonitorSpy.mockClear();
+  });
+
+  afterEach(() => {
+    getProviderSpy.mockClear();
+    buildContentSpy.mockClear();
+    buildWeeklyContentSpy.mockClear();
+    recordDeliverySpy.mockClear();
+    markNotifierSentSpy.mockClear();
+  });
+
+  afterAll(() => {
+    getProviderSpy.mockRestore();
+    buildContentSpy.mockRestore();
+    buildWeeklyContentSpy.mockRestore();
+    recordDeliverySpy.mockRestore();
+    markNotifierSentSpy.mockRestore();
+    withMonitorSpy.mockRestore();
+  });
+
+  it("increments counter with outcome=success on successful daily dispatch", async () => {
+    const { time: testTime } = nowUtc();
+
+    buildContentSpy.mockResolvedValue(fakeContent);
+    recordDeliverySpy.mockResolvedValue(undefined);
+    markNotifierSentSpy.mockResolvedValue(undefined);
+    getProviderSpy.mockReturnValue({
+      name: "discord",
+      send: async () => {},
+      validateConfig: () => ({ valid: true }),
+    });
+
+    await createNotifier(
+      metricsUserId,
+      "discord",
+      "DailySuccess",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      testTime,
+      "UTC"
+    );
+
+    enqueueJob("send-notifications");
+    await processJobs();
+
+    const output = renderMetrics();
+    expect(output).toContain(
+      'notifications_sent_total{kind="daily",outcome="success",provider="discord"} 1'
+    );
+  });
+
+  it("increments counter with outcome=failure when provider.send throws on daily dispatch", async () => {
+    const { time: testTime } = nowUtc();
+
+    buildContentSpy.mockResolvedValue(fakeContent);
+    recordDeliverySpy.mockResolvedValue(undefined);
+    markNotifierSentSpy.mockResolvedValue(undefined);
+    getProviderSpy.mockReturnValue({
+      name: "discord",
+      send: async () => {
+        throw new Error("network error");
+      },
+      validateConfig: () => ({ valid: true }),
+    });
+
+    await createNotifier(
+      metricsUserId,
+      "discord",
+      "DailyFailure",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      testTime,
+      "UTC"
+    );
+
+    enqueueJob("send-notifications");
+    await processJobs();
+
+    const output = renderMetrics();
+    expect(output).toContain(
+      'notifications_sent_total{kind="daily",outcome="failure",provider="discord"} 1'
+    );
   });
 });
