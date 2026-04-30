@@ -802,6 +802,17 @@ export async function updateDepartureAlertSettings(settings: Partial<UserSetting
   });
 }
 
+export async function getCrowdedWeekSettings(signal?: AbortSignal): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
+  return fetchJson("/user/settings/crowded-weeks", { signal });
+}
+
+export async function updateCrowdedWeekSettings(data: { crowdedWeekThreshold?: number; crowdedWeekBadgeEnabled?: number }): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
+  return fetchJson("/user/settings/crowded-weeks", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
 // ─── Admin user management ────────────────────────────────────────────────────
 
 export async function getAdminUsers(opts: { search?: string; filter?: string; page?: number } = {}, signal?: AbortSignal): Promise<AdminUsersResponse> {

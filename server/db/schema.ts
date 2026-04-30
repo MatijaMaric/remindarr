@@ -168,6 +168,8 @@ export const users = sqliteTable(
     activityStreamEnabled: integer("activity_stream_enabled").notNull().default(0),
     streamingDeparturesEnabled: integer("streaming_departures_enabled").notNull().default(1),
     departureAlertLeadDays: integer("departure_alert_lead_days").notNull().default(7),
+    crowdedWeekThreshold: integer("crowded_week_threshold").notNull().default(5),
+    crowdedWeekBadgeEnabled: integer("crowded_week_badge_enabled").notNull().default(1),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(

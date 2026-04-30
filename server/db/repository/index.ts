@@ -119,6 +119,8 @@ export {
   getUserByWatchlistShareToken,
   getUserDepartureSettings,
   updateUserDepartureSettings,
+  getCrowdedWeekSettings,
+  updateCrowdedWeekSettings,
 } from "./users";
 
 export {
