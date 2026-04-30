@@ -42,6 +42,11 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
           : undefined
       }
     >
+      {showTrailer && videos.length > 0 && (
+        <div className="mb-6 sm:mb-8 lg:mb-10 max-w-[1100px] mx-auto">
+          <TrailerEmbed videos={videos} />
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 lg:gap-10 items-end">
         {/* Poster */}
         <div className="w-48 sm:w-56 lg:w-60 shrink-0 mx-auto sm:mx-0">
@@ -140,11 +145,6 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
             )}
           </div>
           {watchHistoryPanel}
-          {showTrailer && videos.length > 0 && (
-            <div className="mt-4">
-              <TrailerEmbed videos={videos} />
-            </div>
-          )}
         </div>
       </div>
     </div>

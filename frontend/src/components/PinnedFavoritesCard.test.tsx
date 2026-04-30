@@ -217,5 +217,20 @@ describe("PinnedFavoritesCard", () => {
       const plusSlots = screen.getAllByText("+");
       expect(plusSlots.length).toBe(2);
     });
+
+    it("links each tile to /title/:id (matching the SPA route)", () => {
+      const pinned: PinnedTitle[] = [
+        { id: "42", title: "Foundation", poster_url: null, object_type: "SHOW", position: 0 },
+        { id: "99", title: "Blade Runner 2049", poster_url: null, object_type: "MOVIE", position: 1 },
+      ];
+      const { container } = render(
+        <PinnedFavoritesCard pinned={pinned} isOwnProfile={false} />,
+        { wrapper: Wrapper },
+      );
+      const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+      expect(hrefs).toContain("/title/42");
+      expect(hrefs).toContain("/title/99");
+      expect(hrefs.some((h) => h?.startsWith("/details/"))).toBe(false);
+    });
   });
 });
