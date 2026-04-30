@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import { createUser, createSession, getSessionWithUser, upsertTitles } from "../db/repository";
+import { makeParsedTitle } from "../test-utils/fixtures";
 import { requireAuth, optionalAuth } from "../middleware/auth";
 import socialApp from "./social";
 import type { AppEnv } from "../types";
@@ -55,6 +56,7 @@ beforeEach(async () => {
   app.use("/social/followers", optionalAuth);
   app.use("/social/following/*", optionalAuth);
   app.use("/social/following", optionalAuth);
+  app.use("/social/friends-loved", requireAuth);
   app.route("/social", socialApp);
 });
 
@@ -279,5 +281,65 @@ describe("GET /social/following/:userId", () => {
     const body = await res.json();
     expect(body.following).toHaveLength(0);
     expect(body.count).toBe(0);
+  });
+});
+
+describe("GET /social/friends-loved", () => {
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/social/friends-loved");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns { items: [] } when user follows nobody (happy path)", async () => {
+    const res = await app.request("/social/friends-loved", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("items");
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items).toHaveLength(0);
+  });
+
+  it("returns loved titles from followed users", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Test Movie" })]);
+
+    // A follows B; B rates movie-1
+    await app.request(`/social/follow/${userBId}`, {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+
+    // Rate via the DB directly through the repository
+    const { rateTitle } = await import("../db/repository/ratings");
+    await rateTitle(userBId, "movie-1", "LOVE");
+
+    const res = await app.request("/social/friends-loved", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].id).toBe("movie-1");
+  });
+
+  it("clamps limit to 50 at most", async () => {
+    const res = await app.request("/social/friends-loved?limit=100", {
+      headers: authHeaders(userAToken),
+    });
+    // limit=100 exceeds max; zod coerces it down — expect 400 (validation) since 100 > 50
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("accepts limit within range", async () => {
+    const res = await app.request("/social/friends-loved?limit=10", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("items");
   });
 });

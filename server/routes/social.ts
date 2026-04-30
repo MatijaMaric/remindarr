@@ -1,8 +1,14 @@
 import { Hono } from "hono";
-import { follow, unfollow, getFollowers, getFollowing, getUserById } from "../db/repository";
+import { z } from "zod";
+import { follow, unfollow, getFollowers, getFollowing, getUserById, getFriendsLovedThisWeek } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
+
+const friendsLovedQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+});
 
 const log = logger.child({ module: "social" });
 
@@ -97,6 +103,16 @@ app.get("/following/:userId", async (c) => {
     image,
   }));
   return ok(c, { following: summary, count: summary.length });
+});
+
+// GET /friends-loved — Top-rated titles from followed users in the last 7 days
+app.get("/friends-loved", zValidator("query", friendsLovedQuerySchema), async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  const { limit } = c.req.valid("query");
+  const items = await getFriendsLovedThisWeek(user.id, limit);
+  return c.json({ items });
 });
 
 export default app;

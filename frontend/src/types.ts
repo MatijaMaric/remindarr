@@ -712,7 +712,7 @@ export interface UserSettings {
   departureAlertLeadDays: number;
 }
 
-export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon";
+export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon" | "friends_loved";
 
 export interface HomepageSection {
   id: HomepageSectionId;
@@ -726,7 +726,17 @@ export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "today", enabled: true },
   { id: "upcoming", enabled: true },
   { id: "airing_soon", enabled: false },
+  { id: "friends_loved", enabled: true },
 ];
+
+export interface FriendsLovedItem {
+  id: string;
+  title: string;
+  poster_url: string | null;
+  object_type: string;
+  love_count: number;
+  score: number;
+}
 
 // Normalize search results to same shape as DB titles
 export function normalizeSearchTitle(t: SearchTitle): Title {

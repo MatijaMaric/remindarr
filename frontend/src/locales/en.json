@@ -442,7 +442,8 @@
         "recommendations": "Recommended for You",
         "today": "Today's Episodes",
         "upcoming": "Coming Up",
-        "airing_soon": "Airing Soon"
+        "airing_soon": "Airing Soon",
+        "friends_loved": "Friends Loved This Week"
       }
     },
     "crowdedWeek": {

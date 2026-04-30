@@ -17,6 +17,7 @@ const SECTION_LABELS: Record<string, string> = {
   today: "settings.homepage.sections.today",
   upcoming: "settings.homepage.sections.upcoming",
   airing_soon: "settings.homepage.sections.airing_soon",
+  friends_loved: "settings.homepage.sections.friends_loved",
 };
 
 function ThemeSection() {

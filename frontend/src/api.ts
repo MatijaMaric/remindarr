@@ -29,6 +29,7 @@ import type {
   NotifierHistoryResponse,
   UserSettings,
   OverlapResponse,
+  FriendsLovedItem,
 } from "./types";
 
 const BASE = "/api";
@@ -1027,6 +1028,19 @@ export async function getUpNext(limit = 12, signal?: AbortSignal): Promise<{ ite
 
 export async function getOverlap(friendUsername: string, signal?: AbortSignal): Promise<OverlapResponse> {
   return fetchJson(`/overlap/${encodeURIComponent(friendUsername)}`, { signal });
+}
+
+// ─── Friends Loved This Week ─────────────────────────────────────────────────
+
+export interface FriendsLovedResponse {
+  items: FriendsLovedItem[];
+}
+
+export async function getFriendsLoved(
+  limit = 20,
+  signal?: AbortSignal,
+): Promise<FriendsLovedResponse> {
+  return fetchJson(`/social/friends-loved?limit=${limit}`, { signal });
 }
 
 export async function setTitleSnooze(
