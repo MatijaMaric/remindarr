@@ -10,6 +10,7 @@ import {
   deleteRecommendation,
   getUnreadCount,
 } from "../db/repository";
+import { isFollowing } from "../db/repository/follows";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
@@ -20,6 +21,7 @@ const log = logger.child({ module: "recommendations" });
 const createRecommendationSchema = z.object({
   titleId: z.string().min(1),
   message: z.string().max(500).optional(),
+  targetUserId: z.string().optional(),
 });
 
 const discoveryFeedQuerySchema = z.object({
@@ -29,7 +31,7 @@ const discoveryFeedQuerySchema = z.object({
 
 const app = new Hono<AppEnv>();
 
-// POST / — Broadcast a recommendation (no toUserId needed)
+// POST / — Send a recommendation (broadcast to all followers, or targeted to one user)
 app.post("/", zValidator("json", createRecommendationSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
@@ -37,15 +39,27 @@ app.post("/", zValidator("json", createRecommendationSchema), async (c) => {
   }
 
   const body = c.req.valid("json");
+  const { targetUserId } = body;
 
-  // Check for duplicate recommendation
-  const existing = await getUserRecommendation(user.id, body.titleId);
-  if (existing) {
-    return err(c, "You have already recommended this title", 409);
+  // Validate targeted recommendation
+  if (targetUserId != null) {
+    if (targetUserId === user.id) {
+      return err(c, "Cannot send a recommendation to yourself", 400);
+    }
+    const following = await isFollowing(user.id, targetUserId);
+    if (!following) {
+      return err(c, "You can only send targeted recommendations to users you follow", 403);
+    }
   }
 
-  const id = await createRecommendation(user.id, body.titleId, body.message);
-  log.info("Recommendation created", { fromUserId: user.id, titleId: body.titleId });
+  // Check for duplicate recommendation (same sender, same title, same target)
+  const existing = await getUserRecommendation(user.id, body.titleId, targetUserId);
+  if (existing) {
+    return err(c, "You have already recommended this title to this recipient", 409);
+  }
+
+  const id = await createRecommendation(user.id, body.titleId, body.message, targetUserId);
+  log.info("Recommendation created", { fromUserId: user.id, titleId: body.titleId, targetUserId: targetUserId ?? null });
   return c.json({ success: true, id }, 201);
 });
 
@@ -78,6 +92,9 @@ app.get("/sent", async (c) => {
     },
     message: r.message,
     created_at: r.createdAt,
+    target_user: r.targetUserId != null
+      ? { id: r.targetUserId, username: r.targetUsername ?? "", display_name: r.targetDisplayName ?? null }
+      : null,
   }));
 
   return ok(c, { recommendations });
@@ -126,6 +143,7 @@ app.get("/", zValidator("query", discoveryFeedQuerySchema), async (c) => {
     message: r.message,
     created_at: r.createdAt,
     read_at: r.readAt,
+    is_targeted: r.targetUserId != null,
   }));
 
   return ok(c, { recommendations, count });

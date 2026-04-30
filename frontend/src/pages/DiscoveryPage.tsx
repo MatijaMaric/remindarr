@@ -111,6 +111,11 @@ function RecommendationCard({
           </div>
         )}
         <span className="text-sm text-zinc-300 font-medium">{senderName}</span>
+        {rec.is_targeted && (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            Direct
+          </span>
+        )}
         <span className="text-xs text-zinc-500 ml-auto">{formatRelativeTime(rec.created_at)}</span>
       </div>
 
@@ -204,7 +209,7 @@ function HeroCard({
 
       {/* Info */}
       <div className="flex flex-col min-w-0 py-2">
-        <Kicker>Pick of the week{senderName ? ` · from @${rec.from_user.username}` : ""}</Kicker>
+        <Kicker>{rec.is_targeted ? "Just for you" : "Pick of the week"}{senderName ? ` · from @${rec.from_user.username}` : ""}</Kicker>
 
         <h2 className="text-[30px] sm:text-[36px] lg:text-[44px] font-extrabold tracking-[-0.03em] leading-[1.02] text-zinc-100 mb-3.5">
           {rec.title.title}

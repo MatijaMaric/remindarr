@@ -281,6 +281,13 @@
       "when": 1778457600000,
       "tag": "0039_users_crowded_week_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1746057600000,
+      "tag": "0039_recommendations_target_user",
+      "breakpoints": true
     }
   ]
 }

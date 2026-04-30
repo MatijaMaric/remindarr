@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Send, Check } from "lucide-react";
+import { Send, Check, Users, User } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -9,10 +9,13 @@ import {
   AlertDialogTitle,
   AlertDialogClose,
 } from "./ui/alert-dialog";
+import UserSearchDropdown, { type SelectedUser } from "./UserSearchDropdown";
 
 interface Props {
   titleId: string;
 }
+
+type AudienceMode = "all" | "pick";
 
 export default function RecommendButton({ titleId }: Props) {
   const { user } = useAuth();
@@ -21,6 +24,8 @@ export default function RecommendButton({ titleId }: Props) {
   const [sending, setSending] = useState(false);
   const [recommended, setRecommended] = useState(false);
   const [recId, setRecId] = useState<string | null>(null);
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>("all");
+  const [targetUser, setTargetUser] = useState<SelectedUser | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -44,6 +49,8 @@ export default function RecommendButton({ titleId }: Props) {
       return;
     }
     setMessage("");
+    setAudienceMode("all");
+    setTargetUser(null);
     setDialogOpen(true);
   }
 
@@ -64,12 +71,24 @@ export default function RecommendButton({ titleId }: Props) {
   }
 
   async function handleSend() {
+    if (audienceMode === "pick" && !targetUser) {
+      toast.error("Please select a recipient");
+      return;
+    }
     setSending(true);
     try {
-      const result = await api.sendRecommendation(titleId, message || undefined);
-      toast.success("Recommendation sent!");
+      const result = await api.sendRecommendation(
+        titleId,
+        message || undefined,
+        audienceMode === "pick" ? targetUser?.id : undefined,
+      );
+      const successMsg = audienceMode === "pick" && targetUser
+        ? `Recommendation sent to @${targetUser.username}!`
+        : "Recommendation sent to all followers!";
+      toast.success(successMsg);
       setDialogOpen(false);
       setMessage("");
+      setTargetUser(null);
       setRecommended(true);
       setRecId(result.id);
     } catch (err: unknown) {
@@ -101,6 +120,52 @@ export default function RecommendButton({ titleId }: Props) {
           <AlertDialogTitle>Recommend this title</AlertDialogTitle>
 
           <div className="mt-4 space-y-4">
+            {/* Audience picker */}
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1.5">Send to</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setAudienceMode("all"); setTargetUser(null); }}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
+                    audienceMode === "all"
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                      : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700"
+                  }`}
+                  data-testid="audience-all"
+                >
+                  <Users className="size-3.5" />
+                  All followers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudienceMode("pick")}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
+                    audienceMode === "pick"
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                      : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700"
+                  }`}
+                  data-testid="audience-pick"
+                >
+                  <User className="size-3.5" />
+                  Pick a person
+                </button>
+              </div>
+            </div>
+
+            {/* User picker — shown when "Pick a person" is selected */}
+            {audienceMode === "pick" && (
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1.5">Recipient</label>
+                <UserSearchDropdown
+                  selected={targetUser}
+                  onSelect={(u) => setTargetUser(u)}
+                  onClear={() => setTargetUser(null)}
+                />
+              </div>
+            )}
+
+            {/* Message */}
             <div>
               <label className="block text-sm text-zinc-400 mb-1.5">
                 Message <span className="text-zinc-500">(optional)</span>
@@ -128,7 +193,7 @@ export default function RecommendButton({ titleId }: Props) {
             </AlertDialogClose>
             <button
               onClick={handleSend}
-              disabled={sending}
+              disabled={sending || (audienceMode === "pick" && !targetUser)}
               className="inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium bg-amber-500 text-zinc-950 hover:bg-amber-400 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="recommend-send"
             >
