@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
@@ -20,6 +20,9 @@ mock.module("../api", () => ({
   watchEpisode: mock(() => Promise.resolve()),
   unwatchEpisode: mock(() => Promise.resolve()),
   watchEpisodesBulk: mock(() => Promise.resolve()),
+  getCrowdedWeekSettings: mock(() =>
+    Promise.resolve({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 })
+  ),
 }));
 
 // Must import after mocks
@@ -165,5 +168,87 @@ describe("CalendarPage", () => {
     const toggle = screen.getByRole("button", { name: /hide watched/i });
     expect(toggle).toBeDefined();
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("renders week view toggle button on desktop", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+    expect(screen.getByTitle("Week view")).toBeDefined();
+  });
+
+  it("switches to week view when week toggle is clicked", async () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    // Verify we're in grid mode
+    expect(screen.getByText("Mon")).toBeDefined();
+
+    // Click week view toggle
+    fireEvent.click(screen.getByTitle("Week view"));
+
+    // Week view renders 7 day-column headers (date numbers in header row)
+    const weekDayNumbers = await waitFor(() => screen.getAllByTestId("week-day-number"));
+    expect(weekDayNumbers.length).toBe(7);
+  });
+
+  it("week view renders 7 day columns", async () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByTitle("Week view"));
+
+    const columns = await waitFor(() => screen.getAllByTestId("week-day-column"));
+    expect(columns.length).toBe(7);
+  });
+
+  it("?view=week param activates week view", async () => {
+    render(
+      <MemoryRouter initialEntries={["/?view=week"]}>
+        <CalendarPage />
+      </MemoryRouter>
+    );
+    const columns = await waitFor(() => screen.getAllByTestId("week-day-column"));
+    expect(columns.length).toBe(7);
+  });
+
+  it("renders density toggle buttons on desktop", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    // Density toggle renders C / C / S (compact / comfortable / spacious initials)
+    const compactBtn = screen.getByRole("button", { name: /compact/i });
+    const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });
+    const spaciousBtn = screen.getByRole("button", { name: /spacious/i });
+    expect(compactBtn).toBeDefined();
+    expect(comfortableBtn).toBeDefined();
+    expect(spaciousBtn).toBeDefined();
+  });
+
+  it("comfortable density is active by default", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });
+    expect(comfortableBtn.getAttribute("aria-pressed")).toBe("true");
+    expect(comfortableBtn.className).toContain("bg-amber-500");
+  });
+
+  it("compact density reduces item cap vs comfortable", () => {
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    // Compact density button
+    const compactBtn = screen.getByRole("button", { name: /compact/i });
+    fireEvent.click(compactBtn);
+
+    expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
+    expect(compactBtn.className).toContain("bg-amber-500");
+
+    // Comfortable should no longer be active
+    const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });
+    expect(comfortableBtn.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("?density=compact param activates compact density", () => {
+    render(
+      <MemoryRouter initialEntries={["/?density=compact"]}>
+        <CalendarPage />
+      </MemoryRouter>
+    );
+    const compactBtn = screen.getByRole("button", { name: /compact/i });
+    expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
   });
 });
