@@ -83,11 +83,17 @@ export type PlexServer = {
   connections: Array<{ uri: string; local: boolean; relay: boolean }>;
 };
 
+/** Raw shape returned by the Plex /api/v2/resources endpoint. */
+interface PlexResource extends PlexServer {
+  /** Comma-separated capability list, e.g. "server,player" */
+  provides?: string;
+}
+
 export async function getServers(token: string): Promise<PlexServer[]> {
   const url = `${PLEX_TV_BASE}/api/v2/resources?includeHttps=1&includeRelay=1`;
-  const data = await plexFetch<PlexServer[]>(url, { headers: plexHeaders(token) });
+  const data = await plexFetch<PlexResource[]>(url, { headers: plexHeaders(token) });
   // Only return MediaServer resources
-  return data.filter((r: any) => r.provides?.includes("server"));
+  return data.filter((r: PlexResource) => r.provides?.includes("server"));
 }
 
 // ─── Library ─────────────────────────────────────────────────────────────────
