@@ -86,6 +86,56 @@ describe("GET /details/movie/:id", () => {
   });
 });
 
+describe("GET /details/movie/:id — videos field", () => {
+  it("passes videos.results through when TMDB returns them", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-123", title: "Movie With Trailer", tmdbId: "123" })]);
+
+    (tmdbClient.fetchMovieFullDetails as any).mockResolvedValueOnce({
+      id: 123,
+      title: "Movie With Trailer",
+      videos: {
+        results: [
+          {
+            id: "vid1",
+            key: "dQw4w9WgXcQ",
+            site: "YouTube",
+            type: "Trailer",
+            official: true,
+            size: 1080,
+            published_at: "2024-01-01T00:00:00.000Z",
+            name: "Official Trailer",
+            iso_639_1: "en",
+            iso_3166_1: "US",
+          },
+        ],
+      },
+    });
+
+    const res = await app.request("/details/movie/movie-123");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.tmdb.videos.results)).toBe(true);
+    expect(body.tmdb.videos.results[0].key).toBe("dQw4w9WgXcQ");
+    expect(body.tmdb.videos.results[0].type).toBe("Trailer");
+  });
+
+  it("tmdb.videos is present as empty results when TMDB returns none", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-123", title: "Movie No Trailer", tmdbId: "123" })]);
+
+    (tmdbClient.fetchMovieFullDetails as any).mockResolvedValueOnce({
+      id: 123,
+      title: "Movie No Trailer",
+      videos: { results: [] },
+    });
+
+    const res = await app.request("/details/movie/movie-123");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.tmdb.videos.results)).toBe(true);
+    expect(body.tmdb.videos.results).toHaveLength(0);
+  });
+});
+
 describe("GET /details/show/:id", () => {
   it("returns title from DB without TMDB fallback", async () => {
     await upsertTitles([makeParsedTitle({ id: "tv-456", objectType: "SHOW", title: "DB Show", tmdbId: "456" })]);

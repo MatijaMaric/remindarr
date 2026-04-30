@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ShowDetailsResponse, Title } from "../../types";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import TrackButton from "../TrackButton";
@@ -11,6 +12,7 @@ import { RatingBadge } from "./RatingBadge";
 import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { getCertification } from "./utils";
 import { formatEta } from "../../pages/StatsPage";
+import TrailerEmbed from "./TrailerEmbed";
 
 export interface ShowHeroProps {
   title: Title;
@@ -19,7 +21,9 @@ export interface ShowHeroProps {
 }
 
 export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
+  const [showTrailer, setShowTrailer] = useState(false);
   const isMobile = useIsMobile();
+  const videos = tmdb?.videos?.results ?? [];
   const genres = tmdb?.genres?.map((g) => g.name) || title.genres;
   const certification =
     getCertification(tmdb?.content_ratings?.results, country) || title.age_certification;
@@ -231,6 +235,18 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               isTracked={title.is_tracked}
             />
             <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
+            {videos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowTrailer((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h7A1.5 1.5 0 0 1 13 3.5v9A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-9ZM6 5.5v5l4.5-2.5L6 5.5Z" />
+                </svg>
+                {showTrailer ? "Hide Trailer" : "Watch Trailer"}
+              </button>
+            )}
           </div>
           {title.is_tracked && title.eta_days != null && (
             <div className="text-xs text-zinc-400">
@@ -241,6 +257,11 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             <div className="flex items-center gap-2 text-xs text-zinc-400">
               <span>Next episode</span>
               <EpisodeCountdown airDate={title.next_episode_air_date} />
+            </div>
+          )}
+          {showTrailer && videos.length > 0 && (
+            <div className="mt-4">
+              <TrailerEmbed videos={videos} />
             </div>
           )}
         </div>

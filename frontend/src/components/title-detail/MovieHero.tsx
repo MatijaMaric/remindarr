@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { MovieDetailsResponse, Title } from "../../types";
 import TrackButton from "../TrackButton";
 import PinButton from "../PinButton";
@@ -8,6 +8,7 @@ import { Chip, Kicker } from "../design";
 import { RatingBadge } from "./RatingBadge";
 import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { formatRuntime } from "./utils";
+import TrailerEmbed from "./TrailerEmbed";
 
 export interface MovieHeroProps {
   title: Title;
@@ -19,6 +20,8 @@ export interface MovieHeroProps {
 }
 
 export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPanel }: MovieHeroProps) {
+  const [showTrailer, setShowTrailer] = useState(false);
+  const videos = tmdb?.videos?.results ?? [];
   const genres = tmdb?.genres?.map((g) => g.name) || title.genres;
   const certification = title.age_certification;
   const backdropUrl = mkBackdropUrl(tmdb?.backdrop_path, "w1280") ?? null;
@@ -123,8 +126,25 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
             />
             {watchedActions}
             <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
+            {videos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowTrailer((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h7A1.5 1.5 0 0 1 13 3.5v9A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-9ZM6 5.5v5l4.5-2.5L6 5.5Z" />
+                </svg>
+                {showTrailer ? "Hide Trailer" : "Watch Trailer"}
+              </button>
+            )}
           </div>
           {watchHistoryPanel}
+          {showTrailer && videos.length > 0 && (
+            <div className="mt-4">
+              <TrailerEmbed videos={videos} />
+            </div>
+          )}
         </div>
       </div>
     </div>
