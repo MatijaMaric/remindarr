@@ -530,7 +530,11 @@
     "regenerating": "Regenerating...",
     "copyUrl": "Copy",
     "copied": "Copied!",
-    "warning": "Keep this URL private — anyone with it can see your upcoming releases."
+    "warning": "Keep this URL private — anyone with it can see your upcoming releases.",
+    "combined": "Combined",
+    "episodesOnly": "Episodes only",
+    "releasesOnly": "Releases only",
+    "streamingAlerts": "Streaming alerts"
   },
   "kiosk": {
     "title": "Kiosk Display",
