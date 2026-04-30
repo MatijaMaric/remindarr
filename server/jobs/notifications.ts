@@ -12,6 +12,7 @@ import { buildNotificationContent, buildWeeklyDigestContent } from "../notificat
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { refreshNotificationSchedule } from "./schedule";
 import { getCurrentTimeInTimezone } from "./time-utils";
+import { notificationsSentTotal } from "../metrics";
 
 // Re-export portable scheduling functions for backward compatibility (tests import from here)
 export { convertToLocalTime, computeNotificationCron, refreshNotificationSchedule } from "./schedule";
@@ -109,8 +110,10 @@ export async function registerNotificationJobs() {
             try {
               await provider.send(notifier.config, content);
               await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - weeklyStart, eventKind: "digest" });
+              notificationsSentTotal.inc({ provider: notifier.provider, kind: "digest", outcome: "success" });
             } catch (sendErr) {
               await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - weeklyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "digest" });
+              notificationsSentTotal.inc({ provider: notifier.provider, kind: "digest", outcome: "failure" });
               throw sendErr;
             }
             await markNotifierSent(notifier.id, notifier.todayDate);
@@ -140,8 +143,10 @@ export async function registerNotificationJobs() {
           try {
             await provider.send(notifier.config, content);
             await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - dailyStart, eventKind: "episode_air" });
+            notificationsSentTotal.inc({ provider: notifier.provider, kind: "daily", outcome: "success" });
           } catch (sendErr) {
             await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - dailyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "episode_air" });
+            notificationsSentTotal.inc({ provider: notifier.provider, kind: "daily", outcome: "failure" });
             throw sendErr;
           }
           await markNotifierSent(notifier.id, notifier.todayDate);
