@@ -114,6 +114,39 @@ export async function updateUserDepartureSettings(
   });
 }
 
+export async function getCrowdedWeekSettings(userId: string): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number } | null> {
+  return traceDbQuery("getCrowdedWeekSettings", async () => {
+    const db = getDb();
+    const row = await db
+      .select({
+        crowdedWeekThreshold: users.crowdedWeekThreshold,
+        crowdedWeekBadgeEnabled: users.crowdedWeekBadgeEnabled,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    return row ?? null;
+  });
+}
+
+export async function updateCrowdedWeekSettings(
+  userId: string,
+  settings: { crowdedWeekThreshold?: number; crowdedWeekBadgeEnabled?: number }
+): Promise<void> {
+  return traceDbQuery("updateCrowdedWeekSettings", async () => {
+    const db = getDb();
+    const patch: Record<string, number> = {};
+    if (settings.crowdedWeekThreshold !== undefined) {
+      patch.crowdedWeekThreshold = settings.crowdedWeekThreshold;
+    }
+    if (settings.crowdedWeekBadgeEnabled !== undefined) {
+      patch.crowdedWeekBadgeEnabled = settings.crowdedWeekBadgeEnabled;
+    }
+    if (Object.keys(patch).length === 0) return;
+    await db.update(users).set(patch).where(eq(users.id, userId)).run();
+  });
+}
+
 export async function getUserByProviderSubject(
   authProvider: string,
   providerSubject: string

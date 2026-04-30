@@ -287,6 +287,65 @@ describe("PUT /user/settings/departure-alerts", () => {
   });
 });
 
+// ─── Crowded week settings ──────────────────────────────────────────────────────
+
+describe("GET /user/settings/crowded-weeks", () => {
+  it("returns default crowded week settings for new user", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/crowded-weeks");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.crowdedWeekThreshold).toBe(5);
+    expect(body.crowdedWeekBadgeEnabled).toBe(1);
+  });
+});
+
+describe("PUT /user/settings/crowded-weeks", () => {
+  it("happy path: smallest valid body { crowdedWeekThreshold: 3 } returns 200", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/crowded-weeks", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ crowdedWeekThreshold: 3 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.crowdedWeekThreshold).toBe(3);
+  });
+
+  it("happy path: empty body returns 200 with current settings", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/crowded-weeks", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.crowdedWeekThreshold).toBe(5);
+    expect(body.crowdedWeekBadgeEnabled).toBe(1);
+  });
+
+  it("saves crowdedWeekThreshold and crowdedWeekBadgeEnabled", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/crowded-weeks", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ crowdedWeekThreshold: 10, crowdedWeekBadgeEnabled: 0 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.crowdedWeekThreshold).toBe(10);
+    expect(body.crowdedWeekBadgeEnabled).toBe(0);
+
+    // GET reflects updated values
+    const getRes = await app.request("/user/settings/crowded-weeks");
+    const getBody = await getRes.json();
+    expect(getBody.crowdedWeekThreshold).toBe(10);
+    expect(getBody.crowdedWeekBadgeEnabled).toBe(0);
+  });
+});
+
 describe("validation — departure alerts", () => {
   it("returns 400 + issues for departureAlertLeadDays = 0", async () => {
     const app = makeAuthedApp();
@@ -320,6 +379,47 @@ describe("validation — departure alerts", () => {
       method: "PUT",
       headers: jsonHeaders(),
       body: JSON.stringify({ streamingDeparturesEnabled: "yes" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});
+
+describe("validation — crowded weeks", () => {
+  it("returns 400 + issues for crowdedWeekThreshold = 0 (too low)", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/crowded-weeks", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ crowdedWeekThreshold: 0 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for crowdedWeekThreshold = 25 (too high)", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/crowded-weeks", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ crowdedWeekThreshold: 25 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for crowdedWeekBadgeEnabled = 2 (out of range)", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/crowded-weeks", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ crowdedWeekBadgeEnabled: 2 }),
     });
     expect(res.status).toBe(400);
     const body = await res.json();

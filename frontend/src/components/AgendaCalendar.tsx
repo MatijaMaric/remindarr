@@ -12,7 +12,8 @@ import {
 import { Popover } from "@base-ui/react/popover";
 import { Calendar } from "../components/ui/calendar";
 import { toast } from "sonner";
-import { getCalendarTitles, watchEpisode, unwatchEpisode } from "../api";
+import { getCalendarTitles, watchEpisode, unwatchEpisode, getCrowdedWeekSettings } from "../api";
+import { getISOWeekKey } from "../lib/isoWeek";
 import TitleCard from "../components/TitleCard";
 import { DeckCardWrapper } from "../components/EpisodeShowCard";
 import type { Title, Episode } from "../types";
@@ -245,6 +246,8 @@ function AgendaCalendarImpl({
     "type"
   );
   const [hideWatched, setHideWatched] = useState(true);
+  const [crowdedWeekThreshold, setCrowdedWeekThreshold] = useState(5);
+  const [crowdedWeekBadgeEnabled, setCrowdedWeekBadgeEnabled] = useState(true);
   const [months, setMonths] = useState<AgendaMonth[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -272,6 +275,20 @@ function AgendaCalendarImpl({
   });
 
   const today = useMemo(() => formatDateKey(new Date()), []);
+
+  // Load crowded week settings once on mount
+  useEffect(() => {
+    const controller = new AbortController();
+    getCrowdedWeekSettings(controller.signal)
+      .then((s) => {
+        if (!controller.signal.aborted) {
+          setCrowdedWeekThreshold(s.crowdedWeekThreshold);
+          setCrowdedWeekBadgeEnabled(s.crowdedWeekBadgeEnabled !== 0);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   const loadMonth = useCallback(
     async (monthStr: string): Promise<AgendaMonth | null> => {
@@ -501,6 +518,25 @@ function AgendaCalendarImpl({
     () => contentDates.map((d) => new Date(d + "T00:00:00")),
     [contentDates]
   );
+
+  // Compute crowded ISO week keys from all loaded episodes
+  const crowdedWeeks = useMemo(() => {
+    if (!crowdedWeekBadgeEnabled) return new Set<string>();
+    const counts = new Map<string, number>();
+    for (const m of months) {
+      for (const ep of m.episodes) {
+        if (!ep.air_date) continue;
+        if (hideWatched && ep.is_watched) continue;
+        const key = getISOWeekKey(new Date(ep.air_date));
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+    const crowded = new Set<string>();
+    for (const [key, count] of counts) {
+      if (count >= crowdedWeekThreshold) crowded.add(key);
+    }
+    return crowded;
+  }, [months, hideWatched, crowdedWeekThreshold, crowdedWeekBadgeEnabled]);
 
   // Toggle watched
   const toggleWatched = async (
@@ -762,7 +798,9 @@ function AgendaCalendarImpl({
               </div>
             ) : (
               <div className="space-y-6">
-                {condensedEntries.map((entry) => {
+                {(() => {
+                  let lastRenderedWeekKey: string | null = null;
+                  return condensedEntries.map((entry) => {
                   if (entry.type === "gap") {
                     return (
                       <div
@@ -787,20 +825,32 @@ function AgendaCalendarImpl({
                     episodesByShow,
                   } = entry;
                   const isDateToday = dateKey === today;
+                  const entryWeekKey = getISOWeekKey(new Date(dateKey + "T00:00:00"));
+                  const showCrowdedBanner = crowdedWeeks.has(entryWeekKey) && entryWeekKey !== lastRenderedWeekKey;
+                  if (showCrowdedBanner) lastRenderedWeekKey = entryWeekKey;
 
                   return (
-                    <div
-                      key={dateKey}
-                      ref={(el) => {
-                        if (el) {
-                          dayRefs.current.set(dateKey, el);
-                        }
-                        if (isDateToday && el) {
-                          (todayRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-                        }
-                      }}
-                      className="space-y-3 scroll-mt-36"
-                    >
+                    <div key={dateKey}>
+                      {showCrowdedBanner && (
+                        <div className="flex items-center gap-2 mb-2 px-1">
+                          <div className="flex-1 h-px bg-orange-500/30" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-mono font-semibold">
+                            Crowded week
+                          </span>
+                          <div className="flex-1 h-px bg-orange-500/30" />
+                        </div>
+                      )}
+                      <div
+                        ref={(el) => {
+                          if (el) {
+                            dayRefs.current.set(dateKey, el);
+                          }
+                          if (isDateToday && el) {
+                            (todayRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+                          }
+                        }}
+                        className="space-y-3 scroll-mt-36"
+                      >
                       {/* Compact day header */}
                       <DayHeader
                         items={items}
@@ -890,9 +940,11 @@ function AgendaCalendarImpl({
                           ))}
                         </div>
                       )}
+                      </div>
                     </div>
                   );
-                })}
+                  });
+                })()}
               </div>
             )}
 

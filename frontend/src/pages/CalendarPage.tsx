@@ -9,7 +9,8 @@ import {
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk } from "../api";
+import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk, getCrowdedWeekSettings } from "../api";
+import { getISOWeekKey } from "../lib/isoWeek";
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleCard from "../components/TitleCard";
 import type { Title, Episode } from "../types";
@@ -517,9 +518,25 @@ function GridCalendar({
   const [titles, setTitles] = useState<Title[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(false);
+  const [crowdedWeekThreshold, setCrowdedWeekThreshold] = useState(5);
+  const [crowdedWeekBadgeEnabled, setCrowdedWeekBadgeEnabled] = useState(true);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
+
+  // Load crowded week settings once on mount
+  useEffect(() => {
+    const controller = new AbortController();
+    getCrowdedWeekSettings(controller.signal)
+      .then((s) => {
+        if (!controller.signal.aborted) {
+          setCrowdedWeekThreshold(s.crowdedWeekThreshold);
+          setCrowdedWeekBadgeEnabled(s.crowdedWeekBadgeEnabled !== 0);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -594,6 +611,22 @@ function GridCalendar({
     }
     return grid;
   }, [year, month]);
+
+  // Compute ISO week keys that exceed the crowded threshold
+  const crowdedWeeks = useMemo(() => {
+    if (!crowdedWeekBadgeEnabled) return new Set<string>();
+    const counts = new Map<string, number>();
+    for (const ep of episodes) {
+      if (!ep.air_date) continue;
+      const key = getISOWeekKey(new Date(ep.air_date));
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const crowded = new Set<string>();
+    for (const [key, count] of counts) {
+      if (count >= crowdedWeekThreshold) crowded.add(key);
+    }
+    return crowded;
+  }, [episodes, crowdedWeekThreshold, crowdedWeekBadgeEnabled]);
 
   const selectedItems = useMemo(() => {
     if (!selectedDate) return [];
@@ -779,11 +812,27 @@ function GridCalendar({
           </div>
 
           {/* Weeks */}
-          {weeks.map((week, wi) => (
+          {weeks.map((week, wi) => {
+            // Determine if this week is crowded: find the first non-null day
+            const firstDay = week.find((d) => d !== null) as Date | undefined;
+            const weekKey = firstDay ? getISOWeekKey(firstDay) : null;
+            const isCrowded = weekKey !== null && crowdedWeeks.has(weekKey);
+            // Count episode airings for this week for the badge number
+            const weekEpisodeCount = weekKey
+              ? episodes.filter((ep) => ep.air_date && getISOWeekKey(new Date(ep.air_date)) === weekKey).length
+              : 0;
+            return (
             <div
               key={wi}
-              className="grid grid-cols-7 gap-px bg-white/[0.06]"
+              className="relative grid grid-cols-7 gap-px bg-white/[0.06]"
             >
+              {isCrowded && (
+                <div className="absolute top-1 right-1 z-10 pointer-events-none">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 text-[9px] font-mono font-semibold leading-none">
+                    {weekEpisodeCount} eps
+                  </span>
+                </div>
+              )}
               {week.map((day, di) => {
                 if (!day) {
                   return (
@@ -863,7 +912,8 @@ function GridCalendar({
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

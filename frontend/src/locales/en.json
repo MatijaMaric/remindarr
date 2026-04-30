@@ -441,6 +441,14 @@
         "airing_soon": "Airing Soon"
       }
     },
+    "crowdedWeek": {
+      "title": "Crowded Week Detection",
+      "description": "Highlight calendar weeks that have many episodes airing.",
+      "enableLabel": "Show crowded week badges",
+      "thresholdLabel": "Episodes per week threshold",
+      "saved": "Settings saved",
+      "saving": "Saving..."
+    },
     "profileVisibility": "Profile Visibility",
     "profileVisibilityDescription": "Control which titles are visible on your public profile.",
     "showWatchlist": "Show watchlist on public profile",

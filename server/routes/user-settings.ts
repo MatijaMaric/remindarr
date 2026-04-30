@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings } from "../db/repository";
+import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings, getCrowdedWeekSettings, updateCrowdedWeekSettings } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
@@ -139,6 +139,37 @@ app.put(
     return ok(c, {
       streamingDeparturesEnabled: settings ? settings.streamingDeparturesEnabled !== 0 : true,
       departureAlertLeadDays: settings?.departureAlertLeadDays ?? 7,
+    });
+  },
+);
+
+// ─── Crowded week settings ────────────────────────────────────────────────────
+
+const updateCrowdedWeekSettingsSchema = z.object({
+  crowdedWeekThreshold: z.number().int().min(1).max(20).optional(),
+  crowdedWeekBadgeEnabled: z.number().int().min(0).max(1).optional(),
+});
+
+app.get("/crowded-weeks", async (c) => {
+  const user = c.get("user")!;
+  const settings = await getCrowdedWeekSettings(user.id);
+  return ok(c, {
+    crowdedWeekThreshold: settings?.crowdedWeekThreshold ?? 5,
+    crowdedWeekBadgeEnabled: settings?.crowdedWeekBadgeEnabled ?? 1,
+  });
+});
+
+app.put(
+  "/crowded-weeks",
+  zValidator("json", updateCrowdedWeekSettingsSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const body = c.req.valid("json");
+    await updateCrowdedWeekSettings(user.id, body);
+    const settings = await getCrowdedWeekSettings(user.id);
+    return ok(c, {
+      crowdedWeekThreshold: settings?.crowdedWeekThreshold ?? 5,
+      crowdedWeekBadgeEnabled: settings?.crowdedWeekBadgeEnabled ?? 1,
     });
   },
 );
