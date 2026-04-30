@@ -290,10 +290,6 @@ const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(
   ((_slug: string, fn: () => unknown) => fn()) as typeof Sentry.withMonitor
 );
 
-// Register the notification handler once for the whole module — the
-// handlerRegistered guard inside registerNotificationJobs makes this idempotent.
-await registerNotificationJobs();
-
 function nowUtc(): { time: string; date: string } {
   const n = new Date();
   const hh = n.getUTCHours().toString().padStart(2, "0");
@@ -324,6 +320,9 @@ describe("notificationsSentTotal counter", () => {
 
   beforeEach(async () => {
     setupTestDb();
+    // registerNotificationJobs needs the DB initialized — call after setupTestDb().
+    // The handlerRegistered guard makes repeated calls idempotent.
+    await registerNotificationJobs();
     metricsUserId = await createUser("metricsuser", "hash");
     resetMetrics();
     getProviderSpy.mockClear();
