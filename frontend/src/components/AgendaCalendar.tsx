@@ -6,8 +6,10 @@ import {
   CalendarIcon,
   LayoutGridIcon,
   ListIcon,
+  CalendarDaysIcon,
   EyeIcon,
   EyeOffIcon,
+  AlignJustifyIcon,
 } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import { Calendar } from "../components/ui/calendar";
@@ -39,7 +41,9 @@ export const typeFilters = [
   { label: "Shows", value: "SHOW" },
 ] as const;
 
-export type ViewMode = "grid" | "agenda";
+export type ViewMode = "grid" | "agenda" | "week";
+
+export type DensityMode = "compact" | "comfortable" | "spacious";
 
 export function formatMonth(date: Date): string {
   const y = date.getFullYear();
@@ -153,6 +157,19 @@ export function ViewToggle({
         <LayoutGridIcon className="size-4" />
       </button>
       <button
+        onClick={() => onViewModeChange("week")}
+        aria-label={t("calendar.weekView")}
+        aria-pressed={viewMode === "week"}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
+          viewMode === "week"
+            ? "bg-amber-500 text-zinc-950"
+            : "text-zinc-400 hover:text-white"
+        }`}
+        title="Week view"
+      >
+        <CalendarDaysIcon className="size-4" />
+      </button>
+      <button
         onClick={() => onViewModeChange("agenda")}
         aria-label={t("calendar.agendaView")}
         aria-pressed={viewMode === "agenda"}
@@ -165,6 +182,43 @@ export function ViewToggle({
       >
         <ListIcon className="size-4" />
       </button>
+    </div>
+  );
+}
+
+// ─── Density Toggle ─────────────────────────────────────────────────────────
+
+export function DensityToggle({
+  density,
+  onDensityChange,
+}: {
+  density: DensityMode;
+  onDensityChange: (mode: DensityMode) => void;
+}) {
+  const { t } = useTranslation();
+  const options: { value: DensityMode; label: string }[] = [
+    { value: "compact", label: t("calendar.densityCompact") },
+    { value: "comfortable", label: t("calendar.densityComfortable") },
+    { value: "spacious", label: t("calendar.densitySpacious") },
+  ];
+  return (
+    <div className="flex items-center bg-zinc-800 rounded-lg p-0.5 gap-0.5" title="Density">
+      <AlignJustifyIcon className="size-3.5 text-zinc-500 mx-1 flex-shrink-0" />
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onDensityChange(opt.value)}
+          aria-label={opt.label}
+          aria-pressed={density === opt.value}
+          className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
+            density === opt.value
+              ? "bg-amber-500 text-zinc-950"
+              : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          {opt.label.charAt(0).toUpperCase()}
+        </button>
+      ))}
     </div>
   );
 }
@@ -229,6 +283,8 @@ interface AgendaMonth {
 interface AgendaCalendarProps {
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
+  density?: DensityMode;
+  onDensityChange?: (mode: DensityMode) => void;
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
 }
@@ -236,6 +292,8 @@ interface AgendaCalendarProps {
 function AgendaCalendarImpl({
   viewMode,
   onViewModeChange,
+  density = "comfortable",
+  onDensityChange,
   searchParams,
   setSearchParams,
 }: AgendaCalendarProps) {
@@ -750,6 +808,12 @@ function AgendaCalendarImpl({
                 onViewModeChange={onViewModeChange}
               />
             )}
+            {onDensityChange && (
+              <DensityToggle
+                density={density}
+                onDensityChange={onDensityChange}
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {typeFilters.map((f) => (
@@ -888,7 +952,7 @@ function AgendaCalendarImpl({
                                         <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
                                       )}
                                     </Link>
-                                    <div className="p-3">
+                                    <div className={density === "compact" ? "p-1.5" : density === "spacious" ? "p-4" : "p-3"}>
                                       <div className="flex items-center justify-between gap-2">
                                         <Link
                                           to={`/title/${ep.title_id}`}

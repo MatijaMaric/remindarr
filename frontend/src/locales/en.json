@@ -299,9 +299,13 @@
     "hideWatched": "Hide watched",
     "showWatched": "Show watched",
     "gridView": "Grid view",
+    "weekView": "Week view",
     "agendaView": "Agenda view",
     "close": "Close",
-    "goToDay": "Go to {{date}}"
+    "goToDay": "Go to {{date}}",
+    "densityCompact": "Compact",
+    "densityComfortable": "Comfortable",
+    "densitySpacious": "Spacious"
   },
   "landing": {
     "tagline": "Track movies & TV shows you love",
