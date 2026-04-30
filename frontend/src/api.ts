@@ -628,10 +628,10 @@ export async function getSeasonEpisodeRatings(titleId: string, season: number, s
 
 // ─── Recommendations ──────────────────────────────────────────────────────────
 
-export async function sendRecommendation(titleId: string, message?: string): Promise<{ id: string }> {
+export async function sendRecommendation(titleId: string, message?: string, targetUserId?: string): Promise<{ id: string }> {
   return fetchJson("/recommendations", {
     method: "POST",
-    body: JSON.stringify({ titleId, message }),
+    body: JSON.stringify({ titleId, message, targetUserId }),
   });
 }
 

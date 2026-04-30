@@ -676,6 +676,8 @@ export interface Recommendation {
   message: string | null;
   created_at: string;
   read_at: string | null;
+  /** true when the recommendation was sent directly to the current user (not a broadcast) */
+  is_targeted?: boolean;
 }
 
 export interface SentRecommendation {
@@ -683,6 +685,8 @@ export interface SentRecommendation {
   title: { id: string; title: string; object_type: string; poster_url: string | null };
   message: string | null;
   created_at: string;
+  /** Present when sent to a specific user; null means broadcast to all followers */
+  target_user: { id: string; username: string; display_name: string | null } | null;
 }
 
 export interface RecommendationsResponse {

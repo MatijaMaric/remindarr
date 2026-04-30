@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, count, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, count, inArray, isNull, or } from "drizzle-orm";
 import { getDb } from "../schema";
 import { recommendations, recommendationReads, users, titles, follows } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -7,6 +7,7 @@ export async function createRecommendation(
   fromUserId: string,
   titleId: string,
   message?: string,
+  targetUserId?: string,
 ): Promise<string> {
   return traceDbQuery("createRecommendation", async () => {
     const db = getDb();
@@ -17,19 +18,33 @@ export async function createRecommendation(
         fromUserId,
         titleId,
         message: message ?? null,
+        targetUserId: targetUserId ?? null,
       })
       .run();
     return id;
   });
 }
 
-export async function getUserRecommendation(userId: string, titleId: string) {
+export async function getUserRecommendation(
+  userId: string,
+  titleId: string,
+  targetUserId?: string,
+) {
   return traceDbQuery("getUserRecommendation", async () => {
     const db = getDb();
+    const targetCondition = targetUserId != null
+      ? eq(recommendations.targetUserId, targetUserId)
+      : isNull(recommendations.targetUserId);
     return await db
       .select({ id: recommendations.id })
       .from(recommendations)
-      .where(and(eq(recommendations.fromUserId, userId), eq(recommendations.titleId, titleId)))
+      .where(
+        and(
+          eq(recommendations.fromUserId, userId),
+          eq(recommendations.titleId, titleId),
+          targetCondition,
+        ),
+      )
       .get();
   });
 }
@@ -45,9 +60,19 @@ export async function getDiscoveryFeed(userId: string, limit = 20, offset = 0) {
       .all();
 
     const followedIds = followedUsers.map((u) => u.id);
-    if (followedIds.length === 0) {
-      return [];
-    }
+
+    // A recommendation is visible if:
+    //   a) it is directly targeted at this user, OR
+    //   b) it is a broadcast (no target) from someone the user follows
+    const visibilityCondition = followedIds.length === 0
+      ? eq(recommendations.targetUserId, userId)
+      : or(
+          eq(recommendations.targetUserId, userId),
+          and(
+            isNull(recommendations.targetUserId),
+            inArray(recommendations.fromUserId, followedIds),
+          ),
+        );
 
     return await db
       .select({
@@ -63,6 +88,7 @@ export async function getDiscoveryFeed(userId: string, limit = 20, offset = 0) {
         message: recommendations.message,
         createdAt: recommendations.createdAt,
         readAt: recommendationReads.readAt,
+        targetUserId: recommendations.targetUserId,
       })
       .from(recommendations)
       .innerJoin(users, eq(users.id, recommendations.fromUserId))
@@ -74,7 +100,7 @@ export async function getDiscoveryFeed(userId: string, limit = 20, offset = 0) {
           eq(recommendationReads.userId, sql`${userId}`),
         ),
       )
-      .where(inArray(recommendations.fromUserId, followedIds))
+      .where(visibilityCondition)
       .orderBy(desc(recommendations.createdAt))
       .limit(limit)
       .offset(offset)
@@ -92,14 +118,21 @@ export async function getDiscoveryFeedCount(userId: string): Promise<number> {
       .all();
 
     const followedIds = followedUsers.map((u) => u.id);
-    if (followedIds.length === 0) {
-      return 0;
-    }
+
+    const visibilityCondition = followedIds.length === 0
+      ? eq(recommendations.targetUserId, userId)
+      : or(
+          eq(recommendations.targetUserId, userId),
+          and(
+            isNull(recommendations.targetUserId),
+            inArray(recommendations.fromUserId, followedIds),
+          ),
+        );
 
     const row = await db
       .select({ count: count() })
       .from(recommendations)
-      .where(inArray(recommendations.fromUserId, followedIds))
+      .where(visibilityCondition)
       .get();
     return row?.count ?? 0;
   });
@@ -108,21 +141,37 @@ export async function getDiscoveryFeedCount(userId: string): Promise<number> {
 export async function getSentRecommendations(userId: string) {
   return traceDbQuery("getSentRecommendations", async () => {
     const db = getDb();
-    return await db
-      .select({
-        id: recommendations.id,
-        titleId: recommendations.titleId,
-        titleName: titles.title,
-        titleObjectType: titles.objectType,
-        posterUrl: titles.posterUrl,
-        message: recommendations.message,
-        createdAt: recommendations.createdAt,
-      })
-      .from(recommendations)
-      .innerJoin(titles, eq(titles.id, recommendations.titleId))
-      .where(eq(recommendations.fromUserId, userId))
-      .orderBy(desc(recommendations.createdAt))
-      .all();
+    // Raw query to support LEFT JOIN on target user without Drizzle alias complexity
+    type Row = {
+      id: string;
+      titleId: string;
+      titleName: string;
+      titleObjectType: string;
+      posterUrl: string | null;
+      message: string | null;
+      createdAt: string | null;
+      targetUserId: string | null;
+      targetUsername: string | null;
+      targetDisplayName: string | null;
+    };
+    return db.all<Row>(sql`
+      SELECT
+        r.id AS id,
+        r.title_id AS titleId,
+        t.title AS titleName,
+        t.object_type AS titleObjectType,
+        t.poster_url AS posterUrl,
+        r.message AS message,
+        r.created_at AS createdAt,
+        r.target_user_id AS targetUserId,
+        tu.username AS targetUsername,
+        tu.name AS targetDisplayName
+      FROM recommendations r
+      INNER JOIN titles t ON t.id = r.title_id
+      LEFT JOIN users tu ON tu.id = r.target_user_id
+      WHERE r.from_user_id = ${userId}
+      ORDER BY r.created_at DESC
+    `);
   });
 }
 
@@ -165,9 +214,16 @@ export async function getUnreadCount(userId: string): Promise<number> {
       .all();
 
     const followedIds = followedUsers.map((u) => u.id);
-    if (followedIds.length === 0) {
-      return 0;
-    }
+
+    const visibilityCondition = followedIds.length === 0
+      ? eq(recommendations.targetUserId, userId)
+      : or(
+          eq(recommendations.targetUserId, userId),
+          and(
+            isNull(recommendations.targetUserId),
+            inArray(recommendations.fromUserId, followedIds),
+          ),
+        );
 
     const row = await db
       .select({ count: count() })
@@ -181,7 +237,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
       )
       .where(
         and(
-          inArray(recommendations.fromUserId, followedIds),
+          visibilityCondition,
           sql`${recommendationReads.readAt} IS NULL`,
         ),
       )

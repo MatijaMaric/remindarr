@@ -396,12 +396,14 @@ export const recommendations = sqliteTable(
     id: text("id").primaryKey(),
     fromUserId: text("from_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    targetUserId: text("target_user_id").references(() => users.id, { onDelete: "cascade" }),
     message: text("message"),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
   (table) => [
-    uniqueIndex("idx_recommendations_from_title").on(table.fromUserId, table.titleId),
+    index("idx_recommendations_from_title").on(table.fromUserId, table.titleId),
     index("idx_recommendations_from_user").on(table.fromUserId),
+    index("idx_recommendations_target_user").on(table.targetUserId),
   ]
 );
 
