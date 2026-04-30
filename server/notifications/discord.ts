@@ -5,6 +5,14 @@ import { formatProviderNames, groupEpisodesByShow } from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
 
+interface DiscordEmbed {
+  title?: string;
+  description?: string;
+  color?: number;
+  thumbnail?: { url: string };
+  footer?: { text: string };
+}
+
 const DISCORD_WEBHOOK_PATTERN =
   /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/.+$/;
 
@@ -55,7 +63,7 @@ export class DiscordProvider implements NotificationProvider {
   }
 
   private buildEmbeds(content: NotificationContent) {
-    const embeds: any[] = [];
+    const embeds: DiscordEmbed[] = [];
     const { episodes, movies, date, streamingAlerts = [] } = content;
 
     if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return [];
@@ -101,7 +109,7 @@ export class DiscordProvider implements NotificationProvider {
 
       const providers = formatProviderNames(eps[0].offers);
 
-      const embed: any = {
+      const embed: DiscordEmbed = {
         title: showTitle,
         description: episodeLines.join("\n"),
         color: EMBED_COLOR,
@@ -123,7 +131,7 @@ export class DiscordProvider implements NotificationProvider {
     // Movie embeds
     for (const movie of movies) {
       const providers = formatProviderNames(movie.offers);
-      const embed: any = {
+      const embed: DiscordEmbed = {
         title: movie.title,
         description: movie.releaseYear
           ? `Movie (${movie.releaseYear})`
@@ -149,7 +157,7 @@ export class DiscordProvider implements NotificationProvider {
       const description = alert.kind === "departure"
         ? formatLeavingCopy(alert.providerName, alert.leavingAt)
         : `Now available on **${alert.providerName}**`;
-      const embed: any = {
+      const embed: DiscordEmbed = {
         title: `🎬 ${alert.title}`,
         description,
         color: EMBED_COLOR,
