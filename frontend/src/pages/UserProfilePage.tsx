@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type { PinnedTitle } from "../types";
+import { useAuth } from "../context/AuthContext";
 import ProfileHero from "../components/profile/ProfileHero";
 import BioCard from "../components/profile/BioCard";
 import PinnedFavoritesCard from "../components/PinnedFavoritesCard";
@@ -24,6 +25,7 @@ import { useApiCall } from "../hooks/useApiCall";
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { t } = useTranslation();
+  const { user: currentUser } = useAuth();
   const { data, loading, error, refetch } = useApiCall(
     (signal) => api.getUserProfile(username!, signal),
     [username],
@@ -88,6 +90,8 @@ export default function UserProfilePage() {
   const displayedFollowerCount = follower_count + followerAdjust;
   const activeList = lists[activeTab];
 
+  const showWatchTogether = !!currentUser && !is_own_profile;
+
   return (
     <div className="space-y-8">
       <ProfileHero
@@ -104,6 +108,14 @@ export default function UserProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10">
           {/* Sidebar */}
           <aside className="flex flex-col gap-4 min-w-0">
+            {showWatchTogether && (
+              <Link
+                to={`/u/${currentUser.username}/overlap/${user.username}`}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-colors"
+              >
+                {t("userProfile.watchTogether", "Watch together")}
+              </Link>
+            )}
             <BioCard
               bio={bio}
               isOwnProfile={is_own_profile}
