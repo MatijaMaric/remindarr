@@ -1,4 +1,4 @@
-import { describe, it, expect, spyOn, beforeEach } from "bun:test";
+import { describe, it, expect, spyOn, beforeEach, afterEach } from "bun:test";
 
 // Mock Sentry before any other imports that might trigger it
 import Sentry from "../sentry";
@@ -20,6 +20,10 @@ describe("getServers()", () => {
 
   beforeEach(() => {
     fetchSpy = spyOn(http, "httpFetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
   });
 
   it("returns only resources whose provides field includes 'server'", async () => {
