@@ -185,3 +185,114 @@ describe("POST /feed/token/regenerate", () => {
     expect(feedRes2.status).toBe(200);
   });
 });
+
+describe("GET /feed/episodes.ics", () => {
+  it("returns 401 when token is missing", async () => {
+    const res = await app.request("/feed/episodes.ics");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 for invalid token", async () => {
+    const res = await app.request("/feed/episodes.ics?token=not-a-real-token");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns valid iCal with only episode UIDs", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = await tokenRes.json() as { token: string };
+
+    // Track a future movie (should NOT appear in episodes feed)
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    const releaseDate = futureDate.toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({
+      id: "movie-ep-test",
+      objectType: "MOVIE",
+      title: "Movie For Episode Test",
+      releaseDate,
+    })]);
+    await trackTitle("movie-ep-test", userId);
+
+    const feedRes = await app.request(`/feed/episodes.ics?token=${token}`);
+    expect(feedRes.status).toBe(200);
+    expect(feedRes.headers.get("Content-Type")).toContain("text/calendar");
+
+    const body = await feedRes.text();
+    expect(body).toContain("BEGIN:VCALENDAR");
+    expect(body).toContain("END:VCALENDAR");
+    expect(body).not.toContain("remindarr-movie-");
+  });
+});
+
+describe("GET /feed/releases.ics", () => {
+  it("returns 401 when token is missing", async () => {
+    const res = await app.request("/feed/releases.ics");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 for invalid token", async () => {
+    const res = await app.request("/feed/releases.ics?token=not-a-real-token");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns valid iCal with only movie UIDs", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = await tokenRes.json() as { token: string };
+
+    // Track a future movie
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    const releaseDate = futureDate.toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({
+      id: "movie-releases-test",
+      objectType: "MOVIE",
+      title: "Future Release Movie",
+      releaseDate,
+    })]);
+    await trackTitle("movie-releases-test", userId);
+
+    const feedRes = await app.request(`/feed/releases.ics?token=${token}`);
+    expect(feedRes.status).toBe(200);
+    expect(feedRes.headers.get("Content-Type")).toContain("text/calendar");
+
+    const body = await feedRes.text();
+    expect(body).toContain("BEGIN:VCALENDAR");
+    expect(body).toContain("END:VCALENDAR");
+    expect(body).toContain("remindarr-movie-movie-releases-test@remindarr");
+    expect(body).not.toContain("remindarr-episode-");
+  });
+});
+
+describe("GET /feed/streaming.ics", () => {
+  it("returns 401 when token is missing", async () => {
+    const res = await app.request("/feed/streaming.ics");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 for invalid token", async () => {
+    const res = await app.request("/feed/streaming.ics?token=not-a-real-token");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns a valid (possibly empty) VCALENDAR", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = await tokenRes.json() as { token: string };
+
+    const feedRes = await app.request(`/feed/streaming.ics?token=${token}`);
+    expect(feedRes.status).toBe(200);
+    expect(feedRes.headers.get("Content-Type")).toContain("text/calendar");
+
+    const body = await feedRes.text();
+    expect(body).toContain("BEGIN:VCALENDAR");
+    expect(body).toContain("END:VCALENDAR");
+  });
+});

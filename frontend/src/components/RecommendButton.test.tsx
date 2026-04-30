@@ -121,7 +121,7 @@ describe("RecommendButton", () => {
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", "You should watch this!");
+      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", "You should watch this!", undefined);
     });
   });
 
@@ -141,7 +141,7 @@ describe("RecommendButton", () => {
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(sonner.toast.success).toHaveBeenCalledWith("Recommendation sent!");
+      expect(sonner.toast.success).toHaveBeenCalledWith("Recommendation sent to all followers!");
     });
   });
 
@@ -183,7 +183,7 @@ describe("RecommendButton", () => {
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", undefined);
+      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", undefined, undefined);
     });
   });
 

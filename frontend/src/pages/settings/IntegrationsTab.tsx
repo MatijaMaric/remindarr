@@ -388,12 +388,25 @@ function PlexSection() {
   );
 }
 
+type FeedFlavor = {
+  key: string;
+  labelKey: string;
+  path: string;
+};
+
+const FEED_FLAVORS: FeedFlavor[] = [
+  { key: "combined", labelKey: "feed.combined", path: "calendar.ics" },
+  { key: "episodes", labelKey: "feed.episodesOnly", path: "episodes.ics" },
+  { key: "releases", labelKey: "feed.releasesOnly", path: "releases.ics" },
+  { key: "streaming", labelKey: "feed.streamingAlerts", path: "streaming.ics" },
+];
+
 function CalendarFeedSection() {
   const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
   const [loadingToken, setLoadingToken] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -402,8 +415,6 @@ function CalendarFeedSection() {
       .catch(() => { if (!controller.signal.aborted) setLoadingToken(false); });
     return () => controller.abort();
   }, []);
-
-  const feedUrl = token ? `${window.location.origin}/api/feed/calendar.ics?token=${token}` : null;
 
   async function handleRegenerate() {
     setRegenerating(true);
@@ -415,11 +426,10 @@ function CalendarFeedSection() {
     }
   }
 
-  async function handleCopy() {
-    if (!feedUrl) return;
-    await navigator.clipboard.writeText(feedUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function handleCopy(key: string, url: string) {
+    await navigator.clipboard.writeText(url);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
   }
 
   return (
@@ -428,26 +438,36 @@ function CalendarFeedSection() {
         <p className="text-sm text-zinc-500">{t("common.loading")}</p>
       ) : token ? (
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <SInput
-              value={feedUrl!}
-              mono
-              readOnly
-              aria-label={t("feed.title")}
-            />
-            <div className="flex gap-2 shrink-0">
-              <SButton variant="ghost" small onClick={handleCopy}>
-                {copied ? t("feed.copied") : t("feed.copyUrl")}
-              </SButton>
-              <SButton
-                variant="ghost"
-                small
-                onClick={handleRegenerate}
-                disabled={regenerating}
-              >
-                {regenerating ? t("feed.regenerating") : t("feed.regenerate")}
-              </SButton>
-            </div>
+          {FEED_FLAVORS.map((flavor) => {
+            const url = `${window.location.origin}/api/feed/${flavor.path}?token=${token}`;
+            return (
+              <div key={flavor.key} className="space-y-1">
+                <div className="text-xs text-zinc-400 font-medium">{t(flavor.labelKey)}</div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <SInput
+                    value={url}
+                    mono
+                    readOnly
+                    aria-label={t(flavor.labelKey)}
+                  />
+                  <div className="flex gap-2 shrink-0">
+                    <SButton variant="ghost" small onClick={() => handleCopy(flavor.key, url)}>
+                      {copiedKey === flavor.key ? t("feed.copied") : t("feed.copyUrl")}
+                    </SButton>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex gap-2 pt-1">
+            <SButton
+              variant="ghost"
+              small
+              onClick={handleRegenerate}
+              disabled={regenerating}
+            >
+              {regenerating ? t("feed.regenerating") : t("feed.regenerate")}
+            </SButton>
           </div>
           <SHint kind="info">{t("feed.warning")}</SHint>
         </div>

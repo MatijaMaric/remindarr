@@ -37,6 +37,7 @@ import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
 import upNextRoutes from "./routes/up-next";
 import shareRoutes from "./routes/share";
+import overlapRoutes from "./routes/overlap";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -296,6 +297,11 @@ app.route("/api/stats", statsRoutes);
 app.use("/api/up-next/*", requireAuth);
 app.use("/api/up-next", requireAuth);
 app.route("/api/up-next", upNextRoutes);
+
+// Overlap / "what to watch together" (requires auth)
+app.use("/api/overlap/*", requireAuth);
+app.use("/api/overlap", requireAuth);
+app.route("/api/overlap", overlapRoutes);
 
 app.use("/api/user/settings/*", requireAuth);
 app.use("/api/user/settings", requireAuth);

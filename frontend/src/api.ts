@@ -28,6 +28,7 @@ import type {
   ActivitySettings,
   NotifierHistoryResponse,
   UserSettings,
+  OverlapResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -628,10 +629,10 @@ export async function getSeasonEpisodeRatings(titleId: string, season: number, s
 
 // ─── Recommendations ──────────────────────────────────────────────────────────
 
-export async function sendRecommendation(titleId: string, message?: string): Promise<{ id: string }> {
+export async function sendRecommendation(titleId: string, message?: string, targetUserId?: string): Promise<{ id: string }> {
   return fetchJson("/recommendations", {
     method: "POST",
-    body: JSON.stringify({ titleId, message }),
+    body: JSON.stringify({ titleId, message, targetUserId }),
   });
 }
 
@@ -799,6 +800,17 @@ export async function updateDepartureAlertSettings(settings: Partial<UserSetting
   return fetchJson("/user/settings/departure-alerts", {
     method: "PUT",
     body: JSON.stringify(settings),
+  });
+}
+
+export async function getCrowdedWeekSettings(signal?: AbortSignal): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
+  return fetchJson("/user/settings/crowded-weeks", { signal });
+}
+
+export async function updateCrowdedWeekSettings(data: { crowdedWeekThreshold?: number; crowdedWeekBadgeEnabled?: number }): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
+  return fetchJson("/user/settings/crowded-weeks", {
+    method: "PUT",
+    body: JSON.stringify(data),
   });
 }
 
@@ -1009,6 +1021,12 @@ export async function getUpNext(limit = 12, signal?: AbortSignal): Promise<{ ite
   const qs = new URLSearchParams();
   qs.set("limit", String(limit));
   return fetchJson(`/up-next?${qs}`, { signal });
+}
+
+// ─── Overlap / "Watch Together" ───────────────────────────────────────────────
+
+export async function getOverlap(friendUsername: string, signal?: AbortSignal): Promise<OverlapResponse> {
+  return fetchJson(`/overlap/${encodeURIComponent(friendUsername)}`, { signal });
 }
 
 export async function setTitleSnooze(

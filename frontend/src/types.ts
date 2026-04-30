@@ -132,6 +132,17 @@ export interface WatchHistoryEntry {
   note: string | null;
 }
 
+// ─── Video Types ─────────────────────────────────────────────────────────────
+
+export interface TmdbVideo {
+  key: string;
+  site: string;
+  type: string;
+  official: boolean;
+  size: number;
+  published_at: string;
+}
+
 // ─── Detail Types ────────────────────────────────────────────────────────────
 
 export interface CastMember {
@@ -241,6 +252,7 @@ export interface MovieDetailsResponse {
     release_dates: { results: ReleaseDatesResult[] };
     "watch/providers": { results: Record<string, WatchProviderCountry> };
     external_ids?: ExternalIds;
+    videos?: { results: TmdbVideo[] };
   } | null;
   country: string;
 }
@@ -276,6 +288,7 @@ export interface ShowDetailsResponse {
     content_ratings: { results: { iso_3166_1: string; rating: string }[] };
     "watch/providers": { results: Record<string, WatchProviderCountry> };
     external_ids?: ExternalIds;
+    videos?: { results: TmdbVideo[] };
   } | null;
   country: string;
 }
@@ -663,6 +676,8 @@ export interface Recommendation {
   message: string | null;
   created_at: string;
   read_at: string | null;
+  /** true when the recommendation was sent directly to the current user (not a broadcast) */
+  is_targeted?: boolean;
 }
 
 export interface SentRecommendation {
@@ -670,6 +685,8 @@ export interface SentRecommendation {
   title: { id: string; title: string; object_type: string; poster_url: string | null };
   message: string | null;
   created_at: string;
+  /** Present when sent to a specific user; null means broadcast to all followers */
+  target_user: { id: string; username: string; display_name: string | null } | null;
 }
 
 export interface RecommendationsResponse {
@@ -749,6 +766,33 @@ export function normalizeSearchTitle(t: SearchTitle): Title {
       provider_icon_url: o.providerIconUrl,
     })),
   };
+}
+
+// ─── Overlap / "Watch Together" Types ────────────────────────────────────────
+
+export interface OverlapTitle extends Omit<Title, "genres"> {
+  genres: string[];
+  viewer_rating: RatingValue | null;
+  friend_rating: RatingValue | null;
+}
+
+export interface OverlapFriendUser {
+  username: string;
+  displayName: string | null;
+  image: string | null;
+}
+
+export interface OverlapCounts {
+  intersection: number;
+  viewerOnly: number;
+  friendOnly: number;
+}
+
+export interface OverlapResponse {
+  titles: OverlapTitle[];
+  sharedProviders: Provider[];
+  counts: OverlapCounts;
+  friendUser: OverlapFriendUser;
 }
 
 export interface NotificationLogRow {

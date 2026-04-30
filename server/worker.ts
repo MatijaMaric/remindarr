@@ -73,6 +73,7 @@ import kioskRoutes from "./routes/kiosk";
 import shareRoutes from "./routes/share";
 import importRoutes from "./routes/import";
 import upNextRoutes from "./routes/up-next";
+import overlapRoutes from "./routes/overlap";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig, CONFIG } from "./config";
@@ -367,6 +368,11 @@ function createApp(env: Env) {
   app.use("/api/up-next/*", requireAuth);
   app.use("/api/up-next", requireAuth);
   app.route("/api/up-next", upNextRoutes);
+
+  // Overlap / "what to watch together" (requires auth)
+  app.use("/api/overlap/*", requireAuth);
+  app.use("/api/overlap", requireAuth);
+  app.route("/api/overlap", overlapRoutes);
 
   app.use("/api/user/settings/*", requireAuth);
   app.route("/api/user/settings", userSettingsRoutes);

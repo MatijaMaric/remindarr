@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import recommendationsApp from "./recommendations";
 import type { AppEnv } from "../types";
 
+
 function createMockAuth() {
   return {
     api: {
@@ -444,6 +445,194 @@ describe("validation", () => {
   it("rejects GET / with negative offset", async () => {
     const res = await app.request("/recommendations?offset=-1", {
       headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});
+
+describe("POST /recommendations — targeted", () => {
+  it("allows sending to a followed user", async () => {
+    // Alice follows Bob
+    await follow(userAId, userBId);
+
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", message: "Just for you!", targetUserId: userBId }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.id).toBeDefined();
+  });
+
+  it("returns 400 when targeting yourself", async () => {
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userAId }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("yourself");
+  });
+
+  it("returns 403 when targeting a non-followed user", async () => {
+    // Alice does not follow Carol
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userCId }),
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("follow");
+  });
+
+  it("allows same title targeted to different recipients", async () => {
+    await follow(userAId, userBId);
+    await follow(userAId, userCId);
+
+    const resB = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
+    });
+    expect(resB.status).toBe(201);
+
+    const resC = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userCId }),
+    });
+    expect(resC.status).toBe(201);
+  });
+
+  it("returns 409 for duplicate targeted recommendation to same recipient", async () => {
+    await follow(userAId, userBId);
+
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
+    });
+
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it("targeted rec appears in recipient feed even without following the sender", async () => {
+    // Alice follows Bob so she can target him; Bob does NOT follow Alice
+    await follow(userAId, userBId);
+
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", message: "Direct rec!", targetUserId: userBId }),
+    });
+
+    // Bob should see it in his feed despite not following Alice
+    const res = await app.request("/recommendations", {
+      headers: authHeaders(userBToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.recommendations).toHaveLength(1);
+    expect(body.recommendations[0].is_targeted).toBe(true);
+    expect(body.recommendations[0].message).toBe("Direct rec!");
+  });
+
+  it("targeted rec does NOT appear in a third-party's feed", async () => {
+    // Alice follows Bob so she can target him; Carol follows Alice
+    await follow(userAId, userBId);
+    await follow(userCId, userAId);
+
+    // Alice sends a targeted rec to Bob
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
+    });
+
+    // Carol follows Alice but should NOT see the targeted rec (it's for Bob)
+    const res = await app.request("/recommendations", {
+      headers: authHeaders(userCToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.recommendations).toHaveLength(0);
+  });
+
+  it("broadcast rec is visible to all followers, targeted rec is only visible to recipient", async () => {
+    // Carol follows Alice
+    await follow(userCId, userAId);
+    // Alice follows Bob so she can target him
+    await follow(userAId, userBId);
+
+    // Alice sends a broadcast
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123" }),
+    });
+
+    // Alice sends a targeted rec to Bob
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "show-456", targetUserId: userBId }),
+    });
+
+    // Carol (follower) sees the broadcast but not the targeted rec
+    const carolRes = await app.request("/recommendations", {
+      headers: authHeaders(userCToken),
+    });
+    const carolBody = await carolRes.json();
+    expect(carolBody.recommendations).toHaveLength(1);
+    expect(carolBody.recommendations[0].is_targeted).toBeFalsy();
+
+    // Bob sees the targeted rec but not the broadcast (Bob doesn't follow Alice)
+    const bobRes = await app.request("/recommendations", {
+      headers: authHeaders(userBToken),
+    });
+    const bobBody = await bobRes.json();
+    expect(bobBody.recommendations).toHaveLength(1);
+    expect(bobBody.recommendations[0].is_targeted).toBe(true);
+  });
+});
+
+describe("GET /recommendations — targeted visibility", () => {
+  it("shows targeted recs in recipient feed even without follow", async () => {
+    await follow(userAId, userBId); // Alice follows Bob so she can target him
+
+    await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
+    });
+
+    const res = await app.request("/recommendations", {
+      headers: authHeaders(userBToken),
+    });
+    const body = await res.json();
+    expect(body.recommendations).toHaveLength(1);
+    expect(body.count).toBe(1);
+  });
+});
+
+describe("validation — targetUserId", () => {
+  it("rejects POST / with targetUserId as a number (not string)", async () => {
+    const res = await app.request("/recommendations", {
+      method: "POST",
+      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleId: "movie-123", targetUserId: 123 }),
     });
     expect(res.status).toBe(400);
     const body = await res.json();

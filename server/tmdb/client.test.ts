@@ -160,7 +160,7 @@ describe("fetchMovieFullDetails", () => {
     await fetchMovieFullDetails("55");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/movie/55");
-    expect(url.searchParams.get("append_to_response")).toBe("credits,release_dates,watch/providers,external_ids");
+    expect(url.searchParams.get("append_to_response")).toBe("credits,release_dates,watch/providers,external_ids,videos");
   });
 });
 
@@ -172,7 +172,7 @@ describe("fetchShowFullDetails", () => {
     await fetchShowFullDetails("77");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/tv/77");
-    expect(url.searchParams.get("append_to_response")).toBe("credits,content_ratings,watch/providers,external_ids");
+    expect(url.searchParams.get("append_to_response")).toBe("credits,content_ratings,watch/providers,external_ids,videos");
   });
 });
 

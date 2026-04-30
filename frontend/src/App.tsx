@@ -39,6 +39,7 @@ const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
 const KioskPage = lazyWithRetry(() => import("./pages/KioskPage"));
 const SharedWatchlistPage = lazyWithRetry(() => import("./pages/SharedWatchlistPage"));
+const UserOverlapPage = lazyWithRetry(() => import("./pages/UserOverlapPage"));
 
 // Wraps a route element in an inline ErrorBoundary so a single page crash
 // shows a contained fallback instead of taking down the whole shell.
@@ -199,6 +200,7 @@ export default function App() {
             <Route path="/stats" element={<Navigate to="/tracked?view=stats" replace />} />
             <Route path="/admin/users" element={<RequireAuth><Page><AdminUsersPage /></Page></RequireAuth>} />
             <Route path="/user/:username" element={<Page><UserProfilePage /></Page>} />
+            <Route path="/u/:username/overlap/:friendUsername" element={<RequireAuth><Page><UserOverlapPage /></Page></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth><Page><SettingsPage /></Page></RequireAuth>} />
             <Route path="/profile" element={<Page><ProfilePage /></Page>} />
             <Route path="/title/:id" element={<Page><TitleDetailPage /></Page>} />
