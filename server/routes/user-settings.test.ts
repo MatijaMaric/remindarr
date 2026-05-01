@@ -387,6 +387,146 @@ describe("validation — departure alerts", () => {
   });
 });
 
+// ─── Appearance settings ─────────────────────────────────────────────────────
+
+describe("GET /user/settings/appearance", () => {
+  it("returns defaults for new user", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/appearance");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.themeVariant).toBe("dark");
+    expect(body.accentColor).toBe("amber");
+    expect(body.density).toBe("comfortable");
+    expect(body.reduceMotion).toBe(0);
+    expect(body.highContrast).toBe(0);
+    expect(body.hideEpisodeSpoilers).toBe(0);
+    expect(body.autoplayTrailers).toBe(0);
+  });
+});
+
+describe("PUT /user/settings/appearance", () => {
+  it("happy path: minimal body {} returns 200 with current settings", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/appearance", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.themeVariant).toBe("dark");
+  });
+
+  it("saves all appearance fields", async () => {
+    const app = makeAuthedApp();
+    const patch = {
+      themeVariant: "midnight",
+      accentColor: "cobalt",
+      density: "compact",
+      reduceMotion: 1,
+      highContrast: 1,
+      hideEpisodeSpoilers: 1,
+      autoplayTrailers: 1,
+    };
+    const res = await app.request("/user/settings/appearance", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify(patch),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.themeVariant).toBe("midnight");
+    expect(body.accentColor).toBe("cobalt");
+    expect(body.density).toBe("compact");
+    expect(body.reduceMotion).toBe(1);
+
+    const getRes = await app.request("/user/settings/appearance");
+    const getBody = await getRes.json();
+    expect(getBody.themeVariant).toBe("midnight");
+    expect(getBody.density).toBe("compact");
+  });
+
+  it("accepts partial update without changing other fields", async () => {
+    const app = makeAuthedApp();
+    await app.request("/user/settings/appearance", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ accentColor: "moss" }),
+    });
+    const res = await app.request("/user/settings/appearance");
+    const body = await res.json();
+    expect(body.accentColor).toBe("moss");
+    expect(body.themeVariant).toBe("dark");
+  });
+});
+
+describe("validation — appearance", () => {
+  it("returns 400 + issues for invalid themeVariant", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/appearance", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ themeVariant: "neon" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for invalid accentColor", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/appearance", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ accentColor: "hot-pink" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for invalid density", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/appearance", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ density: "mega" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for reduceMotion out of range", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/appearance", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ reduceMotion: 2 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("accepts all valid theme variants", async () => {
+    const app = makeAuthedApp();
+    for (const variant of ["dark", "light", "oled", "midnight", "moss", "plum", "auto"]) {
+      const res = await app.request("/user/settings/appearance", {
+        method: "PUT",
+        headers: jsonHeaders(),
+        body: JSON.stringify({ themeVariant: variant }),
+      });
+      expect(res.status).toBe(200);
+    }
+  });
+});
+
 describe("validation — crowded weeks", () => {
   it("returns 400 + issues for crowdedWeekThreshold = 0 (too low)", async () => {
     const app = makeAuthedApp();

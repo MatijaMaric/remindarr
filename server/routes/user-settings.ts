@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings, getCrowdedWeekSettings, updateCrowdedWeekSettings } from "../db/repository";
+import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings, getCrowdedWeekSettings, updateCrowdedWeekSettings, getAppearanceSettings, updateAppearanceSettings } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
@@ -171,6 +171,50 @@ app.put(
       crowdedWeekThreshold: settings?.crowdedWeekThreshold ?? 5,
       crowdedWeekBadgeEnabled: settings?.crowdedWeekBadgeEnabled ?? 1,
     });
+  },
+);
+
+// ─── Appearance settings ──────────────────────────────────────────────────────
+
+const THEME_VARIANTS = ["dark", "light", "oled", "midnight", "moss", "plum", "auto"] as const;
+const ACCENT_COLORS = ["amber", "ember", "plum", "cobalt", "moss", "sand"] as const;
+const DENSITIES = ["comfortable", "cozy", "compact"] as const;
+
+const updateAppearanceSchema = z.object({
+  themeVariant: z.enum(THEME_VARIANTS).optional(),
+  accentColor: z.enum(ACCENT_COLORS).optional(),
+  density: z.enum(DENSITIES).optional(),
+  reduceMotion: z.number().int().min(0).max(1).optional(),
+  highContrast: z.number().int().min(0).max(1).optional(),
+  hideEpisodeSpoilers: z.number().int().min(0).max(1).optional(),
+  autoplayTrailers: z.number().int().min(0).max(1).optional(),
+});
+
+const DEFAULT_APPEARANCE = {
+  themeVariant: "dark",
+  accentColor: "amber",
+  density: "comfortable",
+  reduceMotion: 0,
+  highContrast: 0,
+  hideEpisodeSpoilers: 0,
+  autoplayTrailers: 0,
+};
+
+app.get("/appearance", async (c) => {
+  const user = c.get("user")!;
+  const settings = await getAppearanceSettings(user.id);
+  return ok(c, settings ?? DEFAULT_APPEARANCE);
+});
+
+app.put(
+  "/appearance",
+  zValidator("json", updateAppearanceSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const body = c.req.valid("json");
+    await updateAppearanceSettings(user.id, body);
+    const settings = await getAppearanceSettings(user.id);
+    return ok(c, settings ?? DEFAULT_APPEARANCE);
   },
 );
 
