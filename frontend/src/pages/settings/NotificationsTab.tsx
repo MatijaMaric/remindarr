@@ -349,6 +349,8 @@ function NotificationsSection() {
   const [testing, setTesting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [historyKeys, setHistoryKeys] = useState<Record<string, number>>({});
+  const [previewing, setPreviewing] = useState<string | null>(null);
+  const [previewContent, setPreviewContent] = useState<Record<string, import("../../api").NotificationContent>>({});
 
   const [formProvider, setFormProvider] = useState("discord");
   const [formWebhookUrl, setFormWebhookUrl] = useState("");
@@ -362,6 +364,11 @@ function NotificationsSection() {
   const [formDigestMode, setFormDigestMode] = useState<"daily" | "weekly" | "off">("daily");
   const [formDigestDay, setFormDigestDay] = useState<number>(1);
   const [formStreamingAlerts, setFormStreamingAlerts] = useState(true);
+  const [formQuietStart, setFormQuietStart] = useState("");
+  const [formQuietEnd, setFormQuietEnd] = useState("");
+  const [formQuietDays, setFormQuietDays] = useState<number[]>([]);
+  const [formLeavingSoon, setFormLeavingSoon] = useState(true);
+  const [formFriendActivity, setFormFriendActivity] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback((signal?: AbortSignal) => {
@@ -394,6 +401,11 @@ function NotificationsSection() {
     setFormDigestMode("daily");
     setFormDigestDay(1);
     setFormStreamingAlerts(true);
+    setFormQuietStart("");
+    setFormQuietEnd("");
+    setFormQuietDays([]);
+    setFormLeavingSoon(true);
+    setFormFriendActivity(false);
     setShowForm(false);
     setEditingId(null);
   }
@@ -412,6 +424,11 @@ function NotificationsSection() {
     setFormDigestMode(n.digest_mode === "weekly" ? "weekly" : n.digest_mode === "off" ? "off" : "daily");
     setFormDigestDay(n.digest_day ?? 1);
     setFormStreamingAlerts(n.streaming_alerts_enabled !== false);
+    setFormQuietStart(n.quiet_hours_start ?? "");
+    setFormQuietEnd(n.quiet_hours_end ?? "");
+    setFormQuietDays(n.quiet_hours_days ? n.quiet_hours_days.split(",").map(Number).filter((d) => d >= 0 && d <= 6) : []);
+    setFormLeavingSoon(n.leaving_soon_alerts_enabled !== false);
+    setFormFriendActivity(n.friend_activity_alerts_enabled === true);
     setShowForm(true);
     setMsg("");
     setErr("");
@@ -444,6 +461,13 @@ function NotificationsSection() {
     const digestDayValue = formDigestMode === "weekly" ? formDigestDay : null;
 
     try {
+      const quietFields = {
+        quiet_hours_start: formQuietStart || null,
+        quiet_hours_end: formQuietEnd || null,
+        quiet_hours_days: formQuietDays.length > 0 ? formQuietDays : undefined,
+        leaving_soon_alerts_enabled: formLeavingSoon,
+        friend_activity_alerts_enabled: formFriendActivity,
+      };
       if (editingId) {
         await api.updateNotifier(editingId, {
           config,
@@ -452,6 +476,7 @@ function NotificationsSection() {
           digest_mode: digestModeValue,
           digest_day: digestDayValue,
           streaming_alerts_enabled: formStreamingAlerts,
+          ...quietFields,
         });
         setMsg("Notifier updated");
       } else {
@@ -463,6 +488,7 @@ function NotificationsSection() {
           digest_mode: digestModeValue,
           digest_day: digestDayValue,
           streaming_alerts_enabled: formStreamingAlerts,
+          ...quietFields,
         });
         setMsg("Notifier created");
       }
@@ -503,6 +529,20 @@ function NotificationsSection() {
     } finally {
       setTesting(null);
       setHistoryKeys((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    }
+  }
+
+  async function handlePreview(id: string) {
+    setMsg("");
+    setErr("");
+    setPreviewing(id);
+    try {
+      const content = await api.previewNotifier(id);
+      setPreviewContent((prev) => ({ ...prev, [id]: content }));
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPreviewing(null);
     }
   }
 
@@ -599,6 +639,9 @@ function NotificationsSection() {
                     <SButton small onClick={() => handleTest(n.id)} disabled={testing === n.id}>
                       {testing === n.id ? "Sending..." : "Test"}
                     </SButton>
+                    <SButton variant="ghost" small onClick={() => handlePreview(n.id)} disabled={previewing === n.id}>
+                      {previewing === n.id ? "Loading..." : "Preview"}
+                    </SButton>
                     <SButton variant="ghost" small onClick={() => startEdit(n)}>
                       Edit
                     </SButton>
@@ -612,6 +655,19 @@ function NotificationsSection() {
                   <SKeyValue k="Frequency" v={describeDigest(n)} />
                   <SKeyValue k="Last sent" v={n.last_sent_date ?? "—"} />
                 </div>
+                {previewContent[n.id] && (
+                  <div className="mt-3 pt-3 border-t border-white/[0.04]">
+                    <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-2">Content Preview · {previewContent[n.id].date}</div>
+                    <pre className="text-[11px] text-zinc-300 font-mono whitespace-pre-wrap overflow-auto max-h-48 bg-zinc-900 rounded-lg p-3 leading-relaxed">{JSON.stringify(previewContent[n.id], null, 2)}</pre>
+                    <button
+                      type="button"
+                      className="mt-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 font-mono transition-colors"
+                      onClick={() => setPreviewContent((prev) => { const next = { ...prev }; delete next[n.id]; return next; })}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
                 <NotifierDeliveryHistory notifierId={n.id} refreshKey={historyKeys[n.id] ?? 0} />
               </div>
             );
@@ -808,12 +864,57 @@ function NotificationsSection() {
               </SFormRow>
             )}
 
+            <SDivider label="Quiet hours" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-2">
+              <SFormRow label="Start (do not send after)" hint={<span>optional</span>}>
+                <SInput type="time" value={formQuietStart} onChange={setFormQuietStart} mono />
+              </SFormRow>
+              <SFormRow label="End (resume sending at)" hint={<span>optional</span>}>
+                <SInput type="time" value={formQuietEnd} onChange={setFormQuietEnd} mono />
+              </SFormRow>
+            </div>
+            <div className="mb-1">
+              <SLabel>Days active</SLabel>
+              <div className="text-[11px] text-zinc-500 mb-2">Leave all unchecked to apply every day</div>
+              <div className="flex gap-1.5 flex-wrap">
+                {(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const).map((day, idx) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setFormQuietDays((prev) =>
+                      prev.includes(idx) ? prev.filter((d) => d !== idx) : [...prev, idx]
+                    )}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md text-[12px] font-semibold transition-colors cursor-pointer",
+                      formQuietDays.includes(idx)
+                        ? "bg-amber-400 text-black"
+                        : "bg-zinc-800 text-zinc-300 border border-white/[0.08] hover:bg-white/[0.1]",
+                    )}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <SDivider label="Triggers" />
             <SSwitch
               label="Streaming availability alerts"
               sub="Fires when a tracked title lands on a provider you have"
               on={formStreamingAlerts}
               onChange={setFormStreamingAlerts}
+            />
+            <SSwitch
+              label="Leaving soon alerts"
+              sub="Fires when a tracked title is departing a streaming provider"
+              on={formLeavingSoon}
+              onChange={setFormLeavingSoon}
+            />
+            <SSwitch
+              label="Friend activity alerts"
+              sub="Fires when someone you follow rates a title 4★ or higher"
+              on={formFriendActivity}
+              onChange={setFormFriendActivity}
             />
 
             <div className="flex gap-2 mt-5 flex-wrap">

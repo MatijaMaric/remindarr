@@ -42,6 +42,11 @@ export default function ProfileHero({
   const { t } = useTranslation();
   const displayName = user.display_name || user.username;
 
+  function countryFlag(code: string): string {
+    const offset = 0x1F1E6 - 65;
+    return Array.from(code.toUpperCase()).map((c) => String.fromCodePoint(c.charCodeAt(0) + offset)).join("");
+  }
+
   async function handleShare() {
     const shareUrl = window.location.href;
     const payload = {
@@ -159,8 +164,13 @@ export default function ProfileHero({
               >
                 {displayName}
               </h1>
-              <div className="mt-2 font-mono text-[13px] text-zinc-300">
+              <div className="mt-2 font-mono text-[13px] text-zinc-300 flex items-center gap-2">
                 @{user.username}
+                {user.country_code && (
+                  <span title={user.country_code} aria-label={user.country_code}>
+                    {countryFlag(user.country_code)}
+                  </span>
+                )}
               </div>
             </div>
           </div>

@@ -11,7 +11,16 @@
 export function getCurrentTimeInTimezone(
   tz: string,
   now: Date = new Date(),
-): { time: string; date: string } {
+): { time: string; date: string; dayOfWeek: number } {
+  function dayOfWeekInTz(timezone: string): number {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      weekday: "short",
+    }).formatToParts(now);
+    const weekday = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
+    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
+  }
+
   try {
     const timeFormatter = new Intl.DateTimeFormat("en-GB", {
       timeZone: tz,
@@ -28,6 +37,7 @@ export function getCurrentTimeInTimezone(
     return {
       time: timeFormatter.format(now),
       date: dateFormatter.format(now),
+      dayOfWeek: dayOfWeekInTz(tz),
     };
   } catch {
     const timeFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -45,6 +55,7 @@ export function getCurrentTimeInTimezone(
     return {
       time: timeFormatter.format(now),
       date: dateFormatter.format(now),
+      dayOfWeek: dayOfWeekInTz("UTC"),
     };
   }
 }

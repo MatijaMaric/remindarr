@@ -84,6 +84,8 @@ export {
   getActivityKindVisibilityMap,
   setActivitySettings,
   getActivitySettings,
+  getMyProfile,
+  updateMyProfile,
 } from "./profile";
 export type { ProfileVisibility } from "./profile";
 
@@ -121,6 +123,8 @@ export {
   updateUserDepartureSettings,
   getCrowdedWeekSettings,
   updateCrowdedWeekSettings,
+  getAppearanceSettings,
+  updateAppearanceSettings,
 } from "./users";
 
 export {

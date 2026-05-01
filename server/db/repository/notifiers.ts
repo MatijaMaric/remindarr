@@ -15,7 +15,14 @@ export async function createNotifier(
   timezone: string,
   digestMode?: string | null,
   digestDay?: number | null,
-  streamingAlertsEnabled = true
+  streamingAlertsEnabled = true,
+  opts?: {
+    quietHoursStart?: string | null;
+    quietHoursEnd?: string | null;
+    quietHoursDays?: string;
+    leavingSoonAlertsEnabled?: boolean;
+    friendActivityAlertsEnabled?: boolean;
+  }
 ): Promise<string> {
   return traceDbQuery("createNotifier", async () => {
     const db = getDb();
@@ -32,6 +39,11 @@ export async function createNotifier(
         digestMode: digestMode ?? null,
         digestDay: digestDay ?? null,
         streamingAlertsEnabled: streamingAlertsEnabled ? 1 : 0,
+        quietHoursStart: opts?.quietHoursStart ?? null,
+        quietHoursEnd: opts?.quietHoursEnd ?? null,
+        quietHoursDays: opts?.quietHoursDays ?? "",
+        leavingSoonAlertsEnabled: (opts?.leavingSoonAlertsEnabled ?? true) ? 1 : 0,
+        friendActivityAlertsEnabled: (opts?.friendActivityAlertsEnabled ?? false) ? 1 : 0,
       })
       .run();
     return id;
@@ -50,11 +62,16 @@ export async function updateNotifier(
     digestMode?: string | null;
     digestDay?: number | null;
     streamingAlertsEnabled?: boolean;
+    quietHoursStart?: string | null;
+    quietHoursEnd?: string | null;
+    quietHoursDays?: string;
+    leavingSoonAlertsEnabled?: boolean;
+    friendActivityAlertsEnabled?: boolean;
   }
 ) {
   return traceDbQuery("updateNotifier", async () => {
     const db = getDb();
-    const set: Record<string, any> = { updatedAt: sql`datetime('now')` };
+    const set: Record<string, unknown> = { updatedAt: sql`datetime('now')` };
     if (updates.name !== undefined) set.name = updates.name;
     if (updates.config !== undefined) set.config = JSON.stringify(updates.config);
     if (updates.notifyTime !== undefined) set.notifyTime = updates.notifyTime;
@@ -63,6 +80,11 @@ export async function updateNotifier(
     if ("digestMode" in updates) set.digestMode = updates.digestMode ?? null;
     if ("digestDay" in updates) set.digestDay = updates.digestDay ?? null;
     if (updates.streamingAlertsEnabled !== undefined) set.streamingAlertsEnabled = updates.streamingAlertsEnabled ? 1 : 0;
+    if ("quietHoursStart" in updates) set.quietHoursStart = updates.quietHoursStart ?? null;
+    if ("quietHoursEnd" in updates) set.quietHoursEnd = updates.quietHoursEnd ?? null;
+    if (updates.quietHoursDays !== undefined) set.quietHoursDays = updates.quietHoursDays;
+    if (updates.leavingSoonAlertsEnabled !== undefined) set.leavingSoonAlertsEnabled = updates.leavingSoonAlertsEnabled ? 1 : 0;
+    if (updates.friendActivityAlertsEnabled !== undefined) set.friendActivityAlertsEnabled = updates.friendActivityAlertsEnabled ? 1 : 0;
 
     await db.update(notifiers)
       .set(set)
@@ -97,6 +119,11 @@ export async function getNotifiersByUser(userId: string) {
         digest_mode: notifiers.digestMode,
         digest_day: notifiers.digestDay,
         streaming_alerts_enabled: notifiers.streamingAlertsEnabled,
+        quiet_hours_start: notifiers.quietHoursStart,
+        quiet_hours_end: notifiers.quietHoursEnd,
+        quiet_hours_days: notifiers.quietHoursDays,
+        leaving_soon_alerts_enabled: notifiers.leavingSoonAlertsEnabled,
+        friend_activity_alerts_enabled: notifiers.friendActivityAlertsEnabled,
         created_at: notifiers.createdAt,
         updated_at: notifiers.updatedAt,
       })
@@ -118,6 +145,8 @@ export async function getNotifiersByUser(userId: string) {
         config,
         enabled: Boolean(row.enabled),
         streaming_alerts_enabled: Boolean(row.streaming_alerts_enabled),
+        leaving_soon_alerts_enabled: Boolean(row.leaving_soon_alerts_enabled),
+        friend_activity_alerts_enabled: Boolean(row.friend_activity_alerts_enabled),
       };
     });
   });
@@ -140,6 +169,11 @@ export async function getNotifierById(id: string, userId: string) {
         digest_mode: notifiers.digestMode,
         digest_day: notifiers.digestDay,
         streaming_alerts_enabled: notifiers.streamingAlertsEnabled,
+        quiet_hours_start: notifiers.quietHoursStart,
+        quiet_hours_end: notifiers.quietHoursEnd,
+        quiet_hours_days: notifiers.quietHoursDays,
+        leaving_soon_alerts_enabled: notifiers.leavingSoonAlertsEnabled,
+        friend_activity_alerts_enabled: notifiers.friendActivityAlertsEnabled,
         created_at: notifiers.createdAt,
         updated_at: notifiers.updatedAt,
       })
@@ -160,12 +194,31 @@ export async function getNotifierById(id: string, userId: string) {
       config,
       enabled: Boolean(row.enabled),
       streaming_alerts_enabled: Boolean(row.streaming_alerts_enabled),
+      leaving_soon_alerts_enabled: Boolean(row.leaving_soon_alerts_enabled),
+      friend_activity_alerts_enabled: Boolean(row.friend_activity_alerts_enabled),
     };
   });
 }
 
+/** Returns true if the current time (HH:MM) falls within the quiet window. */
+function isInQuietWindow(currentTime: string, start: string, end: string): boolean {
+  if (start === end) return false;
+  if (start < end) {
+    return currentTime >= start && currentTime < end;
+  }
+  // Wraps midnight: quiet from e.g. 23:00 to 08:00
+  return currentTime >= start || currentTime < end;
+}
+
+/** Parses a CSV day string ("0,1,6") into a Set of day numbers. Empty string → all days. */
+function parseQuietDays(csv: string): Set<number> | null {
+  if (!csv) return null;
+  const nums = csv.split(",").map(Number).filter((n) => n >= 0 && n <= 6);
+  return nums.length > 0 ? new Set(nums) : null;
+}
+
 export async function getDueNotifiers(
-  timesByTimezone: Map<string, { time: string; date: string }>
+  timesByTimezone: Map<string, { time: string; date: string; dayOfWeek: number }>
 ) {
   return traceDbQuery("getDueNotifiers", async () => {
     const db = getDb();
@@ -184,18 +237,35 @@ export async function getDueNotifiers(
         digest_mode: notifiers.digestMode,
         digest_day: notifiers.digestDay,
         streaming_alerts_enabled: notifiers.streamingAlertsEnabled,
+        quiet_hours_start: notifiers.quietHoursStart,
+        quiet_hours_end: notifiers.quietHoursEnd,
+        quiet_hours_days: notifiers.quietHoursDays,
+        leaving_soon_alerts_enabled: notifiers.leavingSoonAlertsEnabled,
+        friend_activity_alerts_enabled: notifiers.friendActivityAlertsEnabled,
       })
       .from(notifiers)
       .where(eq(notifiers.enabled, 1))
       .all();
 
     // Filter in JS: match notify_time to current time in their timezone,
-    // and ensure we haven't already sent today
+    // ensure we haven't already sent today, and respect quiet hours
     return allEnabled
       .filter((n) => {
         const tzInfo = timesByTimezone.get(n.timezone);
         if (!tzInfo) return false;
-        return n.notify_time === tzInfo.time && n.last_sent_date !== tzInfo.date;
+        if (n.notify_time !== tzInfo.time) return false;
+        if (n.last_sent_date === tzInfo.date) return false;
+
+        // Quiet hours: skip if configured and current time is within the window
+        if (n.quiet_hours_start && n.quiet_hours_end) {
+          const days = parseQuietDays(n.quiet_hours_days ?? "");
+          const dayMatches = days === null || days.has(tzInfo.dayOfWeek);
+          if (dayMatches && isInQuietWindow(tzInfo.time, n.quiet_hours_start, n.quiet_hours_end)) {
+            return false;
+          }
+        }
+
+        return true;
       })
       .map((n) => {
         let config: Record<string, string>;
@@ -209,6 +279,9 @@ export async function getDueNotifiers(
           ...n,
           config,
           todayDate: timesByTimezone.get(n.timezone)!.date,
+          streaming_alerts_enabled: Boolean(n.streaming_alerts_enabled),
+          leaving_soon_alerts_enabled: Boolean(n.leaving_soon_alerts_enabled),
+          friend_activity_alerts_enabled: Boolean(n.friend_activity_alerts_enabled),
         };
       });
   });

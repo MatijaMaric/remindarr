@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
-import type { HomepageSection } from "../../types";
+import type { HomepageSection, AppearanceSettings, AccentColor, Density } from "../../types";
 import { DEFAULT_HOMEPAGE_LAYOUT } from "../../types";
 import { GripVertical, Eye, EyeOff } from "lucide-react";
 import ThemePicker from "../../components/ThemePicker";
-import { SCard } from "../../components/settings/kit";
+import AccentPicker from "../../components/AccentPicker";
+import DensityPicker from "../../components/DensityPicker";
+import { SCard, SSwitch } from "../../components/settings/kit";
+import { useTheme } from "../../hooks/useTheme";
+import { applyAppearance } from "../../hooks/useAppearance";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_CROWDED_WEEK_THRESHOLD = 5;
@@ -20,16 +24,125 @@ const SECTION_LABELS: Record<string, string> = {
   friends_loved: "settings.homepage.sections.friends_loved",
 };
 
+const DEFAULT_APPEARANCE: AppearanceSettings = {
+  themeVariant: "dark",
+  accentColor: "amber",
+  density: "comfortable",
+  reduceMotion: 0,
+  highContrast: 0,
+  hideEpisodeSpoilers: 0,
+  autoplayTrailers: 0,
+};
+
 function ThemeSection() {
   const { t } = useTranslation();
 
   return (
     <SCard
       title={t("settings.theme.title")}
-      subtitle="Applies to the whole app."
+      subtitle={t("settings.theme.subtitle")}
     >
       <ThemePicker />
     </SCard>
+  );
+}
+
+function AppearanceSection() {
+  const { t } = useTranslation();
+  const { setTheme } = useTheme();
+  const [settings, setSettings] = useState<AppearanceSettings>(DEFAULT_APPEARANCE);
+  const [saved, setSaved] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    api.getAppearanceSettings(controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setSettings(data);
+          applyAppearance(data);
+          if (data.themeVariant) setTheme(data.themeVariant as Parameters<typeof setTheme>[0]);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [setTheme]);
+
+  async function save(patch: Partial<AppearanceSettings>) {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    applyAppearance(next);
+    try {
+      const saved = await api.updateAppearanceSettings(patch);
+      setSettings(saved);
+      applyAppearance(saved);
+      setSaved(true);
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  function handleAccentChange(accent: AccentColor) {
+    save({ accentColor: accent });
+  }
+
+  function handleDensityChange(density: Density) {
+    save({ density });
+  }
+
+  return (
+    <>
+      <SCard
+        title={t("settings.accent.title")}
+        subtitle={t("settings.accent.subtitle")}
+      >
+        <AccentPicker value={settings.accentColor} onChange={handleAccentChange} />
+        <div className="mt-3 min-h-[18px] font-mono text-[11px]">
+          {saved && <span className="text-emerald-400">{t("settings.saved")}</span>}
+        </div>
+      </SCard>
+
+      <SCard
+        title={t("settings.density.title")}
+        subtitle={t("settings.density.subtitle")}
+      >
+        <DensityPicker value={settings.density} onChange={handleDensityChange} />
+      </SCard>
+
+      <SCard
+        title={t("settings.displayPrefs.title")}
+        subtitle={t("settings.displayPrefs.subtitle")}
+      >
+        <div className="flex flex-col gap-4">
+          <SSwitch
+            label={t("settings.displayPrefs.reduceMotion")}
+            sub={t("settings.displayPrefs.reduceMotionDesc")}
+            on={settings.reduceMotion === 1}
+            onChange={(v) => save({ reduceMotion: v ? 1 : 0 })}
+          />
+          <SSwitch
+            label={t("settings.displayPrefs.highContrast")}
+            sub={t("settings.displayPrefs.highContrastDesc")}
+            on={settings.highContrast === 1}
+            onChange={(v) => save({ highContrast: v ? 1 : 0 })}
+          />
+          <SSwitch
+            label={t("settings.displayPrefs.hideSpoilers")}
+            sub={t("settings.displayPrefs.hideSpoilersDesc")}
+            on={settings.hideEpisodeSpoilers === 1}
+            onChange={(v) => save({ hideEpisodeSpoilers: v ? 1 : 0 })}
+          />
+          <SSwitch
+            label={t("settings.displayPrefs.autoplayTrailers")}
+            sub={t("settings.displayPrefs.autoplayTrailersDesc")}
+            on={settings.autoplayTrailers === 1}
+            onChange={(v) => save({ autoplayTrailers: v ? 1 : 0 })}
+          />
+        </div>
+      </SCard>
+    </>
   );
 }
 
@@ -251,6 +364,7 @@ export default function AppearanceTab() {
   return (
     <>
       <ThemeSection />
+      <AppearanceSection />
       <HomepageLayoutSection />
       <CrowdedWeekSection />
     </>

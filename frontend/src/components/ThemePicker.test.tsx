@@ -9,7 +9,7 @@ afterEach(() => {
 });
 
 describe("ThemePicker", () => {
-  it("renders 3 theme buttons", () => {
+  it("renders all 7 theme buttons", () => {
     const spy = spyOn(useThemeModule, "useTheme").mockReturnValue({
       theme: "dark",
       setTheme: mock(() => {}),
@@ -19,7 +19,11 @@ describe("ThemePicker", () => {
 
     expect(screen.getByRole("button", { name: "Dark" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Light" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "OLED Black" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "OLED" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Midnight" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Moss" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Plum" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Auto" })).toBeDefined();
 
     spy.mockRestore();
   });
@@ -57,7 +61,7 @@ describe("ThemePicker", () => {
     spy.mockRestore();
   });
 
-  it("clicking OLED Black calls setTheme with 'oled'", () => {
+  it("clicking OLED calls setTheme with 'oled'", () => {
     const setTheme = mock(() => {});
     const spy = spyOn(useThemeModule, "useTheme").mockReturnValue({
       theme: "dark",
@@ -65,7 +69,7 @@ describe("ThemePicker", () => {
     });
 
     render(<ThemePicker />);
-    fireEvent.click(screen.getByRole("button", { name: "OLED Black" }));
+    fireEvent.click(screen.getByRole("button", { name: "OLED" }));
     expect(setTheme).toHaveBeenCalledWith("oled");
 
     spy.mockRestore();
@@ -106,9 +110,37 @@ describe("ThemePicker", () => {
     });
 
     render(<ThemePicker />);
-    const activeButton = screen.getByRole("button", { name: "OLED Black" });
+    const activeButton = screen.getByRole("button", { name: "OLED" });
     expect(activeButton.getAttribute("aria-pressed")).toBe("true");
     expect(activeButton.className).toContain("amber-400");
+
+    spy.mockRestore();
+  });
+
+  it("clicking Midnight calls setTheme with 'midnight'", () => {
+    const setTheme = mock(() => {});
+    const spy = spyOn(useThemeModule, "useTheme").mockReturnValue({
+      theme: "dark",
+      setTheme,
+    });
+
+    render(<ThemePicker />);
+    fireEvent.click(screen.getByRole("button", { name: "Midnight" }));
+    expect(setTheme).toHaveBeenCalledWith("midnight");
+
+    spy.mockRestore();
+  });
+
+  it("clicking Auto calls setTheme with 'auto'", () => {
+    const setTheme = mock(() => {});
+    const spy = spyOn(useThemeModule, "useTheme").mockReturnValue({
+      theme: "dark",
+      setTheme,
+    });
+
+    render(<ThemePicker />);
+    fireEvent.click(screen.getByRole("button", { name: "Auto" }));
+    expect(setTheme).toHaveBeenCalledWith("auto");
 
     spy.mockRestore();
   });
