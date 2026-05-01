@@ -299,7 +299,6 @@
     "hideWatched": "Hide watched",
     "showWatched": "Show watched",
     "gridView": "Grid view",
-    "weekView": "Week view",
     "agendaView": "Agenda view",
     "close": "Close",
     "goToDay": "Go to {{date}}",

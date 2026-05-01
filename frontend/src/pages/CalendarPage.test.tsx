@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
-import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
@@ -168,43 +168,6 @@ describe("CalendarPage", () => {
     const toggle = screen.getByRole("button", { name: /hide watched/i });
     expect(toggle).toBeDefined();
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
-  });
-
-  it("renders week view toggle button on desktop", () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-    expect(screen.getByTitle("Week view")).toBeDefined();
-  });
-
-  it("switches to week view when week toggle is clicked", async () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-
-    // Verify we're in grid mode
-    expect(screen.getByText("Mon")).toBeDefined();
-
-    // Click week view toggle
-    fireEvent.click(screen.getByTitle("Week view"));
-
-    // Week view renders 7 day-column headers (date numbers in header row)
-    const weekDayNumbers = await waitFor(() => screen.getAllByTestId("week-day-number"));
-    expect(weekDayNumbers.length).toBe(7);
-  });
-
-  it("week view renders 7 day columns", async () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-    fireEvent.click(screen.getByTitle("Week view"));
-
-    const columns = await waitFor(() => screen.getAllByTestId("week-day-column"));
-    expect(columns.length).toBe(7);
-  });
-
-  it("?view=week param activates week view", async () => {
-    render(
-      <MemoryRouter initialEntries={["/?view=week"]}>
-        <CalendarPage />
-      </MemoryRouter>
-    );
-    const columns = await waitFor(() => screen.getAllByTestId("week-day-column"));
-    expect(columns.length).toBe(7);
   });
 
   it("renders density toggle buttons on desktop", () => {

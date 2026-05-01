@@ -6,7 +6,6 @@ import {
   CalendarIcon,
   LayoutGridIcon,
   ListIcon,
-  CalendarDaysIcon,
   EyeIcon,
   EyeOffIcon,
   AlignJustifyIcon,
@@ -41,7 +40,7 @@ export const typeFilters = [
   { label: "Shows", value: "SHOW" },
 ] as const;
 
-export type ViewMode = "grid" | "agenda" | "week";
+export type ViewMode = "grid" | "agenda";
 
 export type DensityMode = "compact" | "comfortable" | "spacious";
 
@@ -155,19 +154,6 @@ export function ViewToggle({
         title="Grid view"
       >
         <LayoutGridIcon className="size-4" />
-      </button>
-      <button
-        onClick={() => onViewModeChange("week")}
-        aria-label={t("calendar.weekView")}
-        aria-pressed={viewMode === "week"}
-        className={`p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
-          viewMode === "week"
-            ? "bg-amber-500 text-zinc-950"
-            : "text-zinc-400 hover:text-white"
-        }`}
-        title="Week view"
-      >
-        <CalendarDaysIcon className="size-4" />
       </button>
       <button
         onClick={() => onViewModeChange("agenda")}
