@@ -42,17 +42,20 @@ describe("zValidator", () => {
 
   it("emits a structured warn log on validation failure", async () => {
     const errSpy = spyOn(console, "error");
-    errSpy.mockClear(); // clear accumulated calls from other test files on CI
+    errSpy.mockClear();
     const app = makeApp();
     await app.request("/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: 42 }),
     });
-    expect(errSpy).toHaveBeenCalledTimes(1);
-    const rawLine = errSpy.mock.calls[0][0] as string;
-    const entry = JSON.parse(rawLine);
-    expect(entry.msg).toBe("Request validation failed");
+    // Filter by message to avoid counting unrelated console.error calls from
+    // other test files running in parallel on CI.
+    const validatorLogs = errSpy.mock.calls
+      .map(([line]) => { try { return JSON.parse(line as string); } catch { return null; } })
+      .filter((e): e is Record<string, unknown> => !!e && e.msg === "Request validation failed");
+    expect(validatorLogs).toHaveLength(1);
+    const entry = validatorLogs[0];
     expect(entry.level).toBe("warn");
     expect(entry.path).toBe("/test");
     expect(entry.method).toBe("POST");
@@ -63,14 +66,18 @@ describe("zValidator", () => {
 
   it("does NOT log on successful validation", async () => {
     const errSpy = spyOn(console, "error");
-    errSpy.mockClear(); // clear accumulated calls from other test files on CI
+    errSpy.mockClear();
     const app = makeApp();
     await app.request("/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "valid" }),
     });
-    expect(errSpy).not.toHaveBeenCalled();
+    // Filter by module to avoid false positives from parallel test files.
+    const validatorLogs = errSpy.mock.calls
+      .map(([line]) => { try { return JSON.parse(line as string); } catch { return null; } })
+      .filter((e): e is Record<string, unknown> => !!e && e.module === "validator");
+    expect(validatorLogs).toHaveLength(0);
     errSpy.mockRestore();
   });
 });
