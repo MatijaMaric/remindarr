@@ -37,6 +37,12 @@ const timezoneSchema = z.string().refine(isValidTimezone, { message: "Invalid ti
 const digestModeSchema = z.enum(["weekly", "off"]);
 const digestDaySchema = z.number().int().min(0).max(6);
 
+const quietHoursTimeSchema = z.string().regex(HHMM, { message: "Invalid time format. Use HH:MM (24h)" });
+const quietHoursDaysSchema = z
+  .array(z.number().int().min(0).max(6))
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v.join(",") : ""));
+
 const createNotifierSchema = z
   .object({
     provider: z.string().min(1),
@@ -46,6 +52,11 @@ const createNotifierSchema = z
     digest_mode: digestModeSchema.nullish(),
     digest_day: digestDaySchema.nullish(),
     streaming_alerts_enabled: z.boolean().optional(),
+    quiet_hours_start: quietHoursTimeSchema.nullish(),
+    quiet_hours_end: quietHoursTimeSchema.nullish(),
+    quiet_hours_days: quietHoursDaysSchema,
+    leaving_soon_alerts_enabled: z.boolean().optional(),
+    friend_activity_alerts_enabled: z.boolean().optional(),
   })
   .refine(
     (v) => v.digest_mode !== "weekly" || (v.digest_day !== undefined && v.digest_day !== null),
@@ -65,6 +76,11 @@ const updateNotifierSchema = z
     digest_mode: digestModeSchema.nullish(),
     digest_day: digestDaySchema.nullish(),
     streaming_alerts_enabled: z.boolean().optional(),
+    quiet_hours_start: quietHoursTimeSchema.nullish(),
+    quiet_hours_end: quietHoursTimeSchema.nullish(),
+    quiet_hours_days: quietHoursDaysSchema,
+    leaving_soon_alerts_enabled: z.boolean().optional(),
+    friend_activity_alerts_enabled: z.boolean().optional(),
   })
   .passthrough();
 
@@ -109,6 +125,11 @@ app.post("/", zValidator("json", createNotifierSchema), async (c) => {
     digest_mode,
     digest_day,
     streaming_alerts_enabled,
+    quiet_hours_start,
+    quiet_hours_end,
+    quiet_hours_days,
+    leaving_soon_alerts_enabled,
+    friend_activity_alerts_enabled,
   } = body;
 
   const name = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -134,6 +155,13 @@ app.post("/", zValidator("json", createNotifierSchema), async (c) => {
     digest_mode ?? null,
     digest_day ?? null,
     streaming_alerts_enabled !== false,
+    {
+      quietHoursStart: quiet_hours_start ?? null,
+      quietHoursEnd: quiet_hours_end ?? null,
+      quietHoursDays: quiet_hours_days ?? "",
+      leavingSoonAlertsEnabled: leaving_soon_alerts_enabled !== false,
+      friendActivityAlertsEnabled: friend_activity_alerts_enabled === true,
+    },
   );
   await refreshNotificationSchedule();
   const notifier = await getNotifierById(id, user.id);
@@ -213,6 +241,15 @@ app.put("/:id", zValidator("json", updateNotifierSchema), async (c) => {
     ...("streaming_alerts_enabled" in body
       ? { streamingAlertsEnabled: body.streaming_alerts_enabled !== false }
       : {}),
+    ...("quiet_hours_start" in body ? { quietHoursStart: body.quiet_hours_start ?? null } : {}),
+    ...("quiet_hours_end" in body ? { quietHoursEnd: body.quiet_hours_end ?? null } : {}),
+    ...(body.quiet_hours_days !== undefined ? { quietHoursDays: body.quiet_hours_days } : {}),
+    ...(body.leaving_soon_alerts_enabled !== undefined
+      ? { leavingSoonAlertsEnabled: body.leaving_soon_alerts_enabled !== false }
+      : {}),
+    ...(body.friend_activity_alerts_enabled !== undefined
+      ? { friendActivityAlertsEnabled: body.friend_activity_alerts_enabled === true }
+      : {}),
   });
   await refreshNotificationSchedule();
 
@@ -286,6 +323,39 @@ app.post("/:id/test", async (c) => {
       { success: false, message: message || "Failed to send" },
     );
   }
+});
+
+// GET /:id/preview — preview today's digest content (not dispatched)
+app.get("/:id/preview", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  const id = c.req.param("id");
+
+  const notifier = await getNotifierById(id, user.id);
+  if (!notifier) {
+    return err(c, "Notifier not found", 404);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  let content = await buildNotificationContent(user.id, today);
+
+  if (content.episodes.length === 0 && content.movies.length === 0) {
+    content = {
+      date: today,
+      episodes: [
+        {
+          showTitle: "Sample Show",
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: "Pilot",
+          posterUrl: null,
+          offers: [{ providerName: "Netflix", providerIconUrl: null }],
+        },
+      ],
+      movies: [],
+    };
+  }
+
+  return c.json(content);
 });
 
 // GET /:id/history — delivery history for a notifier (owner only)

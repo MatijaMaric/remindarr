@@ -28,7 +28,7 @@ export async function registerNotificationJobs() {
       if (timezones.length === 0) return;
 
       // Compute current time for each timezone
-      const timesByTimezone = new Map<string, { time: string; date: string }>();
+      const timesByTimezone = new Map<string, { time: string; date: string; dayOfWeek: number }>();
       for (const tz of timezones) {
         timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
       }

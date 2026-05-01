@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, createSession, getSessionWithUser } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
+import * as notifContent from "../notifications/content";
 import notifierApp from "./notifiers";
 import type { AppEnv } from "../types";
 
@@ -678,5 +679,142 @@ describe("ownership enforcement", () => {
       headers: user2Headers,
     });
     expect(deleteRes.status).toBe(404);
+  });
+});
+
+describe("quiet hours fields", () => {
+  it("creates notifier with quiet_hours_start and quiet_hours_end", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        quiet_hours_start: "23:00",
+        quiet_hours_end: "08:00",
+        quiet_hours_days: [1, 2, 3, 4, 5],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const { notifier } = await res.json();
+    expect(notifier.quiet_hours_start).toBe("23:00");
+    expect(notifier.quiet_hours_end).toBe("08:00");
+    expect(notifier.quiet_hours_days).toBe("1,2,3,4,5");
+  });
+
+  it("creates notifier with leaving_soon and friend_activity flags", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        leaving_soon_alerts_enabled: false,
+        friend_activity_alerts_enabled: true,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const { notifier } = await res.json();
+    expect(notifier.leaving_soon_alerts_enabled).toBe(false);
+    expect(notifier.friend_activity_alerts_enabled).toBe(true);
+  });
+
+  it("updates quiet hours via PUT", async () => {
+    const createRes = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    const { notifier } = await createRes.json();
+
+    const res = await app.request(`/notifiers/${notifier.id}`, {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        quiet_hours_start: "22:00",
+        quiet_hours_end: "07:00",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const updated = await res.json();
+    expect(updated.notifier.quiet_hours_start).toBe("22:00");
+    expect(updated.notifier.quiet_hours_end).toBe("07:00");
+  });
+
+  it("rejects quiet_hours_start with invalid format", async () => {
+    const res = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        ...validNotifier,
+        quiet_hours_start: "9am",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.issues).toBeDefined();
+  });
+});
+
+describe("GET /notifiers/:id/preview", () => {
+  let buildContentSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    buildContentSpy = spyOn(
+      notifContent,
+      "buildNotificationContent",
+    ).mockResolvedValue({
+      date: "2026-05-01",
+      episodes: [
+        {
+          showTitle: "My Show",
+          seasonNumber: 1,
+          episodeNumber: 3,
+          episodeName: "The One",
+          posterUrl: null,
+          offers: [],
+        },
+      ],
+      movies: [],
+    });
+    spies.push(buildContentSpy);
+  });
+
+  it("returns 404 for non-existent notifier", async () => {
+    const res = await app.request("/notifiers/nonexistent/preview", {
+      headers: headers(),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 200 with content payload for own notifier", async () => {
+    const createRes = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    const { notifier } = await createRes.json();
+
+    const res = await app.request(`/notifiers/${notifier.id}/preview`, {
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.episodes).toBeDefined();
+    expect(Array.isArray(body.episodes)).toBe(true);
+  });
+
+  it("returns 404 when another user tries to preview", async () => {
+    const createRes = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    const { notifier } = await createRes.json();
+
+    const user2Id = await createUser("other2", "hash2");
+    const user2Token = await createSession(user2Id);
+    const res = await app.request(`/notifiers/${notifier.id}/preview`, {
+      headers: { Cookie: `better-auth.session_token=${user2Token}` },
+    });
+    expect(res.status).toBe(404);
   });
 });

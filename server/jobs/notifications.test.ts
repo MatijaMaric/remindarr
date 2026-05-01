@@ -40,7 +40,7 @@ describe("getDueNotifiers", () => {
     await createNotifier(userId, "discord", "Morning", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
 
     const timesByTimezone = new Map([
-      ["UTC", { time: "09:00", date: "2026-03-12" }],
+      ["UTC", { time: "09:00", date: "2026-03-12", dayOfWeek: 4 }],
     ]);
 
     const due = await getDueNotifiers(timesByTimezone);
@@ -53,7 +53,7 @@ describe("getDueNotifiers", () => {
     await createNotifier(userId, "discord", "Evening", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "18:00", "UTC");
 
     const timesByTimezone = new Map([
-      ["UTC", { time: "09:00", date: "2026-03-12" }],
+      ["UTC", { time: "09:00", date: "2026-03-12", dayOfWeek: 4 }],
     ]);
 
     const due = await getDueNotifiers(timesByTimezone);
@@ -65,7 +65,7 @@ describe("getDueNotifiers", () => {
     await markNotifierSent(id, "2026-03-12");
 
     const timesByTimezone = new Map([
-      ["UTC", { time: "09:00", date: "2026-03-12" }],
+      ["UTC", { time: "09:00", date: "2026-03-12", dayOfWeek: 4 }],
     ]);
 
     const due = await getDueNotifiers(timesByTimezone);
@@ -77,7 +77,7 @@ describe("getDueNotifiers", () => {
     await markNotifierSent(id, "2026-03-11");
 
     const timesByTimezone = new Map([
-      ["UTC", { time: "09:00", date: "2026-03-12" }],
+      ["UTC", { time: "09:00", date: "2026-03-12", dayOfWeek: 4 }],
     ]);
 
     const due = await getDueNotifiers(timesByTimezone);
@@ -91,7 +91,7 @@ describe("getDueNotifiers", () => {
     await updateNotifier(id, userId, { enabled: false });
 
     const timesByTimezone = new Map([
-      ["UTC", { time: "09:00", date: "2026-03-12" }],
+      ["UTC", { time: "09:00", date: "2026-03-12", dayOfWeek: 4 }],
     ]);
 
     const due = await getDueNotifiers(timesByTimezone);
@@ -237,7 +237,7 @@ describe("notification error logging includes structured fields", () => {
     );
 
     // Confirm it's due at the current time map
-    const timesByTimezone = new Map([["UTC", { time: "09:00", date: "2026-03-12" }]]);
+    const timesByTimezone = new Map([["UTC", { time: "09:00", date: "2026-03-12", dayOfWeek: 4 }]]);
     const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(1);
 
@@ -290,14 +290,14 @@ const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(
   ((_slug: string, fn: () => unknown) => fn()) as typeof Sentry.withMonitor
 );
 
-function nowUtc(): { time: string; date: string } {
+function nowUtc(): { time: string; date: string; dayOfWeek: number } {
   const n = new Date();
   const hh = n.getUTCHours().toString().padStart(2, "0");
   const mm = n.getUTCMinutes().toString().padStart(2, "0");
   const yyyy = n.getUTCFullYear();
   const mo = (n.getUTCMonth() + 1).toString().padStart(2, "0");
   const dd = n.getUTCDate().toString().padStart(2, "0");
-  return { time: `${hh}:${mm}`, date: `${yyyy}-${mo}-${dd}` };
+  return { time: `${hh}:${mm}`, date: `${yyyy}-${mo}-${dd}`, dayOfWeek: n.getUTCDay() };
 }
 
 const fakeContent = {

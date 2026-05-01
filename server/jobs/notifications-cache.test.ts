@@ -37,14 +37,14 @@ import { processPendingJobs } from "./processor";
  * Using real current time means notifiers created at this time are
  * considered due by handleSendNotifications without clock-mocking.
  */
-function nowUtc(): { time: string; date: string } {
+function nowUtc(): { time: string; date: string; dayOfWeek: number } {
   const n = new Date();
   const hh = n.getUTCHours().toString().padStart(2, "0");
   const mm = n.getUTCMinutes().toString().padStart(2, "0");
   const yyyy = n.getUTCFullYear();
   const mo = (n.getUTCMonth() + 1).toString().padStart(2, "0");
   const dd = n.getUTCDate().toString().padStart(2, "0");
-  return { time: `${hh}:${mm}`, date: `${yyyy}-${mo}-${dd}` };
+  return { time: `${hh}:${mm}`, date: `${yyyy}-${mo}-${dd}`, dayOfWeek: n.getUTCDay() };
 }
 
 async function insertSendNotificationsJob() {
@@ -114,7 +114,7 @@ describe("notification content caching (N+1 fix)", () => {
     await createNotifier(userId, "discord", "N3", { webhookUrl: "https://discord.com/c" }, testTime, "UTC");
 
     // Sanity check: confirm all 3 are picked up as due
-    const timesByTimezone = new Map([["UTC", { time: testTime, date: testDate }]]);
+    const timesByTimezone = new Map([["UTC", { time: testTime, date: testDate, dayOfWeek: new Date().getUTCDay() }]]);
     const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(3);
 
@@ -152,7 +152,7 @@ describe("notification content caching (N+1 fix)", () => {
     await createNotifier(userId2, "discord", "U2-N1", { webhookUrl: "https://discord.com/c" }, testTime, "UTC");
 
     // Sanity check: all 3 are due
-    const timesByTimezone = new Map([["UTC", { time: testTime, date: testDate }]]);
+    const timesByTimezone = new Map([["UTC", { time: testTime, date: testDate, dayOfWeek: new Date().getUTCDay() }]]);
     const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(3);
 

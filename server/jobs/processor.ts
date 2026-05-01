@@ -60,7 +60,7 @@ async function handleSendNotifications(): Promise<void> {
   const timezones = await getDistinctNotifierTimezones();
   if (timezones.length === 0) return;
 
-  const timesByTimezone = new Map<string, { time: string; date: string }>();
+  const timesByTimezone = new Map<string, { time: string; date: string; dayOfWeek: number }>();
   for (const tz of timezones) {
     timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
   }

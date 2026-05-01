@@ -118,6 +118,7 @@ mock.module("../api", () => ({
   revokeKioskToken: mock(() => Promise.resolve()),
   getMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
   updateMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
+  previewNotifier: mock(() => Promise.resolve({ date: "2026-05-01", episodes: [], movies: [] })),
 }));
 
 // Import after mocks
