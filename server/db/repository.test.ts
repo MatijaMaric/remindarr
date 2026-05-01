@@ -894,7 +894,7 @@ describe("notifier config parsing", () => {
     corruptNotifierConfig(id);
 
     const timesByTimezone = new Map([
-      ["UTC", { time: "09:00", date: "2026-03-15" }],
+      ["UTC", { time: "09:00", date: "2026-03-15", dayOfWeek: 0 }],
     ]);
     const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(1);
@@ -908,5 +908,64 @@ describe("notifier config parsing", () => {
     const notifiers = await getNotifiersByUser(userId);
     expect(notifiers).toHaveLength(1);
     expect(notifiers[0].config).toEqual({ url: "http://example.com" });
+  });
+});
+
+describe("quiet hours filtering in getDueNotifiers", () => {
+  let quietUserId: string;
+  beforeEach(async () => {
+    quietUserId = await createUser("quietuser", "hash");
+  });
+
+  it("skips a notifier when current time is inside the quiet window", async () => {
+    await createNotifier(quietUserId, "discord", "Night", { webhookUrl: "https://x.com" }, "01:00", "UTC", null, null, true, {
+      quietHoursStart: "23:00",
+      quietHoursEnd: "07:00",
+    });
+
+    const due = await getDueNotifiers(
+      new Map([["UTC", { time: "01:00", date: "2026-05-01", dayOfWeek: 4 }]])
+    );
+    expect(due).toHaveLength(0);
+  });
+
+  it("does not skip when current time is outside the quiet window", async () => {
+    await createNotifier(quietUserId, "discord", "Day", { webhookUrl: "https://x.com" }, "09:00", "UTC", null, null, true, {
+      quietHoursStart: "23:00",
+      quietHoursEnd: "07:00",
+    });
+
+    const due = await getDueNotifiers(
+      new Map([["UTC", { time: "09:00", date: "2026-05-01", dayOfWeek: 4 }]])
+    );
+    expect(due).toHaveLength(1);
+  });
+
+  it("skips only on matching quiet_hours_days", async () => {
+    // Quiet Mon–Fri (1-5), current day is Sunday (0) — should NOT be skipped
+    await createNotifier(quietUserId, "discord", "Weekday", { webhookUrl: "https://x.com" }, "01:00", "UTC", null, null, true, {
+      quietHoursStart: "00:00",
+      quietHoursEnd: "06:00",
+      quietHoursDays: "1,2,3,4,5",
+    });
+
+    const due = await getDueNotifiers(
+      new Map([["UTC", { time: "01:00", date: "2026-05-03", dayOfWeek: 0 }]])
+    );
+    expect(due).toHaveLength(1);
+  });
+
+  it("skips when current day matches quiet_hours_days and inside window", async () => {
+    // Quiet Mon–Fri, current day is Monday (1), inside window
+    await createNotifier(quietUserId, "discord", "Work", { webhookUrl: "https://x.com" }, "01:00", "UTC", null, null, true, {
+      quietHoursStart: "00:00",
+      quietHoursEnd: "06:00",
+      quietHoursDays: "1,2,3,4,5",
+    });
+
+    const due = await getDueNotifiers(
+      new Map([["UTC", { time: "01:00", date: "2026-05-04", dayOfWeek: 1 }]])
+    );
+    expect(due).toHaveLength(0);
   });
 });

@@ -512,6 +512,11 @@ export interface Notifier {
   digest_mode: "weekly" | "off" | null;
   digest_day: number | null;
   streaming_alerts_enabled: boolean;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  quiet_hours_days: string | null;
+  leaving_soon_alerts_enabled: boolean;
+  friend_activity_alerts_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -528,15 +533,23 @@ export async function getNotifierProviders(signal?: AbortSignal): Promise<{ prov
   return fetchJson("/notifiers/providers", { signal });
 }
 
-export async function createNotifier(data: {
-  provider: string;
-  config: Record<string, string>;
-  notify_time: string;
-  timezone: string;
+export interface NotifierPayload {
+  provider?: string;
+  config?: Record<string, string>;
+  notify_time?: string;
+  timezone?: string;
+  enabled?: boolean;
   digest_mode?: "weekly" | "off" | null;
   digest_day?: number | null;
   streaming_alerts_enabled?: boolean;
-}): Promise<{ notifier: Notifier }> {
+  quiet_hours_start?: string | null;
+  quiet_hours_end?: string | null;
+  quiet_hours_days?: number[];
+  leaving_soon_alerts_enabled?: boolean;
+  friend_activity_alerts_enabled?: boolean;
+}
+
+export async function createNotifier(data: NotifierPayload & { provider: string; config: Record<string, string>; notify_time: string; timezone: string }): Promise<{ notifier: Notifier }> {
   return fetchJson("/notifiers", {
     method: "POST",
     body: JSON.stringify(data),
@@ -545,20 +558,22 @@ export async function createNotifier(data: {
 
 export async function updateNotifier(
   id: string,
-  data: Partial<{
-    config: Record<string, string>;
-    notify_time: string;
-    timezone: string;
-    enabled: boolean;
-    digest_mode: "weekly" | "off" | null;
-    digest_day: number | null;
-    streaming_alerts_enabled: boolean;
-  }>
+  data: Partial<NotifierPayload>
 ): Promise<{ notifier: Notifier }> {
   return fetchJson(`/notifiers/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
+}
+
+export interface NotificationContent {
+  date: string;
+  episodes: { showTitle: string; seasonNumber: number; episodeNumber: number; episodeName: string; posterUrl: string | null; offers: { providerName: string; providerIconUrl: string | null }[] }[];
+  movies: { title: string; posterUrl: string | null; offers: { providerName: string; providerIconUrl: string | null }[] }[];
+}
+
+export async function previewNotifier(id: string): Promise<NotificationContent> {
+  return fetchJson(`/notifiers/${encodeURIComponent(id)}/preview`);
 }
 
 export async function deleteNotifier(id: string): Promise<void> {
