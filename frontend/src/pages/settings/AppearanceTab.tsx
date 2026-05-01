@@ -66,7 +66,8 @@ function AppearanceSection() {
       })
       .catch(() => {});
     return () => controller.abort();
-  }, [setTheme]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only load
+  }, []);
 
   async function save(patch: Partial<AppearanceSettings>) {
     const next = { ...settings, ...patch };

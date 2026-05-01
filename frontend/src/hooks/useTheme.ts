@@ -43,6 +43,12 @@ function subscribe(callback: () => void) {
   return () => { listeners.delete(callback); };
 }
 
+function setTheme(newTheme: Theme) {
+  localStorage.setItem(STORAGE_KEY, newTheme);
+  applyTheme(newTheme);
+  listeners.forEach((fn) => fn());
+}
+
 export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
   const theme = useSyncExternalStore(subscribe, getStoredTheme);
 
@@ -56,12 +62,6 @@ export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, [theme]);
-
-  function setTheme(newTheme: Theme) {
-    localStorage.setItem(STORAGE_KEY, newTheme);
-    applyTheme(newTheme);
-    listeners.forEach((fn) => fn());
-  }
 
   return { theme, setTheme };
 }
