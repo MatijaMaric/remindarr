@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
@@ -321,7 +321,7 @@ describe("PasskeySection", () => {
     const editInput = screen.getByRole("textbox", { name: "Passkey name" });
     fireEvent.change(editInput, { target: { value: "New Name" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(within(editInput.closest("form")!).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(screen.getByText("Passkey renamed")).toBeDefined());
 
@@ -346,7 +346,7 @@ describe("PasskeySection", () => {
     const editInput = screen.getByRole("textbox", { name: "Passkey name" });
     fireEvent.change(editInput, { target: { value: "New Name" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(within(editInput.closest("form")!).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(screen.getByText("Rename failed")).toBeDefined());
 
