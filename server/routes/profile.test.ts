@@ -807,3 +807,153 @@ describe("GET /user/:username — pinned field", () => {
     expect(body.pinned).toEqual([]);
   });
 });
+
+// ─── Profile extras (country / locale / display_name) ──────────────────────
+
+describe("GET /user/me/profile", () => {
+  it("returns profile fields for authenticated user", async () => {
+    const res = await app.request("/user/me/profile", { headers: authHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json() as AnyRecord;
+    expect("display_name" in body).toBe(true);
+    expect(body.bio).toBeNull();
+    expect(body.country_code).toBeNull();
+    expect(body.locale).toBeNull();
+  });
+
+  it("returns 401 without authentication", async () => {
+    const res = await app.request("/user/me/profile");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("PATCH /user/me/profile", () => {
+  it("happy path: saves display_name, bio, and country_code", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: "My Name", bio: "Hello world", country_code: "US" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as AnyRecord;
+    expect(body.display_name).toBe("My Name");
+    expect(body.bio).toBe("Hello world");
+    expect(body.country_code).toBe("US");
+  });
+
+  it("persists changes and GET reflects them", async () => {
+    await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: "Updated", country_code: "DE", locale: "de" }),
+    });
+    const res = await app.request("/user/me/profile", { headers: authHeaders() });
+    const body = await res.json() as AnyRecord;
+    expect(body.display_name).toBe("Updated");
+    expect(body.country_code).toBe("DE");
+    expect(body.locale).toBe("de");
+  });
+
+  it("can clear fields by passing null", async () => {
+    await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: "Name", country_code: "US" }),
+    });
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: null, country_code: null }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as AnyRecord;
+    expect(body.display_name).toBeNull();
+    expect(body.country_code).toBeNull();
+  });
+
+  it("returns 401 without authentication", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: "Name" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("public profile includes country_code after update", async () => {
+    await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ country_code: "FR" }),
+    });
+    const res = await app.request("/user/testuser");
+    expect(res.status).toBe(200);
+    const body = await res.json() as AnyRecord;
+    expect(body.user.country_code).toBe("FR");
+  });
+});
+
+describe("validation — profile extras", () => {
+  it("returns 400 for invalid country_code (lowercase)", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ country_code: "us" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as AnyRecord;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 for country_code longer than 2 chars", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ country_code: "USA" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for bio exceeding 280 chars", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: "x".repeat(281) }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json() as AnyRecord;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 for invalid locale format", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: "EN" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts valid locale with region (en-US)", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: "en-US" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as AnyRecord;
+    expect(body.locale).toBe("en-US");
+  });
+
+  it("happy path: empty body returns 200 (all fields optional)", async () => {
+    const res = await app.request("/user/me/profile", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+  });
+});
+

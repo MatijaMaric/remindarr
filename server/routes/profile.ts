@@ -5,6 +5,8 @@ import {
   updateProfilePublic,
   searchUsers,
   updateUserBio,
+  getMyProfile,
+  updateMyProfile,
   getUserActivity,
   getUserVisibilityByUsername,
   areMutualFollowers,
@@ -50,6 +52,34 @@ app.patch("/me/bio", zValidator("json", bioSchema), async (c) => {
   const normalized = bio === null ? null : bio.trim() || null;
   await updateUserBio(user.id, normalized);
   return ok(c, { bio: normalized });
+});
+
+const profileSchema = z.object({
+  display_name: z.string().max(100).nullable().optional(),
+  bio: z.string().max(280).nullable().optional(),
+  country_code: z.string().regex(/^[A-Z]{2}$/).nullable().optional(),
+  locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).nullable().optional(),
+});
+
+app.get("/me/profile", async (c) => {
+  const user = c.get("user");
+  if (!user) return err(c, "Authentication required", 401);
+  const profile = await getMyProfile(user.id);
+  return ok(c, profile ?? { display_name: null, bio: null, country_code: null, locale: null });
+});
+
+app.patch("/me/profile", zValidator("json", profileSchema), async (c) => {
+  const user = c.get("user");
+  if (!user) return err(c, "Authentication required", 401);
+  const body = c.req.valid("json");
+  await updateMyProfile(user.id, {
+    display_name: body.display_name === undefined ? undefined : (body.display_name === null ? null : body.display_name.trim() || null),
+    bio: body.bio === undefined ? undefined : (body.bio === null ? null : body.bio.trim() || null),
+    country_code: body.country_code,
+    locale: body.locale,
+  });
+  const profile = await getMyProfile(user.id);
+  return ok(c, profile ?? { display_name: null, bio: null, country_code: null, locale: null });
 });
 
 const activityKindEnum = z.enum([

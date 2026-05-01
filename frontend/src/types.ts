@@ -508,6 +508,7 @@ export interface UserProfileUser {
   image: string | null;
   member_since: string | null;
   bio: string | null;
+  country_code: string | null;
 }
 
 export interface UserProfileStats {

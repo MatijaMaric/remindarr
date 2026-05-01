@@ -116,6 +116,8 @@ mock.module("../api", () => ({
   getKioskToken: mock(() => Promise.resolve({ token: null })),
   regenerateKioskToken: mock(() => Promise.resolve({ token: "kiosk-token-123" })),
   revokeKioskToken: mock(() => Promise.resolve()),
+  getMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
+  updateMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
 }));
 
 // Import after mocks

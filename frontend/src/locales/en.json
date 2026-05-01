@@ -227,7 +227,13 @@
     "renamePasskey": "Rename",
     "renamingPasskey": "Renaming...",
     "noPasskeys": "No passkeys registered. Add one to enable passwordless sign-in.",
-    "passkeyUnnamed": "Unnamed passkey"
+    "passkeyUnnamed": "Unnamed passkey",
+    "editProfile": "Edit Profile",
+    "bio": "Bio",
+    "bioPlaceholder": "A short bio about yourself...",
+    "country": "Country",
+    "noCountry": "— Select country —",
+    "profileSaved": "Profile saved"
   },
   "filter": {
     "all": "All",
@@ -569,6 +575,7 @@
     "loading": "Loading...",
     "error": "An error occurred",
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel"
   },
   "feed": {

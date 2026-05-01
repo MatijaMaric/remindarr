@@ -233,6 +233,26 @@ export async function updateMyBio(bio: string | null): Promise<{ bio: string | n
   });
 }
 
+export interface MyProfile {
+  display_name: string | null;
+  bio: string | null;
+  country_code: string | null;
+  locale: string | null;
+}
+
+export async function getMyProfile(signal?: AbortSignal): Promise<MyProfile> {
+  return fetchJson("/user/me/profile", { signal });
+}
+
+export async function updateMyProfile(
+  data: Partial<MyProfile>,
+): Promise<MyProfile> {
+  return fetchJson("/user/me/profile", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getActivitySettings(signal?: AbortSignal): Promise<ActivitySettings> {
   return fetchJson("/user/me/activity-settings", { signal });
 }
