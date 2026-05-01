@@ -147,6 +147,61 @@ export async function updateCrowdedWeekSettings(
   });
 }
 
+export async function getAppearanceSettings(userId: string): Promise<{
+  themeVariant: string;
+  accentColor: string;
+  density: string;
+  reduceMotion: number;
+  highContrast: number;
+  hideEpisodeSpoilers: number;
+  autoplayTrailers: number;
+} | null> {
+  return traceDbQuery("getAppearanceSettings", async () => {
+    const db = getDb();
+    const row = await db
+      .select({
+        themeVariant: users.themeVariant,
+        accentColor: users.accentColor,
+        density: users.density,
+        reduceMotion: users.reduceMotion,
+        highContrast: users.highContrast,
+        hideEpisodeSpoilers: users.hideEpisodeSpoilers,
+        autoplayTrailers: users.autoplayTrailers,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    return row ?? null;
+  });
+}
+
+export async function updateAppearanceSettings(
+  userId: string,
+  settings: {
+    themeVariant?: string;
+    accentColor?: string;
+    density?: string;
+    reduceMotion?: number;
+    highContrast?: number;
+    hideEpisodeSpoilers?: number;
+    autoplayTrailers?: number;
+  }
+): Promise<void> {
+  return traceDbQuery("updateAppearanceSettings", async () => {
+    const db = getDb();
+    const patch: Record<string, string | number> = {};
+    if (settings.themeVariant !== undefined) patch.themeVariant = settings.themeVariant;
+    if (settings.accentColor !== undefined) patch.accentColor = settings.accentColor;
+    if (settings.density !== undefined) patch.density = settings.density;
+    if (settings.reduceMotion !== undefined) patch.reduceMotion = settings.reduceMotion;
+    if (settings.highContrast !== undefined) patch.highContrast = settings.highContrast;
+    if (settings.hideEpisodeSpoilers !== undefined) patch.hideEpisodeSpoilers = settings.hideEpisodeSpoilers;
+    if (settings.autoplayTrailers !== undefined) patch.autoplayTrailers = settings.autoplayTrailers;
+    if (Object.keys(patch).length === 0) return;
+    await db.update(users).set(patch).where(eq(users.id, userId)).run();
+  });
+}
+
 export async function getUserByProviderSubject(
   authProvider: string,
   providerSubject: string

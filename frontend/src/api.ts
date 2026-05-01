@@ -30,6 +30,7 @@ import type {
   UserSettings,
   OverlapResponse,
   FriendsLovedItem,
+  AppearanceSettings,
 } from "./types";
 
 const BASE = "/api";
@@ -812,6 +813,17 @@ export async function updateCrowdedWeekSettings(data: { crowdedWeekThreshold?: n
   return fetchJson("/user/settings/crowded-weeks", {
     method: "PUT",
     body: JSON.stringify(data),
+  });
+}
+
+export async function getAppearanceSettings(signal?: AbortSignal): Promise<AppearanceSettings> {
+  return fetchJson("/user/settings/appearance", { signal });
+}
+
+export async function updateAppearanceSettings(settings: Partial<AppearanceSettings>): Promise<AppearanceSettings> {
+  return fetchJson("/user/settings/appearance", {
+    method: "PUT",
+    body: JSON.stringify(settings),
   });
 }
 

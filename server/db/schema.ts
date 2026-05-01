@@ -170,6 +170,13 @@ export const users = sqliteTable(
     departureAlertLeadDays: integer("departure_alert_lead_days").notNull().default(7),
     crowdedWeekThreshold: integer("crowded_week_threshold").notNull().default(5),
     crowdedWeekBadgeEnabled: integer("crowded_week_badge_enabled").notNull().default(1),
+    themeVariant: text("theme_variant").notNull().default("dark"),
+    accentColor: text("accent_color").notNull().default("amber"),
+    density: text("density").notNull().default("comfortable"),
+    reduceMotion: integer("reduce_motion").notNull().default(0),
+    highContrast: integer("high_contrast").notNull().default(0),
+    hideEpisodeSpoilers: integer("hide_episode_spoilers").notNull().default(0),
+    autoplayTrailers: integer("autoplay_trailers").notNull().default(0),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(

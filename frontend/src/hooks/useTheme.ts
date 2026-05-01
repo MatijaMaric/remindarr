@@ -1,12 +1,19 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useEffect } from "react";
 
-export type Theme = "dark" | "light" | "oled";
+export type Theme = "dark" | "light" | "oled" | "midnight" | "moss" | "plum" | "auto";
 
 const STORAGE_KEY = "remindarr-theme";
-const VALID_THEMES: Theme[] = ["dark", "light", "oled"];
+const VALID_THEMES: Theme[] = ["dark", "light", "oled", "midnight", "moss", "plum", "auto"];
+const BASE_THEMES: Theme[] = [...VALID_THEMES];
 
-function isValidTheme(value: string | null): value is Theme {
-  return VALID_THEMES.includes(value as Theme);
+export function isValidTheme(value: string | null): value is Theme {
+  return BASE_THEMES.includes(value as Theme);
+}
+
+/** Resolves "auto" to dark or light based on prefers-color-scheme. */
+function resolveAutoTheme(): "dark" | "light" {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 function applyTheme(theme: Theme) {
@@ -14,7 +21,12 @@ function applyTheme(theme: Theme) {
   for (const t of VALID_THEMES) {
     root.classList.remove(`theme-${t}`);
   }
-  root.classList.add(`theme-${theme}`);
+  if (theme === "auto") {
+    const resolved = resolveAutoTheme();
+    root.classList.add(`theme-${resolved}`);
+  } else {
+    root.classList.add(`theme-${theme}`);
+  }
 }
 
 function getStoredTheme(): Theme {
@@ -33,6 +45,17 @@ function subscribe(callback: () => void) {
 
 export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
   const theme = useSyncExternalStore(subscribe, getStoredTheme);
+
+  useEffect(() => {
+    if (theme !== "auto") return;
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const handler = () => {
+      applyTheme("auto");
+      listeners.forEach((fn) => fn());
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [theme]);
 
   function setTheme(newTheme: Theme) {
     localStorage.setItem(STORAGE_KEY, newTheme);

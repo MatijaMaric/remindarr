@@ -712,6 +712,20 @@ export interface UserSettings {
   departureAlertLeadDays: number;
 }
 
+export type ThemeVariant = "dark" | "light" | "oled" | "midnight" | "moss" | "plum" | "auto";
+export type AccentColor = "amber" | "ember" | "plum" | "cobalt" | "moss" | "sand";
+export type Density = "comfortable" | "cozy" | "compact";
+
+export interface AppearanceSettings {
+  themeVariant: ThemeVariant;
+  accentColor: AccentColor;
+  density: Density;
+  reduceMotion: number;
+  highContrast: number;
+  hideEpisodeSpoilers: number;
+  autoplayTrailers: number;
+}
+
 export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon" | "friends_loved";
 
 export interface HomepageSection {

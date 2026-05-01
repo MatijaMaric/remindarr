@@ -89,7 +89,7 @@
 
 /* Theme CSS variables */
 :root.theme-dark,
-:root:not(.theme-light):not(.theme-oled) {
+:root:not(.theme-light):not(.theme-oled):not(.theme-midnight):not(.theme-moss):not(.theme-plum) {
   --bg-app: #09090b;
   --text-app: #f4f4f5;
 }
@@ -103,6 +103,59 @@
   --bg-app: #fafafa;
   --text-app: #18181b;
 }
+
+:root.theme-midnight {
+  --bg-app: #0d0f1a;
+  --text-app: #e8eaf6;
+}
+
+:root.theme-midnight .bg-zinc-950 { background-color: #0d0f1a; }
+:root.theme-midnight .bg-zinc-900 { background-color: #151829; }
+:root.theme-midnight .bg-zinc-800 { background-color: #1e2238; }
+
+:root.theme-moss {
+  --bg-app: #0c1209;
+  --text-app: #e8f0e6;
+}
+
+:root.theme-moss .bg-zinc-950 { background-color: #0c1209; }
+:root.theme-moss .bg-zinc-900 { background-color: #141a11; }
+:root.theme-moss .bg-zinc-800 { background-color: #1d2418; }
+
+:root.theme-plum {
+  --bg-app: #120b18;
+  --text-app: #f0e8f8;
+}
+
+:root.theme-plum .bg-zinc-950 { background-color: #120b18; }
+:root.theme-plum .bg-zinc-900 { background-color: #1a1023; }
+:root.theme-plum .bg-zinc-800 { background-color: #241630; }
+
+/* Accent color CSS variables */
+:root[data-accent="amber"]  { --accent-fg: #fbbf24; --accent-bg: rgb(251 191 36 / 0.1); }
+:root[data-accent="ember"]  { --accent-fg: #f97316; --accent-bg: rgb(249 115 22 / 0.1); }
+:root[data-accent="plum"]   { --accent-fg: #c084fc; --accent-bg: rgb(192 132 252 / 0.1); }
+:root[data-accent="cobalt"] { --accent-fg: #60a5fa; --accent-bg: rgb(96 165 250 / 0.1); }
+:root[data-accent="moss"]   { --accent-fg: #4ade80; --accent-bg: rgb(74 222 128 / 0.1); }
+:root[data-accent="sand"]   { --accent-fg: #d4d4aa; --accent-bg: rgb(212 212 170 / 0.1); }
+
+/* Density CSS variables */
+:root[data-density="comfortable"] { --card-gap: 1rem; }
+:root[data-density="cozy"]        { --card-gap: 0.625rem; }
+:root[data-density="compact"]     { --card-gap: 0.375rem; }
+
+/* Reduce motion */
+:root.motion-reduce *,
+:root.motion-reduce *::before,
+:root.motion-reduce *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* High contrast text */
+:root.high-contrast .text-zinc-400 { color: #d4d4d8; }
+:root.high-contrast .text-zinc-500 { color: #a1a1aa; }
 
 /* Light theme overrides for key zinc utility classes */
 .theme-light .bg-zinc-950 {

@@ -288,6 +288,13 @@
       "when": 1746057600000,
       "tag": "0039_recommendations_target_user",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1746144000000,
+      "tag": "0040_users_appearance_prefs",
+      "breakpoints": true
     }
   ]
 }

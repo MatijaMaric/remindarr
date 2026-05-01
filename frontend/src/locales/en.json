@@ -425,10 +425,48 @@
     },
     "theme": {
       "title": "Theme",
+      "subtitle": "Applies to the whole app.",
       "dark": "Dark",
       "light": "Light",
-      "oled": "OLED Black"
+      "oled": "OLED",
+      "midnight": "Midnight",
+      "moss": "Moss",
+      "plum": "Plum",
+      "auto": "Auto"
     },
+    "accent": {
+      "title": "Accent Color",
+      "subtitle": "Highlights buttons, active states, and focus rings.",
+      "amber": "Amber",
+      "ember": "Ember",
+      "plum": "Plum",
+      "cobalt": "Cobalt",
+      "moss": "Moss",
+      "sand": "Sand"
+    },
+    "density": {
+      "title": "Density",
+      "subtitle": "Controls spacing and row height throughout the app.",
+      "comfortable": "Comfortable",
+      "comfortableDesc": "Spacious layout",
+      "cozy": "Cozy",
+      "cozyDesc": "Balanced spacing",
+      "compact": "Compact",
+      "compactDesc": "More content, less padding"
+    },
+    "displayPrefs": {
+      "title": "Display Preferences",
+      "subtitle": "Fine-tune how content is presented.",
+      "reduceMotion": "Reduce motion",
+      "reduceMotionDesc": "Disables transitions and hero parallax effects.",
+      "highContrast": "High-contrast text",
+      "highContrastDesc": "Uses brighter text colors for better readability.",
+      "hideSpoilers": "Hide episode spoilers",
+      "hideSpoilersDesc": "Blurs episode descriptions and titles for unwatched episodes.",
+      "autoplayTrailers": "Auto-play trailers",
+      "autoplayTrailersDesc": "Plays title trailers in the hero banner automatically."
+    },
+    "saved": "Saved",
     "homepage": {
       "title": "Homepage Layout",
       "description": "Drag to reorder sections. Toggle the eye icon to show or hide a section.",
