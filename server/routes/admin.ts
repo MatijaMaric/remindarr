@@ -19,8 +19,9 @@ import {
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
-import { logger } from "../logger";
+import { logger, getRecentLogs, type LogLevel } from "../logger";
 import { zValidator } from "../lib/validator";
+import { MemoryRateLimitStore } from "../middleware/rate-limit";
 
 const log = logger.child({ module: "admin" });
 
@@ -228,6 +229,100 @@ app.put("/users/:id/unban", async (c) => {
   await unbanUser(id);
   log.info("User unbanned", { targetUserId: id, by: c.get("user")!.id });
   return ok(c, { message: "User unbanned" });
+});
+
+// ─── Config dump ─────────────────────────────────────────────────────────────
+
+// Keys whose values are safe to expose to admins.
+const SAFE_CONFIG_KEYS: Array<{ key: string; value: () => unknown; envVar?: string }> = [
+  { key: "LOG_LEVEL", value: () => CONFIG.LOG_LEVEL, envVar: "LOG_LEVEL" },
+  { key: "BASE_URL", value: () => CONFIG.BASE_URL, envVar: "BASE_URL" },
+  { key: "TMDB_COUNTRY", value: () => CONFIG.COUNTRY, envVar: "TMDB_COUNTRY" },
+  { key: "TMDB_LANGUAGE", value: () => CONFIG.LANGUAGE, envVar: "TMDB_LANGUAGE" },
+  { key: "CACHE_BACKEND", value: () => CONFIG.CACHE_BACKEND, envVar: "CACHE_BACKEND" },
+  { key: "JOB_QUEUE_BACKEND", value: () => CONFIG.JOB_QUEUE_BACKEND, envVar: "JOB_QUEUE_BACKEND" },
+  { key: "CORS_ORIGIN", value: () => CONFIG.CORS_ORIGIN, envVar: "CORS_ORIGIN" },
+  { key: "OIDC_ISSUER_URL", value: () => CONFIG.OIDC_ISSUER_URL, envVar: "OIDC_ISSUER_URL" },
+  { key: "OIDC_REDIRECT_URI", value: () => CONFIG.OIDC_REDIRECT_URI, envVar: "OIDC_REDIRECT_URI" },
+  { key: "OIDC_ADMIN_CLAIM", value: () => CONFIG.OIDC_ADMIN_CLAIM, envVar: "OIDC_ADMIN_CLAIM" },
+  { key: "OIDC_ADMIN_VALUE", value: () => CONFIG.OIDC_ADMIN_VALUE, envVar: "OIDC_ADMIN_VALUE" },
+  { key: "PASSKEY_RP_ID", value: () => CONFIG.PASSKEY_RP_ID, envVar: "PASSKEY_RP_ID" },
+  { key: "PASSKEY_RP_NAME", value: () => CONFIG.PASSKEY_RP_NAME, envVar: "PASSKEY_RP_NAME" },
+  { key: "PASSKEY_ORIGIN", value: () => CONFIG.PASSKEY_ORIGIN, envVar: "PASSKEY_ORIGIN" },
+  { key: "VAPID_PUBLIC_KEY", value: () => CONFIG.VAPID_PUBLIC_KEY, envVar: "VAPID_PUBLIC_KEY" },
+  { key: "VAPID_SUBJECT", value: () => CONFIG.VAPID_SUBJECT, envVar: "VAPID_SUBJECT" },
+  { key: "SENTRY_DSN", value: () => CONFIG.SENTRY_DSN, envVar: "SENTRY_DSN" },
+  { key: "PLEX_CLIENT_ID", value: () => CONFIG.PLEX_CLIENT_ID, envVar: "PLEX_CLIENT_ID" },
+  { key: "DB_PATH", value: () => CONFIG.DB_PATH, envVar: "DB_PATH" },
+  { key: "BACKUP_DIR", value: () => CONFIG.BACKUP_DIR, envVar: "BACKUP_DIR" },
+  { key: "BACKUP_CRON", value: () => CONFIG.BACKUP_CRON, envVar: "BACKUP_CRON" },
+  { key: "BACKUP_RETAIN", value: () => CONFIG.BACKUP_RETAIN, envVar: "BACKUP_RETAIN" },
+  { key: "SYNC_TITLES_CRON", value: () => CONFIG.SYNC_TITLES_CRON, envVar: "SYNC_TITLES_CRON" },
+  { key: "SYNC_EPISODES_CRON", value: () => CONFIG.SYNC_EPISODES_CRON, envVar: "SYNC_EPISODES_CRON" },
+  { key: "GLOBAL_RATE_LIMIT_PER_MINUTE", value: () => CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE, envVar: "GLOBAL_RATE_LIMIT_PER_MINUTE" },
+  { key: "AUTH_RATE_LIMIT_PER_MINUTE", value: () => CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, envVar: "AUTH_RATE_LIMIT_PER_MINUTE" },
+];
+
+// Keys whose presence (but not value) is safe to expose.
+const SECRET_CONFIG_KEYS: Array<{ key: string; present: () => boolean }> = [
+  { key: "TMDB_API_KEY", present: () => !!CONFIG.TMDB_API_KEY },
+  { key: "BETTER_AUTH_SECRET", present: () => !!CONFIG.BETTER_AUTH_SECRET },
+  { key: "OIDC_CLIENT_ID", present: () => !!CONFIG.OIDC_CLIENT_ID },
+  { key: "OIDC_CLIENT_SECRET", present: () => !!CONFIG.OIDC_CLIENT_SECRET },
+  { key: "VAPID_PRIVATE_KEY", present: () => !!CONFIG.VAPID_PRIVATE_KEY },
+  { key: "METRICS_TOKEN", present: () => !!CONFIG.METRICS_TOKEN },
+  { key: "REDIS_URL", present: () => !!CONFIG.REDIS_URL },
+  { key: "STREAMING_AVAILABILITY_API_KEY", present: () => !!CONFIG.STREAMING_AVAILABILITY_API_KEY },
+];
+
+// GET /api/admin/config — sanitized runtime configuration dump
+app.get("/config", (c) => {
+  const safe = SAFE_CONFIG_KEYS.map(({ key, value, envVar }) => ({
+    key,
+    value: value(),
+    source: envVar && process.env[envVar] ? "env" : "default",
+  }));
+
+  const secrets = SECRET_CONFIG_KEYS.map(({ key, present }) => ({
+    key,
+    source: present() ? "env" : "unset",
+  }));
+
+  return ok(c, { safe, secrets });
+});
+
+// GET /api/admin/logs — in-process log tail (ring buffer)
+// Per-user rate limit: 10 req/min, enforced via a shared store keyed by userId.
+// Lazy-initialized to avoid setInterval starting at import time during tests.
+let _logsRateLimitStore: MemoryRateLimitStore | null = null;
+function getLogsRateLimitStore(): MemoryRateLimitStore {
+  if (!_logsRateLimitStore) _logsRateLimitStore = new MemoryRateLimitStore();
+  return _logsRateLimitStore;
+}
+
+const logsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(50),
+  level: z.enum(["debug", "info", "warn", "error"]).optional(),
+  module: z.string().optional(),
+});
+
+app.get("/logs", zValidator("query", logsQuerySchema), async (c) => {
+  const user = c.get("user")!;
+  const { limit, level, module } = c.req.valid("query");
+
+  const { allowed, retryAfterMs } = await getLogsRateLimitStore().consume(
+    `logs:${user.id}`,
+    10,
+    60_000,
+    Date.now(),
+  );
+  if (!allowed) {
+    c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
+    return c.json({ error: "Too many requests" }, 429);
+  }
+
+  const entries = getRecentLogs(limit, level as LogLevel | undefined, module);
+  return ok(c, { entries, count: entries.length });
 });
 
 // DELETE /api/admin/users/:id

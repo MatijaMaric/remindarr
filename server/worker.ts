@@ -395,6 +395,14 @@ function createApp(env: Env) {
   app.use("/api/admin", requireAuth, requireAdmin);
   app.route("/api/admin", adminRoutes);
 
+  // Maintenance endpoints are Bun-only (job queue + cache flush).
+  // CF stub — all methods return 501 so the path is registered for route-parity.
+  const maintenanceStub = new Hono<AppEnv>();
+  maintenanceStub.all("/*", (c) =>
+    c.json({ error: "Maintenance endpoints are only available on the Bun server" }, 501)
+  );
+  app.route("/api/admin/maintenance", maintenanceStub);
+
   // Jobs admin (CF Workers-compatible — uses Drizzle ORM + static cron map)
   app.use("/api/jobs/*", requireAuth, requireAdmin);
   app.use("/api/jobs", requireAuth, requireAdmin);

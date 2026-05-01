@@ -18,6 +18,7 @@ import calendarRoutes from "./routes/calendar";
 import episodesRoutes from "./routes/episodes";
 import authCustomRoutes from "./routes/auth-custom";
 import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
+import adminMaintenanceRoutes from "./routes/admin-maintenance";
 import jobsRoutes from "./routes/jobs";
 import browseRoutes from "./routes/browse";
 import detailsRoutes from "./routes/details";
@@ -320,10 +321,11 @@ app.route("/api/kiosk", kioskRoutes);
 app.use("/api/share/token*", requireAuth);
 app.route("/api/share", shareRoutes);
 
-// Admin routes
+// Admin routes (auth + admin guard applied globally for /api/admin/*)
 app.use("/api/admin/*", requireAuth, requireAdmin);
 app.use("/api/admin", requireAuth, requireAdmin);
 app.route("/api/admin", adminRoutes);
+app.route("/api/admin/maintenance", adminMaintenanceRoutes);
 
 app.use("/api/jobs/*", requireAuth, requireAdmin);
 app.use("/api/jobs", requireAuth, requireAdmin);

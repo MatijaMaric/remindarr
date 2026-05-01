@@ -11,8 +11,9 @@ import { join } from "path";
 
 // Routes intentionally excluded from CF Workers (with reason)
 const EXCLUDED_ROUTES = [
-  "jobsRoutes",    // Uses Bun-only in-memory job queue
-  "metricsRoutes", // Prometheus metrics not applicable to CF Workers
+  "jobsRoutes",              // Uses Bun-only in-memory job queue
+  "metricsRoutes",           // Prometheus metrics not applicable to CF Workers
+  "adminMaintenanceRoutes",  // Bun-only: cache flush + job queue (CF uses DO alarms)
 ];
 
 function extractRouteImports(source: string): string[] {

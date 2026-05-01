@@ -101,6 +101,11 @@ mock.module("../api", () => ({
     })
   ),
   updateAdminSettings: mock(() => Promise.resolve({})),
+  getAdminConfig: mock(() => Promise.resolve({ safe: [], secrets: [] })),
+  getAdminLogs: mock(() => Promise.resolve({ entries: [], count: 0 })),
+  flushCache: mock(() => Promise.resolve({ flushed: true })),
+  runAllJobs: mock(() => Promise.resolve({ queued: [] })),
+  triggerBackup: mock(() => Promise.resolve({ queued: true })),
   getHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [{ id: "unwatched", enabled: true }, { id: "recommendations", enabled: true }, { id: "today", enabled: true }, { id: "upcoming", enabled: true }] })),
   updateHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [{ id: "unwatched", enabled: true }, { id: "recommendations", enabled: true }, { id: "today", enabled: true }, { id: "upcoming", enabled: true }] })),
   getIntegrations: mock(() => Promise.resolve({ integrations: [] })),

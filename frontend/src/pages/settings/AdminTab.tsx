@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router";
 import * as api from "../../api";
-import type { JobsResponse } from "../../api";
+import type { JobsResponse, AdminConfigResponse, AdminLogEntry } from "../../api";
 import type { AdminSettings } from "../../types";
 import {
   SCard,
@@ -373,11 +373,200 @@ function AdminSection() {
   );
 }
 
+function RuntimeConfigSection() {
+  const [config, setConfig] = useState<AdminConfigResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    api.getAdminConfig(controller.signal)
+      .then((d) => { if (!controller.signal.aborted) { setConfig(d); setLoading(false); } })
+      .catch(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, []);
+
+  return (
+    <SCard title="Runtime configuration" subtitle="Current server config. Secret values show only whether they are set.">
+      {loading && <div className="text-zinc-500 text-sm">Loading...</div>}
+      {config && (
+        <div className="space-y-4">
+          <div>
+            <div className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 pb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+              <div>Key</div><div>Value</div><div>Source</div>
+            </div>
+            <div className="space-y-0.5">
+              {config.safe.map((entry) => (
+                <div key={entry.key} className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono">
+                  <span className="text-zinc-300 truncate">{entry.key}</span>
+                  <span className="text-zinc-400 truncate">{String(entry.value) || <span className="text-zinc-600 italic">empty</span>}</span>
+                  <SStatusPill kind={entry.source === "env" ? "amber" : "neutral"}>{entry.source}</SStatusPill>
+                </div>
+              ))}
+            </div>
+          </div>
+          {config.secrets.length > 0 && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 px-2 pb-1">Secrets</div>
+              <div className="space-y-0.5">
+                {config.secrets.map((entry) => (
+                  <div key={entry.key} className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono">
+                    <span className="text-zinc-300 truncate">{entry.key}</span>
+                    <span className="text-zinc-600 italic">
+                      {entry.source === "env" ? "•••••• (set)" : "not set"}
+                    </span>
+                    <SStatusPill kind={entry.source === "env" ? "ok" : "neutral"}>{entry.source}</SStatusPill>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </SCard>
+  );
+}
+
+const LOG_LEVEL_COLORS: Record<string, string> = {
+  debug: "text-zinc-500",
+  info: "text-zinc-300",
+  warn: "text-yellow-400",
+  error: "text-red-400",
+};
+
+function LogTailSection() {
+  const [entries, setEntries] = useState<AdminLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [levelFilter, setLevelFilter] = useState<string>("");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchLogs = useCallback((signal?: AbortSignal) => {
+    api.getAdminLogs({ limit: 50, level: levelFilter || undefined }, signal)
+      .then((d) => { if (!signal?.aborted) { setEntries(d.entries); setLoading(false); } })
+      .catch(() => { if (!signal?.aborted) setLoading(false); });
+  }, [levelFilter]);
+
+  // Initial load + polling. Loading state resets via fetchLogs callback results.
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchLogs(controller.signal);
+    intervalRef.current = setInterval(() => fetchLogs(), 5000);
+    return () => { controller.abort(); if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [fetchLogs]);
+
+  return (
+    <SCard
+      title="Server logs"
+      subtitle="Last 50 log entries from this server instance. Auto-refreshes every 5 seconds."
+    >
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          {(["", "debug", "info", "warn", "error"] as const).map((lvl) => (
+            <button
+              key={lvl || "all"}
+              onClick={() => setLevelFilter(lvl)}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono font-semibold transition-colors ${
+                levelFilter === lvl
+                  ? "bg-white/10 text-zinc-100"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {lvl || "all"}
+            </button>
+          ))}
+        </div>
+        {loading && <div className="text-zinc-500 text-sm">Loading logs...</div>}
+        {!loading && entries.length === 0 && (
+          <div className="text-zinc-600 text-sm font-mono italic">No entries</div>
+        )}
+        {entries.length > 0 && (
+          <pre className="overflow-auto max-h-96 rounded bg-zinc-900 p-3 text-[11px] font-mono space-y-0.5">
+            {entries.map((e, i) => (
+              <div key={i} className="flex gap-2 min-w-0">
+                <span className="text-zinc-600 shrink-0">{e.time.slice(11, 19)}</span>
+                <span className={`uppercase w-[38px] shrink-0 ${LOG_LEVEL_COLORS[e.level] ?? "text-zinc-400"}`}>{e.level}</span>
+                {e.module && <span className="text-zinc-500 shrink-0">[{String(e.module)}]</span>}
+                <span className="text-zinc-300 break-all">{e.msg}</span>
+              </div>
+            ))}
+          </pre>
+        )}
+      </div>
+    </SCard>
+  );
+}
+
+function MaintenanceSection() {
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  async function run(action: string, fn: () => Promise<unknown>) {
+    setMsg("");
+    setErr("");
+    setBusy(action);
+    try {
+      await fn();
+      setMsg(`${action} completed`);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <SCard title="Maintenance" subtitle="One-click server operations. Each action will ask for confirmation.">
+      <div className="space-y-3">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {err && <SMessage kind="error">{err}</SMessage>}
+        <div className="flex flex-wrap gap-2">
+          <SButton
+            variant="ghost"
+            onClick={() => {
+              if (confirm("Flush all cache entries? Active requests may slow down briefly.")) {
+                run("Cache flushed", api.flushCache);
+              }
+            }}
+            disabled={busy !== null}
+          >
+            {busy === "Cache flushed" ? "Flushing..." : "Flush cache"}
+          </SButton>
+          <SButton
+            variant="ghost"
+            onClick={() => {
+              if (confirm("Queue all cron jobs to run immediately?")) {
+                run("Jobs queued", api.runAllJobs);
+              }
+            }}
+            disabled={busy !== null}
+          >
+            {busy === "Jobs queued" ? "Queuing..." : "Run all jobs"}
+          </SButton>
+          <SButton
+            variant="ghost"
+            onClick={() => {
+              if (confirm("Trigger a database backup now?")) {
+                run("Backup queued", api.triggerBackup);
+              }
+            }}
+            disabled={busy !== null}
+          >
+            {busy === "Backup queued" ? "Queuing..." : "Backup now"}
+          </SButton>
+        </div>
+      </div>
+    </SCard>
+  );
+}
+
 export default function AdminTab() {
   return (
     <>
       <BackgroundJobsSection />
       <AdminSection />
+      <RuntimeConfigSection />
+      <LogTailSection />
+      <MaintenanceSection />
     </>
   );
 }

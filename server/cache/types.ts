@@ -13,6 +13,8 @@ export interface Cache {
   set(key: string, value: unknown, ttlSeconds: number): Promise<void>;
   /** Delete a cached key. */
   delete(key: string): Promise<void>;
+  /** Clear all cached entries without closing the cache (flush). */
+  flush?(): Promise<void>;
   /** Optional cleanup (close connections, clear timers). */
   close?(): Promise<void>;
 }
