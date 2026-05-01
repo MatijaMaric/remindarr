@@ -293,7 +293,12 @@ app.get("/config", (c) => {
 
 // GET /api/admin/logs — in-process log tail (ring buffer)
 // Per-user rate limit: 10 req/min, enforced via a shared store keyed by userId.
-const logsRateLimitStore = new MemoryRateLimitStore();
+// Lazy-initialized to avoid setInterval starting at import time during tests.
+let _logsRateLimitStore: MemoryRateLimitStore | null = null;
+function getLogsRateLimitStore(): MemoryRateLimitStore {
+  if (!_logsRateLimitStore) _logsRateLimitStore = new MemoryRateLimitStore();
+  return _logsRateLimitStore;
+}
 
 const logsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(50),
@@ -305,7 +310,7 @@ app.get("/logs", zValidator("query", logsQuerySchema), async (c) => {
   const user = c.get("user")!;
   const { limit, level, module } = c.req.valid("query");
 
-  const { allowed, retryAfterMs } = await logsRateLimitStore.consume(
+  const { allowed, retryAfterMs } = await getLogsRateLimitStore().consume(
     `logs:${user.id}`,
     10,
     60_000,

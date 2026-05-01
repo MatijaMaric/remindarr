@@ -42,6 +42,7 @@ describe("zValidator", () => {
 
   it("emits a structured warn log on validation failure", async () => {
     const errSpy = spyOn(console, "error");
+    errSpy.mockClear(); // clear accumulated calls from other test files on CI
     const app = makeApp();
     await app.request("/test", {
       method: "POST",
@@ -62,6 +63,7 @@ describe("zValidator", () => {
 
   it("does NOT log on successful validation", async () => {
     const errSpy = spyOn(console, "error");
+    errSpy.mockClear(); // clear accumulated calls from other test files on CI
     const app = makeApp();
     await app.request("/test", {
       method: "POST",
