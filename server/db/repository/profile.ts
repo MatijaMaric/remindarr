@@ -37,6 +37,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         image: users.image,
         member_since: users.createdAt,
         bio: users.bio,
+        country_code: users.countryCode,
         profile_public: users.profilePublic,
         profile_visibility: users.profileVisibility,
         activity_stream_enabled: users.activityStreamEnabled,
@@ -167,6 +168,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         image: user.image,
         member_since: user.member_since,
         bio: user.bio,
+        country_code: user.country_code,
       },
       stats: {
         tracked_count: trackedCount,
@@ -320,6 +322,39 @@ export async function updateUserBio(userId: string, bio: string | null) {
       .set({ bio })
       .where(eq(users.id, userId))
       .run();
+  });
+}
+
+export async function getMyProfile(userId: string) {
+  return traceDbQuery("getMyProfile", async () => {
+    const db = getDb();
+    const row = await db
+      .select({
+        display_name: users.name,
+        bio: users.bio,
+        country_code: users.countryCode,
+        locale: users.locale,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    return row ?? null;
+  });
+}
+
+export async function updateMyProfile(
+  userId: string,
+  data: { display_name?: string | null; bio?: string | null; country_code?: string | null; locale?: string | null }
+): Promise<void> {
+  return traceDbQuery("updateMyProfile", async () => {
+    const db = getDb();
+    const patch: Partial<typeof users.$inferInsert> = {};
+    if (data.display_name !== undefined) patch.name = data.display_name;
+    if (data.bio !== undefined) patch.bio = data.bio;
+    if (data.country_code !== undefined) patch.countryCode = data.country_code;
+    if (data.locale !== undefined) patch.locale = data.locale;
+    if (Object.keys(patch).length === 0) return;
+    await db.update(users).set(patch).where(eq(users.id, userId)).run();
   });
 }
 

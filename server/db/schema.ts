@@ -165,6 +165,8 @@ export const users = sqliteTable(
     kioskToken: text("kiosk_token"),
     watchlistShareToken: text("watchlist_share_token"),
     bio: text("bio"),
+    countryCode: text("country_code"),
+    locale: text("locale"),
     activityStreamEnabled: integer("activity_stream_enabled").notNull().default(0),
     streamingDeparturesEnabled: integer("streaming_departures_enabled").notNull().default(1),
     departureAlertLeadDays: integer("departure_alert_lead_days").notNull().default(7),

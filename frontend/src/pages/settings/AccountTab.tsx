@@ -21,6 +21,123 @@ import {
 } from "../../components/settings/kit";
 import { cn } from "@/lib/utils";
 
+const COUNTRIES = [
+  { code: "AR", name: "Argentina" },
+  { code: "AU", name: "Australia" },
+  { code: "BR", name: "Brazil" },
+  { code: "CA", name: "Canada" },
+  { code: "CN", name: "China" },
+  { code: "DE", name: "Germany" },
+  { code: "DK", name: "Denmark" },
+  { code: "ES", name: "Spain" },
+  { code: "FI", name: "Finland" },
+  { code: "FR", name: "France" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "HR", name: "Croatia" },
+  { code: "IN", name: "India" },
+  { code: "IT", name: "Italy" },
+  { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" },
+  { code: "MX", name: "Mexico" },
+  { code: "NL", name: "Netherlands" },
+  { code: "NO", name: "Norway" },
+  { code: "NZ", name: "New Zealand" },
+  { code: "PL", name: "Poland" },
+  { code: "PT", name: "Portugal" },
+  { code: "RU", name: "Russia" },
+  { code: "SE", name: "Sweden" },
+  { code: "TR", name: "Turkey" },
+  { code: "US", name: "United States" },
+  { code: "ZA", name: "South Africa" },
+];
+
+function ProfileEditSection() {
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [countryCode, setCountryCode] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [msg, setMsg] = useState("");
+  const { run, error: saveErr, pending: saving } = useAsyncError();
+
+  useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+    api.getMyProfile(controller.signal).then((data) => {
+      if (!mounted) return;
+      setDisplayName(data.display_name ?? "");
+      setBio(data.bio ?? "");
+      setCountryCode(data.country_code ?? "");
+      setLoaded(true);
+    }).catch(() => { if (mounted) setLoaded(true); });
+    return () => { mounted = false; controller.abort(); };
+  }, []);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg("");
+    await run(async () => {
+      await api.updateMyProfile({
+        display_name: displayName.trim() || null,
+        bio: bio.trim() || null,
+        country_code: countryCode || null,
+      });
+      setMsg(t("profile.profileSaved"));
+    });
+  }
+
+  if (!loaded) return null;
+
+  return (
+    <SCard
+      title={t("profile.editProfile")}
+      subtitle="Your display name, bio, and country appear on your public profile."
+    >
+      <form onSubmit={handleSave} className="space-y-3.5 max-w-[640px]">
+        {msg && <SMessage kind="success">{msg}</SMessage>}
+        {saveErr && <SMessage kind="error">{saveErr}</SMessage>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <SFormRow label={t("profile.displayName")}>
+            <SInput
+              value={displayName}
+              onChange={setDisplayName}
+              placeholder={user?.username ?? ""}
+            />
+          </SFormRow>
+          <SFormRow label={t("profile.country")}>
+            <select
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus:border-transparent"
+            >
+              <option value="">{t("profile.noCountry")}</option>
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))}
+            </select>
+          </SFormRow>
+        </div>
+        <SFormRow label={t("profile.bio")}>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder={t("profile.bioPlaceholder")}
+            maxLength={280}
+            rows={3}
+            className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 placeholder-zinc-500 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 resize-none"
+          />
+        </SFormRow>
+        <div>
+          <SButton type="submit" disabled={saving}>
+            {saving ? t("common.saving") : t("common.save")}
+          </SButton>
+        </div>
+      </form>
+    </SCard>
+  );
+}
+
 function passwordStrength(pw: string): number {
   if (!pw) return 0;
   let score = 0;
@@ -721,6 +838,7 @@ export default function AccountTab() {
   return (
     <>
       <UserSection />
+      <ProfileEditSection />
       <PasskeySection />
       <ProfileVisibilitySection />
       <ActivityStreamSection />
