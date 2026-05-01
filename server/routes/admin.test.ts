@@ -432,6 +432,94 @@ describe("DELETE /admin/users/:id", () => {
   });
 });
 
+describe("GET /admin/config", () => {
+  it("returns safe and secrets arrays for admin", async () => {
+    const res = await app.request("/admin/config", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.safe)).toBe(true);
+    expect(Array.isArray(body.secrets)).toBe(true);
+    // Safe entries have key, value, source fields
+    expect(body.safe.every((e: { key: string; value: unknown; source: string }) => e.key && "value" in e && e.source)).toBe(true);
+    // Secret entries have key and source, but NO value
+    for (const entry of body.secrets as { key: string; source: string; value?: unknown }[]) {
+      expect("value" in entry).toBe(false);
+      expect(entry.source === "env" || entry.source === "unset").toBe(true);
+    }
+  });
+
+  it("includes LOG_LEVEL in safe entries", async () => {
+    const res = await app.request("/admin/config", {
+      headers: { Cookie: adminCookie },
+    });
+    const body = await res.json();
+    const logLevel = body.safe.find((e: { key: string }) => e.key === "LOG_LEVEL");
+    expect(logLevel).toBeDefined();
+    expect(logLevel.value).toBe("info");
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/admin/config");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for non-admin", async () => {
+    const userId = await createUser("regular2", "hash");
+    const token = await createSession(userId);
+    const res = await app.request("/admin/config", {
+      headers: { Cookie: `better-auth.session_token=${token}` },
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("GET /admin/logs", () => {
+  it("returns entries and count for admin", async () => {
+    const res = await app.request("/admin/logs", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.entries)).toBe(true);
+    expect(typeof body.count).toBe("number");
+    expect(body.count).toBe(body.entries.length);
+  });
+
+  it("respects limit query param", async () => {
+    const res = await app.request("/admin/logs?limit=5", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.entries.length).toBeLessThanOrEqual(5);
+  });
+
+  it("rejects invalid limit", async () => {
+    const res = await app.request("/admin/logs?limit=0", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/admin/logs");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for non-admin", async () => {
+    const userId = await createUser("regular3", "hash");
+    const token = await createSession(userId);
+    const res = await app.request("/admin/logs", {
+      headers: { Cookie: `better-auth.session_token=${token}` },
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
 describe("PUT /admin/settings — OIDC reload callback error handling", () => {
   it("returns 500 with oidc_reload_failed when the callback throws", async () => {
     setOnOidcSettingsChanged(async () => {

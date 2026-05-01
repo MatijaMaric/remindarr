@@ -51,6 +51,10 @@ export class MemoryCache implements Cache {
     this.store.delete(key);
   }
 
+  async flush(): Promise<void> {
+    this.store.clear();
+  }
+
   async close(): Promise<void> {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer);

@@ -442,6 +442,65 @@ export async function updateAdminSettings(settings: AdminSettingsUpdateRequest):
   });
 }
 
+// ─── Admin config + logs ─────────────────────────────────────────────────────
+
+export interface AdminConfigEntry {
+  key: string;
+  value: unknown;
+  source: "env" | "default";
+}
+
+export interface AdminSecretEntry {
+  key: string;
+  source: "env" | "unset";
+}
+
+export interface AdminConfigResponse {
+  safe: AdminConfigEntry[];
+  secrets: AdminSecretEntry[];
+}
+
+export interface AdminLogEntry {
+  time: string;
+  level: "debug" | "info" | "warn" | "error";
+  msg: string;
+  module?: string;
+  [key: string]: unknown;
+}
+
+export interface AdminLogsResponse {
+  entries: AdminLogEntry[];
+  count: number;
+}
+
+export async function getAdminConfig(signal?: AbortSignal): Promise<AdminConfigResponse> {
+  return fetchJson("/admin/config", { signal });
+}
+
+export async function getAdminLogs(
+  params?: { limit?: number; level?: string; module?: string },
+  signal?: AbortSignal,
+): Promise<AdminLogsResponse> {
+  const qs = new URLSearchParams();
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.level) qs.set("level", params.level);
+  if (params?.module) qs.set("module", params.module);
+  const query = qs.toString();
+  return fetchJson(`/admin/logs${query ? `?${query}` : ""}`, { signal });
+}
+
+export async function flushCache(): Promise<{ flushed: boolean }> {
+  return fetchJson("/admin/maintenance/flush-cache", { method: "POST" });
+}
+
+export async function runAllJobs(): Promise<{ queued: string[] }> {
+  return fetchJson("/admin/maintenance/run-jobs", { method: "POST" });
+}
+
+export async function triggerBackup(): Promise<{ queued: boolean }> {
+  return fetchJson("/admin/maintenance/backup", { method: "POST" });
+}
+
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
 
 export interface CronJobInfo {

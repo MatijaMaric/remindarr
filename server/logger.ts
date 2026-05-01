@@ -4,6 +4,31 @@ import { httpRequestsTotal, httpRequestDurationSeconds } from "./metrics";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
+export interface LogEntry {
+  time: string;
+  level: LogLevel;
+  msg: string;
+  [key: string]: unknown;
+}
+
+// Ring buffer for in-process log tail (GET /api/admin/logs).
+// Disabled in test runtime to avoid memory growth and cross-test interference.
+const LOG_BUFFER_CAPACITY = 500;
+const logBuffer: LogEntry[] = [];
+const bufferEnabled = process.env.NODE_ENV !== "test";
+
+export function getRecentLogs(
+  limit: number = 50,
+  level?: LogLevel,
+  module?: string,
+): LogEntry[] {
+  let entries: LogEntry[] = logBuffer;
+  if (level) entries = entries.filter((e) => e.level === level);
+  if (module) entries = entries.filter((e) => e.module === module);
+  const capped = Math.min(limit, LOG_BUFFER_CAPACITY);
+  return entries.slice(-capped);
+}
+
 interface LogData {
   [key: string]: unknown;
 }
@@ -89,6 +114,11 @@ export class Logger {
         msg,
         serializationError: "Failed to serialize log data",
       });
+    }
+
+    if (bufferEnabled) {
+      if (logBuffer.length >= LOG_BUFFER_CAPACITY) logBuffer.shift();
+      logBuffer.push(entry as LogEntry);
     }
 
     if (level === "warn" || level === "error") {
