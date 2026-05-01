@@ -131,18 +131,48 @@
 :root.theme-plum .bg-zinc-900 { background-color: #1a1023; }
 :root.theme-plum .bg-zinc-800 { background-color: #241630; }
 
-/* Accent color CSS variables */
-:root[data-accent="amber"]  { --accent-fg: #fbbf24; --accent-bg: rgb(251 191 36 / 0.1); }
-:root[data-accent="ember"]  { --accent-fg: #f97316; --accent-bg: rgb(249 115 22 / 0.1); }
-:root[data-accent="plum"]   { --accent-fg: #c084fc; --accent-bg: rgb(192 132 252 / 0.1); }
-:root[data-accent="cobalt"] { --accent-fg: #60a5fa; --accent-bg: rgb(96 165 250 / 0.1); }
-:root[data-accent="moss"]   { --accent-fg: #4ade80; --accent-bg: rgb(74 222 128 / 0.1); }
-:root[data-accent="sand"]   { --accent-fg: #d4d4aa; --accent-bg: rgb(212 212 170 / 0.1); }
+/* Accent color: redirect Tailwind's amber-* utilities to the chosen accent
+   by overriding --color-amber-{shade}. Every existing `bg-amber-400`,
+   `text-amber-500`, `border-amber-400/30`, etc. picks this up automatically. */
+:root[data-accent="ember"] {
+  --color-amber-200: #fed7aa;
+  --color-amber-300: #fdba74;
+  --color-amber-400: #fb923c;
+  --color-amber-500: #f97316;
+  --color-amber-600: #ea580c;
+}
+:root[data-accent="plum"] {
+  --color-amber-200: #e9d5ff;
+  --color-amber-300: #d8b4fe;
+  --color-amber-400: #c084fc;
+  --color-amber-500: #a855f7;
+  --color-amber-600: #9333ea;
+}
+:root[data-accent="cobalt"] {
+  --color-amber-200: #bfdbfe;
+  --color-amber-300: #93c5fd;
+  --color-amber-400: #60a5fa;
+  --color-amber-500: #3b82f6;
+  --color-amber-600: #2563eb;
+}
+:root[data-accent="moss"] {
+  --color-amber-200: #bbf7d0;
+  --color-amber-300: #86efac;
+  --color-amber-400: #4ade80;
+  --color-amber-500: #22c55e;
+  --color-amber-600: #16a34a;
+}
+:root[data-accent="sand"] {
+  --color-amber-200: #e7e5d4;
+  --color-amber-300: #d4d4aa;
+  --color-amber-400: #b8b889;
+  --color-amber-500: #969670;
+  --color-amber-600: #75755a;
+}
 
-/* Density CSS variables */
-:root[data-density="comfortable"] { --card-gap: 1rem; }
-:root[data-density="cozy"]        { --card-gap: 0.625rem; }
-:root[data-density="compact"]     { --card-gap: 0.375rem; }
+/* Density: scale root font-size so spacing/sizing rooted in rem flexes uniformly. */
+:root[data-density="cozy"]    { font-size: 14.5px; }
+:root[data-density="compact"] { font-size: 13px; }
 
 /* Reduce motion */
 :root.motion-reduce *,
