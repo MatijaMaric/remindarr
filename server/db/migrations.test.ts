@@ -166,3 +166,76 @@ describe("0043 consolidate duplicate providers", () => {
     db.close();
   });
 });
+
+describe("0044 reconcile movie watched/completed", () => {
+  it("backfills tracked and watched_titles in both directions without touching shows or explicit statuses", () => {
+    const db = new Database(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+
+    const sqlFiles = fs
+      .readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith(".sql") && f < "0044_")
+      .sort();
+
+    let seededAuth = false;
+    for (const file of sqlFiles) {
+      const content = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
+      const stmts = content
+        .split("--> statement-breakpoint")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((s) => !/^PRAGMA\s+foreign_keys\s*=/i.test(s));
+      for (const stmt of stmts) db.exec(stmt);
+
+      if (!seededAuth && file.startsWith("0000_")) {
+        db.exec(`INSERT INTO users (id, username) VALUES ('u-0044', 'user_0044')`);
+        seededAuth = true;
+      }
+    }
+
+    // Seed titles
+    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-null', 1, 'Watched Movie No Status', 'MOVIE')`);
+    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-drop', 2, 'Dropped Movie', 'MOVIE')`);
+    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-comp', 3, 'Completed No Watch Row', 'MOVIE')`);
+    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('s-null', 4, 'Show With Watch Row', 'SHOW')`);
+
+    // Track all titles
+    db.exec(`INSERT INTO tracked (title_id, user_id) VALUES ('m-null', 'u-0044')`);
+    db.exec(`INSERT INTO tracked (title_id, user_id, user_status) VALUES ('m-drop', 'u-0044', 'dropped')`);
+    db.exec(`INSERT INTO tracked (title_id, user_id, user_status) VALUES ('m-comp', 'u-0044', 'completed')`);
+    db.exec(`INSERT INTO tracked (title_id, user_id) VALUES ('s-null', 'u-0044')`);
+
+    // watched_titles rows for m-null and s-null (m-drop and m-comp don't have one initially)
+    db.exec(`INSERT INTO watched_titles (title_id, user_id) VALUES ('m-null', 'u-0044')`);
+    db.exec(`INSERT INTO watched_titles (title_id, user_id) VALUES ('s-null', 'u-0044')`);
+
+    // Run migration 0044
+    const migration = fs.readFileSync(path.join(MIGRATIONS_DIR, "0044_reconcile_movie_watched_completed.sql"), "utf-8");
+    const stmts = migration
+      .split("--> statement-breakpoint")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const stmt of stmts) db.exec(stmt);
+
+    type TrackedRow = { user_status: string | null };
+    const getStatus = (titleId: string): string | null =>
+      (db.prepare("SELECT user_status FROM tracked WHERE title_id = ? AND user_id = 'u-0044'").get(titleId) as TrackedRow | undefined)?.user_status ?? null;
+
+    const hasWatchRow = (titleId: string): boolean =>
+      db.prepare("SELECT 1 FROM watched_titles WHERE title_id = ? AND user_id = 'u-0044'").get(titleId) != null;
+
+    // m-null: had watched_titles row + user_status=NULL → should be 'completed' now
+    expect(getStatus("m-null")).toBe("completed");
+
+    // m-drop: had watched_titles row but user_status='dropped' (explicit) → preserved
+    expect(getStatus("m-drop")).toBe("dropped");
+
+    // m-comp: had user_status='completed' but no watched_titles row → row inserted
+    expect(hasWatchRow("m-comp")).toBe(true);
+
+    // s-null: SHOW with watched_titles row + user_status=NULL → status stays NULL (SHOWs untouched)
+    expect(getStatus("s-null")).toBeNull();
+
+    db.close();
+  });
+});

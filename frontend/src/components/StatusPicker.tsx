@@ -27,7 +27,7 @@ const SHOW_OPTIONS: StatusOption[] = [
 ];
 
 const MOVIE_OPTIONS: StatusOption[] = [
-  { value: null, labelKey: "status.watching", color: "text-amber-400" },
+  { value: null, labelKey: "status.auto", color: "text-zinc-400" },
   { value: "plan_to_watch", labelKey: "status.planToWatch", color: "text-blue-400" },
   { value: "completed", labelKey: "status.completed", color: "text-emerald-400" },
 ];
