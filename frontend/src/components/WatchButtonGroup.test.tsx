@@ -211,6 +211,42 @@ describe("WatchButtonGroup subscription dimming", () => {
     expect(primaryLink.getAttribute("href")).toBe("https://disneyplus.com/watch");
   });
 
+  it("does not dim Plex even when not in subscriptions list", () => {
+    const plexOffer = makeOffer({
+      id: 3,
+      provider_id: 9999,
+      provider_name: "Plex",
+      url: "https://app.plex.tv/desktop/#!/server/abc/details?key=/library/metadata/123",
+      provider_icon_url: "https://example.com/plex.png",
+    });
+    render(
+      <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>
+        <WatchButtonGroup offers={[netflixOffer, plexOffer]} variant="inline" />
+      </Wrapper>
+    );
+    const plexLink = screen.getByRole("link", { name: /plex/i });
+    expect(plexLink.parentElement?.className ?? "").not.toContain("opacity-50");
+  });
+
+  it("sorts Plex first even when not in subscriptions list", () => {
+    const plexOffer = makeOffer({
+      id: 3,
+      provider_id: 9999,
+      provider_name: "Plex",
+      url: "https://app.plex.tv/desktop/#!/server/abc/details?key=/library/metadata/123",
+      provider_icon_url: "https://example.com/plex.png",
+    });
+    render(
+      <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>
+        <WatchButtonGroup offers={[disneyOffer, plexOffer]} />
+      </Wrapper>
+    );
+    // Primary should be Netflix-subscribed... wait, neither Disney nor Plex is in [8].
+    // Plex should sort to front because it's treated as always-subscribed.
+    const primaryLink = screen.getAllByRole("link")[0];
+    expect(primaryLink.getAttribute("href")).toContain("plex");
+  });
+
   it("marks non-subscribed dropdown item with aria-label suffix", () => {
     render(
       <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>

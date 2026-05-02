@@ -21,6 +21,9 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
     () => new Set(subscriptions?.providerIds ?? []),
     [subscriptions]
   );
+  // Plex is treated as always subscribed — it's a self-hosted library, not a paid streaming service
+  const isSubscribed = (providerId: number) =>
+    providerId === PLEX_PROVIDER_ID || subscribedSet.has(providerId);
 
   const rawProviders = getUniqueProviders(offers);
   if (rawProviders.length === 0) return null;
@@ -28,8 +31,8 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
   // Sort subscribed providers first; stable sort preserves relative order within each group
   const providers = subscribedSet.size > 0
     ? [...rawProviders].sort((a, b) => {
-        const aS = subscribedSet.has(a.provider_id) ? 0 : 1;
-        const bS = subscribedSet.has(b.provider_id) ? 0 : 1;
+        const aS = isSubscribed(a.provider_id) ? 0 : 1;
+        const bS = isSubscribed(b.provider_id) ? 0 : 1;
         return aS - bS;
       })
     : rawProviders;
@@ -40,7 +43,7 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
         {providers.slice(0, maxVisible).map((o) => (
           <div
             key={o.provider_id}
-            className={subscribedSet.size > 0 && !subscribedSet.has(o.provider_id) ? "opacity-50" : undefined}
+            className={subscribedSet.size > 0 && !isSubscribed(o.provider_id) ? "opacity-50" : undefined}
           >
             <WatchButton
               url={o.url}
@@ -163,7 +166,7 @@ function SplitWatchButton({ providers, subscribedSet, size, fullWidth }: { provi
           >
             <Popover.Popup className="flex flex-col gap-1 p-1">
               {rest.map((o) => (
-                <DropdownProviderItem key={o.provider_id} offer={o} isLg={isLg} isSubscribed={subscribedSet.size === 0 || subscribedSet.has(o.provider_id)} />
+                <DropdownProviderItem key={o.provider_id} offer={o} isLg={isLg} isSubscribed={subscribedSet.size === 0 || subscribedSet.has(o.provider_id) || o.provider_id === PLEX_PROVIDER_ID} />
               ))}
             </Popover.Popup>
           </Popover.Positioner>
