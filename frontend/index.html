@@ -14,8 +14,11 @@
     <script>
       (function () {
         var theme = localStorage.getItem('remindarr-theme');
-        var valid = ['dark', 'light', 'oled'];
-        if (!theme || !valid.includes(theme)) theme = 'dark';
+        var valid = ['dark', 'light', 'oled', 'midnight', 'moss', 'plum', 'auto'];
+        if (!theme || valid.indexOf(theme) === -1) theme = 'dark';
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
         document.documentElement.classList.add('theme-' + theme);
       })();
     </script>
