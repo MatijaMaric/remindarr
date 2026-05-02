@@ -88,6 +88,23 @@ describe("SubscriptionsTab", () => {
     });
   });
 
+  it("shows an error message and skips refreshSubscriptions when updateSubscriptions rejects", async () => {
+    (api.updateSubscriptions as ReturnType<typeof spyOn>).mockRejectedValue(new Error("500"));
+
+    render(<SubscriptionsTab />);
+    await waitFor(() => screen.getByText("Netflix"));
+
+    const netflixLabel = screen.getByText("Netflix").closest("label")!;
+    await act(async () => {
+      fireEvent.click(netflixLabel);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Failed to save. Please try again.")).toBeDefined();
+      expect(mockRefreshSubscriptions).not.toHaveBeenCalled();
+    });
+  });
+
   it("calls updateOnlyMine when the Apply Automatically switch is toggled", async () => {
     render(<SubscriptionsTab />);
 

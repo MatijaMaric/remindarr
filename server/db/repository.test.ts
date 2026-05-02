@@ -854,6 +854,31 @@ describe("getProviders", () => {
     expect(providers[0].name).toBe("Disney Plus");
     expect(providers[1].name).toBe("Netflix");
   });
+
+  it("collapses duplicate provider IDs into their canonical ID", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-dedup-1",
+        offers: [
+          makeParsedOffer({ titleId: "movie-dedup-1", providerId: 9, providerName: "Amazon Prime Video", providerTechnicalName: "amazon_prime_video" }),
+          makeParsedOffer({ titleId: "movie-dedup-1", providerId: 384, providerName: "HBO Max", providerTechnicalName: "hbo_max" }),
+        ],
+      }),
+    ]);
+    // Insert the historical duplicate rows (119 = legacy Amazon Prime Video, 1899 = legacy HBO Max)
+    const db = getRawDb();
+    db.run("INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (119, 'Amazon Prime Video', 'amazon_prime_video', NULL)");
+    db.run("INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (1899, 'HBO Max', 'hbo_max', NULL)");
+
+    const results = await getProviders();
+    const ids = results.map((p) => p.id);
+    expect(ids).not.toContain(119);
+    expect(ids).not.toContain(1899);
+    expect(ids).toContain(9);
+    expect(ids).toContain(384);
+    expect(ids.filter((id) => id === 9)).toHaveLength(1);
+    expect(ids.filter((id) => id === 384)).toHaveLength(1);
+  });
 });
 
 // ─── Notifier JSON.parse error handling ─────────────────────────────────────

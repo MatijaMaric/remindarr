@@ -14,6 +14,7 @@ export default function SubscriptionsTab() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [onlyMine, setOnlyMine] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -32,7 +33,8 @@ export default function SubscriptionsTab() {
   }, [subscriptions]);
 
   async function toggleProvider(id: number) {
-    const next = new Set(selectedIds);
+    const prev = selectedIds;
+    const next = new Set(prev);
     if (next.has(id)) {
       next.delete(id);
     } else {
@@ -40,9 +42,13 @@ export default function SubscriptionsTab() {
     }
     setSelectedIds(next);
     setSaving(true);
+    setSaveError(false);
     try {
       await api.updateSubscriptions(Array.from(next));
       await refreshSubscriptions();
+    } catch {
+      setSelectedIds(prev);
+      setSaveError(true);
     } finally {
       setSaving(false);
     }
@@ -90,6 +96,9 @@ export default function SubscriptionsTab() {
 
   return (
     <div>
+      {saveError && (
+        <p className="text-sm text-red-400 mb-3">{t("settings.subscriptions.saveError")}</p>
+      )}
       <SCard
         title={t("settings.subscriptions.title")}
         subtitle={t("settings.subscriptions.subtitle")}

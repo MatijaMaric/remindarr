@@ -439,7 +439,8 @@
       },
       "empty": "No providers found.",
       "regionProviders": "My Region",
-      "otherProviders": "Other"
+      "otherProviders": "Other",
+      "saveError": "Failed to save. Please try again."
     },
     "theme": {
       "title": "Theme",
