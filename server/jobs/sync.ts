@@ -196,6 +196,7 @@ export function registerSyncJobs() {
           integrationId: integration.id,
           moviesAdded: result.moviesAdded,
           showsAdded: result.showsAdded,
+          itemsRemoved: result.itemsRemoved,
         });
         synced++;
       } catch (err) {

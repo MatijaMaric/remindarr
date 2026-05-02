@@ -1,4 +1,4 @@
-import { eq, and, inArray, notInArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { getDb } from "../schema";
 import { plexLibraryItems, integrations } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -54,24 +54,36 @@ export async function upsertPlexLibraryItems(items: PlexLibraryItem[]) {
 export async function deleteStaleLibraryItems(
   integrationId: string,
   currentTitleIds: string[]
-) {
+): Promise<number> {
   return traceDbQuery("deleteStaleLibraryItems", async () => {
     const db = getDb();
-    if (currentTitleIds.length === 0) {
-      // All items for this integration are stale
+
+    // Fetch all rows for this integration (single param — D1-safe)
+    const existing = await db
+      .select({ id: plexLibraryItems.id, titleId: plexLibraryItems.titleId })
+      .from(plexLibraryItems)
+      .where(eq(plexLibraryItems.integrationId, integrationId))
+      .all();
+
+    if (existing.length === 0) return 0;
+
+    // Compute stale set in app code (handles empty currentTitleIds naturally)
+    const currentSet = new Set(currentTitleIds);
+    const staleIds = existing
+      .filter((r) => !currentSet.has(r.titleId))
+      .map((r) => r.id);
+
+    if (staleIds.length === 0) return 0;
+
+    // Delete by PK in chunks to stay under D1's 100-param limit
+    for (let i = 0; i < staleIds.length; i += PLEX_TITLEIDS_CHUNK_SIZE) {
+      const chunk = staleIds.slice(i, i + PLEX_TITLEIDS_CHUNK_SIZE);
       await db.delete(plexLibraryItems)
-        .where(eq(plexLibraryItems.integrationId, integrationId))
+        .where(inArray(plexLibraryItems.id, chunk))
         .run();
-      return;
     }
-    await db.delete(plexLibraryItems)
-      .where(
-        and(
-          eq(plexLibraryItems.integrationId, integrationId),
-          notInArray(plexLibraryItems.titleId, currentTitleIds)
-        )
-      )
-      .run();
+
+    return staleIds.length;
   });
 }
 
