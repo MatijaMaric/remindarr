@@ -88,3 +88,81 @@ describe("migrations FK-cascade regression", () => {
     db.close();
   });
 });
+
+describe("0043 consolidate duplicate providers", () => {
+  it("merges offers/user_subscribed_providers and deletes duplicate provider rows", () => {
+    const db = new Database(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+
+    // Run all migrations up to and including 0042 (before the consolidation).
+    const sqlFiles = fs
+      .readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith(".sql") && f < "0043_")
+      .sort();
+
+    let seededAuth = false;
+    for (const file of sqlFiles) {
+      const content = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
+      const stmts = content
+        .split("--> statement-breakpoint")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((s) => !/^PRAGMA\s+foreign_keys\s*=/i.test(s));
+      for (const stmt of stmts) db.exec(stmt);
+
+      if (!seededAuth && file.startsWith("0000_")) {
+        db.exec(`INSERT INTO users (id, username) VALUES ('u-consol', 'consol_user')`);
+        seededAuth = true;
+      }
+    }
+
+    // Seed canonical providers (9, 384) and their legacy duplicates (119, 1899).
+    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('t1', 1, 'Test Movie', 'movie')`);
+    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (9,    'Amazon Prime Video', 'amazon_prime_video', NULL)`);
+    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (119,  'Amazon Prime Video', 'amazon_prime_video', NULL)`);
+    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (384,  'HBO Max', 'hbo_max', NULL)`);
+    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (1899, 'HBO Max', 'hbo_max', NULL)`);
+
+    // Seed offers referencing duplicate IDs.
+    db.exec(`INSERT INTO offers (title_id, provider_id, monetization_type, presentation_type, url) VALUES ('t1', 119, 'FLATRATE', '', 'https://example.com')`);
+    db.exec(`INSERT INTO offers (title_id, provider_id, monetization_type, presentation_type, url) VALUES ('t1', 1899, 'FLATRATE', '', 'https://example.com')`);
+
+    // Seed user_subscribed_providers: one user with both duplicate + canonical (conflict case),
+    // another user with only the duplicate.
+    db.exec(`INSERT INTO users (id, username) VALUES ('u-conflict', 'conflict_user')`);
+    db.exec(`INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-consol', 119)`);
+    db.exec(`INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-conflict', 9)`);
+    db.exec(`INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-conflict', 119)`);
+
+    // Run the consolidation migration.
+    const consolidation = fs.readFileSync(path.join(MIGRATIONS_DIR, "0043_consolidate_duplicate_providers.sql"), "utf-8");
+    const stmts = consolidation
+      .split("--> statement-breakpoint")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const stmt of stmts) db.exec(stmt);
+
+    // Providers: duplicate rows should be gone.
+    const providerIds = (db.prepare("SELECT id FROM providers").all() as { id: number }[]).map((r) => r.id);
+    expect(providerIds).not.toContain(119);
+    expect(providerIds).not.toContain(1899);
+
+    // Offers: all repointed to canonical IDs.
+    const offerProviders = (db.prepare("SELECT provider_id FROM offers").all() as { provider_id: number }[]).map((r) => r.provider_id);
+    expect(offerProviders).not.toContain(119);
+    expect(offerProviders).not.toContain(1899);
+    expect(offerProviders).toContain(9);
+    expect(offerProviders).toContain(384);
+
+    // user_subscribed_providers: u-consol remapped 119→9; u-conflict deduplicated (no double 9).
+    const uConsolSubs = (db.prepare("SELECT provider_id FROM user_subscribed_providers WHERE user_id = 'u-consol'").all() as { provider_id: number }[]).map((r) => r.provider_id);
+    expect(uConsolSubs).toContain(9);
+    expect(uConsolSubs).not.toContain(119);
+
+    const uConflictSubs = (db.prepare("SELECT provider_id FROM user_subscribed_providers WHERE user_id = 'u-conflict'").all() as { provider_id: number }[]).map((r) => r.provider_id);
+    expect(uConflictSubs.filter((id) => id === 9)).toHaveLength(1);
+    expect(uConflictSubs).not.toContain(119);
+
+    db.close();
+  });
+});

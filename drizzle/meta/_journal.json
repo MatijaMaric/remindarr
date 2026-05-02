@@ -316,6 +316,13 @@
       "when": 1746403200000,
       "tag": "0042_user_subscribed_providers",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1746489600000,
+      "tag": "0043_consolidate_duplicate_providers",
+      "breakpoints": true
     }
   ]
 }
