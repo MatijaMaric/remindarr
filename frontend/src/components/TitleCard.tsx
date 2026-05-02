@@ -73,7 +73,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
             TV
           </span>
         )}
-        {(title.show_status === "completed" || userStatus === "completed") && (
+        {(title.show_status === "completed" || (userStatus === "completed" && title.object_type === "SHOW")) && (
           <>
             <div className="absolute inset-0 bg-emerald-900/40 pointer-events-none" data-testid="completed-overlay" />
             <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">

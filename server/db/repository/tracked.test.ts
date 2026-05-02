@@ -8,8 +8,10 @@ import {
   upsertEpisodes,
   watchEpisode,
   watchEpisodesBulk,
+  updateTrackedStatus,
 } from "../repository";
 import { getTrackedTitles } from "./tracked";
+import { getWatchedTitleIds } from "./watched-titles";
 import { getRawDb } from "../bun-db";
 
 let userId: string;
@@ -189,5 +191,45 @@ describe("getTrackedTitles show_status", () => {
     expect(show!.show_status).toBe("unreleased");
     expect(show!.released_episodes_count).toBe(0);
     expect(show!.total_episodes).toBe(0);
+  });
+});
+
+describe("updateTrackedStatus — watched_titles sync for movies", () => {
+  it("inserts into watched_titles when status set to 'completed' for a MOVIE", async () => {
+    await upsertTitles([makeParsedTitle({ id: "st-m1", objectType: "MOVIE" })]);
+    await trackTitle("st-m1", userId);
+    await updateTrackedStatus("st-m1", userId, "completed");
+
+    const ids = await getWatchedTitleIds(userId);
+    expect(ids.has("st-m1")).toBe(true);
+  });
+
+  it("deletes from watched_titles when status set to 'plan_to_watch' for a MOVIE", async () => {
+    await upsertTitles([makeParsedTitle({ id: "st-m2", objectType: "MOVIE" })]);
+    await trackTitle("st-m2", userId);
+    await updateTrackedStatus("st-m2", userId, "completed");
+    await updateTrackedStatus("st-m2", userId, "plan_to_watch");
+
+    const ids = await getWatchedTitleIds(userId);
+    expect(ids.has("st-m2")).toBe(false);
+  });
+
+  it("deletes from watched_titles when status cleared to null for a MOVIE", async () => {
+    await upsertTitles([makeParsedTitle({ id: "st-m3", objectType: "MOVIE" })]);
+    await trackTitle("st-m3", userId);
+    await updateTrackedStatus("st-m3", userId, "completed");
+    await updateTrackedStatus("st-m3", userId, null);
+
+    const ids = await getWatchedTitleIds(userId);
+    expect(ids.has("st-m3")).toBe(false);
+  });
+
+  it("does NOT touch watched_titles when status set to 'completed' for a SHOW", async () => {
+    await upsertTitles([makeParsedTitle({ id: "st-s1", objectType: "SHOW" })]);
+    await trackTitle("st-s1", userId);
+    await updateTrackedStatus("st-s1", userId, "completed");
+
+    const ids = await getWatchedTitleIds(userId);
+    expect(ids.has("st-s1")).toBe(false);
   });
 });
