@@ -4,7 +4,7 @@ import type { AppEnv } from "../types";
 import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { upsertTitles } from "../db/repository";
-import { makeParsedTitle, makeTmdbMovieDetails, makeTmdbTvDetails } from "../test-utils/fixtures";
+import { makeParsedTitle, makeTmdbMovieDetails, makeTmdbTvDetails, makeTmdbDiscoverMovie, makeTmdbDiscoverTv } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
 
 // Ensure TMDB API key is set so fallback logic is exercised
@@ -30,6 +30,10 @@ beforeEach(() => {
     spyOn(tmdbClient, "fetchSeasonDetails").mockResolvedValue(null as any),
     spyOn(tmdbClient, "fetchEpisodeDetails").mockResolvedValue(null as any),
     spyOn(tmdbClient, "fetchPersonDetails").mockResolvedValue(null as any),
+    spyOn(tmdbClient, "fetchMovieSuggestions").mockResolvedValue({ results: [], page: 1, total_pages: 0, total_results: 0 } as any),
+    spyOn(tmdbClient, "fetchTvSuggestions").mockResolvedValue({ results: [], page: 1, total_pages: 0, total_results: 0 } as any),
+    spyOn(tmdbClient, "getMovieGenres").mockResolvedValue(new Map() as any),
+    spyOn(tmdbClient, "getTvGenres").mockResolvedValue(new Map() as any),
   ];
 });
 
@@ -246,6 +250,77 @@ describe("GET /details/show/:id/season/:season/episode/:episode", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid season or episode number");
+  });
+});
+
+describe("GET /details/movie/:id/suggestions", () => {
+  it("returns suggestions for a valid movie id", async () => {
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 999, title: "Suggested Movie" })],
+      page: 1,
+      total_pages: 1,
+      total_results: 1,
+    });
+
+    const res = await app.request("/details/movie/movie-123/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.titles)).toBe(true);
+    expect(body.titles[0].id).toBe("movie-999");
+    expect(body.page).toBe(1);
+    expect(tmdbClient.fetchMovieSuggestions).toHaveBeenCalledWith(123, 1);
+  });
+
+  it("returns 400 for invalid title id format", async () => {
+    const res = await app.request("/details/movie/invalid/suggestions");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when id is a show id", async () => {
+    const res = await app.request("/details/movie/tv-456/suggestions");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns empty titles array when TMDB returns no results", async () => {
+    const res = await app.request("/details/movie/movie-123/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.titles).toHaveLength(0);
+  });
+});
+
+describe("GET /details/show/:id/suggestions", () => {
+  it("returns suggestions for a valid show id", async () => {
+    (tmdbClient.fetchTvSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverTv({ id: 888, name: "Suggested Show" })],
+      page: 1,
+      total_pages: 1,
+      total_results: 1,
+    });
+
+    const res = await app.request("/details/show/tv-456/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.titles)).toBe(true);
+    expect(body.titles[0].id).toBe("tv-888");
+    expect(body.page).toBe(1);
+    expect(tmdbClient.fetchTvSuggestions).toHaveBeenCalledWith(456, 1);
+  });
+
+  it("returns 400 for invalid title id format", async () => {
+    const res = await app.request("/details/show/invalid/suggestions");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when id is a movie id", async () => {
+    const res = await app.request("/details/show/movie-123/suggestions");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 503 when TMDB fetch fails", async () => {
+    (tmdbClient.fetchTvSuggestions as any).mockRejectedValueOnce(new Error("TMDB error"));
+    const res = await app.request("/details/show/tv-456/suggestions");
+    expect(res.status).toBe(503);
   });
 });
 

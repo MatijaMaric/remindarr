@@ -293,6 +293,38 @@ async function cachedTmdbRequest<T>(
   return result;
 }
 
+// ─── Suggestions endpoints ──────────────────────────────────────────────────
+
+export async function fetchMovieSuggestions(
+  tmdbId: number,
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
+  return cachedTmdbRequest(
+    `tmdb:suggestions:movie:${tmdbId}:${tmdbLanguage()}:p${page}`,
+    CONFIG.CACHE_TTL_DETAILS,
+    () =>
+      tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>(
+        `/movie/${tmdbId}/recommendations`,
+        { language: tmdbLanguage(), page: String(page) },
+      ),
+  );
+}
+
+export async function fetchTvSuggestions(
+  tmdbId: number,
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
+  return cachedTmdbRequest(
+    `tmdb:suggestions:tv:${tmdbId}:${tmdbLanguage()}:p${page}`,
+    CONFIG.CACHE_TTL_DETAILS,
+    () =>
+      tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>(
+        `/tv/${tmdbId}/recommendations`,
+        { language: tmdbLanguage(), page: String(page) },
+      ),
+  );
+}
+
 // ─── Genre lists (for mapping genre_ids to names) ───────────────────────────
 
 export async function getMovieGenres(): Promise<Map<number, string>> {

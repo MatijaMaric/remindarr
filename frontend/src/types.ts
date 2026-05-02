@@ -839,3 +839,13 @@ export interface NotifierHistoryResponse {
   rows: NotificationLogRow[];
   successRate: number;
 }
+
+export interface SuggestionsGroup {
+  source: { id: string; title: string; posterUrl: string | null };
+  suggestions: SearchTitle[];
+}
+
+export interface SuggestionsAggregateResponse {
+  flat: SearchTitle[];
+  groups: SuggestionsGroup[];
+}

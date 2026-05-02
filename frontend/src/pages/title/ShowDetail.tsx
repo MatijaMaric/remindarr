@@ -11,6 +11,7 @@ import { Section } from "../../components/title-detail/Section";
 import { posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { formatDate, isToday } from "../../components/title-detail/utils";
 import SectionErrorBoundary from "../../components/SectionErrorBoundary";
+import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
 
 export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   const { title, tmdb, country } = data;
@@ -146,6 +147,9 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       <SectionErrorBoundary label="streaming providers">
         <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
       </SectionErrorBoundary>
+
+      {/* Suggestions */}
+      <SuggestionsRow titleId={title.id} type="show" />
 
       {/* External Links */}
       {tmdb && (

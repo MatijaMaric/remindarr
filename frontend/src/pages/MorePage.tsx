@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import { Card } from "../components/ui/card";
-import { ChevronRight, Sparkles, BarChart2, User, Settings, LogOut } from "lucide-react";
+import { ChevronRight, Sparkles, BarChart2, User, Settings, LogOut, Lightbulb } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 function MoreGroup({ label, children }: { label: string; children: React.ReactNode }) {
@@ -109,6 +109,12 @@ export default function MorePage() {
           label="Discovery"
           sub="Recommendations for you"
           to="/discovery"
+        />
+        <MoreRow
+          icon={<Lightbulb size={16} />}
+          label="Suggestions"
+          sub="Titles you might like"
+          to="/suggestions"
         />
         <MoreRow
           icon={<BarChart2 size={16} />}

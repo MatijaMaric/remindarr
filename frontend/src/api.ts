@@ -32,6 +32,7 @@ import type {
   FriendsLovedItem,
   AppearanceSettings,
   UserSubscriptions,
+  SuggestionsAggregateResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -1204,4 +1205,23 @@ export async function setRemindOnRelease(
  */
 export async function fetchFriendsLoved(signal?: AbortSignal): Promise<{ titles: SearchTitle[] }> {
   return fetchJson("/social/friends-loved?limit=20", { signal });
+}
+
+export async function getTitleSuggestions(
+  type: "movie" | "show",
+  id: string,
+  page = 1,
+  signal?: AbortSignal,
+): Promise<{ titles: SearchTitle[]; page: number; totalPages: number; totalResults: number }> {
+  return fetchJson(`/details/${type}/${encodeURIComponent(id)}/suggestions?page=${page}`, { signal });
+}
+
+export async function getSuggestionsAggregate(
+  params?: { limit?: number },
+  signal?: AbortSignal,
+): Promise<SuggestionsAggregateResponse> {
+  const qs = new URLSearchParams();
+  if (params?.limit != null) qs.set("limit", String(params.limit));
+  const query = qs.toString();
+  return fetchJson(`/suggestions${query ? `?${query}` : ""}`, { signal });
 }
