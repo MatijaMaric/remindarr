@@ -8,7 +8,7 @@ import {
 } from "../tmdb/client";
 import { parseDiscoverMovie, parseDiscoverTv } from "../tmdb/parser";
 import type { ParsedTitle } from "../tmdb/parser";
-import { getRecentTrackedSourceTitles, type TrackedSourceTitle } from "../db/repository/tracked";
+import { getSuggestionSeedTitles, type SuggestionSourceTitle } from "../db/repository/tracked";
 import { getTrackedTitleIds } from "../db/repository/tracked";
 import { getWatchedTitleIds } from "../db/repository/watched-titles";
 import { CONFIG } from "../config";
@@ -30,7 +30,7 @@ app.get("/", async (c) => {
 
   try {
     const [sourceTitles, trackedIds, watchedIds] = await Promise.all([
-      getRecentTrackedSourceTitles(user.id, 5),
+      getSuggestionSeedTitles(user.id, 5),
       getTrackedTitleIds(user.id),
       getWatchedTitleIds(user.id),
     ]);
@@ -44,7 +44,7 @@ app.get("/", async (c) => {
       getTvGenres(),
     ]);
 
-    type GroupResult = { source: TrackedSourceTitle; suggestions: ParsedTitle[] };
+    type GroupResult = { source: SuggestionSourceTitle; suggestions: ParsedTitle[] };
     const limiter = pLimit(5);
     const groupResults: GroupResult[] = await Promise.all(
       sourceTitles.map((source) =>
@@ -76,7 +76,7 @@ app.get("/", async (c) => {
       .map(({ source, suggestions }) => {
         const filtered = suggestions.filter((t) => !trackedIds.has(t.id) && !watchedIds.has(t.id));
         return {
-          source: { id: source.id, title: source.title, posterUrl: source.posterUrl },
+          source: { id: source.id, title: source.title, posterUrl: source.posterUrl, reason: source.reason },
           suggestions: filtered,
         };
       })

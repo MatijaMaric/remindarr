@@ -3,12 +3,14 @@ import { Link } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
-import type { Recommendation } from "../types";
+import type { Recommendation, SuggestionsAggregateResponse, SuggestionSeedReason, SearchTitle } from "../types";
 import { useApiCall } from "../hooks/useApiCall";
 import { Skeleton } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
 import { PageHeader, Kicker, Pill, Chip } from "../components/design";
 import { posterUrl } from "../lib/tmdb-images";
+import FullBleedCarousel from "../components/FullBleedCarousel";
+import ScrollableRow from "../components/ScrollableRow";
 
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
@@ -314,10 +316,35 @@ function RailCard({
   );
 }
 
+function becauseLabel(reason: SuggestionSeedReason, title: string, t: ReturnType<typeof useTranslation>["t"]): string {
+  switch (reason) {
+    case "loved": return t("suggestions.becauseLoved", { title });
+    case "liked": return t("suggestions.becauseLiked", { title });
+    case "watched": return t("suggestions.becauseWatched", { title });
+    default: return t("suggestions.becauseTracked", { title });
+  }
+}
+
+function PosterCard({ title }: { title: SearchTitle }) {
+  return (
+    <Link to={`/title/${title.id}`} className="w-32 flex-shrink-0 group" style={{ scrollSnapAlign: "start" }}>
+      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800">
+        {title.posterUrl ? (
+          <img src={title.posterUrl} alt={title.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" width={128} height={192} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">N/A</div>
+        )}
+      </div>
+      <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">{title.title}</p>
+    </Link>
+  );
+}
+
 export default function DiscoveryPage() {
   const { t } = useTranslation();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [tab, setTab] = useState<"foryou" | "activity">("foryou");
+  const [aggregate, setAggregate] = useState<SuggestionsAggregateResponse | null>(null);
 
   const { loading, error } = useApiCall(
     (signal) => api.getRecommendations(undefined, undefined, signal),
@@ -335,6 +362,14 @@ export default function DiscoveryPage() {
   );
 
   const unreadCount = countData?.count ?? 0;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    api.getSuggestionsAggregate({ limit: 60 }, controller.signal)
+      .then((res) => { if (!controller.signal.aborted) setAggregate(res); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   const handleMarkRead = useCallback(async (rec: Recommendation) => {
     try {
@@ -400,37 +435,64 @@ export default function DiscoveryPage() {
           {error}
         </div>
       ) : tab === "foryou" ? (
-        recommendations.length === 0 ? (
+        recommendations.length === 0 && (!aggregate || (aggregate.flat.length === 0 && aggregate.groups.length === 0)) ? (
           <p className="text-zinc-500 text-sm py-8 text-center">
             {t("discovery.empty")}
           </p>
         ) : (
-          <div>
-            {/* Hero card — first recommendation */}
-            <HeroCard
-              rec={heroRec}
-              onTrack={handleTrack}
-              onDismiss={handleDismiss}
-            />
-
-            {/* Horizontal rail — remaining recommendations */}
-            {railRecs.length > 0 && (
+          <div className="space-y-8">
+            {/* Social recommendations */}
+            {recommendations.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-                  More recommendations
-                </p>
-                <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
-                  {railRecs.map((rec) => (
-                    <RailCard
-                      key={rec.id}
-                      rec={rec}
-                      onTrack={handleTrack}
-                      onDismiss={handleDismiss}
-                    />
-                  ))}
-                </div>
+                <HeroCard rec={heroRec} onTrack={handleTrack} onDismiss={handleDismiss} />
+                {railRecs.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">More recommendations</p>
+                    <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
+                      {railRecs.map((rec) => (
+                        <RailCard key={rec.id} rec={rec} onTrack={handleTrack} onDismiss={handleDismiss} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+
+            {/* TMDB hero rail */}
+            {aggregate && aggregate.flat.length > 0 && (
+              <section>
+                <div className="mb-4">
+                  <Kicker>For you</Kicker>
+                  <h2 className="text-xl font-bold tracking-[-0.01em]">{t("suggestions.forYou")}</h2>
+                </div>
+                <FullBleedCarousel>
+                  {aggregate.flat.slice(0, 12).map((title) => (
+                    <PosterCard key={title.id} title={title} />
+                  ))}
+                </FullBleedCarousel>
+              </section>
+            )}
+
+            {/* "Because you …" groups */}
+            {aggregate && aggregate.groups.map((group) => (
+              <section key={group.source.id}>
+                <div className="flex items-center gap-3 mb-4">
+                  {group.source.posterUrl && (
+                    <Link to={`/title/${group.source.id}`} className="flex-shrink-0">
+                      <img src={group.source.posterUrl} alt={group.source.title} className="w-8 h-12 rounded object-cover" width={32} height={48} loading="lazy" />
+                    </Link>
+                  )}
+                  <h2 className="text-base font-semibold text-zinc-100 leading-snug">
+                    {becauseLabel(group.source.reason, group.source.title, t)}
+                  </h2>
+                </div>
+                <ScrollableRow>
+                  {group.suggestions.map((title) => (
+                    <PosterCard key={title.id} title={title} />
+                  ))}
+                </ScrollableRow>
+              </section>
+            ))}
           </div>
         )
       ) : (

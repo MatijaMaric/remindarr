@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { trackTitle, upsertTitles, createUser } from "../db/repository";
+import { trackTitle, upsertTitles, createUser, rateTitle } from "../db/repository";
 import { watchTitle } from "../db/repository/watched-titles";
 import { makeParsedTitle, makeTmdbDiscoverMovie, makeTmdbDiscoverTv } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
@@ -79,30 +79,100 @@ describe("GET /suggestions", () => {
     expect(body.groups).toEqual([]);
   });
 
-  it("returns suggestions grouped by source title", async () => {
+  it("seeds from tracked titles as fallback (reason: tracked)", async () => {
     await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
     await trackTitle("movie-100", mockUserId);
 
     (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
-      results: [
-        makeTmdbDiscoverMovie({ id: 200, title: "Suggestion A", vote_average: 8.0 }),
-        makeTmdbDiscoverMovie({ id: 201, title: "Suggestion B", vote_average: 7.0 }),
-      ],
-      page: 1,
-      total_pages: 1,
-      total_results: 2,
+      results: [makeTmdbDiscoverMovie({ id: 200, title: "Suggestion A" })],
+      page: 1, total_pages: 1, total_results: 1,
     });
 
     const res = await app.request("/suggestions");
     expect(res.status).toBe(200);
     const body = await res.json();
-
-    expect(Array.isArray(body.flat)).toBe(true);
-    expect(body.flat.length).toBeGreaterThan(0);
-    expect(Array.isArray(body.groups)).toBe(true);
+    expect(body.groups[0].source.reason).toBe("tracked");
     expect(body.groups[0].source.id).toBe("movie-100");
-    expect(body.groups[0].suggestions.length).toBe(2);
     expect(tmdbClient.fetchMovieSuggestions).toHaveBeenCalledWith(100, 1);
+  });
+
+  it("seeds from watched titles before tracked (reason: watched)", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-200", tmdbId: "200", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("movie-100", mockUserId);
+    await watchTitle("movie-200", mockUserId);
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValue({
+      results: [makeTmdbDiscoverMovie({ id: 999, title: "Suggested" })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // watched title should come first
+    const sourceIds = body.groups.map((g: any) => g.source.id);
+    expect(sourceIds[0]).toBe("movie-200");
+    expect(body.groups[0].source.reason).toBe("watched");
+  });
+
+  it("seeds from LOVE-rated titles with highest priority (reason: loved)", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-200", tmdbId: "200", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("movie-100", mockUserId);
+    await rateTitle(mockUserId, "movie-200", "LOVE");
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValue({
+      results: [makeTmdbDiscoverMovie({ id: 999, title: "Suggested" })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const sourceIds = body.groups.map((g: any) => g.source.id);
+    expect(sourceIds[0]).toBe("movie-200");
+    expect(body.groups[0].source.reason).toBe("loved");
+  });
+
+  it("seeds from LIKE-rated titles before watched (reason: liked)", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-200", tmdbId: "200", objectType: "MOVIE" }),
+    ]);
+    await watchTitle("movie-100", mockUserId);
+    await rateTitle(mockUserId, "movie-200", "LIKE");
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValue({
+      results: [makeTmdbDiscoverMovie({ id: 999, title: "Suggested" })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const sourceIds = body.groups.map((g: any) => g.source.id);
+    expect(sourceIds[0]).toBe("movie-200");
+    expect(body.groups[0].source.reason).toBe("liked");
+  });
+
+  it("group source includes reason field", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
+    await trackTitle("movie-100", mockUserId);
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 200, title: "Suggestion A", vote_average: 8.0 })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.groups[0].source).toHaveProperty("reason");
   });
 
   it("filters out titles the user already tracks", async () => {
@@ -115,9 +185,7 @@ describe("GET /suggestions", () => {
 
     (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
       results: [makeTmdbDiscoverMovie({ id: 200, title: "Already Tracked" })],
-      page: 1,
-      total_pages: 1,
-      total_results: 1,
+      page: 1, total_pages: 1, total_results: 1,
     });
 
     const res = await app.request("/suggestions");
@@ -136,9 +204,7 @@ describe("GET /suggestions", () => {
 
     (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
       results: [makeTmdbDiscoverMovie({ id: 300, title: "Already Watched" })],
-      page: 1,
-      total_pages: 1,
-      total_results: 1,
+      page: 1, total_pages: 1, total_results: 1,
     });
 
     const res = await app.request("/suggestions");
@@ -156,14 +222,8 @@ describe("GET /suggestions", () => {
     await trackTitle("movie-102", mockUserId);
 
     (tmdbClient.fetchMovieSuggestions as any)
-      .mockResolvedValueOnce({
-        results: [makeTmdbDiscoverMovie({ id: 999, title: "Shared Suggestion" })],
-        page: 1, total_pages: 1, total_results: 1,
-      })
-      .mockResolvedValueOnce({
-        results: [makeTmdbDiscoverMovie({ id: 999, title: "Shared Suggestion" })],
-        page: 1, total_pages: 1, total_results: 1,
-      });
+      .mockResolvedValueOnce({ results: [makeTmdbDiscoverMovie({ id: 999, title: "Shared Suggestion" })], page: 1, total_pages: 1, total_results: 1 })
+      .mockResolvedValueOnce({ results: [makeTmdbDiscoverMovie({ id: 999, title: "Shared Suggestion" })], page: 1, total_pages: 1, total_results: 1 });
 
     const res = await app.request("/suggestions");
     expect(res.status).toBe(200);
@@ -177,9 +237,7 @@ describe("GET /suggestions", () => {
     await trackTitle("movie-100", mockUserId);
 
     (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
-      results: Array.from({ length: 20 }, (_, i) =>
-        makeTmdbDiscoverMovie({ id: 400 + i, title: `Suggestion ${i}` })
-      ),
+      results: Array.from({ length: 20 }, (_, i) => makeTmdbDiscoverMovie({ id: 400 + i, title: `Suggestion ${i}` })),
       page: 1, total_pages: 1, total_results: 20,
     });
 

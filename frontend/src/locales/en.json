@@ -49,8 +49,7 @@
     "settings": "Settings",
     "discovery": "Discovery",
     "stats": "Stats",
-    "search": "Search",
-    "suggestions": "Suggestions"
+    "search": "Search"
   },
   "bottomNav": {
     "home": "Home",
@@ -642,10 +641,13 @@
   "suggestions": {
     "alsoLike": "You might also like",
     "forYou": "Suggested for you",
-    "because": "Because you tracked {{title}}",
+    "becauseLoved": "Because you loved {{title}}",
+    "becauseLiked": "Because you liked {{title}}",
+    "becauseWatched": "Because you watched {{title}}",
+    "becauseTracked": "Because you tracked {{title}}",
     "empty": {
       "title": "No suggestions yet",
-      "cta": "Track a movie or show to get personalized picks"
+      "cta": "Watch, rate, or track a title to get personalized picks"
     }
   }
 }
