@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, gte, lt, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, scores, tracked, watchedTitles } from "../schema";
+import { titles, scores, tracked, watchedTitles, ratings } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getOffersWithPlex } from "./offers";
 import { getGenresForTitles } from "./titles";
@@ -406,34 +406,69 @@ export async function setSnooze(
   });
 }
 
-export interface TrackedSourceTitle {
+export type SuggestionSeedReason = "loved" | "liked" | "watched" | "tracked";
+
+export interface SuggestionSourceTitle {
   id: string;
   tmdbId: string;
   objectType: "MOVIE" | "SHOW";
   title: string;
   posterUrl: string | null;
+  reason: SuggestionSeedReason;
 }
 
-export async function getRecentTrackedSourceTitles(userId: string, limit: number): Promise<TrackedSourceTitle[]> {
-  return traceDbQuery("getRecentTrackedSourceTitles", async () => {
+const titleSelectFields = {
+  id: titles.id,
+  tmdbId: titles.tmdbId,
+  objectType: titles.objectType,
+  title: titles.title,
+  posterUrl: titles.posterUrl,
+};
+
+export async function getSuggestionSeedTitles(userId: string, limit: number): Promise<SuggestionSourceTitle[]> {
+  return traceDbQuery("getSuggestionSeedTitles", async () => {
     const db = getDb();
-    const rows = await db
-      .select({
-        id: titles.id,
-        tmdbId: titles.tmdbId,
-        objectType: titles.objectType,
-        title: titles.title,
-        posterUrl: titles.posterUrl,
-      })
-      .from(tracked)
-      .innerJoin(titles, eq(titles.id, tracked.titleId))
-      .where(and(eq(tracked.userId, userId), sql`${titles.tmdbId} IS NOT NULL`))
-      .orderBy(desc(tracked.trackedAt))
-      .limit(limit)
-      .all();
-    return rows
-      .filter((r) => r.tmdbId !== null)
-      .map((r) => ({ ...r, objectType: r.objectType as "MOVIE" | "SHOW", tmdbId: r.tmdbId! }));
+    const tmdbNotNull = sql`${titles.tmdbId} IS NOT NULL`;
+    const seen = new Set<string>();
+    const result: SuggestionSourceTitle[] = [];
+
+    const addRows = (rows: { id: string; tmdbId: string | null; objectType: string; title: string; posterUrl: string | null }[], reason: SuggestionSeedReason) => {
+      for (const r of rows) {
+        if (result.length >= limit) break;
+        if (!r.tmdbId || seen.has(r.id)) continue;
+        seen.add(r.id);
+        result.push({ id: r.id, tmdbId: r.tmdbId, objectType: r.objectType as "MOVIE" | "SHOW", title: r.title, posterUrl: r.posterUrl, reason });
+      }
+    };
+
+    // Tier 1: loved titles
+    const loved = await db.select(titleSelectFields).from(ratings).innerJoin(titles, eq(titles.id, ratings.titleId))
+      .where(and(eq(ratings.userId, userId), eq(ratings.rating, "LOVE"), tmdbNotNull))
+      .orderBy(desc(ratings.createdAt)).limit(limit).all();
+    addRows(loved, "loved");
+    if (result.length >= limit) return result;
+
+    // Tier 2: liked titles
+    const liked = await db.select(titleSelectFields).from(ratings).innerJoin(titles, eq(titles.id, ratings.titleId))
+      .where(and(eq(ratings.userId, userId), eq(ratings.rating, "LIKE"), tmdbNotNull))
+      .orderBy(desc(ratings.createdAt)).limit(limit).all();
+    addRows(liked, "liked");
+    if (result.length >= limit) return result;
+
+    // Tier 3: watched titles
+    const watched = await db.select(titleSelectFields).from(watchedTitles).innerJoin(titles, eq(titles.id, watchedTitles.titleId))
+      .where(and(eq(watchedTitles.userId, userId), tmdbNotNull))
+      .orderBy(desc(watchedTitles.watchedAt)).limit(limit).all();
+    addRows(watched, "watched");
+    if (result.length >= limit) return result;
+
+    // Tier 4: tracked (fallback for new users)
+    const trackedRows = await db.select(titleSelectFields).from(tracked).innerJoin(titles, eq(titles.id, tracked.titleId))
+      .where(and(eq(tracked.userId, userId), tmdbNotNull))
+      .orderBy(desc(tracked.trackedAt)).limit(limit).all();
+    addRows(trackedRows, "tracked");
+
+    return result;
   });
 }
 
