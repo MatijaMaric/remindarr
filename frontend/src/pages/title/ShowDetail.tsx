@@ -57,7 +57,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {/* Overview */}
       {overview && (
         <Section title="Overview">
-          <p className="text-zinc-300 leading-relaxed">{overview}</p>
+          <p className="text-zinc-300 leading-relaxed select-text">{overview}</p>
         </Section>
       )}
 

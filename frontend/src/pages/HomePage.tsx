@@ -656,10 +656,10 @@ export default function HomePage() {
                         <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" />
                       )}
                     </div>
-                    <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
+                    <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors select-text">
                       {rec.title.title}
                     </p>
-                    <p className="text-xs text-zinc-400 truncate">
+                    <p className="text-xs text-zinc-400 truncate select-text">
                       from @{rec.from_user.username}
                     </p>
                   </Link>

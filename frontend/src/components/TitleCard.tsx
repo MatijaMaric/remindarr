@@ -169,7 +169,7 @@ const TitleCard = memo(function TitleCard({ title, onTrackToggle, showVisibility
 
       {/* Info */}
       <div className="p-3 flex-1 flex flex-col gap-2">
-        <div>
+        <div className="select-text">
           <Link to={`/title/${title.id}`} className="hover:text-amber-400 transition-colors">
             <h3 className="font-semibold text-sm leading-tight line-clamp-2">{title.title}</h3>
           </Link>

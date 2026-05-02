@@ -186,13 +186,13 @@ export default function HeroBanner({
 
           {/* Title */}
           <Link to={`/title/${current.featured.title_id}`} className="group">
-            <h2 className="text-5xl sm:text-[56px] font-extrabold tracking-[-0.03em] leading-none text-white group-hover:text-amber-300 transition-colors mb-4">
+            <h2 className="text-5xl sm:text-[56px] font-extrabold tracking-[-0.03em] leading-none text-white group-hover:text-amber-300 transition-colors mb-4 select-text">
               {current.featured.show_title}
             </h2>
           </Link>
 
           {/* Episode info */}
-          <p className="text-base text-zinc-300 leading-relaxed mb-6 line-clamp-2">
+          <p className="text-base text-zinc-300 leading-relaxed mb-6 line-clamp-2 select-text">
             {formatEpisodeCode(current.featured)}
             {current.featured.name && ` · ${current.featured.name}`}
             {current.featured.overview && ` — ${current.featured.overview}`}

@@ -603,7 +603,7 @@ export default function BrowsePage() {
       )}
 
       {searchError && (
-        <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
+        <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm select-text">
           {searchError}
         </div>
       )}

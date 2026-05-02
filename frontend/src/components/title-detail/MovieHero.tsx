@@ -69,16 +69,16 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
         {/* Title info */}
         <div className="flex-1 space-y-3 max-w-[820px]">
           <div>
-            {tmdb?.tagline && <p className="text-sm text-amber-400 italic mb-1">{tmdb.tagline}</p>}
+            {tmdb?.tagline && <p className="text-sm text-amber-400 italic mb-1 select-text">{tmdb.tagline}</p>}
             <Kicker className="mb-2">
               Movie{title.release_year ? ` · ${title.release_year}` : ""}
               {title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
             </Kicker>
-            <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white">
+            <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white select-text">
               {displayTitle}
             </h1>
             {originalTitle && originalTitle !== displayTitle && (
-              <p className="text-sm text-zinc-400 mt-1">{originalTitle}</p>
+              <p className="text-sm text-zinc-400 mt-1 select-text">{originalTitle}</p>
             )}
           </div>
 

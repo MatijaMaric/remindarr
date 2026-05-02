@@ -324,9 +324,15 @@
     }
   body {
     @apply bg-background text-foreground;
+    -webkit-user-select: none;
+    user-select: none;
     }
   html {
     @apply font-sans overflow-x-hidden;
+    }
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
     }
 }
 
