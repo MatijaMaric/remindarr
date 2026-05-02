@@ -662,7 +662,7 @@ export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
 export async function getProviders() {
   return traceDbQuery("getProviders", async () => {
     const db = getDb();
-    return await db
+    const rows = await db
       .select({
         id: providers.id,
         name: providers.name,
@@ -672,6 +672,14 @@ export async function getProviders() {
       .from(providers)
       .orderBy(asc(providers.name))
       .all();
+    const seen = new Map<number, typeof rows[number]>();
+    for (const row of rows) {
+      const cid = canonicalProviderId(row.id);
+      if (!seen.has(cid)) {
+        seen.set(cid, cid === row.id ? row : { ...row, id: cid });
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
   });
 }
 

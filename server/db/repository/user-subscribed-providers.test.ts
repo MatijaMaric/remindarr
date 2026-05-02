@@ -37,6 +37,19 @@ describe("getSubscribedProviderIds / setSubscribedProviderIds", () => {
     expect(ids).toEqual([]);
   });
 
+  it("normalises non-canonical provider IDs (119→9) on save", async () => {
+    // Seed canonical provider 9 (Amazon Prime Video)
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-sub-canonical",
+        offers: [makeParsedOffer({ titleId: "movie-sub-canonical", providerId: 9, providerName: "Amazon Prime Video", providerTechnicalName: "amazon_prime_video" })],
+      }),
+    ]);
+    await setSubscribedProviderIds(userId, [119]);
+    const ids = await getSubscribedProviderIds(userId);
+    expect(ids).toEqual([9]);
+  });
+
   it("round-trips set and get", async () => {
     await setSubscribedProviderIds(userId, [8, 337]);
     const ids = await getSubscribedProviderIds(userId);

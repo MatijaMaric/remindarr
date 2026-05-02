@@ -2,6 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { userSubscribedProviders, users, providers } from "../schema";
 import { traceDbQuery } from "../../tracing";
+import { canonicalProviderId } from "../../streaming-availability/provider-map";
 
 export async function getSubscribedProviderIds(userId: string): Promise<number[]> {
   return traceDbQuery("getSubscribedProviderIds", async () => {
@@ -18,14 +19,13 @@ export async function getSubscribedProviderIds(userId: string): Promise<number[]
 export async function setSubscribedProviderIds(userId: string, providerIds: number[]): Promise<void> {
   return traceDbQuery("setSubscribedProviderIds", async () => {
     const db = getDb();
-    await db.transaction(async (tx) => {
-      await tx.delete(userSubscribedProviders).where(eq(userSubscribedProviders.userId, userId)).run();
-      if (providerIds.length > 0) {
-        await tx.insert(userSubscribedProviders)
-          .values(providerIds.map((providerId) => ({ userId, providerId })))
-          .run();
-      }
-    });
+    const canonical = Array.from(new Set(providerIds.map(canonicalProviderId)));
+    await db.delete(userSubscribedProviders).where(eq(userSubscribedProviders.userId, userId)).run();
+    if (canonical.length > 0) {
+      await db.insert(userSubscribedProviders)
+        .values(canonical.map((providerId) => ({ userId, providerId })))
+        .run();
+    }
   });
 }
 

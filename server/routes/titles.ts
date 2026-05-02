@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { getRecentTitles, getProviders, getGenres, getLanguages, getSubscribedProviderIds } from "../db/repository";
 import { getMovieWatchProviders, getTvWatchProviders } from "../tmdb/client";
+import { canonicalProviderId } from "../streaming-availability/provider-map";
 import { expandGenreGroup } from "../genres";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
@@ -53,10 +54,9 @@ app.get("/providers", async (c) => {
     getMovieWatchProviders(),
     getTvWatchProviders(),
   ]);
-  const regionIds = new Set([
-    ...movieProviders.map((p) => p.id),
-    ...tvProviders.map((p) => p.id),
-  ]);
+  const regionIds = new Set(
+    [...movieProviders, ...tvProviders].map((p) => canonicalProviderId(p.id))
+  );
   c.header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
   return ok(c, { providers: dbProviders, regionProviderIds: Array.from(regionIds) });
 });
