@@ -855,7 +855,7 @@ describe("getProviders", () => {
     expect(providers[1].name).toBe("Netflix");
   });
 
-  it("collapses duplicate provider IDs into their canonical ID", async () => {
+  it("returns providers directly from the DB without runtime dedup", async () => {
     await upsertTitles([
       makeParsedTitle({
         id: "movie-dedup-1",
@@ -865,15 +865,9 @@ describe("getProviders", () => {
         ],
       }),
     ]);
-    // Insert the historical duplicate rows (119 = legacy Amazon Prime Video, 1899 = legacy HBO Max)
-    const db = getRawDb();
-    db.run("INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (119, 'Amazon Prime Video', 'amazon_prime_video', NULL)");
-    db.run("INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (1899, 'HBO Max', 'hbo_max', NULL)");
 
     const results = await getProviders();
     const ids = results.map((p) => p.id);
-    expect(ids).not.toContain(119);
-    expect(ids).not.toContain(1899);
     expect(ids).toContain(9);
     expect(ids).toContain(384);
     expect(ids.filter((id) => id === 9)).toHaveLength(1);
