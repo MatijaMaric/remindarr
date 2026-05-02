@@ -1,11 +1,30 @@
-import { describe, it, expect, afterEach, mock, spyOn } from "bun:test";
+import { describe, it, expect, afterEach, beforeEach, mock, spyOn } from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "../i18n";
 import ThemePicker from "./ThemePicker";
 import * as useThemeModule from "../hooks/useTheme";
+import * as api from "../api";
+import type { AppearanceSettings } from "../types";
+
+const mockAppearance: AppearanceSettings = {
+  themeVariant: "dark",
+  accentColor: "indigo",
+  density: "comfortable",
+  reduceMotion: 0,
+  highContrast: 0,
+  hideEpisodeSpoilers: 0,
+  autoplayTrailers: 0,
+};
+
+let apiSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+  apiSpy = spyOn(api, "updateAppearanceSettings").mockResolvedValue(mockAppearance);
+});
 
 afterEach(() => {
   cleanup();
+  apiSpy.mockRestore();
 });
 
 describe("ThemePicker", () => {
@@ -141,6 +160,19 @@ describe("ThemePicker", () => {
     render(<ThemePicker />);
     fireEvent.click(screen.getByRole("button", { name: "Auto" }));
     expect(setTheme).toHaveBeenCalledWith("auto");
+
+    spy.mockRestore();
+  });
+
+  it("clicking a theme persists themeVariant to the server", () => {
+    const spy = spyOn(useThemeModule, "useTheme").mockReturnValue({
+      theme: "dark",
+      setTheme: mock(() => {}),
+    });
+
+    render(<ThemePicker />);
+    fireEvent.click(screen.getByRole("button", { name: "Moss" }));
+    expect(apiSpy).toHaveBeenCalledWith({ themeVariant: "moss" });
 
     spy.mockRestore();
   });
