@@ -201,7 +201,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
 
             {/* Episode name — large */}
             <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}>
-              <h2 className="text-[30px] font-extrabold tracking-[-0.02em] leading-[1.02] text-white mb-2.5 drop-shadow-lg hover:text-amber-300 transition-colors">
+              <h2 className="text-[30px] font-extrabold tracking-[-0.02em] leading-[1.02] text-white mb-2.5 drop-shadow-lg hover:text-amber-300 transition-colors select-text">
                 {episode.name ?? formatEpisodeCode(episode)}
               </h2>
             </Link>
@@ -215,7 +215,7 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
 
             {/* Overview */}
             {episode.overview && (
-              <p className="text-sm text-white/70 line-clamp-3 mb-4 drop-shadow">
+              <p className="text-sm text-white/70 line-clamp-3 mb-4 drop-shadow select-text">
                 {episode.overview}
               </p>
             )}

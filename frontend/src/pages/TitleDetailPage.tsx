@@ -54,7 +54,7 @@ export default function TitleDetailPage() {
   if (error) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400">{error}</div>
+        <div className="text-red-400 select-text">{error}</div>
       </div>
     );
   }

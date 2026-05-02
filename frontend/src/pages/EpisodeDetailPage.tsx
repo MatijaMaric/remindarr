@@ -78,7 +78,7 @@ export default function EpisodeDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400">{error || "Episode not found"}</div>
+        <div className="text-red-400 select-text">{error || "Episode not found"}</div>
       </div>
     );
   }
@@ -131,7 +131,7 @@ export default function EpisodeDetailPage() {
       {/* Episode header */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-white select-text">
             <span className="text-zinc-500">S{String(seasonNumber).padStart(2, "0")}E{String(episodeNumber).padStart(2, "0")}</span>
             {" "}
             {tmdb?.name || `Episode ${episodeNumber}`}
@@ -181,7 +181,7 @@ export default function EpisodeDetailPage() {
       {tmdb?.overview && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-white">Overview</h2>
-          <p className="text-zinc-300 leading-relaxed">{tmdb.overview}</p>
+          <p className="text-zinc-300 leading-relaxed select-text">{tmdb.overview}</p>
         </section>
       )}
 

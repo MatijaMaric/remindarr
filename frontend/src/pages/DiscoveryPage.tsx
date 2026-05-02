@@ -110,7 +110,7 @@ function RecommendationCard({
             {senderInitial}
           </div>
         )}
-        <span className="text-sm text-zinc-300 font-medium">{senderName}</span>
+        <span className="text-sm text-zinc-300 font-medium select-text">{senderName}</span>
         {rec.is_targeted && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
             Direct
@@ -152,7 +152,7 @@ function RecommendationCard({
 
       {/* Optional message */}
       {rec.message && (
-        <p className="text-sm text-zinc-400 mb-3 italic">&ldquo;{rec.message}&rdquo;</p>
+        <p className="text-sm text-zinc-400 mb-3 italic select-text">&ldquo;{rec.message}&rdquo;</p>
       )}
 
       {/* Actions */}
@@ -226,14 +226,14 @@ function HeroCard({
               Why you'll like it
             </div>
             {rec.message ? (
-              <p className="text-sm text-zinc-300 italic leading-relaxed mb-2">&ldquo;{rec.message}&rdquo;</p>
+              <p className="text-sm text-zinc-300 italic leading-relaxed mb-2 select-text">&ldquo;{rec.message}&rdquo;</p>
             ) : null}
             {senderName && (
               <div className="flex flex-wrap gap-1.5 items-center">
                 <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-400/[0.08] text-amber-400 border border-amber-400/[0.18] font-medium">
                   Recommended by
                 </span>
-                <span className="text-xs text-zinc-200 font-medium">{senderName}</span>
+                <span className="text-xs text-zinc-200 font-medium select-text">{senderName}</span>
               </div>
             )}
           </div>

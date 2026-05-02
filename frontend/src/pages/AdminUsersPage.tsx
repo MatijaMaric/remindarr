@@ -153,7 +153,7 @@ export default function AdminUsersPage() {
       </div>
 
       {actionError && (
-        <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-2 rounded-lg text-sm">
+        <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-2 rounded-lg text-sm select-text">
           {actionError}
         </div>
       )}

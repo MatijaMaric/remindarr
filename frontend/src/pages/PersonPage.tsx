@@ -138,7 +138,7 @@ export default function PersonPage() {
           </div>
         </div>
         <div className="flex-1 space-y-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">{person.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white select-text">{person.name}</h1>
           <div className="flex flex-wrap gap-2 text-sm">
             {person.known_for_department && (
               <span className="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded">
@@ -178,7 +178,7 @@ export default function PersonPage() {
       {biography && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-white">Biography</h2>
-          <p className="text-zinc-300 leading-relaxed whitespace-pre-line">{displayBio}</p>
+          <p className="text-zinc-300 leading-relaxed whitespace-pre-line select-text">{displayBio}</p>
           {showBioToggle && (
             <button
               onClick={() => setBioExpanded(!bioExpanded)}

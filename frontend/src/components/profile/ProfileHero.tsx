@@ -155,7 +155,7 @@ export default function ProfileHero({
             <div className="min-w-0">
               <MemberSinceKicker memberSince={user.member_since} />
               <h1
-                className="text-white font-extrabold leading-none truncate"
+                className="text-white font-extrabold leading-none truncate select-text"
                 style={{
                   fontSize: "clamp(32px, 5vw, 56px)",
                   letterSpacing: "-0.032em",
@@ -164,7 +164,7 @@ export default function ProfileHero({
               >
                 {displayName}
               </h1>
-              <div className="mt-2 font-mono text-[13px] text-zinc-300 flex items-center gap-2">
+              <div className="mt-2 font-mono text-[13px] text-zinc-300 flex items-center gap-2 select-text">
                 @{user.username}
                 {user.country_code && (
                   <span title={user.country_code} aria-label={user.country_code}>

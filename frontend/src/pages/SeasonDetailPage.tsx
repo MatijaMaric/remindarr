@@ -224,7 +224,7 @@ export default function SeasonDetailPage() {
           </div>
 
           {tmdb?.overview && (
-            <p className="text-zinc-300 leading-relaxed">{tmdb.overview}</p>
+            <p className="text-zinc-300 leading-relaxed select-text">{tmdb.overview}</p>
           )}
 
           <div className="pt-2">
@@ -350,7 +350,7 @@ export default function SeasonDetailPage() {
                           )}
                         </div>
                         {ep.overview && (
-                          <p className="hidden sm:block text-xs text-zinc-500 mt-1 line-clamp-2 leading-snug">
+                          <p className="hidden sm:block text-xs text-zinc-500 mt-1 line-clamp-2 leading-snug select-text">
                             {ep.overview}
                           </p>
                         )}

@@ -37,7 +37,7 @@ export default function BioCard({ bio, isOwnProfile, onBioUpdated }: BioCardProp
         )}
       </div>
       <div
-        className={empty ? "text-sm text-zinc-500 italic leading-relaxed" : "text-sm text-zinc-200 leading-relaxed"}
+        className={empty ? "text-sm text-zinc-500 italic leading-relaxed select-text" : "text-sm text-zinc-200 leading-relaxed select-text"}
         data-testid="bio-text"
       >
         {empty ? placeholder : bio}
