@@ -12,7 +12,7 @@ import { RatingBadge } from "./RatingBadge";
 import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { getCertification } from "./utils";
 import { formatEta } from "../../pages/StatsPage";
-import TrailerEmbed from "./TrailerEmbed";
+import TrailerEmbed, { hasTrailer } from "./TrailerEmbed";
 
 export interface ShowHeroProps {
   title: Title;
@@ -24,6 +24,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
   const [showTrailer, setShowTrailer] = useState(false);
   const isMobile = useIsMobile();
   const videos = tmdb?.videos?.results ?? [];
+  const trailerAvailable = hasTrailer(videos);
   const genres = tmdb?.genres?.map((g) => g.name) || title.genres;
   const certification =
     getCertification(tmdb?.content_ratings?.results, country) || title.age_certification;
@@ -137,7 +138,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
           : undefined
       }
     >
-      {showTrailer && videos.length > 0 && (
+      {showTrailer && trailerAvailable && (
         <div className="mb-6 sm:mb-8 lg:mb-10 max-w-[1100px] mx-auto">
           <TrailerEmbed videos={videos} />
         </div>
@@ -240,7 +241,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               isTracked={title.is_tracked}
             />
             <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
-            {videos.length > 0 && (
+            {trailerAvailable && (
               <button
                 type="button"
                 onClick={() => setShowTrailer((prev) => !prev)}

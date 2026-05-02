@@ -5,6 +5,10 @@ export type TrailerEmbedProps = {
   videos: TmdbVideo[];
 };
 
+export function hasTrailer(videos: TmdbVideo[]): boolean {
+  return videos.some((v) => v.site === "YouTube" && v.type === "Trailer");
+}
+
 function pickBestTrailer(videos: TmdbVideo[]): TmdbVideo | null {
   const trailers = videos.filter((v) => v.site === "YouTube" && v.type === "Trailer");
   if (trailers.length === 0) return null;
