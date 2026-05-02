@@ -115,10 +115,57 @@ describe("deleteStaleLibraryItems", () => {
     getRawDb().prepare(`INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type) VALUES (?, ?, ?, ?, ?)`)
       .run("int-1", userId, "movie-1", "rk-1", "movie");
 
-    await deleteStaleLibraryItems("int-1", []);
+    const removed = await deleteStaleLibraryItems("int-1", []);
+    expect(removed).toBe(1);
 
     const count = (getRawDb().prepare(`SELECT COUNT(*) as cnt FROM plex_library_items WHERE integration_id = ?`).get("int-1") as any).cnt;
     expect(count).toBe(0);
+  });
+
+  it("returns 0 when nothing is stale", async () => {
+    insertTitle("movie-1");
+    insertIntegration("int-1", userId, "srv-1");
+
+    getRawDb().prepare(`INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type) VALUES (?, ?, ?, ?, ?)`)
+      .run("int-1", userId, "movie-1", "rk-1", "movie");
+
+    const removed = await deleteStaleLibraryItems("int-1", ["movie-1"]);
+    expect(removed).toBe(0);
+  });
+
+  it("handles >99 titles without D1 param-limit errors (chunked delete)", async () => {
+    const user2 = await createUser("user2", "hash2");
+    insertIntegration("int-1", userId, "srv-1");
+    insertIntegration("int-2", user2, "srv-2");
+
+    // Seed 200 titles across two integrations; keep only the first 50 for int-1
+    const keepIds: string[] = [];
+    for (let i = 1; i <= 200; i++) {
+      const id = `bulk-movie-${i}`;
+      insertTitle(id);
+      getRawDb()
+        .prepare(`INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type) VALUES (?, ?, ?, ?, ?)`)
+        .run("int-1", userId, id, `rk-${i}`, "movie");
+      if (i <= 50) keepIds.push(id);
+    }
+    // Also seed a row for int-2 to confirm cross-integration isolation
+    insertTitle("other-movie");
+    getRawDb()
+      .prepare(`INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type) VALUES (?, ?, ?, ?, ?)`)
+      .run("int-2", user2, "other-movie", "rk-other", "movie");
+
+    const removed = await deleteStaleLibraryItems("int-1", keepIds);
+    expect(removed).toBe(150);
+
+    const remaining = getRawDb()
+      .prepare(`SELECT title_id FROM plex_library_items WHERE integration_id = ?`)
+      .all("int-1") as Array<{ title_id: string }>;
+    expect(remaining).toHaveLength(50);
+    expect(remaining.map((r) => r.title_id).sort()).toEqual(keepIds.sort());
+
+    // int-2 row must be untouched
+    const int2Count = (getRawDb().prepare(`SELECT COUNT(*) as cnt FROM plex_library_items WHERE integration_id = ?`).get("int-2") as any).cnt;
+    expect(int2Count).toBe(1);
   });
 });
 

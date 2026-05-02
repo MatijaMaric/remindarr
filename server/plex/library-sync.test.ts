@@ -151,7 +151,8 @@ describe("syncPlexLibrary — stale cleanup", () => {
     mockGetAllMovies.mockResolvedValue([
       { ratingKey: "rk-1", title: "Movie A", viewCount: 0, Guid: [{ id: "tmdb://100" }] },
     ]);
-    await syncPlexLibrary(integration());
+    const result = await syncPlexLibrary(integration());
+    expect(result.itemsRemoved).toBe(1);
     expect(countLibraryItems(integrationId)).toBe(1);
     expect(getLibraryItem(userId, "movie-100")).not.toBeNull();
     expect(getLibraryItem(userId, "movie-200")).toBeNull();
@@ -167,7 +168,8 @@ describe("syncPlexLibrary — stale cleanup", () => {
     mockGetAllMovies.mockResolvedValue([]);
     mockGetShows.mockResolvedValue([]);
 
-    await syncPlexLibrary(integration());
+    const result = await syncPlexLibrary(integration());
+    expect(result.itemsRemoved).toBe(1);
     expect(countLibraryItems(integrationId)).toBe(0);
   });
 });

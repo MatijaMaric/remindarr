@@ -10,6 +10,7 @@ const log = logger.child({ module: "plex-library-sync" });
 export type LibrarySyncResult = {
   moviesAdded: number;
   showsAdded: number;
+  itemsRemoved: number;
 };
 
 type IntegrationRow = {
@@ -96,10 +97,10 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
 
     // Upsert all items, then remove stale ones in a single pass
     await upsertPlexLibraryItems(itemsToUpsert);
-    await deleteStaleLibraryItems(integrationId, currentTitleIds);
+    const itemsRemoved = await deleteStaleLibraryItems(integrationId, currentTitleIds);
 
-    log.info("Plex library sync complete", { integrationId, moviesAdded, showsAdded });
-    return { moviesAdded, showsAdded };
+    log.info("Plex library sync complete", { integrationId, moviesAdded, showsAdded, itemsRemoved });
+    return { moviesAdded, showsAdded, itemsRemoved };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
 
