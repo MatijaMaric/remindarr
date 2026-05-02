@@ -9,8 +9,12 @@ import {
   fetchSeasonDetails,
   fetchEpisodeDetails,
   fetchPersonDetails,
+  fetchMovieSuggestions,
+  fetchTvSuggestions,
+  getMovieGenres,
+  getTvGenres,
 } from "../tmdb/client";
-import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
+import { parseMovieDetails, parseTvDetails, parseDiscoverMovie, parseDiscoverTv } from "../tmdb/parser";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
@@ -200,6 +204,48 @@ app.get("/person/:personId", async (c) => {
   } catch (e) {
     log.error("TMDB person fetch failed", { personId, err: e });
     return err(c, "Person not found", 404);
+  }
+});
+
+app.get("/movie/:id/suggestions", async (c) => {
+  const parsed = parseTitleId(c.req.param("id"));
+  if (!parsed || parsed.type !== "MOVIE") return err(c, "Invalid title ID", 400);
+  if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
+
+  const page = Math.max(1, Number(c.req.query("page") ?? "1") || 1);
+
+  try {
+    const [data, genreMap] = await Promise.all([
+      fetchMovieSuggestions(parsed.tmdbId, page),
+      getMovieGenres(),
+    ]);
+    const titles = data.results.map((r) => parseDiscoverMovie(r, genreMap));
+    setPublicCacheIfAnon(c, 1800);
+    return ok(c, { titles, page: data.page, totalPages: data.total_pages, totalResults: data.total_results });
+  } catch (e) {
+    log.error("TMDB movie suggestions fetch failed", { tmdbId: parsed.tmdbId, err: e });
+    return err(c, "Failed to fetch suggestions", 503);
+  }
+});
+
+app.get("/show/:id/suggestions", async (c) => {
+  const parsed = parseTitleId(c.req.param("id"));
+  if (!parsed || parsed.type !== "SHOW") return err(c, "Invalid title ID", 400);
+  if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
+
+  const page = Math.max(1, Number(c.req.query("page") ?? "1") || 1);
+
+  try {
+    const [data, genreMap] = await Promise.all([
+      fetchTvSuggestions(parsed.tmdbId, page),
+      getTvGenres(),
+    ]);
+    const titles = data.results.map((r) => parseDiscoverTv(r, genreMap));
+    setPublicCacheIfAnon(c, 1800);
+    return ok(c, { titles, page: data.page, totalPages: data.total_pages, totalResults: data.total_results });
+  } catch (e) {
+    log.error("TMDB show suggestions fetch failed", { tmdbId: parsed.tmdbId, err: e });
+    return err(c, "Failed to fetch suggestions", 503);
   }
 });
 

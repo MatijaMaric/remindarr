@@ -19,6 +19,7 @@ import ReleaseDates from "../../components/title-detail/ReleaseDates";
 import { Section } from "../../components/title-detail/Section";
 import { formatCurrency } from "../../components/title-detail/utils";
 import SectionErrorBoundary from "../../components/SectionErrorBoundary";
+import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
 
 export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { t } = useTranslation();
@@ -184,6 +185,9 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       <SectionErrorBoundary label="streaming providers">
         <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
       </SectionErrorBoundary>
+
+      {/* Suggestions */}
+      <SuggestionsRow titleId={title.id} type="movie" />
 
       {/* External Links */}
       {tmdb && (

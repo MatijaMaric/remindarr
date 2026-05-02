@@ -71,8 +71,9 @@ export {
   getUsersTrackingTitles,
   setSnooze,
   setRemindOnRelease,
+  getRecentTrackedSourceTitles,
 } from "./tracked";
-export type { UserStatus, NotificationMode } from "./tracked";
+export type { UserStatus, NotificationMode, TrackedSourceTitle } from "./tracked";
 
 export { getTagsForUser, getTagsForTitle, setTags } from "./tags";
 

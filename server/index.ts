@@ -29,6 +29,7 @@ import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
 import recommendationsRoutes from "./routes/recommendations";
+import suggestionsRoutes from "./routes/suggestions";
 import invitationsRoutes from "./routes/invitations";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
@@ -254,10 +255,16 @@ app.use("/api/ratings/*", writeRateLimiter, optionalAuth);
 app.use("/api/ratings", writeRateLimiter, optionalAuth);
 app.route("/api/ratings", ratingsRoutes);
 
-// Recommendations routes
+// Recommendations routes (social broadcast)
 app.use("/api/recommendations/*", requireAuth);
 app.use("/api/recommendations", requireAuth);
 app.route("/api/recommendations", recommendationsRoutes);
+
+// Suggestions routes (TMDB-based, auth required for aggregate)
+const suggestionsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "suggestions", limit: 20, windowMs: 60_000 });
+app.use("/api/suggestions/*", suggestionsRateLimiter, requireAuth);
+app.use("/api/suggestions", suggestionsRateLimiter, requireAuth);
+app.route("/api/suggestions", suggestionsRoutes);
 
 // Invitations routes
 app.use("/api/invitations/*", requireAuth);

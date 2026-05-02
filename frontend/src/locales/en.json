@@ -49,7 +49,8 @@
     "settings": "Settings",
     "discovery": "Discovery",
     "stats": "Stats",
-    "search": "Search"
+    "search": "Search",
+    "suggestions": "Suggestions"
   },
   "bottomNav": {
     "home": "Home",
@@ -637,5 +638,14 @@
     "placeholder": "Add tag...",
     "tooMany": "Max 10 tags",
     "tooLong": "Tag too long (max 30 chars)"
+  },
+  "suggestions": {
+    "alsoLike": "You might also like",
+    "forYou": "Suggested for you",
+    "because": "Because you tracked {{title}}",
+    "empty": {
+      "title": "No suggestions yet",
+      "cta": "Track a movie or show to get personalized picks"
+    }
   }
 }

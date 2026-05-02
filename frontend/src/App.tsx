@@ -37,6 +37,7 @@ const InvitePage = lazyWithRetry(() => import("./pages/InvitePage"));
 const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
+const SuggestionsPage = lazyWithRetry(() => import("./pages/SuggestionsPage"));
 const KioskPage = lazyWithRetry(() => import("./pages/KioskPage"));
 const SharedWatchlistPage = lazyWithRetry(() => import("./pages/SharedWatchlistPage"));
 const UserOverlapPage = lazyWithRetry(() => import("./pages/UserOverlapPage"));
@@ -196,6 +197,7 @@ export default function App() {
             <Route path="/upcoming" element={<RequireAuth><Navigate to="/calendar" replace /></RequireAuth>} />
             <Route path="/more" element={<RequireAuth><Page><MorePage /></Page></RequireAuth>} />
             <Route path="/discovery" element={<RequireAuth><Page><DiscoveryPage /></Page></RequireAuth>} />
+            <Route path="/suggestions" element={<RequireAuth><Page><SuggestionsPage /></Page></RequireAuth>} />
             <Route path="/invite" element={<RequireAuth><Page><InvitePage /></Page></RequireAuth>} />
             <Route path="/stats" element={<Navigate to="/tracked?view=stats" replace />} />
             <Route path="/admin/users" element={<RequireAuth><Page><AdminUsersPage /></Page></RequireAuth>} />

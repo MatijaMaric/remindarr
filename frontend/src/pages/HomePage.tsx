@@ -19,6 +19,7 @@ import { Kicker } from "../components/design";
 import { posterUrl } from "../lib/tmdb-images";
 import UpNextRow from "../components/UpNextRow";
 import FriendsLovedRow from "../components/FriendsLovedRow";
+import SuggestedForYouRow from "../components/SuggestedForYouRow";
 import type { UpNextItem } from "../api";
 
 export interface UnwatchedCardEntry {
@@ -790,6 +791,7 @@ export default function HomePage() {
       {layout
         .filter((s) => s.enabled)
         .map((s) => renderSection(s.id))}
+      <SuggestedForYouRow />
     </div>
   );
 }

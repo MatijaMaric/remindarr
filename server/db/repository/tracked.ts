@@ -406,6 +406,37 @@ export async function setSnooze(
   });
 }
 
+export interface TrackedSourceTitle {
+  id: string;
+  tmdbId: string;
+  objectType: "MOVIE" | "SHOW";
+  title: string;
+  posterUrl: string | null;
+}
+
+export async function getRecentTrackedSourceTitles(userId: string, limit: number): Promise<TrackedSourceTitle[]> {
+  return traceDbQuery("getRecentTrackedSourceTitles", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: titles.id,
+        tmdbId: titles.tmdbId,
+        objectType: titles.objectType,
+        title: titles.title,
+        posterUrl: titles.posterUrl,
+      })
+      .from(tracked)
+      .innerJoin(titles, eq(titles.id, tracked.titleId))
+      .where(and(eq(tracked.userId, userId), sql`${titles.tmdbId} IS NOT NULL`))
+      .orderBy(desc(tracked.trackedAt))
+      .limit(limit)
+      .all();
+    return rows
+      .filter((r) => r.tmdbId !== null)
+      .map((r) => ({ ...r, objectType: r.objectType as "MOVIE" | "SHOW", tmdbId: r.tmdbId! }));
+  });
+}
+
 export async function setRemindOnRelease(
   titleId: string,
   userId: string,
