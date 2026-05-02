@@ -133,6 +133,6 @@ describe("fixSkippedMigrations", () => {
     const migrations = rawDb
       .prepare("SELECT COUNT(*) as cnt FROM __drizzle_migrations")
       .get() as { cnt: number };
-    expect(migrations.cnt).toBe(44);
+    expect(migrations.cnt).toBe(45);
   });
 });

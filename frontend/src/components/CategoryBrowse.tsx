@@ -78,6 +78,7 @@ interface Props {
   showProviderBadge?: boolean;
   showRating?: boolean;
   onResultsCount?: (count: number) => void;
+  onlyMine?: boolean;
 }
 
 export default function CategoryBrowse({
@@ -100,6 +101,7 @@ export default function CategoryBrowse({
   showProviderBadge,
   showRating,
   onResultsCount,
+  onlyMine,
 }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -132,6 +134,7 @@ export default function CategoryBrowse({
           yearMin: yearMinNum != null && Number.isFinite(yearMinNum) ? yearMinNum : undefined,
           yearMax: yearMaxNum != null && Number.isFinite(yearMaxNum) ? yearMaxNum : undefined,
           minRating: minRatingNum != null && Number.isFinite(minRatingNum) ? minRatingNum : undefined,
+          onlyMine: onlyMine || undefined,
         });
         const normalized = res.titles.map(normalizeSearchTitle);
         if (append) {
@@ -163,7 +166,7 @@ export default function CategoryBrowse({
         setLoadingMore(false);
       }
     });
-  }, [run, category, type, genre, provider, language, yearMin, yearMax, minRating, onResultsCount]);
+  }, [run, category, type, genre, provider, language, yearMin, yearMax, minRating, onlyMine, onResultsCount]);
 
   useEffect(() => {
     fetchTitles(1, false);

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getRecentTitles, getProviders, getGenres, getLanguages } from "../db/repository";
+import { getRecentTitles, getProviders, getGenres, getLanguages, getSubscribedProviderIds } from "../db/repository";
 import { getMovieWatchProviders, getTvWatchProviders } from "../tmdb/client";
 import { expandGenreGroup } from "../genres";
 import { CONFIG } from "../config";
@@ -19,13 +19,28 @@ app.get("/", async (c) => {
   const genreParam = c.req.query("genre") || "";
   const languageParam = c.req.query("language") || "";
   const excludeTracked = c.req.query("excludeTracked") === "1";
+  const onlyMine = c.req.query("onlyMine") === "true";
   const limit = Math.max(1, Math.min(Number(c.req.query("limit")) || 100, 1000));
   const offset = Math.max(0, Number(c.req.query("offset")) || 0);
 
   const objectTypes = typeParam ? typeParam.split(",").filter(Boolean) : [];
-  const providers = providerParam ? providerParam.split(",").filter(Boolean) : [];
+  let providers = providerParam ? providerParam.split(",").filter(Boolean) : [];
   const genres = genreParam ? genreParam.split(",").filter(Boolean).flatMap(expandGenreGroup) : [];
   const languages = languageParam ? languageParam.split(",").filter(Boolean) : [];
+
+  if (onlyMine && user) {
+    const subscribedIds = await getSubscribedProviderIds(user.id);
+    if (subscribedIds.length === 0) {
+      return ok(c, { titles: [], count: 0 });
+    }
+    const subscribedStrings = subscribedIds.map(String);
+    providers = providers.length > 0
+      ? providers.filter((p) => subscribedStrings.includes(p))
+      : subscribedStrings;
+    if (providers.length === 0) {
+      return ok(c, { titles: [], count: 0 });
+    }
+  }
 
   const titles = await getRecentTitles({ daysBack, objectTypes, providers, genres, languages, excludeTracked, limit, offset }, user?.id);
   setPublicCacheIfAnon(c, 600);

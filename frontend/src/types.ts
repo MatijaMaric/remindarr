@@ -125,6 +125,11 @@ export interface Provider {
   icon_url: string;
 }
 
+export interface UserSubscriptions {
+  providerIds: number[];
+  onlyMine: boolean;
+}
+
 export interface WatchHistoryEntry {
   id: string;
   watchedAt: string;

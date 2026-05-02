@@ -179,6 +179,7 @@ export const users = sqliteTable(
     highContrast: integer("high_contrast").notNull().default(0),
     hideEpisodeSpoilers: integer("hide_episode_spoilers").notNull().default(0),
     autoplayTrailers: integer("autoplay_trailers").notNull().default(0),
+    onlyMineFilter: integer("only_mine_filter").notNull().default(0),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(
@@ -244,6 +245,23 @@ export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });
+
+export const userSubscribedProviders = sqliteTable(
+  "user_subscribed_providers",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    providerId: integer("provider_id")
+      .notNull()
+      .references(() => providers.id, { onDelete: "restrict" }),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.providerId] }),
+    index("idx_user_subscribed_providers_user_id").on(table.userId),
+  ]
+);
 
 export const tracked = sqliteTable(
   "tracked",
@@ -750,7 +768,7 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 }));
 
 export const schemaExports = {
-  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs,
+  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs, userSubscribedProviders,
   follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
   watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents, notificationLog,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,

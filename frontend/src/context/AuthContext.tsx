@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { authClient } from "../lib/auth-client";
+import { getSubscriptions } from "../api";
+import type { UserSubscriptions } from "../types";
 
 interface User {
   id: string;
@@ -20,6 +22,8 @@ interface AuthContextType {
   user: User | null;
   providers: AuthProviders | null;
   loading: boolean;
+  subscriptions: UserSubscriptions | null;
+  refreshSubscriptions: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -57,6 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscriptions, setSubscriptions] = useState<UserSubscriptions | null>(null);
+
+  const refreshSubscriptions = useCallback(async () => {
+    try {
+      const data = await getSubscriptions();
+      setSubscriptions(data);
+    } catch {
+      setSubscriptions(null);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -74,13 +88,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           authClient.getSession().then((r) => r.data),
           fetch("/api/auth/custom/providers").then((r) => r.json()),
         ]);
-        setUser(
-          sessionResult.status === "fulfilled"
-            ? mapSessionToUser(sessionResult.value)
-            : null
-        );
+        const resolvedUser = sessionResult.status === "fulfilled"
+          ? mapSessionToUser(sessionResult.value)
+          : null;
+        setUser(resolvedUser);
         if (provData.status === "fulfilled") {
           setProviders(provData.value);
+        }
+        if (resolvedUser) {
+          getSubscriptions().then(setSubscriptions).catch(() => {});
         }
       } catch {
         setUser(null);
@@ -108,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const session = await authClient.getSession();
     setUser(mapSessionToUser(session.data));
+    getSubscriptions().then(setSubscriptions).catch(() => {});
 
     // Refresh providers in case OIDC was configured
     fetch("/api/auth/custom/providers")
@@ -128,15 +145,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const session = await authClient.getSession();
     setUser(mapSessionToUser(session.data));
+    getSubscriptions().then(setSubscriptions).catch(() => {});
   };
 
   const logout = async () => {
     await authClient.signOut();
     setUser(null);
+    setSubscriptions(null);
   };
 
   return (
-    <AuthContext value={{ user, providers, loading, login, signup, logout, refresh }}>
+    <AuthContext value={{ user, providers, loading, subscriptions, refreshSubscriptions, login, signup, logout, refresh }}>
       {children}
     </AuthContext>
   );

@@ -263,3 +263,11 @@ export {
   pruneOldRows,
 } from "./notification-log";
 export type { NotificationLogRow } from "./notification-log";
+
+export {
+  getSubscribedProviderIds,
+  setSubscribedProviderIds,
+  getOnlyMineFilter,
+  setOnlyMineFilter,
+  filterValidProviderIds,
+} from "./user-subscribed-providers";

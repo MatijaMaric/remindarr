@@ -25,6 +25,7 @@ interface Props {
   showProviderBadge?: boolean;
   showRating?: boolean;
   onResultsCount?: (count: number) => void;
+  onlyMine?: boolean;
 }
 
 export default function NewReleases({
@@ -45,6 +46,7 @@ export default function NewReleases({
   showProviderBadge,
   showRating,
   onResultsCount,
+  onlyMine,
 }: Props) {
   const { t } = useTranslation();
   const [titles, setTitles] = useState<Title[]>([]);
@@ -74,10 +76,11 @@ export default function NewReleases({
       provider: provider.length ? provider.join(",") : undefined,
       language: language.length ? language.join(",") : undefined,
       excludeTracked: hideTracked || undefined,
+      onlyMine: onlyMine || undefined,
     });
     setTitles(res.titles);
     onResultsCount?.(res.titles.length);
-  }), [run, daysBack, type, genre, provider, language, hideTracked, onResultsCount]);
+  }), [run, daysBack, type, genre, provider, language, hideTracked, onlyMine, onResultsCount]);
 
   useEffect(() => {
     fetchTitles();

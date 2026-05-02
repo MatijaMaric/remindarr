@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useReducer } from "react";
+import { useCallback, useEffect, useRef, useState, useReducer } from "react";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import SearchBar from "../components/SearchBar";
@@ -17,6 +17,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader } from "../components/design";
 import { useAsyncError } from "../hooks/useAsyncError";
 import { Card } from "../components/ui/card";
+import { useAuth } from "../context/AuthContext";
 
 const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
 
@@ -122,6 +123,7 @@ export default function BrowsePage() {
   const { run: runAsync, error: searchError, reset: resetSearchError } = useAsyncError();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const { subscriptions } = useAuth();
   useGridNavigation();
 
   // ── Browse filter data (loaded once) ────────────────────────────────────────
@@ -224,6 +226,23 @@ export default function BrowsePage() {
     (value: boolean) => setHideTrackedStr(value ? "1" : ""),
     [setHideTrackedStr]
   );
+
+  const [onlyMineStr, setOnlyMineStr] = useQueryParam(searchParams, setSearchParams, "onlyMine");
+  const onlyMine = onlyMineStr === "true";
+  const setOnlyMine = useCallback(
+    (value: boolean) => setOnlyMineStr(value ? "true" : ""),
+    [setOnlyMineStr]
+  );
+
+  // Preselect provider filter with subscribed providers on first load (when no provider param is set)
+  const preselectedRef = useRef(false);
+  useEffect(() => {
+    if (preselectedRef.current) return;
+    if (!subscriptions || subscriptions.providerIds.length === 0) return;
+    if (searchParams.get("provider")) return;
+    preselectedRef.current = true;
+    setProvider(subscriptions.providerIds.map(String));
+  }, [subscriptions, searchParams, setProvider]);
 
   async function runSearch(
     query: string,
@@ -484,10 +503,38 @@ export default function BrowsePage() {
         )
       )}
 
+      {/* On my services toggle chip — shown when user has subscribed providers */}
+      {searchResults === null && subscriptions && subscriptions.providerIds.length > 0 && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOnlyMine(!onlyMine)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold font-mono border transition-colors ${
+              onlyMine
+                ? "bg-amber-400 text-black border-amber-400"
+                : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500"
+            }`}
+            aria-pressed={onlyMine}
+          >
+            {onlyMine ? "✓ " : ""}On my services
+          </button>
+        </div>
+      )}
+
       {/* Active filter chips */}
-      {searchResults === null && (type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0 || browseYearMin !== "" || browseYearMax !== "" || browseMinRating !== "") && (
+      {searchResults === null && (onlyMine || type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0 || browseYearMin !== "" || browseYearMax !== "" || browseMinRating !== "") && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">Active</span>
+          {onlyMine && (
+            <button
+              type="button"
+              onClick={() => setOnlyMine(false)}
+              aria-label="Remove 'On my services' filter"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+            >
+              On my services ×
+            </button>
+          )}
           {type.map((t) => (
             <button
               key={t}
@@ -596,6 +643,7 @@ export default function BrowsePage() {
               showProviderBadge
               showRating
               onResultsCount={setResultsCount}
+              onlyMine={onlyMine}
             />
           ) : (
             <CategoryBrowse
@@ -619,6 +667,7 @@ export default function BrowsePage() {
               showProviderBadge
               showRating
               onResultsCount={setResultsCount}
+              onlyMine={onlyMine}
             />
           )}
         </div>
