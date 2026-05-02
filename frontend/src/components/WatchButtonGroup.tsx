@@ -122,7 +122,7 @@ function SplitWatchButton({ providers, subscribedSet, size, fullWidth }: { provi
   const primaryUrl = useMobileDeepLink ? plexDeepLink(primary.url, platform) : primary.url;
 
   return (
-    <div ref={containerRef} className={`flex${fullWidth || isLg ? " w-full" : ""}`} style={{ minHeight: isLg ? "52px" : "32px" }}>
+    <div ref={containerRef} className={`flex${fullWidth || isLg ? " w-full" : ""} ${isLg ? "min-h-[3.25rem]" : "min-h-8"}`}>
       {/* Primary provider link */}
       <a
         href={primaryUrl}
