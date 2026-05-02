@@ -1,8 +1,28 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useSearchParams } from "react-router";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import "../i18n";
+
+// Mutable so individual tests can override subscriptions without re-mocking
+let mockSubscriptions: { providerIds: number[]; onlyMine: boolean } | null = null;
+
+mock.module("../context/AuthContext", () => ({
+  useAuth: () => ({
+    user: null,
+    providers: null,
+    loading: false,
+    subscriptions: mockSubscriptions,
+    refreshSubscriptions: mock(() => Promise.resolve()),
+    login: mock(() => Promise.resolve()),
+    signup: mock(() => Promise.resolve()),
+    logout: mock(() => Promise.resolve()),
+    refresh: mock(() => Promise.resolve()),
+  }),
+  AuthContext: { Provider: ({ children }: { children: ReactNode }) => children },
+  AuthProvider: ({ children }: { children: ReactNode }) => children,
+}));
 
 mock.module("../hooks/useIsMobile", () => ({ useIsMobile: () => false }));
 mock.module("../hooks/useGridNavigation", () => ({ useGridNavigation: () => undefined }));
@@ -18,9 +38,6 @@ mock.module("../components/loadFilters", () => ({
     }),
 }));
 
-// Stub out child components that make API calls or have complex browser deps.
-// We do not mock ../api here to avoid leaking into other test files — the only
-// on-mount API call (getLanguages) is silently swallowed by the component on failure.
 mock.module("../components/SearchBar", () => ({
   default: ({ onSearch }: any) => (
     <input data-testid="search-bar" onChange={(e) => onSearch(e.target.value)} />
@@ -39,6 +56,7 @@ function makeWrapper(initialPath: string) {
 
 afterEach(() => {
   cleanup();
+  mockSubscriptions = null;
 });
 
 describe("BrowsePage active filter chips", () => {
@@ -102,5 +120,66 @@ describe("BrowsePage active filter chips", () => {
     expect(screen.queryByRole("button", { name: /remove movies filter/i })).toBeNull();
     // Genre chip for Action should still be present
     expect(screen.getByRole("button", { name: /remove action filter/i })).toBeDefined();
+  });
+});
+
+describe("BrowsePage subscription preselect", () => {
+  // Helper that captures the current URLSearchParams from inside the router tree
+  function SearchParamsSpy({ onCapture }: { onCapture: (p: URLSearchParams) => void }) {
+    const [sp] = useSearchParams();
+    useEffect(() => { onCapture(sp); }, [sp, onCapture]);
+    return null;
+  }
+
+  it("preselects subscribed providers when no provider param in URL", async () => {
+    mockSubscriptions = { providerIds: [8, 337], onlyMine: false };
+
+    let captured: URLSearchParams | null = null;
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/browse"]}>
+          <BrowsePage />
+          <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+        </MemoryRouter>
+      );
+    });
+
+    expect(captured?.get("provider")).toBe("8,337");
+  });
+
+  it("does not overwrite an existing provider param in the URL", async () => {
+    mockSubscriptions = { providerIds: [8, 337], onlyMine: false };
+
+    let captured: URLSearchParams | null = null;
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/browse?provider=15"]}>
+          <BrowsePage />
+          <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+        </MemoryRouter>
+      );
+    });
+
+    // The existing provider=15 should be preserved, not overwritten
+    expect(captured?.get("provider")).toBe("15");
+  });
+
+  it("does not preselect when user has no subscriptions", async () => {
+    mockSubscriptions = null;
+
+    let captured: URLSearchParams | null = null;
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={["/browse"]}>
+          <BrowsePage />
+          <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+        </MemoryRouter>
+      );
+    });
+
+    expect(captured?.get("provider")).toBeNull();
   });
 });

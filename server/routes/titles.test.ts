@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bu
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
-import { upsertTitles, trackTitle, createUser } from "../db/repository";
+import { upsertTitles, trackTitle, createUser, setSubscribedProviderIds } from "../db/repository";
 import titlesApp from "./titles";
 import type { AppEnv } from "../types";
 import * as tmdbClient from "../tmdb/client";
@@ -284,5 +284,112 @@ describe("GET /titles/providers", () => {
     const res = await app.request("/titles/providers");
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toContain("max-age=86400");
+  });
+});
+
+describe("GET /titles?onlyMine", () => {
+  function makeAuthedApp(userId: string) {
+    const a = new Hono<AppEnv>();
+    a.use("*", async (c, next) => {
+      c.set("user", { id: userId, username: "u", name: null, role: null, is_admin: false });
+      await next();
+    });
+    a.route("/titles", titlesApp);
+    return a;
+  }
+
+  it("returns only titles matching subscribed providers", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "netflix-title",
+        title: "Netflix Movie",
+        releaseDate: today,
+        offers: [makeParsedOffer({ titleId: "netflix-title", providerId: 8, providerName: "Netflix", providerTechnicalName: "netflix" })],
+      }),
+      makeParsedTitle({
+        id: "disney-title",
+        title: "Disney Movie",
+        releaseDate: today,
+        offers: [makeParsedOffer({ titleId: "disney-title", providerId: 337, providerName: "Disney+", providerTechnicalName: "disneyplus" })],
+      }),
+    ]);
+    const userId = await createUser("onlymineuser", "hash");
+    await setSubscribedProviderIds(userId, [8]);
+
+    const authedApp = makeAuthedApp(userId);
+    const res = await authedApp.request("/titles?daysBack=9999&onlyMine=true");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].title).toBe("Netflix Movie");
+  });
+
+  it("returns empty when user has no subscribed providers", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "some-title",
+        title: "Some Movie",
+        releaseDate: today,
+        offers: [makeParsedOffer({ titleId: "some-title", providerId: 8 })],
+      }),
+    ]);
+    const userId = await createUser("onlymineempty", "hash");
+    // no subscriptions set
+
+    const authedApp = makeAuthedApp(userId);
+    const res = await authedApp.request("/titles?daysBack=9999&onlyMine=true");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.titles).toHaveLength(0);
+    expect(body.count).toBe(0);
+  });
+
+  it("intersects subscribed providers with explicit provider param", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "netflix-title2",
+        title: "Netflix Movie",
+        releaseDate: today,
+        offers: [makeParsedOffer({ titleId: "netflix-title2", providerId: 8, providerName: "Netflix", providerTechnicalName: "netflix" })],
+      }),
+      makeParsedTitle({
+        id: "disney-title2",
+        title: "Disney Movie",
+        releaseDate: today,
+        offers: [makeParsedOffer({ titleId: "disney-title2", providerId: 337, providerName: "Disney+", providerTechnicalName: "disneyplus" })],
+      }),
+    ]);
+    const userId = await createUser("onlymineint", "hash");
+    await setSubscribedProviderIds(userId, [8, 337]);
+
+    // Explicit provider=8 + onlyMine=true (subscribed to both) → intersection = [8]
+    const authedApp = makeAuthedApp(userId);
+    const res = await authedApp.request("/titles?daysBack=9999&onlyMine=true&provider=8");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.titles).toHaveLength(1);
+    expect(body.titles[0].title).toBe("Netflix Movie");
+  });
+
+  it("ignores onlyMine when user is not authenticated", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "anon-title",
+        title: "Anon Movie",
+        releaseDate: today,
+        offers: [makeParsedOffer({ titleId: "anon-title", providerId: 8 })],
+      }),
+    ]);
+
+    // No user context — use the plain unauthenticated app
+    const res = await app.request("/titles?daysBack=9999&onlyMine=true");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // Without auth, onlyMine is ignored and all titles are returned
+    expect(body.titles.length).toBeGreaterThan(0);
   });
 });

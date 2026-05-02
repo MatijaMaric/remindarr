@@ -8,11 +8,12 @@ import { lazyWithRetry } from "../lib/lazyWithRetry";
 
 const AccountTab = lazyWithRetry(() => import("./settings/AccountTab"));
 const AppearanceTab = lazyWithRetry(() => import("./settings/AppearanceTab"));
+const SubscriptionsTab = lazyWithRetry(() => import("./settings/SubscriptionsTab"));
 const NotificationsTab = lazyWithRetry(() => import("./settings/NotificationsTab"));
 const IntegrationsTab = lazyWithRetry(() => import("./settings/IntegrationsTab"));
 const AdminTab = lazyWithRetry(() => import("./settings/AdminTab"));
 
-const VALID_TABS = ["account", "appearance", "notifications", "integrations", "admin"] as const;
+const VALID_TABS = ["account", "appearance", "subscriptions", "notifications", "integrations", "admin"] as const;
 type SettingsTab = (typeof VALID_TABS)[number];
 
 export default function SettingsPage() {
@@ -47,6 +48,7 @@ export default function SettingsPage() {
   const TABS = [
     { value: "account", label: t("settings.tabs.account") },
     { value: "appearance", label: t("settings.tabs.appearance") },
+    { value: "subscriptions", label: t("settings.tabs.subscriptions") },
     { value: "notifications", label: t("settings.tabs.notifications") },
     { value: "integrations", label: t("settings.tabs.integrations") },
     ...(user.is_admin ? [{ value: "admin", label: t("settings.tabs.admin") }] : []),
@@ -90,6 +92,7 @@ export default function SettingsPage() {
           <Suspense fallback={<div className="p-8 text-zinc-400">Loading…</div>}>
             {activeTab === "account" && <AccountTab />}
             {activeTab === "appearance" && <AppearanceTab />}
+            {activeTab === "subscriptions" && <SubscriptionsTab />}
             {activeTab === "notifications" && <NotificationsTab />}
             {activeTab === "integrations" && <IntegrationsTab />}
             {activeTab === "admin" && user.is_admin && <AdminTab />}

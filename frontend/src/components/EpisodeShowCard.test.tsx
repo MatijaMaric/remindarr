@@ -2,11 +2,28 @@ import { describe, it, expect, afterEach } from "bun:test";
 import { render, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { EpisodeShowCard } from "./EpisodeShowCard";
+import { AuthContext } from "../context/AuthContext";
 import type { Episode, Offer } from "../types";
 import type { ReactNode } from "react";
 
+const baseAuth = {
+  user: null,
+  providers: null,
+  loading: false,
+  subscriptions: null,
+  refreshSubscriptions: async () => {},
+  login: async () => {},
+  signup: async () => {},
+  logout: async () => {},
+  refresh: async () => {},
+};
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <AuthContext value={baseAuth as any}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </AuthContext>
+  );
 }
 
 afterEach(cleanup);

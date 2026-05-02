@@ -425,9 +425,21 @@
     "tabs": {
       "account": "Account",
       "appearance": "Appearance",
+      "subscriptions": "Subscriptions",
       "notifications": "Notifications",
       "integrations": "Integrations",
       "admin": "Admin"
+    },
+    "subscriptions": {
+      "title": "My Streaming Services",
+      "subtitle": "Select the services you're subscribed to. This preselects the provider filter when browsing and dims unavailable offers on title cards.",
+      "onlyMine": {
+        "label": "Only show titles on my services",
+        "description": "When on, browsing always filters to titles available on your subscribed services."
+      },
+      "empty": "No providers found.",
+      "regionProviders": "My Region",
+      "otherProviders": "Other"
     },
     "theme": {
       "title": "Theme",

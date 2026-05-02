@@ -31,6 +31,7 @@ import type {
   OverlapResponse,
   FriendsLovedItem,
   AppearanceSettings,
+  UserSubscriptions,
 } from "./types";
 
 const BASE = "/api";
@@ -80,6 +81,7 @@ export async function getTitles(params: {
   genre?: string;
   language?: string;
   excludeTracked?: boolean;
+  onlyMine?: boolean;
   limit?: number;
   offset?: number;
 } = {}, signal?: AbortSignal): Promise<{ titles: Title[]; count: number }> {
@@ -90,6 +92,7 @@ export async function getTitles(params: {
   if (params.genre) qs.set("genre", params.genre);
   if (params.language) qs.set("language", params.language);
   if (params.excludeTracked) qs.set("excludeTracked", "1");
+  if (params.onlyMine) qs.set("onlyMine", "true");
   if (params.limit != null) qs.set("limit", String(params.limit));
   if (params.offset != null) qs.set("offset", String(params.offset));
   return fetchJson(`/titles?${qs}`, { signal });
@@ -126,6 +129,7 @@ export async function browseTitles(params: {
   yearMin?: number;
   yearMax?: number;
   minRating?: number;
+  onlyMine?: boolean;
 }, signal?: AbortSignal): Promise<{
   titles: SearchTitle[];
   page: number;
@@ -147,6 +151,7 @@ export async function browseTitles(params: {
   if (params.yearMin != null) qs.set("year_min", String(params.yearMin));
   if (params.yearMax != null) qs.set("year_max", String(params.yearMax));
   if (params.minRating != null) qs.set("min_rating", String(params.minRating));
+  if (params.onlyMine) qs.set("onlyMine", "true");
   return fetchJson(`/browse?${qs}`, { signal });
 }
 
@@ -918,6 +923,24 @@ export async function updateAppearanceSettings(settings: Partial<AppearanceSetti
   return fetchJson("/user/settings/appearance", {
     method: "PUT",
     body: JSON.stringify(settings),
+  });
+}
+
+export async function getSubscriptions(signal?: AbortSignal): Promise<UserSubscriptions> {
+  return fetchJson("/user/settings/subscriptions", { signal });
+}
+
+export async function updateSubscriptions(providerIds: number[]): Promise<{ providerIds: number[] }> {
+  return fetchJson("/user/settings/subscriptions", {
+    method: "PUT",
+    body: JSON.stringify({ providerIds }),
+  });
+}
+
+export async function updateOnlyMine(onlyMine: boolean): Promise<{ onlyMine: boolean }> {
+  return fetchJson("/user/settings/subscriptions/only-mine", {
+    method: "PUT",
+    body: JSON.stringify({ onlyMine }),
   });
 }
 

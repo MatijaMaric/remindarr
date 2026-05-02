@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser } from "../db/repository";
+import { createUser, upsertTitles } from "../db/repository";
+import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import userSettingsApp, { DEFAULT_HOMEPAGE_LAYOUT } from "./user-settings";
 import type { AppEnv } from "../types";
 
@@ -284,6 +285,103 @@ describe("PUT /user/settings/departure-alerts", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.streamingDeparturesEnabled).toBe(true);
+  });
+});
+
+// ─── Subscriptions ────────────────────────────────────────────────────────────
+
+describe("GET /user/settings/subscriptions", () => {
+  it("returns empty providerIds and onlyMine=false for new user", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/subscriptions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.providerIds).toEqual([]);
+    expect(body.onlyMine).toBe(false);
+  });
+});
+
+describe("PUT /user/settings/subscriptions", () => {
+  beforeEach(async () => {
+    // Seed provider 8 (Netflix) so FK is satisfied
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-settings-sub-1",
+        offers: [makeParsedOffer({ titleId: "movie-settings-sub-1", providerId: 8, providerName: "Netflix", providerTechnicalName: "netflix" })],
+      }),
+    ]);
+  });
+
+  it("saves and returns subscribed provider IDs", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/subscriptions", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ providerIds: [8] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.providerIds).toEqual([8]);
+  });
+
+  it("returns 400 for invalid (non-existent) providerId", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/subscriptions", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ providerIds: [9999] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for missing providerIds field (zod validation)", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/subscriptions", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.issues).toBeDefined();
+  });
+
+  it("allows saving an empty list", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/subscriptions", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ providerIds: [] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.providerIds).toEqual([]);
+  });
+});
+
+describe("PUT /user/settings/subscriptions/only-mine", () => {
+  it("saves and returns onlyMine=true", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/subscriptions/only-mine", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ onlyMine: true }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.onlyMine).toBe(true);
+  });
+
+  it("returns 400 for invalid body (zod validation)", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/subscriptions/only-mine", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ onlyMine: "yes" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.issues).toBeDefined();
   });
 });
 

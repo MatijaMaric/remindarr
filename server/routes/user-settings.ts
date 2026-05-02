@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings, getCrowdedWeekSettings, updateCrowdedWeekSettings, getAppearanceSettings, updateAppearanceSettings } from "../db/repository";
+import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings, getCrowdedWeekSettings, updateCrowdedWeekSettings, getAppearanceSettings, updateAppearanceSettings, getSubscribedProviderIds, setSubscribedProviderIds, getOnlyMineFilter, setOnlyMineFilter, filterValidProviderIds } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
@@ -216,6 +216,56 @@ app.put(
     const settings = await getAppearanceSettings(user.id);
     return ok(c, settings ?? DEFAULT_APPEARANCE);
   },
+);
+
+// ─── Subscribed streaming providers ──────────────────────────────────────────
+
+const updateSubscriptionsSchema = z.object({
+  providerIds: z.array(z.number().int().positive()).max(100),
+});
+
+const updateOnlyMineSchema = z.object({
+  onlyMine: z.boolean(),
+});
+
+app.get("/subscriptions", async (c) => {
+  const user = c.get("user")!;
+  const [providerIds, onlyMine] = await Promise.all([
+    getSubscribedProviderIds(user.id),
+    getOnlyMineFilter(user.id),
+  ]);
+  return ok(c, { providerIds, onlyMine });
+});
+
+app.put(
+  "/subscriptions",
+  zValidator("json", updateSubscriptionsSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { providerIds } = c.req.valid("json");
+
+    if (providerIds.length > 0) {
+      const valid = await filterValidProviderIds(providerIds);
+      if (valid.length !== providerIds.length) {
+        return c.json({ error: "One or more provider IDs are invalid" }, 400);
+      }
+    }
+
+    await setSubscribedProviderIds(user.id, providerIds);
+    const updated = await getSubscribedProviderIds(user.id);
+    return ok(c, { providerIds: updated });
+  }
+);
+
+app.put(
+  "/subscriptions/only-mine",
+  zValidator("json", updateOnlyMineSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { onlyMine } = c.req.valid("json");
+    await setOnlyMineFilter(user.id, onlyMine);
+    return ok(c, { onlyMine });
+  }
 );
 
 export default app;

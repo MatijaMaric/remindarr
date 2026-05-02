@@ -19,7 +19,7 @@ import {
   parseTvDetails,
   type ParsedTitle,
 } from "../tmdb/parser";
-import { getTrackedTitleIds, upsertTitles } from "../db/repository";
+import { getTrackedTitleIds, upsertTitles, getSubscribedProviderIds } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { syncFailureTotal } from "../metrics";
@@ -99,13 +99,29 @@ app.get("/", async (c) => {
   const yearMinParam = c.req.query("year_min");
   const yearMaxParam = c.req.query("year_max");
   const minRatingParam = c.req.query("min_rating");
+  const onlyMine = c.req.query("onlyMine") === "true";
   const genreNames = genreParam ? genreParam.split(",").filter(Boolean) : [];
-  const providerValues = providerParam ? providerParam.split(",").filter(Boolean) : [];
+  let providerValues = providerParam ? providerParam.split(",").filter(Boolean) : [];
   const languageValues = languageParam ? languageParam.split(",").filter(Boolean) : [];
   const typeValues = type ? type.split(",").filter(Boolean) : [];
   const yearMin = yearMinParam ? parseInt(yearMinParam, 10) : undefined;
   const yearMax = yearMaxParam ? parseInt(yearMaxParam, 10) : undefined;
   const minRating = minRatingParam ? parseFloat(minRatingParam) : undefined;
+
+  const user = c.get("user");
+  if (onlyMine && user) {
+    const subscribedIds = await getSubscribedProviderIds(user.id);
+    if (subscribedIds.length === 0) {
+      return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
+    }
+    const subscribedStrings = subscribedIds.map(String);
+    providerValues = providerValues.length > 0
+      ? providerValues.filter((p) => subscribedStrings.includes(p))
+      : subscribedStrings;
+    if (providerValues.length === 0) {
+      return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
+    }
+  }
 
   if (!category || !VALID_CATEGORIES.includes(category as Category)) {
     return err(c, "Invalid category. Must be one of: popular, upcoming, top_rated");
@@ -196,7 +212,6 @@ app.get("/", async (c) => {
       });
     }
 
-    const user = c.get("user");
     const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
     const titlesWithTracked = titles.map((t) => ({
       ...t,
