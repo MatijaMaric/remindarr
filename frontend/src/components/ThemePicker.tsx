@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import * as api from "../api";
 import { useTheme, type Theme } from "../hooks/useTheme";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +33,10 @@ export default function ThemePicker() {
         return (
           <button
             key={meta.value}
-            onClick={() => setTheme(meta.value)}
+            onClick={() => {
+              setTheme(meta.value);
+              api.updateAppearanceSettings({ themeVariant: meta.value }).catch(() => {});
+            }}
             aria-pressed={isActive}
             aria-label={label}
             className={cn(
