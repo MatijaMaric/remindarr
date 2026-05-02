@@ -8,7 +8,7 @@ import { Chip, Kicker } from "../design";
 import { RatingBadge } from "./RatingBadge";
 import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { formatRuntime } from "./utils";
-import TrailerEmbed from "./TrailerEmbed";
+import TrailerEmbed, { hasTrailer } from "./TrailerEmbed";
 
 export interface MovieHeroProps {
   title: Title;
@@ -22,6 +22,7 @@ export interface MovieHeroProps {
 export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPanel }: MovieHeroProps) {
   const [showTrailer, setShowTrailer] = useState(false);
   const videos = tmdb?.videos?.results ?? [];
+  const trailerAvailable = hasTrailer(videos);
   const genres = tmdb?.genres?.map((g) => g.name) || title.genres;
   const certification = title.age_certification;
   const backdropUrl = mkBackdropUrl(tmdb?.backdrop_path, "w1280") ?? null;
@@ -42,7 +43,7 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
           : undefined
       }
     >
-      {showTrailer && videos.length > 0 && (
+      {showTrailer && trailerAvailable && (
         <div className="mb-6 sm:mb-8 lg:mb-10 max-w-[1100px] mx-auto">
           <TrailerEmbed videos={videos} />
         </div>
@@ -131,7 +132,7 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
             />
             {watchedActions}
             <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
-            {videos.length > 0 && (
+            {trailerAvailable && (
               <button
                 type="button"
                 onClick={() => setShowTrailer((prev) => !prev)}

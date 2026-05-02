@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, mock, afterEach } from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import TrailerEmbed from "./TrailerEmbed";
+import TrailerEmbed, { hasTrailer } from "./TrailerEmbed";
 import type { TmdbVideo } from "../../types";
 
 // happy-dom does not implement window.matchMedia; provide a stub that survives
@@ -99,5 +99,21 @@ describe("TrailerEmbed", () => {
     const videos = [makeVideo({ site: "Vimeo", key: "vimeo-key" })];
     const { container } = render(<TrailerEmbed videos={videos} />);
     expect(container.firstChild).toBeNull();
+  });
+});
+
+describe("hasTrailer", () => {
+  it("returns false for empty array", () => {
+    expect(hasTrailer([])).toBe(false);
+  });
+
+  it("returns false when no YouTube Trailer is present", () => {
+    expect(hasTrailer([makeVideo({ type: "Featurette" })])).toBe(false);
+    expect(hasTrailer([makeVideo({ site: "Vimeo" })])).toBe(false);
+  });
+
+  it("returns true when at least one YouTube Trailer is present", () => {
+    expect(hasTrailer([makeVideo()])).toBe(true);
+    expect(hasTrailer([makeVideo({ type: "Teaser" }), makeVideo()])).toBe(true);
   });
 });
