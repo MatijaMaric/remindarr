@@ -1,7 +1,13 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
-import { watchedTitles } from "../schema";
+import { watchedTitles, tracked, titles } from "../schema";
 import { traceDbQuery } from "../../tracing";
+
+async function isMovie(titleId: string): Promise<boolean> {
+  const db = getDb();
+  const row = await db.select({ objectType: titles.objectType }).from(titles).where(eq(titles.id, titleId)).get();
+  return row?.objectType === "MOVIE";
+}
 
 export async function watchTitle(titleId: string, userId: string) {
   return traceDbQuery("watchTitle", async () => {
@@ -10,6 +16,12 @@ export async function watchTitle(titleId: string, userId: string) {
       .values({ titleId, userId })
       .onConflictDoNothing()
       .run();
+    if (await isMovie(titleId)) {
+      await db.update(tracked)
+        .set({ userStatus: "completed" })
+        .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+        .run();
+    }
   });
 }
 
@@ -19,6 +31,12 @@ export async function unwatchTitle(titleId: string, userId: string) {
     await db.delete(watchedTitles)
       .where(and(eq(watchedTitles.titleId, titleId), eq(watchedTitles.userId, userId)))
       .run();
+    if (await isMovie(titleId)) {
+      await db.update(tracked)
+        .set({ userStatus: null })
+        .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId), eq(tracked.userStatus, "completed")))
+        .run();
+    }
   });
 }
 

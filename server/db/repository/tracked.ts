@@ -281,6 +281,16 @@ export async function updateTrackedStatus(titleId: string, userId: string, statu
       .set({ userStatus: status })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
+    const titleRow = await db.select({ objectType: titles.objectType }).from(titles).where(eq(titles.id, titleId)).get();
+    if (titleRow?.objectType === "MOVIE") {
+      if (status === "completed") {
+        await db.insert(watchedTitles).values({ titleId, userId }).onConflictDoNothing().run();
+      } else {
+        await db.delete(watchedTitles)
+          .where(and(eq(watchedTitles.titleId, titleId), eq(watchedTitles.userId, userId)))
+          .run();
+      }
+    }
   });
 }
 
