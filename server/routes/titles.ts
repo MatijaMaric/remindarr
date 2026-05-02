@@ -57,13 +57,13 @@ app.get("/providers", async (c) => {
   const regionIds = new Set(
     [...movieProviders, ...tvProviders].map((p) => canonicalProviderId(p.id))
   );
-  c.header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+  c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   return ok(c, { providers: dbProviders, regionProviderIds: Array.from(regionIds) });
 });
 
 app.get("/genres", async (c) => {
   const genres = await getGenres();
-  c.header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+  c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   return ok(c, { genres });
 });
 
@@ -72,7 +72,7 @@ app.get("/languages", async (c) => {
   const localLang = CONFIG.LANGUAGE.split("-")[0];
   const prioritySet = new Set([localLang, ...PRIORITY_LANGUAGES]);
   const priorityLanguageCodes = languages.filter((l) => prioritySet.has(l));
-  c.header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+  c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   return ok(c, { languages, priorityLanguageCodes });
 });
 

@@ -238,7 +238,7 @@ describe("GET /titles/genres", () => {
   it("sets Cache-Control header", async () => {
     const res = await app.request("/titles/genres");
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toContain("max-age=86400");
+    expect(res.headers.get("cache-control")).toContain("max-age=60");
   });
 });
 
@@ -258,7 +258,7 @@ describe("GET /titles/languages", () => {
   it("sets Cache-Control header", async () => {
     const res = await app.request("/titles/languages");
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toContain("max-age=86400");
+    expect(res.headers.get("cache-control")).toContain("max-age=60");
   });
 });
 
@@ -283,7 +283,7 @@ describe("GET /titles/providers", () => {
   it("sets Cache-Control header", async () => {
     const res = await app.request("/titles/providers");
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toContain("max-age=86400");
+    expect(res.headers.get("cache-control")).toContain("max-age=60");
   });
 });
 
