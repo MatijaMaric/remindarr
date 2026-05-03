@@ -417,16 +417,16 @@ export default function BrowsePage() {
 
       <CategoryBar category={category} onCategoryChange={setCategory} />
 
-      {/* Persistent browse filter — desktop 4-field card / mobile collapsible chip strip */}
+      {/* Persistent browse filter — desktop full card / mobile collapsible (same card content) */}
       {searchResults === null && (
-        isMobile ? (
-          <div className="space-y-2">
+        <div className="space-y-2">
+          {isMobile && (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen((v) => !v)}
                 aria-expanded={mobileFiltersOpen}
-                aria-controls="mobile-filter-strip"
+                aria-controls="mobile-filter-panel"
                 aria-label={mobileFiltersOpen ? "Hide filters" : "Show filters"}
                 className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 transition-colors"
               >
@@ -452,100 +452,62 @@ export default function BrowsePage() {
                 </button>
               )}
             </div>
-            {mobileFiltersOpen && (
-              <div id="mobile-filter-strip" className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-                {/* Type chips */}
-                {[
-                  { label: "All", value: "" },
-                  { label: "Shows", value: "SHOW" },
-                  { label: "Movies", value: "MOVIE" },
-                ].map(({ label, value }) => {
-                  const isActive = value === "" ? type.length === 0 : type.includes(value);
-                  return (
-                    <button
-                      key={label}
-                      onClick={() => value === "" ? setType([]) : setType(isActive ? [] : [value])}
-                      className={`shrink-0 inline-flex items-center text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
-                        isActive
-                          ? "bg-amber-400 text-black border-amber-400"
-                          : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-                {/* Provider chips */}
-                {filterProviders.filter((_, i) => i < 6).map((p) => {
-                  const isActive = provider.includes(String(p.id));
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => setProvider(isActive ? provider.filter((v) => v !== String(p.id)) : [...provider, String(p.id)])}
-                      className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
-                        isActive
-                          ? "bg-amber-400/[0.12] text-amber-400 border-amber-400/[0.25]"
-                          : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
-                      }`}
-                    >
-                      {p.icon_url && <img src={p.icon_url} alt="" className="w-3.5 h-3.5 rounded-sm" />}
-                      {p.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : category === "new_releases" ? (
-          // new_releases keeps the legacy FilterBar so the daysBack toggle stays available.
-          <Card>
-            <FilterBar
-              type={type}
-              onTypeChange={setType}
-              showDaysFilter
-              daysBack={daysBack}
-              onDaysBackChange={setDaysBack}
-              genre={genre}
-              onGenreChange={setGenre}
-              genres={filterGenres}
-              provider={provider}
-              onProviderChange={setProvider}
-              providers={filterProviders}
-              regionProviderIds={filterRegionProviderIds}
-              language={language}
-              onLanguageChange={setLanguage}
-              languages={filterLanguages}
-              priorityLanguageCodes={filterPriorityLanguageCodes}
-              onClearFilters={clearFilters}
-              hideTracked={hideTracked}
-              onHideTrackedChange={setHideTracked}
-            />
-          </Card>
-        ) : (
-          <BrowseFilterCard
-            genre={genre}
-            onGenreChange={setGenre}
-            genres={filterGenres}
-            provider={provider}
-            onProviderChange={setProvider}
-            providers={filterProviders.map((p) => ({ id: p.id, name: p.name, iconUrl: p.icon_url }))}
-            regionProviderIds={filterRegionProviderIds}
-            yearMin={browseYearMin}
-            yearMax={browseYearMax}
-            onYearChange={setBrowseYearRange}
-            minRating={browseMinRating}
-            onMinRatingChange={setBrowseMinRating}
-            type={type}
-            onTypeChange={setType}
-            language={language}
-            onLanguageChange={setLanguage}
-            languages={filterLanguages}
-            priorityLanguageCodes={filterPriorityLanguageCodes}
-            hideTracked={hideTracked}
-            onHideTrackedChange={setHideTracked}
-            onClearFilters={clearFilters}
-          />
-        )
+          )}
+          {(!isMobile || mobileFiltersOpen) && (
+            <div id={isMobile ? "mobile-filter-panel" : undefined}>
+              {category === "new_releases" ? (
+                // new_releases keeps the legacy FilterBar so the daysBack toggle stays available.
+                <Card>
+                  <FilterBar
+                    type={type}
+                    onTypeChange={setType}
+                    showDaysFilter
+                    daysBack={daysBack}
+                    onDaysBackChange={setDaysBack}
+                    genre={genre}
+                    onGenreChange={setGenre}
+                    genres={filterGenres}
+                    provider={provider}
+                    onProviderChange={setProvider}
+                    providers={filterProviders}
+                    regionProviderIds={filterRegionProviderIds}
+                    language={language}
+                    onLanguageChange={setLanguage}
+                    languages={filterLanguages}
+                    priorityLanguageCodes={filterPriorityLanguageCodes}
+                    onClearFilters={clearFilters}
+                    hideTracked={hideTracked}
+                    onHideTrackedChange={setHideTracked}
+                  />
+                </Card>
+              ) : (
+                <BrowseFilterCard
+                  genre={genre}
+                  onGenreChange={setGenre}
+                  genres={filterGenres}
+                  provider={provider}
+                  onProviderChange={setProvider}
+                  providers={filterProviders.map((p) => ({ id: p.id, name: p.name, iconUrl: p.icon_url }))}
+                  regionProviderIds={filterRegionProviderIds}
+                  yearMin={browseYearMin}
+                  yearMax={browseYearMax}
+                  onYearChange={setBrowseYearRange}
+                  minRating={browseMinRating}
+                  onMinRatingChange={setBrowseMinRating}
+                  type={type}
+                  onTypeChange={setType}
+                  language={language}
+                  onLanguageChange={setLanguage}
+                  languages={filterLanguages}
+                  priorityLanguageCodes={filterPriorityLanguageCodes}
+                  hideTracked={hideTracked}
+                  onHideTrackedChange={setHideTracked}
+                  onClearFilters={clearFilters}
+                />
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* On my services toggle chip — shown when user has subscribed providers */}
@@ -567,7 +529,7 @@ export default function BrowsePage() {
       )}
 
       {/* Active filter chips */}
-      {searchResults === null && (onlyMine || type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0 || browseYearMin !== "" || browseYearMax !== "" || browseMinRating !== "") && (
+      {searchResults === null && (!isMobile || mobileFiltersOpen) && (onlyMine || type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0 || browseYearMin !== "" || browseYearMax !== "" || browseMinRating !== "") && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">Active</span>
           {onlyMine && (
