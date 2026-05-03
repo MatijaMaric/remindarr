@@ -110,7 +110,13 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
 
       {/* Top-left chips: Live/Countdown + Provider */}
       {!caughtUp && (
-        <div className="absolute z-10 flex items-center gap-1.5" style={{ top: 104, left: 20 }}>
+        <div
+          className="absolute z-10 flex items-center gap-1.5"
+          style={{
+            top: "calc(var(--reels-chrome-h, 56px) + 8px + env(safe-area-inset-top, 0px))",
+            left: 20,
+          }}
+        >
           {isLive ? (
             <span className="inline-flex items-center gap-1.5 bg-amber-400 text-black text-[10px] font-extrabold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em]">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />

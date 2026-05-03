@@ -770,7 +770,7 @@ function GridCalendar({
   });
 
   const headerRight = (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 justify-end">
       <button
         onClick={prevMonth}
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
@@ -1147,7 +1147,7 @@ function WeekCalendar({
     density === "compact" ? "min-h-20" : density === "spacious" ? "min-h-96" : "min-h-48";
 
   const headerRight = (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 justify-end">
       <button
         onClick={prevWeek}
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
