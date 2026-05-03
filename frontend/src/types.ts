@@ -845,6 +845,7 @@ export type SuggestionSeedReason = "loved" | "liked" | "watched" | "tracked";
 export interface SuggestionsGroup {
   source: { id: string; title: string; posterUrl: string | null; reason: SuggestionSeedReason };
   suggestions: SearchTitle[];
+  hiddenCount: number;
 }
 
 export interface SuggestionsAggregateResponse {

@@ -272,3 +272,10 @@ export {
   setOnlyMineFilter,
   filterValidProviderIds,
 } from "./user-subscribed-providers";
+
+export {
+  dismissTitle,
+  undismissTitle,
+  getDismissedTitleIds,
+  getDismissedCount,
+} from "./dismissed";

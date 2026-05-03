@@ -767,10 +767,23 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
   user: one(users, { fields: [passkey.userId], references: [users.id] }),
 }));
 
+export const dismissedSuggestions = sqliteTable(
+  "dismissed_suggestions",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    dismissedAt: text("dismissed_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.titleId] }),
+    index("idx_dismissed_suggestions_user_id").on(table.userId),
+  ]
+);
+
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs, userSubscribedProviders,
   follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
-  watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents, notificationLog,
+  watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents, notificationLog, dismissedSuggestions,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,

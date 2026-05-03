@@ -1225,3 +1225,11 @@ export async function getSuggestionsAggregate(
   const query = qs.toString();
   return fetchJson(`/suggestions${query ? `?${query}` : ""}`, { signal });
 }
+
+export async function dismissSuggestion(titleId: string, signal?: AbortSignal): Promise<void> {
+  await fetchJson(`/suggestions/dismiss/${encodeURIComponent(titleId)}`, { method: "POST", signal });
+}
+
+export async function undismissSuggestion(titleId: string, signal?: AbortSignal): Promise<void> {
+  await fetchJson(`/suggestions/dismiss/${encodeURIComponent(titleId)}`, { method: "DELETE", signal });
+}
