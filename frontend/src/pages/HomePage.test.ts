@@ -64,30 +64,16 @@ describe("buildUnwatchedCards", () => {
     expect(cards[0].allEpisodeIds).toEqual([10, 20, 30]);
   });
 
-  it("orders shows by most recent air_date descending", () => {
+  it("preserves the order of first occurrence in the input (backend-provided sort)", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-old", season_number: 1, episode_number: 1, air_date: "2025-01-01", show_title: "Old Show" }),
+      makeEpisode({ id: 1, title_id: "show-mid", season_number: 1, episode_number: 1, air_date: "2025-03-10", show_title: "Mid Show" }),
       makeEpisode({ id: 2, title_id: "show-new", season_number: 1, episode_number: 1, air_date: "2025-06-15", show_title: "New Show" }),
-      makeEpisode({ id: 3, title_id: "show-mid", season_number: 1, episode_number: 1, air_date: "2025-03-10", show_title: "Mid Show" }),
+      makeEpisode({ id: 3, title_id: "show-mid", season_number: 1, episode_number: 2, air_date: "2025-03-17", show_title: "Mid Show" }),
+      makeEpisode({ id: 4, title_id: "show-old", season_number: 1, episode_number: 1, air_date: "2025-01-01", show_title: "Old Show" }),
     ];
     const cards = buildUnwatchedCards(episodes);
 
-    expect(cards[0].titleId).toBe("show-new");
-    expect(cards[1].titleId).toBe("show-mid");
-    expect(cards[2].titleId).toBe("show-old");
-  });
-
-  it("uses most recent episode air_date for ordering when show has multiple episodes", () => {
-    const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-a", season_number: 1, episode_number: 1, air_date: "2025-01-01" }),
-      makeEpisode({ id: 2, title_id: "show-a", season_number: 1, episode_number: 2, air_date: "2025-01-08" }),
-      makeEpisode({ id: 3, title_id: "show-b", season_number: 1, episode_number: 1, air_date: "2025-01-05" }),
-    ];
-    const cards = buildUnwatchedCards(episodes);
-
-    // show-a has most recent ep on 2025-01-08, show-b on 2025-01-05
-    expect(cards[0].titleId).toBe("show-a");
-    expect(cards[1].titleId).toBe("show-b");
+    expect(cards.map((c) => c.titleId)).toEqual(["show-mid", "show-new", "show-old"]);
   });
 
   it("returns empty array for empty input", () => {
