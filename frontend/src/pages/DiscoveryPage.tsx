@@ -706,7 +706,7 @@ export default function DiscoveryPage() {
             {moreForYou.length > 0 && (
               <section>
                 <SectionHead kicker="More for you" title="Suggested next" sub="Ranked by score — tracked and dismissed titles are filtered out." />
-                <ScrollableRow>
+                <ScrollableRow className="gap-3 pb-2">
                   {moreForYou.map((title) => (
                     <SuggestionCard
                       key={title.id}
@@ -727,7 +727,7 @@ export default function DiscoveryPage() {
             {Object.keys(recsByTitle).length > 0 && (
               <section>
                 <SectionHead kicker="From people you follow" title="Friends are recommending" />
-                <ScrollableRow>
+                <ScrollableRow className="gap-3 pb-2">
                   {Object.entries(recsByTitle).map(([titleId, recs]) => {
                     const first = recs[0];
                     return (
@@ -769,7 +769,7 @@ export default function DiscoveryPage() {
                     sourceId={group.source.id}
                   />
                   {visibleSuggestions.length > 0 ? (
-                    <ScrollableRow>
+                    <ScrollableRow className="gap-3 pb-2">
                       {visibleSuggestions.map((title) => (
                         <SuggestionCard
                           key={title.id}
