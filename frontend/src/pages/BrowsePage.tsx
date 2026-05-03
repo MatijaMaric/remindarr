@@ -234,6 +234,16 @@ export default function BrowsePage() {
     [setOnlyMineStr]
   );
 
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const activeFilterCount =
+    type.length +
+    genre.length +
+    provider.length +
+    language.length +
+    (browseYearMin !== "" || browseYearMax !== "" ? 1 : 0) +
+    (browseMinRating !== "" ? 1 : 0) +
+    (onlyMine ? 1 : 0);
+
   // Preselect provider filter with subscribed providers on first load (when no provider param is set)
   const preselectedRef = useRef(false);
   useEffect(() => {
@@ -407,49 +417,95 @@ export default function BrowsePage() {
 
       <CategoryBar category={category} onCategoryChange={setCategory} />
 
-      {/* Persistent browse filter — desktop 4-field card / mobile chip strip */}
+      {/* Persistent browse filter — desktop 4-field card / mobile collapsible chip strip */}
       {searchResults === null && (
         isMobile ? (
-          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-            {/* Type chips */}
-            {[
-              { label: "All", value: "" },
-              { label: "Shows", value: "SHOW" },
-              { label: "Movies", value: "MOVIE" },
-            ].map(({ label, value }) => {
-              const isActive = value === "" ? type.length === 0 : type.includes(value);
-              return (
-                <button
-                  key={label}
-                  onClick={() => value === "" ? setType([]) : setType(isActive ? [] : [value])}
-                  className={`shrink-0 inline-flex items-center text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
-                    isActive
-                      ? "bg-amber-400 text-black border-amber-400"
-                      : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
-                  }`}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen((v) => !v)}
+                aria-expanded={mobileFiltersOpen}
+                aria-controls="mobile-filter-strip"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[11px] font-semibold font-mono border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 6h18M6 12h12M10 18h4" />
+                </svg>
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold leading-none">
+                    {activeFilterCount}
+                  </span>
+                )}
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className={`transition-transform ${mobileFiltersOpen ? "rotate-180" : ""}`}
                 >
-                  {label}
-                </button>
-              );
-            })}
-            {/* Provider chips */}
-            {filterProviders.filter((_, i) => i < 6).map((p) => {
-              const isActive = provider.includes(String(p.id));
-              return (
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {activeFilterCount > 0 && (
                 <button
-                  key={p.id}
-                  onClick={() => setProvider(isActive ? provider.filter((v) => v !== String(p.id)) : [...provider, String(p.id)])}
-                  className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
-                    isActive
-                      ? "bg-amber-400/[0.12] text-amber-400 border-amber-400/[0.25]"
-                      : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
-                  }`}
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-[11px] font-semibold font-mono text-zinc-400 hover:text-white transition-colors"
                 >
-                  {p.icon_url && <img src={p.icon_url} alt="" className="w-3.5 h-3.5 rounded-sm" />}
-                  {p.name}
+                  Clear all
                 </button>
-              );
-            })}
+              )}
+            </div>
+            {mobileFiltersOpen && (
+              <div id="mobile-filter-strip" className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
+                {/* Type chips */}
+                {[
+                  { label: "All", value: "" },
+                  { label: "Shows", value: "SHOW" },
+                  { label: "Movies", value: "MOVIE" },
+                ].map(({ label, value }) => {
+                  const isActive = value === "" ? type.length === 0 : type.includes(value);
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => value === "" ? setType([]) : setType(isActive ? [] : [value])}
+                      className={`shrink-0 inline-flex items-center text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
+                        isActive
+                          ? "bg-amber-400 text-black border-amber-400"
+                          : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                {/* Provider chips */}
+                {filterProviders.filter((_, i) => i < 6).map((p) => {
+                  const isActive = provider.includes(String(p.id));
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setProvider(isActive ? provider.filter((v) => v !== String(p.id)) : [...provider, String(p.id)])}
+                      className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold font-mono px-3 py-2 rounded-full border transition-colors ${
+                        isActive
+                          ? "bg-amber-400/[0.12] text-amber-400 border-amber-400/[0.25]"
+                          : "bg-white/[0.06] text-zinc-300 border-white/[0.08]"
+                      }`}
+                    >
+                      {p.icon_url && <img src={p.icon_url} alt="" className="w-3.5 h-3.5 rounded-sm" />}
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : category === "new_releases" ? (
           // new_releases keeps the legacy FilterBar so the daysBack toggle stays available.
@@ -504,7 +560,7 @@ export default function BrowsePage() {
       )}
 
       {/* On my services toggle chip — shown when user has subscribed providers */}
-      {searchResults === null && subscriptions && subscriptions.providerIds.length > 0 && (
+      {searchResults === null && subscriptions && subscriptions.providerIds.length > 0 && (!isMobile || mobileFiltersOpen) && (
         <div className="flex items-center gap-2">
           <button
             type="button"
