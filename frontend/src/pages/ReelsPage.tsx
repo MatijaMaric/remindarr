@@ -548,21 +548,32 @@ export default function ReelsPage() {
 
   return (
     <>
-      {/* Feed / Reels mode switcher + source picker — fixed overlay, top-left */}
-      <div className="fixed z-40" style={{ top: "calc(8px + env(safe-area-inset-top, 0px))", left: 20, right: 20 }}>
-        {/* Feed / Reels toggle row */}
-        <div className="flex items-center gap-2 mb-2">
-          <Link to="/" className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent">Feed</Link>
-          <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">Reels</span>
-        </div>
-        {/* Source picker chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+      {/* Feed / Reels mode switcher + source picker — fixed overlay, edge-to-edge with scrim */}
+      <div
+        className="fixed z-40 left-0 right-0 bg-gradient-to-b from-black/55 to-transparent"
+        style={{ top: 0, paddingTop: "calc(8px + env(safe-area-inset-top, 0px))", paddingBottom: 12 }}
+      >
+        {/* Single horizontally-scrolling row: Feed/Reels toggle + source chips */}
+        <div
+          className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          style={{ paddingLeft: 20, paddingRight: 20 }}
+        >
+          <Link
+            to="/"
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold text-white/60 border border-transparent"
+          >
+            Feed
+          </Link>
+          <span className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[11px] font-bold text-white">
+            Reels
+          </span>
+          <span className="flex-shrink-0 w-px h-4 bg-white/15 mx-1" aria-hidden="true" />
           {ALL_SOURCES.map((s) => (
             <button
               key={s}
               onClick={() => handleSourceChange(s)}
               className={[
-                "px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
+                "flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
                 s === source
                   ? "bg-amber-400 text-zinc-950 border border-amber-400"
                   : "bg-white/[0.15] backdrop-blur-sm border border-white/[0.2] text-white/80 hover:bg-white/[0.25]",
