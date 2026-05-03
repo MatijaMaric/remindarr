@@ -228,7 +228,7 @@ export default function CategoryBrowse({
         </div>
       )}
 
-      {loading ? (
+      {loading && titles.length === 0 ? (
         <div className="text-center py-12 text-zinc-500">Loading...</div>
       ) : (
         <>
