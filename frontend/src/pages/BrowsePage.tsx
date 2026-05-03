@@ -427,39 +427,28 @@ export default function BrowsePage() {
                 onClick={() => setMobileFiltersOpen((v) => !v)}
                 aria-expanded={mobileFiltersOpen}
                 aria-controls="mobile-filter-strip"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[11px] font-semibold font-mono border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 transition-colors"
+                aria-label={mobileFiltersOpen ? "Hide filters" : "Show filters"}
+                className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 transition-colors"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M3 6h18M6 12h12M10 18h4" />
                 </svg>
-                Filters
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold leading-none">
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold leading-none">
                     {activeFilterCount}
                   </span>
                 )}
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  className={`transition-transform ${mobileFiltersOpen ? "rotate-180" : ""}`}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
               </button>
               {activeFilterCount > 0 && (
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="text-[11px] font-semibold font-mono text-zinc-400 hover:text-white transition-colors"
+                  aria-label="Clear all filters"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 hover:text-white transition-colors"
                 >
-                  Clear all
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
                 </button>
               )}
             </div>
