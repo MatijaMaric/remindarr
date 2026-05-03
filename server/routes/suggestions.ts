@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { pLimit } from "../lib/p-limit";
 import {
   fetchMovieSuggestions,
@@ -11,14 +12,34 @@ import type { ParsedTitle } from "../tmdb/parser";
 import { getSuggestionSeedTitles, type SuggestionSourceTitle } from "../db/repository/tracked";
 import { getTrackedTitleIds } from "../db/repository/tracked";
 import { getWatchedTitleIds } from "../db/repository/watched-titles";
+import { dismissTitle, undismissTitle, getDismissedTitleIds } from "../db/repository/dismissed";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const log = logger.child({ module: "suggestions" });
 
 const app = new Hono<AppEnv>();
+
+const dismissParamSchema = z.object({ titleId: z.string().min(1) });
+
+app.post("/dismiss/:titleId", zValidator("param", dismissParamSchema), async (c) => {
+  const user = c.get("user");
+  if (!user) return err(c, "Authentication required", 401);
+  const { titleId } = c.req.valid("param");
+  await dismissTitle(user.id, titleId);
+  return ok(c, { ok: true });
+});
+
+app.delete("/dismiss/:titleId", zValidator("param", dismissParamSchema), async (c) => {
+  const user = c.get("user");
+  if (!user) return err(c, "Authentication required", 401);
+  const { titleId } = c.req.valid("param");
+  await undismissTitle(user.id, titleId);
+  return ok(c, { ok: true });
+});
 
 app.get("/", async (c) => {
   const user = c.get("user");
@@ -29,10 +50,11 @@ app.get("/", async (c) => {
   const limit = isNaN(rawLimit) || rawLimit < 1 ? 40 : Math.min(rawLimit, 100);
 
   try {
-    const [sourceTitles, trackedIds, watchedIds] = await Promise.all([
+    const [sourceTitles, trackedIds, watchedIds, dismissedIds] = await Promise.all([
       getSuggestionSeedTitles(user.id, 5),
       getTrackedTitleIds(user.id),
       getWatchedTitleIds(user.id),
+      getDismissedTitleIds(user.id),
     ]);
 
     if (sourceTitles.length === 0) {
@@ -68,16 +90,20 @@ app.get("/", async (c) => {
       )
     );
 
-    // Dedupe by id, filter out tracked and watched titles
+    // Dedupe by id, filter out tracked, watched, and dismissed titles
     const seen = new Set<string>();
     const flat: ParsedTitle[] = [];
 
     const groups = groupResults
       .map(({ source, suggestions }) => {
-        const filtered = suggestions.filter((t) => !trackedIds.has(t.id) && !watchedIds.has(t.id));
+        const unfiltered = suggestions.length;
+        const filtered = suggestions.filter(
+          (t) => !trackedIds.has(t.id) && !watchedIds.has(t.id) && !dismissedIds.has(t.id),
+        );
         return {
           source: { id: source.id, title: source.title, posterUrl: source.posterUrl, reason: source.reason },
           suggestions: filtered,
+          hiddenCount: unfiltered - filtered.length,
         };
       })
       .filter((g) => g.suggestions.length > 0);

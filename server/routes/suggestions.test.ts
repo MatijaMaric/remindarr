@@ -5,6 +5,7 @@ import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { trackTitle, upsertTitles, createUser, rateTitle } from "../db/repository";
 import { watchTitle } from "../db/repository/watched-titles";
+import { getDismissedTitleIds } from "../db/repository/dismissed";
 import { makeParsedTitle, makeTmdbDiscoverMovie, makeTmdbDiscoverTv } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
 
@@ -261,5 +262,105 @@ describe("GET /suggestions", () => {
     const body = await res.json();
     expect(tmdbClient.fetchTvSuggestions).toHaveBeenCalledWith(500, 1);
     expect(body.flat[0].id).toBe("tv-600");
+  });
+
+  it("filters out dismissed titles", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-200", tmdbId: "200", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("movie-100", mockUserId);
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 200, title: "Dismissed Movie" })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    // Dismiss via the route
+    const dismissRes = await app.request("/suggestions/dismiss/movie-200", { method: "POST" });
+    expect(dismissRes.status).toBe(200);
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.flat.every((t: any) => t.id !== "movie-200")).toBe(true);
+  });
+
+  it("includes hiddenCount per group reflecting filtered titles", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-200", tmdbId: "200", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-300", tmdbId: "300", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("movie-100", mockUserId);
+    await trackTitle("movie-200", mockUserId); // will be filtered
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [
+        makeTmdbDiscoverMovie({ id: 200, title: "Already Tracked" }),
+        makeTmdbDiscoverMovie({ id: 300, title: "Suggestion" }),
+      ],
+      page: 1, total_pages: 1, total_results: 2,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.groups[0].hiddenCount).toBe(1);
+  });
+});
+
+describe("POST /suggestions/dismiss/:titleId", () => {
+  it("dismisses a title and returns ok", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-500", tmdbId: "500", objectType: "MOVIE" })]);
+    const res = await app.request("/suggestions/dismiss/movie-500", { method: "POST" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    const ids = await getDismissedTitleIds(mockUserId);
+    expect(ids.has("movie-500")).toBe(true);
+  });
+
+  it("is idempotent — dismissing twice returns ok", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-500", tmdbId: "500", objectType: "MOVIE" })]);
+    await app.request("/suggestions/dismiss/movie-500", { method: "POST" });
+    const res = await app.request("/suggestions/dismiss/movie-500", { method: "POST" });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    const anonApp = makeAnonApp();
+    const res = await anonApp.request("/suggestions/dismiss/movie-500", { method: "POST" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for an empty titleId", async () => {
+    const res = await app.request("/suggestions/dismiss/", { method: "POST" });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("DELETE /suggestions/dismiss/:titleId", () => {
+  it("undismisses a title and returns ok", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-600", tmdbId: "600", objectType: "MOVIE" })]);
+    await app.request("/suggestions/dismiss/movie-600", { method: "POST" });
+
+    const res = await app.request("/suggestions/dismiss/movie-600", { method: "DELETE" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    const ids = await getDismissedTitleIds(mockUserId);
+    expect(ids.has("movie-600")).toBe(false);
+  });
+
+  it("is a no-op when title was not dismissed", async () => {
+    const res = await app.request("/suggestions/dismiss/movie-999", { method: "DELETE" });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    const anonApp = makeAnonApp();
+    const res = await anonApp.request("/suggestions/dismiss/movie-600", { method: "DELETE" });
+    expect(res.status).toBe(401);
   });
 });
