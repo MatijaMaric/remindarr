@@ -177,30 +177,31 @@ export default function TrackedPage() {
       {!loading && <TrackedStatsBand titles={allTitles} />}
 
       {view !== 'stats' && (
-        <div className="flex items-center gap-0 border-b border-white/[0.06] mb-4">
-          {STATUS_TABS.map(tab => {
-            const count = tab.key === 'all' ? allTitles.length
-              : allTitles.filter(t => t.user_status === tab.key || (tab.key === 'watching' && t.show_status === 'watching') || (tab.key === 'completed' && t.show_status === 'completed')).length;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setStatusFilter(tab.key)}
-                className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  statusFilter === tab.key
-                    ? 'text-zinc-100 border-amber-400 font-semibold'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-100'
-                }`}
-              >
-                {tab.label}
-                <span className="ml-2 font-mono text-[11px] text-zinc-500">{count}</span>
-              </button>
-            );
-          })}
-          <div className="flex-1" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-white/[0.06] mb-4">
+          <div className="flex items-center gap-0 overflow-x-auto scrollbar-none -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-1">
+            {STATUS_TABS.map(tab => {
+              const count = tab.key === 'all' ? allTitles.length
+                : allTitles.filter(t => t.user_status === tab.key || (tab.key === 'watching' && t.show_status === 'watching') || (tab.key === 'completed' && t.show_status === 'completed')).length;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setStatusFilter(tab.key)}
+                  className={`shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                    statusFilter === tab.key
+                      ? 'text-zinc-100 border-amber-400 font-semibold'
+                      : 'text-zinc-400 border-transparent hover:text-zinc-100'
+                  }`}
+                >
+                  {tab.label}
+                  <span className="ml-2 font-mono text-[11px] text-zinc-500">{count}</span>
+                </button>
+              );
+            })}
+          </div>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 mb-0.5"
+            className="self-end sm:self-auto font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 mb-2 sm:mb-0.5 shrink-0"
           >
             <option value="last_aired">sort: last aired</option>
             <option value="title">sort: title</option>
