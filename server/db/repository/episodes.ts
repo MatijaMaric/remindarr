@@ -205,8 +205,32 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
       .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
       .all();
 
-    const offersByTitle = await getOffersWithPlex([...new Set(rows.map((r) => r.title_id))], userId);
-    return rows.map((row) => ({
+    const lastWatchedByTitle = await getLastWatchedAtPerShow(userId);
+
+    const titleOrder = new Map<string, number>();
+    for (const row of rows) {
+      if (!titleOrder.has(row.title_id)) {
+        titleOrder.set(row.title_id, titleOrder.size);
+      }
+    }
+
+    const sortedRows = [...rows].sort((a, b) => {
+      const aWatched = lastWatchedByTitle.get(a.title_id)?.getTime() ?? null;
+      const bWatched = lastWatchedByTitle.get(b.title_id)?.getTime() ?? null;
+      if (aWatched !== bWatched) {
+        if (aWatched === null) return 1;
+        if (bWatched === null) return -1;
+        return bWatched - aWatched;
+      }
+      const aIdx = titleOrder.get(a.title_id)!;
+      const bIdx = titleOrder.get(b.title_id)!;
+      if (aIdx !== bIdx) return aIdx - bIdx;
+      if (a.season_number !== b.season_number) return a.season_number - b.season_number;
+      return a.episode_number - b.episode_number;
+    });
+
+    const offersByTitle = await getOffersWithPlex([...new Set(sortedRows.map((r) => r.title_id))], userId);
+    return sortedRows.map((row) => ({
       ...row,
       is_watched: false,
       offers: offersByTitle.get(row.title_id) ?? [],

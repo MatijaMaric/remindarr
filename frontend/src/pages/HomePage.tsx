@@ -39,7 +39,6 @@ export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
 
   const entries: UnwatchedCardEntry[] = [];
   for (const [titleId, eps] of showMap) {
-    // Sort episodes: lowest season first, then lowest episode number
     const sorted = [...eps].sort((a, b) =>
       a.season_number !== b.season_number
         ? a.season_number - b.season_number
@@ -47,12 +46,6 @@ export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
     );
     const firstEpisode = sorted[0];
     const allIds = sorted.map((e) => e.id);
-
-    // Find most recent air_date across all episodes for ordering
-    let mostRecentDate = "";
-    for (const ep of eps) {
-      if (ep.air_date && ep.air_date > mostRecentDate) mostRecentDate = ep.air_date;
-    }
 
     entries.push({
       episode: firstEpisode,
@@ -62,19 +55,6 @@ export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
       titleId,
     });
   }
-
-  // Sort by most recent air_date descending
-  entries.sort((a, b) => {
-    const aDate = a.allEpisodeIds.reduce((best, id) => {
-      const ep = episodes.find((e) => e.id === id);
-      return ep?.air_date && ep.air_date > best ? ep.air_date : best;
-    }, "");
-    const bDate = b.allEpisodeIds.reduce((best, id) => {
-      const ep = episodes.find((e) => e.id === id);
-      return ep?.air_date && ep.air_date > best ? ep.air_date : best;
-    }, "");
-    return bDate.localeCompare(aDate);
-  });
 
   return entries;
 }
