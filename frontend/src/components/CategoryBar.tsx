@@ -16,7 +16,7 @@ interface Props {
 
 export default function CategoryBar({ category, onCategoryChange }: Props) {
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       {CATEGORIES.map((c) => (
         <Pill
           key={c.value}
