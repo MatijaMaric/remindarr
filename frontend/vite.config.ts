@@ -10,6 +10,7 @@ export const pwaOptions: Partial<VitePWAOptions> = {
   srcDir: "src",
   filename: "sw.ts",
   registerType: "autoUpdate",
+  injectRegister: "script-defer",
   injectManifest: {
     globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
   },
