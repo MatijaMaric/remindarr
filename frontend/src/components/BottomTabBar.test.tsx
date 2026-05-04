@@ -117,4 +117,11 @@ describe("BottomTabBar", () => {
     render(<BottomTabBar />, { wrapper: Wrapper });
     expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toBeDefined();
   });
+
+  it("More link has descriptive aria-label", () => {
+    render(<BottomTabBar />, { wrapper: Wrapper });
+    const moreLink = screen.getByRole("link", { name: "More navigation options" });
+    expect(moreLink).toBeDefined();
+    expect(moreLink.getAttribute("href")).toBe("/more");
+  });
 });

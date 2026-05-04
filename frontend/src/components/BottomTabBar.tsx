@@ -55,7 +55,7 @@ export default function BottomTabBar() {
               <span className="text-[10px] font-semibold tracking-[0.02em]">{t("bottomNav.tracked")}</span>
             </NavLink>
 
-            <NavLink to="/more" className={({ isActive }) => tabClass(isActive)}>
+            <NavLink to="/more" aria-label={t("bottomNav.moreOptions")} className={({ isActive }) => tabClass(isActive)}>
               <div className="relative">
                 <MoreHorizontal size={ICON_SIZE} aria-hidden="true" />
                 {unreadCount > 0 && (
