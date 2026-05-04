@@ -61,7 +61,7 @@ export function getHeroBannerSlides(unwatched: Episode[]): HeroBannerSlide[] {
 
 export function getHeroImageUrl(episode: Episode): string | null {
   if (episode.backdrop_url) return episode.backdrop_url;
-  if (episode.still_path) return mkBackdropUrl(episode.still_path, "w1280");
+  if (episode.still_path) return mkBackdropUrl(episode.still_path, "w780");
   if (episode.poster_url) return episode.poster_url;
   return null;
 }
@@ -160,6 +160,7 @@ export default function HeroBanner({
               width={1280}
               height={720}
               loading={i === 0 ? "eager" : "lazy"}
+              fetchPriority={i === 0 ? "high" : "auto"}
             />
           </div>
         );
