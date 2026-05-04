@@ -49,7 +49,7 @@ async function shareEpisode(episode: Episode) {
 
 export function getBackgroundImageUrl(episode: Episode): string | null {
   if (episode.still_path) {
-    return mkBackdropUrl(episode.still_path, "w1280");
+    return mkBackdropUrl(episode.still_path, "w780");
   }
   if (episode.poster_url) {
     return episode.poster_url;
