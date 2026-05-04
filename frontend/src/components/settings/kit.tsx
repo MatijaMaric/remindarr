@@ -156,10 +156,11 @@ export function SSwitch({
   disabled?: boolean;
   warning?: boolean;
 }) {
+  const labelId = useId();
   return (
     <div className="flex items-center justify-between py-3.5 gap-5 border-b border-white/[0.04] last:border-b-0">
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-zinc-100 mb-0.5">{label}</div>
+        <div id={labelId} className="text-sm font-semibold text-zinc-100 mb-0.5">{label}</div>
         {sub && (
           <div
             className={cn(
@@ -171,28 +172,28 @@ export function SSwitch({
           </div>
         )}
       </div>
-      <SToggle on={on} onChange={onChange} disabled={disabled} />
+      <SToggle on={on} onChange={onChange} disabled={disabled} aria-labelledby={labelId} />
     </div>
   );
 }
+
+type SToggleProps = { on: boolean; onChange?: (v: boolean) => void; disabled?: boolean } &
+  ({ "aria-label": string; "aria-labelledby"?: never } | { "aria-labelledby": string; "aria-label"?: never });
 
 export function SToggle({
   on,
   onChange,
   disabled,
-  ariaLabel,
-}: {
-  on: boolean;
-  onChange?: (next: boolean) => void;
-  disabled?: boolean;
-  ariaLabel?: string;
-}) {
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledby,
+}: SToggleProps) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
       aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledby}
       disabled={disabled}
       onClick={() => onChange?.(!on)}
       className={cn(
