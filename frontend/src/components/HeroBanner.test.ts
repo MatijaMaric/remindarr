@@ -131,7 +131,7 @@ describe("getHeroImageUrl", () => {
       still_path: "/still.jpg",
       poster_url: "https://example.com/poster.jpg",
     });
-    expect(getHeroImageUrl(ep)).toBe("https://image.tmdb.org/t/p/w1280/still.jpg");
+    expect(getHeroImageUrl(ep)).toBe("https://image.tmdb.org/t/p/w780/still.jpg");
   });
 
   it("falls back to poster_url when no backdrop or still", () => {
@@ -158,6 +158,6 @@ describe("getHeroImageUrl", () => {
       poster_url: "https://example.com/poster.jpg",
     });
     delete (ep as any).backdrop_url;
-    expect(getHeroImageUrl(ep)).toBe("https://image.tmdb.org/t/p/w1280/still.jpg");
+    expect(getHeroImageUrl(ep)).toBe("https://image.tmdb.org/t/p/w780/still.jpg");
   });
 });
