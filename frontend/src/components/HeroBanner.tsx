@@ -228,15 +228,21 @@ export default function HeroBanner({
 
           {/* Slide dots */}
           {slides.length > 1 && (
-            <div className="flex gap-2 mt-6">
+            <div className="flex gap-1 mt-6">
               {slides.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => goTo(i)}
-                  className={`h-1 rounded-full transition-all cursor-pointer ${
-                    i === safeIndex ? "w-6 bg-amber-400" : "w-2 bg-white/30 hover:bg-white/50"
-                  }`}
-                />
+                  aria-label={`Slide ${i + 1} of ${slides.length}`}
+                  aria-current={i === safeIndex ? "true" : undefined}
+                  className="p-2 cursor-pointer"
+                >
+                  <span
+                    className={`block h-1 rounded-full transition-all ${
+                      i === safeIndex ? "w-6 bg-amber-400" : "w-2 bg-white/30 hover:bg-white/50"
+                    }`}
+                  />
+                </button>
               ))}
             </div>
           )}
