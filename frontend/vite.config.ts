@@ -13,6 +13,7 @@ export const pwaOptions: Partial<VitePWAOptions> = {
   injectRegister: "script-defer",
   injectManifest: {
     globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+    target: "es2020",
   },
   manifest: {
     name: "Remindarr",
@@ -68,6 +69,7 @@ export default defineConfig({
     },
   },
   build: {
+    target: "es2020",
     sourcemap: true,
     rollupOptions: {
       output: {
