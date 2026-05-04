@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useId, isValidElement, cloneElement, Children } from "react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
@@ -78,18 +78,33 @@ export function SHead({
 export function SLabel({
   children,
   hint,
+  htmlFor,
   className,
 }: {
   children: ReactNode;
   hint?: ReactNode;
+  /** When provided, renders a `<label>` element with this `htmlFor` value. */
+  htmlFor?: string;
   className?: string;
 }) {
-  return (
-    <div className={cn("flex justify-between items-baseline mb-1.5", className)}>
+  const inner = (
+    <>
       <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
         {children}
       </div>
       {hint && <div className="text-[11px] text-zinc-500">{hint}</div>}
+    </>
+  );
+  if (htmlFor) {
+    return (
+      <label htmlFor={htmlFor} className={cn("flex justify-between items-baseline mb-1.5", className)}>
+        {inner}
+      </label>
+    );
+  }
+  return (
+    <div className={cn("flex justify-between items-baseline mb-1.5", className)}>
+      {inner}
     </div>
   );
 }
@@ -105,10 +120,23 @@ export function SFormRow({
   children: ReactNode;
   className?: string;
 }) {
+  const generatedId = useId();
+  // Inject `id` into the first React element child so the label's `htmlFor`
+  // points to it. Works for single-child rows (SInput, select, textarea) and
+  // also for multi-child rows where the first child is the control and the
+  // rest are hint elements.
+  const childArray = Children.toArray(children);
+  const [firstChild, ...restChildren] = childArray;
+  const patchedFirst =
+    firstChild && isValidElement(firstChild)
+      ? cloneElement(firstChild as React.ReactElement<{ id?: string }>, { id: generatedId })
+      : firstChild;
+
   return (
     <div className={cn("mb-3.5", className)}>
-      <SLabel hint={hint}>{label}</SLabel>
-      {children}
+      <SLabel hint={hint} htmlFor={generatedId}>{label}</SLabel>
+      {patchedFirst}
+      {restChildren}
     </div>
   );
 }
@@ -403,6 +431,7 @@ export function SButton({
 }
 
 export function SInput({
+  id,
   value,
   onChange,
   type = "text",
@@ -419,6 +448,7 @@ export function SInput({
   list,
   autoComplete,
 }: {
+  id?: string;
   value: string;
   onChange?: (v: string) => void;
   type?: string;
@@ -437,6 +467,7 @@ export function SInput({
 }) {
   return (
     <input
+      id={id}
       type={type}
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
