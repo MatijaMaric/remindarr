@@ -222,18 +222,18 @@ describe("Settings tabs", () => {
   it("renders tab list with expected tabs for non-admin user", async () => {
     render(<SettingsPage />, { wrapper: Wrapper });
 
-    // Wait for the sidebar nav to be rendered — all tabs appear as <button> elements in the sidebar
+    // Wait for the sidebar nav to be rendered — all tabs appear as role="tab" elements in the sidebar
     await waitFor(() => {
-      const navButtons = screen.getAllByRole("button", { name: "Account" });
-      expect(navButtons.length).toBeGreaterThanOrEqual(1);
+      const navTabs = screen.getAllByRole("tab", { name: "Account" });
+      expect(navTabs.length).toBeGreaterThanOrEqual(1);
     });
 
-    // Sidebar nav buttons for each tab should exist
-    expect(screen.getAllByRole("button", { name: "Appearance" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("button", { name: "Notifications" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("button", { name: "Integrations" }).length).toBeGreaterThanOrEqual(1);
+    // Sidebar nav tabs for each tab should exist
+    expect(screen.getAllByRole("tab", { name: "Appearance" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("tab", { name: "Notifications" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("tab", { name: "Integrations" }).length).toBeGreaterThanOrEqual(1);
     // Admin tab should not appear for non-admin users
-    expect(screen.queryByRole("button", { name: "Admin" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Admin" })).toBeNull();
   });
 
   it("shows account tab content by default", async () => {
