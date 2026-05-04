@@ -169,6 +169,90 @@ export function GridCalendarSkeleton() {
   );
 }
 
+/** Hero banner skeleton — matches the 520px hero container on desktop */
+export function HeroBannerSkeleton() {
+  return (
+    <div className="hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] h-[520px] bg-zinc-900 overflow-hidden">
+      <Skeleton className="absolute inset-0 rounded-none" />
+    </div>
+  );
+}
+
+/** Scrollable row of card skeletons matching FullBleedCarousel content */
+export function ScrollableRowSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="flex gap-3 overflow-hidden">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="w-80 flex-shrink-0">
+          <div className="bg-zinc-900 rounded-xl overflow-hidden">
+            <Skeleton className="w-full aspect-video rounded-none" />
+            <div className="p-3 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Home page skeleton for authenticated users — reserves space for hero + content rows */
+export function HomeAuthSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="-mt-6">
+        <HeroBannerSkeleton />
+      </div>
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between mb-4">
+          <div className="space-y-1.5">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-6 w-40" />
+          </div>
+        </div>
+        <ScrollableRowSkeleton count={4} />
+      </section>
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between mb-4">
+          <div className="space-y-1.5">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+        </div>
+        <ScrollableRowSkeleton count={4} />
+      </section>
+    </div>
+  );
+}
+
+/** Settings tab content skeleton — reserves height to prevent layout shift when lazy tab loads */
+export function SettingsTabSkeleton() {
+  return (
+    <div className="min-h-[480px] space-y-4">
+      <div className="bg-zinc-900 rounded-xl p-5 space-y-3.5">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-3 w-64" />
+        <div className="space-y-3 pt-1">
+          <Skeleton className="h-10 w-full max-w-sm" />
+          <Skeleton className="h-10 w-full max-w-sm" />
+          <Skeleton className="h-10 w-full max-w-sm" />
+        </div>
+      </div>
+      <div className="bg-zinc-900 rounded-xl p-5 space-y-3.5">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-3 w-56" />
+        <div className="space-y-2 pt-1">
+          <Skeleton className="h-14 w-full rounded-lg" />
+          <Skeleton className="h-14 w-full rounded-lg" />
+          <Skeleton className="h-14 w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Reels page skeleton (full-height card) */
 export function ReelsSkeleton() {
   return (
