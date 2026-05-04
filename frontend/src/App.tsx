@@ -139,7 +139,7 @@ export default function App() {
           >
             <span className="opacity-60 text-base leading-none">⌕</span>
             <span className="flex-1 text-left text-[13px]">Search titles, people…</span>
-            <span aria-hidden="true" className="font-mono text-[11px] opacity-60">⌘K</span>
+            <span aria-hidden="true" className="font-mono text-[11px] opacity-75">⌘K</span>
           </button>
           {/* Desktop user section */}
           <div className="hidden sm:flex items-center gap-3">
@@ -163,7 +163,7 @@ export default function App() {
                 </Link>
                 <button
                   onClick={logout}
-                  className="text-sm text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                  className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
                 >
                   {t("nav.logout")}
                 </button>
