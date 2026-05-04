@@ -10,7 +10,7 @@ import * as api from "../api";
 import type { Episode, Title, Recommendation, HomepageSection, FriendsLovedItem } from "../types";
 import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import TitleList from "../components/TitleList";
-import { EpisodeListSkeleton } from "../components/SkeletonComponents";
+import { HomeAuthSkeleton } from "../components/SkeletonComponents";
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
 import { EpisodeShowCard, DeckCardWrapper } from "../components/EpisodeShowCard";
 import HeroBanner from "../components/HeroBanner";
@@ -491,7 +491,7 @@ export default function HomePage() {
   }, [upcoming]);
 
   if (authLoading || state.status === "loading") {
-    return <EpisodeListSkeleton />;
+    return <HomeAuthSkeleton />;
   }
 
   if (!user) {

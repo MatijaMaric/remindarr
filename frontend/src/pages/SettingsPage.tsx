@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { Kicker } from "../components/design";
 import { SettingsSidebar } from "../components/settings/SettingsSidebar";
 import { lazyWithRetry } from "../lib/lazyWithRetry";
+import { SettingsTabSkeleton } from "../components/SkeletonComponents";
 
 const AccountTab = lazyWithRetry(() => import("./settings/AccountTab"));
 const AppearanceTab = lazyWithRetry(() => import("./settings/AppearanceTab"));
@@ -89,7 +90,7 @@ export default function SettingsPage() {
         />
 
         <div className="min-w-0">
-          <Suspense fallback={<div className="p-8 text-zinc-400">Loading…</div>}>
+          <Suspense fallback={<SettingsTabSkeleton />}>
             {activeTab === "account" && <AccountTab />}
             {activeTab === "appearance" && <AppearanceTab />}
             {activeTab === "subscriptions" && <SubscriptionsTab />}
