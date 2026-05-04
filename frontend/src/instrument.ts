@@ -11,7 +11,6 @@ if (dsn) {
       release: import.meta.env.VITE_SENTRY_RELEASE,
       integrations: [
         Sentry.browserTracingIntegration(),
-        Sentry.replayIntegration(),
         Sentry.reactRouterV7BrowserTracingIntegration({
           useEffect,
           useLocation,
@@ -21,8 +20,6 @@ if (dsn) {
         }),
       ],
       tracesSampleRate: 1.0,
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
     });
   });
 }
