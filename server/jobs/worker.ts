@@ -1,6 +1,7 @@
 import Sentry from "../sentry";
 import { logger } from "../logger";
 import { jobsTotal, jobDurationSeconds } from "../metrics";
+import { CONFIG } from "../config";
 
 const log = logger.child({ module: "jobs" });
 
@@ -28,6 +29,23 @@ export function registerHandler(name: string, handler: JobHandler) {
   handlers.set(name, handler);
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, jobName: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`Job "${jobName}" exceeded handler timeout of ${timeoutMs}ms`)),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export async function processJobs() {
   for (const [name, handler] of handlers) {
     const job = claimNextJob(name);
@@ -43,16 +61,11 @@ export async function processJobs() {
 
     const jobStart = performance.now();
     try {
+      const exec = () => withTimeout(handler(job), CONFIG.JOB_HANDLER_TIMEOUT_MS, name);
       if (cronExpr) {
-        await Sentry.withMonitor(
-          name,
-          async () => {
-            await handler(job);
-          },
-          monitorConfig
-        );
+        await Sentry.withMonitor(name, exec, monitorConfig);
       } else {
-        await handler(job);
+        await exec();
       }
       completeJob(job.id);
       const duration = (performance.now() - jobStart) / 1000;
