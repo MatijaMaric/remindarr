@@ -150,6 +150,9 @@ export default function HeroBanner({
             <img
               src={url}
               alt=""
+              // CORS mode must match useDominantColors so Chrome shares one
+              // cache entry instead of logging a CORS error (issue #695).
+              crossOrigin="anonymous"
               className="absolute right-0 top-0 h-full w-[60%] object-cover"
               style={{
                 maskImage:

@@ -22,6 +22,8 @@ export function useDominantColor(imageUrl: string | null): {
 
     let cancelled = false;
     const img = new Image();
+    // Any <img> on the same page rendering this URL must also set
+    // crossOrigin="anonymous" to avoid a CORS cache-mode-mismatch error.
     img.crossOrigin = "anonymous";
     img.src = imageUrl;
     img.onload = () => {
@@ -81,6 +83,7 @@ export function useDominantColors(
         result: { color: string; isDark: boolean };
       }>((resolve) => {
         const img = new Image();
+        // Same requirement as above — any <img> sharing this URL must match.
         img.crossOrigin = "anonymous";
         img.src = url;
         img.onload = () => {
