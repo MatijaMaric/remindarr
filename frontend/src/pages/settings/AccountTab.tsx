@@ -502,10 +502,11 @@ function PasskeySection() {
 
             <div className="flex flex-col sm:flex-row gap-2 sm:items-end pt-1 bg-zinc-800 rounded-[10px] p-3.5">
               <div className="flex-1">
-                <SLabel hint={<span>optional</span>}>
+                <SLabel htmlFor="passkey-name-input" hint={<span>optional</span>}>
                   {t("profile.passkeyName")}
                 </SLabel>
                 <SInput
+                  id="passkey-name-input"
                   value={passkeyName}
                   onChange={setPasskeyName}
                   placeholder={t("profile.passkeyNamePlaceholder")}
