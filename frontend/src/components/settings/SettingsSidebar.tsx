@@ -21,6 +21,7 @@ export function SettingsSidebar({
     <>
       {/* Mobile: horizontal pill row */}
       <nav
+        role="tablist"
         aria-label="Settings sections"
         className="flex sm:hidden gap-1.5 overflow-x-auto scrollbar-none pb-1"
       >
@@ -29,6 +30,8 @@ export function SettingsSidebar({
           return (
             <button
               key={tab.value}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => onSelect(tab.value)}
               className={cn(
                 "shrink-0 px-3.5 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition-colors cursor-pointer",
@@ -49,6 +52,7 @@ export function SettingsSidebar({
           Sections
         </div>
         <nav
+          role="tablist"
           aria-label="Settings sections"
           className="flex flex-col gap-0.5"
         >
@@ -57,8 +61,9 @@ export function SettingsSidebar({
             return (
               <button
                 key={tab.value}
+                role="tab"
+                aria-selected={isActive}
                 onClick={() => onSelect(tab.value)}
-                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center justify-between px-3.5 py-2.5 rounded-r-md text-left text-[14px] font-medium transition-colors cursor-pointer border-l-2",
                   isActive

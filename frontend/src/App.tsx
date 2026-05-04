@@ -134,13 +134,12 @@ export default function App() {
           {/* ⌘K search trigger */}
           <button
             type="button"
-            aria-label={t("nav.search")}
             onClick={() => focusOrNavigateSearch(navigate, location.pathname)}
             className="hidden sm:flex items-center gap-2 w-[260px] bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
           >
             <span className="opacity-60 text-base leading-none">⌕</span>
             <span className="flex-1 text-left text-[13px]">Search titles, people…</span>
-            <span className="font-mono text-[11px] opacity-60">⌘K</span>
+            <span aria-hidden="true" className="font-mono text-[11px] opacity-60">⌘K</span>
           </button>
           {/* Desktop user section */}
           <div className="hidden sm:flex items-center gap-3">

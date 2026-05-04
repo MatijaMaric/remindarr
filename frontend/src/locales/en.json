@@ -60,6 +60,7 @@
     "tracked": "Tracked",
     "discovery": "Discovery",
     "more": "More",
+    "moreOptions": "More navigation options",
     "profile": "Profile",
     "signIn": "Sign In",
     "unreadRecommendations_one": "{{count}} unread recommendation",
