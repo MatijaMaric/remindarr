@@ -1,6 +1,10 @@
-import { describe, it, expect } from "bun:test";
-import { render, screen } from "@testing-library/react";
-import { SFormRow, SInput, SLabel } from "./kit";
+import { describe, it, expect, afterEach } from "bun:test";
+import { render, screen, cleanup } from "@testing-library/react";
+import { SFormRow, SInput, SLabel, SSwitch, SToggle } from "./kit";
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("SFormRow a11y", () => {
   it("renders a <label> with htmlFor matching the child SInput id", () => {
@@ -10,13 +14,11 @@ describe("SFormRow a11y", () => {
       </SFormRow>,
     );
 
-    // The label element must exist and have a non-empty htmlFor
     const label = screen.getByText("Username").closest("label");
     expect(label).not.toBeNull();
     const htmlFor = label?.getAttribute("for");
     expect(htmlFor).toBeTruthy();
 
-    // The input associated with the label must exist in the DOM
     const input = document.getElementById(htmlFor!);
     expect(input).not.toBeNull();
     expect(input?.tagName.toLowerCase()).toBe("input");
@@ -69,7 +71,6 @@ describe("SFormRow a11y", () => {
       </SFormRow>,
     );
 
-    // Label should still point to the select (first child)
     const label = screen.getByText("Schedule").closest("label");
     expect(label).not.toBeNull();
     const htmlFor = label?.getAttribute("for");
@@ -78,7 +79,6 @@ describe("SFormRow a11y", () => {
     const select = document.getElementById(htmlFor!);
     expect(select?.tagName.toLowerCase()).toBe("select");
 
-    // Hint text must still be rendered
     expect(screen.getByText("Covers the next 7 days")).not.toBeNull();
   });
 });
@@ -86,16 +86,62 @@ describe("SFormRow a11y", () => {
 describe("SLabel a11y", () => {
   it("renders a <div> when no htmlFor is given", () => {
     const { container } = render(<SLabel>Standalone label text</SLabel>);
-    // The outer wrapper should be a div, not a label
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.tagName.toLowerCase()).toBe("div");
   });
 
   it("renders a <label> element when htmlFor is provided", () => {
     const { container } = render(<SLabel htmlFor="my-test-input">Field name here</SLabel>);
-    // The outer wrapper should be a label element
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.tagName.toLowerCase()).toBe("label");
     expect(wrapper.getAttribute("for")).toBe("my-test-input");
+  });
+});
+
+describe("SSwitch", () => {
+  it("renders a switch button with a non-empty aria-labelledby pointing to the label element", () => {
+    render(<SSwitch label="Enable notifications" on={false} onChange={() => {}} />);
+
+    const switchBtn = screen.getByRole("switch");
+    expect(switchBtn).toBeDefined();
+
+    const labelledById = switchBtn.getAttribute("aria-labelledby");
+    expect(labelledById).toBeTruthy();
+
+    const labelEl = document.getElementById(labelledById!);
+    expect(labelEl).toBeDefined();
+    expect(labelEl!.textContent).toBe("Enable notifications");
+  });
+
+  it("sets aria-checked to false when off", () => {
+    render(<SSwitch label="Push alerts" on={false} onChange={() => {}} />);
+    const switchBtn = screen.getByRole("switch");
+    expect(switchBtn.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("sets aria-checked to true when on", () => {
+    render(<SSwitch label="Push alerts" on={true} onChange={() => {}} />);
+    const switchBtn = screen.getByRole("switch");
+    expect(switchBtn.getAttribute("aria-checked")).toBe("true");
+  });
+});
+
+describe("SToggle", () => {
+  it("accepts aria-label and applies it to the button", () => {
+    render(<SToggle on={false} aria-label="Dark mode" />);
+    const btn = screen.getByRole("switch", { name: "Dark mode" });
+    expect(btn).toBeDefined();
+    expect(btn.getAttribute("aria-label")).toBe("Dark mode");
+  });
+
+  it("accepts aria-labelledby and applies it to the button", () => {
+    render(
+      <div>
+        <span id="my-label">My toggle label</span>
+        <SToggle on={false} aria-labelledby="my-label" />
+      </div>,
+    );
+    const btn = screen.getByRole("switch");
+    expect(btn.getAttribute("aria-labelledby")).toBe("my-label");
   });
 });
