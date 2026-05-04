@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
 import Sentry from "../sentry";
+import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { enqueueJob, registerCron, getCronExpression } from "./queue";
+import { enqueueJob, registerCron, getCronExpression, getJobStats } from "./queue";
 import { registerHandler, processJobs, stopWorker } from "./worker";
 
 const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(
@@ -80,6 +81,27 @@ describe("worker Sentry monitoring", () => {
     await processJobs();
 
     expect(captureExceptionSpy).toHaveBeenCalledWith(jobError);
+  });
+});
+
+describe("worker handler timeout", () => {
+  it("fails a job whose handler never resolves within JOB_HANDLER_TIMEOUT_MS", async () => {
+    const original = CONFIG.JOB_HANDLER_TIMEOUT_MS;
+    CONFIG.JOB_HANDLER_TIMEOUT_MS = 50;
+    try {
+      registerHandler("hung-job", () => new Promise(() => {})); // never resolves
+      enqueueJob("hung-job", undefined, { maxAttempts: 1 });
+      await processJobs();
+
+      expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+      const err = captureExceptionSpy.mock.calls[0][0] as Error;
+      expect(err.message).toContain("exceeded handler timeout");
+
+      const stats = getJobStats();
+      expect(stats["hung-job"].failed).toBe(1);
+    } finally {
+      CONFIG.JOB_HANDLER_TIMEOUT_MS = original;
+    }
   });
 });
 
