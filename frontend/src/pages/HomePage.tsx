@@ -159,7 +159,7 @@ function MobileFeedHome({
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-3 pb-0">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-1">{dateLabel}</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">{dateLabel}</div>
           <div className="text-[22px] font-bold tracking-[-0.6px]">
             {getGreeting()}, <span className="text-amber-400">{user.display_name?.split(" ")[0] ?? user.username}</span>
           </div>
@@ -178,7 +178,7 @@ function MobileFeedHome({
       {/* Tonight hero card */}
       {tonightEp && (
         <div className="px-5 pt-4 pb-2">
-          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-2">
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-2">
             Tonight · {today.length} airing
           </div>
           <Link to={`/title/${tonightEp.title_id}`}>
@@ -225,7 +225,7 @@ function MobileFeedHome({
         <>
           <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-1">{alsoAiring.length} more today</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">{alsoAiring.length} more today</div>
               <div className="text-[22px] font-bold tracking-[-0.6px]">Also airing</div>
             </div>
           </div>
@@ -238,14 +238,14 @@ function MobileFeedHome({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[14px] font-semibold truncate mb-0.5">{ep.show_title}</div>
-                    <div className="font-mono text-[11px] text-zinc-500 mb-1">
+                    <div className="font-mono text-[11px] text-zinc-400 mb-1">
                       S{String(ep.season_number).padStart(2,"0")}·E{String(ep.episode_number).padStart(2,"0")}{ep.name ? ` · ${ep.name}` : ""}
                     </div>
                     <div className="font-mono text-[11px] text-amber-400">
                       {ep.air_date ?? ""}{ep.offers?.[0] ? ` · ${ep.offers[0].provider_name}` : ""}
                     </div>
                   </div>
-                  <span className="text-zinc-500 text-base">›</span>
+                  <span className="text-zinc-400 text-base">›</span>
                 </Card>
               </Link>
             ))}
@@ -258,7 +258,7 @@ function MobileFeedHome({
         <>
           <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-1">
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">
                 {cwByShow.size} show{cwByShow.size !== 1 ? "s" : ""} · {unwatched.length} unwatched
               </div>
               <div className="text-[22px] font-bold tracking-[-0.6px]">Continue watching</div>
@@ -283,7 +283,7 @@ function MobileFeedHome({
                     </div>
                   </div>
                   <div className="text-[12px] font-medium leading-[1.2] truncate mb-0.5">{ep.show_title}</div>
-                  <div className="font-mono text-[10px] text-zinc-500">
+                  <div className="font-mono text-[10px] text-zinc-400">
                     E{ep.episode_number}
                   </div>
                 </Link>
@@ -298,7 +298,7 @@ function MobileFeedHome({
         <>
           <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-1">
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">
                 {today7.length} episodes
               </div>
               <div className="text-[22px] font-bold tracking-[-0.6px]">This week</div>
@@ -312,7 +312,7 @@ function MobileFeedHome({
                   {ep.poster_url && <img src={ep.poster_url} alt="" className="w-full h-full object-cover" loading="lazy" />}
                 </div>
                 <div className="text-[11px] font-medium leading-[1.15] truncate">{ep.show_title}</div>
-                <div className="font-mono text-[9px] text-zinc-500 uppercase tracking-[0.3px]">
+                <div className="font-mono text-[9px] text-zinc-400 uppercase tracking-[0.3px]">
                   {ep.air_date ? ep.air_date.slice(5) : ""}
                 </div>
               </Link>
@@ -661,7 +661,7 @@ export default function HomePage() {
               <Link to="/calendar" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">{t("home.seeAll")} →</Link>
             </div>
             {today.length === 0 ? (
-              <p className="text-zinc-500 text-sm">
+              <p className="text-zinc-400 text-sm">
                 {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
               </p>
             ) : (
@@ -694,7 +694,7 @@ export default function HomePage() {
             <div className="space-y-4">
               {upcomingByDateEntries.map(({ date, dateLabel, byShow }) => (
                 <div key={date}>
-                  <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
+                  <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 mb-2">{dateLabel === "__TOMORROW__" ? t("episodes.tomorrow") : dateLabel}</h3>
                   <FullBleedCarousel>
                     {byShow.map(([titleId, showEps]) => (
                       <div key={titleId} className="w-80 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
@@ -741,7 +741,7 @@ export default function HomePage() {
                 <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.airingSoon.title")}</h2>
               </div>
             </div>
-            <p className="text-zinc-500 text-sm">{t("home.airingSoon.empty")}</p>
+            <p className="text-zinc-400 text-sm">{t("home.airingSoon.empty")}</p>
           </section>
         );
 

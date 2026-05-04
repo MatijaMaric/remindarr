@@ -47,7 +47,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           .filter(Boolean)
           .map((cell) => (
             <div key={cell!.label}>
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-1">
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">
                 {cell!.label}
               </div>
               <div className="font-mono text-[13px] font-semibold text-zinc-100">{cell!.value}</div>
@@ -131,7 +131,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <p className="text-xs text-zinc-400 mt-0.5">
                       {s.episode_count} episode{s.episode_count !== 1 ? "s" : ""}
                       {s.air_date && ` · ${s.air_date.slice(0, 4)}`}
                     </p>
@@ -164,19 +164,19 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             {tmdb.type && (
               <div>
-                <span className="text-zinc-500 block">Type</span>
+                <span className="text-zinc-400 block">Type</span>
                 <span className="text-zinc-300">{tmdb.type}</span>
               </div>
             )}
             {tmdb.original_language && (
               <div>
-                <span className="text-zinc-500 block">Original Language</span>
+                <span className="text-zinc-400 block">Original Language</span>
                 <span className="text-zinc-300">{tmdb.original_language.toUpperCase()}</span>
               </div>
             )}
             {tmdb.production_countries?.length > 0 && (
               <div>
-                <span className="text-zinc-500 block">Country</span>
+                <span className="text-zinc-400 block">Country</span>
                 <span className="text-zinc-300">
                   {tmdb.production_countries.map((c) => c.name).join(", ")}
                 </span>
@@ -184,7 +184,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             )}
             {tmdb.spoken_languages?.length > 0 && (
               <div>
-                <span className="text-zinc-500 block">Languages</span>
+                <span className="text-zinc-400 block">Languages</span>
                 <span className="text-zinc-300">
                   {tmdb.spoken_languages.map((l) => l.english_name).join(", ")}
                 </span>
@@ -192,7 +192,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             )}
             {tmdb.production_companies?.length > 0 && (
               <div className="col-span-2 sm:col-span-3">
-                <span className="text-zinc-500 block">Production</span>
+                <span className="text-zinc-400 block">Production</span>
                 <span className="text-zinc-300">
                   {tmdb.production_companies.map((c) => c.name).join(", ")}
                 </span>

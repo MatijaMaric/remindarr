@@ -31,7 +31,7 @@ export function SCard({
               </div>
             )}
             {subtitle && (
-              <div className="text-sm text-zinc-500 leading-relaxed max-w-[640px]">
+              <div className="text-sm text-zinc-400 leading-relaxed max-w-[640px]">
                 {subtitle}
               </div>
             )}
@@ -89,10 +89,10 @@ export function SLabel({
 }) {
   const inner = (
     <>
-      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
         {children}
       </div>
-      {hint && <div className="text-[11px] text-zinc-500">{hint}</div>}
+      {hint && <div className="text-[11px] text-zinc-400">{hint}</div>}
     </>
   );
   if (htmlFor) {
@@ -165,7 +165,7 @@ export function SSwitch({
           <div
             className={cn(
               "text-xs font-mono leading-relaxed",
-              warning ? "text-red-400" : "text-zinc-500",
+              warning ? "text-red-400" : "text-zinc-400",
             )}
           >
             {sub}
@@ -343,7 +343,7 @@ export function SDivider({
     <div className={cn("flex items-center gap-3 my-5 mb-3.5", className)}>
       <div className="flex-1 h-px bg-white/[0.06]" />
       {label && (
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
           {label}
         </div>
       )}
@@ -363,7 +363,7 @@ export function SKeyValue({
 }) {
   return (
     <div className="flex justify-between gap-3 py-2 border-b border-white/[0.04] text-xs">
-      <div className="font-mono tracking-[0.04em] text-zinc-500 shrink-0">{k}</div>
+      <div className="font-mono tracking-[0.04em] text-zinc-400 shrink-0">{k}</div>
       <div
         className={cn(
           "text-right text-zinc-200 min-w-0 truncate",
