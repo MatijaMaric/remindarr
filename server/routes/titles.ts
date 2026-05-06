@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { getRecentTitles, getProviders, getGenres, getLanguages, getSubscribedProviderIds } from "../db/repository";
 import { getMovieWatchProviders, getTvWatchProviders } from "../tmdb/client";
 import { canonicalProviderId } from "../streaming-availability/provider-map";
@@ -7,22 +8,27 @@ import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
+import { zValidator } from "../lib/validator";
 
 const PRIORITY_LANGUAGES = ["en", "es", "fr", "de", "pt", "ja", "ko", "zh", "hi", "it", "ar"];
 
+const titlesQuerySchema = z.object({
+  daysBack: z.coerce.number().int().min(1).max(365).default(30),
+  type: z.string().optional(),
+  provider: z.string().optional(),
+  genre: z.string().optional(),
+  language: z.string().optional(),
+  excludeTracked: z.literal("1").optional().transform((v) => v === "1"),
+  onlyMine: z.literal("true").optional().transform((v) => v === "true"),
+  limit: z.coerce.number().int().min(1).max(1000).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 const app = new Hono<AppEnv>();
 
-app.get("/", async (c) => {
+app.get("/", zValidator("query", titlesQuerySchema), async (c) => {
   const user = c.get("user");
-  const daysBack = Math.max(1, Math.min(Number(c.req.query("daysBack")) || 30, 365));
-  const typeParam = c.req.query("type") || "";
-  const providerParam = c.req.query("provider") || "";
-  const genreParam = c.req.query("genre") || "";
-  const languageParam = c.req.query("language") || "";
-  const excludeTracked = c.req.query("excludeTracked") === "1";
-  const onlyMine = c.req.query("onlyMine") === "true";
-  const limit = Math.max(1, Math.min(Number(c.req.query("limit")) || 100, 1000));
-  const offset = Math.max(0, Number(c.req.query("offset")) || 0);
+  const { daysBack, type: typeParam, provider: providerParam, genre: genreParam, language: languageParam, excludeTracked, onlyMine, limit, offset } = c.req.valid("query");
 
   const objectTypes = typeParam ? typeParam.split(",").filter(Boolean) : [];
   let providers = providerParam ? providerParam.split(",").filter(Boolean) : [];

@@ -84,9 +84,12 @@ describe("GET /details/movie/:id", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 404 for invalid title ID format", async () => {
+  it("returns 400 for invalid title ID format", async () => {
     const res = await app.request("/details/movie/invalid-id");
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });
 
@@ -190,12 +193,11 @@ describe("GET /details/show/:id/season/:season", () => {
   });
 
   it("returns 400 for non-numeric season param", async () => {
-    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
-
     const res = await app.request("/details/show/tv-555/season/abc");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid season number");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("includes seasons array from show details", async () => {
@@ -235,21 +237,19 @@ describe("GET /details/show/:id/season/:season", () => {
 
 describe("GET /details/show/:id/season/:season/episode/:episode", () => {
   it("returns 400 for non-numeric season param", async () => {
-    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
-
     const res = await app.request("/details/show/tv-555/season/abc/episode/1");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid season or episode number");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns 400 for non-numeric episode param", async () => {
-    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
-
     const res = await app.request("/details/show/tv-555/season/1/episode/abc");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid season or episode number");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });
 
@@ -321,6 +321,97 @@ describe("GET /details/show/:id/suggestions", () => {
     (tmdbClient.fetchTvSuggestions as any).mockRejectedValueOnce(new Error("TMDB error"));
     const res = await app.request("/details/show/tv-456/suggestions");
     expect(res.status).toBe(503);
+  });
+});
+
+describe("GET /details — validation", () => {
+  it("rejects invalid title ID format on /movie/:id", async () => {
+    const res = await app.request("/details/movie/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-prefixed numeric ID on /movie/:id", async () => {
+    const res = await app.request("/details/movie/123");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-numeric season param", async () => {
+    const res = await app.request("/details/show/tv-1/season/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects episode=0 (min is 1)", async () => {
+    const res = await app.request("/details/show/tv-1/season/1/episode/0");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-numeric episode param", async () => {
+    const res = await app.request("/details/show/tv-1/season/1/episode/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-numeric personId", async () => {
+    const res = await app.request("/details/person/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects personId=0 (min is 1)", async () => {
+    const res = await app.request("/details/person/0");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects page=0 on suggestions", async () => {
+    const res = await app.request("/details/movie/movie-1/suggestions?page=0");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-numeric page on suggestions", async () => {
+    const res = await app.request("/details/movie/movie-1/suggestions?page=foo");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy-path: GET /movie/:id with valid movie id", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-550", title: "Valid Movie", tmdbId: "550" })]);
+    const res = await app.request("/details/movie/movie-550");
+    expect(res.status).toBe(200);
+  });
+
+  it("happy-path: GET /movie/:id/suggestions?page=1", async () => {
+    const res = await app.request("/details/movie/movie-123/suggestions?page=1");
+    expect(res.status).toBe(200);
+  });
+
+  it("happy-path: GET /show/:id/season/:season/episode/:episode with valid params", async () => {
+    await upsertTitles([makeParsedTitle({ id: "tv-555", objectType: "SHOW", title: "Season Show", tmdbId: "555" })]);
+    const res = await app.request("/details/show/tv-555/season/1/episode/2");
+    expect(res.status).toBe(200);
   });
 });
 

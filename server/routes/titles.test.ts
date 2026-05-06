@@ -40,7 +40,7 @@ describe("GET /titles", () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([makeParsedTitle({ releaseDate: today })]);
 
-    const res = await app.request("/titles?daysBack=9999");
+    const res = await app.request("/titles?daysBack=365");
     expect(res.status).toBe(200);
 
     const body = await res.json();
@@ -56,7 +56,7 @@ describe("GET /titles", () => {
       makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: today }),
     ]);
 
-    const res = await app.request("/titles?daysBack=9999&type=SHOW");
+    const res = await app.request("/titles?daysBack=365&type=SHOW");
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].object_type).toBe("SHOW");
@@ -76,7 +76,7 @@ describe("GET /titles", () => {
       makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: today }),
     ]);
 
-    const res = await app.request("/titles?daysBack=9999&genre=Comedy");
+    const res = await app.request("/titles?daysBack=365&genre=Comedy");
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].title).toBe("Comedy Film");
@@ -89,7 +89,7 @@ describe("GET /titles", () => {
       makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: today }),
     ]);
 
-    const res = await app.request("/titles?daysBack=9999&language=ja");
+    const res = await app.request("/titles?daysBack=365&language=ja");
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].title).toBe("Japanese Movie");
@@ -102,7 +102,7 @@ describe("GET /titles", () => {
       makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: today }),
     ]);
 
-    const res = await app.request("/titles?daysBack=9999&type=MOVIE,SHOW");
+    const res = await app.request("/titles?daysBack=365&type=MOVIE,SHOW");
     const body = await res.json();
     expect(body.titles).toHaveLength(2);
   });
@@ -115,7 +115,7 @@ describe("GET /titles", () => {
       makeParsedTitle({ id: "movie-3", title: "Drama Film", genres: ["Drama"], releaseDate: today }),
     ]);
 
-    const res = await app.request("/titles?daysBack=9999&genre=Action,Comedy");
+    const res = await app.request("/titles?daysBack=365&genre=Action,Comedy");
     const body = await res.json();
     expect(body.titles).toHaveLength(2);
     const titles = body.titles.map((t: any) => t.title).sort();
@@ -130,7 +130,7 @@ describe("GET /titles", () => {
       makeParsedTitle({ id: "movie-3", title: "French Movie", originalLanguage: "fr", releaseDate: today }),
     ]);
 
-    const res = await app.request("/titles?daysBack=9999&language=en,ja");
+    const res = await app.request("/titles?daysBack=365&language=en,ja");
     const body = await res.json();
     expect(body.titles).toHaveLength(2);
   });
@@ -139,40 +139,35 @@ describe("GET /titles", () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([makeParsedTitle({ releaseDate: today })]);
 
-    const res = await app.request("/titles?daysBack=9999");
+    const res = await app.request("/titles?daysBack=365");
     expect(res.status).toBe(200);
     // Should still work — titles within 365 days are returned
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
   });
 
-  it("clamps limit to max 1000 and min 1", async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    await upsertTitles([makeParsedTitle({ releaseDate: today })]);
-
+  it("rejects limit above max 1000", async () => {
     const res = await app.request("/titles?daysBack=365&limit=999999999");
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     const body = await res.json();
-    // Should still return results (clamped to 1000)
-    expect(body.titles).toHaveLength(1);
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
-  it("clamps negative offset to 0", async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    await upsertTitles([makeParsedTitle({ releaseDate: today })]);
-
+  it("rejects negative offset", async () => {
     const res = await app.request("/titles?daysBack=365&offset=-1");
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.titles).toHaveLength(1);
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
-  it("clamps negative daysBack to 1", async () => {
+  it("rejects negative daysBack", async () => {
     const res = await app.request("/titles?daysBack=-5");
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     const body = await res.json();
-    // With daysBack=1, may or may not have titles, but should not error
-    expect(body.titles).toBeDefined();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("filters titles by daysBack date range", async () => {
@@ -212,7 +207,7 @@ describe("GET /titles", () => {
     });
     authedApp.route("/titles", titlesApp);
 
-    const res = await authedApp.request("/titles?daysBack=9999&excludeTracked=1");
+    const res = await authedApp.request("/titles?daysBack=365&excludeTracked=1");
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].title).toBe("Untracked");
@@ -318,7 +313,7 @@ describe("GET /titles?onlyMine", () => {
     await setSubscribedProviderIds(userId, [8]);
 
     const authedApp = makeAuthedApp(userId);
-    const res = await authedApp.request("/titles?daysBack=9999&onlyMine=true");
+    const res = await authedApp.request("/titles?daysBack=365&onlyMine=true");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
@@ -339,7 +334,7 @@ describe("GET /titles?onlyMine", () => {
     // no subscriptions set
 
     const authedApp = makeAuthedApp(userId);
-    const res = await authedApp.request("/titles?daysBack=9999&onlyMine=true");
+    const res = await authedApp.request("/titles?daysBack=365&onlyMine=true");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.titles).toHaveLength(0);
@@ -367,7 +362,7 @@ describe("GET /titles?onlyMine", () => {
 
     // Explicit provider=8 + onlyMine=true (subscribed to both) → intersection = [8]
     const authedApp = makeAuthedApp(userId);
-    const res = await authedApp.request("/titles?daysBack=9999&onlyMine=true&provider=8");
+    const res = await authedApp.request("/titles?daysBack=365&onlyMine=true&provider=8");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
@@ -386,10 +381,99 @@ describe("GET /titles?onlyMine", () => {
     ]);
 
     // No user context — use the plain unauthenticated app
-    const res = await app.request("/titles?daysBack=9999&onlyMine=true");
+    const res = await app.request("/titles?daysBack=365&onlyMine=true");
     expect(res.status).toBe(200);
     const body = await res.json();
     // Without auth, onlyMine is ignored and all titles are returned
     expect(body.titles.length).toBeGreaterThan(0);
+  });
+});
+
+describe("GET /titles — validation", () => {
+  it("rejects daysBack=0 (below min 1)", async () => {
+    const res = await app.request("/titles?daysBack=0");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects daysBack=999 (above max 365)", async () => {
+    const res = await app.request("/titles?daysBack=999");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects daysBack=foo (non-numeric)", async () => {
+    const res = await app.request("/titles?daysBack=foo");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects limit=-1 (below min 1)", async () => {
+    const res = await app.request("/titles?limit=-1");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects limit=10000 (above max 1000)", async () => {
+    const res = await app.request("/titles?limit=10000");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects excludeTracked=0 (only literal '1' accepted)", async () => {
+    const res = await app.request("/titles?excludeTracked=0");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects excludeTracked=true (only literal '1' accepted)", async () => {
+    const res = await app.request("/titles?excludeTracked=true");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects onlyMine=false (only literal 'true' accepted)", async () => {
+    const res = await app.request("/titles?onlyMine=false");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects onlyMine=1 (only literal 'true' accepted)", async () => {
+    const res = await app.request("/titles?onlyMine=1");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy-path: zero params (all defaults applied)", async () => {
+    const res = await app.request("/titles");
+    expect(res.status).toBe(200);
+  });
+
+  it("happy-path: offset=0 is accepted (regression: 0 is a valid number)", async () => {
+    const res = await app.request("/titles?offset=0&limit=1");
+    expect(res.status).toBe(200);
+  });
+
+  it("happy-path: excludeTracked=1 and onlyMine=true with CSV type filter", async () => {
+    const res = await app.request("/titles?excludeTracked=1&onlyMine=true&type=MOVIE,SHOW");
+    expect(res.status).toBe(200);
   });
 });

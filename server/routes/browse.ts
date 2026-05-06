@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { pLimit } from "../lib/p-limit";
 import {
   discoverMovies,
@@ -25,6 +26,7 @@ import { logger } from "../logger";
 import { syncFailureTotal } from "../metrics";
 import { ok, err } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
+import { zValidator } from "../lib/validator";
 import { toCanonicalGenre, expandGenreIds } from "../genres";
 import { CONFIG } from "../config";
 
@@ -32,6 +34,19 @@ const log = logger.child({ module: "browse" });
 
 const VALID_CATEGORIES = ["popular", "upcoming", "top_rated"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
+
+const browseQuerySchema = z.object({
+  category: z.enum(["popular", "upcoming", "top_rated"]),
+  type: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  genre: z.string().optional(),
+  provider: z.string().optional(),
+  language: z.string().optional(),
+  year_min: z.coerce.number().int().optional(),
+  year_max: z.coerce.number().int().optional(),
+  min_rating: z.coerce.number().min(0).max(10).optional(),
+  onlyMine: z.literal("true").optional().transform((v) => v === "true"),
+});
 
 function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -89,24 +104,12 @@ function fetchTvByCategory(category: Category, opts: CategoryDiscoverOptions) {
 
 const app = new Hono<AppEnv>();
 
-app.get("/", async (c) => {
-  const category = c.req.query("category");
-  const type = c.req.query("type") || "";
-  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
-  const genreParam = c.req.query("genre") || "";
-  const providerParam = c.req.query("provider") || "";
-  const languageParam = c.req.query("language") || "";
-  const yearMinParam = c.req.query("year_min");
-  const yearMaxParam = c.req.query("year_max");
-  const minRatingParam = c.req.query("min_rating");
-  const onlyMine = c.req.query("onlyMine") === "true";
+app.get("/", zValidator("query", browseQuerySchema), async (c) => {
+  const { category, type, page, genre: genreParam, provider: providerParam, language: languageParam, year_min: yearMin, year_max: yearMax, min_rating: minRating, onlyMine } = c.req.valid("query");
   const genreNames = genreParam ? genreParam.split(",").filter(Boolean) : [];
   let providerValues = providerParam ? providerParam.split(",").filter(Boolean) : [];
   const languageValues = languageParam ? languageParam.split(",").filter(Boolean) : [];
   const typeValues = type ? type.split(",").filter(Boolean) : [];
-  const yearMin = yearMinParam ? parseInt(yearMinParam, 10) : undefined;
-  const yearMax = yearMaxParam ? parseInt(yearMaxParam, 10) : undefined;
-  const minRating = minRatingParam ? parseFloat(minRatingParam) : undefined;
 
   const user = c.get("user");
   if (onlyMine && user) {
@@ -121,10 +124,6 @@ app.get("/", async (c) => {
     if (providerValues.length === 0) {
       return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
     }
-  }
-
-  if (!category || !VALID_CATEGORIES.includes(category as Category)) {
-    return err(c, "Invalid category. Must be one of: popular, upcoming, top_rated");
   }
 
   try {

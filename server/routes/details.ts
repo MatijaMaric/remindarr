@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { getTitleById, upsertTitles } from "../db/repository";
 import { CONFIG } from "../config";
 import {
@@ -19,11 +20,28 @@ import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
+import { zValidator } from "../lib/validator";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import { getDb } from "../db/schema";
 import { sql } from "drizzle-orm";
 
 const log = logger.child({ module: "details" });
+
+const titleIdParam = z.object({
+  id: z.string().regex(/^(movie|tv)-\d+$/, "id must match movie-N or tv-N"),
+});
+const seasonParam = titleIdParam.extend({
+  season: z.coerce.number().int().min(0),
+});
+const episodeParam = seasonParam.extend({
+  episode: z.coerce.number().int().min(1),
+});
+const personIdParam = z.object({
+  personId: z.coerce.number().int().min(1),
+});
+const suggestionsQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+});
 
 const app = new Hono<AppEnv>();
 
@@ -62,7 +80,7 @@ async function getOrFetchTitle(titleId: string, userId?: string) {
   return await getTitleById(titleId, userId);
 }
 
-app.get("/movie/:id", async (c) => {
+app.get("/movie/:id", zValidator("param", titleIdParam), async (c) => {
   const user = c.get("user");
   const title = await getOrFetchTitle(c.req.param("id"), user?.id);
   if (!title) return err(c, "Title not found", 404);
@@ -80,7 +98,7 @@ app.get("/movie/:id", async (c) => {
   return ok(c, { title, tmdb, country });
 });
 
-app.get("/show/:id", async (c) => {
+app.get("/show/:id", zValidator("param", titleIdParam), async (c) => {
   const user = c.get("user");
   const titleId = c.req.param("id");
   const title = await getOrFetchTitle(titleId, user?.id);
@@ -126,13 +144,12 @@ app.get("/show/:id", async (c) => {
   return ok(c, { title: { ...title, eta_days: etaDays }, tmdb, country });
 });
 
-app.get("/show/:id/season/:season", async (c) => {
+app.get("/show/:id/season/:season", zValidator("param", seasonParam), async (c) => {
   const user = c.get("user");
   const title = await getOrFetchTitle(c.req.param("id"), user?.id);
   if (!title) return err(c, "Title not found", 404);
 
-  const seasonNumber = Number(c.req.param("season"));
-  if (isNaN(seasonNumber)) return c.json({ error: "Invalid season number" }, 400);
+  const seasonNumber = c.req.valid("param").season;
 
   let tmdb = null;
   let seasons: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null }[] = [];
@@ -167,14 +184,12 @@ app.get("/show/:id/season/:season", async (c) => {
   return ok(c, { title, tmdb, seasonNumber, country, seasons });
 });
 
-app.get("/show/:id/season/:season/episode/:episode", async (c) => {
+app.get("/show/:id/season/:season/episode/:episode", zValidator("param", episodeParam), async (c) => {
   const user = c.get("user");
   const title = await getOrFetchTitle(c.req.param("id"), user?.id);
   if (!title) return err(c, "Title not found", 404);
 
-  const seasonNumber = Number(c.req.param("season"));
-  const episodeNumber = Number(c.req.param("episode"));
-  if (isNaN(seasonNumber) || isNaN(episodeNumber)) return c.json({ error: "Invalid season or episode number" }, 400);
+  const { season: seasonNumber, episode: episodeNumber } = c.req.valid("param");
 
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
@@ -188,11 +203,8 @@ app.get("/show/:id/season/:season/episode/:episode", async (c) => {
   return ok(c, { title, tmdb, seasonNumber, episodeNumber, country });
 });
 
-app.get("/person/:personId", async (c) => {
-  const personId = Number(c.req.param("personId"));
-  if (!personId || isNaN(personId)) {
-    return err(c, "Invalid person ID");
-  }
+app.get("/person/:personId", zValidator("param", personIdParam), async (c) => {
+  const personId = c.req.valid("param").personId;
 
   if (!CONFIG.TMDB_API_KEY) {
     return err(c, "TMDB not configured", 503);
@@ -207,12 +219,12 @@ app.get("/person/:personId", async (c) => {
   }
 });
 
-app.get("/movie/:id/suggestions", async (c) => {
+app.get("/movie/:id/suggestions", zValidator("param", titleIdParam), zValidator("query", suggestionsQuery), async (c) => {
   const parsed = parseTitleId(c.req.param("id"));
   if (!parsed || parsed.type !== "MOVIE") return err(c, "Invalid title ID", 400);
   if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
 
-  const page = Math.max(1, Number(c.req.query("page") ?? "1") || 1);
+  const page = c.req.valid("query").page;
 
   try {
     const [data, genreMap] = await Promise.all([
@@ -228,12 +240,12 @@ app.get("/movie/:id/suggestions", async (c) => {
   }
 });
 
-app.get("/show/:id/suggestions", async (c) => {
+app.get("/show/:id/suggestions", zValidator("param", titleIdParam), zValidator("query", suggestionsQuery), async (c) => {
   const parsed = parseTitleId(c.req.param("id"));
   if (!parsed || parsed.type !== "SHOW") return err(c, "Invalid title ID", 400);
   if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
 
-  const page = Math.max(1, Number(c.req.query("page") ?? "1") || 1);
+  const page = c.req.valid("query").page;
 
   try {
     const [data, genreMap] = await Promise.all([

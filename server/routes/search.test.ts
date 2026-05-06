@@ -42,7 +42,8 @@ describe("GET /search", () => {
     const res = await app.request("/search");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("required");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns search results with isTracked=false when no user", async () => {
@@ -218,17 +219,57 @@ describe("GET /search — filter params", () => {
     expect(body.titles.every((t: any) => (t.scores?.tmdbScore ?? 0) >= 9)).toBe(true);
   });
 
-  it("ignores invalid filter params gracefully", async () => {
-    const movie = makeTmdbSearchMultiMovie({ id: 40 });
-    (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
-    });
-    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: 40 }));
+});
 
-    const res = await app.request("/search?q=test&year_min=notanumber&min_rating=abc");
-    expect(res.status).toBe(200);
+describe("GET /search — validation", () => {
+  it("rejects missing q param", async () => {
+    const res = await app.request("/search");
+    expect(res.status).toBe(400);
     const body = await res.json();
-    expect(Array.isArray(body.titles)).toBe(true);
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects empty q param", async () => {
+    const res = await app.request("/search?q=");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-numeric year_min", async () => {
+    const res = await app.request("/search?q=foo&year_min=notanumber");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-numeric min_rating", async () => {
+    const res = await app.request("/search?q=foo&min_rating=abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects lowercase type", async () => {
+    const res = await app.request("/search?q=foo&type=show");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy-path: minimal request with q only", async () => {
+    const res = await app.request("/search?q=foo");
+    expect(res.status).toBe(200);
+  });
+
+  it("happy-path: q + year_min + type", async () => {
+    const res = await app.request("/search?q=foo&year_min=2000&type=MOVIE");
+    expect(res.status).toBe(200);
   });
 });
 
