@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { pLimit } from "../lib/p-limit";
 import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGenres } from "../tmdb/client";
 import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
@@ -8,27 +9,23 @@ import { syncFailureTotal } from "../metrics";
 
 const log = logger.child({ module: "search" });
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 import type { AppEnv } from "../types";
 
+const searchQuerySchema = z.object({
+  q: z.string().min(1),
+  year_min: z.coerce.number().int().optional(),
+  year_max: z.coerce.number().int().optional(),
+  min_rating: z.coerce.number().min(0).max(10).optional(),
+  type: z.enum(["MOVIE", "SHOW"]).optional(),
+  language: z.string().optional(),
+});
+
 const app = new Hono<AppEnv>();
 
-app.get("/", async (c) => {
-  const query = c.req.query("q");
-  if (!query) {
-    return err(c, "Query parameter 'q' is required");
-  }
-
-  // Parse optional filter params
-  const yearMinRaw = c.req.query("year_min");
-  const yearMaxRaw = c.req.query("year_max");
-  const minRatingRaw = c.req.query("min_rating");
-  const typeParam = c.req.query("type"); // "MOVIE" | "SHOW"
-  const languageParam = c.req.query("language");
-
-  const yearMin = yearMinRaw ? parseInt(yearMinRaw, 10) : undefined;
-  const yearMax = yearMaxRaw ? parseInt(yearMaxRaw, 10) : undefined;
-  const minRating = minRatingRaw ? parseFloat(minRatingRaw) : undefined;
+app.get("/", zValidator("query", searchQuerySchema), async (c) => {
+  const { q: query, year_min: yearMin, year_max: yearMax, min_rating: minRating, type: typeParam, language: languageParam } = c.req.valid("query");
 
   try {
     const [genreMap, tvGenreMap, searchResult] = await Promise.all([

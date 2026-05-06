@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import * as sync from "../tmdb/sync";
 import { getEpisodesByDateRange, getUnwatchedEpisodes, getSeasonEpisodeStatus } from "../db/repository";
 import { localDateForTimezone, addDays } from "../utils/timezone";
@@ -6,6 +7,12 @@ import { CONFIG } from "../config";
 import { requireAuth } from "../middleware/auth";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
+
+const statusParamSchema = z.object({
+  titleId: z.string().regex(/^(movie|tv)-\d+$/),
+  season: z.coerce.number().int().min(0),
+});
 
 const app = new Hono<AppEnv>();
 
@@ -28,13 +35,11 @@ app.get("/upcoming", async (c) => {
   return ok(c, { today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
 });
 
-app.get("/status/:titleId/:season", async (c) => {
+app.get("/status/:titleId/:season", zValidator("param", statusParamSchema), async (c) => {
   const user = c.get("user");
   if (!user) return ok(c, { episodes: [] });
 
-  const titleId = c.req.param("titleId");
-  const seasonNumber = Number(c.req.param("season"));
-  if (isNaN(seasonNumber)) return err(c, "Invalid season number", 400);
+  const { titleId, season: seasonNumber } = c.req.valid("param");
 
   const episodes = await getSeasonEpisodeStatus(titleId, seasonNumber, user.id);
   return ok(c, { episodes });

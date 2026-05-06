@@ -57,7 +57,8 @@ describe("GET /browse", () => {
     const res = await app.request("/browse");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Invalid category");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns 400 for invalid category", async () => {
@@ -169,32 +170,20 @@ describe("GET /browse", () => {
     expect(callArgs.voteCountGte).toBe("200");
   });
 
-  it("clamps negative page to 1", async () => {
-    (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [], total_pages: 10, total_results: 200, page: 1,
-    });
-
+  it("rejects negative page", async () => {
     const res = await app.request("/browse?category=popular&type=MOVIE&page=-5");
-    expect(res.status).toBe(200);
-
+    expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.page).toBe(1);
-    const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
-    expect(callArgs.page).toBe(1);
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
-  it("clamps NaN page to 1", async () => {
-    (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [], total_pages: 10, total_results: 200, page: 1,
-    });
-
+  it("rejects non-numeric page", async () => {
     const res = await app.request("/browse?category=popular&type=MOVIE&page=abc");
-    expect(res.status).toBe(200);
-
+    expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.page).toBe(1);
-    const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
-    expect(callArgs.page).toBe(1);
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("passes page parameter correctly", async () => {
@@ -482,18 +471,12 @@ describe("GET /browse", () => {
       expect(filters.voteAverageGte).toBe(7.5);
     });
 
-    it("ignores non-numeric year/rating values", async () => {
-      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
-      });
-
+    it("rejects non-numeric year/rating values", async () => {
       const res = await app.request("/browse?category=popular&type=MOVIE&year_min=abc&min_rating=xyz");
-      expect(res.status).toBe(200);
-
-      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
-      const filters = callArgs.filters as Record<string, unknown>;
-      expect(filters.yearMin).toBeUndefined();
-      expect(filters.voteAverageGte).toBeUndefined();
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
     });
   });
 
@@ -524,6 +507,74 @@ describe("GET /browse", () => {
       expect(body.priorityLanguageCodes).toContain("en");
       expect(body.priorityLanguageCodes).toContain("fr");
       expect(body.priorityLanguageCodes).toContain("ja");
+    });
+  });
+
+  describe("validation", () => {
+    it("rejects missing category", async () => {
+      const res = await app.request("/browse");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects unknown category value", async () => {
+      const res = await app.request("/browse?category=trending");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects page=0", async () => {
+      const res = await app.request("/browse?category=popular&page=0");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects min_rating above 10", async () => {
+      const res = await app.request("/browse?category=popular&min_rating=11");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects min_rating below 0", async () => {
+      const res = await app.request("/browse?category=popular&min_rating=-1");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects non-numeric year_min", async () => {
+      const res = await app.request("/browse?category=popular&year_min=notanumber");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects onlyMine=false (only literal 'true' is accepted)", async () => {
+      const res = await app.request("/browse?category=popular&onlyMine=false");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("happy-path: minimal request with category only", async () => {
+      const res = await app.request("/browse?category=popular");
+      expect(res.status).toBe(200);
+    });
+
+    it("happy-path: category + year filters + min_rating", async () => {
+      const res = await app.request("/browse?category=popular&year_min=2000&min_rating=7.5");
+      expect(res.status).toBe(200);
     });
   });
 });

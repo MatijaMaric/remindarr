@@ -298,3 +298,41 @@ describe("POST /episodes/sync", () => {
     CONFIG.TMDB_API_KEY = origKey;
   });
 });
+
+describe("GET /episodes — validation", () => {
+  it("rejects invalid titleId format on /status/:titleId/:season", async () => {
+    const res = await app.request("/episodes/status/abc/1");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects non-numeric season on /status/:titleId/:season", async () => {
+    const res = await app.request("/episodes/status/movie-1/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects negative season number", async () => {
+    const res = await app.request("/episodes/status/movie-1/-1");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy-path: GET /upcoming returns 200 with no user", async () => {
+    const res = await app.request("/episodes/upcoming");
+    expect(res.status).toBe(200);
+  });
+
+  it("happy-path: GET /status/:titleId/:season returns 200 for valid params (no user = empty episodes)", async () => {
+    const res = await app.request("/episodes/status/movie-1/1");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.episodes)).toBe(true);
+  });
+});

@@ -36,7 +36,8 @@ describe("GET /calendar", () => {
     const res = await app.request("/calendar");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("month parameter required");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("returns 400 for invalid month format", async () => {
@@ -53,7 +54,8 @@ describe("GET /calendar", () => {
     const res = await app.request("/calendar?month=2026-03&type=INVALID");
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("Invalid type");
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("accepts valid objectType MOVIE", async () => {
@@ -106,6 +108,57 @@ describe("GET /calendar", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.titles.length).toBeGreaterThanOrEqual(0);
+  });
+
+  describe("validation", () => {
+    it("rejects missing month", async () => {
+      const res = await app.request("/calendar");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects single-digit month (2026-3)", async () => {
+      const res = await app.request("/calendar?month=2026-3");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects non-date month", async () => {
+      const res = await app.request("/calendar?month=foo");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+    });
+
+    it("rejects lowercase type", async () => {
+      const res = await app.request("/calendar?month=2026-05&type=movie");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("rejects unknown type value", async () => {
+      const res = await app.request("/calendar?month=2026-05&type=BOOK");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+
+    it("happy-path: minimal request with month only", async () => {
+      const res = await app.request("/calendar?month=2026-05");
+      expect(res.status).toBe(200);
+    });
+
+    it("happy-path: month + type + provider", async () => {
+      const res = await app.request("/calendar?month=2026-05&type=MOVIE&provider=8");
+      expect(res.status).toBe(200);
+    });
   });
 
   it("works with authenticated user context", async () => {

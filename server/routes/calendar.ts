@@ -1,24 +1,22 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { getTitlesByMonth, getEpisodesByMonth } from "../db/repository";
 import type { AppEnv } from "../types";
-import { ok, err } from "./response";
+import { ok } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
+import { zValidator } from "../lib/validator";
+
+const calendarQuerySchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/, "month must be YYYY-MM"),
+  type: z.enum(["MOVIE", "SHOW"]).optional(),
+  provider: z.string().optional(),
+});
 
 const app = new Hono<AppEnv>();
 
-app.get("/", async (c) => {
+app.get("/", zValidator("query", calendarQuerySchema), async (c) => {
   const user = c.get("user");
-  const month = c.req.query("month"); // format: 2026-03
-  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
-    return err(c, "month parameter required (format: YYYY-MM)");
-  }
-
-  const objectType = c.req.query("type");
-  const provider = c.req.query("provider");
-
-  if (objectType && !["MOVIE", "SHOW"].includes(objectType)) {
-    return err(c, "Invalid type. Must be one of: MOVIE, SHOW");
-  }
+  const { month, type: objectType, provider } = c.req.valid("query");
 
   const titles = await getTitlesByMonth({ month, objectType, provider }, user?.id);
   const episodes = await getEpisodesByMonth({ month, objectType, provider }, user?.id);
