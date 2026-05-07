@@ -97,6 +97,40 @@ describe("getUserPublicProfile movie sort order", () => {
     expect(result!.movies).toHaveLength(2);
     // Both unwatched, so order is stable (original order preserved)
   });
+
+  it("returns all movies without truncation for large watchlists (regression for #677)", async () => {
+    const TOTAL = 200;
+    const WATCHED = 50;
+    const movies = Array.from({ length: TOTAL }, (_, i) =>
+      makeParsedTitle({ id: `bulk-movie-${i}`, objectType: "MOVIE", title: `Bulk Movie ${i}` })
+    );
+    await upsertTitles(movies);
+    for (const m of movies) {
+      await trackTitle(m.id, userId);
+    }
+
+    const db = getDb();
+    // Watch the first WATCHED movies at distinct timestamps
+    for (let i = 0; i < WATCHED; i++) {
+      await db.insert(watchedTitles).values({ titleId: `bulk-movie-${i}`, userId }).run();
+      const ts = `2024-01-${String(i + 1).padStart(2, "0")} 10:00:00`;
+      await db.update(watchedTitles).set({ watchedAt: ts })
+        .where(sql`${watchedTitles.titleId} = ${"bulk-movie-" + i} AND ${watchedTitles.userId} = ${userId}`).run();
+    }
+
+    const result = await getUserPublicProfile("testuser");
+    expect(result).not.toBeNull();
+    // All 200 movies must be present — LIMIT must not truncate the list
+    expect(result!.movies).toHaveLength(TOTAL);
+    // The 50 watched movies must all sort before the 150 unwatched ones
+    const watchedInResult = result!.movies.slice(0, WATCHED);
+    const unwatchedInResult = result!.movies.slice(WATCHED);
+    expect(watchedInResult.every(m => m.id.startsWith("bulk-movie-"))).toBe(true);
+    expect(unwatchedInResult).toHaveLength(TOTAL - WATCHED);
+    // Most recently watched first: bulk-movie-49 (Jan 49) > bulk-movie-48 > ... > bulk-movie-0
+    expect(watchedInResult[0].id).toBe(`bulk-movie-${WATCHED - 1}`);
+    expect(watchedInResult[WATCHED - 1].id).toBe("bulk-movie-0");
+  });
 });
 
 describe("getUserPublicProfile progress metrics", () => {

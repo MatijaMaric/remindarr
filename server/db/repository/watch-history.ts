@@ -52,6 +52,7 @@ export async function getTitleWatchHistory(
       .from(watchHistory)
       .where(and(eq(watchHistory.userId, userId), eq(watchHistory.titleId, titleId)))
       .orderBy(desc(watchHistory.watchedAt))
+      .limit(1000)
       .all();
     return rows;
   });

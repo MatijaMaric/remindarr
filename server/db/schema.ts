@@ -317,6 +317,7 @@ export const watchedTitles = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.titleId, table.userId] }),
     index("idx_watched_titles_user_id").on(table.userId),
+    index("idx_watched_titles_user_title").on(table.userId, table.titleId),
   ]
 );
 

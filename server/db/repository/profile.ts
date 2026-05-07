@@ -146,6 +146,7 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         .select({ titleId: watchedTitles.titleId, watchedAt: watchedTitles.watchedAt })
         .from(watchedTitles)
         .where(sql`${watchedTitles.titleId} IN (${sql.join(movieIds.map(id => sql`${id}`), sql`, `)}) AND ${watchedTitles.userId} = ${user.id}`)
+        .limit(movieIds.length)
         .all();
       for (const row of watchedRows) {
         watchedAtMap.set(row.titleId, row.watchedAt);
