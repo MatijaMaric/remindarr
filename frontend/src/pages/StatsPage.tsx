@@ -126,7 +126,7 @@ export function StatsView() {
   if (loading || !data) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="bg-zinc-900 rounded-xl p-4 h-20 animate-pulse" />
           ))}
@@ -142,7 +142,7 @@ export function StatsView() {
   return (
     <div className="space-y-8 pb-8">
       {/* Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <OverviewCard label="Movies Watched" value={overview.watched_movies} />
         <OverviewCard label="Episodes Watched" value={overview.watched_episodes} />
         <OverviewCard label="Shows Tracked" value={overview.tracked_shows} />
