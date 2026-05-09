@@ -1,0 +1,54 @@
+{
+  "id": 2000,
+  "name": "Dedup Show",
+  "original_name": "Dedup Show",
+  "overview": "A show where the same provider appears as both FLATRATE and FREE — parser should keep only FLATRATE.",
+  "first_air_date": "2022-06-01",
+  "episode_run_time": [30],
+  "genres": [
+    { "id": 35, "name": "Comedy" }
+  ],
+  "poster_path": "/poster.jpg",
+  "backdrop_path": null,
+  "vote_average": 7.5,
+  "vote_count": 500,
+  "popularity": 20.0,
+  "original_language": "en",
+  "number_of_seasons": 2,
+  "status": "Returning Series",
+  "external_ids": {
+    "imdb_id": "tt9999999"
+  },
+  "watch/providers": {
+    "id": 2000,
+    "results": {
+      "US": {
+        "link": "https://www.themoviedb.org/tv/2000/watch?locale=US",
+        "flatrate": [
+          {
+            "logo_path": "/netflix.jpg",
+            "provider_id": 8,
+            "provider_name": "Netflix",
+            "display_priority": 0
+          }
+        ],
+        "free": [
+          {
+            "logo_path": "/netflix.jpg",
+            "provider_id": 8,
+            "provider_name": "Netflix",
+            "display_priority": 0
+          }
+        ],
+        "ads": [
+          {
+            "logo_path": "/peacock.jpg",
+            "provider_id": 386,
+            "provider_name": "Peacock",
+            "display_priority": 5
+          }
+        ]
+      }
+    }
+  }
+}

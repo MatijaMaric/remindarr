@@ -1,0 +1,46 @@
+{
+  "id": 550,
+  "title": "Fight Club",
+  "original_title": "Fight Club",
+  "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy.",
+  "release_date": "1999-10-15",
+  "runtime": 139,
+  "genres": [
+    { "id": 18, "name": "Drama" }
+  ],
+  "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+  "backdrop_path": "/rr7E0NoGKxvbkb89eR1GwfoYjpA.jpg",
+  "adult": false,
+  "vote_average": 8.4,
+  "vote_count": 26280,
+  "popularity": 73.5,
+  "original_language": "en",
+  "external_ids": {
+    "imdb_id": "tt0137523",
+    "tvdb_id": null
+  },
+  "watch/providers": {
+    "id": 550,
+    "results": {
+      "US": {
+        "link": "https://www.themoviedb.org/movie/550/watch?locale=US",
+        "flatrate": [
+          {
+            "logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+            "provider_id": 8,
+            "provider_name": "Netflix",
+            "display_priority": 0
+          }
+        ],
+        "rent": [
+          {
+            "logo_path": "/peURlLlr8jggOwK53fJ5wdQl05y.jpg",
+            "provider_id": 2,
+            "provider_name": "Apple TV",
+            "display_priority": 4
+          }
+        ]
+      }
+    }
+  }
+}

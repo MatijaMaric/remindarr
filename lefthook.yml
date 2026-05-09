@@ -1,0 +1,6 @@
+pre-push:
+  parallel: true
+  commands:
+    check:
+      run: bun run check
+      fail_text: "❌ bun run check failed — fix before pushing (or use --no-verify if you intentionally want to bypass)"

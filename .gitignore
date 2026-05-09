@@ -35,8 +35,10 @@ Thumbs.db
 *.njsproj
 *.sln
 
-# Claude Code
-.claude/
+# Claude Code — local state ignored; agents/ and commands/ are project artifacts
+.claude/*
+!.claude/agents/
+!.claude/commands/
 .agents/
 skills-lock.json
 

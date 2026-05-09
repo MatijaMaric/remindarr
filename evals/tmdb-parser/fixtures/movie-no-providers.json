@@ -1,0 +1,25 @@
+{
+  "id": 12345,
+  "title": "Obscure Film",
+  "original_title": "Obscure Film",
+  "overview": "A film with no streaming providers in the configured country.",
+  "release_date": "2020-03-01",
+  "runtime": 90,
+  "genres": [
+    { "id": 27, "name": "Horror" }
+  ],
+  "poster_path": null,
+  "backdrop_path": null,
+  "adult": false,
+  "vote_average": 5.2,
+  "vote_count": 100,
+  "popularity": 2.1,
+  "original_language": "en",
+  "external_ids": {
+    "imdb_id": null
+  },
+  "watch/providers": {
+    "id": 12345,
+    "results": {}
+  }
+}
