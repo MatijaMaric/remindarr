@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/card";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
-import type { PinnedTitle } from "../types";
+import type { PinnedTitle, UserAchievement, StreakData } from "../types";
 import { useAuth } from "../context/AuthContext";
 import ProfileHero from "../components/profile/ProfileHero";
 import BioCard from "../components/profile/BioCard";
@@ -21,6 +21,8 @@ import WatchlistTabs, {
 import WatchlistGrid from "../components/profile/WatchlistGrid";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
+import BadgesCard from "../components/profile/BadgesCard";
+import StreakCounter from "../components/profile/StreakCounter";
 
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -35,6 +37,38 @@ export default function UserProfilePage() {
   const [activeTab, setActiveTab] = useState<WatchlistTab>("watching");
   const [localBio, setLocalBio] = useState<string | null | undefined>(undefined);
   const [localPinned, setLocalPinned] = useState<PinnedTitle[] | null>(null);
+  const [achievements, setAchievements] = useState<UserAchievement[] | null>(null);
+  const [streakData, setStreakData] = useState<StreakData | null>(null);
+
+  // Fetch achievements for the profile user
+  useEffect(() => {
+    if (!username) return;
+    const controller = new AbortController();
+    const fetchAchievements = async () => {
+      try {
+        const isOwn = currentUser?.username === username;
+        const result = isOwn
+          ? await api.getMyAchievements(controller.signal)
+          : await api.getUserAchievements(username, controller.signal);
+        if (!controller.signal.aborted) setAchievements(result);
+      } catch {
+        // Silently fail (e.g. private profile)
+      }
+    };
+    fetchAchievements();
+    return () => controller.abort();
+  }, [username, currentUser?.username]);
+
+  // Fetch streak for own profile only
+  useEffect(() => {
+    if (!currentUser || currentUser.username !== username) return;
+    const controller = new AbortController();
+    api
+      .getMyStreak(controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setStreakData(data); })
+      .catch(() => { /* ignore */ });
+    return () => controller.abort();
+  }, [username, currentUser]);
 
   const handleFollowToggle = useCallback((isNowFollowing: boolean) => {
     setFollowerAdjust((prev) => prev + (isNowFollowing ? 1 : -1));
@@ -131,7 +165,16 @@ export default function UserProfilePage() {
                 onPinnedChanged={(next) => setLocalPinned(next)}
               />
             )}
+            {show_watchlist && streakData && streakData.currentStreak > 0 && (
+              <StreakCounter streak={streakData} variant="sidebar" />
+            )}
             {show_watchlist && <ProgressCard overview={overview} />}
+            {achievements && achievements.length > 0 && (
+              <BadgesCard
+                achievements={achievements}
+                mode={is_own_profile ? "self" : "other"}
+              />
+            )}
             {show_watchlist && genres.length > 0 && <TopGenresCard genres={genres} limit={6} />}
             {show_watchlist && friends.length > 0 && (
               <FriendsCard

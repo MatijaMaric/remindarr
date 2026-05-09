@@ -369,6 +369,7 @@ function NotificationsSection() {
   const [formQuietDays, setFormQuietDays] = useState<number[]>([]);
   const [formLeavingSoon, setFormLeavingSoon] = useState(true);
   const [formFriendActivity, setFormFriendActivity] = useState(false);
+  const [formAchievements, setFormAchievements] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback((signal?: AbortSignal) => {
@@ -406,6 +407,7 @@ function NotificationsSection() {
     setFormQuietDays([]);
     setFormLeavingSoon(true);
     setFormFriendActivity(false);
+    setFormAchievements(false);
     setShowForm(false);
     setEditingId(null);
   }
@@ -429,6 +431,7 @@ function NotificationsSection() {
     setFormQuietDays(n.quiet_hours_days ? n.quiet_hours_days.split(",").map(Number).filter((d) => d >= 0 && d <= 6) : []);
     setFormLeavingSoon(n.leaving_soon_alerts_enabled !== false);
     setFormFriendActivity(n.friend_activity_alerts_enabled === true);
+    setFormAchievements(n.achievements_enabled === true);
     setShowForm(true);
     setMsg("");
     setErr("");
@@ -467,6 +470,7 @@ function NotificationsSection() {
         quiet_hours_days: formQuietDays.length > 0 ? formQuietDays : undefined,
         leaving_soon_alerts_enabled: formLeavingSoon,
         friend_activity_alerts_enabled: formFriendActivity,
+        achievements_enabled: formAchievements,
       };
       if (editingId) {
         await api.updateNotifier(editingId, {
@@ -915,6 +919,12 @@ function NotificationsSection() {
               sub="Fires when someone you follow rates a title 4★ or higher"
               on={formFriendActivity}
               onChange={setFormFriendActivity}
+            />
+            <SSwitch
+              label="Achievement notifications"
+              sub="Get notified when you earn a new badge"
+              on={formAchievements}
+              onChange={setFormAchievements}
             />
 
             <div className="flex gap-2 mt-5 flex-wrap">
