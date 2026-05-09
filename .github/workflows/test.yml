@@ -42,3 +42,6 @@ jobs:
 
       - name: Build frontend
         run: cd frontend && bun run build
+
+      - name: Wrangler dry-run (catch CF bundling errors)
+        run: bunx wrangler deploy --dry-run --outdir .wrangler/dry-run
