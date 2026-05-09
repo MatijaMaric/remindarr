@@ -14,6 +14,7 @@ import {
   getDistinctNotifierTimezones,
   markNotifierSent,
   disableNotifier,
+  recordDelivery,
 } from "../db/repository";
 import { fetchNewReleases } from "../tmdb/sync-titles";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
@@ -23,6 +24,8 @@ import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { getCurrentTimeInTimezone } from "./time-utils";
+import { listEarnedSince, markAchievementsNotified } from "../db/repository/achievements";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 
 const log = logger.child({ module: "job-processor" });
 
@@ -70,18 +73,18 @@ async function handleSendNotifications(): Promise<void> {
 
   log.info("Processing due notifiers", { count: dueNotifiers.length });
 
-  // Per-invocation cache keyed by "userId|date" — local to this job run, not global.
+  // Per-invocation caches keyed by "userId|date" — local to this job run, not global.
   // For N notifiers sharing the same user+date, DB queries drop from 2N to 2.
-  const contentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
+  const dailyContentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
 
-  async function getContentCached(userId: string, date: string) {
+  async function getDailyContentCached(userId: string, date: string) {
     const key = `${userId}|${date}`;
-    if (contentCache.has(key)) {
+    if (dailyContentCache.has(key)) {
       log.debug("Notification content cache hit", { userId, date });
-      return contentCache.get(key)!;
+      return dailyContentCache.get(key)!;
     }
     const result = await buildNotificationContent(userId, date);
-    contentCache.set(key, result);
+    dailyContentCache.set(key, result);
     return result;
   }
 
@@ -93,14 +96,49 @@ async function handleSendNotifications(): Promise<void> {
         continue;
       }
 
-      const content = await getContentCached(notifier.user_id, notifier.todayDate);
+      // Default daily behavior
+      const content = await getDailyContentCached(notifier.user_id, notifier.todayDate);
 
-      if (content.episodes.length === 0 && content.movies.length === 0) {
+      // Inject achievements if enabled for this notifier
+      let achievementKeys: string[] = [];
+      if (notifier.achievementsEnabled) {
+        const lastSentDate = notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
+        const earnedSince = await listEarnedSince(notifier.user_id, lastSentDate);
+        const unnotified = earnedSince.filter((ua) => !ua.earnedNotified && ua.earnedAt != null);
+        if (unnotified.length > 0) {
+          content.achievementsEarned = unnotified.map((ua) => {
+            const def = ACHIEVEMENTS.find((a) => a.key === ua.achievementKey);
+            return {
+              key: ua.achievementKey,
+              title: def?.title ?? ua.achievementKey,
+              description: def?.description ?? "",
+              icon: def?.icon ?? "",
+              points: def?.points ?? 0,
+              earnedAt: ua.earnedAt!,
+            };
+          });
+          achievementKeys = unnotified.map((ua) => ua.achievementKey);
+        }
+      }
+
+      // Skip if nothing to notify about
+      if (content.episodes.length === 0 && content.movies.length === 0 && !(content.achievementsEarned?.length)) {
         await markNotifierSent(notifier.id, notifier.todayDate);
         continue;
       }
 
-      await provider.send(notifier.config, content);
+      const dailyStart = Date.now();
+      try {
+        await provider.send(notifier.config, content);
+        await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - dailyStart, eventKind: "episode_air" });
+      } catch (sendErr) {
+        await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - dailyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "episode_air" });
+        throw sendErr;
+      }
+      // Mark achievements as notified after successful send
+      if (achievementKeys.length > 0) {
+        await markAchievementsNotified(notifier.user_id, achievementKeys);
+      }
       await markNotifierSent(notifier.id, notifier.todayDate);
       log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
     } catch (err) {

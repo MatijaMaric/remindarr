@@ -1,6 +1,3 @@
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/schema";
-import { episodes } from "../db/schema";
 import { ACHIEVEMENTS, type AchievementKind } from "./definitions";
 import {
   evaluateCountMovies,
@@ -11,6 +8,7 @@ import {
 } from "./evaluate";
 import { upsertUserAchievement } from "../db/repository/achievements";
 import { bumpStreak } from "../db/repository/streaks";
+import { getEpisodeTitleId } from "../db/repository";
 import { enqueueJob } from "../jobs/queue";
 import { logger } from "../logger";
 
@@ -28,17 +26,6 @@ async function evaluateAndPersist(
   if (newlyEarned) {
     log.info("Achievement newly earned", { userId, key, kind, progress: result.progress });
   }
-}
-
-async function getEpisodeTitleId(episodeId: string): Promise<string | null> {
-  const db = getDb();
-  const numericId = typeof episodeId === "string" ? parseInt(episodeId, 10) : episodeId;
-  const row = await db
-    .select({ titleId: episodes.titleId })
-    .from(episodes)
-    .where(eq(episodes.id, numericId as unknown as number))
-    .get();
-  return row?.titleId ?? null;
 }
 
 /**
@@ -93,7 +80,7 @@ export async function onWatchedEpisode(userId: string, episodeId: string, watche
     }
 
     // Deferred: look up titleId then enqueue completionist + genre_count + speed_binge_season
-    const titleId = await getEpisodeTitleId(episodeId);
+    const titleId = await getEpisodeTitleId(parseInt(episodeId, 10));
     if (titleId) {
       enqueueJob("evaluate-achievements", {
         userId,
