@@ -242,6 +242,7 @@ export async function getDueNotifiers(
         quiet_hours_days: notifiers.quietHoursDays,
         leaving_soon_alerts_enabled: notifiers.leavingSoonAlertsEnabled,
         friend_activity_alerts_enabled: notifiers.friendActivityAlertsEnabled,
+        achievements_enabled: notifiers.achievementsEnabled,
       })
       .from(notifiers)
       .where(eq(notifiers.enabled, 1))
@@ -282,6 +283,7 @@ export async function getDueNotifiers(
           streaming_alerts_enabled: Boolean(n.streaming_alerts_enabled),
           leaving_soon_alerts_enabled: Boolean(n.leaving_soon_alerts_enabled),
           friend_activity_alerts_enabled: Boolean(n.friend_activity_alerts_enabled),
+          achievementsEnabled: Boolean(n.achievements_enabled),
         };
       });
   });

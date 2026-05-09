@@ -27,8 +27,8 @@ export class NtfyProvider implements NotificationProvider {
   }
 
   async send(config: Record<string, string>, content: NotificationContent): Promise<void> {
-    const { episodes, movies, streamingAlerts = [] } = content;
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
+    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return;
 
     const title = this.buildTitle(content);
     const message = this.buildMessage(content);
@@ -59,16 +59,17 @@ export class NtfyProvider implements NotificationProvider {
   }
 
   private buildTitle(content: NotificationContent): string {
-    const { episodes, movies, streamingAlerts = [] } = content;
+    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
     const parts: string[] = [];
     if (episodes.length > 0) parts.push(`${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`);
     if (movies.length > 0) parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
     if (streamingAlerts.length > 0) parts.push(`${streamingAlerts.length} now streaming`);
+    if (achievementsEarned.length > 0) parts.push(`${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`);
     return `Remindarr — ${parts.join(" and ")}`;
   }
 
   private buildMessage(content: NotificationContent): string {
-    const { streamingAlerts = [] } = content;
+    const { streamingAlerts = [], achievementsEarned = [] } = content;
     const lines: string[] = [];
 
     const showMap = groupEpisodesByShow(content.episodes);
@@ -92,6 +93,14 @@ export class NtfyProvider implements NotificationProvider {
         lines.push(`${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt)}`);
       } else {
         lines.push(`${alert.title} — now on ${alert.providerName}`);
+      }
+    }
+
+    if (achievementsEarned.length > 0) {
+      lines.push("");
+      lines.push("🏆 New badges:");
+      for (const ae of achievementsEarned) {
+        lines.push(`${ae.title} +${ae.points} XP — ${ae.description}`);
       }
     }
 

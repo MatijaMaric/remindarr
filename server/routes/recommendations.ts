@@ -15,6 +15,7 @@ import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
+import { onRecommendation } from "../achievements/triggers";
 
 const log = logger.child({ module: "recommendations" });
 
@@ -60,6 +61,7 @@ app.post("/", zValidator("json", createRecommendationSchema), async (c) => {
 
   const id = await createRecommendation(user.id, body.titleId, body.message, targetUserId);
   log.info("Recommendation created", { fromUserId: user.id, titleId: body.titleId, targetUserId: targetUserId ?? null });
+  await onRecommendation(user.id);
   return c.json({ success: true, id }, 201);
 });
 

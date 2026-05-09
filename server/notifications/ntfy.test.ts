@@ -146,4 +146,29 @@ describe("NtfyProvider.send", () => {
     fetchSpy.mockImplementation(async () => new Response("Forbidden", { status: 403 }));
     await expect(ntfy.send({ url: "https://ntfy.sh/my-topic" }, sampleContent)).rejects.toThrow("403");
   });
+
+  it("includes achievement section when achievementsEarned is populated", async () => {
+    const contentWithAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [
+        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    };
+    await ntfy.send({ url: "https://ntfy.sh/my-topic" }, contentWithAchievements);
+    expect(fetchCalls).toHaveLength(1);
+    const body = fetchCalls[0].options.body as string;
+    expect(body).toContain("Cinephile I");
+    expect(body).toContain("10 XP");
+  });
+
+  it("does NOT include achievement section when achievementsEarned is empty", async () => {
+    const contentNoAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [],
+    };
+    await ntfy.send({ url: "https://ntfy.sh/my-topic" }, contentNoAchievements);
+    expect(fetchCalls).toHaveLength(1);
+    const body = fetchCalls[0].options.body as string;
+    expect(body).not.toContain("New badges");
+  });
 });

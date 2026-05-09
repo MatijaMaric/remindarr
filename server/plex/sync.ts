@@ -11,6 +11,7 @@ import { watchTitle, watchEpisodesBulk, getEpisodeIdsBySE } from "../db/reposito
 import { updateIntegrationSyncStatus, disableIntegration } from "../db/repository";
 import type { PlexConfig } from "../db/repository/integrations";
 import { syncFailureTotal } from "../metrics";
+import { onWatchedTitle, onWatchedEpisodesBulk } from "../achievements/triggers";
 
 const log = logger.child({ module: "plex-sync" });
 
@@ -52,6 +53,7 @@ export async function syncPlexWatched(integration: IntegrationRow): Promise<Sync
             await watchTitle(titleId, userId);
             moviesMarked++;
             succeeded++;
+            await onWatchedTitle(userId, titleId, true);
           } catch (err) {
             log.warn("Plex title sync failed", { titleId, err });
             failed.push({ id: titleId, error: err instanceof Error ? err.message : String(err) });
@@ -95,6 +97,7 @@ export async function syncPlexWatched(integration: IntegrationRow): Promise<Sync
 
           await watchEpisodesBulk(episodeIds, userId);
           episodesMarked += episodeIds.length;
+          await onWatchedEpisodesBulk(userId, episodeIds.map(String), new Set([titleId]));
         }
       }
     }

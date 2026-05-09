@@ -161,4 +161,28 @@ describe("TelegramProvider.send", () => {
     );
     await expect(telegram.send(config, sampleContent)).rejects.toThrow("400");
   });
+
+  it("includes achievement section when achievementsEarned is populated", async () => {
+    const contentWithAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [
+        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    };
+    await telegram.send(config, contentWithAchievements);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.text).toContain("Cinephile I");
+    expect(body.text).toContain("10 XP");
+    expect(body.text).toContain("New badges");
+  });
+
+  it("does NOT include achievement section when achievementsEarned is empty", async () => {
+    const contentNoAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [],
+    };
+    await telegram.send(config, contentNoAchievements);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.text).not.toContain("New badges");
+  });
 });

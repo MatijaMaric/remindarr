@@ -143,4 +143,30 @@ describe("WebhookProvider.send", () => {
     const sig2 = (fetchCalls[1].options.headers as Record<string, string>)["X-Remindarr-Signature"];
     expect(sig1).toBe(sig2);
   });
+
+  it("includes achievements_earned in payload when achievementsEarned is populated", async () => {
+    const contentWithAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [
+        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    };
+    await webhook.send({ url: "https://example.com/hook" }, contentWithAchievements);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.achievements_earned).toBeArray();
+    expect(body.achievements_earned.length).toBe(1);
+    expect(body.achievements_earned[0].title).toBe("Cinephile I");
+    expect(body.achievements_earned[0].points).toBe(10);
+  });
+
+  it("includes empty achievements_earned when achievementsEarned is empty", async () => {
+    const contentNoAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [],
+    };
+    await webhook.send({ url: "https://example.com/hook" }, contentNoAchievements);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.achievements_earned).toBeArray();
+    expect(body.achievements_earned.length).toBe(0);
+  });
 });

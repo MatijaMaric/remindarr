@@ -11,6 +11,7 @@ interface DiscordEmbed {
   color?: number;
   thumbnail?: { url: string };
   footer?: { text: string };
+  fields?: Array<{ name: string; value: string; inline: boolean }>;
 }
 
 const DISCORD_WEBHOOK_PATTERN =
@@ -62,11 +63,11 @@ export class DiscordProvider implements NotificationProvider {
     });
   }
 
-  private buildEmbeds(content: NotificationContent) {
+  private buildEmbeds(content: NotificationContent, _config?: Record<string, string>) {
     const embeds: DiscordEmbed[] = [];
-    const { episodes, movies, date, streamingAlerts = [] } = content;
+    const { episodes, movies, date, streamingAlerts = [], achievementsEarned = [] } = content;
 
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return [];
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return [];
 
     // Header embed
     const parts: string[] = [];
@@ -168,6 +169,20 @@ export class DiscordProvider implements NotificationProvider {
         };
       }
       embeds.push(embed);
+    }
+
+    // Achievement embeds
+    if (achievementsEarned.length > 0) {
+      const fields = achievementsEarned.map((ae) => ({
+        name: `${ae.title} · +${ae.points} XP`,
+        value: ae.description,
+        inline: false,
+      }));
+      embeds.push({
+        title: "🏆 New badges earned",
+        color: 0xf59e0b, // amber-500
+        fields,
+      });
     }
 
     // Discord has a limit of 10 embeds per message

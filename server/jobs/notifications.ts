@@ -13,6 +13,8 @@ import { SubscriptionExpiredError } from "../notifications/webpush";
 import { refreshNotificationSchedule } from "./schedule";
 import { getCurrentTimeInTimezone } from "./time-utils";
 import { notificationsSentTotal } from "../metrics";
+import { listEarnedSince, markAchievementsNotified } from "../db/repository/achievements";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 
 // Re-export portable scheduling functions for backward compatibility (tests import from here)
 export { convertToLocalTime, computeNotificationCron, refreshNotificationSchedule } from "./schedule";
@@ -133,8 +135,30 @@ export async function registerNotificationJobs() {
             notifier.todayDate
           );
 
+          // Inject achievements if enabled for this notifier
+          let achievementKeys: string[] = [];
+          if (notifier.achievementsEnabled) {
+            const lastSentDate = notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
+            const earnedSince = await listEarnedSince(notifier.user_id, lastSentDate);
+            const unnotified = earnedSince.filter((ua) => !ua.earnedNotified && ua.earnedAt != null);
+            if (unnotified.length > 0) {
+              content.achievementsEarned = unnotified.map((ua) => {
+                const def = ACHIEVEMENTS.find((a) => a.key === ua.achievementKey);
+                return {
+                  key: ua.achievementKey,
+                  title: def?.title ?? ua.achievementKey,
+                  description: def?.description ?? "",
+                  icon: def?.icon ?? "",
+                  points: def?.points ?? 0,
+                  earnedAt: ua.earnedAt!,
+                };
+              });
+              achievementKeys = unnotified.map((ua) => ua.achievementKey);
+            }
+          }
+
           // Skip if nothing to notify about
-          if (content.episodes.length === 0 && content.movies.length === 0) {
+          if (content.episodes.length === 0 && content.movies.length === 0 && !(content.achievementsEarned?.length)) {
             await markNotifierSent(notifier.id, notifier.todayDate);
             continue;
           }
@@ -148,6 +172,10 @@ export async function registerNotificationJobs() {
             await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - dailyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "episode_air" });
             notificationsSentTotal.inc({ provider: notifier.provider, kind: "daily", outcome: "failure" });
             throw sendErr;
+          }
+          // Mark achievements as notified after successful send
+          if (achievementKeys.length > 0) {
+            await markAchievementsNotified(notifier.user_id, achievementKeys);
           }
           await markNotifierSent(notifier.id, notifier.todayDate);
           log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });

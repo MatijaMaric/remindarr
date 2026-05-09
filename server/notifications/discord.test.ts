@@ -140,4 +140,43 @@ describe("DiscordProvider.send", () => {
       )
     ).rejects.toThrow("Discord webhook failed");
   });
+
+  it("renders achievement embed when achievementsEarned is populated", async () => {
+    const contentWithAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [
+        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    };
+
+    await discord.send(
+      { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
+      contentWithAchievements
+    );
+
+    expect(fetchCalls).toHaveLength(1);
+    const body = JSON.parse(fetchCalls[0].options.body);
+    const achievementEmbed = body.embeds.find((e: any) => e.title?.includes("New badges"));
+    expect(achievementEmbed).toBeDefined();
+    expect(achievementEmbed.fields).toBeArray();
+    expect(achievementEmbed.fields[0].name).toContain("Cinephile I");
+    expect(achievementEmbed.fields[0].name).toContain("10 XP");
+  });
+
+  it("does NOT render achievement embed when achievementsEarned is empty", async () => {
+    const contentNoAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [],
+    };
+
+    await discord.send(
+      { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
+      contentNoAchievements
+    );
+
+    expect(fetchCalls).toHaveLength(1);
+    const body = JSON.parse(fetchCalls[0].options.body);
+    const achievementEmbed = body.embeds.find((e: any) => e.title?.includes("New badges"));
+    expect(achievementEmbed).toBeUndefined();
+  });
 });

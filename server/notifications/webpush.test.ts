@@ -155,4 +155,47 @@ describe("WebPushProvider.send", () => {
 
     sendSpy.mockRestore();
   });
+
+  it("includes achievement info in body when achievementsEarned is populated", async () => {
+    const webpush = await import("web-push");
+    let capturedPayload: string | null = null;
+    const sendSpy = spyOn(webpush.default, "sendNotification").mockImplementation(async (sub: any, payload: any) => {
+      capturedPayload = payload;
+      return { statusCode: 201, body: "", headers: {} } as any;
+    });
+
+    const contentWithAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [
+        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    };
+    await provider.send(validConfig, contentWithAchievements);
+    expect(capturedPayload).not.toBeNull();
+    const parsed = JSON.parse(capturedPayload!);
+    expect(parsed.body).toContain("Cinephile I");
+    expect(parsed.body).toContain("10 XP");
+
+    sendSpy.mockRestore();
+  });
+
+  it("does NOT include achievement info when achievementsEarned is empty", async () => {
+    const webpush = await import("web-push");
+    let capturedPayload: string | null = null;
+    const sendSpy = spyOn(webpush.default, "sendNotification").mockImplementation(async (sub: any, payload: any) => {
+      capturedPayload = payload;
+      return { statusCode: 201, body: "", headers: {} } as any;
+    });
+
+    const contentNoAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [],
+    };
+    await provider.send(validConfig, contentNoAchievements);
+    expect(capturedPayload).not.toBeNull();
+    const parsed = JSON.parse(capturedPayload!);
+    expect(parsed.body).not.toContain("badge");
+
+    sendSpy.mockRestore();
+  });
 });

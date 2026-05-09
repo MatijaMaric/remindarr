@@ -74,12 +74,16 @@ export async function getUserAchievements(userId: string): Promise<UserAchieveme
  * Upsert a user_achievement row, tracking progress and earned status.
  * Returns whether this call newly earned the achievement
  * (transitioned earnedAt from null to non-null).
+ *
+ * @param opts.earnedNotified - If 1, marks the achievement as already notified
+ *   (used by the backfill job to prevent notification bursts for historical earns).
  */
 export async function upsertUserAchievement(
   userId: string,
   key: string,
   progress: number,
-  earnedAt: string | null
+  earnedAt: string | null,
+  opts?: { earnedNotified?: 1 }
 ): Promise<{ newlyEarned: boolean }> {
   return traceDbQuery("upsertUserAchievement", async () => {
     const db = getDb();
@@ -95,6 +99,8 @@ export async function upsertUserAchievement(
     const nowEarned = earnedAt != null;
     const newlyEarned = !wasEarned && nowEarned;
 
+    const earnedNotified = opts?.earnedNotified ?? 0;
+
     await db
       .insert(userAchievements)
       .values({
@@ -102,7 +108,7 @@ export async function upsertUserAchievement(
         achievementKey: key,
         progress,
         earnedAt,
-        earnedNotified: 0,
+        earnedNotified,
         updatedAt: new Date().toISOString(),
       })
       .onConflictDoUpdate({
@@ -110,6 +116,8 @@ export async function upsertUserAchievement(
         set: {
           progress,
           earnedAt: earnedAt ?? existing?.earnedAt ?? null,
+          // Only force earnedNotified=1 when explicitly requested (backfill path)
+          ...(opts?.earnedNotified === 1 ? { earnedNotified: 1 } : {}),
           updatedAt: new Date().toISOString(),
         },
       })

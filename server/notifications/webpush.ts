@@ -36,8 +36,8 @@ export class WebPushProvider implements NotificationProvider {
     config: Record<string, string>,
     content: NotificationContent
   ): Promise<void> {
-    const { episodes, movies, streamingAlerts = [] } = content;
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
+    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return;
 
     const vapid = await getVapidKeys();
     webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
@@ -73,7 +73,7 @@ export class WebPushProvider implements NotificationProvider {
   }
 
   private buildPayload(content: NotificationContent) {
-    const { episodes, movies, streamingAlerts = [] } = content;
+    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
     const totalCount = episodes.length + movies.length + streamingAlerts.length;
 
     const lines: string[] = [];
@@ -100,8 +100,16 @@ export class WebPushProvider implements NotificationProvider {
       }
     }
 
+    if (achievementsEarned.length > 0) {
+      lines.push(`🏆 ${achievementsEarned.map((ae) => `${ae.title} +${ae.points} XP`).join(", ")}`);
+    }
+
+    const titleSuffix = achievementsEarned.length > 0 && totalCount === 0
+      ? `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`
+      : `${totalCount} new release${totalCount !== 1 ? "s" : ""}`;
+
     return {
-      title: `Remindarr — ${totalCount} new release${totalCount !== 1 ? "s" : ""}`,
+      title: `Remindarr — ${titleSuffix}`,
       body: lines.join("\n"),
       icon: "/pwa-192x192.png",
       badge: "/pwa-192x192.png",
