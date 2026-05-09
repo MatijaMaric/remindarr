@@ -169,7 +169,7 @@ export default function UserProfilePage() {
               <StreakCounter streak={streakData} variant="sidebar" />
             )}
             {show_watchlist && <ProgressCard overview={overview} />}
-            {achievements && achievements.length > 0 && (
+            {show_watchlist && achievements && achievements.length > 0 && (
               <BadgesCard
                 achievements={achievements}
                 mode={is_own_profile ? "self" : "other"}

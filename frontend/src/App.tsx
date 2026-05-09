@@ -11,6 +11,7 @@ import OfflineIndicator from "./components/OfflineIndicator";
 import InstallPrompt from "./components/InstallPrompt";
 import NotificationPrompt from "./components/NotificationPrompt";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
+import AchievementToast from "./components/profile/AchievementToast";
 import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
@@ -231,6 +232,7 @@ export default function App() {
       </footer>
       {!isKioskPage && <BottomTabBar />}
       <OfflineIndicator />
+      {user && <AchievementToast />}
       <Toaster theme={theme === "light" ? "light" : "dark"} position="bottom-center" richColors />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>

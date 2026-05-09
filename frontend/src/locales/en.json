@@ -501,7 +501,8 @@
         "today": "Today's Episodes",
         "upcoming": "Coming Up",
         "airing_soon": "Airing Soon",
-        "friends_loved": "Friends Loved This Week"
+        "friends_loved": "Friends Loved This Week",
+        "streak": "Daily Streak"
       }
     },
     "crowdedWeek": {

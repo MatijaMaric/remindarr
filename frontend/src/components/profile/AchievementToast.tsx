@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trophy } from "lucide-react";
 import * as api from "../../api";
 import type { UserAchievement } from "../../types";
@@ -9,40 +9,41 @@ const TOAST_DURATION_MS = 4_000;
 
 export function useNewAchievements(): UserAchievement[] {
   const [newAchievements, setNewAchievements] = useState<UserAchievement[]>([]);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const check = async (signal?: AbortSignal) => {
-    try {
-      const all = await api.getMyAchievements(signal);
-      if (signal?.aborted) return;
-
-      const lastSeen = localStorage.getItem(STORAGE_KEY);
-      const lastSeenDate = lastSeen ? new Date(lastSeen) : null;
-
-      const fresh = all.filter((a) => {
-        if (!a.earned || !a.earnedAt) return false;
-        if (!lastSeenDate) return true;
-        return new Date(a.earnedAt) > lastSeenDate;
-      });
-
-      if (fresh.length > 0) {
-        setNewAchievements(fresh);
-        localStorage.setItem(STORAGE_KEY, new Date().toISOString());
-      }
-    } catch {
-      // ignore — best-effort polling
-    }
-  };
 
   useEffect(() => {
     const controller = new AbortController();
+
+    async function check() {
+      try {
+        const all = await api.getMyAchievements(controller.signal);
+        if (controller.signal.aborted) return;
+
+        const lastSeen = localStorage.getItem(STORAGE_KEY);
+        const lastSeenDate = lastSeen ? new Date(lastSeen) : null;
+
+        const fresh = all.filter((a) => {
+          if (!a.earned || !a.earnedAt) return false;
+          if (!lastSeenDate) return true;
+          return new Date(a.earnedAt) > lastSeenDate;
+        });
+
+        if (fresh.length > 0) {
+          setNewAchievements(fresh);
+          localStorage.setItem(STORAGE_KEY, new Date().toISOString());
+        }
+      } catch {
+        // ignore — best-effort polling
+      }
+    }
+
     // Delay initial check by one tick to avoid synchronous setState inside effect
-    const initialTimer = setTimeout(() => check(controller.signal), 0);
-    intervalRef.current = setInterval(() => check(), POLL_INTERVAL_MS);
+    const initialTimer = setTimeout(check, 0);
+    const intervalId = setInterval(check, POLL_INTERVAL_MS);
+
     return () => {
       clearTimeout(initialTimer);
+      clearInterval(intervalId);
       controller.abort();
-      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
