@@ -58,6 +58,7 @@ import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth"
 import { migrateAuthData } from "./db/migrate-auth";
 import { validateStartup } from "./startup-validation";
 import { createCache, initCache } from "./cache";
+import { syncAchievementRegistry } from "./achievements";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -66,6 +67,9 @@ validateStartup();
 
 // Initialize DB on startup
 initBunDb();
+
+// Sync achievement registry to DB (idempotent — safe on every startup)
+await syncAchievementRegistry();
 
 // Initialize distributed cache
 const cache = await createCache();

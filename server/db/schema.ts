@@ -343,6 +343,7 @@ export const notifiers = sqliteTable(
     quietHoursDays: text("quiet_hours_days").notNull().default(""),
     leavingSoonAlertsEnabled: integer("leaving_soon_alerts_enabled").notNull().default(1),
     friendActivityAlertsEnabled: integer("friend_activity_alerts_enabled").notNull().default(0),
+    achievementsEnabled: integer("achievements_enabled").notNull().default(0),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
@@ -781,10 +782,56 @@ export const dismissedSuggestions = sqliteTable(
   ]
 );
 
+export const achievements = sqliteTable("achievements", {
+  key: text("key").primaryKey(),
+  kind: text("kind").notNull(),
+  threshold: integer("threshold").notNull(),
+  points: integer("points").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(),
+  metadata: text("metadata"),
+});
+
+export const userAchievements = sqliteTable(
+  "user_achievements",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    achievementKey: text("achievement_key")
+      .notNull()
+      .references(() => achievements.key, { onDelete: "cascade" }),
+    progress: integer("progress").notNull().default(0),
+    earnedAt: text("earned_at"),
+    earnedNotified: integer("earned_notified").notNull().default(0),
+    updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.achievementKey] }),
+    index("idx_user_achievements_earned").on(table.userId, table.earnedAt),
+  ]
+);
+
+export const userStreaks = sqliteTable("user_streaks", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastWatchDate: text("last_watch_date"),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+});
+
+export type AchievementDefRow = typeof achievements.$inferSelect;
+export type UserAchievementRow = typeof userAchievements.$inferSelect;
+export type UserStreakRow = typeof userStreaks.$inferSelect;
+
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs, userSubscribedProviders,
   follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
   watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents, notificationLog, dismissedSuggestions,
+  achievements, userAchievements, userStreaks,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
