@@ -9,7 +9,7 @@ import {
 import { upsertUserAchievement } from "../db/repository/achievements";
 import { bumpStreak } from "../db/repository/streaks";
 import { getEpisodeTitleId } from "../db/repository";
-import { enqueueJob } from "../jobs/queue";
+import { enqueueJob } from "../jobs/enqueue";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "achievement-triggers" });
@@ -52,7 +52,7 @@ export async function onWatchedTitle(userId: string, titleId: string, isMovie?: 
     }
 
     // Deferred: completionist + genre_count
-    enqueueJob("evaluate-achievements", { userId, kinds: ["completionist", "genre_count"] as AchievementKind[], titleId });
+    await enqueueJob("evaluate-achievements", { userId, kinds: ["completionist", "genre_count"] as AchievementKind[], titleId });
   } catch (err) {
     log.error("onWatchedTitle trigger failed", { userId, titleId, err });
   }
@@ -82,7 +82,7 @@ export async function onWatchedEpisode(userId: string, episodeId: string, watche
     // Deferred: look up titleId then enqueue completionist + genre_count + speed_binge_season
     const titleId = await getEpisodeTitleId(parseInt(episodeId, 10));
     if (titleId) {
-      enqueueJob("evaluate-achievements", {
+      await enqueueJob("evaluate-achievements", {
         userId,
         kinds: ["completionist", "genre_count", "speed_binge_season"] as AchievementKind[],
         titleId,
@@ -121,7 +121,7 @@ export async function onWatchedEpisodesBulk(
 
     // Deferred: one job per distinct titleId
     for (const titleId of titleIds) {
-      enqueueJob("evaluate-achievements", {
+      await enqueueJob("evaluate-achievements", {
         userId,
         kinds: ["completionist", "genre_count", "speed_binge_season"] as AchievementKind[],
         titleId,
