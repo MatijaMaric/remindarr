@@ -85,6 +85,7 @@ import { armCron, enqueueOnce, processPending, recoverStale, runWithEnv, CRON_JO
 export { JobQueueDO } from "./jobs/durable-object";
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
+import { syncAchievementRegistry } from "./achievements";
 import type { DrizzleDb } from "./platform/types";
 import { runWithCache } from "./cache";
 import { CloudflareKvCache } from "./cache/cloudflare-kv";
@@ -166,6 +167,7 @@ function patchConfigFromEnv(env: Env): void {
 // ─── Per-isolate state (survives across requests within the same Worker instance) ──
 
 let adminChecked = false;
+let achievementRegistrySynced = false;
 let oidcConfigLoaded = false;
 let cachedOidcConfig: Parameters<typeof createAuth>[2] | undefined;
 
@@ -211,6 +213,12 @@ function createApp(env: Env) {
 
     // One-time data migration (skipped after first successful check)
     await migrateAuthData();
+
+    // Sync achievement registry once per isolate (idempotent UPSERT)
+    if (!achievementRegistrySynced) {
+      achievementRegistrySynced = true;
+      await syncAchievementRegistry();
+    }
 
     // Create admin on first request if no users exist
     if (!adminChecked) {
