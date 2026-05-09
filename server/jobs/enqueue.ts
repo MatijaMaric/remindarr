@@ -30,5 +30,5 @@ export async function hasActiveJob(name: string): Promise<boolean> {
     .from(jobs)
     .where(and(eq(jobs.name, name), inArray(jobs.status, ["pending", "running", "completed"])))
     .get();
-  return row !== null;
+  return row != null;
 }
