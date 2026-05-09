@@ -22,7 +22,10 @@ import { registerHandler } from "./worker";
 const log = logger.child({ module: "backfill-achievements" });
 const PAGE_SIZE = 50;
 
-registerHandler("backfill-achievements", async () => {
+/**
+ * Core handler logic — shared between Bun (registerHandler) and CF Workers (processor.ts).
+ */
+export async function runBackfillAchievements(_data?: string | null): Promise<void> {
   const db = getDb();
 
   // 1. Read cursor
@@ -143,4 +146,6 @@ registerHandler("backfill-achievements", async () => {
     await setSetting("achievements_backfill_done", "1");
     log.info("Backfill: complete", { totalProcessed: rows.length });
   }
-});
+}
+
+registerHandler("backfill-achievements", () => runBackfillAchievements());

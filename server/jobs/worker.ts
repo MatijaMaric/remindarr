@@ -29,6 +29,10 @@ export function registerHandler(name: string, handler: JobHandler) {
   handlers.set(name, handler);
 }
 
+export function getHandler(name: string): JobHandler | undefined {
+  return handlers.get(name);
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, jobName: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

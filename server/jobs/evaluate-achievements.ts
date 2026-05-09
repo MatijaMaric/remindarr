@@ -15,16 +15,19 @@ import { registerHandler } from "./worker";
 
 const log = logger.child({ module: "evaluate-achievements" });
 
-registerHandler("evaluate-achievements", async (job) => {
-  const raw = typeof job.data === "string" ? JSON.parse(job.data) : job.data;
-  const { userId, kinds, titleId } = raw as {
+/**
+ * Core handler logic — shared between Bun (registerHandler) and CF Workers (processor.ts).
+ */
+export async function runEvaluateAchievements(data: string | null): Promise<void> {
+  const raw = typeof data === "string" ? JSON.parse(data) : data;
+  const { userId, kinds, titleId } = (raw ?? {}) as {
     userId: string;
     kinds: AchievementKind[];
     titleId?: string;
   };
 
   if (!userId || !Array.isArray(kinds)) {
-    log.warn("evaluate-achievements: invalid job data", { jobId: job.id });
+    log.warn("evaluate-achievements: invalid job data");
     return;
   }
 
@@ -86,4 +89,6 @@ registerHandler("evaluate-achievements", async (job) => {
       }
     }
   }
-});
+}
+
+registerHandler("evaluate-achievements", (job) => runEvaluateAchievements(job.data));

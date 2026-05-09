@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, upsertTitles, upsertEpisodes } from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
@@ -6,6 +7,8 @@ import * as queue from "../jobs/queue";
 import * as achievementsRepo from "../db/repository/achievements";
 import * as streaksRepo from "../db/repository/streaks";
 import * as evaluate from "./evaluate";
+import * as triggers from "./triggers";
+import type { AppEnv } from "../types";
 
 // Do NOT import triggers at module top level — DB must be set up first.
 // Import inside tests after setupTestDb().
@@ -221,5 +224,105 @@ describe("onRecommendation", () => {
     upsertSpy.mockRestore();
     enqueueSpy.mockRestore();
     evalRecSpy.mockRestore();
+  });
+});
+
+// ─── DELETE-path tests: triggers must NOT fire on un-watch / unfollow ─────────
+
+describe("DELETE /watched/:episodeId — no trigger fired", () => {
+  it("does not call onWatchedEpisode, bumpStreak, or enqueueJob when un-watching an episode", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-del-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-del-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: today, still_path: null },
+    ]);
+
+    const { getDb } = await import("../db/schema");
+    const { episodes } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = getDb();
+    const ep = await db.select().from(episodes).where(eq(episodes.titleId, "show-del-1")).get();
+    const epId = ep!.id;
+
+    const onWatchedEpisodeSpy = spyOn(triggers, "onWatchedEpisode").mockResolvedValue(undefined);
+    const bumpSpy = spyOn(streaksRepo, "bumpStreak").mockResolvedValue({
+      userId,
+      currentStreak: 0,
+      longestStreak: 0,
+      lastWatchDate: null,
+      updatedAt: new Date().toISOString(),
+    });
+    const enqueueSpy = spyOn(queue, "enqueueJob").mockReturnValue(1);
+
+    const watchedApp = (await import("../routes/watched")).default;
+    const app = new Hono<AppEnv>();
+    app.use("*", async (c, next) => {
+      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      await next();
+    });
+    app.route("/watched", watchedApp);
+
+    const res = await app.request(`/watched/${epId}`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+
+    expect(onWatchedEpisodeSpy).not.toHaveBeenCalled();
+    expect(bumpSpy).not.toHaveBeenCalled();
+    expect(enqueueSpy).not.toHaveBeenCalled();
+
+    onWatchedEpisodeSpy.mockRestore();
+    bumpSpy.mockRestore();
+    enqueueSpy.mockRestore();
+  });
+});
+
+describe("DELETE /watched/movies/:titleId — no trigger fired", () => {
+  it("does not call onWatchedTitle when un-watching a movie", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-del-1", objectType: "MOVIE", title: "Delete Me" })]);
+
+    const onWatchedTitleSpy = spyOn(triggers, "onWatchedTitle").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(queue, "enqueueJob").mockReturnValue(1);
+
+    const watchedApp = (await import("../routes/watched")).default;
+    const app = new Hono<AppEnv>();
+    app.use("*", async (c, next) => {
+      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      await next();
+    });
+    app.route("/watched", watchedApp);
+
+    const res = await app.request("/watched/movies/movie-del-1", { method: "DELETE" });
+    expect(res.status).toBe(200);
+
+    expect(onWatchedTitleSpy).not.toHaveBeenCalled();
+    expect(enqueueSpy).not.toHaveBeenCalled();
+
+    onWatchedTitleSpy.mockRestore();
+    enqueueSpy.mockRestore();
+  });
+});
+
+describe("DELETE /social/follow/:userId — no trigger fired", () => {
+  it("does not call onFollow when unfollowing a user", async () => {
+    const targetUserId = await createUser("targetuser", "hash2", "Target User");
+
+    const onFollowSpy = spyOn(triggers, "onFollow").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(queue, "enqueueJob").mockReturnValue(1);
+
+    const socialApp = (await import("../routes/social")).default;
+    const app = new Hono<AppEnv>();
+    app.use("*", async (c, next) => {
+      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      await next();
+    });
+    app.route("/social", socialApp);
+
+    const res = await app.request(`/social/follow/${targetUserId}`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+
+    expect(onFollowSpy).not.toHaveBeenCalled();
+    expect(enqueueSpy).not.toHaveBeenCalled();
+
+    onFollowSpy.mockRestore();
+    enqueueSpy.mockRestore();
   });
 });

@@ -200,6 +200,16 @@ async function handleCleanup() {
   await cleanupOldJobs(30);
 }
 
+async function handleEvaluateAchievements(data: string | null): Promise<void> {
+  const { runEvaluateAchievements } = await import("./evaluate-achievements");
+  await runEvaluateAchievements(data);
+}
+
+async function handleBackfillAchievements(data: string | null): Promise<void> {
+  const { runBackfillAchievements } = await import("./backfill-achievements");
+  await runBackfillAchievements(data);
+}
+
 export const handlers: Record<string, (data: string | null) => Promise<void>> = {
   "sync-titles": () => handleSyncTitles(),
   "sync-episodes": () => handleSyncEpisodes(),
@@ -209,6 +219,8 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> = 
   "migrate-offers": () => handleMigrateOffers(),
   "sync-deep-links": () => handleSyncDeepLinks(),
   "cleanup": () => handleCleanup(),
+  "evaluate-achievements": (data) => handleEvaluateAchievements(data),
+  "backfill-achievements": (data) => handleBackfillAchievements(data),
 };
 
 export interface JobRow {
