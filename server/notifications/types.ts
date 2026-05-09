@@ -23,11 +23,21 @@ export interface NotificationStreamingAlert {
   leavingAt?: string | null;
 }
 
+export interface NotificationAchievementEarned {
+  key: string;
+  title: string;
+  description: string;
+  icon: string;
+  points: number;
+  earnedAt: string;
+}
+
 export interface NotificationContent {
   episodes: NotificationEpisode[];
   movies: NotificationMovie[];
   date: string;
   streamingAlerts?: NotificationStreamingAlert[];
+  achievementsEarned?: NotificationAchievementEarned[];
 }
 
 export interface NotificationProvider {

@@ -5,6 +5,7 @@ import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
+import { onFollow } from "../achievements/triggers";
 
 const friendsLovedQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
@@ -30,6 +31,7 @@ app.post("/follow/:userId", async (c) => {
 
   await follow(currentUser.id, targetUserId);
   log.info("User followed", { followerId: currentUser.id, followingId: targetUserId });
+  await onFollow(currentUser.id);
   return ok(c, { success: true });
 });
 

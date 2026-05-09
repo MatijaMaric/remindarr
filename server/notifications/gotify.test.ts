@@ -134,4 +134,28 @@ describe("GotifyProvider.send", () => {
     fetchSpy.mockImplementation(async () => new Response("Unauthorized", { status: 401 }));
     await expect(gotify.send(config, sampleContent)).rejects.toThrow("401");
   });
+
+  it("includes achievement section when achievementsEarned is populated", async () => {
+    const contentWithAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [
+        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    };
+    await gotify.send(config, contentWithAchievements);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.message).toContain("Cinephile I");
+    expect(body.message).toContain("10 XP");
+    expect(body.message).toContain("New badges");
+  });
+
+  it("does NOT include achievement section when achievementsEarned is empty", async () => {
+    const contentNoAchievements: NotificationContent = {
+      ...sampleContent,
+      achievementsEarned: [],
+    };
+    await gotify.send(config, contentNoAchievements);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.message).not.toContain("New badges");
+  });
 });

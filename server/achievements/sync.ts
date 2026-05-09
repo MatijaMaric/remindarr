@@ -1,5 +1,7 @@
 import { ACHIEVEMENTS } from "./definitions";
 import { upsertAchievementDef } from "../db/repository/achievements";
+import { getSetting } from "../db/repository/settings";
+import { enqueueJob, hasActiveJob } from "../jobs/enqueue";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "achievements-sync" });
@@ -17,4 +19,11 @@ export async function syncAchievementRegistry(): Promise<void> {
   }
 
   log.info("Achievement registry sync complete");
+
+  // Auto-trigger backfill once (idempotent via hasActiveJob guard)
+  const done = await getSetting("achievements_backfill_done");
+  if (!done && !(await hasActiveJob("backfill-achievements"))) {
+    await enqueueJob("backfill-achievements", {});
+    log.info("Enqueued achievements backfill job");
+  }
 }

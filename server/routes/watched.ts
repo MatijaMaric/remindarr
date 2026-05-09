@@ -11,6 +11,7 @@ import { localDateForTimezone } from "../utils/timezone";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
+import { onWatchedTitle, onWatchedEpisode, onWatchedEpisodesBulk } from "../achievements/triggers";
 
 const app = new Hono<AppEnv>();
 
@@ -62,7 +63,22 @@ app.post("/bulk", zValidator("json", bulkWatchedSchema), async (c) => {
         await logWatch(user.id, titleId, episodeId, watchedAtByEpisodeId?.get(episodeId));
       }
     }
+
+    // Trigger achievement evaluation for bulk episode watch
+    const distinctTitleIds = new Set(
+      releasedIds
+        .map((id) => titleIdMap.get(id))
+        .filter((id): id is string => id != null)
+    );
+    const watchedAt = watchedAtByEpisodeId?.get(releasedIds[0]);
+    await onWatchedEpisodesBulk(
+      user.id,
+      releasedIds.map(String),
+      distinctTitleIds,
+      watchedAt
+    );
   } else {
+    // Achievements are sticky — deletes do not undo progress or earned badges.
     await unwatchEpisodesBulk(episodeIds, user.id);
   }
 
@@ -107,10 +123,13 @@ app.post("/:episodeId", async (c) => {
     await logWatch(user.id, titleId, episodeId);
   }
 
+  await onWatchedEpisode(user.id, String(episodeId));
+
   return ok(c, {});
 });
 
 app.delete("/:episodeId", async (c) => {
+  // Achievements are sticky — deletes do not undo progress or earned badges.
   const user = c.get("user")!;
   const episodeId = Number(c.req.param("episodeId"));
   if (isNaN(episodeId)) return c.json({ error: "Invalid episodeId" }, 400);
@@ -125,10 +144,12 @@ app.post("/movies/:titleId", async (c) => {
   const titleId = c.req.param("titleId");
   await watchTitle(titleId, user.id);
   await logWatch(user.id, titleId);
+  await onWatchedTitle(user.id, titleId, true);
   return ok(c, {});
 });
 
 app.delete("/movies/:titleId", async (c) => {
+  // Achievements are sticky — deletes do not undo progress or earned badges.
   const user = c.get("user")!;
   const titleId = c.req.param("titleId");
   await unwatchTitle(titleId, user.id);

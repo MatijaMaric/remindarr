@@ -75,6 +75,7 @@ import shareRoutes from "./routes/share";
 import importRoutes from "./routes/import";
 import upNextRoutes from "./routes/up-next";
 import overlapRoutes from "./routes/overlap";
+import achievementsRoutes, { leaderboardApp, streakApp } from "./routes/achievements";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig, CONFIG } from "./config";
@@ -389,6 +390,21 @@ function createApp(env: Env) {
   app.use("/api/overlap/*", requireAuth);
   app.use("/api/overlap", requireAuth);
   app.route("/api/overlap", overlapRoutes);
+
+  // Achievements — GET /api/achievements is public; /me, /u/:username require auth (applied per-route)
+  app.use("/api/achievements/*", optionalAuth);
+  app.use("/api/achievements", optionalAuth);
+  app.route("/api/achievements", achievementsRoutes);
+
+  // Leaderboard — requireAuth applied per-route
+  app.use("/api/leaderboard/*", optionalAuth);
+  app.use("/api/leaderboard", optionalAuth);
+  app.route("/api/leaderboard", leaderboardApp);
+
+  // Streak — requireAuth applied per-route
+  app.use("/api/streak/*", optionalAuth);
+  app.use("/api/streak", optionalAuth);
+  app.route("/api/streak", streakApp);
 
   app.use("/api/user/settings/*", requireAuth);
   app.route("/api/user/settings", userSettingsRoutes);

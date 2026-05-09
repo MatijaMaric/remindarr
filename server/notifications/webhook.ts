@@ -22,8 +22,8 @@ export class WebhookProvider implements NotificationProvider {
   }
 
   async send(config: Record<string, string>, content: NotificationContent): Promise<void> {
-    const { episodes, movies, streamingAlerts = [] } = content;
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
+    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return;
 
     const payload = this.buildPayload(content);
     const body = JSON.stringify(payload);
@@ -52,7 +52,7 @@ export class WebhookProvider implements NotificationProvider {
   }
 
   private buildPayload(content: NotificationContent) {
-    const { episodes, movies, date, streamingAlerts = [] } = content;
+    const { episodes, movies, date, streamingAlerts = [], achievementsEarned = [] } = content;
 
     const summaryLines: string[] = [];
     const showMap = groupEpisodesByShow(episodes);
@@ -91,6 +91,14 @@ export class WebhookProvider implements NotificationProvider {
         providerName: a.providerName,
         kind: a.kind,
         leavingAt: a.leavingAt ?? null,
+      })),
+      achievements_earned: achievementsEarned.map((ae) => ({
+        key: ae.key,
+        title: ae.title,
+        description: ae.description,
+        icon: ae.icon,
+        points: ae.points,
+        earnedAt: ae.earnedAt,
       })),
     };
   }

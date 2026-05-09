@@ -26,8 +26,8 @@ export class TelegramProvider implements NotificationProvider {
   }
 
   async send(config: Record<string, string>, content: NotificationContent): Promise<void> {
-    const { episodes, movies, streamingAlerts = [] } = content;
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0) return;
+    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
+    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return;
 
     const text = this.buildMessage(content);
     const url = `${TELEGRAM_API}/bot${config.botToken}/sendMessage`;
@@ -52,11 +52,12 @@ export class TelegramProvider implements NotificationProvider {
   }
 
   private buildMessage(content: NotificationContent): string {
-    const { episodes, movies, date, streamingAlerts = [] } = content;
+    const { episodes, movies, date, streamingAlerts = [], achievementsEarned = [] } = content;
     const parts: string[] = [];
     if (episodes.length > 0) parts.push(`${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`);
     if (movies.length > 0) parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
     if (streamingAlerts.length > 0) parts.push(`${streamingAlerts.length} now streaming`);
+    if (achievementsEarned.length > 0) parts.push(`${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`);
 
     const lines: string[] = [`<b>📺 Remindarr — ${parts.join(" and ")} today (${date})</b>`, ""];
 
@@ -84,6 +85,14 @@ export class TelegramProvider implements NotificationProvider {
         lines.push(`🔕 <b>${escapeHtml(alert.title)}</b> — ${escapeHtml(copy)}`);
       } else {
         lines.push(`🔔 <b>${escapeHtml(alert.title)}</b> — now on <i>${escapeHtml(alert.providerName)}</i>`);
+      }
+    }
+
+    if (achievementsEarned.length > 0) {
+      lines.push("");
+      lines.push("<b>🏆 New badges:</b>");
+      for (const ae of achievementsEarned) {
+        lines.push(`🎖 <b>${escapeHtml(ae.title)}</b> +${ae.points} XP — <i>${escapeHtml(ae.description)}</i>`);
       }
     }
 

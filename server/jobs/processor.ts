@@ -14,6 +14,7 @@ import {
   getDistinctNotifierTimezones,
   markNotifierSent,
   disableNotifier,
+  recordDelivery,
 } from "../db/repository";
 import { fetchNewReleases } from "../tmdb/sync-titles";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
@@ -23,6 +24,20 @@ import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { getCurrentTimeInTimezone } from "./time-utils";
+import { listEarnedSince, markAchievementsNotified, upsertUserAchievement } from "../db/repository/achievements";
+import { recomputeStreakFromHistory } from "../db/repository/streaks";
+import { getSetting, setSetting } from "../db/repository/settings";
+import { ACHIEVEMENTS, type AchievementKind } from "../achievements/definitions";
+import {
+  evaluateCountMovies,
+  evaluateCountEpisodes,
+  evaluateStreak,
+  evaluateGenreCount,
+  evaluateCompletionist,
+  evaluateSpeedBingeSeason,
+  evaluateSocialFirstFollow,
+  evaluateSocialFirstRecommendation,
+} from "../achievements/evaluate";
 
 const log = logger.child({ module: "job-processor" });
 
@@ -70,18 +85,18 @@ async function handleSendNotifications(): Promise<void> {
 
   log.info("Processing due notifiers", { count: dueNotifiers.length });
 
-  // Per-invocation cache keyed by "userId|date" — local to this job run, not global.
+  // Per-invocation caches keyed by "userId|date" — local to this job run, not global.
   // For N notifiers sharing the same user+date, DB queries drop from 2N to 2.
-  const contentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
+  const dailyContentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
 
-  async function getContentCached(userId: string, date: string) {
+  async function getDailyContentCached(userId: string, date: string) {
     const key = `${userId}|${date}`;
-    if (contentCache.has(key)) {
+    if (dailyContentCache.has(key)) {
       log.debug("Notification content cache hit", { userId, date });
-      return contentCache.get(key)!;
+      return dailyContentCache.get(key)!;
     }
     const result = await buildNotificationContent(userId, date);
-    contentCache.set(key, result);
+    dailyContentCache.set(key, result);
     return result;
   }
 
@@ -93,14 +108,49 @@ async function handleSendNotifications(): Promise<void> {
         continue;
       }
 
-      const content = await getContentCached(notifier.user_id, notifier.todayDate);
+      // Default daily behavior
+      const content = await getDailyContentCached(notifier.user_id, notifier.todayDate);
 
-      if (content.episodes.length === 0 && content.movies.length === 0) {
+      // Inject achievements if enabled for this notifier
+      let achievementKeys: string[] = [];
+      if (notifier.achievementsEnabled) {
+        const lastSentDate = notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
+        const earnedSince = await listEarnedSince(notifier.user_id, lastSentDate);
+        const unnotified = earnedSince.filter((ua) => !ua.earnedNotified && ua.earnedAt != null);
+        if (unnotified.length > 0) {
+          content.achievementsEarned = unnotified.map((ua) => {
+            const def = ACHIEVEMENTS.find((a) => a.key === ua.achievementKey);
+            return {
+              key: ua.achievementKey,
+              title: def?.title ?? ua.achievementKey,
+              description: def?.description ?? "",
+              icon: def?.icon ?? "",
+              points: def?.points ?? 0,
+              earnedAt: ua.earnedAt!,
+            };
+          });
+          achievementKeys = unnotified.map((ua) => ua.achievementKey);
+        }
+      }
+
+      // Skip if nothing to notify about
+      if (content.episodes.length === 0 && content.movies.length === 0 && !(content.achievementsEarned?.length)) {
         await markNotifierSent(notifier.id, notifier.todayDate);
         continue;
       }
 
-      await provider.send(notifier.config, content);
+      const dailyStart = Date.now();
+      try {
+        await provider.send(notifier.config, content);
+        await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - dailyStart, eventKind: "episode_air" });
+      } catch (sendErr) {
+        await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - dailyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "episode_air" });
+        throw sendErr;
+      }
+      // Mark achievements as notified after successful send
+      if (achievementKeys.length > 0) {
+        await markAchievementsNotified(notifier.user_id, achievementKeys);
+      }
       await markNotifierSent(notifier.id, notifier.todayDate);
       log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
     } catch (err) {
@@ -200,6 +250,179 @@ async function handleCleanup() {
   await cleanupOldJobs(30);
 }
 
+const BACKFILL_PAGE_SIZE = 50;
+
+async function handleEvaluateAchievements(data: string | null): Promise<void> {
+  const raw = typeof data === "string" ? JSON.parse(data) : data;
+  const { userId, kinds, titleId } = (raw ?? {}) as {
+    userId: string;
+    kinds: AchievementKind[];
+    titleId?: string;
+  };
+
+  if (!userId || !Array.isArray(kinds)) {
+    log.warn("evaluate-achievements: invalid job data");
+    return;
+  }
+
+  for (const kind of kinds) {
+    const matchingAchievements = ACHIEVEMENTS.filter((a) => a.kind === kind);
+    for (const a of matchingAchievements) {
+      try {
+        let result: { progress: number; earned: boolean };
+        switch (kind) {
+          case "count_movies":
+            result = await evaluateCountMovies(userId, a.threshold);
+            break;
+          case "count_episodes":
+            result = await evaluateCountEpisodes(userId, a.threshold);
+            break;
+          case "streak_days":
+            result = await evaluateStreak(userId, a.threshold);
+            break;
+          case "genre_count":
+            result = await evaluateGenreCount(userId, a.threshold, a.genre ?? "__any__");
+            break;
+          case "completionist":
+            result = await evaluateCompletionist(userId, a.threshold, titleId);
+            break;
+          case "speed_binge_season":
+            if (!titleId) continue;
+            result = await evaluateSpeedBingeSeason(userId, a.threshold, a.windowHours ?? 24, titleId);
+            break;
+          case "social_first_follow":
+            result = await evaluateSocialFirstFollow(userId);
+            break;
+          case "social_first_recommendation":
+            result = await evaluateSocialFirstRecommendation(userId);
+            break;
+          default:
+            log.warn("evaluate-achievements: unknown kind, skipping", { kind, userId });
+            continue;
+        }
+        const earnedAt = result.earned ? new Date().toISOString() : null;
+        const { newlyEarned } = await upsertUserAchievement(userId, a.key, result.progress, earnedAt);
+        if (newlyEarned) {
+          log.info("Achievement newly earned (deferred)", { userId, key: a.key, kind });
+        }
+      } catch (err) {
+        log.error("evaluate-achievements: error evaluating achievement", {
+          userId,
+          key: a.key,
+          kind,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  }
+}
+
+async function handleBackfillAchievements(_data?: string | null): Promise<void> {
+  const db = getDb();
+
+  const cursor = (await getSetting("achievements_backfill_cursor")) ?? "";
+
+  const rows = await db.all<{ id: string }>(sql`
+    SELECT id FROM users
+    WHERE id > ${cursor}
+    ORDER BY id ASC
+    LIMIT ${BACKFILL_PAGE_SIZE}
+  `);
+
+  if (rows.length === 0) {
+    await setSetting("achievements_backfill_done", "1");
+    log.info("Backfill complete — no more users");
+    return;
+  }
+
+  log.info("Backfill: processing page", { count: rows.length, cursor });
+
+  for (const row of rows) {
+    const userId = row.id;
+    try {
+      await recomputeStreakFromHistory(userId);
+
+      for (const a of ACHIEVEMENTS) {
+        try {
+          let result: { progress: number; earned: boolean };
+          switch (a.kind) {
+            case "count_movies":
+              result = await evaluateCountMovies(userId, a.threshold);
+              break;
+            case "count_episodes":
+              result = await evaluateCountEpisodes(userId, a.threshold);
+              break;
+            case "streak_days":
+              result = await evaluateStreak(userId, a.threshold);
+              break;
+            case "genre_count":
+              result = await evaluateGenreCount(userId, a.threshold, a.genre ?? "__any__");
+              break;
+            case "completionist":
+              result = await evaluateCompletionist(userId, a.threshold);
+              break;
+            case "speed_binge_season": {
+              const threshold = a.threshold;
+              const windowHours = a.windowHours ?? 24;
+              const candidateRows = await db.all<{ title_id: string }>(sql`
+                SELECT e.title_id
+                FROM watched_episodes we
+                JOIN episodes e ON e.id = we.episode_id
+                WHERE we.user_id = ${userId}
+                  AND we.watched_at IS NOT NULL
+                GROUP BY e.title_id
+                HAVING COUNT(*) >= ${threshold}
+              `);
+              let maxProgress = 0;
+              let anyEarned = false;
+              for (const c of candidateRows) {
+                const r = await evaluateSpeedBingeSeason(userId, threshold, windowHours, c.title_id);
+                if (r.earned) anyEarned = true;
+                maxProgress = Math.max(maxProgress, r.progress);
+              }
+              result = { progress: maxProgress, earned: anyEarned };
+              break;
+            }
+            case "social_first_follow":
+              result = await evaluateSocialFirstFollow(userId);
+              break;
+            case "social_first_recommendation":
+              result = await evaluateSocialFirstRecommendation(userId);
+              break;
+            default:
+              continue;
+          }
+          const earnedAt = result.earned ? new Date().toISOString() : null;
+          await upsertUserAchievement(userId, a.key, result.progress, earnedAt, { earnedNotified: 1 });
+        } catch (err) {
+          log.warn("Backfill: error evaluating achievement for user", {
+            userId,
+            key: a.key,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    } catch (err) {
+      log.warn("Backfill: error processing user", {
+        userId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  const lastUserId = rows[rows.length - 1].id;
+  await setSetting("achievements_backfill_cursor", lastUserId);
+
+  if (rows.length === BACKFILL_PAGE_SIZE) {
+    // Direct insert is CF-safe (no bun:sqlite); mirrors handleMigrateOffers pattern
+    await db.insert(jobs).values({ name: "backfill-achievements", runAt: new Date(Date.now() + 5000).toISOString() });
+    log.info("Backfill: enqueued next batch", { nextCursor: lastUserId });
+  } else {
+    await setSetting("achievements_backfill_done", "1");
+    log.info("Backfill: complete", { totalProcessed: rows.length });
+  }
+}
+
 export const handlers: Record<string, (data: string | null) => Promise<void>> = {
   "sync-titles": () => handleSyncTitles(),
   "sync-episodes": () => handleSyncEpisodes(),
@@ -209,6 +432,8 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> = 
   "migrate-offers": () => handleMigrateOffers(),
   "sync-deep-links": () => handleSyncDeepLinks(),
   "cleanup": () => handleCleanup(),
+  "evaluate-achievements": (data) => handleEvaluateAchievements(data),
+  "backfill-achievements": (data) => handleBackfillAchievements(data),
 };
 
 export interface JobRow {

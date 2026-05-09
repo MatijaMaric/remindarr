@@ -40,6 +40,7 @@ import kioskRoutes from "./routes/kiosk";
 import upNextRoutes from "./routes/up-next";
 import shareRoutes from "./routes/share";
 import overlapRoutes from "./routes/overlap";
+import achievementsRoutes, { leaderboardApp, streakApp } from "./routes/achievements";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -49,6 +50,8 @@ import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
 import { registerBackupJob } from "./jobs/backup";
 import { registerPruneNotificationLogJob } from "./jobs/prune-notification-log";
+import "./jobs/evaluate-achievements";
+import "./jobs/backfill-achievements";
 import { startWorker, stopWorker } from "./jobs/worker";
 import { createShutdownHandler } from "./graceful-shutdown";
 import { registerCron } from "./jobs/queue";
@@ -315,6 +318,21 @@ app.route("/api/up-next", upNextRoutes);
 app.use("/api/overlap/*", requireAuth);
 app.use("/api/overlap", requireAuth);
 app.route("/api/overlap", overlapRoutes);
+
+// Achievements — GET /api/achievements is public; /me, /u/:username require auth (applied per-route)
+app.use("/api/achievements/*", optionalAuth);
+app.use("/api/achievements", optionalAuth);
+app.route("/api/achievements", achievementsRoutes);
+
+// Leaderboard — requireAuth applied per-route
+app.use("/api/leaderboard/*", optionalAuth);
+app.use("/api/leaderboard", optionalAuth);
+app.route("/api/leaderboard", leaderboardApp);
+
+// Streak — requireAuth applied per-route
+app.use("/api/streak/*", optionalAuth);
+app.use("/api/streak", optionalAuth);
+app.route("/api/streak", streakApp);
 
 app.use("/api/user/settings/*", requireAuth);
 app.use("/api/user/settings", requireAuth);
