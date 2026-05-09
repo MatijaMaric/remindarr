@@ -7,8 +7,9 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useIsMobile } from "../hooks/useIsMobile";
 import * as api from "../api";
-import type { Episode, Title, Recommendation, HomepageSection, FriendsLovedItem } from "../types";
+import type { Episode, Title, Recommendation, HomepageSection, FriendsLovedItem, StreakData } from "../types";
 import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
+import StreakCounter from "../components/profile/StreakCounter";
 import TitleList from "../components/TitleList";
 import { HomeAuthSkeleton } from "../components/SkeletonComponents";
 import { groupByShow, formatUpcomingDate } from "../components/EpisodeComponents";
@@ -132,11 +133,13 @@ function MobileFeedHome({
   today,
   upcoming,
   unwatched,
+  streak,
 }: {
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
   today: Episode[];
   upcoming: Episode[];
   unwatched: Episode[];
+  streak: StreakData | null;
 }) {
   const tonightEp = today[0] ?? null;
   const alsoAiring = today.slice(1);
@@ -163,6 +166,11 @@ function MobileFeedHome({
           <div className="text-[22px] font-bold tracking-[-0.6px]">
             {getGreeting()}, <span className="text-amber-400">{user.display_name?.split(" ")[0] ?? user.username}</span>
           </div>
+          {streak && streak.currentStreak > 0 && (
+            <div className="mt-1">
+              <StreakCounter variant="inline" streak={streak} />
+            </div>
+          )}
         </div>
         <Link to="/browse" className="w-[38px] h-[38px] rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-zinc-400 text-base shrink-0">
           ⌕
@@ -331,6 +339,7 @@ export default function HomePage() {
   const [state, dispatch] = useReducer(homeReducer, { status: "loading" });
   const [confirmingTitleId, setConfirmingTitleId] = useState<string | null>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [streakData, setStreakData] = useState<StreakData | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -346,14 +355,16 @@ export default function HomePage() {
 
     async function load() {
       try {
-        const [episodeData, recData, layoutData, upNextData, friendsLovedData] = await Promise.all([
+        const [episodeData, recData, layoutData, upNextData, friendsLovedData, streakResult] = await Promise.all([
           api.getUpcomingEpisodes(signal),
           api.getRecommendations(6, undefined, signal).catch(() => ({ recommendations: [], count: 0 })),
           (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
           api.getUpNext(12, signal).catch(() => ({ items: [] as UpNextItem[] })),
           api.getFriendsLoved(20, signal).catch(() => ({ items: [] as FriendsLovedItem[] })),
+          api.getMyStreak(signal).catch(() => null),
         ]);
         if (signal.aborted) return;
+        if (streakResult) setStreakData(streakResult);
         dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout, upNextItems: upNextData.items, friendsLovedItems: friendsLovedData.items });
       } catch (err: unknown) {
         if (!signal.aborted) dispatch({ type: "LOAD_ERROR", message: err instanceof Error ? err.message : String(err) });
@@ -543,7 +554,7 @@ export default function HomePage() {
   }
 
   if (isMobile && user) {
-    return <MobileFeedHome user={user} today={today} upcoming={upcoming} unwatched={unwatched} />;
+    return <MobileFeedHome user={user} today={today} upcoming={upcoming} unwatched={unwatched} streak={streakData} />;
   }
 
   const noEpisodes = today.length === 0 && upcoming.length === 0 && unwatched.length === 0;
@@ -760,6 +771,13 @@ export default function HomePage() {
 
       case "friends_loved":
         return <FriendsLovedRow key="friends_loved" items={friendsLovedItems} />;
+
+      case "streak":
+        return streakData && streakData.currentStreak > 0 ? (
+          <section key="streak">
+            <StreakCounter variant="home" streak={streakData} />
+          </section>
+        ) : null;
 
       default:
         return null;

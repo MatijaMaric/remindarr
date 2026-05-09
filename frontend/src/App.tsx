@@ -11,6 +11,7 @@ import OfflineIndicator from "./components/OfflineIndicator";
 import InstallPrompt from "./components/InstallPrompt";
 import NotificationPrompt from "./components/NotificationPrompt";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
+import AchievementToast from "./components/profile/AchievementToast";
 import { Github, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
@@ -40,6 +41,7 @@ const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
 const KioskPage = lazyWithRetry(() => import("./pages/KioskPage"));
 const SharedWatchlistPage = lazyWithRetry(() => import("./pages/SharedWatchlistPage"));
 const UserOverlapPage = lazyWithRetry(() => import("./pages/UserOverlapPage"));
+const LeaderboardPage = lazyWithRetry(() => import("./pages/LeaderboardPage"));
 
 // Wraps a route element in an inline ErrorBoundary so a single page crash
 // shows a contained fallback instead of taking down the whole shell.
@@ -199,6 +201,7 @@ export default function App() {
             <Route path="/invite" element={<RequireAuth><Page><InvitePage /></Page></RequireAuth>} />
             <Route path="/stats" element={<Navigate to="/tracked?view=stats" replace />} />
             <Route path="/admin/users" element={<RequireAuth><Page><AdminUsersPage /></Page></RequireAuth>} />
+            <Route path="/leaderboard" element={<RequireAuth><Page><LeaderboardPage /></Page></RequireAuth>} />
             <Route path="/user/:username" element={<Page><UserProfilePage /></Page>} />
             <Route path="/u/:username/overlap/:friendUsername" element={<RequireAuth><Page><UserOverlapPage /></Page></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth><Page><SettingsPage /></Page></RequireAuth>} />
@@ -229,6 +232,7 @@ export default function App() {
       </footer>
       {!isKioskPage && <BottomTabBar />}
       <OfflineIndicator />
+      {user && <AchievementToast />}
       <Toaster theme={theme === "light" ? "light" : "dark"} position="bottom-center" richColors />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>

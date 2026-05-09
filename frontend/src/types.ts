@@ -732,7 +732,7 @@ export interface AppearanceSettings {
   autoplayTrailers: number;
 }
 
-export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon" | "friends_loved";
+export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon" | "friends_loved" | "streak";
 
 export interface HomepageSection {
   id: HomepageSectionId;
@@ -740,6 +740,7 @@ export interface HomepageSection {
 }
 
 export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
+  { id: "streak", enabled: true },
   { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
   { id: "recommendations", enabled: true },
@@ -851,4 +852,40 @@ export interface SuggestionsGroup {
 export interface SuggestionsAggregateResponse {
   flat: SearchTitle[];
   groups: SuggestionsGroup[];
+}
+
+// ─── Gamification Types ───────────────────────────────────────────────────────
+
+export interface AchievementDef {
+  key: string;
+  kind: string;
+  threshold: number;
+  points: number;
+  title: string;
+  description: string;
+  icon: string;
+  genre?: string;
+  windowHours?: number;
+}
+
+export interface UserAchievement extends AchievementDef {
+  progress: number;
+  earned: boolean;
+  earnedAt: string | null;
+}
+
+export interface LeaderboardEntry {
+  userId: string;
+  username: string;
+  name: string | null;
+  image: string | null;
+  xp: number;
+  badgeCount: number;
+  rank: number;
+}
+
+export interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  lastWatchDate: string | null;
 }

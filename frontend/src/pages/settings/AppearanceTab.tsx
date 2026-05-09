@@ -22,6 +22,7 @@ const SECTION_LABELS: Record<string, string> = {
   upcoming: "settings.homepage.sections.upcoming",
   airing_soon: "settings.homepage.sections.airing_soon",
   friends_loved: "settings.homepage.sections.friends_loved",
+  streak: "settings.homepage.sections.streak",
 };
 
 const DEFAULT_APPEARANCE: AppearanceSettings = {

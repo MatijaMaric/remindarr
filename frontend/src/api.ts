@@ -33,6 +33,10 @@ import type {
   AppearanceSettings,
   UserSubscriptions,
   SuggestionsAggregateResponse,
+  AchievementDef,
+  UserAchievement,
+  LeaderboardEntry,
+  StreakData,
 } from "./types";
 
 const BASE = "/api";
@@ -582,6 +586,7 @@ export interface Notifier {
   quiet_hours_days: string | null;
   leaving_soon_alerts_enabled: boolean;
   friend_activity_alerts_enabled: boolean;
+  achievements_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -612,6 +617,7 @@ export interface NotifierPayload {
   quiet_hours_days?: number[];
   leaving_soon_alerts_enabled?: boolean;
   friend_activity_alerts_enabled?: boolean;
+  achievements_enabled?: boolean;
 }
 
 export async function createNotifier(data: NotifierPayload & { provider: string; config: Record<string, string>; notify_time: string; timezone: string }): Promise<{ notifier: Notifier }> {
@@ -1232,4 +1238,35 @@ export async function dismissSuggestion(titleId: string, signal?: AbortSignal): 
 
 export async function undismissSuggestion(titleId: string, signal?: AbortSignal): Promise<void> {
   await fetchJson(`/suggestions/dismiss/${encodeURIComponent(titleId)}`, { method: "DELETE", signal });
+}
+
+// ─── Achievements ─────────────────────────────────────────────────────────────
+
+export async function getAchievementsRegistry(signal?: AbortSignal): Promise<AchievementDef[]> {
+  const data = await fetchJson<{ achievements: AchievementDef[] }>("/achievements", { signal });
+  return data.achievements;
+}
+
+export async function getMyAchievements(signal?: AbortSignal): Promise<UserAchievement[]> {
+  const data = await fetchJson<{ achievements: UserAchievement[] }>("/achievements/me", { signal });
+  return data.achievements;
+}
+
+export async function getUserAchievements(username: string, signal?: AbortSignal): Promise<UserAchievement[]> {
+  const data = await fetchJson<{ achievements: UserAchievement[] }>(`/achievements/u/${encodeURIComponent(username)}`, { signal });
+  // Server returns achievements without progress for other users; fill in defaults
+  return data.achievements.map((a) => ({ ...a, progress: a.progress ?? 0 }));
+}
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+
+export async function getLeaderboard(signal?: AbortSignal): Promise<LeaderboardEntry[]> {
+  const data = await fetchJson<{ entries: LeaderboardEntry[] }>("/leaderboard", { signal });
+  return data.entries;
+}
+
+// ─── Streak ───────────────────────────────────────────────────────────────────
+
+export async function getMyStreak(signal?: AbortSignal): Promise<StreakData> {
+  return fetchJson<StreakData>("/streak/me", { signal });
 }
