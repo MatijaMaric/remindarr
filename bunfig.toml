@@ -1,5 +1,2 @@
 [install]
 peer = false
-
-[test]
-preload = ["./frontend/src/test-utils/setup.ts"]

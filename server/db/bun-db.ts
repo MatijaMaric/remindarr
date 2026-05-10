@@ -280,6 +280,21 @@ export function resetDb() {
   setDbSingleton(undefined!);
 }
 
+/** Restore a DB from a serialized snapshot (test use only — skips migration replay). */
+export function initBunDbFromSnapshot(snapshot: Uint8Array): DrizzleDb {
+  if (drizzleDb) return drizzleDb as DrizzleDb;
+  rawDb = Database.deserialize(snapshot);
+  rawDb.run("PRAGMA foreign_keys = ON");
+  drizzleDb = drizzle(rawDb, { schema: schemaExports });
+  setDbSingleton(drizzleDb as DrizzleDb);
+  return drizzleDb as DrizzleDb;
+}
+
+/** Serialize the current raw DB to a buffer (test use only). */
+export function snapshotDb(): Uint8Array {
+  return getRawDb().serialize();
+}
+
 /** Migrate old tracked data to the admin user. Called from index.ts after admin creation. */
 export function migrateTrackedData(adminUserId: string) {
   const d = getRawDb();

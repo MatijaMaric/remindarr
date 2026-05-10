@@ -45,6 +45,9 @@ skills-lock.json
 # Logs
 *.log
 
+# TypeScript incremental build info
+.tsbuildinfo
+
 # Cloudflare
 .wrangler/
 
