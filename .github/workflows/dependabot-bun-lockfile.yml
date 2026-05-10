@@ -1,0 +1,38 @@
+name: Sync bun.lock on Dependabot PRs
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  sync-lockfile:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+
+      - name: Regenerate lockfiles
+        run: bun install
+
+      - name: Commit & push if lockfiles changed
+        run: |
+          if [[ -n "$(git status --porcelain bun.lock frontend/bun.lock)" ]]; then
+            git config user.name 'dependabot[bot]'
+            git config user.email '49699333+dependabot[bot]@users.noreply.github.com'
+            git add bun.lock frontend/bun.lock
+            git commit -m "chore(deps): regenerate bun.lock"
+            git push
+          else
+            echo "Lockfiles already in sync."
+          fi
