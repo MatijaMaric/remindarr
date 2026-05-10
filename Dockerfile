@@ -12,7 +12,7 @@ FROM oven/bun:1.3.9 AS server-build
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY frontend/package.json ./frontend/
-RUN bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production --ignore-scripts
 COPY server/ ./server/
 COPY drizzle/ ./drizzle/
 COPY tsconfig.json ./
