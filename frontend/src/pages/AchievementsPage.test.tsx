@@ -162,6 +162,20 @@ describe("AchievementsPage — own profile", () => {
 
     expect(screen.getByText("Streaks")).toBeDefined();
   });
+
+  test("hides 'recently earned' section when no achievements are earned", async () => {
+    getMyAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([inProgressWatching])
+    );
+
+    render(<AchievementsPage />, { wrapper: OwnWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Achievements")).toBeDefined();
+    });
+
+    expect(screen.queryByText("Recently earned")).toBeNull();
+  });
 });
 
 describe("AchievementsPage — other user profile", () => {

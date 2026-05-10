@@ -117,10 +117,12 @@ export default function AchievementsPage() {
       )}
 
       {/* Recently earned */}
-      <section>
-        <Kicker color="zinc" className="mb-2">Recently earned</Kicker>
-        <RecentlyEarnedStrip achievements={achievements} mode={mode} baseHref={baseHref} />
-      </section>
+      {earned.length > 0 && (
+        <section>
+          <Kicker color="zinc" className="mb-2">Recently earned</Kicker>
+          <RecentlyEarnedStrip achievements={achievements} mode={mode} baseHref={baseHref} />
+        </section>
+      )}
 
       {/* Category filter */}
       <CategoryFilter categories={presentCategories} />
