@@ -73,12 +73,12 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-router": ["react-router"],
-          "vendor-ui": ["lucide-react", "sonner", "tailwind-merge", "clsx", "class-variance-authority"],
-          "vendor-sentry": ["@sentry/react"],
-          "vendor-i18n": ["i18next", "react-i18next"],
-          "vendor-auth": ["better-auth"],
+        manualChunks(id) {
+          if (id.includes("react-router")) return "vendor-router";
+          if (id.includes("lucide-react") || id.includes("sonner") || id.includes("tailwind-merge") || id.includes("clsx") || id.includes("class-variance-authority")) return "vendor-ui";
+          if (id.includes("@sentry/react")) return "vendor-sentry";
+          if (id.includes("i18next") || id.includes("react-i18next")) return "vendor-i18n";
+          if (id.includes("better-auth")) return "vendor-auth";
         },
       },
     },
