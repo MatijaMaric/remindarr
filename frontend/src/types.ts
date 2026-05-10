@@ -856,6 +856,8 @@ export interface SuggestionsAggregateResponse {
 
 // ─── Gamification Types ───────────────────────────────────────────────────────
 
+export type Category = 'watching' | 'streaks' | 'genres' | 'social' | 'special' | 'explorer' | 'habit' | 'long-haul';
+
 export interface AchievementDef {
   key: string;
   kind: string;
@@ -866,12 +868,23 @@ export interface AchievementDef {
   icon: string;
   genre?: string;
   windowHours?: number;
+  // PR1 additions (computed server-side from registry)
+  category: Category;
+  tier: 'ladder' | 'one-shot';
+  repeatable: boolean;
+  family: string | null;
+  rungIndex: number | null;
 }
 
 export interface UserAchievement extends AchievementDef {
   progress: number;
   earned: boolean;
   earnedAt: string | null;
+  // PR1 additions
+  earnedCount: number;
+  lastEarnedAt: string | null;
+  nextRung: { key: string; threshold: number; rungIndex: number; points: number } | null;
+  rarity: { pct: number; bucket: 'common' | 'rare' | 'epic' | 'legendary' } | null;
 }
 
 export interface LeaderboardEntry {
