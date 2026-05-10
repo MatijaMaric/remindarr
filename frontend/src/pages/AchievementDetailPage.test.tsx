@@ -98,7 +98,7 @@ describe("AchievementDetailPage — own profile", () => {
     render(<AchievementDetailPage />, { wrapper: OwnWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Movie Buff")).toBeDefined();
+      expect(screen.getByRole("heading", { name: "Movie Buff" })).toBeDefined();
     });
   });
 
@@ -130,7 +130,7 @@ describe("AchievementDetailPage — own profile", () => {
     render(<AchievementDetailPage />, { wrapper: OwnWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Movie Buff")).toBeDefined();
+      expect(screen.getByRole("heading", { name: "Movie Buff" })).toBeDefined();
     });
 
     expect(screen.queryByText("Ladder progress")).toBeNull();
@@ -165,7 +165,7 @@ describe("AchievementDetailPage — own profile", () => {
     render(<AchievementDetailPage />, { wrapper: OwnWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Movie Buff")).toBeDefined();
+      expect(screen.getByRole("heading", { name: "Movie Buff" })).toBeDefined();
     });
 
     expect(screen.queryByText("Earn history")).toBeNull();
@@ -201,7 +201,7 @@ describe("AchievementDetailPage — other user profile", () => {
     render(<AchievementDetailPage />, { wrapper: OtherWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Movie Buff")).toBeDefined();
+      expect(screen.getByRole("heading", { name: "Movie Buff" })).toBeDefined();
     });
   });
 
