@@ -24,7 +24,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fast-average-color": "^9.5.0",
-    "i18next": "^24.0.0",
+    "i18next": "^26.0.10",
     "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
