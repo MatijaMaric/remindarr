@@ -1,6 +1,6 @@
 import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Routes, Route } from "react-router";
 import type { ReactNode } from "react";
 import * as api from "../api";
 import type { UserAchievement } from "../types";
@@ -28,14 +28,22 @@ const { default: AchievementsPage } = await import("./AchievementsPage");
 
 // Renders the page as the current user (own profile — /achievements)
 function OwnWrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter initialEntries={["/achievements"]}>{children}</MemoryRouter>;
+  return (
+    <MemoryRouter initialEntries={["/achievements"]}>
+      <Routes>
+        <Route path="/achievements" element={<>{children}</>} />
+      </Routes>
+    </MemoryRouter>
+  );
 }
 
 // Renders the page as another user (/u/alice/achievements)
 function OtherWrapper({ children }: { children: ReactNode }) {
   return (
     <MemoryRouter initialEntries={["/u/alice/achievements"]}>
-      {children}
+      <Routes>
+        <Route path="/u/:username/achievements" element={<>{children}</>} />
+      </Routes>
     </MemoryRouter>
   );
 }
@@ -137,16 +145,25 @@ describe("AchievementsPage — own profile", () => {
 
     render(<AchievementsPage />, {
       wrapper: ({ children }: { children: ReactNode }) => (
-        <MemoryRouter initialEntries={["/achievements?cat=watching"]}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={["/achievements?cat=watching"]}>
+          <Routes>
+            <Route path="/achievements" element={<>{children}</>} />
+          </Routes>
+        </MemoryRouter>
       ),
     });
 
     await waitFor(() => {
-      // "Watching" category kicker should appear but not "Streaks"
-      expect(screen.getByText("Watching")).toBeDefined();
+      expect(screen.getByText("Achievements")).toBeDefined();
     });
 
-    expect(screen.queryByText("Streaks")).toBeNull();
+    // "Watching" appears in both the filter chip and the section heading (2+)
+    const watchingEls = screen.getAllByText("Watching");
+    expect(watchingEls.length).toBeGreaterThanOrEqual(2);
+
+    // "Streaks" appears only in the filter chip (section heading is hidden) = 1
+    const streaksEls = screen.getAllByText("Streaks");
+    expect(streaksEls.length).toBe(1);
   });
 
   test("'All' filter (no cat param) shows all categories", async () => {
@@ -157,10 +174,12 @@ describe("AchievementsPage — own profile", () => {
     render(<AchievementsPage />, { wrapper: OwnWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Watching")).toBeDefined();
+      expect(screen.getByText("Achievements")).toBeDefined();
     });
 
-    expect(screen.getByText("Streaks")).toBeDefined();
+    // Both categories appear in chip + section heading = at least 2 each
+    expect(screen.getAllByText("Watching").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Streaks").length).toBeGreaterThanOrEqual(2);
   });
 
   test("hides 'recently earned' section when no achievements are earned", async () => {
