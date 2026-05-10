@@ -66,6 +66,7 @@ export const CRON_BY_EXPRESSION: Record<string, CronJobName> = Object.fromEntrie
 function getPartitionKey(name: string, data?: Record<string, unknown>): string | null {
   if (name === "sync-show-episodes" && data?.titleId != null) return String(data.titleId);
   if (name === "backfill-title-offers" && data?.tmdbId != null) return String(data.tmdbId);
+  if (name === "evaluate-achievements" && data?.userId != null) return String(data.userId);
   return null;
 }
 

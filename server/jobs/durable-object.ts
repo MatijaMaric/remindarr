@@ -9,7 +9,7 @@
 import { Alarms } from "@cloudflare/actors/alarms";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql } from "drizzle-orm";
-import { runWithDb, schemaExports, titles } from "../db/schema";
+import { runWithDb, schemaExports, titles, settings } from "../db/schema";
 import { runWithCache } from "../cache";
 import { CloudflareKvCache } from "../cache/cloudflare-kv";
 import { MemoryCache } from "../cache/memory";
@@ -294,6 +294,26 @@ export class JobQueueDO {
           log.info("migrate-offers batch done, re-queued in DO", { remaining: remaining.count });
         } else {
           log.info("migrate-offers migration complete");
+        }
+      }
+
+      // backfill-achievements: re-enqueue next page unless the handler marked it done.
+      // The handler writes achievements_backfill_done=1 to D1 settings on last page;
+      // processor.ts skips the D1 re-enqueue in DO mode, so we do it here instead.
+      if (job.name === "backfill-achievements") {
+        const doneSetting = await db
+          .select({ value: settings.value })
+          .from(settings)
+          .where(eq(settings.key, "achievements_backfill_done"))
+          .get();
+        if (!doneSetting) {
+          this.ctx.storage.sql.exec(
+            "INSERT INTO jobs (name, run_at, max_attempts) VALUES ('backfill-achievements', ?, 1)",
+            new Date(Date.now() + 5000).toISOString(),
+          );
+          log.info("Backfill: enqueued next batch in DO");
+        } else {
+          log.info("Backfill: complete");
         }
       }
     } catch (err) {

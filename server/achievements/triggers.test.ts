@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, upsertTitles, upsertEpisodes } from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import * as enqueue from "../jobs/enqueue";
+import * as backend from "../jobs/backend";
 import * as achievementsRepo from "../db/repository/achievements";
 import * as streaksRepo from "../db/repository/streaks";
 import * as evaluate from "./evaluate";
@@ -67,7 +67,7 @@ describe("onWatchedTitle", () => {
       updatedAt: new Date().toISOString(),
     });
     const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
     const evalMoviesSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({ progress: 1, earned: false });
     const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
 
@@ -99,7 +99,7 @@ describe("onWatchedTitle", () => {
       updatedAt: new Date().toISOString(),
     });
     const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
     const evalMoviesSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({ progress: 1, earned: false });
     const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
 
@@ -130,7 +130,7 @@ describe("onWatchedEpisode", () => {
       updatedAt: new Date().toISOString(),
     });
     const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
     const evalEpsSpy = spyOn(evaluate, "evaluateCountEpisodes").mockResolvedValue({ progress: 1, earned: false });
     const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
 
@@ -167,7 +167,7 @@ describe("onWatchedEpisodesBulk", () => {
       updatedAt: new Date().toISOString(),
     });
     const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
     const evalEpsSpy = spyOn(evaluate, "evaluateCountEpisodes").mockResolvedValue({ progress: 5, earned: false });
     const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
 
@@ -192,7 +192,7 @@ describe("onFollow", () => {
     const { onFollow } = await import("./triggers");
 
     const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: true });
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
     const evalFollowSpy = spyOn(evaluate, "evaluateSocialFirstFollow").mockResolvedValue({ progress: 1, earned: true });
 
     await onFollow(userId);
@@ -212,7 +212,7 @@ describe("onRecommendation", () => {
     const { onRecommendation } = await import("./triggers");
 
     const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: true });
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
     const evalRecSpy = spyOn(evaluate, "evaluateSocialFirstRecommendation").mockResolvedValue({ progress: 1, earned: true });
 
     await onRecommendation(userId);
@@ -252,7 +252,7 @@ describe("DELETE /watched/:episodeId — no trigger fired", () => {
       lastWatchDate: null,
       updatedAt: new Date().toISOString(),
     });
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
 
     const watchedApp = (await import("../routes/watched")).default;
     const app = new Hono<AppEnv>();
@@ -280,7 +280,7 @@ describe("DELETE /watched/movies/:titleId — no trigger fired", () => {
     await upsertTitles([makeParsedTitle({ id: "movie-del-1", objectType: "MOVIE", title: "Delete Me" })]);
 
     const onWatchedTitleSpy = spyOn(triggers, "onWatchedTitle").mockResolvedValue(undefined);
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
 
     const watchedApp = (await import("../routes/watched")).default;
     const app = new Hono<AppEnv>();
@@ -306,7 +306,7 @@ describe("DELETE /social/follow/:userId — no trigger fired", () => {
     const targetUserId = await createUser("targetuser", "hash2", "Target User");
 
     const onFollowSpy = spyOn(triggers, "onFollow").mockResolvedValue(undefined);
-    const enqueueSpy = spyOn(enqueue, "enqueueJob").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
 
     const socialApp = (await import("../routes/social")).default;
     const app = new Hono<AppEnv>();

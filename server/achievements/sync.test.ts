@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { eq } from "drizzle-orm";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { ACHIEVEMENTS } from "./definitions";
 import { syncAchievementRegistry } from "./sync";
 import { listAchievementDefs } from "../db/repository/achievements";
 import { getDb } from "../db/schema";
-import { achievements } from "../db/schema";
+import { achievements, settings } from "../db/schema";
+import * as backend from "../jobs/backend";
 
 beforeEach(() => setupTestDb());
 afterEach(() => teardownTestDb());
@@ -51,6 +52,22 @@ describe("syncAchievementRegistry", () => {
     expect(orphan).toBeDefined();
     // Plus all registry entries
     expect(all.length).toBe(ACHIEVEMENTS.length + 1);
+  });
+
+  it("enqueues backfill-achievements job when not yet done", async () => {
+    const spy = spyOn(backend, "enqueueOnce").mockResolvedValue(undefined);
+    await syncAchievementRegistry();
+    expect(spy).toHaveBeenCalledWith("backfill-achievements");
+    spy.mockRestore();
+  });
+
+  it("does not enqueue backfill when achievements_backfill_done is set", async () => {
+    const db = getDb();
+    await db.insert(settings).values({ key: "achievements_backfill_done", value: "1" });
+    const spy = spyOn(backend, "enqueueOnce").mockResolvedValue(undefined);
+    await syncAchievementRegistry();
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it("updates stale rows with new values on re-sync", async () => {
