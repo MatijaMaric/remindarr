@@ -351,6 +351,13 @@
       "when": 1746835200000,
       "tag": "0047_achievements",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1778415487985,
+      "tag": "0050_0048_achievements_v2",
+      "breakpoints": true
     }
   ]
 }

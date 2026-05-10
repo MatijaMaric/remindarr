@@ -791,6 +791,11 @@ export const achievements = sqliteTable("achievements", {
   description: text("description").notNull(),
   icon: text("icon").notNull(),
   metadata: text("metadata"),
+  repeatable: integer("repeatable").notNull().default(0),
+  tier: text("tier").notNull().default("one-shot"),
+  family: text("family"),
+  rungIndex: integer("rung_index"),
+  category: text("category").notNull().default("special"),
 });
 
 export const userAchievements = sqliteTable(
@@ -805,11 +810,33 @@ export const userAchievements = sqliteTable(
     progress: integer("progress").notNull().default(0),
     earnedAt: text("earned_at"),
     earnedNotified: integer("earned_notified").notNull().default(0),
+    earnedCount: integer("earned_count").notNull().default(0),
+    lastEarnedAt: text("last_earned_at"),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.achievementKey] }),
     index("idx_user_achievements_earned").on(table.userId, table.earnedAt),
+  ]
+);
+
+export const userAchievementEarns = sqliteTable(
+  "user_achievement_earns",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    achievementKey: text("achievement_key")
+      .notNull()
+      .references(() => achievements.key, { onDelete: "cascade" }),
+    earnedAt: text("earned_at").notNull(),
+    context: text("context"),
+    notified: integer("notified").notNull().default(0),
+  },
+  (table) => [
+    index("idx_uae_user_key_earnedat").on(table.userId, table.achievementKey, table.earnedAt),
+    index("idx_uae_user_earnedat").on(table.userId, table.earnedAt),
   ]
 );
 
@@ -825,13 +852,14 @@ export const userStreaks = sqliteTable("user_streaks", {
 
 export type AchievementDefRow = typeof achievements.$inferSelect;
 export type UserAchievementRow = typeof userAchievements.$inferSelect;
+export type UserAchievementEarnRow = typeof userAchievementEarns.$inferSelect;
 export type UserStreakRow = typeof userStreaks.$inferSelect;
 
 export const schemaExports = {
   titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs, userSubscribedProviders,
   follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
   watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents, notificationLog, dismissedSuggestions,
-  achievements, userAchievements, userStreaks,
+  achievements, userAchievements, userAchievementEarns, userStreaks,
   titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
   passkeyRelations,
   usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
