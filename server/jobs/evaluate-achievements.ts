@@ -8,8 +8,10 @@ import {
   evaluateSpeedBingeSeason,
   evaluateSocialFirstFollow,
   evaluateSocialFirstRecommendation,
+  evaluateMonthlyCountRepeatable,
+  evaluateWeekendWarriorRepeatable,
 } from "../achievements/evaluate";
-import { upsertUserAchievement } from "../db/repository/achievements";
+import { upsertUserAchievement, appendUserAchievementEarns } from "../db/repository/achievements";
 import { logger } from "../logger";
 import { registerHandler } from "./worker";
 
@@ -36,6 +38,29 @@ export async function runEvaluateAchievements(data: string | null): Promise<void
 
     for (const a of matchingAchievements) {
       try {
+        // Handle repeatable kinds separately — they use append logic
+        if (kind === "monthly_count_repeatable" || kind === "weekend_warrior_repeatable") {
+          const repeatResult = kind === "monthly_count_repeatable"
+            ? await evaluateMonthlyCountRepeatable(userId, a.threshold, a.key)
+            : await evaluateWeekendWarriorRepeatable(userId, a.threshold, a.key);
+
+          if (repeatResult.newEarns.length > 0) {
+            const firstEarnedAt = repeatResult.newEarns.reduce(
+              (min, e) => (e.earnedAt < min ? e.earnedAt : min),
+              repeatResult.newEarns[0].earnedAt
+            );
+            await upsertUserAchievement(userId, a.key, repeatResult.progress, firstEarnedAt);
+            await appendUserAchievementEarns(userId, a.key, repeatResult.newEarns);
+            log.info("Repeatable achievement newly earned (deferred)", {
+              userId,
+              key: a.key,
+              kind,
+              newEarns: repeatResult.newEarns.length,
+            });
+          }
+          continue;
+        }
+
         let result: { progress: number; earned: boolean };
 
         switch (kind) {

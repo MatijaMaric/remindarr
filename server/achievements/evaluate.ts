@@ -9,6 +9,7 @@ import {
   follows,
   recommendations,
   userStreaks,
+  userAchievementEarns,
 } from "../db/schema";
 import { traceDbQuery } from "../tracing";
 
@@ -260,5 +261,103 @@ export async function evaluateSpeedBingeSeason(
     }
 
     return { progress: maxInWindow, earned: maxInWindow >= threshold };
+  });
+}
+
+export type RepeatEvalResult = {
+  progress: number;
+  newEarns: Array<{ earnedAt: string; context?: Record<string, unknown> }>;
+};
+
+/**
+ * monthly_count_repeatable: count episodes watched in each calendar month.
+ * Returns all months where the user hit the threshold that don't already have
+ * an audit row in user_achievement_earns.
+ */
+export async function evaluateMonthlyCountRepeatable(
+  userId: string,
+  threshold: number,
+  key: string
+): Promise<RepeatEvalResult> {
+  return traceDbQuery("evaluateMonthlyCountRepeatable", async () => {
+    const db = getDb();
+
+    // Count episodes per calendar month
+    const monthRows = await db.all<{ month: string; cnt: number }>(sql`
+      SELECT strftime('%Y-%m', we.watched_at) AS month, COUNT(*) AS cnt
+      FROM watched_episodes we
+      WHERE we.user_id = ${userId}
+        AND we.watched_at IS NOT NULL
+      GROUP BY month
+      HAVING cnt >= ${threshold}
+    `);
+
+    if (monthRows.length === 0) return { progress: 0, newEarns: [] };
+
+    // Get already-stamped months for this achievement
+    const existingRows = await db.all<{ earned_at: string }>(sql`
+      SELECT earned_at FROM user_achievement_earns
+      WHERE user_id = ${userId} AND achievement_key = ${key}
+    `);
+    const stampedMonths = new Set(
+      existingRows.map((r) => r.earned_at.slice(0, 7)) // 'YYYY-MM'
+    );
+
+    const newEarns = monthRows
+      .filter((r) => !stampedMonths.has(r.month))
+      .map((r) => ({
+        earnedAt: `${r.month}-01T00:00:00.000Z`,
+        context: { month: r.month, count: r.cnt },
+      }));
+
+    return { progress: monthRows.length, newEarns };
+  });
+}
+
+/**
+ * weekend_warrior_repeatable: count episodes watched on Sat+Sun within the same
+ * calendar weekend (ISO week). Returns all weekends that hit the threshold that
+ * don't already have an audit row.
+ */
+export async function evaluateWeekendWarriorRepeatable(
+  userId: string,
+  threshold: number,
+  key: string
+): Promise<RepeatEvalResult> {
+  return traceDbQuery("evaluateWeekendWarriorRepeatable", async () => {
+    const db = getDb();
+
+    // Group episodes by ISO year-week, only counting Sat (6) and Sun (0)
+    const weekRows = await db.all<{ week: string; cnt: number }>(sql`
+      SELECT strftime('%Y-W%W', we.watched_at) AS week, COUNT(*) AS cnt
+      FROM watched_episodes we
+      WHERE we.user_id = ${userId}
+        AND we.watched_at IS NOT NULL
+        AND CAST(strftime('%w', we.watched_at) AS INTEGER) IN (0, 6)
+      GROUP BY week
+      HAVING cnt >= ${threshold}
+    `);
+
+    if (weekRows.length === 0) return { progress: 0, newEarns: [] };
+
+    const existingRows = await db.all<{ earned_at: string }>(sql`
+      SELECT earned_at FROM user_achievement_earns
+      WHERE user_id = ${userId} AND achievement_key = ${key}
+    `);
+    const stampedWeeks = new Set(
+      existingRows.map((r) => {
+        const d = new Date(r.earned_at);
+        return `${d.getUTCFullYear()}-W${String(Math.ceil(d.getUTCDate() / 7)).padStart(2, "0")}`;
+      })
+    );
+
+    const newEarns = weekRows
+      .filter((r) => !stampedWeeks.has(r.week))
+      .map((r) => ({
+        earnedAt: new Date().toISOString(),
+        context: { week: r.week, count: r.cnt },
+      }));
+
+    return { progress: weekRows.length, newEarns };
   });
 }

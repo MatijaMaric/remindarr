@@ -61,9 +61,9 @@ describe("syncAchievementRegistry", () => {
     spy.mockRestore();
   });
 
-  it("does not enqueue backfill when achievements_backfill_done is set", async () => {
+  it("does not enqueue backfill when achievements_backfill_done_v2 is set", async () => {
     const db = getDb();
-    await db.insert(settings).values({ key: "achievements_backfill_done", value: "1" });
+    await db.insert(settings).values({ key: "achievements_backfill_done_v2", value: "1" });
     const spy = spyOn(backend, "enqueueOnce").mockResolvedValue(undefined);
     await syncAchievementRegistry();
     expect(spy).not.toHaveBeenCalled();

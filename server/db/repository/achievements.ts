@@ -1,17 +1,18 @@
 import { eq, and, inArray, sql, sum } from "drizzle-orm";
 import { getDb } from "../schema";
-import { achievements, userAchievements } from "../schema";
-import type { AchievementDefRow, UserAchievementRow } from "../schema";
-import type { Achievement } from "../../achievements/definitions";
+import { achievements, userAchievements, userAchievementEarns } from "../schema";
+import type { AchievementDefRow, UserAchievementRow, UserAchievementEarnRow } from "../schema";
+import type { Achievement, AchievementMeta } from "../../achievements/definitions";
 import { traceDbQuery } from "../../tracing";
 
-export type { AchievementDefRow, UserAchievementRow };
+export type { AchievementDefRow, UserAchievementRow, UserAchievementEarnRow };
 
 /**
  * Upsert a single achievement definition into the achievements table.
  * metadata stores optional fields (genre, seasons, windowHours) as JSON.
+ * Optionally accepts AchievementMeta to populate derived columns (repeatable, tier, family, rungIndex, category).
  */
-export async function upsertAchievementDef(a: Achievement): Promise<void> {
+export async function upsertAchievementDef(a: Achievement, meta?: AchievementMeta): Promise<void> {
   return traceDbQuery("upsertAchievementDef", async () => {
     const db = getDb();
     const metadataFields: Record<string, unknown> = {};
@@ -21,6 +22,14 @@ export async function upsertAchievementDef(a: Achievement): Promise<void> {
     const metadata = Object.keys(metadataFields).length > 0
       ? JSON.stringify(metadataFields)
       : null;
+
+    const newCols = meta ? {
+      repeatable: meta.repeatable ? 1 : 0,
+      tier: meta.tier,
+      family: meta.family ?? null,
+      rungIndex: meta.rungIndex ?? null,
+      category: meta.category,
+    } : {};
 
     await db
       .insert(achievements)
@@ -33,6 +42,7 @@ export async function upsertAchievementDef(a: Achievement): Promise<void> {
         description: a.description,
         icon: a.icon,
         metadata,
+        ...newCols,
       })
       .onConflictDoUpdate({
         target: achievements.key,
@@ -44,6 +54,7 @@ export async function upsertAchievementDef(a: Achievement): Promise<void> {
           description: a.description,
           icon: a.icon,
           metadata,
+          ...newCols,
         },
       })
       .run();
@@ -178,6 +189,88 @@ export async function sumXpForUser(userId: string): Promise<number> {
       ))
       .get();
     return Number(row?.total ?? 0);
+  });
+}
+
+/**
+ * Insert new earn audit rows and bump earned_count + last_earned_at in user_achievements.
+ */
+export async function appendUserAchievementEarns(
+  userId: string,
+  key: string,
+  earns: Array<{ earnedAt: string; context?: Record<string, unknown> }>
+): Promise<void> {
+  if (earns.length === 0) return;
+  return traceDbQuery("appendUserAchievementEarns", async () => {
+    const db = getDb();
+    const latestEarnedAt = earns.reduce((max, e) => (e.earnedAt > max ? e.earnedAt : max), earns[0].earnedAt);
+
+    for (const earn of earns) {
+      await db
+        .insert(userAchievementEarns)
+        .values({
+          userId,
+          achievementKey: key,
+          earnedAt: earn.earnedAt,
+          context: earn.context ? JSON.stringify(earn.context) : null,
+        })
+        .run();
+    }
+
+    // Bump earned_count and last_earned_at
+    await db
+      .update(userAchievements)
+      .set({
+        earnedCount: sql`${userAchievements.earnedCount} + ${earns.length}`,
+        lastEarnedAt: latestEarnedAt,
+        earnedAt: sql`COALESCE(${userAchievements.earnedAt}, ${latestEarnedAt})`,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(and(eq(userAchievements.userId, userId), eq(userAchievements.achievementKey, key)))
+      .run();
+  });
+}
+
+/**
+ * Get earn history for a repeatable achievement, most recent first.
+ */
+export async function getEarnHistory(
+  userId: string,
+  key: string,
+  limit = 12
+): Promise<UserAchievementEarnRow[]> {
+  return traceDbQuery("getEarnHistory", async () => {
+    const db = getDb();
+    return await db
+      .select()
+      .from(userAchievementEarns)
+      .where(and(eq(userAchievementEarns.userId, userId), eq(userAchievementEarns.achievementKey, key)))
+      .orderBy(sql`${userAchievementEarns.earnedAt} DESC`)
+      .limit(limit)
+      .all();
+  });
+}
+
+/**
+ * Get recently earned achievements for a user (union of one-shot earnedAt + repeatable lastEarnedAt).
+ * Returns up to `limit` rows ordered by most recently earned desc.
+ */
+export async function getRecentlyEarned(
+  userId: string,
+  limit = 8
+): Promise<UserAchievementRow[]> {
+  return traceDbQuery("getRecentlyEarned", async () => {
+    const db = getDb();
+    return await db
+      .select()
+      .from(userAchievements)
+      .where(and(
+        eq(userAchievements.userId, userId),
+        sql`${userAchievements.earnedAt} IS NOT NULL`
+      ))
+      .orderBy(sql`COALESCE(${userAchievements.lastEarnedAt}, ${userAchievements.earnedAt}) DESC`)
+      .limit(limit)
+      .all();
   });
 }
 

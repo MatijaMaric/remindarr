@@ -5,8 +5,9 @@ import {
   evaluateStreak,
   evaluateSocialFirstFollow,
   evaluateSocialFirstRecommendation,
+  type RepeatEvalResult,
 } from "./evaluate";
-import { upsertUserAchievement } from "../db/repository/achievements";
+import { upsertUserAchievement, appendUserAchievementEarns } from "../db/repository/achievements";
 import { bumpStreak } from "../db/repository/streaks";
 import { getEpisodeTitleId } from "../db/repository";
 import { enqueueAdhoc } from "../jobs/backend";
@@ -26,6 +27,26 @@ async function evaluateAndPersist(
   if (newlyEarned) {
     log.info("Achievement newly earned", { userId, key, kind, progress: result.progress });
   }
+}
+
+async function evaluateAndPersistRepeatable(
+  userId: string,
+  key: string,
+  kind: AchievementKind,
+  evaluator: () => Promise<RepeatEvalResult>
+): Promise<void> {
+  const result = await evaluator();
+  if (result.newEarns.length === 0) return;
+
+  // Ensure there's a user_achievements row first (earned_at set to first earn)
+  const firstEarnedAt = result.newEarns.reduce(
+    (min, e) => (e.earnedAt < min ? e.earnedAt : min),
+    result.newEarns[0].earnedAt
+  );
+  await upsertUserAchievement(userId, key, result.progress, firstEarnedAt);
+  await appendUserAchievementEarns(userId, key, result.newEarns);
+
+  log.info("Repeatable achievement newly earned", { userId, key, kind, newEarns: result.newEarns.length });
 }
 
 /**
@@ -79,12 +100,12 @@ export async function onWatchedEpisode(userId: string, episodeId: string, watche
       );
     }
 
-    // Deferred: look up titleId then enqueue completionist + genre_count + speed_binge_season
+    // Deferred: look up titleId then enqueue completionist + genre_count + speed_binge_season + repeatables
     const titleId = await getEpisodeTitleId(parseInt(episodeId, 10));
     if (titleId) {
       await enqueueAdhoc("evaluate-achievements", {
         userId,
-        kinds: ["completionist", "genre_count", "speed_binge_season"] as AchievementKind[],
+        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable"] as AchievementKind[],
         titleId,
       });
     }
@@ -123,7 +144,7 @@ export async function onWatchedEpisodesBulk(
     for (const titleId of titleIds) {
       await enqueueAdhoc("evaluate-achievements", {
         userId,
-        kinds: ["completionist", "genre_count", "speed_binge_season"] as AchievementKind[],
+        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable"] as AchievementKind[],
         titleId,
       });
     }
