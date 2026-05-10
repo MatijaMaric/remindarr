@@ -1,12 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, createSession, getSessionWithUser, upsertTitles } from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { requireAuth, optionalAuth } from "../middleware/auth";
-import * as achievementsRepo from "../db/repository/achievements";
+import { optionalAuth } from "../middleware/auth";
 import { upsertAchievementDef } from "../db/repository/achievements";
-import * as streaksRepo from "../db/repository/streaks";
 import { follow } from "../db/repository";
 import achievementsRoutes, { leaderboardApp, streakApp } from "./achievements";
 import { ACHIEVEMENTS } from "../achievements/definitions";
