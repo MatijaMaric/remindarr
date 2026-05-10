@@ -21,7 +21,7 @@ import WatchlistTabs, {
 import WatchlistGrid from "../components/profile/WatchlistGrid";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
-import BadgesCard from "../components/profile/BadgesCard";
+import ProfileBadgesSummary from "../components/profile/ProfileBadgesSummary";
 import StreakCounter from "../components/profile/StreakCounter";
 
 export default function UserProfilePage() {
@@ -170,9 +170,13 @@ export default function UserProfilePage() {
             )}
             {show_watchlist && <ProgressCard overview={overview} />}
             {show_watchlist && achievements && achievements.length > 0 && (
-              <BadgesCard
+              <ProfileBadgesSummary
                 achievements={achievements}
                 mode={is_own_profile ? "self" : "other"}
+                viewAllHref={is_own_profile
+                  ? "/achievements"
+                  : `/u/${user.username}/achievements`
+                }
               />
             )}
             {show_watchlist && genres.length > 0 && <TopGenresCard genres={genres} limit={6} />}
