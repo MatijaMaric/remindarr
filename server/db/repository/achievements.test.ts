@@ -10,6 +10,9 @@ import {
   markAchievementsNotified,
   sumXpForUser,
   sumXpBatch,
+  appendUserAchievementEarns,
+  getEarnHistory,
+  getRecentlyEarned,
 } from "./achievements";
 
 function makeAchievementDef(key: string, points = 10) {
@@ -211,5 +214,138 @@ describe("sumXpBatch with >50 users (chunking)", () => {
     const result = await sumXpBatch([uid]);
     // Not earned means no row in the result (or 0)
     expect(result.get(uid) ?? 0).toBe(0);
+  });
+});
+
+describe("appendUserAchievementEarns", () => {
+  it("inserts earn audit rows and bumps earnedCount + lastEarnedAt", async () => {
+    const userId = await createUser("append-earns-1", "hash");
+    await upsertAchievementDef(makeAchievementDef("repeatable_key_1"));
+    // Create the user_achievements row first
+    await upsertUserAchievement(userId, "repeatable_key_1", 2, "2024-01-01T00:00:00.000Z");
+
+    const earns = [
+      { earnedAt: "2024-01-01T00:00:00.000Z", context: { month: "2024-01", count: 10 } },
+      { earnedAt: "2024-02-01T00:00:00.000Z", context: { month: "2024-02", count: 12 } },
+    ];
+    await appendUserAchievementEarns(userId, "repeatable_key_1", earns);
+
+    const rows = await getUserAchievements(userId);
+    const row = rows.find((r) => r.achievementKey === "repeatable_key_1");
+    expect(row).toBeDefined();
+    expect(row?.earnedCount).toBe(2);
+    expect(row?.lastEarnedAt).toBe("2024-02-01T00:00:00.000Z");
+  });
+
+  it("is a no-op when earns array is empty", async () => {
+    const userId = await createUser("append-earns-2", "hash");
+    await upsertAchievementDef(makeAchievementDef("repeatable_key_2"));
+    await upsertUserAchievement(userId, "repeatable_key_2", 0, null);
+
+    // Should not throw
+    await appendUserAchievementEarns(userId, "repeatable_key_2", []);
+
+    const rows = await getUserAchievements(userId);
+    const row = rows.find((r) => r.achievementKey === "repeatable_key_2");
+    expect(row?.earnedCount).toBe(0);
+  });
+});
+
+describe("getEarnHistory", () => {
+  it("returns earn rows ordered by earnedAt descending", async () => {
+    const userId = await createUser("earn-history-1", "hash");
+    await upsertAchievementDef(makeAchievementDef("earn_hist_key_1"));
+    await upsertUserAchievement(userId, "earn_hist_key_1", 3, "2024-01-01T00:00:00.000Z");
+
+    const earns = [
+      { earnedAt: "2024-01-01T00:00:00.000Z", context: { month: "2024-01", count: 5 } },
+      { earnedAt: "2024-02-01T00:00:00.000Z", context: { month: "2024-02", count: 7 } },
+      { earnedAt: "2024-03-01T00:00:00.000Z", context: { month: "2024-03", count: 9 } },
+    ];
+    await appendUserAchievementEarns(userId, "earn_hist_key_1", earns);
+
+    const history = await getEarnHistory(userId, "earn_hist_key_1");
+    expect(history).toHaveLength(3);
+    // Most recent first
+    expect(history[0].earnedAt).toBe("2024-03-01T00:00:00.000Z");
+    expect(history[2].earnedAt).toBe("2024-01-01T00:00:00.000Z");
+  });
+
+  it("respects the limit parameter", async () => {
+    const userId = await createUser("earn-history-2", "hash");
+    await upsertAchievementDef(makeAchievementDef("earn_hist_key_2"));
+    await upsertUserAchievement(userId, "earn_hist_key_2", 3, "2024-01-01T00:00:00.000Z");
+
+    const earns = [
+      { earnedAt: "2024-01-01T00:00:00.000Z" },
+      { earnedAt: "2024-02-01T00:00:00.000Z" },
+      { earnedAt: "2024-03-01T00:00:00.000Z" },
+    ];
+    await appendUserAchievementEarns(userId, "earn_hist_key_2", earns);
+
+    const history = await getEarnHistory(userId, "earn_hist_key_2", 2);
+    expect(history).toHaveLength(2);
+  });
+});
+
+describe("getRecentlyEarned", () => {
+  it("returns earned achievements ordered by most recent earn desc", async () => {
+    const userId = await createUser("recently-earned-1", "hash");
+    await upsertAchievementDef(makeAchievementDef("recent_key_1", 10));
+    await upsertAchievementDef(makeAchievementDef("recent_key_2", 20));
+
+    // recent_key_1 earned in Jan, recent_key_2 in June
+    await upsertUserAchievement(userId, "recent_key_1", 10, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(userId, "recent_key_2", 10, "2024-06-01T00:00:00.000Z");
+
+    const result = await getRecentlyEarned(userId);
+    expect(result).toHaveLength(2);
+    // Most recent first
+    expect(result[0].achievementKey).toBe("recent_key_2");
+    expect(result[1].achievementKey).toBe("recent_key_1");
+  });
+
+  it("excludes achievements not yet earned", async () => {
+    const userId = await createUser("recently-earned-2", "hash");
+    await upsertAchievementDef(makeAchievementDef("recent_key_3", 10));
+    await upsertAchievementDef(makeAchievementDef("recent_key_4", 10));
+
+    await upsertUserAchievement(userId, "recent_key_3", 5, null); // not earned
+    await upsertUserAchievement(userId, "recent_key_4", 10, "2024-01-01T00:00:00.000Z"); // earned
+
+    const result = await getRecentlyEarned(userId);
+    expect(result).toHaveLength(1);
+    expect(result[0].achievementKey).toBe("recent_key_4");
+  });
+
+  it("uses lastEarnedAt for repeatable achievements when ordering", async () => {
+    const userId = await createUser("recently-earned-3", "hash");
+    await upsertAchievementDef(makeAchievementDef("recent_key_5", 10));
+    await upsertAchievementDef(makeAchievementDef("recent_key_6", 10));
+
+    // One-shot earned in June, repeatable earned first in Jan but has lastEarnedAt in December
+    await upsertUserAchievement(userId, "recent_key_5", 10, "2024-06-01T00:00:00.000Z");
+    await upsertUserAchievement(userId, "recent_key_6", 5, "2024-01-01T00:00:00.000Z");
+    // Bump the repeatable's lastEarnedAt to December (more recent)
+    await appendUserAchievementEarns(userId, "recent_key_6", [
+      { earnedAt: "2024-12-01T00:00:00.000Z", context: { month: "2024-12", count: 3 } },
+    ]);
+
+    const result = await getRecentlyEarned(userId);
+    expect(result).toHaveLength(2);
+    // recent_key_6 has lastEarnedAt = Dec, so it should come first
+    expect(result[0].achievementKey).toBe("recent_key_6");
+    expect(result[1].achievementKey).toBe("recent_key_5");
+  });
+
+  it("respects the limit parameter", async () => {
+    const userId = await createUser("recently-earned-4", "hash");
+    for (let i = 0; i < 5; i++) {
+      await upsertAchievementDef(makeAchievementDef(`recent_limit_key_${i}`, 10));
+      await upsertUserAchievement(userId, `recent_limit_key_${i}`, 10, "2024-01-01T00:00:00.000Z");
+    }
+
+    const result = await getRecentlyEarned(userId, 3);
+    expect(result).toHaveLength(3);
   });
 });

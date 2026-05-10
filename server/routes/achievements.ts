@@ -65,8 +65,8 @@ achievementsApp.get("/me", requireAuth, async (c) => {
       earned: earnedAt != null,
       earnedAt,
       ...enrichWithMeta(a, ACHIEVEMENT_META.get(a.key)),
-      earnedCount: earnedAt != null ? 1 : 0,
-      lastEarnedAt: earnedAt,
+      earnedCount: row?.earnedCount || (earnedAt != null ? 1 : 0),
+      lastEarnedAt: row?.lastEarnedAt ?? earnedAt,
       nextRung: null,
       rarity: null,
     };
