@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/schema";
 import { ACHIEVEMENTS, ACHIEVEMENT_META } from "../achievements/definitions";
+import type { Achievement, AchievementMeta } from "../achievements/definitions";
 import { getUserAchievements } from "../db/repository/achievements";
 import { getStreak } from "../db/repository/streaks";
 import { getUserVisibilityByUsername } from "../db/repository/profile";
@@ -12,6 +13,16 @@ import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 import { requireAuth } from "../middleware/auth";
 import { traceDbQuery } from "../tracing";
+
+function enrichWithMeta(_a: Achievement | undefined, meta: AchievementMeta | undefined) {
+  return {
+    category: meta?.category ?? "watching",
+    family: meta?.family ?? null,
+    rungIndex: meta?.rungIndex ?? null,
+    tier: meta?.tier ?? "one-shot" as const,
+    repeatable: meta?.repeatable ?? false,
+  };
+}
 
 // ─── Achievements sub-app (mounted at /api/achievements) ────────────────────
 
@@ -23,17 +34,10 @@ const usernameSchema = z.object({
 
 // GET / — Public registry (no auth required)
 achievementsApp.get("/", (c) => {
-  const achievements = ACHIEVEMENTS.map((a) => {
-    const meta = ACHIEVEMENT_META.get(a.key);
-    return {
-      ...a,
-      category: meta?.category ?? "watching",
-      family: meta?.family ?? null,
-      rungIndex: meta?.rungIndex ?? null,
-      tier: meta?.tier ?? "one-shot",
-      repeatable: meta?.repeatable ?? false,
-    };
-  });
+  const achievements = ACHIEVEMENTS.map((a) => ({
+    ...a,
+    ...enrichWithMeta(a, ACHIEVEMENT_META.get(a.key)),
+  }));
   return ok(c, { achievements });
 });
 
@@ -46,7 +50,6 @@ achievementsApp.get("/me", requireAuth, async (c) => {
 
   const result = ACHIEVEMENTS.map((a) => {
     const row = progressMap.get(a.key);
-    const meta = ACHIEVEMENT_META.get(a.key);
     const earnedAt = row?.earnedAt ?? null;
     return {
       key: a.key,
@@ -61,11 +64,7 @@ achievementsApp.get("/me", requireAuth, async (c) => {
       progress: row?.progress ?? 0,
       earned: earnedAt != null,
       earnedAt,
-      category: meta?.category ?? "watching",
-      family: meta?.family ?? null,
-      rungIndex: meta?.rungIndex ?? null,
-      tier: meta?.tier ?? "one-shot",
-      repeatable: meta?.repeatable ?? false,
+      ...enrichWithMeta(a, ACHIEVEMENT_META.get(a.key)),
       earnedCount: earnedAt != null ? 1 : 0,
       lastEarnedAt: earnedAt,
       nextRung: null,
@@ -106,7 +105,6 @@ achievementsApp.get("/u/:username", requireAuth, zValidator("param", usernameSch
     .filter((r) => r.earnedAt != null)
     .map((r) => {
       const def = ACHIEVEMENTS.find((a) => a.key === r.achievementKey);
-      const meta = ACHIEVEMENT_META.get(r.achievementKey);
       return {
         key: r.achievementKey,
         kind: def?.kind ?? "count_movies",
@@ -120,11 +118,7 @@ achievementsApp.get("/u/:username", requireAuth, zValidator("param", usernameSch
         // Progress hidden for other users — only earned status shown
         earned: true,
         earnedAt: r.earnedAt,
-        category: meta?.category ?? "watching",
-        family: meta?.family ?? null,
-        rungIndex: meta?.rungIndex ?? null,
-        tier: meta?.tier ?? "one-shot",
-        repeatable: meta?.repeatable ?? false,
+        ...enrichWithMeta(def, ACHIEVEMENT_META.get(r.achievementKey)),
       };
     });
 
