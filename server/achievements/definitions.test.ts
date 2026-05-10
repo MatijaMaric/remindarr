@@ -63,6 +63,11 @@ describe("ACHIEVEMENTS registry", () => {
       "speed_binge_season",
       "monthly_count_repeatable",
       "weekend_warrior_repeatable",
+      "decade_count",
+      "language_count",
+      "long_film",
+      "miniseries_completed",
+      "deep_show_completed",
     ]);
     for (const a of ACHIEVEMENTS) {
       expect(validKinds.has(a.kind)).toBe(true);

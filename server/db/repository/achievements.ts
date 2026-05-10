@@ -1,9 +1,10 @@
-import { eq, and, inArray, sql, sum } from "drizzle-orm";
+import { eq, and, inArray, sql, sum, count } from "drizzle-orm";
 import { getDb } from "../schema";
-import { achievements, userAchievements, userAchievementEarns } from "../schema";
+import { achievements, userAchievements, userAchievementEarns, users } from "../schema";
 import type { AchievementDefRow, UserAchievementRow, UserAchievementEarnRow } from "../schema";
 import type { Achievement, AchievementMeta } from "../../achievements/definitions";
 import { traceDbQuery } from "../../tracing";
+import { getCache } from "../../cache";
 
 export type { AchievementDefRow, UserAchievementRow, UserAchievementEarnRow };
 
@@ -228,6 +229,69 @@ export async function appendUserAchievementEarns(
       })
       .where(and(eq(userAchievements.userId, userId), eq(userAchievements.achievementKey, key)))
       .run();
+  });
+}
+
+const RARITY_CACHE_TTL = 3600; // 1 hour
+const RARITY_MIN_EARNERS = 5;   // hide rarity when fewer users have earned
+
+export type RarityBucket = "common" | "rare" | "epic" | "legendary";
+
+export interface RarityResult {
+  pct: number;
+  bucket: RarityBucket;
+}
+
+/**
+ * Get rarity for a one-shot achievement (% of users who earned it).
+ * Returns null when fewer than RARITY_MIN_EARNERS users have earned it.
+ * Result is cached for RARITY_CACHE_TTL seconds.
+ */
+export async function getRarityForKey(key: string): Promise<RarityResult | null> {
+  return traceDbQuery("getRarityForKey", async () => {
+    const cache = getCache();
+    const cacheKey = `achievements:rarity:v1:${key}`;
+
+    const cached = await cache.get<RarityResult | null>(cacheKey);
+    if (cached !== null) return cached;
+
+    const db = getDb();
+
+    // Count earners for this achievement key
+    const earnersRow = await db
+      .select({ earners: count() })
+      .from(userAchievements)
+      .where(and(
+        eq(userAchievements.achievementKey, key),
+        sql`${userAchievements.earnedAt} IS NOT NULL`
+      ))
+      .get();
+
+    const earners = earnersRow?.earners ?? 0;
+
+    if (earners < RARITY_MIN_EARNERS) {
+      await cache.set(cacheKey, null, RARITY_CACHE_TTL);
+      return null;
+    }
+
+    // Count total users
+    const totalRow = await db
+      .select({ total: count() })
+      .from(users)
+      .get();
+
+    const totalUsers = totalRow?.total ?? 0;
+
+    const pct = totalUsers > 0 ? (earners / totalUsers) * 100 : 0;
+    let bucket: RarityBucket;
+    if (pct >= 25) bucket = "common";
+    else if (pct >= 5) bucket = "rare";
+    else if (pct >= 1) bucket = "epic";
+    else bucket = "legendary";
+
+    const result: RarityResult = { pct: Math.round(pct * 10) / 10, bucket };
+    await cache.set(cacheKey, result, RARITY_CACHE_TTL);
+    return result;
   });
 }
 
