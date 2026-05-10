@@ -1,0 +1,71 @@
+version: 2
+updates:
+  # Root npm/Bun workspace
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Zagreb"
+    open-pull-requests-limit: 10
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+
+  # Frontend workspace
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Zagreb"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "frontend"]
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+
+  # GitHub Actions across all workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Zagreb"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+
+  # Dockerfile base image
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Zagreb"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
