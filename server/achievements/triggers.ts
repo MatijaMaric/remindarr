@@ -72,8 +72,8 @@ export async function onWatchedTitle(userId: string, titleId: string, isMovie?: 
       );
     }
 
-    // Deferred: completionist + genre_count
-    await enqueueAdhoc("evaluate-achievements", { userId, kinds: ["completionist", "genre_count"] as AchievementKind[], titleId });
+    // Deferred: completionist + genre_count + explorer/long-haul
+    await enqueueAdhoc("evaluate-achievements", { userId, kinds: ["completionist", "genre_count", "decade_count", "language_count", "long_film"] as AchievementKind[], titleId });
   } catch (err) {
     log.error("onWatchedTitle trigger failed", { userId, titleId, err });
   }
@@ -100,12 +100,12 @@ export async function onWatchedEpisode(userId: string, episodeId: string, watche
       );
     }
 
-    // Deferred: look up titleId then enqueue completionist + genre_count + speed_binge_season + repeatables
+    // Deferred: look up titleId then enqueue completionist + genre_count + speed_binge_season + repeatables + series kinds
     const titleId = await getEpisodeTitleId(parseInt(episodeId, 10));
     if (titleId) {
       await enqueueAdhoc("evaluate-achievements", {
         userId,
-        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable"] as AchievementKind[],
+        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable", "miniseries_completed", "deep_show_completed"] as AchievementKind[],
         titleId,
       });
     }
@@ -144,7 +144,7 @@ export async function onWatchedEpisodesBulk(
     for (const titleId of titleIds) {
       await enqueueAdhoc("evaluate-achievements", {
         userId,
-        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable"] as AchievementKind[],
+        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable", "miniseries_completed", "deep_show_completed"] as AchievementKind[],
         titleId,
       });
     }

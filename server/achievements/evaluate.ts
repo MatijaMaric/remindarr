@@ -264,6 +264,129 @@ export async function evaluateSpeedBingeSeason(
   });
 }
 
+/**
+ * decade_count: count DISTINCT decades (release_year / 10) across watched_titles
+ */
+export async function evaluateDecadeCount(userId: string, threshold: number): Promise<EvalResult> {
+  return traceDbQuery("evaluateDecadeCount", async () => {
+    const db = getDb();
+    const row = await db
+      .select({ cnt: sql<number>`COUNT(DISTINCT CAST(${titles.releaseYear} / 10 AS INTEGER))` })
+      .from(watchedTitles)
+      .innerJoin(titles, eq(titles.id, watchedTitles.titleId))
+      .where(and(eq(watchedTitles.userId, userId), sql`${titles.releaseYear} IS NOT NULL`))
+      .get();
+    const progress = row?.cnt ?? 0;
+    return { progress, earned: progress >= threshold };
+  });
+}
+
+/**
+ * language_count: count DISTINCT original_language values across watched_titles
+ */
+export async function evaluateLanguageCount(userId: string, threshold: number): Promise<EvalResult> {
+  return traceDbQuery("evaluateLanguageCount", async () => {
+    const db = getDb();
+    const row = await db
+      .select({ cnt: sql<number>`COUNT(DISTINCT ${titles.originalLanguage})` })
+      .from(watchedTitles)
+      .innerJoin(titles, eq(titles.id, watchedTitles.titleId))
+      .where(and(eq(watchedTitles.userId, userId), sql`${titles.originalLanguage} IS NOT NULL`))
+      .get();
+    const progress = row?.cnt ?? 0;
+    return { progress, earned: progress >= threshold };
+  });
+}
+
+/**
+ * long_film: earned if user has watched any MOVIE with runtime_minutes >= 180
+ */
+export async function evaluateLongFilm(userId: string): Promise<EvalResult> {
+  return traceDbQuery("evaluateLongFilm", async () => {
+    const db = getDb();
+    const row = await db
+      .select({ cnt: count() })
+      .from(watchedTitles)
+      .innerJoin(titles, eq(titles.id, watchedTitles.titleId))
+      .where(and(
+        eq(watchedTitles.userId, userId),
+        eq(titles.objectType, "MOVIE"),
+        sql`${titles.runtimeMinutes} >= 180`
+      ))
+      .get();
+    const progress = Math.min(row?.cnt ?? 0, 1);
+    return { progress, earned: progress >= 1 };
+  });
+}
+
+/**
+ * miniseries_completed: count shows with exactly 1 season (determined by DISTINCT season_number
+ * in episodes) and ≤ 6 total released episodes where user has watched all released episodes.
+ */
+export async function evaluateMiniseriesCompleted(userId: string, threshold: number): Promise<EvalResult> {
+  return traceDbQuery("evaluateMiniseriesCompleted", async () => {
+    const db = getDb();
+    const completedShows = await db.all<{ title_id: string }>(sql`
+      SELECT e.title_id
+      FROM watched_episodes we
+      JOIN episodes e ON e.id = we.episode_id
+      WHERE we.user_id = ${userId}
+      GROUP BY e.title_id
+      HAVING
+        COUNT(*) = (
+          SELECT COUNT(*) FROM episodes e2
+          WHERE e2.title_id = e.title_id AND e2.air_date <= date('now')
+        )
+        AND (
+          SELECT COUNT(*) FROM episodes e2
+          WHERE e2.title_id = e.title_id AND e2.air_date <= date('now')
+        ) > 0
+        AND (
+          SELECT COUNT(*) FROM episodes e2
+          WHERE e2.title_id = e.title_id AND e2.air_date <= date('now')
+        ) <= 6
+        AND (
+          SELECT COUNT(DISTINCT e2.season_number) FROM episodes e2
+          WHERE e2.title_id = e.title_id
+        ) = 1
+    `);
+    const progress = completedShows.length;
+    return { progress, earned: progress >= threshold };
+  });
+}
+
+/**
+ * deep_show_completed: count shows with >= 10 distinct season_numbers where user
+ * has watched all released episodes.
+ */
+export async function evaluateDeepShowCompleted(userId: string, threshold: number): Promise<EvalResult> {
+  return traceDbQuery("evaluateDeepShowCompleted", async () => {
+    const db = getDb();
+    const completedShows = await db.all<{ title_id: string }>(sql`
+      SELECT e.title_id
+      FROM watched_episodes we
+      JOIN episodes e ON e.id = we.episode_id
+      WHERE we.user_id = ${userId}
+      GROUP BY e.title_id
+      HAVING
+        COUNT(*) = (
+          SELECT COUNT(*) FROM episodes e2
+          WHERE e2.title_id = e.title_id AND e2.air_date <= date('now')
+        )
+        AND (
+          SELECT COUNT(*) FROM episodes e2
+          WHERE e2.title_id = e.title_id AND e2.air_date <= date('now')
+        ) > 0
+        AND (
+          SELECT COUNT(DISTINCT e2.season_number) FROM episodes e2
+          WHERE e2.title_id = e.title_id
+        ) >= 10
+    `);
+    const progress = completedShows.length;
+    return { progress, earned: progress >= threshold };
+  });
+}
+
 export type RepeatEvalResult = {
   progress: number;
   newEarns: Array<{ earnedAt: string; context?: Record<string, unknown> }>;

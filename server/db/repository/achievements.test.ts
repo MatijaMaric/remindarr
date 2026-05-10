@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, afterEach } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { createUser } from "../repository";
 import {
@@ -13,7 +13,10 @@ import {
   appendUserAchievementEarns,
   getEarnHistory,
   getRecentlyEarned,
+  getRarityForKey,
 } from "./achievements";
+import { initCache } from "../../cache";
+import { MemoryCache } from "../../cache/memory";
 
 function makeAchievementDef(key: string, points = 10) {
   return {
@@ -27,8 +30,16 @@ function makeAchievementDef(key: string, points = 10) {
   };
 }
 
+let testCache: MemoryCache;
+
 beforeEach(async () => {
   setupTestDb();
+  testCache = new MemoryCache(100, 60_000);
+  initCache(testCache);
+});
+
+afterEach(async () => {
+  await testCache.close();
 });
 
 afterAll(() => {
@@ -347,5 +358,91 @@ describe("getRecentlyEarned", () => {
 
     const result = await getRecentlyEarned(userId, 3);
     expect(result).toHaveLength(3);
+  });
+});
+
+// ─── getRarityForKey ──────────────────────────────────────────────────────────
+
+describe("getRarityForKey", () => {
+  it("returns null when fewer than 5 users have earned the achievement", async () => {
+    await upsertAchievementDef(makeAchievementDef("rarity_test_sparse", 10));
+
+    // Only 4 earners — below the RARITY_MIN_EARNERS threshold of 5
+    for (let i = 0; i < 4; i++) {
+      const uid = await createUser(`rarity-sparse-${i}`, "hash");
+      await upsertUserAchievement(uid, "rarity_test_sparse", 10, "2024-01-01T00:00:00.000Z");
+    }
+
+    const result = await getRarityForKey("rarity_test_sparse");
+    expect(result).toBeNull();
+  });
+
+  it("returns common bucket when >= 25% of users earned it", async () => {
+    await upsertAchievementDef(makeAchievementDef("rarity_test_common", 10));
+
+    // Create 10 users, all earn — 100% earner rate → common
+    for (let i = 0; i < 10; i++) {
+      const uid = await createUser(`rarity-common-${i}`, "hash");
+      await upsertUserAchievement(uid, "rarity_test_common", 10, "2024-01-01T00:00:00.000Z");
+    }
+
+    const result = await getRarityForKey("rarity_test_common");
+    expect(result).not.toBeNull();
+    expect(result!.bucket).toBe("common");
+    expect(result!.pct).toBeGreaterThanOrEqual(25);
+  });
+
+  it("returns rare bucket when 5–24% of users earned it", async () => {
+    await upsertAchievementDef(makeAchievementDef("rarity_test_rare", 10));
+
+    // Create 100 users, 10 earn → 10% earner rate → rare
+    const earnerIds: string[] = [];
+    for (let i = 0; i < 100; i++) {
+      const uid = await createUser(`rarity-rare-${i}`, "hash");
+      if (i < 10) earnerIds.push(uid);
+    }
+    for (const uid of earnerIds) {
+      await upsertUserAchievement(uid, "rarity_test_rare", 10, "2024-01-01T00:00:00.000Z");
+    }
+
+    const result = await getRarityForKey("rarity_test_rare");
+    expect(result).not.toBeNull();
+    expect(result!.bucket).toBe("rare");
+    expect(result!.pct).toBeGreaterThanOrEqual(5);
+    expect(result!.pct).toBeLessThan(25);
+  });
+
+  it("caches the result so a second call returns the same value", async () => {
+    await upsertAchievementDef(makeAchievementDef("rarity_test_cache", 10));
+
+    // Create 8 users (>= min earners) all earning
+    for (let i = 0; i < 8; i++) {
+      const uid = await createUser(`rarity-cache-${i}`, "hash");
+      await upsertUserAchievement(uid, "rarity_test_cache", 10, "2024-01-01T00:00:00.000Z");
+    }
+
+    const first = await getRarityForKey("rarity_test_cache");
+    const second = await getRarityForKey("rarity_test_cache");
+
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(second!.pct).toBe(first!.pct);
+    expect(second!.bucket).toBe(first!.bucket);
+  });
+
+  it("caches null result for sparse achievements", async () => {
+    await upsertAchievementDef(makeAchievementDef("rarity_test_null_cache", 10));
+
+    // Only 2 earners — below threshold
+    for (let i = 0; i < 2; i++) {
+      const uid = await createUser(`rarity-null-cache-${i}`, "hash");
+      await upsertUserAchievement(uid, "rarity_test_null_cache", 10, "2024-01-01T00:00:00.000Z");
+    }
+
+    const first = await getRarityForKey("rarity_test_null_cache");
+    const second = await getRarityForKey("rarity_test_null_cache");
+
+    expect(first).toBeNull();
+    expect(second).toBeNull();
   });
 });

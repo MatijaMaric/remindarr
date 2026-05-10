@@ -10,6 +10,11 @@ import {
   evaluateSocialFirstRecommendation,
   evaluateMonthlyCountRepeatable,
   evaluateWeekendWarriorRepeatable,
+  evaluateDecadeCount,
+  evaluateLanguageCount,
+  evaluateLongFilm,
+  evaluateMiniseriesCompleted,
+  evaluateDeepShowCompleted,
 } from "../achievements/evaluate";
 import { upsertUserAchievement, appendUserAchievementEarns } from "../db/repository/achievements";
 import { logger } from "../logger";
@@ -91,6 +96,21 @@ export async function runEvaluateAchievements(data: string | null): Promise<void
             break;
           case "social_first_recommendation":
             result = await evaluateSocialFirstRecommendation(userId);
+            break;
+          case "decade_count":
+            result = await evaluateDecadeCount(userId, a.threshold);
+            break;
+          case "language_count":
+            result = await evaluateLanguageCount(userId, a.threshold);
+            break;
+          case "long_film":
+            result = await evaluateLongFilm(userId);
+            break;
+          case "miniseries_completed":
+            result = await evaluateMiniseriesCompleted(userId, a.threshold);
+            break;
+          case "deep_show_completed":
+            result = await evaluateDeepShowCompleted(userId, a.threshold);
             break;
           default:
             // Unknown kind — skip gracefully

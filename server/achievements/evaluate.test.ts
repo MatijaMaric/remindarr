@@ -30,6 +30,9 @@ import {
   evaluateSpeedBingeSeason,
   evaluateMonthlyCountRepeatable,
   evaluateWeekendWarriorRepeatable,
+  evaluateDecadeCount,
+  evaluateLanguageCount,
+  evaluateLongFilm,
 } from "./evaluate";
 import { userAchievementEarns, achievements } from "../db/schema";
 import { upsertAchievementDef } from "../db/repository/achievements";
@@ -596,5 +599,152 @@ describe("evaluateWeekendWarriorRepeatable", () => {
     const result = await evaluateWeekendWarriorRepeatable(userId, 2, achievementKey);
     expect(result.progress).toBe(0);
     expect(result.newEarns).toHaveLength(0);
+  });
+});
+
+// ─── decade_count ─────────────────────────────────────────────────────────────
+
+describe("evaluateDecadeCount", () => {
+  it("returns zero progress with no watched titles", async () => {
+    const result = await evaluateDecadeCount(userId, 1);
+    expect(result.progress).toBe(0);
+    expect(result.earned).toBe(false);
+  });
+
+  it("counts distinct decades across watched titles", async () => {
+    // Titles from 3 different decades: 1980s, 1990s, 2000s
+    await upsertTitles([makeParsedTitle({ id: "decade-1980", objectType: "MOVIE", releaseYear: 1985 })]);
+    await upsertTitles([makeParsedTitle({ id: "decade-1990", objectType: "MOVIE", releaseYear: 1995 })]);
+    await upsertTitles([makeParsedTitle({ id: "decade-2000", objectType: "MOVIE", releaseYear: 2005 })]);
+    await watchTitle("decade-1980", userId);
+    await watchTitle("decade-1990", userId);
+    await watchTitle("decade-2000", userId);
+
+    const result = await evaluateDecadeCount(userId, 3);
+    expect(result.progress).toBe(3);
+    expect(result.earned).toBe(true);
+  });
+
+  it("does not double-count titles from the same decade", async () => {
+    // Both titles are from the 2010s
+    await upsertTitles([makeParsedTitle({ id: "decade-2010a", objectType: "MOVIE", releaseYear: 2011 })]);
+    await upsertTitles([makeParsedTitle({ id: "decade-2010b", objectType: "MOVIE", releaseYear: 2019 })]);
+    await watchTitle("decade-2010a", userId);
+    await watchTitle("decade-2010b", userId);
+
+    const result = await evaluateDecadeCount(userId, 2);
+    expect(result.progress).toBe(1); // only 1 distinct decade
+    expect(result.earned).toBe(false);
+  });
+
+  it("returns false when below threshold", async () => {
+    await upsertTitles([makeParsedTitle({ id: "decade-single", objectType: "MOVIE", releaseYear: 2024 })]);
+    await watchTitle("decade-single", userId);
+
+    const result = await evaluateDecadeCount(userId, 3);
+    expect(result.progress).toBe(1);
+    expect(result.earned).toBe(false);
+  });
+});
+
+// ─── language_count ───────────────────────────────────────────────────────────
+
+describe("evaluateLanguageCount", () => {
+  it("returns zero progress with no watched titles", async () => {
+    const result = await evaluateLanguageCount(userId, 2);
+    expect(result.progress).toBe(0);
+    expect(result.earned).toBe(false);
+  });
+
+  it("counts distinct languages across watched titles", async () => {
+    await upsertTitles([makeParsedTitle({ id: "lang-en", objectType: "MOVIE", originalLanguage: "en" })]);
+    await upsertTitles([makeParsedTitle({ id: "lang-fr", objectType: "MOVIE", originalLanguage: "fr" })]);
+    await upsertTitles([makeParsedTitle({ id: "lang-ja", objectType: "MOVIE", originalLanguage: "ja" })]);
+    await watchTitle("lang-en", userId);
+    await watchTitle("lang-fr", userId);
+    await watchTitle("lang-ja", userId);
+
+    const result = await evaluateLanguageCount(userId, 3);
+    expect(result.progress).toBe(3);
+    expect(result.earned).toBe(true);
+  });
+
+  it("does not double-count titles with the same language", async () => {
+    await upsertTitles([makeParsedTitle({ id: "lang-en1", objectType: "MOVIE", originalLanguage: "en" })]);
+    await upsertTitles([makeParsedTitle({ id: "lang-en2", objectType: "MOVIE", originalLanguage: "en" })]);
+    await watchTitle("lang-en1", userId);
+    await watchTitle("lang-en2", userId);
+
+    const result = await evaluateLanguageCount(userId, 2);
+    expect(result.progress).toBe(1); // only 1 distinct language
+    expect(result.earned).toBe(false);
+  });
+
+  it("earned = true at threshold", async () => {
+    await upsertTitles([makeParsedTitle({ id: "lang-de", objectType: "MOVIE", originalLanguage: "de" })]);
+    await upsertTitles([makeParsedTitle({ id: "lang-es", objectType: "MOVIE", originalLanguage: "es" })]);
+    await watchTitle("lang-de", userId);
+    await watchTitle("lang-es", userId);
+
+    const result = await evaluateLanguageCount(userId, 2);
+    expect(result.progress).toBe(2);
+    expect(result.earned).toBe(true);
+  });
+});
+
+// ─── long_film ────────────────────────────────────────────────────────────────
+
+describe("evaluateLongFilm", () => {
+  it("returns zero progress with no watched movies", async () => {
+    const result = await evaluateLongFilm(userId);
+    expect(result.progress).toBe(0);
+    expect(result.earned).toBe(false);
+  });
+
+  it("not earned when movie runtime is below 180 minutes", async () => {
+    await upsertTitles([makeParsedTitle({ id: "short-film", objectType: "MOVIE", runtimeMinutes: 120 })]);
+    await watchTitle("short-film", userId);
+
+    const result = await evaluateLongFilm(userId);
+    expect(result.progress).toBe(0);
+    expect(result.earned).toBe(false);
+  });
+
+  it("earned when user has watched a movie with runtime >= 180 minutes", async () => {
+    await upsertTitles([makeParsedTitle({ id: "long-film", objectType: "MOVIE", runtimeMinutes: 195 })]);
+    await watchTitle("long-film", userId);
+
+    const result = await evaluateLongFilm(userId);
+    expect(result.progress).toBe(1);
+    expect(result.earned).toBe(true);
+  });
+
+  it("earned at exactly 180 minutes", async () => {
+    await upsertTitles([makeParsedTitle({ id: "exactly-180", objectType: "MOVIE", runtimeMinutes: 180 })]);
+    await watchTitle("exactly-180", userId);
+
+    const result = await evaluateLongFilm(userId);
+    expect(result.progress).toBe(1);
+    expect(result.earned).toBe(true);
+  });
+
+  it("progress is capped at 1 even with multiple long films watched", async () => {
+    await upsertTitles([makeParsedTitle({ id: "long-film-1", objectType: "MOVIE", runtimeMinutes: 185 })]);
+    await upsertTitles([makeParsedTitle({ id: "long-film-2", objectType: "MOVIE", runtimeMinutes: 200 })]);
+    await watchTitle("long-film-1", userId);
+    await watchTitle("long-film-2", userId);
+
+    const result = await evaluateLongFilm(userId);
+    expect(result.progress).toBe(1); // capped at 1
+    expect(result.earned).toBe(true);
+  });
+
+  it("does not count SHOW titles", async () => {
+    await upsertTitles([makeParsedTitle({ id: "long-show", objectType: "SHOW", title: "Long Show", runtimeMinutes: 999 })]);
+    await watchTitle("long-show", userId);
+
+    const result = await evaluateLongFilm(userId);
+    expect(result.progress).toBe(0);
+    expect(result.earned).toBe(false);
   });
 });

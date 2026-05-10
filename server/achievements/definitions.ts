@@ -4,6 +4,8 @@ import { genreAchievements } from "./categories/genres";
 import { socialAchievements } from "./categories/social";
 import { specialAchievements } from "./categories/special";
 import { habitAchievements } from "./categories/habit";
+import { explorerAchievements } from "./categories/explorer";
+import { longHaulAchievements } from "./categories/long-haul";
 
 export type AchievementKind =
   | "count_movies"
@@ -15,7 +17,12 @@ export type AchievementKind =
   | "social_first_follow"
   | "speed_binge_season"
   | "monthly_count_repeatable"
-  | "weekend_warrior_repeatable";
+  | "weekend_warrior_repeatable"
+  | "decade_count"
+  | "language_count"
+  | "long_film"
+  | "miniseries_completed"
+  | "deep_show_completed";
 
 export type Category =
   | "watching"
@@ -49,6 +56,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   ...socialAchievements,
   ...specialAchievements,
   ...habitAchievements,
+  ...explorerAchievements,
+  ...longHaulAchievements,
 ];
 
 export interface AchievementMeta {
@@ -77,6 +86,13 @@ function deriveCategory(kind: AchievementKind): Category {
     case "monthly_count_repeatable":
     case "weekend_warrior_repeatable":
       return "habit";
+    case "decade_count":
+    case "language_count":
+      return "explorer";
+    case "long_film":
+    case "miniseries_completed":
+    case "deep_show_completed":
+      return "long-haul";
   }
 }
 
