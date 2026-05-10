@@ -414,8 +414,11 @@ async function handleBackfillAchievements(_data?: string | null): Promise<void> 
   await setSetting("achievements_backfill_cursor", lastUserId);
 
   if (rows.length === BACKFILL_PAGE_SIZE) {
-    // Direct insert is CF-safe (no bun:sqlite); mirrors handleMigrateOffers pattern
-    await db.insert(jobs).values({ name: "backfill-achievements", runAt: new Date(Date.now() + 5000).toISOString() });
+    // In DO mode the DO re-enqueues into its own SQLite after the handler returns.
+    // In D1/Bun mode insert directly so the polling worker picks up the next page.
+    if (CONFIG.JOB_QUEUE_BACKEND !== "durable-object") {
+      await db.insert(jobs).values({ name: "backfill-achievements", runAt: new Date(Date.now() + 5000).toISOString() });
+    }
     log.info("Backfill: enqueued next batch", { nextCursor: lastUserId });
   } else {
     await setSetting("achievements_backfill_done", "1");
