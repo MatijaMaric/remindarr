@@ -184,17 +184,28 @@ export async function recoverStale(env: CFEnv, staleMinutes = 15): Promise<numbe
 /**
  * Clean up old completed/failed jobs.
  * D1 mode: DELETE from shared jobs table.
- * DO mode: fan out to each cron DO (cleanup DO fans out further internally).
+ * DO mode: fan out POST /cleanup to all 5 cron DOs. Uses allSettled so one
+ * unresponsive DO cannot abort the rest of the sweep.
  */
 export async function cleanupOld(env: CFEnv, retentionDays = 30): Promise<number> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     if (!env.JOB_QUEUE_DO) return 0;
-    const results = await Promise.all(
-      [...CRON_JOB_NAMES, "cleanup"].map((name) =>
+    const names = [...CRON_JOB_NAMES, "cleanup"];
+    const results = await Promise.allSettled(
+      names.map((name) =>
         doFetch<{ count: number }>(env, name, "/cleanup", "POST", { retentionDays }),
       ),
     );
-    return results.reduce((sum, r) => sum + (r.count ?? 0), 0);
+    let total = 0;
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "fulfilled") {
+        total += result.value.count ?? 0;
+      } else {
+        log.warn("DO cleanup peer failed", { name: names[i], error: result.reason instanceof Error ? result.reason.message : String(result.reason) });
+      }
+    }
+    return total;
   }
   return cleanupOldJobs(retentionDays);
 }

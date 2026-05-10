@@ -14,7 +14,6 @@ import { runWithCache } from "../cache";
 import { CloudflareKvCache } from "../cache/cloudflare-kv";
 import { MemoryCache } from "../cache/memory";
 import { logger } from "../logger";
-import { deleteExpiredSessions } from "../db/repository";
 import { handlers } from "./processor";
 import type { DrizzleDb } from "../platform/types";
 
@@ -495,29 +494,10 @@ export class JobQueueDO {
     }
   }
 
-  /** Cleanup handler: delete expired sessions + fan out per-DO cleanup. */
-  private async runCleanup(): Promise<void> {
-    // deleteExpiredSessions() uses getDb() which is bound via runWithDb above
-    await deleteExpiredSessions();
-
-    // Fan out cleanup to the four cron-singleton DOs
-    if (this.env.JOB_QUEUE_DO) {
-      await Promise.all(
-        CRON_JOB_NAMES.map((cronName) => {
-          const id = this.env.JOB_QUEUE_DO!.idFromName(cronName);
-          const stub = this.env.JOB_QUEUE_DO!.get(id);
-          return stub.fetch(
-            new Request("https://do/cleanup", {
-              method: "POST",
-              body: JSON.stringify({ retentionDays: 30 }),
-              headers: { "content-type": "application/json" },
-            }),
-          );
-        }),
-      );
-    }
-
-    // Also clean our own jobs table
+  /** Cleanup handler: prune this DO's own old jobs. */
+  private runCleanup(): void {
+    // D1 cleanup + peer-DO fan-out moved to Worker scheduled() to avoid the
+    // 30-second DO alarm hard limit (#726). Only local SQLite work stays here.
     this.cleanup(30);
   }
 }

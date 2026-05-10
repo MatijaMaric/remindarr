@@ -17,6 +17,7 @@ import { runWithDb } from "../db/schema";
 import * as processorModule from "./processor";
 import {
   armCron,
+  cleanupOld,
   enqueueAdhoc,
   enqueueOnce,
   processPending,
@@ -32,6 +33,7 @@ const mockEnqueueCronJob = spyOn(processorModule, "enqueueCronJob").mockResolved
 const mockProcessPendingJobs = spyOn(processorModule, "processPendingJobs").mockResolvedValue(0);
 const mockRecoverStaleJobs = spyOn(processorModule, "recoverStaleJobs").mockResolvedValue(0);
 const mockEnqueueOneTimeMigration = spyOn(processorModule, "enqueueOneTimeMigration").mockResolvedValue(undefined);
+const mockCleanupOldJobs = spyOn(processorModule, "cleanupOldJobs").mockResolvedValue(0);
 
 // ─── DO stub factory ──────────────────────────────────────────────────────────
 
@@ -73,6 +75,7 @@ beforeEach(() => {
   mockProcessPendingJobs.mockClear();
   mockRecoverStaleJobs.mockClear();
   mockEnqueueOneTimeMigration.mockClear();
+  mockCleanupOldJobs.mockClear();
 });
 
 afterAll(() => {
@@ -82,6 +85,7 @@ afterAll(() => {
   mockProcessPendingJobs.mockRestore();
   mockRecoverStaleJobs.mockRestore();
   mockEnqueueOneTimeMigration.mockRestore();
+  mockCleanupOldJobs.mockRestore();
 });
 
 const d1Env = {
@@ -309,5 +313,62 @@ describe("runWithEnv", () => {
       await enqueueAdhoc("sync-plex-library");
     });
     expect(ns.calls).toHaveLength(1);
+  });
+});
+
+// ─── cleanupOld ──────────────────────────────────────────────────────────────
+
+describe("cleanupOld (D1 mode)", () => {
+  it("delegates to cleanupOldJobs with the given retention days", async () => {
+    mockCleanupOldJobs.mockResolvedValueOnce(7);
+    const count = await cleanupOld(d1Env, 14);
+    expect(count).toBe(7);
+    expect(mockCleanupOldJobs).toHaveBeenCalledWith(14);
+  });
+});
+
+describe("cleanupOld (DO mode)", () => {
+  it("fans out POST /cleanup to all 5 cron DOs and sums counts", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace(() => ({ count: 2 }));
+    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+
+    const total = await cleanupOld(env, 30);
+
+    // 4 CRON_JOB_NAMES + "cleanup" = 5 DOs
+    expect(ns.calls).toHaveLength(5);
+    expect(ns.calls.every((c) => c.path === "/cleanup" && c.method === "POST")).toBe(true);
+    expect(ns.calls.every((c) => (c.body as any).retentionDays === 30)).toBe(true);
+    expect(total).toBe(10); // 5 × 2
+    expect(mockCleanupOldJobs).not.toHaveBeenCalled();
+  });
+
+  it("continues and sums fulfilled counts when one peer DO rejects", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const attempted: string[] = [];
+    // Use name-aware stub so each DO call can be routed by the captured id
+    const failingNs = {
+      idFromName: (name: string) => ({ name, toString: () => name }),
+      get: (id: any) => ({
+        fetch: async () => {
+          const name: string = id.name ?? id.toString();
+          attempted.push(name);
+          if (name === "send-notifications") throw new Error("DO unavailable");
+          return new Response(JSON.stringify({ count: 3 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        },
+      }),
+    };
+    const env = { ...d1Env, JOB_QUEUE_DO: failingNs as unknown as DurableObjectNamespace };
+
+    const total = await cleanupOld(env, 30);
+
+    // All 5 DOs were attempted despite one failure
+    expect(attempted).toHaveLength(5);
+    expect(attempted).toContain("send-notifications");
+    // Only 4 fulfilled × 3 = 12 (send-notifications rejected, excluded)
+    expect(total).toBe(12);
   });
 });

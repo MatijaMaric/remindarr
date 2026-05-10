@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Database } from "bun:sqlite";
 import { JobQueueDO } from "./durable-object";
 import * as processorModule from "./processor";
+import * as repository from "../db/repository";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 
 // ─── Fake CF storage ──────────────────────────────────────────────────────────
@@ -563,6 +564,46 @@ describe("JobQueueDO", () => {
   it("returns 404 for unknown paths", async () => {
     const resp = await do_.fetch(new Request("https://do/unknown-path"));
     expect(resp.status).toBe(404);
+  });
+
+  // ── runCleanup (cleanup DO alarm) ─────────────────────────────────────────
+
+  it("runCleanup() only prunes the DO's own jobs table — no D1 call or peer-DO fan-out", async () => {
+    const deleteExpiredSessionsSpy = spyOn(repository, "deleteExpiredSessions").mockResolvedValue(undefined);
+    const peerFetchCalls: { path: string }[] = [];
+    const fakeNs = {
+      idFromName: (_name: string) => ({ toString: () => _name }),
+      get: () => ({
+        fetch: async (req: Request) => {
+          peerFetchCalls.push({ path: new URL(req.url).pathname });
+          return new Response(JSON.stringify({ count: 0 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        },
+      }),
+    };
+
+    const cleanupState = new FakeDurableObjectState("cleanup");
+    const cleanupDO = new JobQueueDO(
+      cleanupState as any,
+      { ...fakeEnv, JOB_QUEUE_DO: fakeNs as any } as any,
+    );
+
+    // Arm the cleanup cron (sets the "cron" key in storage so runJob auto-inserts a tick row)
+    await cleanupDO.armCron("cleanup", "0 0 * * *");
+    await cleanupDO.runJob(null);
+
+    // No peer-DO fetch calls
+    expect(peerFetchCalls).toHaveLength(0);
+    // No D1 deleteExpiredSessions call
+    expect(deleteExpiredSessionsSpy).not.toHaveBeenCalled();
+    // Own jobs table has a completed row
+    const rows = cleanupState.rawDb.prepare("SELECT status FROM jobs ORDER BY id DESC LIMIT 1").all() as Array<{ status: string }>;
+    expect(rows[0]?.status).toBe("completed");
+
+    deleteExpiredSessionsSpy.mockRestore();
+    cleanupState.close();
   });
 });
 
