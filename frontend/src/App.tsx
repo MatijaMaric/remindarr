@@ -43,6 +43,7 @@ const SharedWatchlistPage = lazyWithRetry(() => import("./pages/SharedWatchlistP
 const UserOverlapPage = lazyWithRetry(() => import("./pages/UserOverlapPage"));
 const LeaderboardPage = lazyWithRetry(() => import("./pages/LeaderboardPage"));
 const AchievementsPage = lazyWithRetry(() => import("./pages/AchievementsPage"));
+const AchievementDetailPage = lazyWithRetry(() => import("./pages/AchievementDetailPage"));
 
 // Wraps a route element in an inline ErrorBoundary so a single page crash
 // shows a contained fallback instead of taking down the whole shell.
@@ -207,6 +208,8 @@ export default function App() {
             <Route path="/u/:username/overlap/:friendUsername" element={<RequireAuth><Page><UserOverlapPage /></Page></RequireAuth>} />
             <Route path="/u/:username/achievements" element={<Page><AchievementsPage /></Page>} />
             <Route path="/achievements" element={<RequireAuth><Page><AchievementsPage /></Page></RequireAuth>} />
+            <Route path="/achievements/:key" element={<RequireAuth><Page><AchievementDetailPage /></Page></RequireAuth>} />
+            <Route path="/u/:username/achievements/:key" element={<Page><AchievementDetailPage /></Page>} />
             <Route path="/settings" element={<RequireAuth><Page><SettingsPage /></Page></RequireAuth>} />
             <Route path="/profile" element={<Page><ProfilePage /></Page>} />
             <Route path="/title/:id" element={<Page><TitleDetailPage /></Page>} />

@@ -309,6 +309,128 @@ describe("GET /achievements/u/:username", () => {
   });
 });
 
+describe("GET /achievements/:key/me", () => {
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/achievements/movies_10/me");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for invalid key pattern", async () => {
+    const res = await app.request("/achievements/!!!/me", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for unknown key", async () => {
+    const res = await app.request("/achievements/nonexistent_key_xyz/me", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns achievement detail with ladder rungs for movies_10", async () => {
+    const res = await app.request("/achievements/movies_10/me", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.key).toBe("movies_10");
+    expect(body).toHaveProperty("earned");
+    expect(body).toHaveProperty("progress");
+    expect(body).toHaveProperty("earnedAt");
+    expect(body).toHaveProperty("earnedCount");
+    expect(body).toHaveProperty("lastEarnedAt");
+    expect(body).toHaveProperty("rarity");
+    expect(body).toHaveProperty("ladder");
+    expect(body).toHaveProperty("history");
+    expect(Array.isArray(body.history)).toBe(true);
+    // movies_10 is a ladder achievement so ladder should be non-null
+    expect(body.ladder).not.toBeNull();
+    expect(Array.isArray(body.ladder.rungs)).toBe(true);
+    expect(body.ladder.rungs.length).toBeGreaterThan(0);
+    // Each rung should have required fields
+    const rung = body.ladder.rungs[0];
+    expect(rung).toHaveProperty("key");
+    expect(rung).toHaveProperty("title");
+    expect(rung).toHaveProperty("threshold");
+    expect(rung).toHaveProperty("rungIndex");
+    expect(rung).toHaveProperty("points");
+    expect(rung).toHaveProperty("earned");
+    expect(rung).toHaveProperty("earnedAt");
+  });
+
+  it("history is empty for non-repeatable achievement", async () => {
+    const res = await app.request("/achievements/movies_10/me", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.history).toEqual([]);
+  });
+});
+
+describe("GET /achievements/u/:username/:key", () => {
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/achievements/u/alice/movies_10");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 for private user", async () => {
+    // bob is private by default
+    const res = await app.request("/achievements/u/bob/movies_10", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for unknown key on public user", async () => {
+    const { getDb } = await import("../db/schema");
+    const { users } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = getDb();
+    await db.update(users).set({ profileVisibility: "public" }).where(eq(users.id, userBId)).run();
+
+    const res = await app.request("/achievements/u/bob/nonexistent_key_xyz", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns achievement detail for public user", async () => {
+    const { getDb } = await import("../db/schema");
+    const { users } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = getDb();
+    await db.update(users).set({ profileVisibility: "public" }).where(eq(users.id, userBId)).run();
+
+    const res = await app.request("/achievements/u/bob/movies_10", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.key).toBe("movies_10");
+    expect(body).toHaveProperty("earned");
+    expect(body).toHaveProperty("earnedAt");
+    // ladder and history are hidden for other users
+    expect(body.ladder).toBeNull();
+    expect(body.history).toEqual([]);
+  });
+
+  it("returns 403 for friends_only profile when not following", async () => {
+    const { getDb } = await import("../db/schema");
+    const { users } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = getDb();
+    await db.update(users).set({ profileVisibility: "friends_only" }).where(eq(users.id, userBId)).run();
+
+    const res = await app.request("/achievements/u/bob/movies_10", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
 describe("GET /leaderboard", () => {
   it("returns 401 without auth", async () => {
     const res = await app.request("/leaderboard");

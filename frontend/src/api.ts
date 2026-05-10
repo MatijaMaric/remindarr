@@ -1258,6 +1258,29 @@ export async function getUserAchievements(username: string, signal?: AbortSignal
   return data.achievements.map((a) => ({ ...a, progress: a.progress ?? 0 }));
 }
 
+export interface AchievementDetail extends UserAchievement {
+  ladder: {
+    rungs: Array<{
+      key: string;
+      title: string;
+      threshold: number;
+      rungIndex: number;
+      points: number;
+      earned: boolean;
+      earnedAt: string | null;
+    }>;
+  } | null;
+  history: Array<{ earnedAt: string; context: Record<string, unknown> | null }>;
+}
+
+export async function getMyAchievementDetail(key: string, signal?: AbortSignal): Promise<AchievementDetail> {
+  return await fetchJson<AchievementDetail>(`/achievements/${encodeURIComponent(key)}/me`, { signal });
+}
+
+export async function getUserAchievementDetail(username: string, key: string, signal?: AbortSignal): Promise<AchievementDetail> {
+  return await fetchJson<AchievementDetail>(`/achievements/u/${encodeURIComponent(username)}/${encodeURIComponent(key)}`, { signal });
+}
+
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
 
 export async function getLeaderboard(signal?: AbortSignal): Promise<LeaderboardEntry[]> {
