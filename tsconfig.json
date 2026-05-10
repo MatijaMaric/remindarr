@@ -8,7 +8,9 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "types": ["@types/bun"]
+    "types": ["@types/bun"],
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["server/**/*.ts"],
   "exclude": ["node_modules", "frontend"]
