@@ -8,6 +8,16 @@ export type AchievementKind =
   | "social_first_follow"
   | "speed_binge_season";
 
+export type Category =
+  | "watching"
+  | "streaks"
+  | "genres"
+  | "social"
+  | "special"
+  | "explorer"
+  | "habit"
+  | "long-haul";
+
 export interface Achievement {
   key: string;           // immutable PK — NEVER reused (orphan rows in user_achievements if renamed)
   kind: AchievementKind;
@@ -50,3 +60,95 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   // Speed
   { key: "binge_season_24h", kind: "speed_binge_season", threshold: 8, windowHours: 24, points: 50, title: "Speedrun", description: "Watch 8 episodes of one season in 24 hours", icon: "Zap" },
 ];
+
+export interface AchievementMeta {
+  category: Category;
+  family: string | null;
+  rungIndex: number | null;
+  tier: "ladder" | "one-shot";
+  repeatable: boolean;
+}
+
+function deriveCategory(kind: AchievementKind): Category {
+  switch (kind) {
+    case "count_movies":
+    case "count_episodes":
+      return "watching";
+    case "streak_days":
+      return "streaks";
+    case "genre_count":
+      return "genres";
+    case "social_first_recommendation":
+    case "social_first_follow":
+      return "social";
+    case "completionist":
+    case "speed_binge_season":
+      return "special";
+  }
+}
+
+function deriveFamily(achievement: Achievement): string | null {
+  switch (achievement.kind) {
+    case "count_movies":
+      return "movies";
+    case "count_episodes":
+      return "episodes";
+    case "streak_days":
+      return "streaks";
+    case "genre_count":
+      if (achievement.genre && achievement.genre !== "__any__") {
+        return "genre_" + achievement.genre.toLowerCase();
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Pre-computes category, family, rungIndex, tier, and repeatable for each
+ * achievement in the registry. Call once at module load; use the returned Map
+ * in route handlers.
+ */
+export function computeAchievementMeta(
+  achievements: readonly Achievement[],
+): Map<string, AchievementMeta> {
+  // Build family → sorted entries (by threshold asc) to assign rungIndex
+  const familyBuckets = new Map<string, Achievement[]>();
+  for (const a of achievements) {
+    const family = deriveFamily(a);
+    if (family !== null) {
+      const bucket = familyBuckets.get(family) ?? [];
+      bucket.push(a);
+      familyBuckets.set(family, bucket);
+    }
+  }
+  // Sort each bucket by threshold ascending
+  for (const bucket of familyBuckets.values()) {
+    bucket.sort((a, b) => a.threshold - b.threshold);
+  }
+  // Build rungIndex lookup: key → index within its family bucket
+  const rungIndexByKey = new Map<string, number>();
+  for (const bucket of familyBuckets.values()) {
+    bucket.forEach((a, idx) => {
+      rungIndexByKey.set(a.key, idx);
+    });
+  }
+
+  const result = new Map<string, AchievementMeta>();
+  for (const a of achievements) {
+    const family = deriveFamily(a);
+    const rungIndex = family !== null ? (rungIndexByKey.get(a.key) ?? null) : null;
+    result.set(a.key, {
+      category: deriveCategory(a.kind),
+      family,
+      rungIndex,
+      tier: family !== null ? "ladder" : "one-shot",
+      repeatable: false,
+    });
+  }
+  return result;
+}
+
+/** Pre-computed meta map — computed once at module load. */
+export const ACHIEVEMENT_META: Map<string, AchievementMeta> = computeAchievementMeta(ACHIEVEMENTS);

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/schema";
-import { ACHIEVEMENTS } from "../achievements/definitions";
+import { ACHIEVEMENTS, ACHIEVEMENT_META } from "../achievements/definitions";
 import { getUserAchievements } from "../db/repository/achievements";
 import { getStreak } from "../db/repository/streaks";
 import { getUserVisibilityByUsername } from "../db/repository/profile";
@@ -23,7 +23,18 @@ const usernameSchema = z.object({
 
 // GET / — Public registry (no auth required)
 achievementsApp.get("/", (c) => {
-  return ok(c, { achievements: ACHIEVEMENTS });
+  const achievements = ACHIEVEMENTS.map((a) => {
+    const meta = ACHIEVEMENT_META.get(a.key);
+    return {
+      ...a,
+      category: meta?.category ?? "watching",
+      family: meta?.family ?? null,
+      rungIndex: meta?.rungIndex ?? null,
+      tier: meta?.tier ?? "one-shot",
+      repeatable: meta?.repeatable ?? false,
+    };
+  });
+  return ok(c, { achievements });
 });
 
 // GET /me — User's merged progress (auth required)
@@ -35,6 +46,8 @@ achievementsApp.get("/me", requireAuth, async (c) => {
 
   const result = ACHIEVEMENTS.map((a) => {
     const row = progressMap.get(a.key);
+    const meta = ACHIEVEMENT_META.get(a.key);
+    const earnedAt = row?.earnedAt ?? null;
     return {
       key: a.key,
       kind: a.kind,
@@ -46,8 +59,17 @@ achievementsApp.get("/me", requireAuth, async (c) => {
       genre: a.genre,
       windowHours: a.windowHours,
       progress: row?.progress ?? 0,
-      earned: row?.earnedAt != null,
-      earnedAt: row?.earnedAt ?? null,
+      earned: earnedAt != null,
+      earnedAt,
+      category: meta?.category ?? "watching",
+      family: meta?.family ?? null,
+      rungIndex: meta?.rungIndex ?? null,
+      tier: meta?.tier ?? "one-shot",
+      repeatable: meta?.repeatable ?? false,
+      earnedCount: earnedAt != null ? 1 : 0,
+      lastEarnedAt: earnedAt,
+      nextRung: null,
+      rarity: null,
     };
   });
 
@@ -84,6 +106,7 @@ achievementsApp.get("/u/:username", requireAuth, zValidator("param", usernameSch
     .filter((r) => r.earnedAt != null)
     .map((r) => {
       const def = ACHIEVEMENTS.find((a) => a.key === r.achievementKey);
+      const meta = ACHIEVEMENT_META.get(r.achievementKey);
       return {
         key: r.achievementKey,
         kind: def?.kind ?? "count_movies",
@@ -97,6 +120,11 @@ achievementsApp.get("/u/:username", requireAuth, zValidator("param", usernameSch
         // Progress hidden for other users — only earned status shown
         earned: true,
         earnedAt: r.earnedAt,
+        category: meta?.category ?? "watching",
+        family: meta?.family ?? null,
+        rungIndex: meta?.rungIndex ?? null,
+        tier: meta?.tier ?? "one-shot",
+        repeatable: meta?.repeatable ?? false,
       };
     });
 

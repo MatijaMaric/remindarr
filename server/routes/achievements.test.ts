@@ -5,9 +5,11 @@ import { createUser, createSession, getSessionWithUser, upsertTitles } from "../
 import { makeParsedTitle } from "../test-utils/fixtures";
 import { requireAuth, optionalAuth } from "../middleware/auth";
 import * as achievementsRepo from "../db/repository/achievements";
+import { upsertAchievementDef } from "../db/repository/achievements";
 import * as streaksRepo from "../db/repository/streaks";
 import { follow } from "../db/repository";
 import achievementsRoutes, { leaderboardApp, streakApp } from "./achievements";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 import type { AppEnv } from "../types";
 
 function createMockAuth() {
@@ -83,12 +85,74 @@ describe("GET /achievements", () => {
     const body = await res.json();
     expect(Array.isArray(body.achievements)).toBe(true);
     expect(body.achievements.length).toBeGreaterThan(0);
-    // Verify structure of registry entries
+    // Verify base structure of registry entries
     const first = body.achievements[0];
     expect(first).toHaveProperty("key");
     expect(first).toHaveProperty("kind");
     expect(first).toHaveProperty("title");
     expect(first).toHaveProperty("points");
+    // Verify enriched meta fields are present on every row
+    for (const row of body.achievements) {
+      expect(row).toHaveProperty("category");
+      expect(row).toHaveProperty("family");
+      expect(row).toHaveProperty("rungIndex");
+      expect(row).toHaveProperty("tier");
+      expect(row).toHaveProperty("repeatable");
+      expect(typeof row.category).toBe("string");
+      expect(["ladder", "one-shot"]).toContain(row.tier);
+      expect(typeof row.repeatable).toBe("boolean");
+    }
+  });
+
+  it("computes correct category for count_movies kind", async () => {
+    const res = await app.request("/achievements");
+    const body = await res.json();
+    const movieRow = body.achievements.find((a: any) => a.key === "movies_10");
+    expect(movieRow.category).toBe("watching");
+    expect(movieRow.family).toBe("movies");
+    expect(movieRow.tier).toBe("ladder");
+    expect(movieRow.rungIndex).toBe(0);
+  });
+
+  it("computes correct rungIndex for ladder family", async () => {
+    const res = await app.request("/achievements");
+    const body = await res.json();
+    const movies = body.achievements
+      .filter((a: any) => a.family === "movies")
+      .sort((a: any, b: any) => a.threshold - b.threshold);
+    movies.forEach((row: any, idx: number) => {
+      expect(row.rungIndex).toBe(idx);
+    });
+  });
+
+  it("computes one-shot tier and null family for social achievements", async () => {
+    const res = await app.request("/achievements");
+    const body = await res.json();
+    const socialRow = body.achievements.find((a: any) => a.key === "first_recommendation");
+    expect(socialRow.category).toBe("social");
+    expect(socialRow.family).toBeNull();
+    expect(socialRow.tier).toBe("one-shot");
+    expect(socialRow.rungIndex).toBeNull();
+  });
+
+  it("genre_explorer has null family and one-shot tier", async () => {
+    const res = await app.request("/achievements");
+    const body = await res.json();
+    const explorerRow = body.achievements.find((a: any) => a.key === "genre_explorer");
+    expect(explorerRow.category).toBe("genres");
+    expect(explorerRow.family).toBeNull();
+    expect(explorerRow.tier).toBe("one-shot");
+    expect(explorerRow.rungIndex).toBeNull();
+  });
+
+  it("specific genre achievements have family and ladder tier", async () => {
+    const res = await app.request("/achievements");
+    const body = await res.json();
+    const actionRow = body.achievements.find((a: any) => a.key === "genre_action_25");
+    expect(actionRow.category).toBe("genres");
+    expect(actionRow.family).toBe("genre_action");
+    expect(actionRow.tier).toBe("ladder");
+    expect(actionRow.rungIndex).toBe(0);
   });
 });
 
@@ -104,6 +168,49 @@ describe("GET /achievements/me", () => {
     expect(first).toHaveProperty("progress");
     expect(first).toHaveProperty("earned");
     expect(first).toHaveProperty("earnedAt");
+    // Verify enriched meta fields are present on every row
+    for (const row of body.achievements) {
+      expect(row).toHaveProperty("category");
+      expect(row).toHaveProperty("family");
+      expect(row).toHaveProperty("rungIndex");
+      expect(row).toHaveProperty("tier");
+      expect(row).toHaveProperty("repeatable");
+      // /me-only extra fields
+      expect(row).toHaveProperty("earnedCount");
+      expect(row).toHaveProperty("lastEarnedAt");
+      expect(row).toHaveProperty("nextRung");
+      expect(row).toHaveProperty("rarity");
+      expect(typeof row.earnedCount).toBe("number");
+      expect(row.nextRung).toBeNull();
+      expect(row.rarity).toBeNull();
+    }
+  });
+
+  it("earnedCount is 0 when not earned, 1 when earned", async () => {
+    // Seed the achievement definition (FK parent) then insert user row
+    const moviesDef = ACHIEVEMENTS.find((a) => a.key === "movies_10")!;
+    await upsertAchievementDef(moviesDef);
+
+    const { getDb } = await import("../db/schema");
+    const { userAchievements } = await import("../db/schema");
+    const db = getDb();
+    await db.insert(userAchievements).values({
+      userId: userAId,
+      achievementKey: "movies_10",
+      progress: 10,
+      earnedAt: new Date().toISOString(),
+    }).run();
+
+    const res = await app.request("/achievements/me", {
+      headers: authHeaders(userAToken),
+    });
+    const body = await res.json();
+    const earnedRow = body.achievements.find((a: any) => a.key === "movies_10");
+    const unearnedRow = body.achievements.find((a: any) => a.key === "movies_50");
+    expect(earnedRow.earnedCount).toBe(1);
+    expect(earnedRow.lastEarnedAt).not.toBeNull();
+    expect(unearnedRow.earnedCount).toBe(0);
+    expect(unearnedRow.lastEarnedAt).toBeNull();
   });
 
   it("returns 401 without auth", async () => {
@@ -155,6 +262,43 @@ describe("GET /achievements/u/:username", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body.achievements)).toBe(true);
+  });
+
+  it("returns meta fields on earned rows for public profile", async () => {
+    const { getDb } = await import("../db/schema");
+    const { users, userAchievements } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = getDb();
+    await db.update(users).set({ profileVisibility: "public" }).where(eq(users.id, userBId)).run();
+
+    // Seed the achievement definition (FK parent) then insert user row
+    const streakDef = ACHIEVEMENTS.find((a) => a.key === "streak_7")!;
+    await upsertAchievementDef(streakDef);
+
+    // Give bob an earned achievement
+    await db.insert(userAchievements).values({
+      userId: userBId,
+      achievementKey: "streak_7",
+      progress: 7,
+      earnedAt: new Date().toISOString(),
+    }).run();
+
+    const res = await app.request("/achievements/u/bob", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.achievements.length).toBe(1);
+    const row = body.achievements[0];
+    expect(row.category).toBe("streaks");
+    expect(row.family).toBe("streaks");
+    expect(row.tier).toBe("ladder");
+    expect(typeof row.rungIndex).toBe("number");
+    expect(row.repeatable).toBe(false);
+    // /u/:username should NOT expose /me-only fields
+    expect(row.earnedCount).toBeUndefined();
+    expect(row.nextRung).toBeUndefined();
+    expect(row.rarity).toBeUndefined();
   });
 
   it("validates param: empty username returns 400", async () => {
