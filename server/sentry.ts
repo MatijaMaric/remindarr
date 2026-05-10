@@ -7,7 +7,7 @@
  */
 
 interface SentryLike {
-  captureException(err: unknown): string;
+  captureException(err: unknown, context?: Record<string, unknown>): string;
   startSpan<T>(opts: { name: string; op?: string; attributes?: Record<string, string> }, fn: () => T): T;
   withMonitor<T>(monitorSlug: string, fn: () => Promise<T>, config?: unknown): Promise<T>;
   flush(timeoutMs?: number): Promise<boolean>;
@@ -18,7 +18,7 @@ interface SentryLike {
 }
 
 const noopSentry: SentryLike = {
-  captureException: () => "",
+  captureException: (_err?: unknown, _ctx?: unknown) => "",
   startSpan: (_opts, fn) => fn(),
   withMonitor: (_slug, fn) => fn(),
   flush: () => Promise.resolve(true),

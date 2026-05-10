@@ -14,6 +14,7 @@ import { runWithCache } from "../cache";
 import { CloudflareKvCache } from "../cache/cloudflare-kv";
 import { MemoryCache } from "../cache/memory";
 import { logger } from "../logger";
+import Sentry from "../sentry";
 import { handlers } from "./processor";
 import type { DrizzleDb } from "../platform/types";
 
@@ -329,7 +330,7 @@ export class JobQueueDO {
           retryAt,
           job.id,
         );
-        log.warn("Job failed, will retry", { name: job.name, jobId: job.id, attempt: newAttempts, retryAt, err });
+        log.warn("Job failed, will retry", { name: job.name, jobId: job.id, attempt: newAttempts, retryAt, error: message });
       } else {
         this.ctx.storage.sql.exec(
           "UPDATE jobs SET status = 'failed', error = ?, completed_at = ? WHERE id = ?",
@@ -337,7 +338,20 @@ export class JobQueueDO {
           new Date().toISOString(),
           job.id,
         );
-        log.error("Job failed permanently", { name: job.name, jobId: job.id, attempts: newAttempts, err });
+        Sentry.captureException(err, {
+          level: "error",
+          tags: { jobName: job.name, jobId: String(job.id) },
+          extra: { attempts: newAttempts, maxAttempts: job.max_attempts, lastError: message },
+          fingerprint: ["job-permanent-failure", job.name],
+        });
+        log.error("Job failed permanently", {
+          name: job.name,
+          jobId: job.id,
+          attempts: newAttempts,
+          maxAttempts: job.max_attempts,
+          error: message,
+          stack: err instanceof Error ? err.stack : undefined,
+        });
       }
     }
 

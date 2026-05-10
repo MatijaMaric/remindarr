@@ -10,11 +10,12 @@
  * idempotency, re-arm after processing) call alarm() and manipulate the
  * _actor_alarms table directly.
  */
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { Database } from "bun:sqlite";
 import { JobQueueDO } from "./durable-object";
 import * as processorModule from "./processor";
 import * as repository from "../db/repository";
+import Sentry from "../sentry";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 
 // ─── Fake CF storage ──────────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ const fakeEnv = {
 // ─── Spy setup ────────────────────────────────────────────────────────────────
 
 const mockSyncTitles = spyOn(processorModule.handlers, "sync-titles" as any);
+const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
 
 // Snapshot original handlers so afterEach can restore them (prevents mutation leaking to processor.test.ts)
 const originalHandlers: Record<string, (data: string | null) => Promise<void>> = { ...processorModule.handlers };
@@ -151,6 +153,7 @@ describe("JobQueueDO", () => {
   beforeEach(() => {
     setupTestDb(); // keep the shared DB fresh for processor imports
     ({ do_, state } = makeDO("sync-titles"));
+    captureExceptionSpy.mockClear();
 
     // Reset handler mocks
     for (const key of Object.keys(processorModule.handlers)) {
@@ -290,6 +293,35 @@ describe("JobQueueDO", () => {
     expect(rows[0].status).toBe("failed");
     expect(rows[0].error).toBe("fatal error");
     expect(rows[0].completed_at).not.toBeNull();
+  });
+
+  it("captures permanent failures to Sentry with stable fingerprint and tags", async () => {
+    const fatalError = new Error("fatal error");
+    processorModule.handlers["sync-titles"] = async () => { throw fatalError; };
+    await do_.enqueue("sync-titles", null, undefined, 1);
+    await do_.runJob(null);
+
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+    const capturedErr = captureExceptionSpy.mock.calls[0]?.[0];
+    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1];
+    expect(capturedErr).toBe(fatalError);
+    expect(capturedCtx).toMatchObject({
+      level: "error",
+      tags: { jobName: "sync-titles", jobId: expect.any(String) },
+      extra: { attempts: 1, maxAttempts: 1, lastError: "fatal error" },
+      fingerprint: ["job-permanent-failure", "sync-titles"],
+    });
+  });
+
+  it("does NOT capture transient retry failures to Sentry", async () => {
+    processorModule.handlers["sync-titles"] = async () => {
+      throw new Error("transient error");
+    };
+    // maxAttempts=3 so first failure is a retry, not permanent
+    await do_.enqueue("sync-titles", null, undefined, 3);
+    await do_.runJob(null);
+
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
   });
 
   // ── unknown handler ───────────────────────────────────────────────────────
@@ -605,6 +637,11 @@ describe("JobQueueDO", () => {
     deleteExpiredSessionsSpy.mockRestore();
     cleanupState.close();
   });
+});
+
+// Restore module-level spies after all tests so they don't leak into later test files on Linux CI.
+afterAll(() => {
+  captureExceptionSpy.mockRestore();
 });
 
 // Suppress unused-variable warning for the spy (it suppresses console output in tests)
