@@ -35,7 +35,7 @@
   "dependencies": {
     "@better-auth/passkey": "^1.5.6",
     "@cloudflare/actors": "^0.0.1-beta.6",
-    "@hono/zod-validator": "^0.7.6",
+    "@hono/zod-validator": "^0.8.0",
     "@sentry/bun": "^10.43.0",
     "@sentry/cloudflare": "^10.46.0",
     "@simplewebauthn/server": "^13.3.0",
