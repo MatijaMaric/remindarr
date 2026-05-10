@@ -16,7 +16,9 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # PAT required: GITHUB_TOKEN pushes don't trigger downstream workflow runs,
+          # so all-passed would wait forever on the lockfile commit.
+          token: ${{ secrets.WORKFLOW_PAT }}
 
       - uses: oven-sh/setup-bun@v2
         with:
