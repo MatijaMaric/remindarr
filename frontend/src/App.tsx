@@ -12,7 +12,7 @@ import InstallPrompt from "./components/InstallPrompt";
 import NotificationPrompt from "./components/NotificationPrompt";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
 import AchievementToast from "./components/profile/AchievementToast";
-import { Github, Settings } from "lucide-react";
+import { ExternalLink, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
 import { useKeyboardShortcut } from "./hooks/useKeyboardShortcut";
@@ -231,7 +231,7 @@ export default function App() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors"
           >
-            <Github className="size-4" />
+            <ExternalLink className="size-4" />
             GitHub
           </a>
         </div>
