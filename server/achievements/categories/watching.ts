@@ -1,0 +1,11 @@
+import type { Achievement } from "../definitions";
+
+export const watchingAchievements: Achievement[] = [
+  { key: "movies_10",   kind: "count_movies",   threshold: 10,  points: 10,  title: "Cinephile I",    description: "Watch 10 movies",           icon: "Film" },
+  { key: "movies_50",   kind: "count_movies",   threshold: 50,  points: 40,  title: "Cinephile II",   description: "Watch 50 movies",           icon: "Film" },
+  { key: "movies_100",  kind: "count_movies",   threshold: 100, points: 100, title: "Cinephile III",  description: "Watch 100 movies",          icon: "Film" },
+  { key: "movies_500",  kind: "count_movies",   threshold: 500, points: 400, title: "Film Fanatic",   description: "Watch 500 movies",          icon: "Film" },
+  { key: "episodes_100",  kind: "count_episodes", threshold: 100,  points: 20,  title: "Binge Starter",  description: "Watch 100 episodes",   icon: "Tv" },
+  { key: "episodes_500",  kind: "count_episodes", threshold: 500,  points: 75,  title: "Couch Captain",  description: "Watch 500 episodes",   icon: "Tv" },
+  { key: "episodes_1000", kind: "count_episodes", threshold: 1000, points: 200, title: "Marathon Mind",  description: "Watch 1000 episodes",  icon: "Tv" },
+];

@@ -1,0 +1,9 @@
+import type { Achievement } from "../definitions";
+
+export const genreAchievements: Achievement[] = [
+  { key: "genre_action_25", kind: "genre_count", threshold: 25, points: 40, title: "Action Hero",    description: "Watch 25 action titles",                 icon: "Swords",   genre: "Action" },
+  { key: "genre_comedy_25", kind: "genre_count", threshold: 25, points: 40, title: "Laugh Track",    description: "Watch 25 comedy titles",                 icon: "Laugh",    genre: "Comedy" },
+  { key: "genre_horror_25", kind: "genre_count", threshold: 25, points: 40, title: "Final Girl",     description: "Watch 25 horror titles",                 icon: "Skull",    genre: "Horror" },
+  { key: "genre_drama_25",  kind: "genre_count", threshold: 25, points: 40, title: "Drama Queen",    description: "Watch 25 drama titles",                  icon: "Sparkles", genre: "Drama" },
+  { key: "genre_explorer",  kind: "genre_count", threshold: 10, points: 50, title: "Genre Explorer", description: "Watch titles from 10 different genres",  icon: "Compass",  genre: "__any__" },
+];

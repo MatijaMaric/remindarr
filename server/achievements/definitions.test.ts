@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { ACHIEVEMENTS } from "./definitions";
+import { ACHIEVEMENTS, ACHIEVEMENT_META } from "./definitions";
 
 describe("ACHIEVEMENTS registry", () => {
   it("has no duplicate keys", () => {
@@ -61,9 +61,36 @@ describe("ACHIEVEMENTS registry", () => {
       "social_first_recommendation",
       "social_first_follow",
       "speed_binge_season",
+      "monthly_count_repeatable",
+      "weekend_warrior_repeatable",
     ]);
     for (const a of ACHIEVEMENTS) {
       expect(validKinds.has(a.kind)).toBe(true);
     }
+  });
+
+  it("monthly_centurion has repeatable: true in its meta", () => {
+    const meta = ACHIEVEMENT_META.get("monthly_centurion");
+    expect(meta).toBeDefined();
+    expect(meta?.repeatable).toBe(true);
+  });
+
+  it("weekend_warrior has repeatable: true in its meta", () => {
+    const meta = ACHIEVEMENT_META.get("weekend_warrior");
+    expect(meta).toBeDefined();
+    expect(meta?.repeatable).toBe(true);
+  });
+
+  it("monthly_centurion has category: 'habit' in its meta", () => {
+    const meta = ACHIEVEMENT_META.get("monthly_centurion");
+    expect(meta).toBeDefined();
+    expect(meta?.category).toBe("habit");
+  });
+
+  it("ACHIEVEMENT_META has an entry for every achievement in ACHIEVEMENTS", () => {
+    for (const a of ACHIEVEMENTS) {
+      expect(ACHIEVEMENT_META.has(a.key)).toBe(true);
+    }
+    expect(ACHIEVEMENT_META.size).toBe(ACHIEVEMENTS.length);
   });
 });
