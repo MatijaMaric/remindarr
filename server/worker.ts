@@ -40,7 +40,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { drizzle } from "drizzle-orm/d1";
 import { getDb, runWithDb, schemaExports } from "./db/schema";
-import { getUserCount, createUser, isOidcConfigured, getOidcConfig, getUserByWatchlistShareToken, getTrackedTitles } from "./db/repository";
+import { getUserCount, createUser, isOidcConfigured, getOidcConfig, getUserByWatchlistShareToken, getTrackedTitles, deleteExpiredSessions } from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter, MemoryRateLimitStore, KvRateLimitStore } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -82,7 +82,7 @@ import { patchConfig, CONFIG } from "./config";
 import Sentry from "./sentry";
 import { withSentry } from "@sentry/cloudflare";
 import { CloudflarePlatform } from "./platform/cloudflare";
-import { armCron, enqueueOnce, processPending, recoverStale, runWithEnv, CRON_JOBS } from "./jobs/backend";
+import { armCron, cleanupOld, enqueueOnce, processPending, recoverStale, runWithEnv, CRON_JOBS } from "./jobs/backend";
 export { JobQueueDO } from "./jobs/durable-object";
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
@@ -627,6 +627,14 @@ const handler = {
         const processed = await processPending();
         if (processed > 0) {
           logger.info("Processed jobs", { count: processed });
+        }
+
+        // Daily cleanup — moved out of JobQueueDO alarm to avoid the 30-second
+        // DO alarm hard limit (#726). This handler has no such limit.
+        await deleteExpiredSessions();
+        const cleaned = await cleanupOld(cfEnv, 30);
+        if (cleaned > 0) {
+          logger.info("Daily cleanup pruned old jobs", { cleaned });
         }
       })));
     } catch (err) {
