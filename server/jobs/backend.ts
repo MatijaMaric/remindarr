@@ -15,7 +15,7 @@ import {
   recoverStaleJobs,
   cleanupOldJobs,
 } from "./processor";
-import { parseExpression } from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 import { logger } from "../logger";
 import type { DOJobRow } from "./durable-object";
 import { CRON_JOB_NAMES } from "./durable-object";
@@ -271,7 +271,7 @@ async function getJobsOverviewD1(): Promise<{
 
       let next_run = "";
       try {
-        next_run = parseExpression(cron, { currentDate: new Date() }).next().toDate().toISOString();
+        next_run = CronExpressionParser.parse(cron, { currentDate: new Date() }).next().toDate().toISOString();
       } catch {
         // ignore invalid expression
       }
