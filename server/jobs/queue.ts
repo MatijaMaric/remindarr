@@ -1,4 +1,4 @@
-import { parseExpression } from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 import { getRawDb } from "../db/bun-db";
 import { logger } from "../logger";
 
@@ -36,7 +36,7 @@ export type JobHandler = (job: Job) => Promise<void>;
 
 export function getNextCronDate(cron: string, after: Date = new Date()): Date {
   try {
-    const interval = parseExpression(cron, { currentDate: after });
+    const interval = CronExpressionParser.parse(cron, { currentDate: after });
     return interval.next().toDate();
   } catch {
     throw new Error(`Invalid cron expression: ${cron}`);
