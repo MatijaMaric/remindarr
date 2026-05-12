@@ -402,6 +402,21 @@ export async function watchEpisode(episodeId: number, userId: string) {
   });
 }
 
+export async function setWatchedEpisodeWatchedAt(
+  episodeId: number,
+  userId: string,
+  watchedAt: string,
+): Promise<void> {
+  return traceDbQuery("setWatchedEpisodeWatchedAt", async () => {
+    const db = getDb();
+    await db
+      .update(watchedEpisodes)
+      .set({ watchedAt })
+      .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+      .run();
+  });
+}
+
 export async function unwatchEpisode(episodeId: number, userId: string) {
   return traceDbQuery("unwatchEpisode", async () => {
     const db = getDb();

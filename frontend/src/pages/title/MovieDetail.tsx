@@ -20,6 +20,7 @@ import { Section } from "../../components/title-detail/Section";
 import { formatCurrency } from "../../components/title-detail/utils";
 import SectionErrorBoundary from "../../components/SectionErrorBoundary";
 import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
+import EditWatchedAtDialog from "../../components/EditWatchedAtDialog";
 
 export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { t } = useTranslation();
@@ -28,6 +29,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const [playCount, setPlayCount] = useState(0);
   const [watchHistory, setWatchHistory] = useState<WatchHistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -117,13 +119,16 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                 i < watchHistory.length - 1 ? "border-b border-zinc-800/50" : ""
               }`}
             >
-              <span className="text-zinc-500 shrink-0">
-                {new Date(entry.watchedAt).toLocaleDateString("en-US", {
+              <button
+                onClick={() => setEditEntry(entry.id)}
+                className="text-zinc-500 shrink-0 hover:text-zinc-300 cursor-pointer transition-colors underline-offset-2 hover:underline"
+              >
+                {new Date(entry.watchedAt.replace(" ", "T") + "Z").toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",
                 })}
-              </span>
+              </button>
               {entry.note && <span className="text-zinc-400 italic">{entry.note}</span>}
             </li>
           ))}
@@ -248,6 +253,22 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             )}
           </div>
         </Section>
+      )}
+
+      {editEntry && (
+        <EditWatchedAtDialog
+          open={true}
+          onClose={() => setEditEntry(null)}
+          entryId={editEntry}
+          currentWatchedAt={watchHistory.find(e => e.id === editEntry)?.watchedAt ?? ""}
+          anchorDate={title.release_date}
+          onUpdated={(newWatchedAt) => {
+            setWatchHistory(prev =>
+              prev.map(e => e.id === editEntry ? { ...e, watchedAt: newWatchedAt } : e)
+            );
+            setEditEntry(null);
+          }}
+        />
       )}
     </div>
   );

@@ -5,15 +5,30 @@ import {
   getEpisodeAirDate, getReleasedEpisodeIds, getReleasedEpisodesWithAirDate,
   watchTitle, unwatchTitle, getEpisodeTitleId, getEpisodeTitleIds,
   backdateWatchedEpisodesToAirDate,
+  setWatchedTitleWatchedAt, setWatchedEpisodeWatchedAt,
 } from "../db/repository";
-import { logWatch, getTitlePlayCount, getTitleWatchHistory } from "../db/repository/watch-history";
+import { logWatch, getTitlePlayCount, getTitleWatchHistory, getWatchHistoryById, updateWatchHistoryWatchedAt, getLatestWatchHistoryFor } from "../db/repository/watch-history";
 import { localDateForTimezone } from "../utils/timezone";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 import { onWatchedTitle, onWatchedEpisode, onWatchedEpisodesBulk } from "../achievements/triggers";
+import { MemoryRateLimitStore } from "../middleware/rate-limit";
+import { logger } from "../logger";
 
 const app = new Hono<AppEnv>();
+
+const log = logger.child({ module: "watched" });
+
+const editHistorySchema = z.object({
+  watched_at: z.string().regex(/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/),
+});
+
+let _watchedEditStore: MemoryRateLimitStore | null = null;
+function getWatchedEditStore(): MemoryRateLimitStore {
+  if (!_watchedEditStore) _watchedEditStore = new MemoryRateLimitStore();
+  return _watchedEditStore;
+}
 
 function isReleased(airDate: string | null, timezone: string): boolean {
   if (!airDate) return false;
@@ -104,6 +119,45 @@ app.get("/history/:titleId", async (c) => {
     getTitlePlayCount(user.id, titleId),
   ]);
   return ok(c, { history, playCount });
+});
+
+app.patch("/history/:id", zValidator("json", editHistorySchema), async (c) => {
+  const user = c.get("user")!;
+  const id = c.req.param("id");
+  const { watched_at } = c.req.valid("json");
+  const timezone = c.req.header("X-Timezone") || "UTC";
+
+  const { allowed, retryAfterMs } = await getWatchedEditStore().consume(
+    `watched-edit:${user.id}`, 50, 60 * 60 * 1000, Date.now(),
+  );
+  if (!allowed) {
+    c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
+    return c.json({ error: "Too many requests" }, 429);
+  }
+
+  const row = await getWatchHistoryById(id, user.id);
+  if (!row) return c.json({ error: "Not found" }, 404);
+
+  const todayLocal = localDateForTimezone(timezone);
+  if (watched_at.slice(0, 10) > todayLocal) {
+    return c.json({ error: "Validation failed", issues: [{ message: "Cannot set a future watched date" }] }, 400);
+  }
+
+  const normalised = watched_at.length === 10 ? `${watched_at} 00:00:00` : watched_at;
+
+  await updateWatchHistoryWatchedAt(id, user.id, normalised);
+
+  const latest = await getLatestWatchHistoryFor(user.id, row.titleId, row.episodeId);
+  if (latest === normalised) {
+    if (row.episodeId === null) {
+      await setWatchedTitleWatchedAt(row.titleId, user.id, normalised);
+    } else {
+      await setWatchedEpisodeWatchedAt(row.episodeId, user.id, normalised);
+    }
+  }
+
+  log.info("Watched timestamp edited", { historyId: id, userId: user.id });
+  return ok(c, { id, watchedAt: normalised });
 });
 
 app.post("/:episodeId", async (c) => {

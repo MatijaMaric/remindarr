@@ -38,6 +38,7 @@ export {
   getReleasedEpisodesWithAirDate,
   watchEpisode,
   unwatchEpisode,
+  setWatchedEpisodeWatchedAt,
   watchEpisodesBulk,
   unwatchEpisodesBulk,
   backdateWatchedEpisodesToAirDate,
@@ -50,6 +51,9 @@ export {
   logWatch,
   getTitlePlayCount,
   getTitleWatchHistory,
+  getWatchHistoryById,
+  updateWatchHistoryWatchedAt,
+  getLatestWatchHistoryFor,
 } from "./watch-history";
 
 export {
@@ -144,6 +148,7 @@ export {
   watchTitle,
   unwatchTitle,
   getWatchedTitleIds,
+  setWatchedTitleWatchedAt,
 } from "./watched-titles";
 
 export {

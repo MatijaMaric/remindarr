@@ -40,6 +40,21 @@ export async function unwatchTitle(titleId: string, userId: string) {
   });
 }
 
+export async function setWatchedTitleWatchedAt(
+  titleId: string,
+  userId: string,
+  watchedAt: string,
+): Promise<void> {
+  return traceDbQuery("setWatchedTitleWatchedAt", async () => {
+    const db = getDb();
+    await db
+      .update(watchedTitles)
+      .set({ watchedAt })
+      .where(and(eq(watchedTitles.titleId, titleId), eq(watchedTitles.userId, userId)))
+      .run();
+  });
+}
+
 export async function getWatchedTitleIds(userId: string): Promise<Set<string>> {
   return traceDbQuery("getWatchedTitleIds", async () => {
     const db = getDb();

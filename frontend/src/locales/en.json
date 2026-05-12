@@ -1,4 +1,13 @@
 {
+  "watchedAt": {
+    "editTitle": "Edit watched date",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "lastWeek": "Last week",
+    "onRelease": "On release",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
   "admin": {
     "accessDenied": "Access denied",
     "backToSettings": "Back to Settings",

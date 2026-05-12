@@ -286,6 +286,13 @@ function ActivityFeed({ username, isOwnProfile, pageSize, fetcher }: ActivityFee
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setTick((t) => t + 1);
+    window.addEventListener("watch-history:updated", handler);
+    return () => window.removeEventListener("watch-history:updated", handler);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -303,7 +310,7 @@ function ActivityFeed({ username, isOwnProfile, pageSize, fetcher }: ActivityFee
         setLoading(false);
       });
     return () => controller.abort();
-  }, [username, pageSize, fetcher]);
+  }, [username, pageSize, fetcher, tick]);
 
   const handleHide = useCallback((event: ActivityEvent) => {
     setEvents((prev) => prev.filter((e) => e.id !== event.id));
