@@ -59,10 +59,13 @@ describe("AuthContext", () => {
     try {
       render(<LoginPage />, { wrapper: Wrapper });
 
+      // Drain the Promise.allSettled microtask chain before waitFor starts polling
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       // The OIDC button should appear even though session check failed
       await waitFor(() => {
         expect(screen.getByText(/PocketID/)).toBeDefined();
-      });
+      }, { timeout: 3000 });
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -97,10 +100,13 @@ describe("AuthContext", () => {
     try {
       render(<LoginPage />, { wrapper: Wrapper });
 
+      // Drain the Promise.allSettled microtask chain before waitFor starts polling
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       // With a valid session and no OIDC, local login form should render
       await waitFor(() => {
         expect(screen.getByLabelText(/username/i)).toBeDefined();
-      });
+      }, { timeout: 3000 });
     } finally {
       globalThis.fetch = originalFetch;
     }
