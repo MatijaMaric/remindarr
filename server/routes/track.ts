@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle, setSnooze, setRemindOnRelease, getTitleById } from "../db/repository";
+import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle, getTagsForTitles, addTagToTitlesBulk, setSnooze, setRemindOnRelease, getTitleById } from "../db/repository";
 import { getDb, jobs } from "../db/schema";
 import { and, eq, sql as dsql } from "drizzle-orm";
 import { getUserPace, computeEta } from "../db/repository/stats";
@@ -342,13 +342,18 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
       return c.json({ error: "Validation failed", issues: [{ message: "Tag must be between 1 and 30 characters" }] }, 400);
     }
     const normalizedTag = tag.trim().toLowerCase();
-    for (const titleId of titleIds) {
-      const existing = await getTagsForTitle(user.id, titleId);
-      if (!existing.includes(normalizedTag) && existing.length < 10) {
-        await setTags(user.id, titleId, [...existing, normalizedTag]);
-      }
-      updated++;
+
+    const existingByTitle = await getTagsForTitles(user.id, titleIds);
+    const eligible = titleIds.filter((titleId) => {
+      const existing = existingByTitle.get(titleId) ?? [];
+      return !existing.includes(normalizedTag) && existing.length < 10;
+    });
+
+    if (eligible.length > 0) {
+      await addTagToTitlesBulk(user.id, eligible, normalizedTag);
     }
+
+    updated = titleIds.length;
   } else if (action === "set_notification_mode") {
     const mode = (payload?.mode ?? null) as NotificationMode | null;
     if (mode !== null && !VALID_NOTIFICATION_MODES.includes(mode as (typeof VALID_NOTIFICATION_MODES)[number])) {
