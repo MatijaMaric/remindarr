@@ -37,6 +37,9 @@ mock.module("../context/AuthContext", () => ({
     refresh: () => Promise.resolve(),
   }),
   AuthContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
+  // AuthProvider export preserved so sibling test files that import it from
+  // the same cached module don't get "Export named 'AuthProvider' not found".
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 const { default: LoginPage } = await import("./LoginPage");
