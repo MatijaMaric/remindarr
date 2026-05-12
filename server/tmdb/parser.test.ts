@@ -208,6 +208,20 @@ describe("parseDiscoverMovie", () => {
     expect(result.genres).toEqual(["Action"]);
   });
 
+  it("handles null genre_ids without throwing (regression: #786)", () => {
+    const genreMap = new Map([[28, "Action"]]);
+    const movie = makeTmdbDiscoverMovie({ genre_ids: null as any });
+    const result = parseDiscoverMovie(movie, genreMap);
+    expect(result.genres).toEqual([]);
+  });
+
+  it("handles undefined genre_ids without throwing (regression: #786)", () => {
+    const genreMap = new Map([[28, "Action"]]);
+    const movie = makeTmdbDiscoverMovie({ genre_ids: undefined as any });
+    const result = parseDiscoverMovie(movie, genreMap);
+    expect(result.genres).toEqual([]);
+  });
+
   it("parses original_title", () => {
     const genreMap = new Map([[28, "Action"]]);
     const movie = makeTmdbDiscoverMovie({ original_title: "Pelicula" });
@@ -233,6 +247,20 @@ describe("parseDiscoverTv", () => {
     expect(result.objectType).toBe("SHOW");
     expect(result.title).toBe("Discover Show");
     expect(result.genres).toEqual(["Drama"]);
+  });
+
+  it("handles null genre_ids without throwing (regression: #786)", () => {
+    const genreMap = new Map([[18, "Drama"]]);
+    const tv = makeTmdbDiscoverTv({ genre_ids: null as any });
+    const result = parseDiscoverTv(tv, genreMap);
+    expect(result.genres).toEqual([]);
+  });
+
+  it("handles undefined genre_ids without throwing (regression: #786)", () => {
+    const genreMap = new Map([[18, "Drama"]]);
+    const tv = makeTmdbDiscoverTv({ genre_ids: undefined as any });
+    const result = parseDiscoverTv(tv, genreMap);
+    expect(result.genres).toEqual([]);
   });
 
   it("parses original_name", () => {
