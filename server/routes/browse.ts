@@ -112,21 +112,22 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
   const typeValues = type ? type.split(",").filter(Boolean) : [];
 
   const user = c.get("user");
-  if (onlyMine && user) {
-    const subscribedIds = await getSubscribedProviderIds(user.id);
-    if (subscribedIds.length === 0) {
-      return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
-    }
-    const subscribedStrings = subscribedIds.map(String);
-    providerValues = providerValues.length > 0
-      ? providerValues.filter((p) => subscribedStrings.includes(p))
-      : subscribedStrings;
-    if (providerValues.length === 0) {
-      return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
-    }
-  }
 
   try {
+    if (onlyMine && user) {
+      const subscribedIds = await getSubscribedProviderIds(user.id);
+      if (subscribedIds.length === 0) {
+        return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
+      }
+      const subscribedStrings = subscribedIds.map(String);
+      providerValues = providerValues.length > 0
+        ? providerValues.filter((p) => subscribedStrings.includes(p))
+        : subscribedStrings;
+      if (providerValues.length === 0) {
+        return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
+      }
+    }
+
     const [movieGenreMap, tvGenreMap, movieProviders, tvProviders, tmdbLanguages] = await Promise.all([
       getMovieGenres(),
       getTvGenres(),
