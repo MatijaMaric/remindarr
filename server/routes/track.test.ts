@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, upsertEpisodes, createUser, createSession, getSessionWithUser } from "../db/repository";
+import { upsertTitles, upsertEpisodes, createUser, createSession, getSessionWithUser, setTags, getTagsForTitle } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import { getRawDb } from "../db/bun-db";
 import { CONFIG } from "../config";
@@ -1117,6 +1117,75 @@ describe("POST /track/bulk", () => {
     const listRes = await app.request("/track", { headers: headers() });
     const listBody = await listRes.json();
     expect(listBody.titles.every((t: any) => t.tags?.includes("favorite"))).toBe(true);
+  });
+
+  it("bulk add_tag enforces 10-tag cap per title", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-capped" })]);
+    await app.request("/track/movie-capped", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const currentUser = await getSessionWithUser(userToken);
+    const existingTags = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10"];
+    await setTags(currentUser!.id, "movie-capped", existingTags);
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-capped"], action: "add_tag", payload: { tag: "eleventh" } }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.updated).toBe(1);
+
+    const tags = await getTagsForTitle(currentUser!.id, "movie-capped");
+    expect(tags).not.toContain("eleventh");
+    expect(tags).toHaveLength(10);
+  });
+
+  it("bulk add_tag is idempotent", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-idem" })]);
+    await app.request("/track/movie-idem", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    for (let i = 0; i < 2; i++) {
+      const res = await app.request("/track/bulk", {
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ titleIds: ["movie-idem"], action: "add_tag", payload: { tag: "unique" } }),
+      });
+      expect(res.status).toBe(200);
+    }
+
+    const idemUser = await getSessionWithUser(userToken);
+    const tags = await getTagsForTitle(idemUser!.id, "movie-idem");
+    expect(tags.filter((t) => t === "unique")).toHaveLength(1);
+  });
+
+  it("bulk add_tag normalises case and whitespace", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-norm" })]);
+    await app.request("/track/movie-norm", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titleIds: ["movie-norm"], action: "add_tag", payload: { tag: "  Favorite  " } }),
+    });
+    expect(res.status).toBe(200);
+
+    const normUser = await getSessionWithUser(userToken);
+    const tags = await getTagsForTitle(normUser!.id, "movie-norm");
+    expect(tags).toContain("favorite");
+    expect(tags).not.toContain("  Favorite  ");
   });
 
   it("bulk set_notification_mode updates all selected titles", async () => {

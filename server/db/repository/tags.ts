@@ -1,4 +1,4 @@
-import { eq, and, notInArray } from "drizzle-orm";
+import { eq, and, notInArray, inArray } from "drizzle-orm";
 import { getDb, titleTags } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
@@ -35,6 +35,49 @@ export async function getTagsForTitle(userId: string, titleId: string): Promise<
       .where(and(eq(titleTags.userId, userId), eq(titleTags.titleId, titleId)))
       .all();
     return rows.map((r) => r.tag);
+  });
+}
+
+export async function getTagsForTitles(
+  userId: string,
+  titleIds: string[],
+): Promise<Map<string, string[]>> {
+  return traceDbQuery("getTagsForTitles", async () => {
+    if (titleIds.length === 0) return new Map();
+    const db = getDb();
+    const rows = await db
+      .select({ titleId: titleTags.titleId, tag: titleTags.tag })
+      .from(titleTags)
+      .where(and(eq(titleTags.userId, userId), inArray(titleTags.titleId, titleIds)))
+      .all();
+    const out = new Map<string, string[]>();
+    for (const r of rows) {
+      const list = out.get(r.titleId) ?? [];
+      list.push(r.tag);
+      out.set(r.titleId, list);
+    }
+    return out;
+  });
+}
+
+const BULK_TAG_CHUNK_SIZE = 30;
+
+export async function addTagToTitlesBulk(
+  userId: string,
+  titleIds: string[],
+  tag: string,
+): Promise<void> {
+  return traceDbQuery("addTagToTitlesBulk", async () => {
+    if (titleIds.length === 0) return;
+    const db = getDb();
+    for (let i = 0; i < titleIds.length; i += BULK_TAG_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + BULK_TAG_CHUNK_SIZE);
+      await db
+        .insert(titleTags)
+        .values(chunk.map((titleId) => ({ userId, titleId, tag })))
+        .onConflictDoNothing()
+        .run();
+    }
   });
 }
 
