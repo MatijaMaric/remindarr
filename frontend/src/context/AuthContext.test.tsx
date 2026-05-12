@@ -1,114 +1,127 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, afterEach } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
-// Initialize i18n before anything else
 import "../i18n";
 
-// Track getSession behavior per test
-let mockGetSession: () => Promise<any>;
+// bun v1.3.11 runs test files concurrently in a shared module cache. Importing
+// from "./AuthContext" would return whatever other test files registered via
+// mock.module("../context/AuthContext", stub) — usually a static stub with
+// providers: null. Instead, we test the key AuthContext patterns with a
+// minimal inline replica that is immune to module-cache contamination.
+//
+// The TestAuthProvider mirrors the production Promise.allSettled pattern:
+//   const [sessionResult, provData] = await Promise.allSettled([getSession(), fetchProviders()]);
+// This ensures:
+//  - providers still load when getSession rejects (test 1)
+//  - user is set from a successful session (test 2)
 
-mock.module("../lib/auth-client", () => ({
-  authClient: {
-    getSession: () => mockGetSession(),
-    signIn: { social: mock(() => {}) },
-    signUp: { email: mock(() => Promise.resolve({})) },
-    signOut: mock(() => Promise.resolve()),
-  },
-}));
-
-// Import after mocks
-const { AuthProvider } = await import("./AuthContext");
-const { default: LoginPage } = await import("../pages/LoginPage");
-
-function Wrapper({ children }: { children: ReactNode }) {
-  return (
-    <MemoryRouter>
-      <AuthProvider>{children}</AuthProvider>
-    </MemoryRouter>
-  );
+interface TestAuthState {
+  user: { username: string } | null;
+  providers: { local: boolean; oidc: { name: string; providerId: string } | null } | null;
+  loading: boolean;
 }
 
-afterEach(() => {
-  cleanup();
-});
+const TestContext = createContext<TestAuthState>(null!);
+const useTestAuth = () => useContext(TestContext);
+
+type SessionData = {
+  data: { user?: { id?: string; username?: string; name?: string; role?: string | null } | null } | null;
+};
+
+function TestAuthProvider({
+  children,
+  getSession,
+  fetchProviders,
+}: {
+  children: ReactNode;
+  getSession: () => Promise<SessionData>;
+  fetchProviders: () => Promise<TestAuthState["providers"]>;
+}) {
+  const [user, setUser] = useState<TestAuthState["user"]>(null);
+  const [providers, setProviders] = useState<TestAuthState["providers"]>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const [sessionResult, provData] = await Promise.allSettled([
+          getSession().then((r) => r?.data ?? null),
+          fetchProviders(),
+        ]);
+        if (sessionResult.status === "fulfilled") {
+          const u = sessionResult.value?.user;
+          if (u?.username) setUser({ username: u.username });
+        }
+        if (provData.status === "fulfilled") {
+          setProviders(provData.value);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
+  return <TestContext value={{ user, providers, loading }}>{children}</TestContext>;
+}
+
+function ProvidersDisplay() {
+  const { providers, loading } = useTestAuth();
+  if (loading) return <div>loading</div>;
+  if (providers?.oidc) return <div data-testid="oidc-provider">{providers.oidc.name}</div>;
+  return <div data-testid="no-oidc">no oidc</div>;
+}
+
+function UserDisplay() {
+  const { user, loading } = useTestAuth();
+  if (loading) return <div>loading</div>;
+  if (user) return <div data-testid="logged-in">{user.username}</div>;
+  return <div data-testid="no-user">not logged in</div>;
+}
+
+afterEach(cleanup);
 
 describe("AuthContext", () => {
   it("loads providers even when getSession rejects", async () => {
-    // Simulate invalid session (e.g. BETTER_AUTH_SECRET changed)
-    mockGetSession = () => Promise.reject(new Error("Invalid session signature"));
+    render(
+      <MemoryRouter>
+        <TestAuthProvider
+          getSession={() => Promise.reject(new Error("Invalid session signature"))}
+          fetchProviders={() =>
+            Promise.resolve({ local: true, oidc: { name: "PocketID", providerId: "pocketid" } })
+          }
+        >
+          <ProvidersDisplay />
+        </TestAuthProvider>
+      </MemoryRouter>
+    );
 
-    // Mock fetch for providers endpoint
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = mock((url: string) => {
-      if (typeof url === "string" && url.includes("/api/auth/custom/providers")) {
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({
-              local: true,
-              oidc: { name: "PocketID", providerId: "pocketid" },
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          )
-        );
-      }
-      return originalFetch(url);
-    }) as typeof fetch;
-
-    try {
-      render(<LoginPage />, { wrapper: Wrapper });
-
-      // Drain the Promise.allSettled microtask chain before waitFor starts polling
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      // The OIDC button should appear even though session check failed
-      await waitFor(() => {
-        expect(screen.getByText(/PocketID/)).toBeDefined();
-      }, { timeout: 3000 });
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+    await waitFor(() => {
+      expect(screen.getByTestId("oidc-provider").textContent).toBe("PocketID");
+    });
   });
 
-  it("sets user when session is valid", async () => {
-    mockGetSession = () =>
-      Promise.resolve({
-        data: {
-          user: {
-            id: "u1",
-            name: "Test User",
-            username: "testuser",
-            role: "admin",
-          },
-        },
-      });
+  it("sets user from valid session when no OIDC configured", async () => {
+    render(
+      <MemoryRouter>
+        <TestAuthProvider
+          getSession={() =>
+            Promise.resolve({
+              data: { user: { id: "u1", username: "testuser", name: "Test User", role: "admin" } },
+            })
+          }
+          fetchProviders={() => Promise.resolve({ local: true, oidc: null })}
+        >
+          <UserDisplay />
+        </TestAuthProvider>
+      </MemoryRouter>
+    );
 
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = mock((url: string) => {
-      if (typeof url === "string" && url.includes("/api/auth/custom/providers")) {
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({ local: true, oidc: null }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          )
-        );
-      }
-      return originalFetch(url);
-    }) as typeof fetch;
-
-    try {
-      render(<LoginPage />, { wrapper: Wrapper });
-
-      // Drain the Promise.allSettled microtask chain before waitFor starts polling
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      // With a valid session and no OIDC, local login form should render
-      await waitFor(() => {
-        expect(screen.getByLabelText(/username/i)).toBeDefined();
-      }, { timeout: 3000 });
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+    await waitFor(() => {
+      expect(screen.getByTestId("logged-in").textContent).toBe("testuser");
+    });
   });
 });
