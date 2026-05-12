@@ -63,7 +63,7 @@ function TestAuthProvider({
       }
     }
     init();
-  }, []);
+  }, [fetchProviders, getSession]);
 
   return <TestContext value={{ user, providers, loading }}>{children}</TestContext>;
 }
