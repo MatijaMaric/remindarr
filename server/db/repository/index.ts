@@ -75,7 +75,7 @@ export {
 } from "./tracked";
 export type { UserStatus, NotificationMode, SuggestionSourceTitle, SuggestionSeedReason } from "./tracked";
 
-export { getTagsForUser, getTagsForTitle, setTags } from "./tags";
+export { getTagsForUser, getTagsForTitle, setTags, getTagsForTitles, addTagToTitlesBulk } from "./tags";
 
 export {
   getUserPublicProfile,
