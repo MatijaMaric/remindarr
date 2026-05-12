@@ -3,7 +3,7 @@ FROM oven/bun:1.3.13 AS frontend-build
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY frontend/package.json frontend/bun.lock ./frontend/
-RUN cd frontend && bun install --frozen-lockfile
+RUN cd frontend && bun install --frozen-lockfile --ignore-scripts
 COPY frontend/ ./frontend/
 RUN cd frontend && bun run build
 
