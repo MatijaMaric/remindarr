@@ -7,6 +7,7 @@ import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { upsertTitles, trackTitle, createUser, getOffersForTitle } from "../db/repository";
 import { makeParsedTitle, makeTmdbDiscoverMovie, makeTmdbDiscoverTv, makeTmdbMovieDetails, makeTmdbTvDetails } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
+import * as repository from "../db/repository";
 
 const browseApp = (await import("./browse")).default;
 
@@ -575,6 +576,50 @@ describe("GET /browse", () => {
     it("happy-path: category + year filters + min_rating", async () => {
       const res = await app.request("/browse?category=popular&year_min=2000&min_rating=7.5");
       expect(res.status).toBe(200);
+    });
+  });
+
+  describe("onlyMine filtering", () => {
+    it("returns 500 via route catch when getSubscribedProviderIds throws", async () => {
+      spies.push(
+        spyOn(repository, "getSubscribedProviderIds").mockRejectedValueOnce(new Error("D1 connection lost"))
+      );
+
+      const userId = await createUser("onlymine-err-user", "hash");
+      const authedApp = new Hono<AppEnv>();
+      authedApp.use("/browse/*", async (c, next) => {
+        c.set("user", { id: userId, username: "onlymine-err-user", name: null, role: null, is_admin: false });
+        await next();
+      });
+      authedApp.route("/browse", browseApp);
+
+      const res = await authedApp.request("/browse?category=popular&onlyMine=true");
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body.error).toBeDefined();
+    });
+
+    it("happy-path: onlyMine=true passes subscribed providers to discover filters", async () => {
+      spies.push(
+        spyOn(repository, "getSubscribedProviderIds").mockResolvedValueOnce([8])
+      );
+
+      const userId = await createUser("onlymine-ok-user", "hash");
+      const authedApp = new Hono<AppEnv>();
+      authedApp.use("/browse/*", async (c, next) => {
+        c.set("user", { id: userId, username: "onlymine-ok-user", name: null, role: null, is_admin: false });
+        await next();
+      });
+      authedApp.route("/browse", browseApp);
+
+      const res = await authedApp.request("/browse?category=popular&onlyMine=true");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.titles).toBeDefined();
+      expect(tmdbClient.discoverMovies).toHaveBeenCalled();
+      const movieCallFilters = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const filters = movieCallFilters.filters as Record<string, string>;
+      expect(filters.withProviders).toBe("8");
     });
   });
 });

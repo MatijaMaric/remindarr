@@ -85,7 +85,7 @@ import { CloudflarePlatform } from "./platform/cloudflare";
 import { armCron, cleanupOld, enqueueOnce, processPending, recoverStale, runWithEnv, CRON_JOBS } from "./jobs/backend";
 export { JobQueueDO } from "./jobs/durable-object";
 import { createAuth } from "./auth/better-auth";
-import { migrateAuthData } from "./db/migrate-auth";
+import { migrateAuthData, resetMigrationState } from "./db/migrate-auth";
 import { syncAchievementRegistry } from "./achievements";
 import type { DrizzleDb } from "./platform/types";
 import { runWithCache } from "./cache";
@@ -209,40 +209,78 @@ function createApp(env: Env) {
   // Per-request setup: inject platform and auth into context.
   // One-time initialization (migration, admin creation, OIDC config) is
   // guarded by module-level flags so it only runs on the first request.
+  // Each init step is wrapped in its own try/catch so a transient failure
+  // doesn't 500 the request — the step retries on the next request (flags
+  // are reset on error), and the error message is captured in CF logs even
+  // when Sentry is unconfigured.
   app.use("*", async (c, next) => {
     c.set("platform", platform);
 
     // One-time data migration (skipped after first successful check)
-    await migrateAuthData();
+    try {
+      await migrateAuthData();
+    } catch (err) {
+      resetMigrationState();
+      logger.error("Auth data migration failed", {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+    }
 
     // Sync achievement registry once per isolate (idempotent UPSERT)
     if (!achievementRegistrySynced) {
       achievementRegistrySynced = true;
-      await syncAchievementRegistry();
+      try {
+        await syncAchievementRegistry();
+      } catch (err) {
+        achievementRegistrySynced = false;
+        logger.error("Achievement registry sync failed", {
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+      }
     }
 
     // Create admin on first request if no users exist
     if (!adminChecked) {
       adminChecked = true;
-      const userCount = await getUserCount();
-      if (userCount === 0) {
-        const password = crypto.randomUUID().slice(0, 16);
-        const hash = await platform.hashPassword(password);
-        await createUser("admin", hash, "Admin", "local", undefined, true);
-        // Keep the password inline in the human-readable message only —
-        // do NOT pass it as a structured field so it isn't indexed by log
-        // aggregators. The operator still sees it once in dev/server logs.
-        const bootstrapLog = logger.child({ module: "worker-bootstrap" });
-        bootstrapLog.warn(
-          `Admin account created — default password: ${password} (change it after first login)`,
-          { username: "admin" }
-        );
+      try {
+        const userCount = await getUserCount();
+        if (userCount === 0) {
+          const password = crypto.randomUUID().slice(0, 16);
+          const hash = await platform.hashPassword(password);
+          await createUser("admin", hash, "Admin", "local", undefined, true);
+          // Keep the password inline in the human-readable message only —
+          // do NOT pass it as a structured field so it isn't indexed by log
+          // aggregators. The operator still sees it once in dev/server logs.
+          const bootstrapLog = logger.child({ module: "worker-bootstrap" });
+          bootstrapLog.warn(
+            `Admin account created — default password: ${password} (change it after first login)`,
+            { username: "admin" }
+          );
+        }
+      } catch (err) {
+        adminChecked = false;
+        logger.error("Admin bootstrap check failed", {
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
       }
     }
 
     // Create auth instance per-request (D1 binding is per-request),
     // but reuse cached OIDC config to avoid DB queries every time.
-    const oidcConfig = await resolveOidcConfig();
+    let oidcConfig: Awaited<ReturnType<typeof resolveOidcConfig>>;
+    try {
+      oidcConfig = await resolveOidcConfig();
+    } catch (err) {
+      invalidateOidcConfig();
+      oidcConfig = undefined;
+      logger.error("OIDC config resolve failed", {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+    }
     const db = getDb();
     c.set("auth", createAuth(db, platform, oidcConfig));
 
