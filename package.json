@@ -14,7 +14,7 @@
     "lint": "cd frontend && bun run lint",
     "test": "bun run test:server && bun run test:frontend",
     "test:server": "bun test server/",
-    "test:frontend": "bun test --preload ./frontend/src/test-utils/setup.ts frontend/src/",
+    "test:frontend": "cd frontend && bun test src/",
     "test:e2e": "playwright test",
     "eval": "bun test evals/",
     "eval:notifications": "bun test evals/notifications/",
