@@ -1,4 +1,4 @@
-import { eq, and, count, desc } from "drizzle-orm";
+import { eq, and, count, desc, isNull } from "drizzle-orm";
 import { getDb } from "../schema";
 import { watchHistory } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -33,6 +33,65 @@ export async function getTitlePlayCount(userId: string, titleId: string): Promis
       .where(and(eq(watchHistory.userId, userId), eq(watchHistory.titleId, titleId)))
       .get();
     return row?.cnt ?? 0;
+  });
+}
+
+export async function getWatchHistoryById(
+  id: string,
+  userId: string,
+): Promise<{ id: string; userId: string; titleId: string; episodeId: number | null; watchedAt: string } | null> {
+  return traceDbQuery("getWatchHistoryById", async () => {
+    const db = getDb();
+    const row = await db
+      .select({
+        id: watchHistory.id,
+        userId: watchHistory.userId,
+        titleId: watchHistory.titleId,
+        episodeId: watchHistory.episodeId,
+        watchedAt: watchHistory.watchedAt,
+      })
+      .from(watchHistory)
+      .where(and(eq(watchHistory.id, id), eq(watchHistory.userId, userId)))
+      .get();
+    return row ?? null;
+  });
+}
+
+export async function updateWatchHistoryWatchedAt(
+  id: string,
+  userId: string,
+  watchedAt: string,
+): Promise<void> {
+  return traceDbQuery("updateWatchHistoryWatchedAt", async () => {
+    const db = getDb();
+    await db
+      .update(watchHistory)
+      .set({ watchedAt })
+      .where(and(eq(watchHistory.id, id), eq(watchHistory.userId, userId)))
+      .run();
+  });
+}
+
+export async function getLatestWatchHistoryFor(
+  userId: string,
+  titleId: string,
+  episodeId: number | null,
+): Promise<string | null> {
+  return traceDbQuery("getLatestWatchHistoryFor", async () => {
+    const db = getDb();
+    const conditions = [
+      eq(watchHistory.userId, userId),
+      eq(watchHistory.titleId, titleId),
+      episodeId === null ? isNull(watchHistory.episodeId) : eq(watchHistory.episodeId, episodeId),
+    ];
+    const row = await db
+      .select({ watchedAt: watchHistory.watchedAt })
+      .from(watchHistory)
+      .where(and(...conditions))
+      .orderBy(desc(watchHistory.watchedAt))
+      .limit(1)
+      .get();
+    return row?.watchedAt ?? null;
   });
 }
 

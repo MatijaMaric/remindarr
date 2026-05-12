@@ -7,12 +7,24 @@ import { getRawDb } from "../db/bun-db";
 import watchedApp from "./watched";
 import type { AppEnv } from "../types";
 
+let secondUserId: string;
+
 let userId: string;
 
 function makeAuthedApp() {
   const a = new Hono<AppEnv>();
   a.use("*", async (c, next) => {
     c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+    await next();
+  });
+  a.route("/watched", watchedApp);
+  return a;
+}
+
+function makeAuthedAppAs(uid: string) {
+  const a = new Hono<AppEnv>();
+  a.use("*", async (c, next) => {
+    c.set("user", { id: uid, username: "user", name: null, role: null, is_admin: false });
     await next();
   });
   a.route("/watched", watchedApp);
@@ -44,6 +56,7 @@ async function getEpisodeId(titleId: string, season: number, episode: number): P
 beforeEach(async () => {
   setupTestDb();
   userId = await createUser("testuser", "hash");
+  secondUserId = await createUser("otheruser", "hash2");
 });
 
 afterAll(() => {
@@ -766,6 +779,190 @@ describe("Watch history logging", () => {
     const row = db.prepare("SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?")
       .get(userId, "show-hist-bulk") as { cnt: number };
     expect(row.cnt).toBe(2);
+  });
+});
+
+describe("PATCH /watched/history/:id", () => {
+  it("returns 400 with issues when watched_at is missing", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/history/some-id", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 with issues when watched_at is malformed", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/history/some-id", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: "not-a-date" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 when watched_at is a future date", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-future-1", objectType: "MOVIE" })]);
+    const app = makeAuthedApp();
+    await app.request("/watched/movies/movie-future-1", { method: "POST" });
+
+    const db = getRawDb();
+    const histRow = db.prepare("SELECT id FROM watch_history WHERE user_id = ?").get(userId) as { id: string };
+
+    const future = new Date();
+    future.setFullYear(future.getFullYear() + 1);
+    const futureStr = future.toISOString().slice(0, 10);
+
+    const res = await app.request(`/watched/history/${histRow.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: futureStr }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.issues[0].message).toContain("future");
+  });
+
+  it("returns 401 for unauthenticated requests", async () => {
+    const app = makeUnauthApp();
+    const res = await app.request("/watched/history/some-id", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: "2024-01-01" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when the entry belongs to another user", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-other-1", objectType: "MOVIE" })]);
+    const otherApp = makeAuthedAppAs(secondUserId);
+    await otherApp.request("/watched/movies/movie-other-1", { method: "POST" });
+
+    const db = getRawDb();
+    const histRow = db.prepare("SELECT id FROM watch_history WHERE user_id = ?").get(secondUserId) as { id: string };
+
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/history/${histRow.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: "2024-01-01" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("happy path (movie): updates watch_history and watched_titles", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-patch-1", objectType: "MOVIE" })]);
+    const app = makeAuthedApp();
+    await app.request("/watched/movies/movie-patch-1", { method: "POST" });
+
+    const db = getRawDb();
+    const histRow = db.prepare("SELECT id FROM watch_history WHERE user_id = ?").get(userId) as { id: string };
+
+    const res = await app.request(`/watched/history/${histRow.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: "2023-05-10" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.watchedAt).toBe("2023-05-10 00:00:00");
+
+    const histUpdated = db.prepare("SELECT watched_at FROM watch_history WHERE id = ?").get(histRow.id) as { watched_at: string };
+    expect(histUpdated.watched_at).toBe("2023-05-10 00:00:00");
+
+    const titleUpdated = db.prepare("SELECT watched_at FROM watched_titles WHERE title_id = ? AND user_id = ?").get("movie-patch-1", userId) as { watched_at: string };
+    expect(titleUpdated.watched_at).toBe("2023-05-10 00:00:00");
+  });
+
+  it("happy path (episode): updates watch_history and watched_episodes", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-patch-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-patch-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const epId = await getEpisodeId("show-patch-1", 1, 1);
+
+    const app = makeAuthedApp();
+    await app.request(`/watched/${epId}`, { method: "POST" });
+
+    const db = getRawDb();
+    const histRow = db.prepare("SELECT id FROM watch_history WHERE user_id = ? AND episode_id = ?").get(userId, epId) as { id: string };
+
+    const res = await app.request(`/watched/history/${histRow.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: "2022-11-20 15:30:00" }),
+    });
+    expect(res.status).toBe(200);
+
+    const histUpdated = db.prepare("SELECT watched_at FROM watch_history WHERE id = ?").get(histRow.id) as { watched_at: string };
+    expect(histUpdated.watched_at).toBe("2022-11-20 15:30:00");
+
+    const epUpdated = db.prepare("SELECT watched_at FROM watched_episodes WHERE episode_id = ? AND user_id = ?").get(epId, userId) as { watched_at: string };
+    expect(epUpdated.watched_at).toBe("2022-11-20 15:30:00");
+  });
+
+  it("mirror guard: PATCH on older history entry does not overwrite watched_episodes with newer value", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([makeParsedTitle({ id: "show-guard-1", objectType: "SHOW" })]);
+    await upsertEpisodes([
+      { title_id: "show-guard-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+    ]);
+    const epId = await getEpisodeId("show-guard-1", 1, 1);
+
+    const db = getRawDb();
+    // Insert two history rows manually — first watch, then a rewatch with a later timestamp.
+    db.prepare("INSERT INTO watched_episodes (episode_id, user_id, watched_at) VALUES (?, ?, ?)").run(epId, userId, "2024-10-01 00:00:00");
+    db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at) VALUES (?, ?, ?, ?, ?)").run("hist-older", userId, "show-guard-1", epId, "2023-01-01 00:00:00");
+    db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at) VALUES (?, ?, ?, ?, ?)").run("hist-newer", userId, "show-guard-1", epId, "2024-10-01 00:00:00");
+
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/history/hist-older", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: "2023-06-15" }),
+    });
+    expect(res.status).toBe(200);
+
+    // watched_episodes should still reflect the latest history row's timestamp.
+    const epRow = db.prepare("SELECT watched_at FROM watched_episodes WHERE episode_id = ? AND user_id = ?").get(epId, userId) as { watched_at: string };
+    expect(epRow.watched_at).toBe("2024-10-01 00:00:00");
+  });
+
+  it("returns 429 and Retry-After header after 50 requests", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-rl-1", objectType: "MOVIE" })]);
+    const app = makeAuthedAppAs(secondUserId);
+    await app.request("/watched/movies/movie-rl-1", {
+      method: "POST",
+    });
+
+    const db = getRawDb();
+    const histRow = db.prepare("SELECT id FROM watch_history WHERE user_id = ?").get(secondUserId) as { id: string };
+
+    const today = new Date().toISOString().slice(0, 10);
+    for (let i = 0; i < 50; i++) {
+      await app.request(`/watched/history/${histRow.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ watched_at: today }),
+      });
+    }
+
+    const res51 = await app.request(`/watched/history/${histRow.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: today }),
+    });
+    expect(res51.status).toBe(429);
+    expect(res51.headers.get("Retry-After")).not.toBeNull();
   });
 });
 

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import * as api from "../api";
 import type { StatsResponse } from "../types";
 import { useApiCall } from "../hooks/useApiCall";
@@ -121,7 +122,13 @@ const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 export function StatsView() {
-  const { data, loading } = useApiCall((signal) => api.getStats(signal), []);
+  const { data, loading, refetch } = useApiCall((signal) => api.getStats(signal), []);
+
+  useEffect(() => {
+    const handler = () => refetch();
+    window.addEventListener("watch-history:updated", handler);
+    return () => window.removeEventListener("watch-history:updated", handler);
+  }, [refetch]);
 
   if (loading || !data) {
     return (

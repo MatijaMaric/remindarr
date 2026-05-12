@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
-import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
+import type { EpisodeDetailsResponse, CastMember, CrewMember, WatchHistoryEntry } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
@@ -14,6 +14,7 @@ import ShareButton from "../components/ShareButton";
 import EpisodeRatingButtons from "../components/EpisodeRatingButtons";
 import { stillUrl as mkStillUrl } from "../lib/tmdb-images";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import EditWatchedAtDialog from "../components/EditWatchedAtDialog";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -39,6 +40,8 @@ export default function EpisodeDetailPage() {
   );
 
   const [episodeStatus, setEpisodeStatus] = useState<{ id: number; is_watched: boolean } | null>(null);
+  const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>([]);
+  const [editHistoryEntry, setEditHistoryEntry] = useState<string | null>(null);
 
   useApiCall(
     (signal) => user && id && season
@@ -52,6 +55,14 @@ export default function EpisodeDetailPage() {
       },
     },
   );
+
+  useEffect(() => {
+    if (episodeStatus?.is_watched && id) {
+      api.getWatchHistory(id).then(({ history }) => {
+        setWatchHistoryEntries(history.filter(e => e.episodeId === episodeStatus.id));
+      }).catch(() => {});
+    }
+  }, [episodeStatus?.is_watched, episodeStatus?.id, id]);
 
   const toggleWatched = async () => {
     if (!episodeStatus) return;
@@ -165,6 +176,15 @@ export default function EpisodeDetailPage() {
             </>
           ) : null}
         </div>
+
+        {episodeStatus?.is_watched && watchHistoryEntries.length > 0 && (
+          <button
+            onClick={() => setEditHistoryEntry(watchHistoryEntries[0].id)}
+            className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors underline-offset-2 hover:underline cursor-pointer"
+          >
+            Watched {new Date(watchHistoryEntries[0].watchedAt.replace(" ", "T") + "Z").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+          </button>
+        )}
       </div>
 
       {/* Rating */}
@@ -220,6 +240,20 @@ export default function EpisodeDetailPage() {
             </ScrollableRow>
           </section>
         </SectionErrorBoundary>
+      )}
+
+      {editHistoryEntry && (
+        <EditWatchedAtDialog
+          open={true}
+          onClose={() => setEditHistoryEntry(null)}
+          entryId={editHistoryEntry}
+          currentWatchedAt={watchHistoryEntries.find(e => e.id === editHistoryEntry)?.watchedAt ?? ""}
+          anchorDate={data?.tmdb?.air_date ?? null}
+          onUpdated={(newWatchedAt) => {
+            setWatchHistoryEntries(prev => prev.map(e => e.id === editHistoryEntry ? { ...e, watchedAt: newWatchedAt } : e));
+            setEditHistoryEntry(null);
+          }}
+        />
       )}
     </div>
   );

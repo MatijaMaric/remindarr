@@ -429,6 +429,17 @@ export async function getWatchHistory(titleId: string, signal?: AbortSignal): Pr
   return fetchJson(`/watched/history/${encodeURIComponent(titleId)}`, { signal });
 }
 
+export async function patchWatchHistoryEntry(
+  id: string,
+  watchedAt: string,
+): Promise<{ id: string; watchedAt: string }> {
+  return fetchJson(`/watched/history/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ watched_at: watchedAt }),
+  });
+}
+
 // ─── Details ────────────────────────────────────────────────────────────────
 
 export async function getMovieDetails(titleId: string, signal?: AbortSignal): Promise<MovieDetailsResponse> {
