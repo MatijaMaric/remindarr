@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { getDb, jobs } from "../db/schema";
 import { eq } from "drizzle-orm";
+import Sentry from "../sentry";
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -319,10 +320,9 @@ describe("processor error logging includes stack traces", () => {
 
     const retryLog = warnCalls.find((obj) => obj.msg === "Job failed, will retry");
     expect(retryLog).toBeDefined();
-    // err must be the serialized Error object, not a plain string
-    const errObj = retryLog!.err as Record<string, unknown>;
-    expect(typeof errObj.stack).toBe("string");
-    expect((errObj.stack as string).length).toBeGreaterThan(0);
+    // stack must be a top-level string field (not nested inside err)
+    expect(typeof retryLog!.stack).toBe("string");
+    expect((retryLog!.stack as string).length).toBeGreaterThan(0);
 
     consoleErrorSpy.mockRestore();
   });
@@ -349,10 +349,57 @@ describe("processor error logging includes stack traces", () => {
 
     const permanentLog = errorCalls.find((obj) => obj.msg === "Job failed permanently");
     expect(permanentLog).toBeDefined();
-    const errObj = permanentLog!.err as Record<string, unknown>;
-    expect(typeof errObj.stack).toBe("string");
-    expect((errObj.stack as string).length).toBeGreaterThan(0);
+    // stack must be a top-level string field (not nested inside err)
+    expect(typeof permanentLog!.stack).toBe("string");
+    expect((permanentLog!.stack as string).length).toBeGreaterThan(0);
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("processor Sentry capture on permanent failure", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let captureExceptionSpy: ReturnType<typeof spyOn<typeof Sentry, "captureException">>;
+
+  beforeEach(() => {
+    captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
+  });
+
+  afterEach(() => {
+    captureExceptionSpy.mockRestore();
+  });
+
+  it("captures permanent failures to Sentry with stable fingerprint and tags", async () => {
+    mockFetchNewReleases.mockRejectedValueOnce(new Error("permanent sync error"));
+    const db = getDb();
+    await db.insert(jobs).values({
+      name: "sync-titles",
+      status: "pending",
+      attempts: 2,
+      maxAttempts: 3,
+      runAt: new Date().toISOString(),
+    });
+
+    await processPendingJobs();
+
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+    const capturedErr = captureExceptionSpy.mock.calls[0]?.[0];
+    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1];
+    expect(capturedErr).toBeInstanceOf(Error);
+    expect((capturedErr as Error).message).toBe("permanent sync error");
+    expect(capturedCtx).toMatchObject({
+      level: "error",
+      tags: { jobName: "sync-titles", jobId: expect.any(String) },
+      extra: { attempts: 3, maxAttempts: 3, lastError: "permanent sync error" },
+      fingerprint: ["job-permanent-failure", "sync-titles"],
+    });
+  });
+
+  it("does NOT capture transient retry failures to Sentry", async () => {
+    mockFetchNewReleases.mockRejectedValueOnce(new Error("transient error"));
+    await insertJob("sync-titles"); // attempts=0, maxAttempts=3 → retry, not permanent
+    await processPendingJobs();
+
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
   });
 });

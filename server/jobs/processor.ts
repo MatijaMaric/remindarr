@@ -8,6 +8,7 @@ import { eq, and, lte, lt, asc, sql, inArray } from "drizzle-orm";
 import { getDb, jobs } from "../db/schema";
 import { CONFIG } from "../config";
 import { logger } from "../logger";
+import Sentry from "../sentry";
 import { upsertTitles, deleteExpiredSessions } from "../db/repository";
 import {
   getDueNotifiers,
@@ -521,18 +522,27 @@ export async function processPendingJobs(): Promise<number> {
           attempt: newAttempts,
           maxAttempts: job.maxAttempts,
           retryAt,
-          err,
+          error: message,
+          stack: err instanceof Error ? err.stack : undefined,
         });
       } else {
         await db
           .update(jobs)
           .set({ status: "failed", error: message, completedAt: new Date().toISOString() })
           .where(eq(jobs.id, job.id));
+        Sentry.captureException(err, {
+          level: "error",
+          tags: { jobName: job.name, jobId: String(job.id) },
+          extra: { attempts: newAttempts, maxAttempts: job.maxAttempts, lastError: message },
+          fingerprint: ["job-permanent-failure", job.name],
+        });
         log.error("Job failed permanently", {
           name: job.name,
           jobId: job.id,
           attempts: newAttempts,
-          err,
+          maxAttempts: job.maxAttempts,
+          error: message,
+          stack: err instanceof Error ? err.stack : undefined,
         });
       }
     }

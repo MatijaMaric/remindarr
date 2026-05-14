@@ -162,11 +162,11 @@ app.onError((err, c) => {
 
   (Sentry.addBreadcrumb as (opts: { message: string; data: Record<string, string> }) => void)?.({
     message: "Unhandled error",
-    data: { category, requestId },
+    data: { category, requestId, path: c.req.path, method: c.req.method },
   });
   Sentry.captureException(err);
 
-  log.error("Unhandled error", { category, requestId, err });
+  log.error("Unhandled error", { category, requestId, path: c.req.path, method: c.req.method, error: err.message, stack: err.stack });
 
   return c.json({ error: "Internal server error" }, 500, {
     "X-Request-Id": requestId,
