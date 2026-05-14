@@ -8,8 +8,8 @@ import type { AppEnv } from "../types";
 
 // Mock Sentry
 import Sentry from "../sentry";
-spyOn(Sentry, "startSpan").mockImplementation((_opts: any, fn: any) => fn({}));
-spyOn(Sentry, "captureException").mockImplementation(() => "");
+const sentryStartSpanSpy = spyOn(Sentry, "startSpan").mockImplementation((_opts: any, fn: any) => fn({}));
+const sentryCaptureExceptionSpy = spyOn(Sentry, "captureException").mockImplementation(() => "");
 
 // Mock Plex client so no real HTTP calls are made
 import * as plexClient from "../plex/client";
@@ -65,6 +65,8 @@ afterEach(() => {
 });
 
 afterAll(() => {
+  sentryStartSpanSpy.mockRestore();
+  sentryCaptureExceptionSpy.mockRestore();
   teardownTestDb();
 });
 

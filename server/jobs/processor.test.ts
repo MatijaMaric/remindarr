@@ -363,6 +363,7 @@ describe("processor Sentry capture on permanent failure", () => {
 
   beforeEach(() => {
     captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
+    captureExceptionSpy.mockClear();
   });
 
   afterEach(() => {
