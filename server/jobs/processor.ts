@@ -516,6 +516,12 @@ export async function processPendingJobs(): Promise<number> {
           .update(jobs)
           .set({ status: "pending", error: message, runAt: retryAt })
           .where(eq(jobs.id, job.id));
+        Sentry.addBreadcrumb({
+          category: "jobs",
+          message: "Job retry scheduled",
+          level: "warning",
+          data: { name: job.name, jobId: String(job.id), attempt: String(newAttempts), maxAttempts: String(job.maxAttempts), error: message },
+        });
         log.warn("Job failed, will retry", {
           name: job.name,
           jobId: job.id,

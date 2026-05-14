@@ -2,6 +2,7 @@ import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
 import { getCache } from "../cache";
 import { httpFetch } from "../lib/http";
+import Sentry from "../sentry";
 import type {
   TmdbShowDetails,
   TmdbSeasonResponse,
@@ -32,6 +33,7 @@ async function tmdbRequest<T>(path: string, params?: Record<string, string>): Pr
   return traceHttp("GET", url.toString(), async () => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), CONFIG.TMDB_API_TIMEOUT_MS);
+    const startMs = Date.now();
     try {
       const res = await httpFetch(url.toString(), {
         headers: {
@@ -40,6 +42,15 @@ async function tmdbRequest<T>(path: string, params?: Record<string, string>): Pr
         },
         signal: controller.signal,
       });
+      const elapsedMs = Date.now() - startMs;
+      if (elapsedMs > 2000) {
+        Sentry.addBreadcrumb({
+          category: "tmdb",
+          message: "Slow TMDB response",
+          level: "warning",
+          data: { path, elapsedMs: String(elapsedMs) },
+        });
+      }
       if (!res.ok) {
         const body = await res.text();
         throw new Error(`TMDB API error ${res.status}: ${body}`);

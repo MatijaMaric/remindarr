@@ -330,7 +330,17 @@ export class JobQueueDO {
           retryAt,
           job.id,
         );
-        log.warn("Job failed, will retry", { name: job.name, jobId: job.id, attempt: newAttempts, retryAt, error: message });
+        Sentry.addBreadcrumb({
+          category: "jobs",
+          message: "Job retry scheduled",
+          level: "warning",
+          data: { name: job.name, jobId: String(job.id), attempt: String(newAttempts), maxAttempts: String(job.max_attempts), error: message },
+        });
+        log.warn("Job failed, will retry", {
+          name: job.name, jobId: job.id, attempt: newAttempts,
+          maxAttempts: job.max_attempts, retryAt,
+          error: message, stack: err instanceof Error ? err.stack : undefined,
+        });
       } else {
         this.ctx.storage.sql.exec(
           "UPDATE jobs SET status = 'failed', error = ?, completed_at = ? WHERE id = ?",
@@ -355,6 +365,10 @@ export class JobQueueDO {
       }
     }
 
+    // Self-heal: re-register the cron schedule after every execution so a dropped
+    // schedule (e.g. due to DO eviction or a wrapped entrypoint interfering with
+    // @cloudflare/actors/alarms) recovers within the next alarm cycle (#795).
+    if (cron) await this.armCron(name, cron);
     await this.rearmIfPending(cron);
   }
 
@@ -368,6 +382,12 @@ export class JobQueueDO {
     const existing = this.alarms.getSchedules({ type: "cron" });
     if (!existing.some((s) => s.callback === "runJob")) {
       await this.alarms.schedule(cron, "runJob" as keyof JobQueueDO, null);
+      Sentry.addBreadcrumb({
+        category: "jobs",
+        message: "Re-armed cron schedule",
+        level: "info",
+        data: { name, cron, priorScheduleCount: String(existing.length) },
+      });
     }
   }
 

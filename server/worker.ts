@@ -666,6 +666,10 @@ const handler = {
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     patchConfigFromEnv(env);
+    // Two cron triggers run this handler:
+    //   */5 * * * *  — watchdog: arm cron DOs + stale-job recovery only (no heavy cleanup)
+    //   0 0 * * *    — daily: same watchdog work + cleanup + one-time migrations
+    const isDailyTick = event.cron === "0 0 * * *";
     try {
       const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
       const cache = env.CACHE_KV
@@ -678,13 +682,11 @@ const handler = {
 
         // Arm every cron-singleton DO. Idempotent — the DO only schedules its
         // alarm if no `runJob` cron schedule exists. DOs drive their own
-        // sub-daily execution via @cloudflare/actors/alarms.
+        // sub-daily execution via @cloudflare/actors/alarms. Running on every
+        // 5-min watchdog tick ensures a dropped alarm self-heals within 5 min (#795).
         for (const { name, cron } of CRON_JOBS) {
           await armCron(cfEnv, name, cron);
         }
-
-        // One-time migrations (idempotent — no-ops once done)
-        await enqueueOnce("migrate-offers");
 
         // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
         await recoverStale(cfEnv, 15);
@@ -693,12 +695,19 @@ const handler = {
           logger.info("Processed jobs", { count: processed });
         }
 
-        // Daily cleanup — moved out of JobQueueDO alarm to avoid the 30-second
-        // DO alarm hard limit (#726). This handler has no such limit.
-        await deleteExpiredSessions();
-        const cleaned = await cleanupOld(cfEnv, 30);
-        if (cleaned > 0) {
-          logger.info("Daily cleanup pruned old jobs", { cleaned });
+        // Daily-only work — skip on the 5-min watchdog ticks to avoid repeated
+        // heavy cleanup (session expiry, old job pruning, one-time migrations).
+        if (isDailyTick) {
+          // One-time migrations (idempotent — no-ops once done)
+          await enqueueOnce("migrate-offers");
+
+          // Daily cleanup — moved out of JobQueueDO alarm to avoid the 30-second
+          // DO alarm hard limit (#726). This handler has no such limit.
+          await deleteExpiredSessions();
+          const cleaned = await cleanupOld(cfEnv, 30);
+          if (cleaned > 0) {
+            logger.info("Daily cleanup pruned old jobs", { cleaned });
+          }
         }
       })));
     } catch (err) {

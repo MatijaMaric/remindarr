@@ -6,8 +6,16 @@
  * rest of the codebase can import Sentry unconditionally without crashing.
  */
 
+interface SentryBreadcrumb {
+  category?: string;
+  message?: string;
+  level?: "debug" | "info" | "warning" | "error" | "fatal";
+  data?: Record<string, string | number | boolean>;
+}
+
 interface SentryLike {
   captureException(err: unknown, context?: Record<string, unknown>): string;
+  addBreadcrumb(breadcrumb: SentryBreadcrumb): void;
   startSpan<T>(opts: { name: string; op?: string; attributes?: Record<string, string> }, fn: () => T): T;
   withMonitor<T>(monitorSlug: string, fn: () => Promise<T>, config?: unknown): Promise<T>;
   flush(timeoutMs?: number): Promise<boolean>;
@@ -19,6 +27,7 @@ interface SentryLike {
 
 const noopSentry: SentryLike = {
   captureException: (_err?: unknown, _ctx?: unknown) => "",
+  addBreadcrumb: () => {},
   startSpan: (_opts, fn) => fn(),
   withMonitor: (_slug, fn) => fn(),
   flush: () => Promise.resolve(true),
