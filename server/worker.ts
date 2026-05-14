@@ -79,11 +79,17 @@ import achievementsRoutes, { leaderboardApp, streakApp } from "./routes/achievem
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig, CONFIG } from "./config";
+import { classifyError } from "./lib/error-classifier";
+import { errorsByCategory } from "./metrics";
 import Sentry from "./sentry";
-import { withSentry } from "@sentry/cloudflare";
+import { withSentry, instrumentDurableObjectWithSentry } from "@sentry/cloudflare";
 import { CloudflarePlatform } from "./platform/cloudflare";
 import { armCron, cleanupOld, enqueueOnce, processPending, recoverStale, runWithEnv, CRON_JOBS } from "./jobs/backend";
-export { JobQueueDO } from "./jobs/durable-object";
+import { JobQueueDO as JobQueueDOBase } from "./jobs/durable-object";
+export const JobQueueDO = instrumentDurableObjectWithSentry(
+  (env: Env) => ({ dsn: env.SENTRY_DSN, release: env.SENTRY_RELEASE, tracesSampleRate: 1.0, sendDefaultPii: false }),
+  JobQueueDOBase,
+);
 import { createAuth } from "./auth/better-auth";
 import { migrateAuthData, resetMigrationState } from "./db/migrate-auth";
 import { syncAchievementRegistry } from "./achievements";
@@ -296,9 +302,29 @@ function createApp(env: Env) {
     if (err instanceof HTTPException) {
       return err.getResponse();
     }
+    const category = classifyError(err);
+    errorsByCategory.inc({ category });
+
+    const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
+
+    (Sentry.addBreadcrumb as ((opts: { message: string; data: Record<string, string> }) => void) | undefined)?.({
+      message: "Unhandled error",
+      data: { category, requestId, path: c.req.path, method: c.req.method },
+    });
     Sentry.captureException(err);
-    logger.error("Unhandled error", { error: err.message, stack: err.stack });
-    return c.json({ error: "Internal server error" }, 500);
+
+    logger.error("Unhandled error", {
+      category,
+      requestId,
+      path: c.req.path,
+      method: c.req.method,
+      error: err.message,
+      stack: err.stack,
+    });
+
+    return c.json({ error: "Internal server error" }, 500, {
+      "X-Request-Id": requestId,
+    });
   });
 
   // CORS — restricted to explicit origins via CORS_ORIGIN env var

@@ -1,0 +1,139 @@
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import Sentry from "./sentry";
+import { classifyError } from "./lib/error-classifier";
+import { errorsByCategory } from "./metrics";
+
+function makeTestApp() {
+  const app = new Hono();
+
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) {
+      return err.getResponse();
+    }
+    const category = classifyError(err);
+    errorsByCategory.inc({ category });
+
+    const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
+
+    (Sentry.addBreadcrumb as ((opts: { message: string; data: Record<string, string> }) => void) | undefined)?.({
+      message: "Unhandled error",
+      data: { category, requestId, path: c.req.path, method: c.req.method },
+    });
+    Sentry.captureException(err);
+
+    console.error(
+      JSON.stringify({
+        level: "error",
+        msg: "Unhandled error",
+        category,
+        requestId,
+        path: c.req.path,
+        method: c.req.method,
+        error: err.message,
+        stack: err.stack,
+      }),
+    );
+
+    return c.json({ error: "Internal server error" }, 500, {
+      "X-Request-Id": requestId,
+    });
+  });
+
+  app.get("/boom", () => {
+    throw new Error("test explosion");
+  });
+
+  app.get("/sqlite-error", () => {
+    const e = new Error("SQLITE_CONSTRAINT: NOT NULL constraint failed");
+    (e as unknown as { code: string }).code = "SQLITE_CONSTRAINT";
+    throw e;
+  });
+
+  app.get("/forbidden", () => {
+    throw new HTTPException(403, { message: "Forbidden" });
+  });
+
+  return app;
+}
+
+describe("CF worker onError handler", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let captureSpy: ReturnType<typeof spyOn<typeof Sentry, "captureException">>;
+  let consoleSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    captureSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
+    consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+    errorsByCategory.reset();
+  });
+
+  afterEach(() => {
+    captureSpy.mockRestore();
+    consoleSpy.mockRestore();
+  });
+
+  it("returns 500 JSON with X-Request-Id for plain errors", async () => {
+    const app = makeTestApp();
+    const res = await app.request("/boom");
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as Record<string, string>;
+    expect(body.error).toBe("Internal server error");
+    expect(res.headers.get("X-Request-Id")).toBeTypeOf("string");
+    expect(res.headers.get("X-Request-Id")!.length).toBeGreaterThan(0);
+  });
+
+  it("captures exception to Sentry once", async () => {
+    const app = makeTestApp();
+    await app.request("/boom");
+
+    expect(captureSpy).toHaveBeenCalledTimes(1);
+    const capturedErr = captureSpy.mock.calls[0]?.[0] as Error;
+    expect(capturedErr.message).toBe("test explosion");
+  });
+
+  it("propagates incoming x-request-id header", async () => {
+    const app = makeTestApp();
+    const res = await app.request("/boom", {
+      headers: { "x-request-id": "my-trace-id" },
+    });
+
+    expect(res.headers.get("X-Request-Id")).toBe("my-trace-id");
+  });
+
+  it("increments errorsByCategory counter with classified category", async () => {
+    const app = makeTestApp();
+    await app.request("/sqlite-error");
+
+    const rendered = errorsByCategory.render();
+    expect(rendered).toContain('category="db"');
+  });
+
+  it("logs path, method, category, requestId, error, stack", async () => {
+    const app = makeTestApp();
+    await app.request("/boom");
+
+    const logLines = consoleSpy.mock.calls
+      .map((args: unknown[]) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
+      .filter((obj: Record<string, unknown> | null): obj is Record<string, unknown> => obj !== null && obj.msg === "Unhandled error");
+
+    expect(logLines.length).toBe(1);
+    const log = logLines[0];
+    expect(log.path).toBe("/boom");
+    expect(log.method).toBe("GET");
+    expect(log.category).toBe("unknown");
+    expect(typeof log.requestId).toBe("string");
+    expect(log.error).toBe("test explosion");
+    expect(typeof log.stack).toBe("string");
+  });
+
+  it("delegates HTTPException to getResponse without capturing", async () => {
+    const app = makeTestApp();
+    const res = await app.request("/forbidden");
+
+    expect(res.status).toBe(403);
+    expect(captureSpy).not.toHaveBeenCalled();
+  });
+});
