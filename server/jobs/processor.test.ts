@@ -360,14 +360,19 @@ describe("processor error logging includes stack traces", () => {
 describe("processor Sentry capture on permanent failure", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let captureExceptionSpy: ReturnType<typeof spyOn<typeof Sentry, "captureException">>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let addBreadcrumbSpy: ReturnType<typeof spyOn<typeof Sentry, "addBreadcrumb">>;
 
   beforeEach(() => {
     captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
     captureExceptionSpy.mockClear();
+    addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(() => {});
+    addBreadcrumbSpy.mockClear();
   });
 
   afterEach(() => {
     captureExceptionSpy.mockRestore();
+    addBreadcrumbSpy.mockRestore();
   });
 
   it("captures permanent failures to Sentry with stable fingerprint and tags", async () => {
@@ -402,5 +407,20 @@ describe("processor Sentry capture on permanent failure", () => {
     await processPendingJobs();
 
     expect(captureExceptionSpy).not.toHaveBeenCalled();
+  });
+
+  it("adds a breadcrumb on retry without calling captureException", async () => {
+    mockFetchNewReleases.mockRejectedValueOnce(new Error("transient for breadcrumb"));
+    await insertJob("sync-titles"); // attempts=0, maxAttempts=3
+    await processPendingJobs();
+
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
+    const retryBreadcrumb = addBreadcrumbSpy.mock.calls.find(
+      (args) => (args[0] as { message?: string }).message === "Job retry scheduled",
+    );
+    expect(retryBreadcrumb).toBeDefined();
+    const bc = retryBreadcrumb![0] as { data?: { name?: string; attempt?: string } };
+    expect(bc.data?.name).toBe("sync-titles");
+    expect(bc.data?.attempt).toBe("1");
   });
 });

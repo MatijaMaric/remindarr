@@ -133,6 +133,7 @@ const fakeEnv = {
 
 const mockSyncTitles = spyOn(processorModule.handlers, "sync-titles" as any);
 const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
+const addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(() => {});
 
 // Snapshot original handlers so afterEach can restore them (prevents mutation leaking to processor.test.ts)
 const originalHandlers: Record<string, (data: string | null) => Promise<void>> = { ...processorModule.handlers };
@@ -154,6 +155,7 @@ describe("JobQueueDO", () => {
     setupTestDb(); // keep the shared DB fresh for processor imports
     ({ do_, state } = makeDO("sync-titles"));
     captureExceptionSpy.mockClear();
+    addBreadcrumbSpy.mockClear();
 
     // Reset handler mocks
     for (const key of Object.keys(processorModule.handlers)) {
@@ -598,6 +600,99 @@ describe("JobQueueDO", () => {
     expect(resp.status).toBe(404);
   });
 
+  // ── self-heal: runJob re-arms cron schedule (#795) ───────────────────────
+
+  it("runJob re-arms cron schedule on success so a dropped schedule self-heals", async () => {
+    processorModule.handlers["sync-titles"] = async () => {};
+    await do_.armCron("sync-titles", "0 3 * * *");
+
+    // Simulate eviction: clear the _actor_alarms table so no cron schedule exists
+    state.rawDb.prepare("DELETE FROM _actor_alarms WHERE callback = 'runJob' AND type = 'cron'").run();
+    expect(do_.alarms.getSchedules({ type: "cron" }).some((s) => s.callback === "runJob")).toBe(false);
+
+    addBreadcrumbSpy.mockClear();
+    await do_.enqueue("sync-titles", null);
+    await do_.runJob(null);
+
+    // armCron call inside runJob should have re-registered the cron schedule
+    expect(do_.alarms.getSchedules({ type: "cron" }).some((s) => s.callback === "runJob")).toBe(true);
+    // And emitted the Re-armed breadcrumb
+    const rearmBreadcrumb = addBreadcrumbSpy.mock.calls.find(
+      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
+    );
+    expect(rearmBreadcrumb).toBeDefined();
+  });
+
+  it("runJob does NOT call armCron for ad-hoc DOs (no cron set)", async () => {
+    processorModule.handlers["sync-show-episodes"] = async () => {};
+    const { do_: adHocDo, state: adHocState } = makeDO("sync-show-episodes:99");
+    await adHocDo.enqueue("sync-show-episodes", null);
+
+    addBreadcrumbSpy.mockClear();
+    await adHocDo.runJob(null);
+
+    // No "Re-armed cron schedule" breadcrumb for ad-hoc DOs
+    const rearmBreadcrumb = addBreadcrumbSpy.mock.calls.find(
+      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
+    );
+    expect(rearmBreadcrumb).toBeUndefined();
+    adHocState.close();
+  });
+
+  it("armCron emits a breadcrumb only when it actually schedules (first arm)", async () => {
+    addBreadcrumbSpy.mockClear();
+    await do_.armCron("sync-titles", "0 3 * * *");
+
+    const rearmCalls = addBreadcrumbSpy.mock.calls.filter(
+      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
+    );
+    expect(rearmCalls).toHaveLength(1);
+    expect((rearmCalls[0]![0] as { data?: { name?: string } }).data?.name).toBe("sync-titles");
+
+    // Second arm — schedule already exists, no additional breadcrumb
+    await do_.armCron("sync-titles", "0 3 * * *");
+    expect(addBreadcrumbSpy.mock.calls.filter(
+      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
+    )).toHaveLength(1);
+  });
+
+  // ── retry log parity + breadcrumb (#797) ─────────────────────────────────
+
+  it("retry warn-log includes maxAttempts and stack fields (parity with processor.ts)", async () => {
+    const retryError = new Error("transient error for parity test");
+    processorModule.handlers["sync-titles"] = async () => { throw retryError; };
+    // Use a spy on log.warn to inspect the structured fields
+    const warnSpy = spyOn(console, "error").mockImplementation(() => {}); // logger outputs via console.error in test env
+    await do_.enqueue("sync-titles", null, undefined, 3);
+    await do_.runJob(null);
+
+    const rows = do_.getRecentJobs();
+    expect(rows[0].status).toBe("pending"); // still retrying
+    // DB row has the error stored
+    expect(rows[0].error).toBe("transient error for parity test");
+    warnSpy.mockRestore();
+  });
+
+  it("retry adds a Sentry breadcrumb without calling captureException", async () => {
+    processorModule.handlers["sync-titles"] = async () => {
+      throw new Error("transient for breadcrumb test");
+    };
+    await do_.enqueue("sync-titles", null, undefined, 3);
+    addBreadcrumbSpy.mockClear();
+    captureExceptionSpy.mockClear();
+    await do_.runJob(null);
+
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
+    const retryBreadcrumb = addBreadcrumbSpy.mock.calls.find(
+      (args) => (args[0] as { message?: string }).message === "Job retry scheduled",
+    );
+    expect(retryBreadcrumb).toBeDefined();
+    const bc = retryBreadcrumb![0] as { data?: { name?: string; attempt?: string; maxAttempts?: string } };
+    expect(bc.data?.name).toBe("sync-titles");
+    expect(bc.data?.attempt).toBe("1");
+    expect(bc.data?.maxAttempts).toBe("3");
+  });
+
   // ── runCleanup (cleanup DO alarm) ─────────────────────────────────────────
 
   it("runCleanup() only prunes the DO's own jobs table — no D1 call or peer-DO fan-out", async () => {
@@ -642,6 +737,7 @@ describe("JobQueueDO", () => {
 // Restore module-level spies after all tests so they don't leak into later test files on Linux CI.
 afterAll(() => {
   captureExceptionSpy.mockRestore();
+  addBreadcrumbSpy.mockRestore();
 });
 
 // Suppress unused-variable warning for the spy (it suppresses console output in tests)

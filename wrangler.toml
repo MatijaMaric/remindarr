@@ -66,10 +66,11 @@ head_sampling_rate = 1
 persist = true
 invocation_logs = true
 
-# Cron triggers — bootstrap window only. Per-job sub-daily schedules
-# (e.g. send-notifications every 5 min) live in CRON_JOBS in
-# server/jobs/backend.ts and are driven by Durable Object alarms via
-# @cloudflare/actors/alarms. This single daily tick arms every cron DO
-# (idempotent), runs stale-job recovery, and enqueues one-time migrations.
+# Cron triggers — two entries for belt-and-suspenders alarm resilience:
+#   */5 *  *  *  *  — watchdog: re-arm cron DOs + stale-job recovery every 5 min so a
+#                     dropped alarm self-heals within one cycle (see #795).
+#   0  0  *  *  *  — daily: cleanup (expired sessions, old job rows) + one-time migrations.
+# Per-job sub-daily schedules (e.g. send-notifications every 5 min) live in CRON_JOBS
+# in server/jobs/backend.ts and are driven by Durable Object alarms via @cloudflare/actors/alarms.
 [triggers]
-crons = ["0 0 * * *"]
+crons = ["*/5 * * * *", "0 0 * * *"]

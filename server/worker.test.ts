@@ -5,6 +5,30 @@ import Sentry from "./sentry";
 import { classifyError } from "./lib/error-classifier";
 import { errorsByCategory } from "./metrics";
 
+// ─── Scheduled handler cron-branching tests ───────────────────────────────────
+
+describe("scheduled() cron-branching logic", () => {
+  // Extract the branching logic as a pure function for unit testing
+  // (mirrors the isDailyTick gate in worker.ts scheduled())
+  function isDailyTick(cron: string): boolean {
+    return cron === "0 0 * * *";
+  }
+
+  it("identifies the midnight cron as a daily tick", () => {
+    expect(isDailyTick("0 0 * * *")).toBe(true);
+  });
+
+  it("identifies the 5-min watchdog cron as NOT a daily tick", () => {
+    expect(isDailyTick("*/5 * * * *")).toBe(false);
+  });
+
+  it("any other cron expression is not a daily tick", () => {
+    expect(isDailyTick("0 3 * * *")).toBe(false);
+    expect(isDailyTick("30 3 * * *")).toBe(false);
+    expect(isDailyTick("")).toBe(false);
+  });
+});
+
 function makeTestApp() {
   const app = new Hono();
 

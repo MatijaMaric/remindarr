@@ -576,6 +576,53 @@ describe("malformed responses", () => {
   });
 });
 
+// ─── Slow-call breadcrumb (#796) ────────────────────────────────────────────
+
+describe("slow TMDB response breadcrumb", () => {
+  let addBreadcrumbSpy: ReturnType<typeof spyOn>;
+  let dateSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(() => {});
+    // Simulate a 2500ms elapsed time by returning controlled values from Date.now()
+    dateSpy = (spyOn(Date, "now") as ReturnType<typeof spyOn>)
+      .mockReturnValueOnce(1000)   // startMs
+      .mockReturnValueOnce(3500);  // after fetch → elapsedMs = 2500
+  });
+
+  afterEach(() => {
+    addBreadcrumbSpy.mockRestore();
+    dateSpy.mockRestore();
+  });
+
+  it("emits a Sentry breadcrumb when TMDB response takes >2s", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 42 }));
+    await fetchMovieDetails(42);
+
+    const bc = (addBreadcrumbSpy.mock.calls as unknown as Array<[{ message?: string; data?: { elapsedMs?: string } }]>).find(
+      ([arg]) => arg.message === "Slow TMDB response",
+    );
+    expect(bc).toBeDefined();
+    expect(Number(bc![0].data?.elapsedMs)).toBeGreaterThan(2000);
+  });
+
+  it("does NOT emit a breadcrumb when TMDB response is fast (<= 2s)", async () => {
+    // Override the Date.now mock for this test to return a fast elapsed time
+    dateSpy.mockRestore();
+    dateSpy = (spyOn(Date, "now") as ReturnType<typeof spyOn>)
+      .mockReturnValueOnce(1000)
+      .mockReturnValueOnce(1500); // only 500ms elapsed
+
+    fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 42 }));
+    await fetchMovieDetails(42);
+
+    const bc = (addBreadcrumbSpy.mock.calls as unknown as Array<[{ message?: string }]>).find(
+      ([arg]) => arg.message === "Slow TMDB response",
+    );
+    expect(bc).toBeUndefined();
+  });
+});
+
 // ─── Timeout tests (added from master — tests AbortController timeout) ──────
 
 describe("tmdbRequest timeout", () => {

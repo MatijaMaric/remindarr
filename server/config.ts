@@ -18,7 +18,7 @@ export const CONFIG = {
   TMDB_API_KEY: process.env.TMDB_API_KEY || "",
   TMDB_BASE_URL: "https://api.themoviedb.org/3",
   TMDB_IMAGE_BASE_URL: "https://image.tmdb.org/t/p",
-  TMDB_API_TIMEOUT_MS: Number(process.env.TMDB_API_TIMEOUT_MS) || 15000,
+  TMDB_API_TIMEOUT_MS: Number(process.env.TMDB_API_TIMEOUT_MS) || 5000,
   // Job worker per-handler deadline (Bun queue only). Must be < 30 min stale-job
   // recovery window so the in-process timeout fires before recoverStaleJobs could.
   JOB_HANDLER_TIMEOUT_MS: Number(process.env.JOB_HANDLER_TIMEOUT_MS) || 300000,
