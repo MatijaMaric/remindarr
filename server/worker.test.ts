@@ -4,6 +4,8 @@ import { HTTPException } from "hono/http-exception";
 import Sentry from "./sentry";
 import { classifyError } from "./lib/error-classifier";
 import { errorsByCategory } from "./metrics";
+import { maybeDeferRegistrySync, resetAchievementRegistrySync } from "./worker";
+import { logger } from "./logger";
 
 // ─── Scheduled handler cron-branching tests ───────────────────────────────────
 
@@ -159,5 +161,81 @@ describe("CF worker onError handler", () => {
 
     expect(res.status).toBe(403);
     expect(captureSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ─── maybeDeferRegistrySync — deferral contract (#799) ───────────────────────
+
+describe("maybeDeferRegistrySync (#799 deferral contract)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function makeCtx(): { ctx: any; captured: Promise<unknown>[] } {
+    const captured: Promise<unknown>[] = [];
+    const ctx = { waitUntil: (p: Promise<unknown>) => { captured.push(p); }, passThroughOnException: () => {} };
+    return { ctx, captured };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let logSpy: ReturnType<typeof spyOn<any, any>>;
+
+  beforeEach(() => {
+    resetAchievementRegistrySync();
+    logSpy = spyOn(logger, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    resetAchievementRegistrySync();
+    logSpy.mockRestore();
+  });
+
+  it("returns synchronously without awaiting run", () => {
+    const { ctx, captured } = makeCtx();
+    let runStarted = false;
+    let resolveRun!: () => void;
+    const run = () => new Promise<void>((resolve) => {
+      runStarted = true;
+      resolveRun = resolve;
+    });
+
+    maybeDeferRegistrySync(ctx, run);
+
+    // run was invoked synchronously (promise created) but not yet resolved
+    expect(runStarted).toBe(true);
+    // ctx.waitUntil received exactly one promise
+    expect(captured).toHaveLength(1);
+    // function itself returned without awaiting — resolveRun still pending
+    resolveRun();
+  });
+
+  it("passes a promise to ctx.waitUntil, not void", () => {
+    const { ctx, captured } = makeCtx();
+    maybeDeferRegistrySync(ctx, () => Promise.resolve());
+    expect(captured[0]).toBeInstanceOf(Promise);
+  });
+
+  it("does not call ctx.waitUntil a second time (stampede guard)", () => {
+    const { ctx, captured } = makeCtx();
+    maybeDeferRegistrySync(ctx, () => Promise.resolve());
+    maybeDeferRegistrySync(ctx, () => Promise.resolve());
+
+    expect(captured).toHaveLength(1);
+  });
+
+  it("resets the flag on error so a later request retries", async () => {
+    const { ctx, captured } = makeCtx();
+    maybeDeferRegistrySync(ctx, () => Promise.reject(new Error("sync failed")));
+
+    // Await the captured waitUntil promise (the .catch wrapper)
+    await captured[0];
+
+    // Error was logged
+    expect(logSpy).toHaveBeenCalledWith(
+      "Achievement registry sync failed",
+      expect.objectContaining({ error: "sync failed" }),
+    );
+
+    // Flag was reset — a subsequent call fires again
+    const { ctx: ctx2, captured: captured2 } = makeCtx();
+    maybeDeferRegistrySync(ctx2, () => Promise.resolve());
+    expect(captured2).toHaveLength(1);
   });
 });

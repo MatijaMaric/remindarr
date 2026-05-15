@@ -184,6 +184,33 @@ function invalidateOidcConfig(): void {
   cachedOidcConfig = undefined;
 }
 
+/**
+ * Defer achievement registry sync via ctx.waitUntil so it never blocks a
+ * response. The per-isolate flag prevents stampedes; on error the flag resets
+ * so the next request retries (#799).
+ */
+export function maybeDeferRegistrySync(
+  ctx: ExecutionContext,
+  run: () => Promise<void>,
+): void {
+  if (achievementRegistrySynced) return;
+  achievementRegistrySynced = true;
+  ctx.waitUntil(
+    run().catch((err) => {
+      achievementRegistrySynced = false;
+      logger.error("Achievement registry sync failed", {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+    }),
+  );
+}
+
+/** Reset the per-isolate achievement sync flag — test seam only. */
+export function resetAchievementRegistrySync(): void {
+  achievementRegistrySynced = false;
+}
+
 /** Resolve OIDC config once per isolate, caching the result. */
 async function resolveOidcConfig(): Promise<typeof cachedOidcConfig> {
   if (oidcConfigLoaded) return cachedOidcConfig;
@@ -231,20 +258,6 @@ function createApp(env: Env) {
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
       });
-    }
-
-    // Sync achievement registry once per isolate (idempotent UPSERT)
-    if (!achievementRegistrySynced) {
-      achievementRegistrySynced = true;
-      try {
-        await syncAchievementRegistry();
-      } catch (err) {
-        achievementRegistrySynced = false;
-        logger.error("Achievement registry sync failed", {
-          error: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-        });
-      }
     }
 
     // Create admin on first request if no users exist
@@ -649,6 +662,17 @@ const handler = {
           })
         );
       }
+
+      // Sync achievement registry once per isolate, deferred so it never blocks
+      // the response — the first request to a cold isolate must not pay the ~4s
+      // UPSERT loop cost (#799). Runs in both DO and D1 modes.
+      maybeDeferRegistrySync(ctx, () =>
+        runWithEnv(cfEnv, () =>
+          runWithCache(cache, () =>
+            runWithDb(db, () => syncAchievementRegistry()),
+          ),
+        ),
+      );
 
       return response;
     } catch (err) {
