@@ -38,6 +38,7 @@ import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
 import upNextRoutes from "./routes/up-next";
+import moviesRoutes from "./routes/movies";
 import shareRoutes from "./routes/share";
 import overlapRoutes from "./routes/overlap";
 import achievementsRoutes, { leaderboardApp, streakApp } from "./routes/achievements";
@@ -279,6 +280,9 @@ app.use("/api/invitations", requireAuth);
 app.route("/api/invitations", invitationsRoutes);
 
 // Protected routes
+app.use("/api/movies/*", requireAuth);
+app.route("/api/movies", moviesRoutes);
+
 app.use("/api/track/*", writeRateLimiter, requireAuth);
 app.use("/api/track", writeRateLimiter, requireAuth);
 app.route("/api/track", trackRoutes);

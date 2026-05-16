@@ -9,7 +9,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk, getCrowdedWeekSettings } from "../api";
+import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk, getCrowdedWeekSettings, watchMovie, unwatchMovie } from "../api";
 import { getISOWeekKey } from "../lib/isoWeek";
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleCard from "../components/TitleCard";
@@ -82,7 +82,7 @@ function MonthStatsBar({
 
 // ─── Slide-over Panel for Grid View ─────────────────────────────────────────
 
-function SlideOverPanel({
+export function SlideOverPanel({
   selectedDate,
   items,
   episodes,
@@ -90,6 +90,7 @@ function SlideOverPanel({
   onClose,
   onToggleWatched,
   onBulkToggle,
+  onToggleTitleWatched,
 }: {
   selectedDate: string;
   items: CalendarItem[];
@@ -98,6 +99,7 @@ function SlideOverPanel({
   onClose: () => void;
   onToggleWatched: (id: number, watched: boolean) => void;
   onBulkToggle: (ids: number[], watched: boolean) => void;
+  onToggleTitleWatched?: (id: string, watched: boolean) => void;
 }) {
   const { t } = useTranslation();
   const today = formatDateKey(new Date());
@@ -263,7 +265,18 @@ function SlideOverPanel({
             </h4>
             <div className="grid grid-cols-2 gap-3">
               {titles.map((t) => (
-                <TitleCard key={t.id} title={t} />
+                <div key={t.id} className="relative">
+                  <TitleCard title={t} />
+                  {t.object_type === "MOVIE" && t.is_watched !== undefined && onToggleTitleWatched && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <WatchedToggleButton
+                        watched={!!t.is_watched}
+                        onClick={() => onToggleTitleWatched(t.id, !!t.is_watched)}
+                        size="sm"
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -764,6 +777,25 @@ function GridCalendar({
     }
   };
 
+  const toggleTitleWatched = async (titleId: string, currentlyWatched: boolean) => {
+    setTitles((prev) =>
+      prev.map((t) => t.id === titleId ? { ...t, is_watched: !currentlyWatched } : t)
+    );
+    try {
+      if (currentlyWatched) {
+        await unwatchMovie(titleId);
+      } else {
+        await watchMovie(titleId);
+      }
+    } catch (err) {
+      setTitles((prev) =>
+        prev.map((t) => t.id === titleId ? { ...t, is_watched: currentlyWatched } : t)
+      );
+      console.error("Failed to toggle movie watched:", err);
+      toast.error("Failed to update watched status — please try again");
+    }
+  };
+
   const monthTitle = currentMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -997,6 +1029,7 @@ function GridCalendar({
           onClose={() => setSelectedDate("")}
           onToggleWatched={toggleWatched}
           onBulkToggle={toggleBulkWatched}
+          onToggleTitleWatched={toggleTitleWatched}
         />
       )}
     </div>

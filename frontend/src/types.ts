@@ -732,7 +732,7 @@ export interface AppearanceSettings {
   autoplayTrailers: number;
 }
 
-export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon" | "friends_loved" | "streak";
+export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon" | "friends_loved" | "streak" | "movies_to_watch" | "upcoming_movies";
 
 export interface HomepageSection {
   id: HomepageSectionId;
@@ -743,9 +743,11 @@ export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "streak", enabled: true },
   { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
+  { id: "movies_to_watch", enabled: true },
   { id: "recommendations", enabled: true },
   { id: "today", enabled: true },
   { id: "upcoming", enabled: true },
+  { id: "upcoming_movies", enabled: true },
   { id: "airing_soon", enabled: false },
   { id: "friends_loved", enabled: true },
 ];

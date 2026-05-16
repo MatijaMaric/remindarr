@@ -71,9 +71,10 @@ interface ReelsCardProps {
   index: number;
   total: number;
   undoInfo?: UndoInfo;
+  isMovie?: boolean;
 }
 
-export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, total, undoInfo }: ReelsCardProps) {
+export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, total, undoInfo, isMovie }: ReelsCardProps) {
   const bgUrl = getBackgroundImageUrl(episode);
   const airDateFormatted = formatAirDate(episode.air_date);
   const isLive = isToday(episode.air_date);
@@ -201,14 +202,15 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
             <Link to={`/title/${episode.title_id}`}>
               <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-amber-400 font-semibold mb-1.5 drop-shadow hover:opacity-80 transition-opacity">
                 <span>{episode.show_title}</span>
-                <span> · {formatEpisodeCode(episode)}</span>
+                {!isMovie && <span> · {formatEpisodeCode(episode)}</span>}
+                {isMovie && <span> · Movie</span>}
               </div>
             </Link>
 
             {/* Episode name — large */}
-            <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}>
+            <Link to={isMovie ? `/title/${episode.title_id}` : `/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}>
               <h2 className="text-[30px] font-extrabold tracking-[-0.02em] leading-[1.02] text-white mb-2.5 drop-shadow-lg hover:text-amber-300 transition-colors select-text">
-                {episode.name ?? formatEpisodeCode(episode)}
+                {episode.name ?? (isMovie ? episode.show_title : formatEpisodeCode(episode))}
               </h2>
             </Link>
 

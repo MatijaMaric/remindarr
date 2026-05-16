@@ -68,6 +68,8 @@ export {
   getTrackedMoviesByReleaseDate,
   getTrackedMoviesByReleaseDateRange,
   getUpcomingTrackedMovies,
+  getReleasedUnwatchedTrackedMovies,
+  getUpcomingTrackedMoviesOpen,
   updateTrackedStatus,
   updateNotificationMode,
   getTrackedTitlesForNotifications,
