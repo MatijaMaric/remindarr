@@ -74,6 +74,7 @@ import kioskRoutes from "./routes/kiosk";
 import shareRoutes from "./routes/share";
 import importRoutes from "./routes/import";
 import upNextRoutes from "./routes/up-next";
+import moviesRoutes from "./routes/movies";
 import overlapRoutes from "./routes/overlap";
 import achievementsRoutes, { leaderboardApp, streakApp } from "./routes/achievements";
 import type { AppEnv } from "./types";
@@ -457,6 +458,10 @@ function createApp(env: Env) {
   app.use("/api/stats/*", requireAuth);
   app.use("/api/stats", requireAuth);
   app.route("/api/stats", statsRoutes);
+
+  // Movie tracking surfaces
+  app.use("/api/movies/*", requireAuth);
+  app.route("/api/movies", moviesRoutes);
 
   // Up Next smart queue
   app.use("/api/up-next/*", requireAuth);

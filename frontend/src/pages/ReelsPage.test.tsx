@@ -3,6 +3,11 @@ import { render, screen, waitFor, cleanup, act, fireEvent } from "@testing-libra
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
+mock.module("../context/AuthContext", () => ({
+  useAuth: () => ({ subscriptions: null, user: null, providers: null }),
+  AuthContext: { Provider: ({ children }: { children: ReactNode }) => children },
+}));
+
 const mockGetUpcomingEpisodes = mock(() =>
   Promise.resolve({ today: [], upcoming: [], unwatched: [] })
 );
@@ -28,6 +33,23 @@ const mockGetRecommendations = mock(() =>
 const mockFetchFriendsLoved = mock(() =>
   Promise.resolve({ titles: [] })
 );
+const mockWatchMovie = mock((_id: string) => Promise.resolve());
+const mockUnwatchMovie = mock((_id: string) => Promise.resolve());
+const mockGetMovieTracking = mock(() =>
+  Promise.resolve({
+    to_watch: [
+      {
+        id: "m-1",
+        title: "Inception",
+        release_date: "2024-01-01",
+        release_year: 2024,
+        poster_url: null,
+        offers: [],
+      },
+    ],
+    upcoming: [],
+  })
+);
 
 mock.module("../api", () => ({
   getUpcomingEpisodes: mockGetUpcomingEpisodes,
@@ -37,9 +59,15 @@ mock.module("../api", () => ({
   browseTitles: mockBrowseTitles,
   getRecommendations: mockGetRecommendations,
   fetchFriendsLoved: mockFetchFriendsLoved,
+  watchMovie: mockWatchMovie,
+  unwatchMovie: mockUnwatchMovie,
+  getMovieTracking: mockGetMovieTracking,
+  rateEpisode: mock(() => Promise.resolve()),
+  unrateEpisode: mock(() => Promise.resolve()),
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
 }));
 
-const { default: ReelsPage, getFirstUnwatchedPerShow } = await import("./ReelsPage");
+const { default: ReelsPage, getFirstUnwatchedPerShow, normalizeMovieToReelItem } = await import("./ReelsPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
@@ -60,6 +88,9 @@ afterEach(() => {
   mockBrowseTitles.mockReset();
   mockGetRecommendations.mockReset();
   mockFetchFriendsLoved.mockReset();
+  mockWatchMovie.mockReset();
+  mockUnwatchMovie.mockReset();
+  mockGetMovieTracking.mockReset();
 });
 
 const sampleEpisode = {
@@ -232,7 +263,7 @@ describe("ReelsPage source picker", () => {
     );
   });
 
-  it("renders source picker chips", async () => {
+  it("renders source picker chips including Movies", async () => {
     mockGetUpcomingEpisodes.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [] })
     );
@@ -241,6 +272,16 @@ describe("ReelsPage source picker", () => {
     expect(screen.getByText("Popular")).toBeDefined();
     expect(screen.getByText("From My Genres")).toBeDefined();
     expect(screen.getByText("Friends Loved")).toBeDefined();
+    expect(screen.getByText("Movies")).toBeDefined();
+  });
+
+  it("?source=movies calls getMovieTracking not getUpcomingEpisodes", async () => {
+    mockGetMovieTracking.mockImplementation(() =>
+      Promise.resolve({ to_watch: [], upcoming: [] })
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
+    await waitFor(() => expect(mockGetMovieTracking).toHaveBeenCalled());
+    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
   });
 });
 
@@ -468,5 +509,54 @@ describe("getFirstUnwatchedPerShow", () => {
     ];
     const result = getFirstUnwatchedPerShow(episodes);
     expect(result[0].episodes.map((e) => e.id)).toEqual([1, 2, 3]);
+  });
+});
+
+describe("normalizeMovieToReelItem", () => {
+  it("creates a synthetic Episode from a MovieTrackItem", () => {
+    const movie = {
+      id: "m-42",
+      title: "Test Movie",
+      release_date: "2024-03-15",
+      release_year: 2024,
+      poster_url: null,
+      offers: [],
+    };
+    const ep = normalizeMovieToReelItem(movie);
+    expect(ep.title_id).toBe("m-42");
+    expect(ep.name).toBe("Test Movie");
+    expect(ep.season_number).toBe(0);
+    expect(ep.episode_number).toBe(0);
+    expect(ep.air_date).toBe("2024-03-15");
+  });
+});
+
+describe("ReelsPage — movies source", () => {
+  it("renders the movie title for movies source", async () => {
+    mockGetMovieTracking.mockImplementation(() =>
+      Promise.resolve({
+        to_watch: [{ id: "m-1", title: "Inception", release_date: "2024-01-01", release_year: 2024, poster_url: null, offers: [] }],
+        upcoming: [],
+      })
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
+    await waitFor(() => expect(screen.getAllByText("Inception").length).toBeGreaterThanOrEqual(1));
+  });
+
+  it("calls api.watchMovie (not watchEpisode) when marking a movie as watched", async () => {
+    mockGetMovieTracking.mockImplementation(() =>
+      Promise.resolve({
+        to_watch: [{ id: "m-1", title: "Inception", release_date: "2024-01-01", release_year: 2024, poster_url: null, offers: [] }],
+        upcoming: [],
+      })
+    );
+    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
+    const btn = await screen.findByRole("button", { name: /mark as watched/i });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect(mockWatchMovie).toHaveBeenCalledTimes(1);
+    expect(mockWatchMovie).toHaveBeenCalledWith("m-1");
+    expect(mockWatchEpisode).not.toHaveBeenCalled();
   });
 });

@@ -12,6 +12,14 @@ mock.module("../hooks/useIsMobile", () => ({
   useIsMobile: () => mockIsMobile,
 }));
 
+mock.module("../context/AuthContext", () => ({
+  useAuth: () => ({ subscriptions: null, user: null, providers: null }),
+  AuthContext: { Provider: ({ children }: { children: ReactNode }) => children },
+}));
+
+const mockWatchMovie = mock((_id: string) => Promise.resolve());
+const mockUnwatchMovie = mock((_id: string) => Promise.resolve());
+
 // Mock API calls
 mock.module("../api", () => ({
   getCalendarTitles: mock(() =>
@@ -23,10 +31,13 @@ mock.module("../api", () => ({
   getCrowdedWeekSettings: mock(() =>
     Promise.resolve({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 })
   ),
+  watchMovie: mockWatchMovie,
+  unwatchMovie: mockUnwatchMovie,
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
 }));
 
 // Must import after mocks
-const { default: CalendarPage } = await import("./CalendarPage");
+const { default: CalendarPage, SlideOverPanel } = await import("./CalendarPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
@@ -250,5 +261,75 @@ describe("CalendarPage", () => {
     );
     const compactBtn = screen.getByRole("button", { name: /compact/i });
     expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
+  });
+});
+
+describe("SlideOverPanel — movie watched toggle", () => {
+  const movieTitle = {
+    id: "m-1",
+    object_type: "MOVIE" as const,
+    title: "Dune: Part Two",
+    original_title: null,
+    release_year: 2024,
+    release_date: "2024-03-01",
+    runtime_minutes: 166,
+    short_description: null,
+    genres: [],
+    imdb_id: null,
+    tmdb_id: null,
+    poster_url: null,
+    age_certification: null,
+    original_language: "en",
+    tmdb_url: null,
+    imdb_score: null,
+    imdb_votes: null,
+    tmdb_score: null,
+    is_tracked: true,
+    is_watched: false,
+    offers: [],
+  };
+
+  const noop = () => {};
+
+  function renderSlideOver(onToggleTitleWatched?: (id: string, watched: boolean) => void) {
+    return render(
+      <MemoryRouter>
+        <SlideOverPanel
+          selectedDate="2024-03-01"
+          items={[{ type: "title", data: movieTitle }]}
+          episodes={[]}
+          titles={[movieTitle]}
+          onClose={noop}
+          onToggleWatched={noop as never}
+          onBulkToggle={noop as never}
+          onToggleTitleWatched={onToggleTitleWatched}
+        />
+      </MemoryRouter>,
+    );
+  }
+
+  afterEach(() => {
+    mockWatchMovie.mockClear();
+    mockUnwatchMovie.mockClear();
+  });
+
+  it("renders a watched toggle button for a movie title", () => {
+    renderSlideOver(noop);
+    const btn = screen.getByRole("button", { name: /mark as watched/i });
+    expect(btn).toBeTruthy();
+  });
+
+  it("calls onToggleTitleWatched when the toggle is clicked", () => {
+    const onToggle = mock((_id: string, _watched: boolean) => {});
+    renderSlideOver(onToggle);
+    const btn = screen.getByRole("button", { name: /mark as watched/i });
+    fireEvent.click(btn);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(onToggle).toHaveBeenCalledWith("m-1", false);
+  });
+
+  it("does NOT render a watched toggle when onToggleTitleWatched is not provided", () => {
+    renderSlideOver(undefined);
+    expect(screen.queryByRole("button", { name: /mark as watched/i })).toBeNull();
   });
 });

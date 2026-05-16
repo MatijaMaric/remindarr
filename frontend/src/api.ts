@@ -423,6 +423,15 @@ export async function unwatchMovie(titleId: string): Promise<void> {
   await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, { method: "DELETE" });
 }
 
+export interface MovieTrackResponse {
+  to_watch: { id: string; title: string; release_date: string | null; release_year: number | null; poster_url: string | null; offers: { url: string; provider_name: string }[] }[];
+  upcoming: { id: string; title: string; release_date: string | null; release_year: number | null; poster_url: string | null; offers: { url: string; provider_name: string }[] }[];
+}
+
+export async function getMovieTracking(signal?: AbortSignal): Promise<MovieTrackResponse> {
+  return fetchJson("/movies/tracking", { signal });
+}
+
 // ─── Watch History ───────────────────────────────────────────────────────────
 
 export async function getWatchHistory(titleId: string, signal?: AbortSignal): Promise<{ history: WatchHistoryEntry[]; playCount: number }> {

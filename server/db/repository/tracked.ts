@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, gte, lt, asc, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, gte, lt, lte, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, scores, tracked, watchedTitles, ratings } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -245,6 +245,65 @@ export async function getTrackedMoviesByReleaseDate(date: string, userId: string
       ...row,
       offers: offersByTitle.get(row.id) ?? [],
     }));
+  });
+}
+
+export async function getReleasedUnwatchedTrackedMovies(userId: string) {
+  return traceDbQuery("getReleasedUnwatchedTrackedMovies", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: titles.id,
+        title: titles.title,
+        release_date: titles.releaseDate,
+        release_year: titles.releaseYear,
+        poster_url: titles.posterUrl,
+      })
+      .from(tracked)
+      .innerJoin(titles, eq(titles.id, tracked.titleId))
+      .where(
+        and(
+          eq(tracked.userId, userId),
+          eq(titles.objectType, "MOVIE"),
+          sql`${titles.releaseDate} IS NOT NULL AND ${titles.releaseDate} != ''`,
+          lte(titles.releaseDate, sql`date('now')`),
+          sql`NOT EXISTS (SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
+        )
+      )
+      .orderBy(desc(titles.releaseDate))
+      .all();
+
+    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
+    return rows.map((row) => ({ ...row, offers: offersByTitle.get(row.id) ?? [] }));
+  });
+}
+
+export async function getUpcomingTrackedMoviesOpen(userId: string) {
+  return traceDbQuery("getUpcomingTrackedMoviesOpen", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: titles.id,
+        title: titles.title,
+        release_date: titles.releaseDate,
+        release_year: titles.releaseYear,
+        poster_url: titles.posterUrl,
+      })
+      .from(tracked)
+      .innerJoin(titles, eq(titles.id, tracked.titleId))
+      .where(
+        and(
+          eq(tracked.userId, userId),
+          eq(titles.objectType, "MOVIE"),
+          sql`${titles.releaseDate} IS NOT NULL AND ${titles.releaseDate} != ''`,
+          sql`${titles.releaseDate} > date('now')`,
+        )
+      )
+      .orderBy(asc(titles.releaseDate))
+      .all();
+
+    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
+    return rows.map((row) => ({ ...row, offers: offersByTitle.get(row.id) ?? [] }));
   });
 }
 

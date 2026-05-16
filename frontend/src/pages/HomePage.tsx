@@ -21,7 +21,8 @@ import { posterUrl } from "../lib/tmdb-images";
 import UpNextRow from "../components/UpNextRow";
 import FriendsLovedRow from "../components/FriendsLovedRow";
 import SuggestedForYouRow from "../components/SuggestedForYouRow";
-import type { UpNextItem } from "../api";
+import MovieRow from "../components/MovieRow";
+import type { UpNextItem, MovieTrackResponse } from "../api";
 
 export interface UnwatchedCardEntry {
   episode: Episode;
@@ -340,6 +341,7 @@ export default function HomePage() {
   const [confirmingTitleId, setConfirmingTitleId] = useState<string | null>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [streakData, setStreakData] = useState<StreakData | null>(null);
+  const [movieData, setMovieData] = useState<MovieTrackResponse>({ to_watch: [], upcoming: [] });
 
   useEffect(() => {
     if (authLoading) return;
@@ -355,16 +357,18 @@ export default function HomePage() {
 
     async function load() {
       try {
-        const [episodeData, recData, layoutData, upNextData, friendsLovedData, streakResult] = await Promise.all([
+        const [episodeData, recData, layoutData, upNextData, friendsLovedData, streakResult, moviesResult] = await Promise.all([
           api.getUpcomingEpisodes(signal),
           api.getRecommendations(6, undefined, signal).catch(() => ({ recommendations: [], count: 0 })),
           (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
           api.getUpNext(12, signal).catch(() => ({ items: [] as UpNextItem[] })),
           api.getFriendsLoved(20, signal).catch(() => ({ items: [] as FriendsLovedItem[] })),
           api.getMyStreak(signal).catch(() => null),
+          api.getMovieTracking(signal).catch(() => ({ to_watch: [], upcoming: [] })),
         ]);
         if (signal.aborted) return;
         if (streakResult) setStreakData(streakResult);
+        setMovieData(moviesResult);
         dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout, upNextItems: upNextData.items, friendsLovedItems: friendsLovedData.items });
       } catch (err: unknown) {
         if (!signal.aborted) dispatch({ type: "LOAD_ERROR", message: err instanceof Error ? err.message : String(err) });
@@ -771,6 +775,34 @@ export default function HomePage() {
 
       case "friends_loved":
         return <FriendsLovedRow key="friends_loved" items={friendsLovedItems} />;
+
+      case "movies_to_watch":
+        return movieData.to_watch.length > 0 ? (
+          <section key="movies_to_watch">
+            <div className="flex items-baseline justify-between mb-4 px-4">
+              <div>
+                <Kicker>Movies</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">Movies to Watch</h2>
+              </div>
+              <Link to="/tracked" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">See all →</Link>
+            </div>
+            <MovieRow variant="to_watch" movies={movieData.to_watch} />
+          </section>
+        ) : null;
+
+      case "upcoming_movies":
+        return movieData.upcoming.length > 0 ? (
+          <section key="upcoming_movies">
+            <div className="flex items-baseline justify-between mb-4 px-4">
+              <div>
+                <Kicker>Movies</Kicker>
+                <h2 className="text-xl font-bold tracking-[-0.01em]">Upcoming Movies</h2>
+              </div>
+              <Link to="/calendar" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">Calendar →</Link>
+            </div>
+            <MovieRow variant="upcoming" movies={movieData.upcoming} />
+          </section>
+        ) : null;
 
       case "streak":
         return streakData && streakData.currentStreak > 0 ? (

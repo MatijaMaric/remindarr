@@ -10,18 +10,43 @@ import { ReelsSkeleton } from "../components/SkeletonComponents";
 
 // ─── Source types ──────────────────────────────────────────────────────────────
 
-export type ReelsSource = "coming-soon" | "popular" | "from-your-genres" | "friends-loved";
+export type ReelsSource = "coming-soon" | "popular" | "from-your-genres" | "friends-loved" | "movies";
 
 const SOURCE_LABELS: Record<ReelsSource, string> = {
   "coming-soon": "Coming Soon",
   "popular": "Popular",
   "from-your-genres": "From My Genres",
   "friends-loved": "Friends Loved",
+  "movies": "Movies",
 };
 
-const ALL_SOURCES: ReelsSource[] = ["coming-soon", "popular", "from-your-genres", "friends-loved"];
+const ALL_SOURCES: ReelsSource[] = ["coming-soon", "popular", "from-your-genres", "friends-loved", "movies"];
 
 // ─── Normalizer ───────────────────────────────────────────────────────────────
+
+/** Convert a MovieTrackItem into a synthetic Episode shape for ReelsCard. */
+export function normalizeMovieToReelItem(movie: {
+  id: string;
+  title: string;
+  release_date: string | null;
+  release_year: number | null;
+  poster_url: string | null;
+  offers: { url: string; provider_name: string }[];
+}): Episode {
+  return {
+    id: 0,
+    title_id: movie.id,
+    season_number: 0,
+    episode_number: 0,
+    name: movie.title,
+    overview: null,
+    air_date: movie.release_date,
+    still_path: null,
+    show_title: movie.title,
+    poster_url: movie.poster_url,
+    offers: movie.offers as Episode["offers"],
+  };
+}
 
 /**
  * Convert a Title (from browse/recommendations) into a synthetic Episode shape
@@ -70,6 +95,7 @@ interface ShowCard {
   episodes: Episode[];
   currentIndex: number;
   caughtUp: boolean;
+  isMovie?: boolean;
 }
 
 interface UndoAction {
@@ -77,6 +103,7 @@ interface UndoAction {
   previousIndex: number;
   episodeId: number;
   wasCaughtUp: boolean;
+  isMovie?: boolean;
 }
 
 function adjustWatchedCount(episodes: Episode[], delta: number): Episode[] {
@@ -156,6 +183,12 @@ async function fetchCardsForSource(
         // Endpoint not yet shipped — treat as empty
         return { cards: [], friendsLovedEmpty: true };
       }
+    }
+    case "movies": {
+      const data = await api.getMovieTracking(signal);
+      const episodes = data.to_watch.map((m) => normalizeMovieToReelItem(m));
+      const cards = episodesToCards(episodes).map((c) => ({ ...c, isMovie: true as const }));
+      return { cards, friendsLovedEmpty: false };
     }
   }
 }
@@ -322,7 +355,7 @@ export default function ReelsPage() {
       // Handle clone card at the end (maps back to first card)
       const index = rawIndex >= cardsRef.current.length ? 0 : rawIndex;
       const card = cardsRef.current[index];
-      if (card && !card.caughtUp) {
+      if (card && !card.caughtUp && !card.isMovie) {
         const currentEp = card.episodes[card.currentIndex];
         setSeasonPanel({ card, seasonNumber: currentEp.season_number });
       }
@@ -341,6 +374,7 @@ export default function ReelsPage() {
       previousIndex: card.currentIndex,
       episodeId: episode.id,
       wasCaughtUp: false,
+      isMovie: card.isMovie,
     };
 
     setCards((prev) => {
@@ -368,7 +402,11 @@ export default function ReelsPage() {
     }, 5000);
 
     try {
-      await api.watchEpisode(episode.id);
+      if (card.isMovie) {
+        await api.watchMovie(titleId);
+      } else {
+        await api.watchEpisode(episode.id);
+      }
     } catch (err: unknown) {
       // Revert on failure
       setCards((prev) =>
@@ -423,7 +461,11 @@ export default function ReelsPage() {
     );
 
     try {
-      await api.unwatchEpisode(undoAction.episodeId);
+      if (undoAction.isMovie) {
+        await api.unwatchMovie(undoAction.titleId);
+      } else {
+        await api.unwatchEpisode(undoAction.episodeId);
+      }
     } catch (err: unknown) {
       if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
       setActionError(err instanceof Error ? err.message : "Failed to undo");
@@ -470,10 +512,15 @@ export default function ReelsPage() {
     if (!undoAction || undoAction.titleId !== titleId) return undefined;
     const card = cards.find((c) => c.titleId === titleId);
     if (!card) return undefined;
-    const ep = card.episodes.find((e) => e.id === undoAction.episodeId);
-    const episodeCode = ep
-      ? `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}`
-      : "episode";
+    let episodeCode: string;
+    if (undoAction.isMovie) {
+      episodeCode = "Movie";
+    } else {
+      const ep = card.episodes.find((e) => e.id === undoAction.episodeId);
+      episodeCode = ep
+        ? `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}`
+        : "episode";
+    }
     return {
       episodeCode,
       currentRating: reelsRating,
@@ -622,6 +669,7 @@ export default function ReelsPage() {
               index={i}
               total={cards.length}
               undoInfo={getUndoInfo(card.titleId)}
+              isMovie={card.isMovie}
             />
           ))}
 
@@ -635,6 +683,7 @@ export default function ReelsPage() {
               index={0}
               total={cards.length}
               undoInfo={getUndoInfo(cards[0].titleId)}
+              isMovie={cards[0].isMovie}
             />
           )}
         </div>

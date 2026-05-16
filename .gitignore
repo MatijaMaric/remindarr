@@ -57,3 +57,6 @@ test-results/
 .playwright/
 .playwright-cli/
 .e2e/
+
+# Superpowers
+.superpowers/
