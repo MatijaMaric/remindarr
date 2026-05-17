@@ -5,7 +5,8 @@ import type { AppEnv } from "../types";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
 
-export const HOMEPAGE_SECTION_IDS = ["up_next", "unwatched", "recommendations", "today", "upcoming", "airing_soon"] as const;
+// Keep in sync with frontend/src/types.ts HomepageSectionId / DEFAULT_HOMEPAGE_LAYOUT.
+export const HOMEPAGE_SECTION_IDS = ["streak", "up_next", "unwatched", "movies_to_watch", "recommendations", "today", "upcoming", "upcoming_movies", "airing_soon", "friends_loved"] as const;
 export type HomepageSectionId = (typeof HOMEPAGE_SECTION_IDS)[number];
 
 export interface HomepageSection {
@@ -14,25 +15,23 @@ export interface HomepageSection {
 }
 
 export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
+  { id: "streak", enabled: true },
   { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
+  { id: "movies_to_watch", enabled: true },
   { id: "recommendations", enabled: true },
   { id: "today", enabled: true },
   { id: "upcoming", enabled: true },
+  { id: "upcoming_movies", enabled: true },
   { id: "airing_soon", enabled: false },
+  { id: "friends_loved", enabled: true },
 ];
 
-// Discriminated union: each known section id is its own member with a fixed
-// `id` literal. This gives precise TypeScript narrowing and rejects unknown
-// section ids at the validator boundary instead of inside the handler.
-const homepageSectionSchema = z.discriminatedUnion("id", [
-  z.object({ id: z.literal("up_next"), enabled: z.boolean().default(true) }),
-  z.object({ id: z.literal("unwatched"), enabled: z.boolean().default(true) }),
-  z.object({ id: z.literal("recommendations"), enabled: z.boolean().default(true) }),
-  z.object({ id: z.literal("today"), enabled: z.boolean().default(true) }),
-  z.object({ id: z.literal("upcoming"), enabled: z.boolean().default(true) }),
-  z.object({ id: z.literal("airing_soon"), enabled: z.boolean().default(false) }),
-]);
+// Derives from HOMEPAGE_SECTION_IDS so adding a new section is a one-line change above.
+const homepageSectionSchema = z.object({
+  id: z.enum(HOMEPAGE_SECTION_IDS),
+  enabled: z.boolean().default(true),
+});
 
 const updateHomepageLayoutSchema = z.object({
   homepage_layout: z
