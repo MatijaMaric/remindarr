@@ -145,7 +145,7 @@ export function MediaCard({
               <h3
                 className={cn(
                   "text-sm font-semibold",
-                  titleClamp === 2 ? "line-clamp-2" : "truncate",
+                  titleClamp === 2 ? "line-clamp-2 min-h-[2.5rem]" : "truncate",
                 )}
               >
                 {title}

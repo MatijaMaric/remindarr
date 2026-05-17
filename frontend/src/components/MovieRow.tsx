@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { CheckCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import ScrollableRow from "./ScrollableRow";
 import { posterUrl as buildPosterUrl } from "../lib/tmdb-images";
@@ -61,6 +62,7 @@ function releaseMeta(variant: "to_watch" | "upcoming", movie: MovieTrackItem): s
 }
 
 export default function MovieRow({ variant, movies }: MovieRowProps) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const visible = movies.filter((m) => !dismissed.has(m.id));
@@ -83,11 +85,11 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
   return (
     <ScrollableRow className="gap-3 px-4 pb-2">
       {visible.map((movie) => (
-        <div key={movie.id} className="w-32 flex-shrink-0">
+        <div key={movie.id} className="w-52 flex-shrink-0">
           <MediaCard
             aspect="poster"
             to={`/title/${movie.id}`}
-            imageUrl={buildPosterUrl(movie.poster_url, "w185") ?? null}
+            imageUrl={buildPosterUrl(movie.poster_url, "w342") ?? null}
             imageAlt={movie.title}
             title={movie.title}
             titleClamp={2}
@@ -101,17 +103,17 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
                   }
                 : undefined
             }
-            overlayAction={
+            footer={
               variant === "to_watch" ? (
                 <button
-                  aria-label="Mark watched"
                   onClick={(e) => {
                     e.preventDefault();
                     void handleWatched(movie.id);
                   }}
-                  className="w-7 h-7 rounded-full bg-black/60 border border-amber-400/70 text-amber-400 flex items-center justify-center hover:bg-amber-400 hover:text-zinc-950 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                 >
-                  <Check size={14} />
+                  <CheckCircle size={14} />
+                  {t("home.markWatched")}
                 </button>
               ) : undefined
             }
