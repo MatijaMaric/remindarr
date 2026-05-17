@@ -71,7 +71,7 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
         )
       }
       footer={
-        <>
+        <div className="space-y-1.5">
           {isEpisodeReleased(episode) && (
             <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" />
           )}
@@ -102,7 +102,7 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
               )}
             </div>
           )}
-        </>
+        </div>
       }
     />
   );
