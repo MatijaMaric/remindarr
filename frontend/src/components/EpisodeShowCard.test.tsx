@@ -108,4 +108,32 @@ describe("EpisodeShowCard", () => {
     const link = container.querySelector('a[href="https://example.com/watch"]');
     expect(link).toBeTruthy();
   });
+
+  it("wraps the Stream button and Mark Watched action in a single spacing container", () => {
+    const episode = makeEpisode({ air_date: "2020-01-01" });
+    const { container } = render(
+      <Wrapper>
+        <EpisodeShowCard
+          episode={episode}
+          episodeCount={1}
+          showActions
+          onToggleWatched={() => {}}
+        />
+      </Wrapper>
+    );
+
+    const streamLink = container.querySelector(
+      'a[href="https://example.com/watch"]'
+    );
+    const markWatchedBtn = container.querySelector("button.bg-amber-500");
+    expect(streamLink).toBeTruthy();
+    expect(markWatchedBtn).toBeTruthy();
+
+    // Both controls must live inside the same space-y-1.5 wrapper so the
+    // gap above "Mark Watched" matches the rest of the card's spacing.
+    const spacingWrapper = container.querySelector(".space-y-1\\.5");
+    expect(spacingWrapper).toBeTruthy();
+    expect(spacingWrapper!.contains(streamLink!)).toBe(true);
+    expect(spacingWrapper!.contains(markWatchedBtn!)).toBe(true);
+  });
 });
