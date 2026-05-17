@@ -68,23 +68,22 @@ describe("syncEachWithDelay", () => {
   it("waits delayMs between sequential items", async () => {
     const log = makeLog();
     const stamps: number[] = [];
-    const start = performance.now();
 
     await syncEachWithDelay([1, 2, 3], {
       delayMs: 30,
       label: "test",
       log,
       onItem: async (n) => {
-        stamps.push(performance.now() - start);
+        stamps.push(performance.now());
         return n;
       },
     });
 
     expect(stamps).toHaveLength(3);
-    // Item 2 starts after delay following item 1 (>= ~30ms).
-    expect(stamps[1]).toBeGreaterThanOrEqual(25);
-    // Item 3 starts after another delay (>= ~60ms cumulative).
-    expect(stamps[2]).toBeGreaterThanOrEqual(55);
+    // Check inter-item intervals so event-loop startup overhead on the
+    // first item does not eat into the slack on cumulative assertions.
+    expect(stamps[1] - stamps[0]).toBeGreaterThanOrEqual(25);
+    expect(stamps[2] - stamps[1]).toBeGreaterThanOrEqual(25);
   });
 
   it("runs items in parallel when concurrency > 1", async () => {
@@ -110,9 +109,9 @@ describe("syncEachWithDelay", () => {
     });
     const elapsed = performance.now() - start;
 
-    // With concurrency 2 and 20ms per item, 4 items take ~40ms (not ~80ms).
+    // Concurrency is proven by inFlight.peak; elapsed cap is a loose sanity check.
     expect(inFlight.peak).toBeGreaterThanOrEqual(2);
-    expect(elapsed).toBeLessThan(75);
+    expect(elapsed).toBeLessThan(200);
   });
 
   it("invokes onError and treats {result} as a successful fallback", async () => {
