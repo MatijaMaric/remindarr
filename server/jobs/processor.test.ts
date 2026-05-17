@@ -423,4 +423,37 @@ describe("processor Sentry capture on permanent failure", () => {
     expect(bc.data?.name).toBe("sync-titles");
     expect(bc.data?.attempt).toBe("1");
   });
+
+  it("surfaces job payload and runAt in permanent failure Sentry extra and log", async () => {
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    mockFetchNewReleases.mockRejectedValueOnce(new Error("payload test failure"));
+    const db = getDb();
+    await db.insert(jobs).values({
+      name: "sync-titles",
+      status: "pending",
+      attempts: 2,
+      maxAttempts: 3,
+      runAt: new Date().toISOString(),
+      data: JSON.stringify({ marker: "p801" }),
+    });
+
+    await processPendingJobs();
+
+    // Sentry extra has data and runAt
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1] as { extra?: Record<string, unknown> };
+    expect(capturedCtx?.extra?.data).toBe('{"marker":"p801"}');
+    expect(typeof capturedCtx?.extra?.runAt).toBe("string");
+
+    // JSON log line has data and runAt
+    const errorCalls = consoleErrorSpy.mock.calls
+      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
+      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
+    const permanentLog = errorCalls.find((obj) => obj.msg === "Job failed permanently");
+    expect(permanentLog).toBeDefined();
+    expect(permanentLog!.data).toBe('{"marker":"p801"}');
+    expect(typeof permanentLog!.runAt).toBe("string");
+
+    consoleErrorSpy.mockRestore();
+  });
 });

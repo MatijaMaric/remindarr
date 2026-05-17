@@ -539,7 +539,7 @@ export async function processPendingJobs(): Promise<number> {
         Sentry.captureException(err, {
           level: "error",
           tags: { jobName: job.name, jobId: String(job.id) },
-          extra: { attempts: newAttempts, maxAttempts: job.maxAttempts, lastError: message },
+          extra: { attempts: newAttempts, maxAttempts: job.maxAttempts, lastError: message, data: job.data, runAt: job.runAt },
           fingerprint: ["job-permanent-failure", job.name],
         });
         log.error("Job failed permanently", {
@@ -549,6 +549,8 @@ export async function processPendingJobs(): Promise<number> {
           maxAttempts: job.maxAttempts,
           error: message,
           stack: err instanceof Error ? err.stack : undefined,
+          data: job.data,
+          runAt: job.runAt,
         });
       }
     }
