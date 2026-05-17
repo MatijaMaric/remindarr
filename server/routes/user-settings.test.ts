@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, upsertTitles } from "../db/repository";
+import { createUser, upsertTitles, setHomepageLayout } from "../db/repository";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
-import userSettingsApp, { DEFAULT_HOMEPAGE_LAYOUT } from "./user-settings";
+import userSettingsApp, { DEFAULT_HOMEPAGE_LAYOUT, HOMEPAGE_SECTION_IDS } from "./user-settings";
 import type { AppEnv } from "../types";
 
 let userId: string;
@@ -132,8 +132,8 @@ describe("PUT /user/settings/homepage-layout", () => {
 
     const res = await app.request("/user/settings/homepage-layout");
     const body = await res.json();
-    // All 6 sections returned; the 4 missing ones are appended
-    expect(body.homepage_layout).toHaveLength(6);
+    // All 10 sections returned; the 8 missing ones are appended from DEFAULT_HOMEPAGE_LAYOUT
+    expect(body.homepage_layout).toHaveLength(10);
     expect(body.homepage_layout[0].id).toBe("today");
     expect(body.homepage_layout[1].id).toBe("unwatched");
   });
@@ -224,6 +224,92 @@ describe("validation", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.homepage_layout.some((s: { id: string }) => s.id === "airing_soon")).toBe(true);
+  });
+});
+
+// ─── homepage-layout: new section IDs regression ─────────────────────────────
+// Regression for #803: user-settings.ts must include all HomepageSectionId values
+// so parseLayout() doesn't strip them. See frontend/src/types.ts for canonical list.
+
+describe("homepage-layout — new section IDs (regression #803)", () => {
+  it("HOMEPAGE_SECTION_IDS contains all 10 sections including movies_to_watch, upcoming_movies, streak, friends_loved", () => {
+    const ids = [...HOMEPAGE_SECTION_IDS];
+    expect(ids).toContain("movies_to_watch");
+    expect(ids).toContain("upcoming_movies");
+    expect(ids).toContain("streak");
+    expect(ids).toContain("friends_loved");
+    expect(ids).toHaveLength(10);
+  });
+
+  it("default layout for new user includes movies_to_watch and upcoming_movies", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/homepage-layout");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const ids = body.homepage_layout.map((s: { id: string }) => s.id);
+    expect(ids).toContain("movies_to_watch");
+    expect(ids).toContain("upcoming_movies");
+    expect(ids).toContain("streak");
+    expect(ids).toContain("friends_loved");
+    expect(body.homepage_layout).toHaveLength(10);
+  });
+
+  it("parseLayout preserves movies_to_watch, upcoming_movies, streak, friends_loved from stored layout", async () => {
+    const app = makeAuthedApp();
+    const stored = JSON.stringify([
+      { id: "movies_to_watch", enabled: true },
+      { id: "upcoming_movies", enabled: false },
+      { id: "streak", enabled: true },
+      { id: "friends_loved", enabled: true },
+      { id: "up_next", enabled: true },
+    ]);
+    await setHomepageLayout(userId, stored);
+
+    const res = await app.request("/user/settings/homepage-layout");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const ids = body.homepage_layout.map((s: { id: string }) => s.id);
+    expect(ids).toContain("movies_to_watch");
+    expect(ids).toContain("upcoming_movies");
+    expect(ids).toContain("streak");
+    expect(ids).toContain("friends_loved");
+    expect(body.homepage_layout.find((s: { id: string; enabled: boolean }) => s.id === "upcoming_movies")?.enabled).toBe(false);
+  });
+
+  it("PUT accepts movies_to_watch and upcoming_movies — does not 400", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/homepage-layout", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        homepage_layout: [
+          { id: "movies_to_watch", enabled: true },
+          { id: "upcoming_movies", enabled: false },
+          { id: "up_next", enabled: true },
+        ],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const ids = body.homepage_layout.map((s: { id: string }) => s.id);
+    expect(ids).toContain("movies_to_watch");
+    expect(ids).toContain("upcoming_movies");
+  });
+
+  it("PUT with all 10 sections returns 200 and round-trips them", async () => {
+    const app = makeAuthedApp();
+    const fullLayout = HOMEPAGE_SECTION_IDS.map((id, i) => ({ id, enabled: i % 2 === 0 }));
+    const res = await app.request("/user/settings/homepage-layout", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ homepage_layout: fullLayout }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.homepage_layout).toHaveLength(10);
+    for (const id of HOMEPAGE_SECTION_IDS) {
+      expect(body.homepage_layout.some((s: { id: string }) => s.id === id)).toBe(true);
+    }
   });
 });
 
