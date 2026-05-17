@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import ScrollableRow from "./ScrollableRow";
 import { posterUrl as buildPosterUrl } from "../lib/tmdb-images";
@@ -62,7 +61,6 @@ function releaseMeta(variant: "to_watch" | "upcoming", movie: MovieTrackItem): s
 }
 
 export default function MovieRow({ variant, movies }: MovieRowProps) {
-  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const visible = movies.filter((m) => !dismissed.has(m.id));
@@ -113,7 +111,7 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
                   className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   <CheckCircle size={14} />
-                  {t("home.markWatched")}
+                  Mark watched
                 </button>
               ) : undefined
             }
