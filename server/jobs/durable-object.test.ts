@@ -317,6 +317,7 @@ describe("JobQueueDO", () => {
 
   it("surfaces job payload and runAt in permanent failure Sentry extra and log", async () => {
     const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    consoleErrorSpy.mockClear(); // discard calls leaked from prior test files (Bun cross-file spy leak on Linux CI)
     processorModule.handlers["sync-titles"] = async () => {
       throw new Error("payload test failure");
     };
