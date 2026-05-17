@@ -128,6 +128,18 @@ const mockGetFriendsLoved = mock(() =>
   Promise.resolve({ items: [] })
 );
 
+const mockGetMovieTracking = mock(() =>
+  Promise.resolve({ to_watch: [], upcoming: [] })
+);
+
+const mockGetMyStreak = mock(() =>
+  Promise.resolve(null)
+);
+
+const mockGetSuggestionsAggregate = mock(() =>
+  Promise.resolve({ flat: [] })
+);
+
 mock.module("../api", () => ({
   browseTitles: mockBrowseTitles,
   getUpcomingEpisodes: mockGetUpcomingEpisodes,
@@ -135,6 +147,9 @@ mock.module("../api", () => ({
   getHomepageLayout: mockGetHomepageLayout,
   getUpNext: mockGetUpNext,
   getFriendsLoved: mockGetFriendsLoved,
+  getMovieTracking: mockGetMovieTracking,
+  getMyStreak: mockGetMyStreak,
+  getSuggestionsAggregate: mockGetSuggestionsAggregate,
 }));
 
 const { default: HomePage } = await import("./HomePage");
@@ -152,6 +167,9 @@ afterEach(() => {
   mockGetRecommendations.mockClear();
   mockGetUpNext.mockClear();
   mockGetFriendsLoved.mockClear();
+  mockGetMovieTracking.mockClear();
+  mockGetMyStreak.mockClear();
+  mockGetSuggestionsAggregate.mockClear();
 
   // Reset defaults
   mockGetUpcomingEpisodes.mockImplementation(() =>
