@@ -426,6 +426,7 @@ describe("processor Sentry capture on permanent failure", () => {
 
   it("surfaces job payload and runAt in permanent failure Sentry extra and log", async () => {
     const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    consoleErrorSpy.mockClear(); // discard calls leaked from prior test files (Bun cross-file spy leak on Linux CI)
     mockFetchNewReleases.mockRejectedValueOnce(new Error("payload test failure"));
     const db = getDb();
     await db.insert(jobs).values({
