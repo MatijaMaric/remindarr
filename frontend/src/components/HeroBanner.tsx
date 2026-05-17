@@ -206,18 +206,18 @@ export default function HeroBanner({
           <div className="flex items-center gap-3 flex-wrap">
             <Link
               to={`/title/${current.featured.title_id}`}
-              className="bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 py-2.5 rounded-lg transition-colors"
+              className="inline-flex items-center bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 h-10 rounded-lg transition-colors"
             >
               ▶ Play S{current.featured.season_number}·E{current.featured.episode_number}
             </Link>
             <button
               onClick={handleMarkWatched}
               disabled={markingWatched}
-              className="bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 h-10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
             >
               {markingWatched ? "Marking…" : "Mark watched"}
             </button>
-            <WatchButtonGroup offers={current.featured.offers ?? []} variant="inline" maxVisible={2} />
+            <WatchButtonGroup offers={current.featured.offers ?? []} variant="inline" maxVisible={2} buttonClassName="text-sm px-4 h-10" />
           </div>
           {/* Metadata strip */}
           {current.featured.offers && current.featured.offers.length > 0 && (
