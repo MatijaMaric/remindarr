@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import { Check } from "lucide-react";
 import * as api from "../api";
 import ScrollableRow from "./ScrollableRow";
 import { posterUrl as buildPosterUrl } from "../lib/tmdb-images";
+import { MediaCard } from "./MediaCard";
 
 export interface MovieTrackItem {
   id: string;
@@ -45,6 +45,21 @@ function relativeRelease(date: string | null): string {
   return formatReleaseDate(date, null);
 }
 
+function releaseMeta(variant: "to_watch" | "upcoming", movie: MovieTrackItem): string {
+  if (variant === "to_watch") {
+    return movie.release_date
+      ? `Released ${relativeRelease(movie.release_date)}`
+      : movie.release_year
+        ? String(movie.release_year)
+        : "";
+  }
+  return movie.release_date
+    ? formatReleaseDate(movie.release_date, null)
+    : movie.release_year
+      ? String(movie.release_year)
+      : "";
+}
+
 export default function MovieRow({ variant, movies }: MovieRowProps) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -68,44 +83,39 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
   return (
     <ScrollableRow className="gap-3 px-4 pb-2">
       {visible.map((movie) => (
-        <div key={movie.id} style={{ width: 104, flexShrink: 0 }}>
-          <Link to={`/title/${movie.id}`} className="block relative">
-            <div
-              className="w-[104px] h-[156px] rounded-lg overflow-hidden bg-zinc-800"
-            >
-              {movie.poster_url && (
-                <img
-                  src={buildPosterUrl(movie.poster_url, "w185") ?? undefined}
-                  alt={movie.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              )}
-            </div>
-            {variant === "upcoming" && movie.release_date && (
-              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-zinc-950 leading-none">
-                {relativeRelease(movie.release_date)}
-              </span>
-            )}
-            {variant === "to_watch" && (
-              <button
-                aria-label="Mark watched"
-                onClick={(e) => {
-                  e.preventDefault();
-                  void handleWatched(movie.id);
-                }}
-                className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/60 border border-amber-400/70 text-amber-400 flex items-center justify-center hover:bg-amber-400 hover:text-zinc-950 transition-colors cursor-pointer"
-              >
-                <Check size={14} />
-              </button>
-            )}
-          </Link>
-          <p className="mt-1.5 text-xs text-zinc-200 line-clamp-2 leading-snug">{movie.title}</p>
-          <p className="text-[11px] text-zinc-500 leading-none mt-0.5">
-            {variant === "to_watch"
-              ? (movie.release_date ? `Released ${relativeRelease(movie.release_date)}` : (movie.release_year ? String(movie.release_year) : ""))
-              : (movie.release_date ? formatReleaseDate(movie.release_date, null) : (movie.release_year ? String(movie.release_year) : ""))}
-          </p>
+        <div key={movie.id} className="w-32 flex-shrink-0">
+          <MediaCard
+            aspect="poster"
+            to={`/title/${movie.id}`}
+            imageUrl={buildPosterUrl(movie.poster_url, "w185") ?? null}
+            imageAlt={movie.title}
+            title={movie.title}
+            titleClamp={2}
+            meta={releaseMeta(variant, movie)}
+            badge={
+              variant === "upcoming" && movie.release_date
+                ? {
+                    label: relativeRelease(movie.release_date),
+                    tone: "accent",
+                    position: "top-left",
+                  }
+                : undefined
+            }
+            overlayAction={
+              variant === "to_watch" ? (
+                <button
+                  aria-label="Mark watched"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    void handleWatched(movie.id);
+                  }}
+                  className="w-7 h-7 rounded-full bg-black/60 border border-amber-400/70 text-amber-400 flex items-center justify-center hover:bg-amber-400 hover:text-zinc-950 transition-colors cursor-pointer"
+                >
+                  <Check size={14} />
+                </button>
+              ) : undefined
+            }
+          />
         </div>
       ))}
     </ScrollableRow>

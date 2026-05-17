@@ -1,5 +1,4 @@
 import { memo } from "react";
-import { Link } from "react-router";
 import { CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Episode } from "../types";
@@ -10,6 +9,7 @@ import {
 } from "./EpisodeComponents";
 import WatchButtonGroup from "./WatchButtonGroup";
 import EpisodeCountdown from "./EpisodeCountdown";
+import { MediaCard } from "./MediaCard";
 
 /** Shared card component used across Unwatched, Today, Coming Up, and Calendar sections */
 export const EpisodeShowCard = memo(function EpisodeShowCard({
@@ -32,87 +32,79 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
   isConfirming?: boolean;
 }) {
   const { t } = useTranslation();
-  const imageUrl = getEpisodeCardImageUrl(episode);
+  const episodeLink = `/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`;
 
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col h-full">
-      {/* Episode image with badge */}
-      <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="block relative">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={episode.name || formatEpisodeCode(episode)}
-            className="w-full aspect-video object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
-        )}
-        {episodeCount > 1 && (
-          <span className="absolute top-2 right-2 bg-black/75 backdrop-blur-sm text-zinc-100 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full">
-            {episodeCount} new
+    <MediaCard
+      aspect="video"
+      hoverZoom={false}
+      to={episodeLink}
+      imageUrl={getEpisodeCardImageUrl(episode)}
+      imageAlt={episode.name || formatEpisodeCode(episode)}
+      badge={
+        episodeCount > 1
+          ? { label: `${episodeCount} new`, tone: "neutral" }
+          : undefined
+      }
+      titleTo={`/title/${episode.title_id}`}
+      title={episode.show_title}
+      titleClamp={1}
+      subtitleTo={episodeLink}
+      subtitle={
+        <>
+          <span className="text-amber-400 font-medium">
+            {formatEpisodeCode(episode)}
           </span>
-        )}
-      </Link>
-
-      {/* Content */}
-      <div className="p-3 flex flex-col flex-1">
-        <Link to={`/title/${episode.title_id}`} className="hover:text-amber-400 transition-colors">
-          <h3 className="font-semibold text-white text-sm truncate">{episode.show_title}</h3>
-        </Link>
-        <Link to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`} className="hover:text-amber-400 transition-colors">
-          <p className="text-xs mt-0.5">
-            <span className="text-amber-400 font-medium">{formatEpisodeCode(episode)}</span>
-            {episode.name && <span className="text-zinc-400"> · {episode.name}</span>}
-          </p>
-        </Link>
-
-        {/* Season + progress / countdown */}
-        {showCountdown ? (
-          <div className="mt-1.5">
-            <EpisodeCountdown airDate={episode.air_date} />
-          </div>
+          {episode.name && (
+            <span className="text-zinc-400"> · {episode.name}</span>
+          )}
+        </>
+      }
+      meta={
+        showCountdown ? (
+          <EpisodeCountdown airDate={episode.air_date} />
         ) : (
-          <p className="text-xs text-zinc-500 mt-1.5">
-            {t("home.season", { number: episode.season_number })} · {t("home.episodesRemaining", { count: episodeCount })}
-          </p>
-        )}
-
-        {/* Stream button — only for released episodes */}
-        {isEpisodeReleased(episode) && (
-          <div className="mt-2">
+          <>
+            {t("home.season", { number: episode.season_number })} ·{" "}
+            {t("home.episodesRemaining", { count: episodeCount })}
+          </>
+        )
+      }
+      footer={
+        <>
+          {isEpisodeReleased(episode) && (
             <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" />
-          </div>
-        )}
-
-        {/* Actions (only for Unwatched) */}
-        {showActions && onToggleWatched && (
-          <div className="mt-auto pt-3 space-y-1.5">
-            <button
-              onClick={() => onToggleWatched(episode.id, !!episode.is_watched)}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-            >
-              <CheckCircle size={14} />
-              {t("home.markWatched")}
-            </button>
-            {episodeCount > 1 && allEpisodeIds && onMarkAllWatched && (
+          )}
+          {showActions && onToggleWatched && (
+            <div className="space-y-1.5">
               <button
-                onClick={() => onMarkAllWatched(allEpisodeIds)}
-                className={`w-full text-center text-xs transition-colors cursor-pointer ${
-                  isConfirming
-                    ? "text-red-400 hover:text-red-300 font-medium"
-                    : "text-zinc-400 hover:text-emerald-400"
-                }`}
+                onClick={() => onToggleWatched(episode.id, !!episode.is_watched)}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
-                {isConfirming
-                  ? t("home.confirmMarkAllWatched", { count: allEpisodeIds.length })
-                  : t("home.markAllWatched")}
+                <CheckCircle size={14} />
+                {t("home.markWatched")}
               </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+              {episodeCount > 1 && allEpisodeIds && onMarkAllWatched && (
+                <button
+                  onClick={() => onMarkAllWatched(allEpisodeIds)}
+                  className={`w-full text-center text-xs transition-colors cursor-pointer ${
+                    isConfirming
+                      ? "text-red-400 hover:text-red-300 font-medium"
+                      : "text-zinc-400 hover:text-emerald-400"
+                  }`}
+                >
+                  {isConfirming
+                    ? t("home.confirmMarkAllWatched", {
+                        count: allEpisodeIds.length,
+                      })
+                    : t("home.markAllWatched")}
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      }
+    />
   );
 });
 

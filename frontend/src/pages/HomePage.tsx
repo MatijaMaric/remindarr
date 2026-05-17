@@ -22,6 +22,7 @@ import UpNextRow from "../components/UpNextRow";
 import FriendsLovedRow from "../components/FriendsLovedRow";
 import SuggestedForYouRow from "../components/SuggestedForYouRow";
 import MovieRow from "../components/MovieRow";
+import { MediaCard } from "../components/MediaCard";
 import type { UpNextItem, MovieTrackResponse } from "../api";
 
 export interface UnwatchedCardEntry {
@@ -277,25 +278,28 @@ function MobileFeedHome({
           <div className="flex gap-3 px-5 overflow-x-auto scrollbar-none pb-1">
             {cwEntries.map(([titleId, eps]) => {
               const ep = eps[0];
-              const pUrl = ep.poster_url;
               return (
-                <Link key={titleId} to={`/title/${titleId}`} className="w-[132px] shrink-0">
-                  <div className="aspect-[2/3] rounded-[10px] overflow-hidden relative mb-2 bg-zinc-800">
-                    {pUrl && <img src={pUrl} alt="" className="w-full h-full object-cover" loading="lazy" />}
-                    {/* Progress bar */}
-                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/40">
-                      <div className="h-full bg-amber-400" style={{ width: `${ep.total_episodes ? Math.round((ep.watched_episodes_count ?? 0) / ep.total_episodes * 100) : 0}%` }} />
-                    </div>
-                    {/* Unwatched badge */}
-                    <div className="absolute top-1.5 right-1.5 bg-black/70 text-amber-400 text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full">
-                      +{eps.length}
-                    </div>
-                  </div>
-                  <div className="text-[12px] font-medium leading-[1.2] truncate mb-0.5">{ep.show_title}</div>
-                  <div className="font-mono text-[10px] text-zinc-400">
-                    E{ep.episode_number}
-                  </div>
-                </Link>
+                <div key={titleId} className="w-[132px] shrink-0">
+                  <MediaCard
+                    aspect="poster"
+                    to={`/title/${titleId}`}
+                    imageUrl={ep.poster_url}
+                    imageAlt={ep.show_title}
+                    progressPercent={
+                      ep.total_episodes
+                        ? Math.round(
+                            ((ep.watched_episodes_count ?? 0) /
+                              ep.total_episodes) *
+                              100,
+                          )
+                        : 0
+                    }
+                    badge={{ label: `+${eps.length}`, tone: "neutral" }}
+                    title={ep.show_title}
+                    titleClamp={1}
+                    meta={`E${ep.episode_number}`}
+                  />
+                </div>
               );
             })}
           </div>
@@ -316,15 +320,16 @@ function MobileFeedHome({
           </div>
           <div className="px-5 grid grid-cols-3 gap-2.5">
             {today7.map((ep) => (
-              <Link key={ep.id} to={`/title/${ep.title_id}`}>
-                <div className="aspect-[2/3] rounded-lg overflow-hidden mb-1.5 bg-zinc-800">
-                  {ep.poster_url && <img src={ep.poster_url} alt="" className="w-full h-full object-cover" loading="lazy" />}
-                </div>
-                <div className="text-[11px] font-medium leading-[1.15] truncate">{ep.show_title}</div>
-                <div className="font-mono text-[9px] text-zinc-400 uppercase tracking-[0.3px]">
-                  {ep.air_date ? ep.air_date.slice(5) : ""}
-                </div>
-              </Link>
+              <MediaCard
+                key={ep.id}
+                aspect="poster"
+                to={`/title/${ep.title_id}`}
+                imageUrl={ep.poster_url ?? null}
+                imageAlt={ep.show_title}
+                title={ep.show_title}
+                titleClamp={1}
+                meta={ep.air_date ? ep.air_date.slice(5) : ""}
+              />
             ))}
           </div>
         </>
@@ -623,44 +628,29 @@ export default function HomePage() {
               </Link>
             </div>
             <FullBleedCarousel>
-              {recommendations.map((rec) => {
-                const posterSrc = posterUrl(rec.title.poster_url, "w185");
-                const isUnread = !rec.read_at;
-                return (
-                  <Link
-                    key={rec.id}
+              {recommendations.map((rec) => (
+                <div
+                  key={rec.id}
+                  className="w-32 flex-shrink-0"
+                  style={{ scrollSnapAlign: "start" }}
+                >
+                  <MediaCard
+                    aspect="poster"
+                    hoverZoom
                     to={`/title/${rec.title.id}`}
-                    className="w-32 flex-shrink-0 group"
-                    style={{ scrollSnapAlign: "start" }}
-                  >
-                    <div className={`relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 ${isUnread ? "ring-2 ring-amber-500/60" : ""}`}>
-                      {posterSrc ? (
-                        <img
-                          src={posterSrc}
-                          alt={rec.title.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          loading="lazy"
-                          width={185}
-                          height={278}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
-                          N/A
-                        </div>
-                      )}
-                      {isUnread && (
-                        <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" />
-                      )}
-                    </div>
-                    <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors select-text">
-                      {rec.title.title}
-                    </p>
-                    <p className="text-xs text-zinc-400 truncate select-text">
-                      from @{rec.from_user.username}
-                    </p>
-                  </Link>
-                );
-              })}
+                    imageUrl={posterUrl(rec.title.poster_url, "w185")}
+                    imageAlt={rec.title.title}
+                    unread={!rec.read_at}
+                    title={rec.title.title}
+                    titleClamp={2}
+                    subtitle={
+                      <span className="text-zinc-400">
+                        from @{rec.from_user.username}
+                      </span>
+                    }
+                  />
+                </div>
+              ))}
             </FullBleedCarousel>
           </section>
         ) : null;
