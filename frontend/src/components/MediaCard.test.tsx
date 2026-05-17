@@ -200,4 +200,22 @@ describe("MediaCard", () => {
     );
     expect(hasClass(container, "truncate")).toBe(true);
   });
+
+  it("applies min-h-[2.5rem] to title when titleClamp is 2", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <MediaCard {...baseProps} title="Long title" titleClamp={2} />
+      </MemoryRouter>,
+    );
+    expect(hasClass(container, "min-h-[2.5rem]")).toBe(true);
+  });
+
+  it("does not apply min-h-[2.5rem] to title when titleClamp is 1", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <MediaCard {...baseProps} title="Long title" titleClamp={1} />
+      </MemoryRouter>,
+    );
+    expect(hasClass(container, "min-h-[2.5rem]")).toBe(false);
+  });
 });

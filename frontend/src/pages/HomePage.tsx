@@ -278,28 +278,25 @@ function MobileFeedHome({
           <div className="flex gap-3 px-5 overflow-x-auto scrollbar-none pb-1">
             {cwEntries.map(([titleId, eps]) => {
               const ep = eps[0];
+              const pUrl = ep.poster_url;
               return (
-                <div key={titleId} className="w-[132px] shrink-0">
-                  <MediaCard
-                    aspect="poster"
-                    to={`/title/${titleId}`}
-                    imageUrl={ep.poster_url}
-                    imageAlt={ep.show_title}
-                    progressPercent={
-                      ep.total_episodes
-                        ? Math.round(
-                            ((ep.watched_episodes_count ?? 0) /
-                              ep.total_episodes) *
-                              100,
-                          )
-                        : 0
-                    }
-                    badge={{ label: `+${eps.length}`, tone: "neutral" }}
-                    title={ep.show_title}
-                    titleClamp={1}
-                    meta={`E${ep.episode_number}`}
-                  />
-                </div>
+                <Link key={titleId} to={`/title/${titleId}`} className="w-[132px] shrink-0">
+                  <div className="aspect-[2/3] rounded-[10px] overflow-hidden relative mb-2 bg-zinc-800">
+                    {pUrl && <img src={pUrl} alt="" className="w-full h-full object-cover" loading="lazy" />}
+                    {/* Progress bar */}
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/40">
+                      <div className="h-full bg-amber-400" style={{ width: `${ep.total_episodes ? Math.round((ep.watched_episodes_count ?? 0) / ep.total_episodes * 100) : 0}%` }} />
+                    </div>
+                    {/* Unwatched badge */}
+                    <div className="absolute top-1.5 right-1.5 bg-black/70 text-amber-400 text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full">
+                      +{eps.length}
+                    </div>
+                  </div>
+                  <div className="text-[12px] font-medium leading-[1.2] truncate mb-0.5">{ep.show_title}</div>
+                  <div className="font-mono text-[10px] text-zinc-400">
+                    E{ep.episode_number}
+                  </div>
+                </Link>
               );
             })}
           </div>
@@ -320,16 +317,15 @@ function MobileFeedHome({
           </div>
           <div className="px-5 grid grid-cols-3 gap-2.5">
             {today7.map((ep) => (
-              <MediaCard
-                key={ep.id}
-                aspect="poster"
-                to={`/title/${ep.title_id}`}
-                imageUrl={ep.poster_url ?? null}
-                imageAlt={ep.show_title}
-                title={ep.show_title}
-                titleClamp={1}
-                meta={ep.air_date ? ep.air_date.slice(5) : ""}
-              />
+              <Link key={ep.id} to={`/title/${ep.title_id}`}>
+                <div className="aspect-[2/3] rounded-lg overflow-hidden mb-1.5 bg-zinc-800">
+                  {ep.poster_url && <img src={ep.poster_url} alt="" className="w-full h-full object-cover" loading="lazy" />}
+                </div>
+                <div className="text-[11px] font-medium leading-[1.15] truncate">{ep.show_title}</div>
+                <div className="font-mono text-[9px] text-zinc-400 uppercase tracking-[0.3px]">
+                  {ep.air_date ? ep.air_date.slice(5) : ""}
+                </div>
+              </Link>
             ))}
           </div>
         </>
@@ -631,7 +627,7 @@ export default function HomePage() {
               {recommendations.map((rec) => (
                 <div
                   key={rec.id}
-                  className="w-32 flex-shrink-0"
+                  className="w-52 flex-shrink-0"
                   style={{ scrollSnapAlign: "start" }}
                 >
                   <MediaCard
