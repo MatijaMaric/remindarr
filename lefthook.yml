@@ -1,6 +1,9 @@
 pre-push:
   parallel: true
   commands:
-    check:
-      run: bun run check
-      fail_text: "❌ bun run check failed — fix before pushing (or use --no-verify if you intentionally want to bypass)"
+    types-and-lint:
+      run: bun run check:fast
+      fail_text: "❌ types/lint failed — fix before pushing (or git push --no-verify to bypass). Full suite still runs in CI."
+    changed-tests:
+      run: bun run test:changed
+      fail_text: "❌ tests for changed files failed — fix before pushing (or git push --no-verify to bypass). Full suite still runs in CI."
