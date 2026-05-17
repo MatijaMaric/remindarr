@@ -496,6 +496,30 @@ describe("For you tab — suggestions", () => {
     });
   });
 
+  it("More for you rail renders MediaCard-styled cards (poster image links to title detail)", async () => {
+    const title1 = makeSearchTitle("movie-1");
+    const title2 = makeSearchTitle("movie-2", { posterUrl: "https://image.tmdb.org/t/p/w342/p2.jpg" });
+    mockGetSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] }))
+    );
+
+    render(<DiscoveryPage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Suggested next")).toBeDefined();
+    });
+
+    // title2 is in the More for you rail; its poster is rendered as an <img>
+    // wrapped in a Link to the title detail page (MediaCard structure).
+    const poster = await screen.findByAltText("Title movie-2");
+    expect(poster.tagName).toBe("IMG");
+    expect(poster.closest("a")?.getAttribute("href")).toBe("/title/movie-2");
+
+    // Track + Dismiss actions live in the card footer
+    expect(screen.getAllByText("Track").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Dismiss").length).toBeGreaterThanOrEqual(1);
+  });
+
   it("Track button in More for you rail calls trackTitle with the suggestion id", async () => {
     const title1 = makeSearchTitle("movie-1");
     const title2 = makeSearchTitle("movie-2");
