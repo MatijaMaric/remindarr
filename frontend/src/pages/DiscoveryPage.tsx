@@ -16,6 +16,7 @@ import { Skeleton } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
 import { PageHeader, Kicker, Pill, Chip } from "../components/design";
 import ScrollableRow from "../components/ScrollableRow";
+import { MediaCard } from "../components/MediaCard";
 import { posterUrl } from "../lib/tmdb-images";
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -128,62 +129,73 @@ function SuggestionCard({
   onDismiss: () => void;
   onUndismiss: () => void;
 }) {
-  const src = item.posterUrl ? posterUrl(item.posterUrl, "w185") : null;
+  const src = posterUrl(item.posterUrl, "w342");
   const state = isTracked ? "tracked" : isDismissed ? "dismissed" : null;
 
   return (
-    <div className="w-[118px] sm:w-[140px] shrink-0 flex flex-col gap-2" style={{ opacity: isDismissed ? 0.55 : 1 }}>
-      <div className="aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 relative">
-        <Link to={`/title/${item.id}`} className="block w-full h-full">
-          {src ? (
-            <img src={src} alt={item.title} className="w-full h-full object-cover" loading="lazy" width={185} height={278} />
-          ) : (
-            <div className="w-full h-full bg-zinc-800" />
-          )}
-        </Link>
-        {/* Friend stack overlay bottom-left */}
-        {friends.length > 0 && !state && (
-          <div className="absolute bottom-2 left-2 bg-zinc-950/80 backdrop-blur-sm rounded-full px-1.5 py-0.5 flex items-center">
-            <FriendStack friends={friends} max={3} />
+    <div
+      className="w-40 sm:w-44 shrink-0"
+      style={{ opacity: isDismissed ? 0.6 : 1 }}
+    >
+      <MediaCard
+        aspect="poster"
+        to={`/title/${item.id}`}
+        imageUrl={src}
+        imageAlt={item.title}
+        title={isDismissed ? <span className="line-through">{item.title}</span> : item.title}
+        titleClamp={2}
+        badge={
+          state === "tracked"
+            ? { label: "✓ Tracked", tone: "accent" }
+            : state === "dismissed"
+              ? { label: "Dismissed", tone: "neutral" }
+              : undefined
+        }
+        subtitle={
+          friends.length > 0 && !state ? (
+            <span className="flex items-center gap-1.5 text-zinc-400">
+              <FriendStack friends={friends} max={3} />
+              <span className="truncate">
+                {friends.length} {friends.length === 1 ? "friend" : "friends"}
+              </span>
+            </span>
+          ) : undefined
+        }
+        footer={
+          <div className="flex gap-1.5">
+            {isTracked ? (
+              <button
+                onClick={(e) => { e.preventDefault(); onTrack(); }}
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400/[0.16] text-amber-400 border border-amber-400/[0.35] cursor-pointer"
+              >
+                ✓ Tracked
+              </button>
+            ) : (
+              <button
+                onClick={(e) => { e.preventDefault(); onTrack(); }}
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-black hover:bg-amber-400 transition-colors cursor-pointer"
+              >
+                Track
+              </button>
+            )}
+            {isDismissed ? (
+              <button
+                onClick={(e) => { e.preventDefault(); onUndismiss(); }}
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-zinc-400 border border-white/[0.08] hover:bg-white/[0.08] transition-colors cursor-pointer"
+              >
+                Undo
+              </button>
+            ) : (
+              <button
+                onClick={(e) => { e.preventDefault(); onDismiss(); }}
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
+              >
+                Dismiss
+              </button>
+            )}
           </div>
-        )}
-        <StateBadge state={state} />
-      </div>
-      <p className={`text-[11px] sm:text-xs text-zinc-200 font-medium leading-snug line-clamp-2 ${isDismissed ? "line-through" : ""}`}>
-        {item.title}
-      </p>
-      <div className="flex gap-1">
-        {isTracked ? (
-          <button
-            onClick={onTrack}
-            className="flex-1 py-1 rounded text-[10px] font-bold bg-amber-400/[0.16] text-amber-400 border border-amber-400/[0.35] cursor-pointer"
-          >
-            ✓ Tracked
-          </button>
-        ) : (
-          <button
-            onClick={onTrack}
-            className="flex-1 py-1 rounded text-[10px] font-bold bg-amber-400 text-zinc-950 hover:bg-amber-300 transition-colors cursor-pointer"
-          >
-            Track
-          </button>
-        )}
-        {isDismissed ? (
-          <button
-            onClick={onUndismiss}
-            className="flex-1 py-1 rounded text-[10px] font-medium bg-white/[0.04] text-zinc-500 border border-white/[0.08] cursor-pointer"
-          >
-            Undo
-          </button>
-        ) : (
-          <button
-            onClick={onDismiss}
-            className="flex-1 py-1 rounded text-[10px] font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors cursor-pointer"
-          >
-            Dismiss
-          </button>
-        )}
-      </div>
+        }
+      />
     </div>
   );
 }
