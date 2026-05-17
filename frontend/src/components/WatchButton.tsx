@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { getProviderColor } from "../data/providerColors";
+import { cn } from "../lib/utils";
 
 export const PLEX_PROVIDER_ID = 9999;
 
@@ -112,7 +113,10 @@ export default function WatchButton({
       href={effectiveUrl}
       target={target}
       rel="noopener noreferrer"
-      className={`min-h-8 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 ${className?.match(/\btext-(xs|sm|base|lg|xl|\d)/) ? "" : "text-xs"} font-semibold transition-colors duration-200 ${className ?? ""}`}
+      className={cn(
+        "min-h-8 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
+        className,
+      )}
       style={{
         backgroundColor: hovered ? color.hover : color.bg,
         color: color.text,

@@ -13,9 +13,11 @@ interface Props {
   maxVisible?: number;
   size?: "sm" | "lg";
   fullWidth?: boolean;
+  /** Applied to each inline-variant button; tailwind-merge lets it override default sizing. */
+  buttonClassName?: string;
 }
 
-export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisible = 4, size = "sm", fullWidth }: Props) {
+export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisible = 4, size = "sm", fullWidth, buttonClassName }: Props) {
   const { subscriptions } = useAuth();
   const subscribedSet = useMemo(
     () => new Set(subscriptions?.providerIds ?? []),
@@ -52,6 +54,7 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
               providerIconUrl={o.provider_icon_url}
               monetizationType={o.monetization_type}
               variant="full"
+              className={buttonClassName}
             />
           </div>
         ))}

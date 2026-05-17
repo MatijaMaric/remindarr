@@ -142,6 +142,21 @@ describe("WatchButtonGroup", () => {
     expect(links.length).toBe(2);
   });
 
+  it("applies buttonClassName to inline buttons, overriding default sizing", () => {
+    render(
+      <Wrapper>
+        <WatchButtonGroup offers={[makeOffer()]} variant="inline" buttonClassName="text-sm px-4 h-10" />
+      </Wrapper>
+    );
+    const link = screen.getByRole("link");
+    expect(link.className).toContain("text-sm");
+    expect(link.className).toContain("px-4");
+    expect(link.className).toContain("h-10");
+    // tailwind-merge must strip the conflicting default utilities
+    expect(link.className).not.toContain("text-xs");
+    expect(link.className).not.toContain("px-3");
+  });
+
   it("shows Stream label for FLATRATE offer", () => {
     render(
       <Wrapper>
