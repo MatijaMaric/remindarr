@@ -315,6 +315,32 @@ describe("JobQueueDO", () => {
     });
   });
 
+  it("surfaces job payload and runAt in permanent failure Sentry extra and log", async () => {
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    processorModule.handlers["sync-titles"] = async () => {
+      throw new Error("payload test failure");
+    };
+    // enqueue with a payload and maxAttempts=1 so first failure is permanent
+    await do_.enqueue("sync-titles", JSON.stringify({ marker: "p801" }), undefined, 1);
+    await do_.runJob(null);
+
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1] as { extra?: Record<string, unknown> };
+    expect(capturedCtx?.extra?.data).toBe('{"marker":"p801"}');
+    expect(typeof capturedCtx?.extra?.runAt).toBe("string");
+
+    // JSON log line
+    const errorCalls = consoleErrorSpy.mock.calls
+      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
+      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
+    const permanentLog = errorCalls.find((obj) => obj.msg === "Job failed permanently");
+    expect(permanentLog).toBeDefined();
+    expect(permanentLog!.data).toBe('{"marker":"p801"}');
+    expect(typeof permanentLog!.runAt).toBe("string");
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it("does NOT capture transient retry failures to Sentry", async () => {
     processorModule.handlers["sync-titles"] = async () => {
       throw new Error("transient error");

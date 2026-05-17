@@ -202,10 +202,10 @@ export class JobQueueDO {
 
     let rows = this.ctx.storage.sql
       .exec(
-        "SELECT id, name, data, attempts, max_attempts FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
+        "SELECT id, name, data, attempts, max_attempts, run_at FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
         now,
       )
-      .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts">[];
+      .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts" | "run_at">[];
 
     if (rows.length === 0) {
       if (cron) {
@@ -222,10 +222,10 @@ export class JobQueueDO {
           );
           rows = this.ctx.storage.sql
             .exec(
-              "SELECT id, name, data, attempts, max_attempts FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
+              "SELECT id, name, data, attempts, max_attempts, run_at FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
               now,
             )
-            .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts">[];
+            .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts" | "run_at">[];
         }
       }
       if (rows.length === 0) {
@@ -351,7 +351,7 @@ export class JobQueueDO {
         Sentry.captureException(err, {
           level: "error",
           tags: { jobName: job.name, jobId: String(job.id) },
-          extra: { attempts: newAttempts, maxAttempts: job.max_attempts, lastError: message },
+          extra: { attempts: newAttempts, maxAttempts: job.max_attempts, lastError: message, data: job.data, runAt: job.run_at },
           fingerprint: ["job-permanent-failure", job.name],
         });
         log.error("Job failed permanently", {
@@ -361,6 +361,8 @@ export class JobQueueDO {
           maxAttempts: job.max_attempts,
           error: message,
           stack: err instanceof Error ? err.stack : undefined,
+          data: job.data,
+          runAt: job.run_at,
         });
       }
     }
