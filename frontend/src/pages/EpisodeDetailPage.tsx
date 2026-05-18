@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
-import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
+import type { CastMember, CrewMember } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
-import { useApiCall } from "../hooks/useApiCall";
+
 import { useAuth } from "../context/AuthContext";
 import { WatchedIcon } from "../components/EpisodeComponents";
 import ShareButton from "../components/ShareButton";
@@ -35,10 +35,11 @@ export default function EpisodeDetailPage() {
   const { user } = useAuth();
   const { t } = useTranslation();
 
-  const { data, loading, error } = useApiCall<EpisodeDetailsResponse>(
-    (signal) => api.getEpisodeDetails(id!, Number(season), Number(episode), signal),
-    [id, season, episode],
-  );
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: ["episode-detail", id, season, episode],
+    queryFn: ({ signal }) => api.getEpisodeDetails(id!, Number(season), Number(episode), signal),
+    enabled: !!id && !!season && !!episode,
+  });
 
   const [editHistoryEntry, setEditHistoryEntry] = useState<string | null>(null);
   const qc = useQueryClient();
@@ -112,7 +113,7 @@ export default function EpisodeDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400 select-text">{error || "Episode not found"}</div>
+        <div className="text-red-400 select-text">Episode not found</div>
       </div>
     );
   }

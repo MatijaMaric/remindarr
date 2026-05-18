@@ -7,7 +7,7 @@ import * as api from "../api";
 import type { Title } from "../types";
 import TitleList from "../components/TitleList";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groupShowsByStatus } from "../lib/groupShows";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
@@ -88,7 +88,12 @@ function sortTitles(titles: Title[], sort: SortKey): Title[] {
 }
 
 export default function TrackedPage() {
-  const { data, loading, refetch } = useApiCall((signal) => api.getTrackedTitles(signal), []);
+  const qc = useQueryClient();
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["tracked"],
+    queryFn: ({ signal }) => api.getTrackedTitles(signal),
+  });
+  const refetch = useCallback(() => { void qc.invalidateQueries({ queryKey: ["tracked"] }); }, [qc]);
   const allTitles: Title[] = useMemo(() => data?.titles ?? [], [data]);
   useScrollRestoration("tracked", !loading);
   const { t } = useTranslation();

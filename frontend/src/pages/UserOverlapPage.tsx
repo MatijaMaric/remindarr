@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import TitleCard from "../components/TitleCard";
 import type { OverlapTitle, Provider } from "../types";
@@ -34,10 +34,12 @@ export default function UserOverlapPage() {
   const { user: currentUser } = useAuth();
   const { t } = useTranslation();
 
-  const { data, loading, error } = useApiCall(
-    (signal) => api.getOverlap(friendUsername!, signal),
-    [friendUsername],
-  );
+  const { data, isLoading: loading, isError, error } = useQuery({
+    queryKey: ["user-overlap", friendUsername],
+    queryFn: ({ signal }) => api.getOverlap(friendUsername!, signal),
+    enabled: !!friendUsername,
+    retry: false,
+  });
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -75,9 +77,10 @@ export default function UserOverlapPage() {
   }, [data, filterMode, selectedGenres, sharedProviderIds]);
 
   // 403 private watchlist state
-  if (error) {
+  if (isError) {
+    const errorMessage = error instanceof Error ? error.message : String(error ?? "");
     const isPrivate =
-      error.includes("private") || error.includes("mutual followers");
+      errorMessage.includes("private") || errorMessage.includes("mutual followers");
     return (
       <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
         <p className="text-zinc-400 text-lg">

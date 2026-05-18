@@ -2,7 +2,7 @@ import { NavLink } from "react-router";
 import { Home, Search, CalendarDays, Bookmark, MoreHorizontal, LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
 
 const ICON_SIZE = 22;
@@ -11,10 +11,11 @@ export default function BottomTabBar() {
   const { user, loading } = useAuth();
   const { t } = useTranslation();
 
-  const { data: countData } = useApiCall(
-    (signal) => (user ? api.getUnreadRecommendationCount(signal) : Promise.resolve({ count: 0 })),
-    [user?.id],
-  );
+  const { data: countData } = useQuery({
+    queryKey: ["notification-count"],
+    queryFn: ({ signal }) => api.getUnreadRecommendationCount(signal),
+    enabled: !!user,
+  });
 
   const unreadCount = countData?.count ?? 0;
 

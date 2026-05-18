@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery } from "@tanstack/react-query";
 import { getMyAchievementDetail, getUserAchievementDetail } from "../api";
 import { BadgeTile } from "../components/achievements/BadgeTile";
 import { LadderProgress } from "../components/achievements/LadderProgress";
@@ -12,13 +12,14 @@ export default function AchievementDetailPage() {
   const { username, key } = useParams<{ username?: string; key: string }>();
   const isOwnProfile = !username;
 
-  const { data, loading, error } = useApiCall(
-    (signal) =>
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: ["achievement", username ?? "me", key],
+    queryFn: ({ signal }) =>
       isOwnProfile
         ? getMyAchievementDetail(key!, signal)
         : getUserAchievementDetail(username!, key!, signal),
-    [key, username],
-  );
+    enabled: !!key,
+  });
 
   const backHref = username ? `/u/${username}/achievements` : "/achievements";
 

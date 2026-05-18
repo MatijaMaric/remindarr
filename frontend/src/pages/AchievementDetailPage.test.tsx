@@ -2,6 +2,7 @@ import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import type { AchievementDetail } from "../api";
 
@@ -25,23 +26,31 @@ mock.module("../context/AuthContext", () => ({
 
 const { default: AchievementDetailPage } = await import("./AchievementDetailPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function OwnWrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter initialEntries={["/achievements/movies_10"]}>
-      <Routes>
-        <Route path="/achievements/:key" element={<>{children}</>} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/achievements/movies_10"]}>
+        <Routes>
+          <Route path="/achievements/:key" element={<>{children}</>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
 function OtherWrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter initialEntries={["/u/alice/achievements/movies_10"]}>
-      <Routes>
-        <Route path="/u/:username/achievements/:key" element={<>{children}</>} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/u/alice/achievements/movies_10"]}>
+        <Routes>
+          <Route path="/u/:username/achievements/:key" element={<>{children}</>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
