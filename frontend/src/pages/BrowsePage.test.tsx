@@ -1,9 +1,15 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import { MemoryRouter, useSearchParams } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 import "../i18n";
+
+// Fresh client per test — never the app singleton — so cache never leaks across tests
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
 
 // Mutable so individual tests can override subscriptions without re-mocking
 let mockSubscriptions: { providerIds: number[]; onlyMine: boolean } | null = null;
@@ -49,8 +55,13 @@ mock.module("../components/CategoryBrowse", () => ({ default: () => null }));
 const { default: BrowsePage } = await import("./BrowsePage");
 
 function makeWrapper(initialPath: string) {
+  const client = newTestClient();
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <MemoryRouter initialEntries={[initialPath]}>{children}</MemoryRouter>;
+    return (
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[initialPath]}>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
   };
 }
 
@@ -138,10 +149,12 @@ describe("BrowsePage subscription preselect", () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={["/browse"]}>
-          <BrowsePage />
-          <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
-        </MemoryRouter>
+        <QueryClientProvider client={newTestClient()}>
+          <MemoryRouter initialEntries={["/browse"]}>
+            <BrowsePage />
+            <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -155,10 +168,12 @@ describe("BrowsePage subscription preselect", () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={["/browse?provider=15"]}>
-          <BrowsePage />
-          <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
-        </MemoryRouter>
+        <QueryClientProvider client={newTestClient()}>
+          <MemoryRouter initialEntries={["/browse?provider=15"]}>
+            <BrowsePage />
+            <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
@@ -173,10 +188,12 @@ describe("BrowsePage subscription preselect", () => {
 
     await act(async () => {
       render(
-        <MemoryRouter initialEntries={["/browse"]}>
-          <BrowsePage />
-          <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
-        </MemoryRouter>
+        <QueryClientProvider client={newTestClient()}>
+          <MemoryRouter initialEntries={["/browse"]}>
+            <BrowsePage />
+            <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
     });
 
