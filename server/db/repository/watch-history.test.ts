@@ -251,6 +251,8 @@ describe("getTitleWatchHistory", () => {
 
     const result = await getTitleWatchHistory(userId, "show-twh-6");
     expect(result.history.length).toBe(2);
+    expect(result.has_more).toBe(false);
+    expect(result.next_cursor).toBeNull();
   });
 
   it("limit clamping: caps at 100 rows max", async () => {
@@ -279,7 +281,9 @@ describe("getTitleWatchHistory", () => {
 
     // Should match the result with no cursor at all
     const baseline = await getTitleWatchHistory(userId, "movie-twh-8");
-    expect(result.history.length).toBe(baseline.history.length);
+    const resultIds = result.history.map(r => r.id).sort();
+    const baselineIds = baseline.history.map(r => r.id).sort();
+    expect(resultIds).toEqual(baselineIds);
   });
 
   it("next_cursor is null on the final page", async () => {
