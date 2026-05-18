@@ -563,6 +563,7 @@ export const watchHistory = sqliteTable(
   },
   (table) => [
     index("watch_history_user_title").on(table.userId, table.titleId),
+    index("watch_history_user_title_ts_id").on(table.userId, table.titleId, table.watchedAt, table.id),
   ]
 );
 
