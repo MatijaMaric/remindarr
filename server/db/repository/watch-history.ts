@@ -1,4 +1,4 @@
-import { eq, and, count, desc, isNull } from "drizzle-orm";
+import { eq, and, count, desc, isNull, or, lt } from "drizzle-orm";
 import { getDb } from "../schema";
 import { watchHistory } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -97,9 +97,38 @@ export async function getLatestWatchHistoryFor(
 
 export async function getTitleWatchHistory(
   userId: string,
-  titleId: string
-): Promise<{ id: string; watchedAt: string; episodeId: number | null; note: string | null }[]> {
+  titleId: string,
+  options: { limit?: number; before?: string | null; episodeId?: number | null } = {},
+): Promise<{
+  history: { id: string; watchedAt: string; episodeId: number | null; note: string | null }[];
+  has_more: boolean;
+  next_cursor: string | null;
+}> {
   return traceDbQuery("getTitleWatchHistory", async () => {
+    const limit = Math.max(1, Math.min(options.limit ?? 50, 100));
+    const fetchN = limit + 1;
+
+    const conditions: ReturnType<typeof eq>[] = [
+      eq(watchHistory.userId, userId),
+      eq(watchHistory.titleId, titleId),
+    ];
+
+    if (options.episodeId != null) {
+      conditions.push(eq(watchHistory.episodeId, options.episodeId));
+    }
+
+    if (options.before) {
+      const pipeIdx = options.before.indexOf("|");
+      const ts = options.before.slice(0, pipeIdx);
+      const cid = options.before.slice(pipeIdx + 1);
+      conditions.push(
+        or(
+          lt(watchHistory.watchedAt, ts),
+          and(eq(watchHistory.watchedAt, ts), lt(watchHistory.id, cid)),
+        ) as ReturnType<typeof eq>,
+      );
+    }
+
     const db = getDb();
     const rows = await db
       .select({
@@ -109,10 +138,15 @@ export async function getTitleWatchHistory(
         note: watchHistory.note,
       })
       .from(watchHistory)
-      .where(and(eq(watchHistory.userId, userId), eq(watchHistory.titleId, titleId)))
-      .orderBy(desc(watchHistory.watchedAt))
-      .limit(1000)
+      .where(and(...conditions))
+      .orderBy(desc(watchHistory.watchedAt), desc(watchHistory.id))
+      .limit(fetchN)
       .all();
-    return rows;
+
+    const has_more = rows.length > limit;
+    const page = rows.slice(0, limit);
+    const last = page[page.length - 1];
+    const next_cursor = has_more && last ? `${last.watchedAt}|${last.id}` : null;
+    return { history: page, has_more, next_cursor };
   });
 }
