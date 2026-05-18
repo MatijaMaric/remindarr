@@ -119,6 +119,8 @@ export async function getTitleWatchHistory(
 
     if (options.before) {
       const pipeIdx = options.before.indexOf("|");
+      // Malformed cursor (no pipe separator) — treat as first page rather than erroring.
+      // Cursors are opaque tokens sourced from next_cursor responses, not user-constructed.
       if (pipeIdx !== -1) {
         const ts = options.before.slice(0, pipeIdx);
         const cid = options.before.slice(pipeIdx + 1);
