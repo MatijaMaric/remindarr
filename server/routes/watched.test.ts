@@ -976,6 +976,8 @@ describe("GET /watched/history/:titleId", () => {
     const body = await res.json();
     expect(body.playCount).toBe(0);
     expect(body.history).toEqual([]);
+    expect(body.has_more).toBe(false);
+    expect(body.next_cursor).toBeNull();
   });
 
   it("returns 401 for unauthenticated requests", async () => {
@@ -996,6 +998,8 @@ describe("GET /watched/history/:titleId", () => {
     const body = await res.json();
     expect(body.playCount).toBe(2);
     expect(body.history.length).toBe(2);
+    expect(body.has_more).toBe(false);
+    expect(body.next_cursor).toBeNull();
     // Newest first
     expect(new Date(body.history[0].watchedAt).getTime()).toBeGreaterThanOrEqual(
       new Date(body.history[1].watchedAt).getTime()
@@ -1018,5 +1022,129 @@ describe("GET /watched/history/:titleId", () => {
     const body = await res.json();
     expect(body.playCount).toBe(1);
     expect(body.history[0].episodeId).toBe(episodeId);
+    expect(body.has_more).toBe(false);
+    expect(body.next_cursor).toBeNull();
+  });
+
+  describe("validation", () => {
+    it("rejects ?limit=0 with 400 and issues array", async () => {
+      await upsertTitles([makeParsedTitle({ id: "movie-val-1", objectType: "MOVIE" })]);
+      const app = makeAuthedApp();
+      const res = await app.request("/watched/history/movie-val-1?limit=0");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.issues).toBeInstanceOf(Array);
+    });
+
+    it("rejects ?limit=101 with 400 and issues array", async () => {
+      await upsertTitles([makeParsedTitle({ id: "movie-val-2", objectType: "MOVIE" })]);
+      const app = makeAuthedApp();
+      const res = await app.request("/watched/history/movie-val-2?limit=101");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.issues).toBeInstanceOf(Array);
+    });
+
+    it("rejects ?episodeId=0 with 400 and issues array", async () => {
+      await upsertTitles([makeParsedTitle({ id: "movie-val-3", objectType: "MOVIE" })]);
+      const app = makeAuthedApp();
+      const res = await app.request("/watched/history/movie-val-3?episodeId=0");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.issues).toBeInstanceOf(Array);
+    });
+
+    it("happy path with no query params returns 200 with expected fields", async () => {
+      await upsertTitles([makeParsedTitle({ id: "movie-val-4", objectType: "MOVIE" })]);
+      const app = makeAuthedApp();
+      const res = await app.request("/watched/history/movie-val-4");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect("history" in body).toBe(true);
+      expect("playCount" in body).toBe(true);
+      expect("has_more" in body).toBe(true);
+      expect("next_cursor" in body).toBe(true);
+    });
+  });
+
+  describe("pagination", () => {
+    it("returns first page with has_more: true and cursor when more rows exist", async () => {
+      await upsertTitles([makeParsedTitle({ id: "movie-pag-1", objectType: "MOVIE" })]);
+      const db = getRawDb();
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "movie-pag-1", null, "2024-01-01 10:00:00", null);
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "movie-pag-1", null, "2024-01-02 10:00:00", null);
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "movie-pag-1", null, "2024-01-03 10:00:00", null);
+
+      const app = makeAuthedApp();
+      const res = await app.request("/watched/history/movie-pag-1?limit=2");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.history.length).toBe(2);
+      expect(body.has_more).toBe(true);
+      expect(typeof body.next_cursor).toBe("string");
+    });
+
+    it("second page via next_cursor returns remaining items and has_more: false", async () => {
+      await upsertTitles([makeParsedTitle({ id: "movie-pag-2", objectType: "MOVIE" })]);
+      const db = getRawDb();
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "movie-pag-2", null, "2024-01-01 10:00:00", null);
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "movie-pag-2", null, "2024-01-02 10:00:00", null);
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "movie-pag-2", null, "2024-01-03 10:00:00", null);
+
+      const app = makeAuthedApp();
+      const res1 = await app.request("/watched/history/movie-pag-2?limit=2");
+      expect(res1.status).toBe(200);
+      const body1 = await res1.json();
+      expect(body1.has_more).toBe(true);
+      const cursor = body1.next_cursor as string;
+
+      const res2 = await app.request(`/watched/history/movie-pag-2?limit=2&before=${encodeURIComponent(cursor)}`);
+      expect(res2.status).toBe(200);
+      const body2 = await res2.json();
+      expect(body2.history.length).toBe(1);
+      expect(body2.has_more).toBe(false);
+      expect(body2.next_cursor).toBeNull();
+
+      // No overlap between pages
+      const ids1 = (body1.history as { id: string }[]).map((r) => r.id);
+      const ids2 = (body2.history as { id: string }[]).map((r) => r.id);
+      const overlap = ids1.filter((id) => ids2.includes(id));
+      expect(overlap.length).toBe(0);
+
+      // Results are watchedAt DESC across pages
+      const allWatchedAts = [
+        ...(body1.history as { watchedAt: string }[]).map((r) => r.watchedAt),
+        ...(body2.history as { watchedAt: string }[]).map((r) => r.watchedAt),
+      ];
+      for (let i = 1; i < allWatchedAts.length; i++) {
+        expect(new Date(allWatchedAts[i - 1]).getTime()).toBeGreaterThanOrEqual(
+          new Date(allWatchedAts[i]).getTime()
+        );
+      }
+    });
+  });
+
+  describe("episodeId filter", () => {
+    it("?episodeId=<id> returns only the matching episode entry", async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      await upsertTitles([makeParsedTitle({ id: "show-epf-1", objectType: "SHOW" })]);
+      await upsertEpisodes([
+        { title_id: "show-epf-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: today, still_path: null },
+      ]);
+      const epId = await getEpisodeId("show-epf-1", 1, 1);
+
+      const db = getRawDb();
+      // Episode watch
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "show-epf-1", epId, "2024-01-01 10:00:00", null);
+      // Movie-level watch (no episodeId)
+      db.prepare("INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at, note) VALUES (?, ?, ?, ?, ?, ?)").run(crypto.randomUUID(), userId, "show-epf-1", null, "2024-01-02 10:00:00", null);
+
+      const app = makeAuthedApp();
+      const res = await app.request(`/watched/history/show-epf-1?episodeId=${epId}`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.history.length).toBe(1);
+      expect(body.history[0].episodeId).toBe(epId);
+    });
   });
 });
