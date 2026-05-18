@@ -31,6 +31,7 @@ export interface ParsedTitle {
   tmdbUrl: string | null;
   offers: ParsedOffer[];
   scores: ParsedScores;
+  matchScore?: number;
 }
 
 export interface ParsedOffer {

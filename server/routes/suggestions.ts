@@ -21,6 +21,21 @@ import { zValidator } from "../lib/validator";
 
 const log = logger.child({ module: "suggestions" });
 
+const REASON_WEIGHT: Record<SuggestionSourceTitle["reason"], number> = {
+  loved: 1.0,
+  liked: 0.85,
+  watched: 0.7,
+  tracked: 0.55,
+};
+
+function computeMatchScore(tmdbScore: number | null, maxReasonWeight: number, seedCount: number): number {
+  const quality = (tmdbScore ?? 6.0) / 10;
+  const affinity = maxReasonWeight;
+  const coBonus = Math.min(0.10, (seedCount - 1) * 0.05);
+  const raw = 0.55 * quality + 0.45 * affinity + coBonus;
+  return Math.round(Math.min(1, Math.max(0, raw)) * 100);
+}
+
 const app = new Hono<AppEnv>();
 
 const dismissParamSchema = z.object({ titleId: z.string().min(1) });
@@ -108,6 +123,27 @@ app.get("/", async (c) => {
       })
       .filter((g) => g.suggestions.length > 0);
 
+    // Compute per-title match score: aggregate affinity across all groups that suggest each title
+    const aggById = new Map<string, { maxWeight: number; seedCount: number }>();
+    for (const group of groups) {
+      const weight = REASON_WEIGHT[group.source.reason];
+      for (const title of group.suggestions) {
+        const existing = aggById.get(title.id);
+        if (existing) {
+          existing.maxWeight = Math.max(existing.maxWeight, weight);
+          existing.seedCount += 1;
+        } else {
+          aggById.set(title.id, { maxWeight: weight, seedCount: 1 });
+        }
+      }
+    }
+    for (const group of groups) {
+      for (const title of group.suggestions) {
+        const agg = aggById.get(title.id)!;
+        title.matchScore = computeMatchScore(title.scores.tmdbScore, agg.maxWeight, agg.seedCount);
+      }
+    }
+
     // Build flat list: iterate groups in order, pick unseen titles
     for (const group of groups) {
       for (const title of group.suggestions) {
@@ -118,8 +154,8 @@ app.get("/", async (c) => {
       }
     }
 
-    // Sort flat by TMDB score descending, then truncate
-    flat.sort((a, b) => (b.scores.tmdbScore ?? 0) - (a.scores.tmdbScore ?? 0));
+    // Sort flat by match score descending, then truncate
+    flat.sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
     flat.splice(limit);
 
     return ok(c, { flat, groups });

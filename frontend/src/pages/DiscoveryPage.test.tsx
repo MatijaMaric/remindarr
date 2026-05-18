@@ -571,4 +571,33 @@ describe("For you tab — suggestions", () => {
       expect(mockTrackTitle.mock.calls[0]?.[0]).toBe("movie-2");
     });
   });
+
+  it("hero renders an amber match-score chip when matchScore is present", async () => {
+    const title = makeSearchTitle("movie-1", { matchScore: 94 });
+    mockGetSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve(makeAggregate({ flat: [title], groups: [] }))
+    );
+
+    render(<DiscoveryPage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Top pick for you")).toBeDefined();
+    });
+    // Chip text node is lowercase; CSS text-transform: uppercase is visual-only
+    expect(screen.getByText("94% match")).toBeDefined();
+  });
+
+  it("hero omits the match-score chip when matchScore is absent", async () => {
+    const title = makeSearchTitle("movie-1");
+    mockGetSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve(makeAggregate({ flat: [title], groups: [] }))
+    );
+
+    render(<DiscoveryPage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Top pick for you")).toBeDefined();
+    });
+    expect(screen.queryByText(/% match/)).toBeNull();
+  });
 });

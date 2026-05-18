@@ -102,6 +102,7 @@ export interface SearchTitle {
     tmdbScore: number | null;
   };
   isTracked?: boolean;
+  matchScore?: number;
 }
 
 export interface SearchOffer {
