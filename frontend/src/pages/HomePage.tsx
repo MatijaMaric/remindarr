@@ -388,12 +388,15 @@ export default function HomePage() {
     mutationFn: (episodeId: number) => api.watchEpisode(episodeId),
     onMutate: async (episodeId) => {
       await qc.cancelQueries({ queryKey: ["home", "auth"] });
+      const snapshot = qc.getQueryData<AuthHomeData>(["home", "auth"]);
       qc.setQueryData<AuthHomeData>(["home", "auth"], (prev) => {
         if (!prev) return prev;
         return { ...prev, upNextItems: prev.upNextItems.filter((item) => item.nextEpisodeId !== episodeId) };
       });
+      return { snapshot };
     },
-    onError: () => {
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(["home", "auth"], ctx.snapshot);
       toast.error("Failed to mark episode as watched — please try again");
     },
     onSettled: () => {

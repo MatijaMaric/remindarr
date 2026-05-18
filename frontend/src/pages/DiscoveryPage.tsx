@@ -634,6 +634,7 @@ export default function DiscoveryPage() {
           ),
         };
       });
+      void qc.invalidateQueries({ queryKey: ["notification-count"] });
     } catch {
       // Silent failure for mark-read
     }
@@ -647,6 +648,7 @@ export default function DiscoveryPage() {
         if (!old) return old;
         return { ...old, recommendations: old.recommendations.filter((r) => r.id !== rec.id) };
       });
+      void qc.invalidateQueries({ queryKey: ["notification-count"] });
       toast.success(t("discovery.tracked", { title: rec.title.title }));
     } catch {
       toast.error(t("discovery.trackFailed"));
@@ -660,6 +662,7 @@ export default function DiscoveryPage() {
         if (!old) return old;
         return { ...old, recommendations: old.recommendations.filter((r) => r.id !== rec.id) };
       });
+      void qc.invalidateQueries({ queryKey: ["notification-count"] });
     } catch {
       toast.error(t("discovery.dismissFailed"));
     }

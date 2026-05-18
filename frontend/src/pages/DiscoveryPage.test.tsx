@@ -64,7 +64,21 @@ mock.module("../api", () => ({
   getSuggestionsAggregate: mockGetSuggestionsAggregate,
   dismissSuggestion: mockDismissSuggestion,
   undismissSuggestion: mockUndismissSuggestion,
+  // stubs to prevent mock-leak breakage in downstream test files
   getSharedWatchlist: mock(() => Promise.resolve({ username: "", titles: [] })),
+  getSeasonDetails: mock(() => Promise.resolve({})),
+  getSeasonEpisodeStatus: mock(() => Promise.resolve([])),
+  getSeasonEpisodeRatings: mock(() => Promise.resolve({ ratings: {} })),
+  watchEpisode: mock(() => Promise.resolve()),
+  unwatchEpisode: mock(() => Promise.resolve()),
+  watchEpisodesBulk: mock(() => Promise.resolve()),
+  browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
+  getUpcomingEpisodes: mock(() => Promise.resolve({ today: [], upcoming: [] })),
+  getHomepageLayout: mock(() => Promise.resolve({ layout: [] })),
+  getUpNext: mock(() => Promise.resolve({ items: [] })),
+  getFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
+  getMovieTracking: mock(() => Promise.resolve(null)),
+  getMyStreak: mock(() => Promise.resolve(null)),
 }));
 
 const { default: DiscoveryPage } = await import("./DiscoveryPage");
