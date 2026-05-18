@@ -140,11 +140,15 @@ app.put("/settings", zValidator("json", updateSettingsSchema), async (c) => {
 
 const PAGE_SIZE = 50;
 
+const usersQuerySchema = z.object({
+  search: z.string().optional(),
+  filter: z.enum(["all", "active", "banned"]).default("all"),
+  page: z.coerce.number().int().min(1).default(1),
+});
+
 // GET /api/admin/users?search=&filter=all|active|banned&page=1
-app.get("/users", async (c) => {
-  const search = c.req.query("search") || undefined;
-  const filter = (c.req.query("filter") as "all" | "active" | "banned") || "all";
-  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
+app.get("/users", zValidator("query", usersQuerySchema), async (c) => {
+  const { search, filter, page } = c.req.valid("query");
   const offset = (page - 1) * PAGE_SIZE;
 
   const [rows, total] = await Promise.all([
