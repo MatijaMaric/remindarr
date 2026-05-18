@@ -6,6 +6,7 @@ import { logger } from "../logger";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 import { onFollow } from "../achievements/triggers";
+import Sentry from "../sentry";
 
 const friendsLovedQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
@@ -110,11 +111,19 @@ app.get("/following/:userId", async (c) => {
 // GET /friends-loved — Top-rated titles from followed users in the last 7 days
 app.get("/friends-loved", zValidator("query", friendsLovedQuerySchema), async (c) => {
   const user = c.get("user");
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  if (!user) return err(c, "Authentication required", 401);
 
   const { limit } = c.req.valid("query");
-  const items = await getFriendsLovedThisWeek(user.id, limit);
-  return c.json({ items });
+  try {
+    const items = await getFriendsLovedThisWeek(user.id, limit);
+    return ok(c, { items });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    const stack = e instanceof Error ? e.stack : undefined;
+    Sentry.captureException(e);
+    log.error("friends-loved query failed", { userId: user.id, error: message, stack });
+    return err(c, "Failed to load friends-loved", 500);
+  }
 });
 
 export default app;

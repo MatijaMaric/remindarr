@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, createSession, getSessionWithUser, upsertTitles } from "../db/repository";
+import * as repository from "../db/repository";
+import Sentry from "../sentry";
 import { makeParsedTitle } from "../test-utils/fixtures";
 import { requireAuth, optionalAuth } from "../middleware/auth";
 import socialApp from "./social";
@@ -341,5 +343,17 @@ describe("GET /social/friends-loved", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveProperty("items");
+  });
+
+  it("returns 500 with a generic message and captures the error when the DB query throws", async () => {
+    const spy = spyOn(repository, "getFriendsLovedThisWeek").mockRejectedValueOnce(new Error("D1 connection lost"));
+    const captureSpy = spyOn(Sentry, "captureException");
+    const res = await app.request("/social/friends-loved", { headers: authHeaders(userAToken) });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("Failed to load friends-loved");
+    expect(captureSpy).toHaveBeenCalled();
+    spy.mockRestore();
+    captureSpy.mockRestore();
   });
 });
