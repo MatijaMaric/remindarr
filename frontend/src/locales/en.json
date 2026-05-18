@@ -651,6 +651,12 @@
     "tooMany": "Max 10 tags",
     "tooLong": "Tag too long (max 30 chars)"
   },
+  "titleDetail": {
+    "watchHistory": {
+      "loadMore": "Load more →",
+      "loading": "Loading…"
+    }
+  },
   "suggestions": {
     "alsoLike": "You might also like",
     "forYou": "Suggested for you",

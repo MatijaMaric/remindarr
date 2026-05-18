@@ -58,9 +58,9 @@ export default function EpisodeDetailPage() {
 
   useEffect(() => {
     if (episodeStatus?.is_watched && id) {
-      api.getWatchHistory(id).then(({ history }) => {
-        setWatchHistoryEntries(history.filter(e => e.episodeId === episodeStatus.id));
-      }).catch(() => {});
+      api.getWatchHistory(id, { episodeId: episodeStatus.id })
+        .then(({ history }) => setWatchHistoryEntries(history))
+        .catch(() => {});
     }
   }, [episodeStatus?.is_watched, episodeStatus?.id, id]);
 

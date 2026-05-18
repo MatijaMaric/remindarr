@@ -434,8 +434,17 @@ export async function getMovieTracking(signal?: AbortSignal): Promise<MovieTrack
 
 // ─── Watch History ───────────────────────────────────────────────────────────
 
-export async function getWatchHistory(titleId: string, signal?: AbortSignal): Promise<{ history: WatchHistoryEntry[]; playCount: number }> {
-  return fetchJson(`/watched/history/${encodeURIComponent(titleId)}`, { signal });
+export async function getWatchHistory(
+  titleId: string,
+  options: { limit?: number; before?: string; episodeId?: number } = {},
+  signal?: AbortSignal,
+): Promise<{ history: WatchHistoryEntry[]; playCount: number; has_more: boolean; next_cursor: string | null }> {
+  const params = new URLSearchParams();
+  if (options.limit) params.set("limit", String(options.limit));
+  if (options.before) params.set("before", options.before);
+  if (options.episodeId != null) params.set("episodeId", String(options.episodeId));
+  const qs = params.toString();
+  return fetchJson(`/watched/history/${encodeURIComponent(titleId)}${qs ? `?${qs}` : ""}`, { signal });
 }
 
 export async function patchWatchHistoryEntry(
