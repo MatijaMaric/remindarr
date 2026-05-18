@@ -6,6 +6,7 @@ import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle 
 import { getTrackedTitleIds, upsertTitles } from "../db/repository";
 import { logger } from "../logger";
 import { syncFailureTotal } from "../metrics";
+import Sentry from "../sentry";
 
 const log = logger.child({ module: "search" });
 import { ok, err } from "./response";
@@ -108,7 +109,11 @@ app.get("/", zValidator("query", searchQuerySchema), async (c) => {
 
     return ok(c, { titles: titlesWithTracked, count: titlesWithTracked.length });
   } catch (e: unknown) {
-    return err(c, (e as Error).message, 500);
+    const message = e instanceof Error ? e.message : String(e);
+    const stack = e instanceof Error ? e.stack : undefined;
+    Sentry.captureException(e);
+    log.error("Search failed", { query, error: message, stack });
+    return err(c, "Search failed", 500);
   }
 });
 

@@ -7,6 +7,7 @@ import { CONFIG } from "../config";
 import { upsertTitles, trackTitle, createUser, getOffersForTitle } from "../db/repository";
 import { makeParsedTitle, makeTmdbSearchMultiMovie, makeTmdbMovieDetails } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
+import Sentry from "../sentry";
 
 const searchApp = (await import("./search")).default;
 
@@ -270,6 +271,19 @@ describe("GET /search — validation", () => {
   it("happy-path: q + year_min + type", async () => {
     const res = await app.request("/search?q=foo&year_min=2000&type=MOVIE");
     expect(res.status).toBe(200);
+  });
+});
+
+describe("GET /search — outer catch (TMDB failure)", () => {
+  it("returns 500 with a generic message and captures the error when TMDB search throws", async () => {
+    (tmdbClient.searchMulti as any).mockRejectedValueOnce(new Error("TMDB upstream 503"));
+    const captureSpy = spyOn(Sentry, "captureException");
+    const res = await app.request("/search?q=malcolm");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("Search failed");
+    expect(captureSpy).toHaveBeenCalled();
+    captureSpy.mockRestore();
   });
 });
 
