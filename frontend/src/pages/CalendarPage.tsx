@@ -415,14 +415,14 @@ function MobileCalendar({
               <div className="text-[32px] font-extrabold tracking-[-1.2px]">{monthLabel}</div>
             </div>
             <div className="flex gap-2 items-center">
-              <button onClick={prevMonth} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">‹</button>
-              <button onClick={nextMonth} className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">›</button>
+              <button onClick={prevMonth} aria-label="Previous month" className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">‹</button>
+              <button onClick={nextMonth} aria-label="Next month" className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">›</button>
             </div>
           </div>
           {/* Month/Agenda toggle */}
           <div className="flex gap-2 px-5 pb-4">
-            <button onClick={() => setMobileView("month")} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Month</button>
-            <button onClick={() => setMobileView("agenda")} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Agenda</button>
+            <button onClick={() => setMobileView("month")} aria-pressed={true} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Month</button>
+            <button onClick={() => setMobileView("agenda")} aria-pressed={false} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Agenda</button>
           </div>
           {loadingMonth ? (
             <div className="text-center py-8 text-zinc-500 font-mono text-xs">Loading...</div>
@@ -436,8 +436,8 @@ function MobileCalendar({
         <div>
           {/* Month/Agenda toggle */}
           <div className="flex gap-2 px-4 pt-2 pb-2">
-            <button onClick={() => setMobileView("month")} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Month</button>
-            <button onClick={() => setMobileView("agenda")} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Agenda</button>
+            <button onClick={() => setMobileView("month")} aria-pressed={false} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Month</button>
+            <button onClick={() => setMobileView("agenda")} aria-pressed={true} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Agenda</button>
           </div>
           <AgendaCalendar
             searchParams={searchParams}
@@ -805,6 +805,7 @@ function GridCalendar({
     <div className="flex flex-wrap items-center gap-2 justify-end">
       <button
         onClick={prevMonth}
+        aria-label="Previous month"
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronLeftIcon className="size-5" />
@@ -817,6 +818,7 @@ function GridCalendar({
       </button>
       <button
         onClick={nextMonth}
+        aria-label="Next month"
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronRightIcon className="size-5" />
@@ -826,6 +828,7 @@ function GridCalendar({
         <button
           key={f.value}
           onClick={() => setTypeFilter(f.value)}
+          aria-pressed={typeFilter === f.value}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
             typeFilter === f.value
               ? "bg-amber-500 text-zinc-950"
