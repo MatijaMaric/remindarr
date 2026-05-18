@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
@@ -30,13 +30,18 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const [watchHistory, setWatchHistory] = useState<WatchHistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     api
       .getWatchHistory(title.id)
-      .then(({ history, playCount: cnt }) => {
+      .then(({ history, playCount: cnt, has_more, next_cursor }) => {
         setWatchHistory(history);
         setPlayCount(cnt);
+        setCursor(next_cursor);
+        setHasMore(has_more);
       })
       .catch(() => {});
   }, [title.id]);
@@ -50,14 +55,31 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       } else {
         await api.watchMovie(title.id);
         // Refresh history after marking watched
-        const { history, playCount: cnt } = await api.getWatchHistory(title.id);
+        const { history, playCount: cnt, has_more, next_cursor } = await api.getWatchHistory(title.id);
         setWatchHistory(history);
         setPlayCount(cnt);
+        setCursor(next_cursor);
+        setHasMore(has_more);
       }
     } catch {
       setWatched(prev);
     }
   }
+
+  const loadMore = useCallback(async () => {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const { history: more, has_more: moreHas, next_cursor: moreCursor } = await api.getWatchHistory(title.id, { before: cursor });
+      setWatchHistory(prev => [...prev, ...more]);
+      setCursor(moreCursor);
+      setHasMore(moreHas);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [cursor, loadingMore, title.id]);
 
   const overview = tmdb?.overview || title.short_description;
 
@@ -133,6 +155,18 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             </li>
           ))}
         </ul>
+        {hasMore && (
+          <div className="text-center py-2 border-t border-white/[0.06]">
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="text-sm font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-50 transition-colors"
+            >
+              {loadingMore ? t("titleDetail.watchHistory.loading") : t("titleDetail.watchHistory.loadMore")}
+            </button>
+          </div>
+        )}
       </Card>
     ) : null;
 
