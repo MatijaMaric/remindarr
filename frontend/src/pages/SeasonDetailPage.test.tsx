@@ -62,6 +62,7 @@ mock.module("../api", () => ({
   getSeasonDetails: mockGetSeasonDetails,
   getEpisodeDetails: mockGetEpisodeDetails,
   getSeasonEpisodeStatus: mockGetSeasonEpisodeStatus,
+  getSeasonEpisodeRatings: mock(() => Promise.resolve({ ratings: {} })),
   watchEpisode: mockWatchEpisode,
   unwatchEpisode: mockUnwatchEpisode,
   watchEpisodesBulk: mockWatchEpisodesBulk,
