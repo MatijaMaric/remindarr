@@ -1,5 +1,5 @@
 # Stage 1: Build frontend
-FROM oven/bun:1.3.13 AS frontend-build
+FROM oven/bun:1.3.14 AS frontend-build
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY frontend/package.json frontend/bun.lock ./frontend/
@@ -8,7 +8,7 @@ COPY frontend/ ./frontend/
 RUN cd frontend && bun run build
 
 # Stage 2: Build server
-FROM oven/bun:1.3.13 AS server-build
+FROM oven/bun:1.3.14 AS server-build
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY frontend/package.json ./frontend/
@@ -18,7 +18,7 @@ COPY drizzle/ ./drizzle/
 COPY tsconfig.json ./
 
 # Stage 3: Production
-FROM oven/bun:1.3.13-slim
+FROM oven/bun:1.3.14-slim
 WORKDIR /app
 COPY --from=server-build /app/ ./
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
