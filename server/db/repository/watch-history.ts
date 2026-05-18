@@ -1,4 +1,4 @@
-import { eq, and, count, desc, isNull, or, lt } from "drizzle-orm";
+import { eq, and, count, desc, isNull, or, lt, type SQL } from "drizzle-orm";
 import { getDb } from "../schema";
 import { watchHistory } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -108,7 +108,7 @@ export async function getTitleWatchHistory(
     const limit = Math.max(1, Math.min(options.limit ?? 50, 100));
     const fetchN = limit + 1;
 
-    const conditions: ReturnType<typeof eq>[] = [
+    const conditions: SQL[] = [
       eq(watchHistory.userId, userId),
       eq(watchHistory.titleId, titleId),
     ];
@@ -119,14 +119,15 @@ export async function getTitleWatchHistory(
 
     if (options.before) {
       const pipeIdx = options.before.indexOf("|");
-      const ts = options.before.slice(0, pipeIdx);
-      const cid = options.before.slice(pipeIdx + 1);
-      conditions.push(
-        or(
+      if (pipeIdx !== -1) {
+        const ts = options.before.slice(0, pipeIdx);
+        const cid = options.before.slice(pipeIdx + 1);
+        const cursorCondition = or(
           lt(watchHistory.watchedAt, ts),
           and(eq(watchHistory.watchedAt, ts), lt(watchHistory.id, cid)),
-        ) as ReturnType<typeof eq>,
-      );
+        );
+        if (cursorCondition) conditions.push(cursorCondition);
+      }
     }
 
     const db = getDb();
