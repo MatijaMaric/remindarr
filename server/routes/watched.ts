@@ -111,14 +111,21 @@ app.post("/backdate", zValidator("json", backdateSchema), async (c) => {
   return ok(c, { updated });
 });
 
-app.get("/history/:titleId", async (c) => {
+const historyQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  before: z.string().min(1).optional(),
+  episodeId: z.coerce.number().int().positive().optional(),
+});
+
+app.get("/history/:titleId", zValidator("query", historyQuerySchema), async (c) => {
   const user = c.get("user")!;
   const titleId = c.req.param("titleId");
-  const [history, playCount] = await Promise.all([
-    getTitleWatchHistory(user.id, titleId),
+  const { limit, before, episodeId } = c.req.valid("query");
+  const [page, playCount] = await Promise.all([
+    getTitleWatchHistory(user.id, titleId, { limit, before, episodeId }),
     getTitlePlayCount(user.id, titleId),
   ]);
-  return ok(c, { history, playCount });
+  return ok(c, { history: page.history, playCount, has_more: page.has_more, next_cursor: page.next_cursor });
 });
 
 app.patch("/history/:id", zValidator("json", editHistorySchema), async (c) => {
