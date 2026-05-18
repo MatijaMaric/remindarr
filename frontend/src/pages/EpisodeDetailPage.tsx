@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
-import type { EpisodeDetailsResponse, CastMember, CrewMember, WatchHistoryEntry } from "../types";
+import type { EpisodeDetailsResponse, CastMember, CrewMember } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useApiCall } from "../hooks/useApiCall";
@@ -39,47 +40,69 @@ export default function EpisodeDetailPage() {
     [id, season, episode],
   );
 
-  const [episodeStatus, setEpisodeStatus] = useState<{ id: number; is_watched: boolean } | null>(null);
-  const [watchHistoryEntries, setWatchHistoryEntries] = useState<WatchHistoryEntry[]>([]);
   const [editHistoryEntry, setEditHistoryEntry] = useState<string | null>(null);
+  const qc = useQueryClient();
 
-  useApiCall(
-    (signal) => user && id && season
-      ? api.getSeasonEpisodeStatus(id, Number(season), signal)
-      : Promise.resolve({ episodes: [] }),
-    [user, id, season, episode],
-    {
-      onSuccess: (result) => {
-        const match = result.episodes.find((ep) => ep.episode_number === Number(episode));
-        setEpisodeStatus(match ? { id: match.id, is_watched: match.is_watched } : null);
-      },
-    },
+  type SeasonStatusEntry = { episode_number: number; id: number; is_watched: boolean };
+  type SeasonStatusData = { episodes: SeasonStatusEntry[] };
+
+  const { data: statusData } = useQuery({
+    queryKey: ["season-status", id, season],
+    queryFn: ({ signal }) =>
+      user && id && season
+        ? api.getSeasonEpisodeStatus(id, Number(season), signal)
+        : Promise.resolve({ episodes: [] as SeasonStatusEntry[] }),
+    enabled: !!user && !!id && !!season,
+  });
+
+  const episodeStatus = useMemo(() => {
+    const match = statusData?.episodes.find((ep) => ep.episode_number === Number(episode));
+    return match ? { id: match.id, is_watched: match.is_watched } : null;
+  }, [statusData, episode]);
+
+  const { data: historyData } = useQuery({
+    queryKey: ["watch-history", id, episodeStatus?.id],
+    queryFn: ({ signal }) => api.getWatchHistory(id!, { episodeId: episodeStatus!.id }, signal),
+    enabled: !!id && !!episodeStatus?.id && !!episodeStatus?.is_watched,
+  });
+  const watchHistoryEntries = useMemo(
+    () => historyData?.history ?? [],
+    [historyData],
   );
 
-  useEffect(() => {
-    if (episodeStatus?.is_watched && id) {
-      api.getWatchHistory(id, { episodeId: episodeStatus.id })
-        .then(({ history }) => setWatchHistoryEntries(history))
-        .catch(() => {});
-    }
-  }, [episodeStatus?.is_watched, episodeStatus?.id, id]);
-
-  const toggleWatched = async () => {
-    if (!episodeStatus) return;
-
-    const wasWatched = episodeStatus.is_watched;
-    setEpisodeStatus({ ...episodeStatus, is_watched: !wasWatched });
-
-    try {
-      if (wasWatched) {
-        await api.unwatchEpisode(episodeStatus.id);
-      } else {
-        await api.watchEpisode(episodeStatus.id);
+  const toggleMutation = useMutation({
+    mutationFn: (status: { id: number; is_watched: boolean }) =>
+      status.is_watched ? api.unwatchEpisode(status.id) : api.watchEpisode(status.id),
+    onMutate: async (status) => {
+      await qc.cancelQueries({ queryKey: ["season-status", id, season] });
+      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
+      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          episodes: old.episodes.map((ep) =>
+            ep.id === status.id ? { ...ep, is_watched: !status.is_watched } : ep
+          ),
+        };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot !== undefined) {
+        qc.setQueryData(["season-status", id, season], context.snapshot);
       }
-    } catch {
-      setEpisodeStatus({ ...episodeStatus, is_watched: wasWatched });
       toast.error(t("episodes.watchedError", "Failed to update watched status"));
-    }
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const toggleWatched = () => {
+    if (!episodeStatus) return;
+    toggleMutation.mutate(episodeStatus);
   };
 
   if (loading) {
@@ -249,8 +272,8 @@ export default function EpisodeDetailPage() {
           entryId={editHistoryEntry}
           currentWatchedAt={watchHistoryEntries.find(e => e.id === editHistoryEntry)?.watchedAt ?? ""}
           anchorDate={data?.tmdb?.air_date ?? null}
-          onUpdated={(newWatchedAt) => {
-            setWatchHistoryEntries(prev => prev.map(e => e.id === editHistoryEntry ? { ...e, watchedAt: newWatchedAt } : e));
+          onUpdated={() => {
+            void qc.invalidateQueries({ queryKey: ["watch-history", id] });
             setEditHistoryEntry(null);
           }}
         />

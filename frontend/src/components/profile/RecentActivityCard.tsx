@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import type { InfiniteData } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { BookmarkPlus, Play, Quote, Star, X } from "lucide-react";
@@ -280,62 +282,44 @@ interface ActivityFeedProps {
 
 function ActivityFeed({ username, isOwnProfile, pageSize, fetcher }: ActivityFeedProps) {
   const { t } = useTranslation();
-  const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(false);
-  const [tick, setTick] = useState(0);
+  const qc = useQueryClient();
 
-  useEffect(() => {
-    const handler = () => setTick((t) => t + 1);
-    window.addEventListener("watch-history:updated", handler);
-    return () => window.removeEventListener("watch-history:updated", handler);
-  }, []);
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+    isFetchingNextPage: loadingMore,
+    hasNextPage: hasMore,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["activity", username, pageSize],
+    queryFn: ({ pageParam }) => fetcher(username, { limit: pageSize, before: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => (last.has_more && last.next_cursor) ? last.next_cursor : undefined,
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetcher(username, { limit: pageSize })
-      .then((res) => {
-        if (controller.signal.aborted) return;
-        setEvents(res.activities);
-        setCursor(res.next_cursor);
-        setHasMore(res.has_more);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (controller.signal.aborted) return;
-        setError(true);
-        setLoading(false);
-      });
-    return () => controller.abort();
-  }, [username, pageSize, fetcher, tick]);
+  const events = data?.pages.flatMap((p) => p.activities) ?? [];
 
-  const handleHide = useCallback((event: ActivityEvent) => {
-    setEvents((prev) => prev.filter((e) => e.id !== event.id));
-    api.hideActivityEvent(event.type, event.id).catch(() => {
-      setEvents((prev) =>
-        [...prev, event].sort((a, b) => b.created_at.localeCompare(a.created_at)),
-      );
+  const handleHide = useCallback((eventToHide: ActivityEvent) => {
+    const snapshot = qc.getQueryData<InfiniteData<ActivityFeedResponse>>(["activity", username, pageSize]);
+    qc.setQueryData<InfiniteData<ActivityFeedResponse>>(["activity", username, pageSize], (prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        pages: prev.pages.map((page) => ({
+          ...page,
+          activities: page.activities.filter((e) => e.id !== eventToHide.id),
+        })),
+      };
     });
-  }, []);
+    api.hideActivityEvent(eventToHide.type, eventToHide.id).catch(() => {
+      qc.setQueryData(["activity", username, pageSize], snapshot);
+    });
+  }, [qc, username, pageSize]);
 
   const loadMore = useCallback(() => {
-    if (!cursor || loadingMore) return;
-    setLoadingMore(true);
-    fetcher(username, { limit: pageSize, before: cursor })
-      .then((res) => {
-        setEvents((prev) => [...prev, ...res.activities]);
-        setCursor(res.next_cursor);
-        setHasMore(res.has_more);
-        setLoadingMore(false);
-      })
-      .catch(() => {
-        setError(true);
-        setLoadingMore(false);
-      });
-  }, [username, pageSize, cursor, loadingMore, fetcher]);
+    fetchNextPage();
+  }, [fetchNextPage]);
 
   if (error) return null;
 

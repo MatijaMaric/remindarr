@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 import EditWatchedAtDialog from "./EditWatchedAtDialog";
 import * as api from "../api";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 let spies: ReturnType<typeof spyOn>[] = [];
 
@@ -28,7 +33,12 @@ function renderDialog(overrides: Partial<Parameters<typeof EditWatchedAtDialog>[
     onUpdated: mock((_: string) => {}),
   };
   const props = { ...defaults, ...overrides };
-  return { result: render(<EditWatchedAtDialog {...props} />), props };
+  const qc = newTestClient();
+  return {
+    result: render(<QueryClientProvider client={qc}><EditWatchedAtDialog {...props} /></QueryClientProvider>),
+    props,
+    qc,
+  };
 }
 
 describe("EditWatchedAtDialog", () => {
@@ -70,13 +80,9 @@ describe("EditWatchedAtDialog", () => {
     });
   });
 
-  it("dispatches watch-history:updated event on successful save", async () => {
-    const events: Event[] = [];
-    const handler = (e: Event) => events.push(e);
-    window.addEventListener("watch-history:updated", handler);
-
-    const onClose = mock(() => {});
-    renderDialog({ onClose });
+  it("invalidates query caches on successful save", async () => {
+    const { qc } = renderDialog();
+    const invalidateSpy = spyOn(qc, "invalidateQueries");
 
     fireEvent.click(screen.getByText("Save"));
 
@@ -85,9 +91,13 @@ describe("EditWatchedAtDialog", () => {
     });
 
     await waitFor(() => {
-      expect(events.length).toBeGreaterThan(0);
+      expect(invalidateSpy).toHaveBeenCalled();
     });
 
-    window.removeEventListener("watch-history:updated", handler);
+    const keys = invalidateSpy.mock.calls.map((call: any[]) => (call[0] as any)?.queryKey);
+    expect(keys).toContainEqual(["stats"]);
+    expect(keys).toContainEqual(["activity"]);
+
+    invalidateSpy.mockRestore();
   });
 });

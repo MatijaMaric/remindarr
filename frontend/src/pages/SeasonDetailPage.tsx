@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "../components/ui/card";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -48,24 +49,28 @@ export default function SeasonDetailPage() {
     [id, season],
   );
 
-  const [statusMap, setStatusMap] = useState<Map<number, EpisodeStatus>>(new Map());
   const [episodeRatings, setEpisodeRatings] = useState<Record<number, Record<RatingValue, number>>>({});
+  const qc = useQueryClient();
 
-  useApiCall(
-    (signal) => user && id && season
-      ? api.getSeasonEpisodeStatus(id, Number(season), signal)
-      : Promise.resolve({ episodes: [] }),
-    [user, id, season],
-    {
-      onSuccess: (result) => {
-        const map = new Map<number, EpisodeStatus>();
-        for (const ep of result.episodes) {
-          map.set(ep.episode_number, { id: ep.id, is_watched: ep.is_watched });
-        }
-        setStatusMap(map);
-      },
-    },
-  );
+  type SeasonStatusEntry = { episode_number: number; id: number; is_watched: boolean };
+  type SeasonStatusData = { episodes: SeasonStatusEntry[] };
+
+  const { data: statusData } = useQuery({
+    queryKey: ["season-status", id, season],
+    queryFn: ({ signal }) =>
+      user && id && season
+        ? api.getSeasonEpisodeStatus(id, Number(season), signal)
+        : Promise.resolve({ episodes: [] as SeasonStatusEntry[] }),
+    enabled: !!user && !!id && !!season,
+  });
+
+  const statusMap = useMemo(() => {
+    const map = new Map<number, EpisodeStatus>();
+    for (const ep of statusData?.episodes ?? []) {
+      map.set(ep.episode_number, { id: ep.id, is_watched: ep.is_watched });
+    }
+    return map;
+  }, [statusData]);
 
   useApiCall(
     (signal) => id && season
@@ -77,56 +82,88 @@ export default function SeasonDetailPage() {
     },
   );
 
-  const toggleWatched = async (episodeNumber: number) => {
+  const toggleWatchedMutation = useMutation({
+    mutationFn: ({ epId, wasWatched }: { epId: number; wasWatched: boolean }) =>
+      wasWatched ? api.unwatchEpisode(epId) : api.watchEpisode(epId),
+    onMutate: async ({ epId, wasWatched }) => {
+      await qc.cancelQueries({ queryKey: ["season-status", id, season] });
+      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
+      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
+        if (!old) return old;
+        return { ...old, episodes: old.episodes.map((ep) => ep.id === epId ? { ...ep, is_watched: !wasWatched } : ep) };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot !== undefined) qc.setQueryData(["season-status", id, season], context.snapshot);
+      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const airDateMutation = useMutation({
+    mutationFn: ({ epId }: { epId: number }) => api.watchEpisodesBulk([epId], true, { useAirDate: true }),
+    onMutate: async ({ epId }) => {
+      await qc.cancelQueries({ queryKey: ["season-status", id, season] });
+      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
+      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
+        if (!old) return old;
+        return { ...old, episodes: old.episodes.map((ep) => ep.id === epId ? { ...ep, is_watched: true } : ep) };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot !== undefined) qc.setQueryData(["season-status", id, season], context.snapshot);
+      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const allWatchedMutation = useMutation({
+    mutationFn: ({ ids, newWatched, useAirDate }: { ids: number[]; newWatched: boolean; useAirDate?: boolean }) =>
+      api.watchEpisodesBulk(ids, newWatched, newWatched && useAirDate !== undefined ? { useAirDate } : undefined),
+    onMutate: async ({ ids, newWatched }) => {
+      await qc.cancelQueries({ queryKey: ["season-status", id, season] });
+      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
+      const idSet = new Set(ids);
+      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
+        if (!old) return old;
+        return { ...old, episodes: old.episodes.map((ep) => idSet.has(ep.id) ? { ...ep, is_watched: newWatched } : ep) };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot !== undefined) qc.setQueryData(["season-status", id, season], context.snapshot);
+      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const toggleWatched = (episodeNumber: number) => {
     const status = statusMap.get(episodeNumber);
     if (!status) return;
-
-    const wasWatched = status.is_watched;
-    setStatusMap((prev) => {
-      const next = new Map(prev);
-      next.set(episodeNumber, { ...status, is_watched: !wasWatched });
-      return next;
-    });
-
-    try {
-      if (wasWatched) {
-        await api.unwatchEpisode(status.id);
-      } else {
-        await api.watchEpisode(status.id);
-      }
-    } catch {
-      setStatusMap((prev) => {
-        const next = new Map(prev);
-        next.set(episodeNumber, { ...status, is_watched: wasWatched });
-        return next;
-      });
-      toast.error(t("episodes.watchedError", "Failed to update watched status"));
-    }
+    toggleWatchedMutation.mutate({ epId: status.id, wasWatched: status.is_watched });
   };
 
-  const markEpisodeOnAirDate = async (episodeNumber: number) => {
+  const markEpisodeOnAirDate = (episodeNumber: number) => {
     const status = statusMap.get(episodeNumber);
     if (!status) return;
-
-    setStatusMap((prev) => {
-      const next = new Map(prev);
-      next.set(episodeNumber, { ...status, is_watched: true });
-      return next;
-    });
-
-    try {
-      await api.watchEpisodesBulk([status.id], true, { useAirDate: true });
-    } catch {
-      setStatusMap((prev) => {
-        const next = new Map(prev);
-        next.set(episodeNumber, { ...status, is_watched: status.is_watched });
-        return next;
-      });
-      toast.error(t("episodes.watchedError", "Failed to update watched status"));
-    }
+    airDateMutation.mutate({ epId: status.id });
   };
 
-  const toggleAllWatched = async (options?: { useAirDate?: boolean }) => {
+  const toggleAllWatched = (options?: { useAirDate?: boolean }) => {
     const episodes = data?.tmdb?.episodes || [];
     const releasedEps = episodes.filter((ep) => isReleased(ep.air_date));
     const releasedStatuses = releasedEps
@@ -138,23 +175,7 @@ export default function SeasonDetailPage() {
     const allWatched = releasedStatuses.every((e) => e.status.is_watched);
     const newWatched = !allWatched;
     const ids = releasedStatuses.map((e) => e.status.id);
-
-    // Optimistic update
-    const prevMap = new Map(statusMap);
-    setStatusMap((prev) => {
-      const next = new Map(prev);
-      for (const e of releasedStatuses) {
-        next.set(e.episodeNumber, { ...e.status, is_watched: newWatched });
-      }
-      return next;
-    });
-
-    try {
-      await api.watchEpisodesBulk(ids, newWatched, newWatched ? options : undefined);
-    } catch {
-      setStatusMap(prevMap);
-      toast.error(t("episodes.watchedError", "Failed to update watched status"));
-    }
+    allWatchedMutation.mutate({ ids, newWatched, useAirDate: options?.useAirDate });
   };
 
   if (loading) {

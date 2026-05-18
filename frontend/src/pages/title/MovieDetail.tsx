@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
@@ -6,7 +7,6 @@ import type {
   CrewMember,
   MovieDetailsResponse,
   ReleaseDatesResult,
-  WatchHistoryEntry,
   WatchProviderCountry,
 } from "../../types";
 import Cast from "../../components/title-detail/Cast";
@@ -25,67 +25,50 @@ import EditWatchedAtDialog from "../../components/EditWatchedAtDialog";
 export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { t } = useTranslation();
   const { title, tmdb, country } = data;
+  const qc = useQueryClient();
   const [watched, setWatched] = useState(title.is_watched ?? false);
-  const [playCount, setPlayCount] = useState(0);
-  const [watchHistory, setWatchHistory] = useState<WatchHistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<string | null>(null);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
 
-  useEffect(() => {
-    api
-      .getWatchHistory(title.id)
-      .then(({ history, playCount: cnt, has_more, next_cursor }) => {
-        setWatchHistory(history);
-        setPlayCount(cnt);
-        setCursor(next_cursor);
-        setHasMore(has_more);
-      })
-      .catch(() => {});
-  }, [title.id]);
+  const {
+    data: historyData,
+    hasNextPage: hasMore,
+    isFetchingNextPage: loadingMore,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["watch-history", title.id],
+    queryFn: ({ pageParam, signal }) =>
+      api.getWatchHistory(title.id, { before: pageParam }, signal),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.has_more && last.next_cursor ? last.next_cursor : undefined,
+  });
+  const watchHistory = historyData?.pages.flatMap((p) => p.history) ?? [];
+  const playCount = historyData?.pages[0]?.playCount ?? 0;
 
-  async function toggleWatched() {
-    const prev = watched;
-    setWatched(!prev);
-    try {
-      if (prev) {
-        await api.unwatchMovie(title.id);
-        const { history, playCount: cnt, has_more, next_cursor } = await api.getWatchHistory(title.id);
-        setWatchHistory(history);
-        setPlayCount(cnt);
-        setCursor(next_cursor);
-        setHasMore(has_more);
-      } else {
-        await api.watchMovie(title.id);
-        // Refresh history after marking watched
-        const { history, playCount: cnt, has_more, next_cursor } = await api.getWatchHistory(title.id);
-        setWatchHistory(history);
-        setPlayCount(cnt);
-        setCursor(next_cursor);
-        setHasMore(has_more);
-      }
-    } catch {
-      setWatched(prev);
-    }
+  const toggleMutation = useMutation({
+    mutationFn: (currentlyWatched: boolean) =>
+      currentlyWatched ? api.unwatchMovie(title.id) : api.watchMovie(title.id),
+    onMutate: (currentlyWatched) => {
+      setWatched(!currentlyWatched);
+      return { prev: currentlyWatched };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) setWatched(context.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["watch-history", title.id] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void qc.invalidateQueries({ queryKey: ["calendar"] });
+    },
+  });
+
+  function toggleWatched() {
+    toggleMutation.mutate(watched);
   }
 
-  const loadMore = useCallback(async () => {
-    if (!cursor || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const { history: more, has_more: moreHas, next_cursor: moreCursor } = await api.getWatchHistory(title.id, { before: cursor });
-      setWatchHistory(prev => [...prev, ...more]);
-      setCursor(moreCursor);
-      setHasMore(moreHas);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingMore(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursor, title.id]);
+  const loadMore = () => { void fetchNextPage(); };
 
   const overview = tmdb?.overview || title.short_description;
 
@@ -302,10 +285,8 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           entryId={editEntry}
           currentWatchedAt={watchHistory.find(e => e.id === editEntry)?.watchedAt ?? ""}
           anchorDate={title.release_date}
-          onUpdated={(newWatchedAt) => {
-            setWatchHistory(prev =>
-              prev.map(e => e.id === editEntry ? { ...e, watchedAt: newWatchedAt } : e)
-            );
+          onUpdated={() => {
+            void qc.invalidateQueries({ queryKey: ["watch-history", title.id] });
             setEditEntry(null);
           }}
         />
