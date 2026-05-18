@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
-import type { Title, Provider } from "../types";
+import type { Title } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 import { loadFilters } from "./loadFilters";
@@ -52,21 +53,16 @@ export default function NewReleases({
   const [titles, setTitles] = useState<Title[]>([]);
   const { run, error, pending: loading } = useAsyncError();
 
-  const [genres, setGenres] = useState<string[]>([]);
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [languages, setLanguages] = useState<string[]>([]);
-  const [regionProviderIds, setRegionProviderIds] = useState<number[]>([]);
-  const [priorityLanguageCodes, setPriorityLanguageCodes] = useState<string[]>([]);
-
-  useEffect(() => {
-    loadFilters().then(({ genres, providers, languages, regionProviderIds, priorityLanguageCodes }) => {
-      setGenres(genres);
-      setProviders(providers);
-      setLanguages(languages);
-      setRegionProviderIds(regionProviderIds);
-      setPriorityLanguageCodes(priorityLanguageCodes);
-    });
-  }, []);
+  const { data: filters } = useQuery({
+    queryKey: ["filters"],
+    queryFn: ({ signal }) => loadFilters(signal),
+    staleTime: Infinity,
+  });
+  const genres = filters?.genres ?? [];
+  const providers = filters?.providers ?? [];
+  const languages = filters?.languages ?? [];
+  const regionProviderIds = filters?.regionProviderIds ?? [];
+  const priorityLanguageCodes = filters?.priorityLanguageCodes ?? [];
 
   const fetchTitles = useCallback(() => run(async () => {
     const res = await api.getTitles({

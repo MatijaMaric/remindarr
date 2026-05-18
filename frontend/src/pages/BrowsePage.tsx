@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useReducer } from "react";
 import { useSearchParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import SearchBar from "../components/SearchBar";
 import NewReleases from "../components/NewReleases";
@@ -10,7 +11,7 @@ import BrowseFilterCard from "../components/BrowseFilterCard";
 import TitleList from "../components/TitleList";
 import { loadFilters } from "../components/loadFilters";
 import * as api from "../api";
-import type { Title, Provider } from "../types";
+import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -126,26 +127,17 @@ export default function BrowsePage() {
   const { subscriptions } = useAuth();
   useGridNavigation();
 
-  // ── Browse filter data (loaded once) ────────────────────────────────────────
-  const [filterGenres, setFilterGenres] = useState<string[]>([]);
-  const [filterProviders, setFilterProviders] = useState<Provider[]>([]);
-  const [filterLanguages, setFilterLanguages] = useState<string[]>([]);
-  const [filterRegionProviderIds, setFilterRegionProviderIds] = useState<number[]>([]);
-  const [filterPriorityLanguageCodes, setFilterPriorityLanguageCodes] = useState<string[]>([]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    loadFilters(controller.signal).then(({ genres, providers, languages, regionProviderIds, priorityLanguageCodes }) => {
-      if (!controller.signal.aborted) {
-        setFilterGenres(genres);
-        setFilterProviders(providers);
-        setFilterLanguages(languages);
-        setFilterRegionProviderIds(regionProviderIds);
-        setFilterPriorityLanguageCodes(priorityLanguageCodes);
-      }
-    }).catch(() => { /* ignore */ });
-    return () => controller.abort();
-  }, []);
+  // ── Browse filter data (shared cache, loaded once across pages) ──────────────
+  const { data: filters } = useQuery({
+    queryKey: ["filters"],
+    queryFn: ({ signal }) => loadFilters(signal),
+    staleTime: Infinity,
+  });
+  const filterGenres = filters?.genres ?? [];
+  const filterProviders = filters?.providers ?? [];
+  const filterLanguages = filters?.languages ?? [];
+  const filterRegionProviderIds = filters?.regionProviderIds ?? [];
+  const filterPriorityLanguageCodes = filters?.priorityLanguageCodes ?? [];
 
   // ── Derived search state ────────────────────────────────────────────────────
   const searchResults = search.results;

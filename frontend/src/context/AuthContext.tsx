@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { authClient } from "../lib/auth-client";
+import { queryClient } from "../lib/queryClient";
 import { getSubscriptions } from "../api";
 import type { UserSubscriptions } from "../types";
 
@@ -109,7 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Listen for 401 events from api.ts
   useEffect(() => {
-    const handler = () => setUser(null);
+    const handler = () => {
+      queryClient.clear();
+      setUser(null);
+    };
     window.addEventListener("auth:unauthorized", handler);
     return () => window.removeEventListener("auth:unauthorized", handler);
   }, []);
