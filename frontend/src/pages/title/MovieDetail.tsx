@@ -52,6 +52,11 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
     try {
       if (prev) {
         await api.unwatchMovie(title.id);
+        const { history, playCount: cnt, has_more, next_cursor } = await api.getWatchHistory(title.id);
+        setWatchHistory(history);
+        setPlayCount(cnt);
+        setCursor(next_cursor);
+        setHasMore(has_more);
       } else {
         await api.watchMovie(title.id);
         // Refresh history after marking watched
@@ -79,7 +84,8 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
     } finally {
       setLoadingMore(false);
     }
-  }, [cursor, loadingMore, title.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor, title.id]);
 
   const overview = tmdb?.overview || title.short_description;
 
