@@ -1,7 +1,12 @@
 import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 import * as sonner from "sonner";
 import "../i18n";
 
@@ -50,6 +55,7 @@ mock.module("../api", () => ({
   getEpisodeDetails: mockGetEpisodeDetails,
   getSeasonDetails: mockGetSeasonDetails,
   getSeasonEpisodeStatus: mockGetSeasonEpisodeStatus,
+  getWatchHistory: mock(() => Promise.resolve({ history: [], playCount: 0 })),
   watchEpisode: mockWatchEpisode,
   unwatchEpisode: mockUnwatchEpisode,
   watchEpisodesBulk: mockWatchEpisodesBulk,
@@ -59,11 +65,13 @@ const { default: EpisodeDetailPage } = await import("./EpisodeDetailPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter initialEntries={["/title/tv-100/season/1/episode/1"]}>
-      <Routes>
-        <Route path="/title/:id/season/:season/episode/:episode" element={children} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/title/tv-100/season/1/episode/1"]}>
+        <Routes>
+          <Route path="/title/:id/season/:season/episode/:episode" element={children} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -136,11 +144,13 @@ describe("EpisodeDetailPage", () => {
     }));
 
     const UnreleasedWrapper = ({ children }: { children: ReactNode }) => (
-      <MemoryRouter initialEntries={["/title/tv-100/season/1/episode/3"]}>
-        <Routes>
-          <Route path="/title/:id/season/:season/episode/:episode" element={children} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/title/tv-100/season/1/episode/3"]}>
+          <Routes>
+            <Route path="/title/:id/season/:season/episode/:episode" element={children} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     render(<EpisodeDetailPage />, { wrapper: UnreleasedWrapper });

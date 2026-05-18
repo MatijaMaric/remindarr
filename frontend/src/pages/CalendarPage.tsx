@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -35,6 +36,8 @@ import AgendaCalendar, {
 } from "../components/AgendaCalendar";
 import { PageHeader } from "../components/design";
 
+
+type CalendarData = { titles: Title[]; episodes: Episode[]; count: number };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -362,24 +365,12 @@ function MobileCalendar({
     return new Date(y, m - 1, 1);
   }, [monthParam]);
 
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loadingMonth, setLoadingMonth] = useState(false);
-
-  useEffect(() => {
-    if (mobileView !== "month") return;
-    const controller = new AbortController();
-    const { signal } = controller;
-    void (async () => {
-      setLoadingMonth(true);
-      try {
-        const data = await getCalendarTitles({ month: formatMonth(currentMonth) }, signal);
-        if (!signal.aborted) setEpisodes(data.episodes || []);
-      } catch { /* ignore */ } finally {
-        if (!signal.aborted) setLoadingMonth(false);
-      }
-    })();
-    return () => { controller.abort(); };
-  }, [mobileView, currentMonth]);
+  const { data: mobileCalData, isFetching: loadingMonth } = useQuery<CalendarData>({
+    queryKey: ["calendar", formatMonth(currentMonth), undefined],
+    queryFn: ({ signal }) => getCalendarTitles({ month: formatMonth(currentMonth) }, signal),
+    enabled: mobileView === "month",
+  });
+  const episodes = useMemo(() => mobileCalData?.episodes ?? [], [mobileCalData]);
 
   const dotDates = useMemo(() => {
     const set = new Set<string>();
@@ -568,11 +559,17 @@ function GridCalendar({
     return new Date(y, m - 1, 1);
   }, [monthParam]);
 
-  const [titles, setTitles] = useState<Title[]>([]);
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(false);
   const [crowdedWeekThreshold, setCrowdedWeekThreshold] = useState(5);
   const [crowdedWeekBadgeEnabled, setCrowdedWeekBadgeEnabled] = useState(true);
+  const qc = useQueryClient();
+  const calendarMonthKey = formatMonth(currentMonth);
+  const calendarTypeKey = typeFilter || undefined;
+  const { data: calendarData, isFetching: loading } = useQuery<CalendarData>({
+    queryKey: ["calendar", calendarMonthKey, calendarTypeKey],
+    queryFn: ({ signal }) => getCalendarTitles({ month: calendarMonthKey, type: calendarTypeKey }, signal),
+  });
+  const titles = useMemo(() => calendarData?.titles ?? [], [calendarData]);
+  const episodes = useMemo(() => calendarData?.episodes ?? [], [calendarData]);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -591,24 +588,6 @@ function GridCalendar({
     return () => controller.abort();
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const { signal } = controller;
-    setLoading(true);
-    getCalendarTitles({
-      month: formatMonth(currentMonth),
-      type: typeFilter || undefined,
-    }, signal)
-      .then((data) => {
-        if (!signal.aborted) {
-          setTitles(data.titles);
-          setEpisodes(data.episodes || []);
-        }
-      })
-      .catch((err) => { if (!signal.aborted) console.error(err); })
-      .finally(() => { if (!signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, [currentMonth, typeFilter]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
@@ -713,43 +692,90 @@ function GridCalendar({
     setMonthParam(formatMonth(new Date(year, month + 1, 1)));
   const today = formatDateKey(new Date());
 
-  const toggleWatched = async (
-    episodeId: number,
-    currentlyWatched: boolean
-  ) => {
-    setEpisodes((prev) =>
-      prev.map((ep) =>
-        ep.id === episodeId
-          ? { ...ep, is_watched: !currentlyWatched }
-          : ep
-      )
-    );
-    try {
-      if (currentlyWatched) {
-        await unwatchEpisode(episodeId);
-      } else {
-        await watchEpisode(episodeId);
-      }
-    } catch (err) {
-      setEpisodes((prev) =>
-        prev.map((ep) =>
-          ep.id === episodeId
-            ? { ...ep, is_watched: currentlyWatched }
-            : ep
-        )
-      );
-      console.error("Failed to toggle watched:", err);
-      toast.error("Failed to update watched status — please try again");
-    }
-  };
-
   const isEpisodeReleased = (ep: Episode) =>
     ep.air_date ? ep.air_date <= today : false;
 
-  const toggleBulkWatched = async (
-    episodeIds: number[],
-    markWatched: boolean
-  ) => {
+  const episodeToggleMutation = useMutation({
+    mutationFn: ({ episodeId, currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
+      currentlyWatched ? unwatchEpisode(episodeId) : watchEpisode(episodeId),
+    onMutate: async ({ episodeId, currentlyWatched }) => {
+      await qc.cancelQueries({ queryKey: ["calendar"] });
+      const snapshots = qc.getQueriesData<CalendarData>({ queryKey: ["calendar"] });
+      qc.setQueriesData<CalendarData>({ queryKey: ["calendar"] }, (old) => {
+        if (!old) return old;
+        return { ...old, episodes: old.episodes.map((ep) => ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep) };
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) qc.setQueryData(key, data);
+      }
+      toast.error("Failed to update watched status — please try again");
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["calendar"] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const bulkToggleMutation = useMutation({
+    mutationFn: ({ episodeIds, markWatched }: { episodeIds: number[]; markWatched: boolean }) =>
+      watchEpisodesBulk(episodeIds, markWatched),
+    onMutate: async ({ episodeIds, markWatched }) => {
+      await qc.cancelQueries({ queryKey: ["calendar"] });
+      const snapshots = qc.getQueriesData<CalendarData>({ queryKey: ["calendar"] });
+      const idSet = new Set(episodeIds);
+      qc.setQueriesData<CalendarData>({ queryKey: ["calendar"] }, (old) => {
+        if (!old) return old;
+        return { ...old, episodes: old.episodes.map((ep) => idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep) };
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) qc.setQueryData(key, data);
+      }
+      toast.error("Failed to update watched status — please try again");
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["calendar"] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const titleToggleMutation = useMutation({
+    mutationFn: ({ titleId, currentlyWatched }: { titleId: string; currentlyWatched: boolean }) =>
+      currentlyWatched ? unwatchMovie(titleId) : watchMovie(titleId),
+    onMutate: async ({ titleId, currentlyWatched }) => {
+      await qc.cancelQueries({ queryKey: ["calendar"] });
+      const snapshots = qc.getQueriesData<CalendarData>({ queryKey: ["calendar"] });
+      qc.setQueriesData<CalendarData>({ queryKey: ["calendar"] }, (old) => {
+        if (!old) return old;
+        return { ...old, titles: old.titles.map((t) => t.id === titleId ? { ...t, is_watched: !currentlyWatched } : t) };
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshots) {
+        for (const [key, data] of context.snapshots) qc.setQueryData(key, data);
+      }
+      toast.error("Failed to update watched status — please try again");
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["calendar"] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const toggleWatched = (episodeId: number, currentlyWatched: boolean) => {
+    episodeToggleMutation.mutate({ episodeId, currentlyWatched });
+  };
+
+  const toggleBulkWatched = (episodeIds: number[], markWatched: boolean) => {
     const effectiveIds = markWatched
       ? episodeIds.filter((id) => {
           const ep = episodes.find((e) => e.id === id);
@@ -757,43 +783,11 @@ function GridCalendar({
         })
       : episodeIds;
     if (effectiveIds.length === 0) return;
-
-    const idSet = new Set(effectiveIds);
-    setEpisodes((prev) =>
-      prev.map((ep) =>
-        idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep
-      )
-    );
-    try {
-      await watchEpisodesBulk(effectiveIds, markWatched);
-    } catch (err) {
-      setEpisodes((prev) =>
-        prev.map((ep) =>
-          idSet.has(ep.id) ? { ...ep, is_watched: !markWatched } : ep
-        )
-      );
-      console.error("Failed to bulk toggle watched:", err);
-      toast.error("Failed to update watched status — please try again");
-    }
+    bulkToggleMutation.mutate({ episodeIds: effectiveIds, markWatched });
   };
 
-  const toggleTitleWatched = async (titleId: string, currentlyWatched: boolean) => {
-    setTitles((prev) =>
-      prev.map((t) => t.id === titleId ? { ...t, is_watched: !currentlyWatched } : t)
-    );
-    try {
-      if (currentlyWatched) {
-        await unwatchMovie(titleId);
-      } else {
-        await watchMovie(titleId);
-      }
-    } catch (err) {
-      setTitles((prev) =>
-        prev.map((t) => t.id === titleId ? { ...t, is_watched: currentlyWatched } : t)
-      );
-      console.error("Failed to toggle movie watched:", err);
-      toast.error("Failed to update watched status — please try again");
-    }
+  const toggleTitleWatched = (titleId: string, currentlyWatched: boolean) => {
+    titleToggleMutation.mutate({ titleId, currentlyWatched });
   };
 
   const monthTitle = currentMonth.toLocaleDateString("en-US", {
@@ -1098,46 +1092,39 @@ function WeekCalendar({
   }, [weekStart]);
 
   // Data loading — fetch the month(s) that overlap the week
-  const [titles, setTitles] = useState<Title[]>([]);
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(false);
+  const startMonth = formatMonth(weekStart);
+  const endMonth = formatMonth(weekDays[6]);
+  const weekMonths = startMonth === endMonth ? [startMonth] : [startMonth, endMonth];
+  const weekTypeKey = typeFilter || undefined;
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const { signal } = controller;
-    setLoading(true);
+  const weekQueries = useQueries({
+    queries: weekMonths.map((m) => ({
+      queryKey: ["calendar", m, weekTypeKey] as const,
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        getCalendarTitles({ month: m, type: weekTypeKey }, signal),
+    })),
+  });
 
-    // The week may span two months; fetch both if needed
-    const startMonth = formatMonth(weekStart);
-    const weekEnd = weekDays[6];
-    const endMonth = formatMonth(weekEnd);
-    const months =
-      startMonth === endMonth ? [startMonth] : [startMonth, endMonth];
+  const loading = weekQueries.some((q) => q.isFetching);
 
-    Promise.all(
-      months.map((m) =>
-        getCalendarTitles({ month: m, type: typeFilter || undefined }, signal)
-      )
-    )
-      .then((results) => {
-        if (signal.aborted) return;
-        const allTitles: Title[] = [];
-        const allEpisodes: Episode[] = [];
-        for (const data of results) {
-          allTitles.push(...data.titles);
-          allEpisodes.push(...(data.episodes || []));
-        }
-        // Deduplicate by id
-        const seenTitles = new Set<string>();
-        const seenEps = new Set<number>();
-        setTitles(allTitles.filter((t) => { if (seenTitles.has(t.id)) return false; seenTitles.add(t.id); return true; }));
-        setEpisodes(allEpisodes.filter((e) => { if (seenEps.has(e.id)) return false; seenEps.add(e.id); return true; }));
-      })
-      .catch((err) => { if (!signal.aborted) console.error(err); })
-      .finally(() => { if (!signal.aborted) setLoading(false); });
-
-    return () => controller.abort();
-  }, [weekStart, weekDays, typeFilter]);
+  const weekQ0Data = weekQueries[0]?.data;
+  const weekQ1Data = weekQueries[1]?.data;
+  const { titles, episodes } = useMemo(() => {
+    const allTitles: Title[] = [];
+    const allEpisodes: Episode[] = [];
+    for (const data of [weekQ0Data, weekQ1Data]) {
+      if (data) {
+        allTitles.push(...data.titles);
+        allEpisodes.push(...(data.episodes || []));
+      }
+    }
+    const seenTitles = new Set<string>();
+    const seenEps = new Set<number>();
+    return {
+      titles: allTitles.filter((t) => { if (seenTitles.has(t.id)) return false; seenTitles.add(t.id); return true; }),
+      episodes: allEpisodes.filter((e) => { if (seenEps.has(e.id)) return false; seenEps.add(e.id); return true; }),
+    };
+  }, [weekQ0Data, weekQ1Data]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();

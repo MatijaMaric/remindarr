@@ -1,8 +1,13 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import "../i18n";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 // --- Mocks ---
 
@@ -155,7 +160,11 @@ mock.module("../api", () => ({
 const { default: HomePage } = await import("./HomePage");
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 afterEach(() => {

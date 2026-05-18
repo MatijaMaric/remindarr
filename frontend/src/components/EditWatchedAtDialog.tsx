@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
@@ -29,6 +30,7 @@ function toYMD(d: Date): string {
 
 export default function EditWatchedAtDialog({ open, onClose, entryId, currentWatchedAt, anchorDate, onUpdated }: Props) {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [selected, setSelected] = useState<Date | undefined>(toDate(currentWatchedAt));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +56,11 @@ export default function EditWatchedAtDialog({ open, onClose, entryId, currentWat
     try {
       const result = await api.patchWatchHistoryEntry(entryId, toYMD(selected));
       onUpdated(result.watchedAt);
-      window.dispatchEvent(new CustomEvent("watch-history:updated"));
+      qc.invalidateQueries({ queryKey: ["watch-history"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
+      qc.invalidateQueries({ queryKey: ["calendar"] });
+      qc.invalidateQueries({ queryKey: ["home", "auth"] });
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save";

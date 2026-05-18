@@ -1,7 +1,12 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 // Initialize i18n before anything else
 import "../i18n";
@@ -37,7 +42,11 @@ mock.module("../api", () => ({
 const { default: TrackedPage } = await import("./TrackedPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 afterEach(() => {

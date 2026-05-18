@@ -1,13 +1,22 @@
 import { describe, it, expect, afterEach, mock } from "bun:test";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import "../../i18n";
 import RecentActivityCard from "./RecentActivityCard";
 import type { ActivityEvent, ActivityFeedResponse } from "../../types";
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function event(overrides: Partial<ActivityEvent>): ActivityEvent {

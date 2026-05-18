@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback, useReducer } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "../components/ui/card";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
@@ -62,66 +63,17 @@ export function buildUnwatchedCards(episodes: Episode[]): UnwatchedCardEntry[] {
   return entries;
 }
 
-type HomeState =
-  | { status: "loading" }
-  | { status: "anon"; popularTitles: Title[] }
-  | { status: "auth"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[]; friendsLovedItems: FriendsLovedItem[] }
-  | { status: "error"; message: string };
-
-type HomeAction =
-  | { type: "LOAD_ANON_SUCCESS"; popularTitles: Title[] }
-  | { type: "LOAD_AUTH_SUCCESS"; today: Episode[]; upcoming: Episode[]; unwatched: Episode[]; recommendations: Recommendation[]; layout: HomepageSection[]; upNextItems: UpNextItem[]; friendsLovedItems: FriendsLovedItem[] }
-  | { type: "LOAD_ERROR"; message: string }
-  | { type: "TOGGLE_WATCHED"; episodeId: number; currentlyWatched: boolean }
-  | { type: "TOGGLE_WATCHED_REVERT"; episodeId: number; currentlyWatched: boolean }
-  | { type: "REPLACE_UNWATCHED"; unwatched: Episode[] }
-  | { type: "MARK_ALL_WATCHED"; episodeIds: number[] }
-  | { type: "REMOVE_UP_NEXT_EPISODE"; episodeId: number };
-
-function homeReducer(state: HomeState, action: HomeAction): HomeState {
-  switch (action.type) {
-    case "LOAD_ANON_SUCCESS":
-      return { status: "anon", popularTitles: action.popularTitles };
-    case "LOAD_AUTH_SUCCESS":
-      return { status: "auth", today: action.today, upcoming: action.upcoming, unwatched: action.unwatched, recommendations: action.recommendations, layout: action.layout, upNextItems: action.upNextItems, friendsLovedItems: action.friendsLovedItems };
-    case "LOAD_ERROR":
-      return { status: "error", message: action.message };
-    case "TOGGLE_WATCHED": {
-      if (state.status !== "auth") return state;
-      const update = (ep: Episode) => ep.id === action.episodeId ? { ...ep, is_watched: !action.currentlyWatched } : ep;
-      return {
-        ...state,
-        today: state.today.map(update),
-        upcoming: state.upcoming.map(update),
-        unwatched: !action.currentlyWatched
-          ? state.unwatched.filter((ep) => ep.id !== action.episodeId)
-          : state.unwatched,
-      };
-    }
-    case "TOGGLE_WATCHED_REVERT": {
-      if (state.status !== "auth") return state;
-      const revert = (ep: Episode) => ep.id === action.episodeId ? { ...ep, is_watched: action.currentlyWatched } : ep;
-      return { ...state, today: state.today.map(revert), upcoming: state.upcoming.map(revert) };
-    }
-    case "REPLACE_UNWATCHED":
-      if (state.status !== "auth") return state;
-      return { ...state, unwatched: action.unwatched };
-    case "MARK_ALL_WATCHED": {
-      if (state.status !== "auth") return state;
-      const idSet = new Set(action.episodeIds);
-      return { ...state, unwatched: state.unwatched.filter((ep) => !idSet.has(ep.id)) };
-    }
-    case "REMOVE_UP_NEXT_EPISODE": {
-      if (state.status !== "auth") return state;
-      return {
-        ...state,
-        upNextItems: state.upNextItems.filter((item) => item.nextEpisodeId !== action.episodeId),
-      };
-    }
-    default:
-      return state;
-  }
-}
+type AuthHomeData = {
+  today: Episode[];
+  upcoming: Episode[];
+  unwatched: Episode[];
+  recommendations: Recommendation[];
+  layout: HomepageSection[];
+  upNextItems: UpNextItem[];
+  friendsLovedItems: FriendsLovedItem[];
+  streakData: StreakData | null;
+  movieData: MovieTrackResponse;
+};
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -338,128 +290,144 @@ export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
   const isMobile = useIsMobile();
   const { t } = useTranslation();
-  const [state, dispatch] = useReducer(homeReducer, { status: "loading" });
+  const qc = useQueryClient();
   const [confirmingTitleId, setConfirmingTitleId] = useState<string | null>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [streakData, setStreakData] = useState<StreakData | null>(null);
-  const [movieData, setMovieData] = useState<MovieTrackResponse>({ to_watch: [], upcoming: [] });
 
-  useEffect(() => {
-    if (authLoading) return;
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    if (!user) {
+  const { data: anonData, isLoading: anonLoading } = useQuery({
+    queryKey: ["home", "anon"],
+    enabled: !authLoading && !user,
+    queryFn: ({ signal }) =>
       api.browseTitles({ category: "popular", page: 1 }, signal)
-        .then((res) => { if (!signal.aborted) dispatch({ type: "LOAD_ANON_SUCCESS", popularTitles: res.titles.map(normalizeSearchTitle) }); })
-        .catch(() => { if (!signal.aborted) dispatch({ type: "LOAD_ANON_SUCCESS", popularTitles: [] }); });
-      return () => controller.abort();
-    }
+        .then((res) => res.titles.map(normalizeSearchTitle))
+        .catch(() => [] as Title[]),
+  });
 
-    async function load() {
-      try {
-        const [episodeData, recData, layoutData, upNextData, friendsLovedData, streakResult, moviesResult] = await Promise.all([
-          api.getUpcomingEpisodes(signal),
-          api.getRecommendations(6, undefined, signal).catch(() => ({ recommendations: [], count: 0 })),
-          (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
-          api.getUpNext(12, signal).catch(() => ({ items: [] as UpNextItem[] })),
-          api.getFriendsLoved(20, signal).catch(() => ({ items: [] as FriendsLovedItem[] })),
-          api.getMyStreak(signal).catch(() => null),
-          api.getMovieTracking(signal).catch(() => ({ to_watch: [], upcoming: [] })),
-        ]);
-        if (signal.aborted) return;
-        if (streakResult) setStreakData(streakResult);
-        setMovieData(moviesResult);
-        dispatch({ type: "LOAD_AUTH_SUCCESS", today: episodeData.today, upcoming: episodeData.upcoming, unwatched: episodeData.unwatched, recommendations: recData.recommendations, layout: layoutData.homepage_layout, upNextItems: upNextData.items, friendsLovedItems: friendsLovedData.items });
-      } catch (err: unknown) {
-        if (!signal.aborted) dispatch({ type: "LOAD_ERROR", message: err instanceof Error ? err.message : String(err) });
-      }
-    }
-    load();
-    return () => controller.abort();
-  }, [user, authLoading]);
+  const { data: authData, isLoading: authDataLoading, isError: authDataError, error: authError } = useQuery<AuthHomeData>({
+    queryKey: ["home", "auth"],
+    enabled: !authLoading && !!user,
+    queryFn: async ({ signal }) => {
+      const [episodeData, recData, layoutData, upNextData, friendsLovedData, streakResult, moviesResult] = await Promise.all([
+        api.getUpcomingEpisodes(signal),
+        api.getRecommendations(6, undefined, signal).catch(() => ({ recommendations: [] as Recommendation[], count: 0 })),
+        (api.getHomepageLayout?.(signal) ?? Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
+        api.getUpNext(12, signal).catch(() => ({ items: [] as UpNextItem[] })),
+        api.getFriendsLoved(20, signal).catch(() => ({ items: [] as FriendsLovedItem[] })),
+        api.getMyStreak(signal).catch(() => null),
+        api.getMovieTracking(signal).catch(() => ({ to_watch: [], upcoming: [] } as MovieTrackResponse)),
+      ]);
+      return {
+        today: episodeData.today,
+        upcoming: episodeData.upcoming,
+        unwatched: episodeData.unwatched,
+        recommendations: recData.recommendations,
+        layout: layoutData.homepage_layout,
+        upNextItems: upNextData.items,
+        friendsLovedItems: friendsLovedData.items,
+        streakData: streakResult,
+        movieData: moviesResult,
+      };
+    },
+  });
 
-  // Cleanup confirmation timer
-  useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
-
-  const toggleWatched = useCallback(async (episodeId: number, currentlyWatched: boolean) => {
-    dispatch({ type: "TOGGLE_WATCHED", episodeId, currentlyWatched });
-    try {
-      if (currentlyWatched) {
-        await api.unwatchEpisode(episodeId);
-      } else {
-        await api.watchEpisode(episodeId);
-      }
-    } catch (err) {
-      dispatch({ type: "TOGGLE_WATCHED_REVERT", episodeId, currentlyWatched });
-      if (!currentlyWatched) {
-        try {
-          const data = await api.getUpcomingEpisodes();
-          dispatch({ type: "REPLACE_UNWATCHED", unwatched: data.unwatched });
-        } catch { /* ignore refetch failure */ }
-      }
-      console.error("Failed to toggle watched:", err);
+  const toggleWatchedMutation = useMutation({
+    mutationFn: ({ episodeId, currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
+      currentlyWatched ? api.unwatchEpisode(episodeId) : api.watchEpisode(episodeId),
+    onMutate: async ({ episodeId, currentlyWatched }) => {
+      await qc.cancelQueries({ queryKey: ["home", "auth"] });
+      const snapshot = qc.getQueryData<AuthHomeData>(["home", "auth"]);
+      qc.setQueryData<AuthHomeData>(["home", "auth"], (prev) => {
+        if (!prev) return prev;
+        const update = (ep: Episode) => ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep;
+        return {
+          ...prev,
+          today: prev.today.map(update),
+          upcoming: prev.upcoming.map(update),
+          unwatched: !currentlyWatched
+            ? prev.unwatched.filter((ep) => ep.id !== episodeId)
+            : prev.unwatched,
+        };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot) qc.setQueryData(["home", "auth"], context.snapshot);
       toast.error("Failed to update watched status — please try again");
-    }
-  }, []);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
 
-  const markAllWatched = useCallback(async (episodeIds: number[]) => {
-    dispatch({ type: "MARK_ALL_WATCHED", episodeIds });
-    try {
-      await api.watchEpisodesBulk(episodeIds, true);
-    } catch (err) {
-      try {
-        const data = await api.getUpcomingEpisodes();
-        dispatch({ type: "REPLACE_UNWATCHED", unwatched: data.unwatched });
-      } catch { /* ignore refetch failure */ }
-      console.error("Failed to bulk mark watched:", err);
+  const markAllWatchedMutation = useMutation({
+    mutationFn: (episodeIds: number[]) => api.watchEpisodesBulk(episodeIds, true),
+    onMutate: async (episodeIds) => {
+      await qc.cancelQueries({ queryKey: ["home", "auth"] });
+      const snapshot = qc.getQueryData<AuthHomeData>(["home", "auth"]);
+      const idSet = new Set(episodeIds);
+      qc.setQueryData<AuthHomeData>(["home", "auth"], (prev) => {
+        if (!prev) return prev;
+        return { ...prev, unwatched: prev.unwatched.filter((ep) => !idSet.has(ep.id)) };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot) qc.setQueryData(["home", "auth"], context.snapshot);
       toast.error("Failed to mark episodes as watched — please try again");
-    }
-  }, []);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const upNextMarkWatchedMutation = useMutation({
+    mutationFn: (episodeId: number) => api.watchEpisode(episodeId),
+    onMutate: async (episodeId) => {
+      await qc.cancelQueries({ queryKey: ["home", "auth"] });
+      qc.setQueryData<AuthHomeData>(["home", "auth"], (prev) => {
+        if (!prev) return prev;
+        return { ...prev, upNextItems: prev.upNextItems.filter((item) => item.nextEpisodeId !== episodeId) };
+      });
+    },
+    onError: () => {
+      toast.error("Failed to mark episode as watched — please try again");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
 
   const handleMarkAllWatched = useCallback((titleId: string, episodeIds: number[]) => {
     if (confirmingTitleId === titleId) {
-      // Second click — execute
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
       setConfirmingTitleId(null);
-      markAllWatched(episodeIds);
+      markAllWatchedMutation.mutate(episodeIds);
     } else {
-      // First click — enter confirmation
       setConfirmingTitleId(titleId);
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
       confirmTimerRef.current = setTimeout(() => setConfirmingTitleId(null), 3000);
     }
-  }, [confirmingTitleId, markAllWatched]);
+  }, [confirmingTitleId, markAllWatchedMutation]);
 
-  // Derived data from reducer state — wrapped in useMemo so downstream deps
-  // get stable array references when state.status !== "auth".
   const { today, upcoming, unwatched, recommendations, layout, upNextItems, friendsLovedItems } = useMemo(() => {
-    if (state.status === "auth") {
-      return { today: state.today, upcoming: state.upcoming, unwatched: state.unwatched, recommendations: state.recommendations, layout: state.layout, upNextItems: state.upNextItems, friendsLovedItems: state.friendsLovedItems };
+    if (authData) {
+      return { today: authData.today, upcoming: authData.upcoming, unwatched: authData.unwatched, recommendations: authData.recommendations, layout: authData.layout, upNextItems: authData.upNextItems, friendsLovedItems: authData.friendsLovedItems };
     }
     return { today: [] as Episode[], upcoming: [] as Episode[], unwatched: [] as Episode[], recommendations: [] as Recommendation[], layout: DEFAULT_HOMEPAGE_LAYOUT, upNextItems: [] as UpNextItem[], friendsLovedItems: [] as FriendsLovedItem[] };
-  }, [state]);
+  }, [authData]);
 
-  const handleUpNextMarkWatched = useCallback(async (episodeId: number) => {
-    dispatch({ type: "REMOVE_UP_NEXT_EPISODE", episodeId });
-    try {
-      await api.watchEpisode(episodeId);
-    } catch (err) {
-      // Optimistic removal stands; log the failure.
-      console.error("Failed to mark episode as watched:", err);
-      toast.error("Failed to mark episode as watched — please try again");
-    }
-  }, []);
+  const streakData = authData?.streakData ?? null;
+  const movieData = authData?.movieData ?? { to_watch: [], upcoming: [] };
 
-  // Stable slice for the unauthenticated landing page so TitleList sees the
-  // same array reference on unrelated re-renders.
   const popularTitlesPreview = useMemo(
-    () => state.status === "anon" ? state.popularTitles.slice(0, 12) : [],
-    [state]
+    () => (anonData ?? []).slice(0, 12),
+    [anonData]
   );
 
   const unwatchedCards = useMemo(() => buildUnwatchedCards(unwatched), [unwatched]);
@@ -506,7 +474,7 @@ export default function HomePage() {
     });
   }, [upcoming]);
 
-  if (authLoading || state.status === "loading") {
+  if (authLoading || (user ? (authData === undefined && authDataLoading) : anonLoading)) {
     return <HomeAuthSkeleton />;
   }
 
@@ -550,10 +518,10 @@ export default function HomePage() {
     );
   }
 
-  if (state.status === "error") {
+  if (authDataError) {
     return (
       <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
-        {state.message}
+        {authError instanceof Error ? authError.message : String(authError)}
       </div>
     );
   }
@@ -570,7 +538,7 @@ export default function HomePage() {
         return unwatched.length > 0 ? (
           <>
             <div className="-mt-6">
-              <HeroBanner episodes={unwatched} onToggleWatched={toggleWatched} />
+              <HeroBanner episodes={unwatched} onToggleWatched={(id, w) => toggleWatchedMutation.mutate({ episodeId: id, currentlyWatched: w })} />
             </div>
             <section key="unwatched">
               <div className="flex items-baseline justify-between mb-4">
@@ -599,7 +567,7 @@ export default function HomePage() {
                         episodeCount={card.totalEpisodeCount}
                         showActions
                         allEpisodeIds={card.allEpisodeIds}
-                        onToggleWatched={toggleWatched}
+                        onToggleWatched={(id, w) => toggleWatchedMutation.mutate({ episodeId: id, currentlyWatched: w })}
                         onMarkAllWatched={(ids) => handleMarkAllWatched(card.titleId, ids)}
                         isConfirming={confirmingTitleId === card.titleId}
                       />
@@ -755,7 +723,7 @@ export default function HomePage() {
                 <h2 className="text-xl font-bold tracking-[-0.01em]">{t("home.upNext.title")}</h2>
               </div>
             </div>
-            <UpNextRow items={upNextItems} onMarkWatched={handleUpNextMarkWatched} />
+            <UpNextRow items={upNextItems} onMarkWatched={(id) => upNextMarkWatchedMutation.mutate(id)} />
           </section>
         );
 

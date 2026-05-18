@@ -1,7 +1,6 @@
-import { useEffect } from "react";
 import * as api from "../api";
+import { useQuery } from "@tanstack/react-query";
 import type { StatsResponse } from "../types";
-import { useApiCall } from "../hooks/useApiCall";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -122,13 +121,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 export function StatsView() {
-  const { data, loading, refetch } = useApiCall((signal) => api.getStats(signal), []);
-
-  useEffect(() => {
-    const handler = () => refetch();
-    window.addEventListener("watch-history:updated", handler);
-    return () => window.removeEventListener("watch-history:updated", handler);
-  }, [refetch]);
+  const { data, isLoading: loading } = useQuery({ queryKey: ["stats"], queryFn: ({ signal }) => api.getStats(signal) });
 
   if (loading || !data) {
     return (

@@ -1,7 +1,12 @@
 import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 import * as sonner from "sonner";
 import "../i18n";
 
@@ -66,11 +71,13 @@ const { default: SeasonDetailPage } = await import("./SeasonDetailPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter initialEntries={["/title/tv-100/season/1"]}>
-      <Routes>
-        <Route path="/title/:id/season/:season" element={children} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/title/tv-100/season/1"]}>
+        <Routes>
+          <Route path="/title/:id/season/:season" element={children} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 

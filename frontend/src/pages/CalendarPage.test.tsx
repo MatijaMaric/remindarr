@@ -1,7 +1,12 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 // Initialize i18n before anything else (avoids mock.module leak)
 import "../i18n";
@@ -40,7 +45,11 @@ mock.module("../api", () => ({
 const { default: CalendarPage, SlideOverPanel } = await import("./CalendarPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 afterEach(() => {
@@ -210,9 +219,11 @@ describe("CalendarPage", () => {
 
   it("?view=week param activates week view", async () => {
     render(
-      <MemoryRouter initialEntries={["/?view=week"]}>
-        <CalendarPage />
-      </MemoryRouter>
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/?view=week"]}>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     const columns = await waitFor(() => screen.getAllByTestId("week-day-column"));
     expect(columns.length).toBe(7);
@@ -255,9 +266,11 @@ describe("CalendarPage", () => {
 
   it("?density=compact param activates compact density", () => {
     render(
-      <MemoryRouter initialEntries={["/?density=compact"]}>
-        <CalendarPage />
-      </MemoryRouter>
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/?density=compact"]}>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     const compactBtn = screen.getByRole("button", { name: /compact/i });
     expect(compactBtn.getAttribute("aria-pressed")).toBe("true");

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -22,6 +23,7 @@ interface Props {
 export default function BackdateWatchedButton({ titleId, scope, variant = "default", onComplete }: Props) {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +41,11 @@ export default function BackdateWatchedButton({ titleId, scope, variant = "defau
           t("episodes.backdateSuccess", "Backdated {{count}} episode to air date", { count: updated }),
         );
       }
+      qc.invalidateQueries({ queryKey: ["watch-history"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
+      qc.invalidateQueries({ queryKey: ["calendar"] });
+      qc.invalidateQueries({ queryKey: ["home", "auth"] });
       onComplete?.(updated);
     } catch {
       toast.error(t("episodes.backdateError", "Failed to backdate watched episodes"));
