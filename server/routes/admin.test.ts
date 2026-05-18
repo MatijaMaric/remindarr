@@ -233,6 +233,15 @@ describe("GET /admin/users", () => {
     expect(body.users.some((u: { username: string }) => u.username === "tobebanned")).toBe(true);
   });
 
+  it("accepts a valid filter + page", async () => {
+    const res = await app.request("/admin/users?filter=active&page=1", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.users)).toBe(true);
+  });
+
   it("returns 403 for non-admin", async () => {
     const userId = await createUser("regular", "hash");
     const token = await createSession(userId);
@@ -295,6 +304,26 @@ describe("validation", () => {
       method: "PUT",
       headers: { Cookie: adminCookie, "Content-Type": "application/json" },
       body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects GET /admin/users with invalid filter enum", async () => {
+    const res = await app.request("/admin/users?filter=superadmin", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects GET /admin/users with non-numeric page", async () => {
+    const res = await app.request("/admin/users?page=abc", {
+      headers: { Cookie: adminCookie },
     });
     expect(res.status).toBe(400);
     const body = await res.json();
