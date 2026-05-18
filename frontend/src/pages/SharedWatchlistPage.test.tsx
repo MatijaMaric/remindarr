@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "../i18n";
 
@@ -32,42 +33,41 @@ function makeTitle(overrides: Partial<Title> = {}): Title {
   };
 }
 
-const mockFetch = mock((_url: string, _init?: RequestInit) =>
-  Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve({ username: "testuser", titles: [makeTitle()] }),
-  } as Response)
+const mockGetSharedWatchlist = mock(() =>
+  Promise.resolve({ username: "testuser", titles: [makeTitle()] })
 );
+
+mock.module("../api", () => ({
+  getSharedWatchlist: mockGetSharedWatchlist,
+}));
 
 const { default: SharedWatchlistPage } = await import("./SharedWatchlistPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ token = "abc123" }: { token?: string }) {
   return (
-    <MemoryRouter initialEntries={[`/share/watchlist/${token}`]}>
-      <Routes>
-        <Route path="/share/watchlist/:token" element={<SharedWatchlistPage />} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={[`/share/watchlist/${token}`]}>
+        <Routes>
+          <Route path="/share/watchlist/:token" element={<SharedWatchlistPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
 beforeEach(() => {
-  globalThis.fetch = mockFetch as any;
-  mockFetch.mockImplementation((_url: string) =>
-    Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ username: "testuser", titles: [makeTitle()] }),
-    } as Response)
+  mockGetSharedWatchlist.mockImplementation(() =>
+    Promise.resolve({ username: "testuser", titles: [makeTitle()] })
   );
 });
 
 afterEach(() => {
   cleanup();
-  mockFetch.mockReset();
-  // @ts-expect-error — restore to undefined so other test files are unaffected
-  globalThis.fetch = undefined;
+  mockGetSharedWatchlist.mockReset();
 });
 
 describe("SharedWatchlistPage", () => {
@@ -87,12 +87,8 @@ describe("SharedWatchlistPage", () => {
   });
 
   it("shows 'This watchlist is empty' when titles array is empty", async () => {
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ username: "emptyuser", titles: [] }),
-      } as Response)
+    mockGetSharedWatchlist.mockImplementation(() =>
+      Promise.resolve({ username: "emptyuser", titles: [] })
     );
     render(<Wrapper />);
     await waitFor(() => {
@@ -101,7 +97,7 @@ describe("SharedWatchlistPage", () => {
   });
 
   it("shows error state when fetch throws", async () => {
-    mockFetch.mockImplementation((_url: string) =>
+    mockGetSharedWatchlist.mockImplementation(() =>
       Promise.reject(new Error("Not found"))
     );
     render(<Wrapper />);
@@ -111,16 +107,11 @@ describe("SharedWatchlistPage", () => {
   });
 
   it("shows plural titles count correctly", async () => {
-    mockFetch.mockImplementation((_url: string) =>
+    mockGetSharedWatchlist.mockImplementation(() =>
       Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () =>
-          Promise.resolve({
-            username: "multiuser",
-            titles: [makeTitle({ id: "t1", title: "Movie A" }), makeTitle({ id: "t2", title: "Movie B" })],
-          }),
-      } as Response)
+        username: "multiuser",
+        titles: [makeTitle({ id: "t1", title: "Movie A" }), makeTitle({ id: "t2", title: "Movie B" })],
+      })
     );
     render(<Wrapper />);
     await waitFor(() => {

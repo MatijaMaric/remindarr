@@ -1,6 +1,6 @@
 import { useParams, useSearchParams } from "react-router";
 import { useAuth } from "../context/AuthContext";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
 import type { Category, UserAchievement } from "../types";
 import { Kicker } from "../components/design/Kicker";
@@ -41,13 +41,13 @@ export default function AchievementsPage() {
   const baseHref = isOwnProfile ? "/achievements" : `/u/${username}/achievements`;
   const activeCategory = searchParams.get("cat") as Category | null;
 
-  const { data, loading, error } = useApiCall(
-    (signal) =>
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: ["achievements", username ?? "me"],
+    queryFn: ({ signal }) =>
       isOwnProfile
         ? api.getMyAchievements(signal)
         : api.getUserAchievements(username!, signal),
-    [isOwnProfile, username],
-  );
+  });
 
   if (loading) {
     return (

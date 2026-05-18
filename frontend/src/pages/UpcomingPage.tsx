@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import type { Episode } from "../types";
 import {
@@ -10,36 +10,35 @@ import {
   ShowEpisodeGroup,
 } from "../components/EpisodeComponents";
 import { EpisodeListSkeleton } from "../components/SkeletonComponents";
-import { useApiCall } from "../hooks/useApiCall";
 import { useIsMobile } from "../hooks/useIsMobile";
 import AgendaCalendar from "../components/AgendaCalendar";
 
 export default function UpcomingPage() {
-  const [today, setToday] = useState<Episode[]>([]);
-  const [upcoming, setUpcoming] = useState<Episode[]>([]);
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
+  const qc = useQueryClient();
 
-  const { loading, error } = useApiCall(
-    (signal) => api.getUpcomingEpisodes(signal),
-    [],
-    {
-      onSuccess: (data) => {
-        setToday(data.today);
-        setUpcoming(data.upcoming);
-      },
-    },
-  );
+  const { isLoading: loading, isError: error, data: upcomingData } = useQuery({
+    queryKey: ["upcoming"],
+    queryFn: ({ signal }) => api.getUpcomingEpisodes(signal),
+  });
+
+  const today = upcomingData?.today ?? [];
+  const upcoming = upcomingData?.upcoming ?? [];
+
+  type UpcomingData = { today: Episode[]; upcoming: Episode[] };
 
   const toggleWatched = async (episodeId: number, currentlyWatched: boolean) => {
-    const updateAll = (eps: Episode[]) =>
+    const updateEps = (eps: Episode[]) =>
       eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
-    const revertAll = (eps: Episode[]) =>
+    const revertEps = (eps: Episode[]) =>
       eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep));
 
-    setToday((prev) => updateAll(prev));
-    setUpcoming((prev) => updateAll(prev));
+    qc.setQueryData<UpcomingData>(["upcoming"], (old) => {
+      if (!old) return old;
+      return { today: updateEps(old.today), upcoming: updateEps(old.upcoming) };
+    });
 
     try {
       if (currentlyWatched) {
@@ -48,8 +47,10 @@ export default function UpcomingPage() {
         await api.watchEpisode(episodeId);
       }
     } catch (err) {
-      setToday((prev) => revertAll(prev));
-      setUpcoming((prev) => revertAll(prev));
+      qc.setQueryData<UpcomingData>(["upcoming"], (old) => {
+        if (!old) return old;
+        return { today: revertEps(old.today), upcoming: revertEps(old.upcoming) };
+      });
       console.error("Failed to toggle watched:", err);
       toast.error("Failed to update watched status — please try again");
     }
@@ -71,7 +72,7 @@ export default function UpcomingPage() {
   if (error) {
     return (
       <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
-        {error}
+        {t("upcoming.error", "Failed to load episodes")}
       </div>
     );
   }

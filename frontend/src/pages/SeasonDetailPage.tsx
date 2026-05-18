@@ -7,10 +7,8 @@ import { useTranslation } from "react-i18next";
 import { CalendarDays, CheckCircle, ChevronDown, Circle, MoreHorizontal, Share2 } from "lucide-react";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
-import type { SeasonDetailsResponse, RatingValue } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
-import { useApiCall } from "../hooks/useApiCall";
 import { useAuth } from "../context/AuthContext";
 import ShareButton from "../components/ShareButton";
 import { posterUrl as mkPosterUrl, stillUrl as mkStillUrl } from "../lib/tmdb-images";
@@ -44,12 +42,11 @@ export default function SeasonDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const { data, loading, error } = useApiCall<SeasonDetailsResponse>(
-    (signal) => api.getSeasonDetails(id!, Number(season), signal),
-    [id, season],
-  );
-
-  const [episodeRatings, setEpisodeRatings] = useState<Record<number, Record<RatingValue, number>>>({});
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: ["season-detail", id, season],
+    queryFn: ({ signal }) => api.getSeasonDetails(id!, Number(season), signal),
+    enabled: !!id && !!season,
+  });
   const qc = useQueryClient();
 
   type SeasonStatusEntry = { episode_number: number; id: number; is_watched: boolean };
@@ -72,15 +69,13 @@ export default function SeasonDetailPage() {
     return map;
   }, [statusData]);
 
-  useApiCall(
-    (signal) => id && season
-      ? api.getSeasonEpisodeRatings(id, Number(season), signal)
-      : Promise.resolve({ ratings: {} }),
-    [id, season],
-    {
-      onSuccess: (result) => setEpisodeRatings(result.ratings),
-    },
-  );
+  const { data: ratingsData } = useQuery({
+    queryKey: ["season-ratings", id, season],
+    queryFn: ({ signal }) =>
+      api.getSeasonEpisodeRatings(id!, Number(season), signal),
+    enabled: !!id && !!season,
+  });
+  const episodeRatings = ratingsData?.ratings ?? {};
 
   const toggleWatchedMutation = useMutation({
     mutationFn: ({ epId, wasWatched }: { epId: number; wasWatched: boolean }) =>
@@ -185,7 +180,7 @@ export default function SeasonDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400">{error || "Season not found"}</div>
+        <div className="text-red-400">Season not found</div>
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { SearchTitle, SuggestionsAggregateResponse, SuggestionSeedReason } from "../types";
 
 // Initialize i18n before anything else
@@ -63,12 +64,21 @@ mock.module("../api", () => ({
   getSuggestionsAggregate: mockGetSuggestionsAggregate,
   dismissSuggestion: mockDismissSuggestion,
   undismissSuggestion: mockUndismissSuggestion,
+  getSharedWatchlist: mock(() => Promise.resolve({ username: "", titles: [] })),
 }));
 
 const { default: DiscoveryPage } = await import("./DiscoveryPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function makeRecommendation(id: string, overrides: Record<string, unknown> = {}) {

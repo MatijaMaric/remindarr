@@ -11,7 +11,7 @@ import type {
   SearchTitle,
 } from "../types";
 import { normalizeSearchTitle } from "../types";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
 import { PageHeader, Kicker, Pill, Chip } from "../components/design";
@@ -531,22 +531,22 @@ function RecommendationCard({
 
 export default function DiscoveryPage() {
   const { t } = useTranslation();
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const qc = useQueryClient();
   const [aggregate, setAggregate] = useState<SuggestionsAggregateResponse | null>(null);
   const [tab, setTab] = useState<"foryou" | "activity">("foryou");
   const [trackedSet, setTrackedSet] = useState<Set<string>>(() => new Set());
   const [dismissedSet, setDismissedSet] = useState<Set<string>>(() => new Set());
 
-  const { loading, error } = useApiCall(
-    (signal) => api.getRecommendations(undefined, undefined, signal),
-    [],
-    { onSuccess: (data) => setRecommendations(data.recommendations) },
-  );
+  const { isLoading: loading, isError: error, data: recsData } = useQuery({
+    queryKey: ["recommendations"],
+    queryFn: ({ signal }) => api.getRecommendations(undefined, undefined, signal),
+  });
+  const recommendations = useMemo(() => recsData?.recommendations ?? [], [recsData]);
 
-  const { data: countData } = useApiCall(
-    (signal) => api.getUnreadRecommendationCount(signal),
-    [],
-  );
+  const { data: countData } = useQuery({
+    queryKey: ["notification-count"],
+    queryFn: ({ signal }) => api.getUnreadRecommendationCount(signal),
+  });
   const unreadCount = countData?.count ?? 0;
 
   useEffect(() => {
@@ -625,33 +625,45 @@ export default function DiscoveryPage() {
   const handleMarkRead = useCallback(async (rec: Recommendation) => {
     try {
       await api.markRecommendationRead(rec.id);
-      setRecommendations((prev) =>
-        prev.map((r) => r.id === rec.id ? { ...r, read_at: new Date().toISOString() } : r),
-      );
+      qc.setQueryData<{ recommendations: Recommendation[] }>(["recommendations"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          recommendations: old.recommendations.map((r) =>
+            r.id === rec.id ? { ...r, read_at: new Date().toISOString() } : r
+          ),
+        };
+      });
     } catch {
       // Silent failure for mark-read
     }
-  }, []);
+  }, [qc]);
 
   const handleTrackRec = useCallback(async (rec: Recommendation) => {
     try {
       await api.trackTitle(rec.title.id);
       if (!rec.read_at) await api.markRecommendationRead(rec.id);
-      setRecommendations((prev) => prev.filter((r) => r.id !== rec.id));
+      qc.setQueryData<{ recommendations: Recommendation[] }>(["recommendations"], (old) => {
+        if (!old) return old;
+        return { ...old, recommendations: old.recommendations.filter((r) => r.id !== rec.id) };
+      });
       toast.success(t("discovery.tracked", { title: rec.title.title }));
     } catch {
       toast.error(t("discovery.trackFailed"));
     }
-  }, [t]);
+  }, [t, qc]);
 
   const handleDismissRec = useCallback(async (rec: Recommendation) => {
     try {
       await api.deleteRecommendation(rec.id);
-      setRecommendations((prev) => prev.filter((r) => r.id !== rec.id));
+      qc.setQueryData<{ recommendations: Recommendation[] }>(["recommendations"], (old) => {
+        if (!old) return old;
+        return { ...old, recommendations: old.recommendations.filter((r) => r.id !== rec.id) };
+      });
     } catch {
       toast.error(t("discovery.dismissFailed"));
     }
-  }, [t]);
+  }, [t, qc]);
 
   // ─── Derived counts ───────────────────────────────────────────────────────
 
@@ -695,7 +707,7 @@ export default function DiscoveryPage() {
         loading ? (
           <DiscoverySkeleton />
         ) : error ? (
-          <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">{error}</div>
+          <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">{t("discovery.loadFailed", "Failed to load recommendations")}</div>
         ) : isEmpty ? (
           <p className="text-zinc-500 text-sm py-8 text-center">{t("discovery.empty")}</p>
         ) : (

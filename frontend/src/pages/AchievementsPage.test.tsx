@@ -2,6 +2,7 @@ import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import type { UserAchievement } from "../types";
 
@@ -26,25 +27,33 @@ mock.module("../context/AuthContext", () => ({
 
 const { default: AchievementsPage } = await import("./AchievementsPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 // Renders the page as the current user (own profile — /achievements)
 function OwnWrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter initialEntries={["/achievements"]}>
-      <Routes>
-        <Route path="/achievements" element={<>{children}</>} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/achievements"]}>
+        <Routes>
+          <Route path="/achievements" element={<>{children}</>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
 // Renders the page as another user (/u/alice/achievements)
 function OtherWrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter initialEntries={["/u/alice/achievements"]}>
-      <Routes>
-        <Route path="/u/:username/achievements" element={<>{children}</>} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/u/alice/achievements"]}>
+        <Routes>
+          <Route path="/u/:username/achievements" element={<>{children}</>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -145,11 +154,13 @@ describe("AchievementsPage — own profile", () => {
 
     render(<AchievementsPage />, {
       wrapper: ({ children }: { children: ReactNode }) => (
-        <MemoryRouter initialEntries={["/achievements?cat=watching"]}>
-          <Routes>
-            <Route path="/achievements" element={<>{children}</>} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={newTestClient()}>
+          <MemoryRouter initialEntries={["/achievements?cat=watching"]}>
+            <Routes>
+              <Route path="/achievements" element={<>{children}</>} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       ),
     });
 

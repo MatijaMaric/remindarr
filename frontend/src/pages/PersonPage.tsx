@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import * as api from "../api";
 import ScrollableRow from "../components/ScrollableRow";
-import type { PersonDetailsResponse, PersonCastCredit, PersonCrewCredit } from "../types";
+import type { PersonCastCredit, PersonCrewCredit } from "../types";
 import ExternalLinks from "../components/ExternalLinks";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery } from "@tanstack/react-query";
 import { profileUrl, posterUrl as mkPosterUrl } from "../lib/tmdb-images";
 
 const BIO_TRUNCATE_LENGTH = 600;
@@ -86,10 +86,11 @@ export default function PersonPage() {
   const { personId } = useParams<{ personId: string }>();
   const [bioExpanded, setBioExpanded] = useState(false);
 
-  const { data, loading, error } = useApiCall<PersonDetailsResponse>(
-    (signal) => api.getPersonDetails(Number(personId), signal),
-    [personId],
-  );
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: ["person", personId],
+    queryFn: ({ signal }) => api.getPersonDetails(Number(personId), signal),
+    enabled: !!personId,
+  });
 
   if (loading) {
     return <DetailPageSkeleton />;
@@ -98,7 +99,7 @@ export default function PersonPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400">{error || "Person not found"}</div>
+        <div className="text-red-400">Person not found</div>
       </div>
     );
   }

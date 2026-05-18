@@ -2,15 +2,16 @@ import { useParams, Link } from "react-router";
 import { getSharedWatchlist } from "../api";
 import type { Title } from "../types";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery } from "@tanstack/react-query";
 
 export default function SharedWatchlistPage() {
   const { token } = useParams<{ token: string }>();
 
-  const { data, loading, error } = useApiCall(
-    (signal) => getSharedWatchlist(token!, signal),
-    [token],
-  );
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: ["shared-watchlist", token],
+    queryFn: ({ signal }) => getSharedWatchlist(token!, signal),
+    enabled: !!token,
+  });
 
   if (loading) {
     return (

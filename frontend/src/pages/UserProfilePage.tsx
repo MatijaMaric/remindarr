@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Card } from "../components/ui/card";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
-import type { PinnedTitle, UserAchievement, StreakData } from "../types";
+import type { PinnedTitle } from "../types";
 import { useAuth } from "../context/AuthContext";
 import ProfileHero from "../components/profile/ProfileHero";
 import BioCard from "../components/profile/BioCard";
@@ -20,7 +20,7 @@ import WatchlistTabs, {
 } from "../components/profile/WatchlistTabs";
 import WatchlistGrid from "../components/profile/WatchlistGrid";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
-import { useApiCall } from "../hooks/useApiCall";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ProfileBadgesSummary from "../components/profile/ProfileBadgesSummary";
 import StreakCounter from "../components/profile/StreakCounter";
 
@@ -28,47 +28,33 @@ export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { t } = useTranslation();
   const { user: currentUser } = useAuth();
-  const { data, loading, error, refetch } = useApiCall(
-    (signal) => api.getUserProfile(username!, signal),
-    [username],
-  );
+  const qc = useQueryClient();
+  const { data, isLoading: loading, isError: error } = useQuery({
+    queryKey: ["user-profile", username],
+    queryFn: ({ signal }) => api.getUserProfile(username!, signal),
+    enabled: !!username,
+  });
+
+  const isOwnProfileQuery = currentUser?.username === username;
+  const { data: achievementsData } = useQuery({
+    queryKey: ["achievements", username ?? "me"],
+    queryFn: ({ signal }) =>
+      isOwnProfileQuery
+        ? api.getMyAchievements(signal)
+        : api.getUserAchievements(username!, signal),
+    enabled: !!username,
+  });
+
+  const { data: streakData } = useQuery({
+    queryKey: ["streak", username],
+    queryFn: ({ signal }) => api.getMyStreak(signal),
+    enabled: !!currentUser && currentUser.username === username,
+  });
 
   const [followerAdjust, setFollowerAdjust] = useState(0);
   const [activeTab, setActiveTab] = useState<WatchlistTab>("watching");
   const [localBio, setLocalBio] = useState<string | null | undefined>(undefined);
   const [localPinned, setLocalPinned] = useState<PinnedTitle[] | null>(null);
-  const [achievements, setAchievements] = useState<UserAchievement[] | null>(null);
-  const [streakData, setStreakData] = useState<StreakData | null>(null);
-
-  // Fetch achievements for the profile user
-  useEffect(() => {
-    if (!username) return;
-    const controller = new AbortController();
-    const fetchAchievements = async () => {
-      try {
-        const isOwn = currentUser?.username === username;
-        const result = isOwn
-          ? await api.getMyAchievements(controller.signal)
-          : await api.getUserAchievements(username, controller.signal);
-        if (!controller.signal.aborted) setAchievements(result);
-      } catch {
-        // Silently fail (e.g. private profile)
-      }
-    };
-    fetchAchievements();
-    return () => controller.abort();
-  }, [username, currentUser?.username]);
-
-  // Fetch streak for own profile only
-  useEffect(() => {
-    if (!currentUser || currentUser.username !== username) return;
-    const controller = new AbortController();
-    api
-      .getMyStreak(controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setStreakData(data); })
-      .catch(() => { /* ignore */ });
-    return () => controller.abort();
-  }, [username, currentUser]);
 
   const handleFollowToggle = useCallback((isNowFollowing: boolean) => {
     setFollowerAdjust((prev) => prev + (isNowFollowing ? 1 : -1));
@@ -155,7 +141,7 @@ export default function UserProfilePage() {
               isOwnProfile={is_own_profile}
               onBioUpdated={(next) => {
                 setLocalBio(next);
-                refetch();
+                void qc.invalidateQueries({ queryKey: ["user-profile", username] });
               }}
             />
             {(pinnedDisplay.length > 0 || is_own_profile) && (
@@ -169,9 +155,9 @@ export default function UserProfilePage() {
               <StreakCounter streak={streakData} variant="sidebar" />
             )}
             {show_watchlist && <ProgressCard overview={overview} />}
-            {show_watchlist && achievements && achievements.length > 0 && (
+            {show_watchlist && achievementsData && achievementsData.length > 0 && (
               <ProfileBadgesSummary
-                achievements={achievements}
+                achievements={achievementsData}
                 mode={is_own_profile ? "self" : "other"}
                 viewAllHref={is_own_profile
                   ? "/achievements"

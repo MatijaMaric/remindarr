@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 import * as sonner from "sonner";
 
@@ -24,8 +25,16 @@ mock.module("../hooks/useIsMobile", () => ({
 
 const { default: UpcomingPage } = await import("./UpcomingPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 afterEach(() => {
@@ -48,7 +57,7 @@ describe("UpcomingPage", () => {
       Promise.reject(new Error("Network error"))
     );
     render(<UpcomingPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(screen.getByText("Network error")).toBeDefined());
+    await waitFor(() => expect(screen.getByText("Failed to load episodes")).toBeDefined());
   });
 
   it("renders today and upcoming sections on success", async () => {

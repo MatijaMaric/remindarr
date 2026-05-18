@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Initialize i18n
 import "../i18n";
@@ -13,6 +14,10 @@ mock.module("../api", () => ({
 
 import BottomTabBar from "./BottomTabBar";
 import { AuthContext } from "../context/AuthContext";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
 
@@ -27,9 +32,11 @@ const mockAuthValue = {
 
 function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
   return (
-    <MemoryRouter>
-      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>
+        <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -51,11 +58,13 @@ describe("BottomTabBar", () => {
   it("renders Browse and Sign In when user is not authenticated", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     render(
-      <MemoryRouter>
-        <AuthContext value={noUserAuth as any}>
-          <BottomTabBar />
-        </AuthContext>
-      </MemoryRouter>
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter>
+          <AuthContext value={noUserAuth as any}>
+            <BottomTabBar />
+          </AuthContext>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     expect(screen.getByText("Browse")).toBeDefined();
@@ -69,11 +78,13 @@ describe("BottomTabBar", () => {
   it("renders nothing while auth is loading", () => {
     const loadingAuth = { ...mockAuthValue, loading: true };
     const { container } = render(
-      <MemoryRouter>
-        <AuthContext value={loadingAuth as any}>
-          <BottomTabBar />
-        </AuthContext>
-      </MemoryRouter>
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter>
+          <AuthContext value={loadingAuth as any}>
+            <BottomTabBar />
+          </AuthContext>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     expect(container.innerHTML).toBe("");
@@ -100,11 +111,13 @@ describe("BottomTabBar", () => {
   it("links to correct routes when not authenticated", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     render(
-      <MemoryRouter>
-        <AuthContext value={noUserAuth as any}>
-          <BottomTabBar />
-        </AuthContext>
-      </MemoryRouter>
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter>
+          <AuthContext value={noUserAuth as any}>
+            <BottomTabBar />
+          </AuthContext>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     const links = screen.getAllByRole("link");
