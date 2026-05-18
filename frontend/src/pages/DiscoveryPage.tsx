@@ -255,7 +255,7 @@ function DiscoveryHero({
           <Chip variant="default">{hero.objectType === "SHOW" ? "TV Series" : "Movie"}</Chip>
           {hero.genres?.slice(0, 3).map((g) => <Chip key={g} variant="default">{g}</Chip>)}
           {hero.releaseYear && <Chip variant="default">{hero.releaseYear}</Chip>}
-          {/* TODO(scoring): no match score from /api/suggestions yet */}
+          {hero.matchScore != null && <Chip variant="amber">{hero.matchScore}% match</Chip>}
         </div>
 
         {/* Two-source signal grid */}

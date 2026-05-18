@@ -308,6 +308,81 @@ describe("GET /suggestions", () => {
     const body = await res.json();
     expect(body.groups[0].hiddenCount).toBe(1);
   });
+
+  it("each flat result has a numeric matchScore in [0, 100]", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
+    await trackTitle("movie-100", mockUserId);
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 200, title: "Suggestion", vote_average: 7.5 })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.flat.length).toBeGreaterThan(0);
+    for (const title of body.flat) {
+      expect(typeof title.matchScore).toBe("number");
+      expect(title.matchScore).toBeGreaterThanOrEqual(0);
+      expect(title.matchScore).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("sorts flat by matchScore — loved+low-tmdb outranks tracked+high-tmdb", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-10", tmdbId: "10", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-20", tmdbId: "20", objectType: "MOVIE" }),
+    ]);
+    await rateTitle(mockUserId, "movie-10", "LOVE"); // reason: loved (highest affinity)
+    await trackTitle("movie-20", mockUserId);         // reason: tracked (lowest affinity)
+
+    // loved seed → low-tmdb suggestion: quality=0.6, affinity=1.0 → matchScore 78
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 500, title: "Loved Pick", vote_average: 6.0 })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+    // tracked seed → high-tmdb suggestion: quality=0.85, affinity=0.55 → matchScore 72
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 501, title: "Tracked Pick", vote_average: 8.5 })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // movie-500 (loved + tmdb 6.0 → ~78%) should outrank movie-501 (tracked + tmdb 8.5 → ~72%)
+    expect(body.flat[0].id).toBe("movie-500");
+    expect(body.flat[1].id).toBe("movie-501");
+    expect(body.flat[0].matchScore).toBeGreaterThan(body.flat[1].matchScore);
+  });
+
+  it("reason affinity: loved-sourced title gets higher matchScore than tracked-sourced at equal tmdb", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-30", tmdbId: "30", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-40", tmdbId: "40", objectType: "MOVIE" }),
+    ]);
+    await rateTitle(mockUserId, "movie-30", "LOVE");
+    await trackTitle("movie-40", mockUserId);
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 600, title: "Via Loved", vote_average: 7.0 })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 601, title: "Via Tracked", vote_average: 7.0 })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const scored600 = body.flat.find((t: any) => t.id === "movie-600");
+    const scored601 = body.flat.find((t: any) => t.id === "movie-601");
+    expect(scored600).toBeDefined();
+    expect(scored601).toBeDefined();
+    expect(scored600.matchScore).toBeGreaterThan(scored601.matchScore);
+  });
 });
 
 describe("POST /suggestions/dismiss/:titleId", () => {
