@@ -304,6 +304,18 @@ async function cachedTmdbRequest<T>(
   return result;
 }
 
+// ─── Cached detail endpoints (for browse fan-out) ───────────────────────────
+
+export async function cachedFetchMovieDetails(tmdbId: number): Promise<TmdbMovieDetails> {
+  const key = `tmdb:details:movie:${tmdbId}:${tmdbLanguage()}`;
+  return cachedTmdbRequest(key, CONFIG.CACHE_TTL_DETAILS, () => fetchMovieDetails(tmdbId));
+}
+
+export async function cachedFetchTvDetails(tmdbId: number): Promise<TmdbTvDetails> {
+  const key = `tmdb:details:tv:${tmdbId}:${tmdbLanguage()}`;
+  return cachedTmdbRequest(key, CONFIG.CACHE_TTL_DETAILS, () => fetchTvDetails(tmdbId));
+}
+
 // ─── Suggestions endpoints ──────────────────────────────────────────────────
 
 export async function fetchMovieSuggestions(
