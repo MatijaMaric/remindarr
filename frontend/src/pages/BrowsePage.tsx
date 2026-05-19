@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useReducer } from "react";
+import { useCallback, useEffect, useRef, useState, useReducer, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -62,7 +62,7 @@ function useQueryParamArray(
   key: string
 ): [string[], (values: string[]) => void] {
   const raw = searchParams.get(key) || "";
-  const value = raw ? raw.split(",") : [];
+  const value = useMemo(() => (raw ? raw.split(",") : []), [raw]);
   const setValue = useCallback(
     (newValues: string[]) => {
       setSearchParams(
@@ -124,7 +124,13 @@ export default function BrowsePage() {
   const { run: runAsync, error: searchError, reset: resetSearchError } = useAsyncError();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { subscriptions } = useAuth();
+  const { user, subscriptions, loading: authLoading } = useAuth();
+  // subscriptionsReady: true once we can safely mount CategoryBrowse without a
+  // provider-race double-fire. For unauthenticated visits (no user) auth loading
+  // finishing is sufficient. For authenticated visits we wait until subscriptions
+  // is non-null (populated).
+  const subscriptionsReady =
+    !authLoading && (!user || subscriptions !== null);
   useGridNavigation();
 
   // ── Browse filter data (shared cache, loaded once across pages) ──────────────
@@ -644,7 +650,7 @@ export default function BrowsePage() {
               onResultsCount={setResultsCount}
               onlyMine={onlyMine}
             />
-          ) : (
+          ) : subscriptionsReady ? (
             <CategoryBrowse
               key={category}
               category={category}
@@ -668,7 +674,7 @@ export default function BrowsePage() {
               onResultsCount={setResultsCount}
               onlyMine={onlyMine}
             />
-          )}
+          ) : null}
         </div>
       )}
     </div>
