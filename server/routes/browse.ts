@@ -4,13 +4,10 @@ import { pLimit } from "../lib/p-limit";
 import {
   discoverMovies,
   discoverTv,
-  fetchMovieDetails,
-  fetchTvDetails,
+  cachedFetchMovieDetails,
+  cachedFetchTvDetails,
   getMovieGenres,
   getTvGenres,
-  getMovieWatchProviders,
-  getTvWatchProviders,
-  getLanguages,
   type DiscoverFilters,
 } from "../tmdb/client";
 import {
@@ -27,8 +24,7 @@ import { syncFailureTotal } from "../metrics";
 import { ok, err } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
 import { zValidator } from "../lib/validator";
-import { toCanonicalGenre, expandGenreIds } from "../genres";
-import { CONFIG } from "../config";
+import { expandGenreIds } from "../genres";
 
 const log = logger.child({ module: "browse" });
 
@@ -117,23 +113,20 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
     if (onlyMine && user) {
       const subscribedIds = await getSubscribedProviderIds(user.id);
       if (subscribedIds.length === 0) {
-        return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
+        return ok(c, { titles: [], page, totalPages: 0, totalResults: 0 });
       }
       const subscribedStrings = subscribedIds.map(String);
       providerValues = providerValues.length > 0
         ? providerValues.filter((p) => subscribedStrings.includes(p))
         : subscribedStrings;
       if (providerValues.length === 0) {
-        return ok(c, { titles: [], page, totalPages: 0, totalResults: 0, availableGenres: [], availableProviders: [], availableLanguages: [], regionProviderIds: [], priorityLanguageCodes: [] });
+        return ok(c, { titles: [], page, totalPages: 0, totalResults: 0 });
       }
     }
 
-    const [movieGenreMap, tvGenreMap, movieProviders, tvProviders, tmdbLanguages] = await Promise.all([
+    const [movieGenreMap, tvGenreMap] = await Promise.all([
       getMovieGenres(),
       getTvGenres(),
-      getMovieWatchProviders(),
-      getTvWatchProviders(),
-      getLanguages(),
     ]);
     const allGenres = new Map([...movieGenreMap, ...tvGenreMap]);
 
@@ -191,9 +184,9 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
           try {
             const tmdbId = parseInt(t.tmdbId || "0", 10);
             if (t.objectType === "MOVIE") {
-              return parseMovieDetails(await fetchMovieDetails(tmdbId));
+              return parseMovieDetails(await cachedFetchMovieDetails(tmdbId));
             } else {
-              return parseTvDetails(await fetchTvDetails(tmdbId));
+              return parseTvDetails(await cachedFetchTvDetails(tmdbId));
             }
           } catch (err) {
             log.warn("TMDB enrichment failed for title", { titleId: t.tmdbId, err });
@@ -218,32 +211,8 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       isTracked: trackedIds.has(t.id),
     }));
 
-    // Build available filter options from TMDB data for dropdown population
-    const rawGenres = [...movieGenreMap.values(), ...tvGenreMap.values()];
-    const availableGenres = Array.from(new Set(rawGenres.map(toCanonicalGenre))).sort();
-
-    // Deduplicate providers by ID and sort by name
-    const providerMap = new Map<number, { id: number; name: string; iconUrl: string }>();
-    for (const p of [...movieProviders, ...tvProviders]) {
-      if (!providerMap.has(p.id)) providerMap.set(p.id, p);
-    }
-    const availableProviders = Array.from(providerMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-
-    const availableLanguages = tmdbLanguages;
-
-    // All browse providers come from TMDB filtered by region, so all are region providers
-    const regionProviderIds = Array.from(providerMap.keys());
-
-    // Priority languages: local language + English + common world languages
-    const localLang = CONFIG.LANGUAGE.split("-")[0];
-    const PRIORITY_LANGUAGES = ["en", "es", "fr", "de", "pt", "ja", "ko", "zh", "hi", "it", "ar"];
-    const prioritySet = new Set([localLang, ...PRIORITY_LANGUAGES]);
-    const priorityLanguageCodes = availableLanguages
-      .filter((l) => prioritySet.has(l.code))
-      .map((l) => l.code);
-
     setPublicCacheIfAnon(c, 1800);
-    return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults, availableGenres, availableProviders, availableLanguages, regionProviderIds, priorityLanguageCodes });
+    return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     const stack = e instanceof Error ? e.stack : undefined;

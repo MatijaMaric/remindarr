@@ -140,11 +140,6 @@ export async function browseTitles(params: {
   page: number;
   totalPages: number;
   totalResults: number;
-  availableGenres: string[];
-  availableProviders: { id: number; name: string; iconUrl: string }[];
-  availableLanguages: { code: string; name: string }[];
-  regionProviderIds: number[];
-  priorityLanguageCodes: string[];
 }> {
   const qs = new URLSearchParams();
   qs.set("category", params.category);

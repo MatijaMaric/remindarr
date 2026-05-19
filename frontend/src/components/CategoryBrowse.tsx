@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
 import TitleList from "./TitleList";
 import FilterBar from "./FilterBar";
 import type { BrowseCategory } from "./CategoryBar";
-import { useAsyncError } from "../hooks/useAsyncError";
 
 export function filterBrowseTitles(
   titles: Title[],
@@ -103,74 +103,54 @@ export default function CategoryBrowse({
   onResultsCount,
   onlyMine,
 }: Props) {
-  const [titles, setTitles] = useState<Title[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const { run, error, pending: loading } = useAsyncError();
-  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
-
-  const [availableProviders, setAvailableProviders] = useState<{ id: number; name: string; iconUrl: string }[]>([]);
-  const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
-  const [regionProviderIds, setRegionProviderIds] = useState<number[]>([]);
-  const [priorityLanguageCodes, setPriorityLanguageCodes] = useState<string[]>([]);
-
-  const fetchTitles = useCallback((pageNum: number, append: boolean) => {
-    return run(async () => {
-      if (append) {
-        setLoadingMore(true);
-      }
-      try {
-        const yearMinNum = yearMin ? parseInt(yearMin, 10) : undefined;
-        const yearMaxNum = yearMax ? parseInt(yearMax, 10) : undefined;
-        const minRatingNum = minRating ? parseFloat(minRating) : undefined;
-        const res = await api.browseTitles({
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["browse", category, type, genre, provider, language, yearMin, yearMax, minRating, onlyMine],
+    queryFn: ({ pageParam, signal }) =>
+      api.browseTitles(
+        {
           category,
           type: type.length ? type.join(",") : undefined,
-          page: pageNum,
+          page: pageParam as number,
           genre: genre.length ? genre.join(",") : undefined,
           provider: provider.length ? provider.join(",") : undefined,
           language: language.length ? language.join(",") : undefined,
-          yearMin: yearMinNum != null && Number.isFinite(yearMinNum) ? yearMinNum : undefined,
-          yearMax: yearMaxNum != null && Number.isFinite(yearMaxNum) ? yearMaxNum : undefined,
-          minRating: minRatingNum != null && Number.isFinite(minRatingNum) ? minRatingNum : undefined,
+          yearMin: yearMin ? parseInt(yearMin, 10) : undefined,
+          yearMax: yearMax ? parseInt(yearMax, 10) : undefined,
+          minRating: minRating ? parseFloat(minRating) : undefined,
           onlyMine: onlyMine || undefined,
-        });
-        const normalized = res.titles.map(normalizeSearchTitle);
-        if (append) {
-          setTitles((prev) => [...prev, ...normalized]);
-        } else {
-          setTitles(normalized);
-        }
-        if (res.availableGenres) {
-          setAvailableGenres(res.availableGenres);
-        }
-        if (res.availableProviders) {
-          setAvailableProviders(res.availableProviders);
-        }
-        if (res.availableLanguages) {
-          setAvailableLanguages(res.availableLanguages);
-        }
-        if (res.regionProviderIds) {
-          setRegionProviderIds(res.regionProviderIds);
-        }
-        if (res.priorityLanguageCodes) {
-          setPriorityLanguageCodes(res.priorityLanguageCodes);
-        }
-        setTotalPages(res.totalPages);
-        if (!append) {
-          onResultsCount?.(res.totalResults);
-        }
-        setPage(pageNum);
-      } finally {
-        setLoadingMore(false);
-      }
-    });
-  }, [run, category, type, genre, provider, language, yearMin, yearMax, minRating, onlyMine, onResultsCount]);
+        },
+        signal,
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (last: { page: number; totalPages: number }) =>
+      last.page < last.totalPages ? last.page + 1 : undefined,
+    staleTime: 60_000,
+  });
 
+  const titles = useMemo(
+    () => data?.pages.flatMap((p) => p.titles.map(normalizeSearchTitle)) ?? [],
+    [data],
+  );
+
+  const lastPage = data?.pages[data.pages.length - 1];
+  const totalPages = lastPage?.totalPages ?? 1;
+  const page = lastPage?.page ?? 1;
+
+  // Report total results count on first page load
   useEffect(() => {
-    fetchTitles(1, false);
-  }, [fetchTitles]);
+    const firstPage = data?.pages[0];
+    if (firstPage) {
+      onResultsCount?.(firstPage.totalResults);
+    }
+  }, [data?.pages, onResultsCount]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -180,8 +160,8 @@ export default function CategoryBrowse({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && page < totalPages && !loadingMore) {
-          fetchTitles(page + 1, true);
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
         }
       },
       { rootMargin: "200px" }
@@ -189,7 +169,7 @@ export default function CategoryBrowse({
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [page, totalPages, loadingMore, fetchTitles]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Stabilize the titles array passed into TitleList so React.memo can short-
   // circuit re-renders when neither `titles` nor `hideTracked` changed.
@@ -197,6 +177,8 @@ export default function CategoryBrowse({
     () => (hideTracked ? titles.filter((t) => !t.is_tracked) : titles),
     [titles, hideTracked]
   );
+
+  const errorMessage = isError && error instanceof Error ? error.message : isError ? "Failed to load titles" : null;
 
   return (
     <div className="space-y-4">
@@ -207,28 +189,28 @@ export default function CategoryBrowse({
           showDaysFilter={false}
           genre={genre}
           onGenreChange={onGenreChange}
-          genres={availableGenres}
+          genres={[]}
           provider={provider}
           onProviderChange={onProviderChange}
-          providers={availableProviders}
-          regionProviderIds={regionProviderIds}
+          providers={[]}
+          regionProviderIds={[]}
           language={language}
           onLanguageChange={onLanguageChange}
-          languages={availableLanguages}
-          priorityLanguageCodes={priorityLanguageCodes}
+          languages={[]}
+          priorityLanguageCodes={[]}
           onClearFilters={onClearFilters}
           hideTracked={hideTracked}
           onHideTrackedChange={onHideTrackedChange}
         />
       )}
 
-      {error && (
+      {errorMessage && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
-          {error}
+          {errorMessage}
         </div>
       )}
 
-      {loading && titles.length === 0 ? (
+      {isLoading && titles.length === 0 ? (
         <div className="text-center py-12 text-zinc-500">Loading...</div>
       ) : (
         <>
@@ -238,24 +220,24 @@ export default function CategoryBrowse({
             showProviderBadge={showProviderBadge}
             showRating={showRating}
           />
-          {error && (
+          {errorMessage && (
             <div className="text-center py-4 text-red-400">
-              <p>{error}</p>
+              <p>{errorMessage}</p>
               <button
-                onClick={() => fetchTitles(page + 1, true)}
+                onClick={() => void fetchNextPage()}
                 className="mt-2 text-sm underline hover:text-red-300"
               >
                 Retry
               </button>
             </div>
           )}
-          {!error && page < totalPages && (
+          {!errorMessage && page < totalPages && (
             <div ref={sentinelRef} className="text-center py-4">
-              {loadingMore ? (
+              {isFetchingNextPage ? (
                 <div className="text-zinc-500 text-sm">Loading...</div>
               ) : (
                 <button
-                  onClick={() => fetchTitles(page + 1, true)}
+                  onClick={() => void fetchNextPage()}
                   className="bg-white/[0.05] border border-white/[0.08] text-zinc-300 px-6 py-2.5 rounded-xl text-[13px] font-semibold sm:hidden"
                 >
                   Load more

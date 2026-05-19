@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import type {
   Recommendation,
-  SuggestionsAggregateResponse,
   SuggestionsGroup,
   SuggestionSeedReason,
   SearchTitle,
@@ -532,7 +531,6 @@ function RecommendationCard({
 export default function DiscoveryPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [aggregate, setAggregate] = useState<SuggestionsAggregateResponse | null>(null);
   const [tab, setTab] = useState<"foryou" | "activity">("foryou");
   const [trackedSet, setTrackedSet] = useState<Set<string>>(() => new Set());
   const [dismissedSet, setDismissedSet] = useState<Set<string>>(() => new Set());
@@ -549,13 +547,11 @@ export default function DiscoveryPage() {
   });
   const unreadCount = countData?.count ?? 0;
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getSuggestionsAggregate({ limit: 60 }, controller.signal)
-      .then((res) => { if (!controller.signal.aborted) setAggregate(res); })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
+  const { data: aggregate } = useQuery({
+    queryKey: ["suggestions", 60],
+    queryFn: ({ signal }) => api.getSuggestionsAggregate({ limit: 60 }, signal),
+    staleTime: 5 * 60_000,
+  });
 
   // Group received recommendations by title ID for hero + friend overlays
   const recsByTitle = useMemo(() => {
