@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import * as api from "../api";
 import { AuthContext } from "../context/AuthContext";
@@ -86,11 +87,17 @@ const mockAuthValue = {
   refresh: async () => {},
 };
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter>
-      <AuthContext value={mockAuthValue as never}>{children}</AuthContext>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>
+        <AuthContext value={mockAuthValue as never}>{children}</AuthContext>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -143,10 +150,12 @@ describe("CategoryBrowse pagination", () => {
     });
 
     expect(intersectionCallback).not.toBeNull();
-    intersectionCallback!(
-      [{ isIntersecting: true } as IntersectionObserverEntry],
-      {} as IntersectionObserver,
-    );
+    act(() => {
+      intersectionCallback!(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
 
     // While page 2 is in flight the existing title must stay rendered —
     // i.e. the entire list must not be replaced with the centered loader.
@@ -158,6 +167,75 @@ describe("CategoryBrowse pagination", () => {
     resolvePage2?.();
     await waitFor(() => {
       expect(screen.getByText("Title 2")).toBeDefined();
+    });
+  });
+
+  it("fires exactly one request on initial mount", async () => {
+    const browseSpy = spyOn(api, "browseTitles");
+    browseSpy.mockImplementation(() =>
+      Promise.resolve(makeBrowseResponse(1, [makeSearchTitle(1)], 1)),
+    );
+    spies.push(browseSpy);
+
+    render(
+      <CategoryBrowse
+        category="popular"
+        type={[]}
+        onTypeChange={() => {}}
+        genre={[]}
+        onGenreChange={() => {}}
+        provider={[]}
+        onProviderChange={() => {}}
+        language={[]}
+        onLanguageChange={() => {}}
+        hideFilterBar
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Title 1")).toBeDefined();
+    });
+
+    expect(browseSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire a duplicate request when parent re-renders with identical props", async () => {
+    const browseSpy = spyOn(api, "browseTitles");
+    browseSpy.mockImplementation(() =>
+      Promise.resolve(makeBrowseResponse(1, [makeSearchTitle(1)], 1)),
+    );
+    spies.push(browseSpy);
+
+    function Parent() {
+      return (
+        <CategoryBrowse
+          category="popular"
+          type={[]}
+          onTypeChange={() => {}}
+          genre={[]}
+          onGenreChange={() => {}}
+          provider={[]}
+          onProviderChange={() => {}}
+          language={[]}
+          onLanguageChange={() => {}}
+          hideFilterBar
+        />
+      );
+    }
+
+    const { rerender } = render(<Parent />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Title 1")).toBeDefined();
+    });
+
+    const callCountAfterMount = browseSpy.mock.calls.length;
+    rerender(<Parent />);
+
+    // Allow any async effects to settle
+    await waitFor(() => {
+      expect(browseSpy.mock.calls.length).toBe(callCountAfterMount);
     });
   });
 });

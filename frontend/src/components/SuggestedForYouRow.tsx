@@ -1,30 +1,21 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
-import type { SearchTitle } from "../types";
 import FullBleedCarousel from "./FullBleedCarousel";
 import { Kicker } from "./design";
 
 export default function SuggestedForYouRow() {
   const { t } = useTranslation();
-  const [titles, setTitles] = useState<SearchTitle[]>([]);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getSuggestionsAggregate({ limit: 20 }, controller.signal)
-      .then((res) => {
-        if (!controller.signal.aborted) setTitles(res.flat);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!controller.signal.aborted) setLoaded(true);
-      });
-    return () => controller.abort();
-  }, []);
+  const { data: aggregate, isLoading } = useQuery({
+    queryKey: ["suggestions", 60],
+    queryFn: ({ signal }) => api.getSuggestionsAggregate({ limit: 60 }, signal),
+    staleTime: 5 * 60_000,
+  });
+  const titles = aggregate?.flat.slice(0, 20) ?? [];
 
-  if (!loaded || titles.length === 0) return null;
+  if (isLoading || titles.length === 0) return null;
 
   return (
     <section>

@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act, waitFor } from "@testing-library/react";
 import { MemoryRouter, useSearchParams } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -11,14 +11,16 @@ function newTestClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
-// Mutable so individual tests can override subscriptions without re-mocking
+// Mutable so individual tests can override auth state without re-mocking
 let mockSubscriptions: { providerIds: number[]; onlyMine: boolean } | null = null;
+let mockUser: { id: string; username: string; display_name: null; auth_provider: string; is_admin: boolean } | null = null;
+let mockAuthLoading = false;
 
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: null,
+    user: mockUser,
     providers: null,
-    loading: false,
+    loading: mockAuthLoading,
     subscriptions: mockSubscriptions,
     refreshSubscriptions: mock(() => Promise.resolve()),
     login: mock(() => Promise.resolve()),
@@ -50,7 +52,9 @@ mock.module("../components/SearchBar", () => ({
   ),
 }));
 mock.module("../components/NewReleases", () => ({ default: () => null }));
-mock.module("../components/CategoryBrowse", () => ({ default: () => null }));
+mock.module("../components/CategoryBrowse", () => ({
+  default: () => <div data-testid="category-browse" />,
+}));
 
 const { default: BrowsePage } = await import("./BrowsePage");
 
@@ -68,6 +72,8 @@ function makeWrapper(initialPath: string) {
 afterEach(() => {
   cleanup();
   mockSubscriptions = null;
+  mockUser = null;
+  mockAuthLoading = false;
 });
 
 describe("BrowsePage active filter chips", () => {
@@ -198,5 +204,55 @@ describe("BrowsePage subscription preselect", () => {
     });
 
     expect(captured?.get("provider")).toBeNull();
+  });
+});
+
+describe("BrowsePage CategoryBrowse mount gate", () => {
+  it("renders CategoryBrowse immediately when user is not authenticated", async () => {
+    mockUser = null;
+    mockSubscriptions = null;
+    mockAuthLoading = false;
+
+    await act(async () => {
+      render(<BrowsePage />, {
+        wrapper: makeWrapper("/browse"),
+      });
+    });
+
+    // With no user, subscriptionsReady flips true immediately
+    await waitFor(() => {
+      expect(screen.getByTestId("category-browse")).toBeDefined();
+    });
+  });
+
+  it("does not render CategoryBrowse while authenticated user subscriptions are still loading", async () => {
+    mockUser = { id: "u1", username: "alice", display_name: null, auth_provider: "local", is_admin: false };
+    mockSubscriptions = null; // not yet loaded
+    mockAuthLoading = false;
+
+    await act(async () => {
+      render(<BrowsePage />, {
+        wrapper: makeWrapper("/browse"),
+      });
+    });
+
+    // subscriptions is null + user is set → subscriptionsReady stays false
+    expect(screen.queryByTestId("category-browse")).toBeNull();
+  });
+
+  it("renders CategoryBrowse once subscriptions settle for authenticated user", async () => {
+    mockUser = { id: "u1", username: "alice", display_name: null, auth_provider: "local", is_admin: false };
+    mockSubscriptions = { providerIds: [8], onlyMine: false };
+    mockAuthLoading = false;
+
+    await act(async () => {
+      render(<BrowsePage />, {
+        wrapper: makeWrapper("/browse"),
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("category-browse")).toBeDefined();
+    });
   });
 });
