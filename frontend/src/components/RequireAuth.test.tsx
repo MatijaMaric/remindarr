@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
+import { createContext, useContext } from "react";
 
 import "../i18n";
 
@@ -12,8 +13,31 @@ let mockLoading: boolean;
 let mockSessionStatus: SessionStatus;
 let mockRefresh: () => Promise<void>;
 
+// Use a real React context so the leaked mock doesn't break <AuthContext value={...}> in other test files.
+const MockAuthContext = createContext<any>(null);
+
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
+  useAuth: () =>
+    useContext(MockAuthContext) ?? {
+      user: mockUser,
+      loading: mockLoading,
+      sessionStatus: mockSessionStatus,
+      refresh: () => mockRefresh(),
+      providers: null,
+      subscriptions: null,
+      refreshSubscriptions: () => Promise.resolve(),
+      login: () => Promise.resolve(),
+      signup: () => Promise.resolve(),
+      logout: () => Promise.resolve(),
+    },
+  AuthContext: MockAuthContext,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+const { default: RequireAuth } = await import("./RequireAuth");
+
+function renderProtected() {
+  const authValue = {
     user: mockUser,
     loading: mockLoading,
     sessionStatus: mockSessionStatus,
@@ -24,27 +48,23 @@ mock.module("../context/AuthContext", () => ({
     login: () => Promise.resolve(),
     signup: () => Promise.resolve(),
     logout: () => Promise.resolve(),
-  }),
-  AuthContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
-  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
+  };
 
-const { default: RequireAuth } = await import("./RequireAuth");
-
-function renderProtected() {
   return render(
     <MemoryRouter initialEntries={["/protected"]}>
-      <Routes>
-        <Route
-          path="/protected"
-          element={
-            <RequireAuth>
-              <div data-testid="protected-content">Protected</div>
-            </RequireAuth>
-          }
-        />
-        <Route path="/login" element={<div data-testid="login-page">Login</div>} />
-      </Routes>
+      <MockAuthContext value={authValue}>
+        <Routes>
+          <Route
+            path="/protected"
+            element={
+              <RequireAuth>
+                <div data-testid="protected-content">Protected</div>
+              </RequireAuth>
+            }
+          />
+          <Route path="/login" element={<div data-testid="login-page">Login</div>} />
+        </Routes>
+      </MockAuthContext>
     </MemoryRouter>
   );
 }

@@ -1,26 +1,21 @@
-import { describe, it, expect, beforeAll, afterEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "../i18n";
+import * as api from "../api";
+import SnoozePicker from "./SnoozePicker";
 
-// Mock the api module before importing the component
-const mockSetTitleSnooze = mock(async (_titleId: string, _until: string | null) => ({ success: true }));
+let mockSetTitleSnooze: ReturnType<typeof spyOn>;
+let mockSetRemindOnRelease: ReturnType<typeof spyOn>;
 
-mock.module("../api", () => ({
-  setTitleSnooze: mockSetTitleSnooze,
-  setRemindOnRelease: mock(async () => ({ success: true, scheduledFor: null })),
-}));
-
-// Import after mocking
-const { default: SnoozePicker } = await import("./SnoozePicker");
-
-beforeAll(() => {
-  // Ensure mocks are clean
-  mockSetTitleSnooze.mockClear();
+beforeEach(() => {
+  mockSetTitleSnooze = spyOn(api, "setTitleSnooze").mockResolvedValue({ success: true } as never);
+  mockSetRemindOnRelease = spyOn(api, "setRemindOnRelease").mockResolvedValue({ success: true, scheduledFor: null } as never);
 });
 
 afterEach(() => {
   cleanup();
-  mockSetTitleSnooze.mockClear();
+  mockSetTitleSnooze.mockRestore();
+  mockSetRemindOnRelease.mockRestore();
 });
 
 describe("SnoozePicker", () => {
@@ -49,7 +44,7 @@ describe("SnoozePicker", () => {
   });
 
   it("calls setTitleSnooze with ~1 day from now when Snooze 1 day is clicked", async () => {
-    const onSnoozed = mock(() => {});
+    const onSnoozed = () => {};
     render(<SnoozePicker titleId="movie-123" snoozeUntil={null} onSnoozed={onSnoozed} />);
 
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
@@ -58,7 +53,6 @@ describe("SnoozePicker", () => {
     const oneDayOption = screen.getByRole("option", { name: /snooze 1 day/i });
     fireEvent.click(oneDayOption);
 
-    // Wait for async handler
     await new Promise((r) => setTimeout(r, 10));
 
     expect(mockSetTitleSnooze).toHaveBeenCalledTimes(1);
@@ -66,15 +60,14 @@ describe("SnoozePicker", () => {
     expect(titleId).toBe("movie-123");
     expect(until).not.toBeNull();
 
-    // Should be approximately 1 day from now
     const diff = new Date(until!).getTime() - Date.now();
-    expect(diff).toBeGreaterThan(80000000); // > 22 hours
-    expect(diff).toBeLessThan(90000000); // < 25 hours
+    expect(diff).toBeGreaterThan(80000000);
+    expect(diff).toBeLessThan(90000000);
   });
 
   it("calls setTitleSnooze(id, null) when Clear snooze is clicked", async () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
-    const onSnoozed = mock(() => {});
+    const onSnoozed = () => {};
     render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} onSnoozed={onSnoozed} />);
 
     const btn = screen.getByRole("button", { name: /notifications snoozed/i });

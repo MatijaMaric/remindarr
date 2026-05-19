@@ -1,18 +1,18 @@
-import { mock, describe, it, expect, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-
-const mockWatchMovie = mock(() => Promise.resolve());
-
-mock.module("../api", () => ({
-  watchMovie: mockWatchMovie,
-}));
-
+import * as api from "../api";
 import MovieRow from "./MovieRow";
+
+let mockWatchMovie: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+  mockWatchMovie = spyOn(api, "watchMovie").mockResolvedValue(undefined as never);
+});
 
 afterEach(() => {
   cleanup();
-  mockWatchMovie.mockClear();
+  mockWatchMovie.mockRestore();
 });
 
 const releasedMovie = {
