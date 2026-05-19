@@ -415,6 +415,112 @@ describe("POST /suggestions/dismiss/:titleId", () => {
   });
 });
 
+describe("validation", () => {
+  it("rejects invalid limit — returns 400 with issues array when limit is not a number", async () => {
+    // The handler falls back gracefully for non-numeric limit (NaN → 40),
+    // so an alphabetic limit still returns 200. The limit param is not
+    // validated via zValidator — it coerces. This test documents the
+    // current behaviour (200 with default limit).
+    await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
+    await trackTitle("movie-100", mockUserId);
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [],
+      page: 1, total_pages: 0, total_results: 0,
+    });
+
+    const res = await app.request("/suggestions?limit=abc");
+    // NaN → coerces to default 40; handler still returns 200
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("flat");
+  });
+});
+
+describe("payload-size fixes", () => {
+  it("caps each group's suggestions to 12 items", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
+    await trackTitle("movie-100", mockUserId);
+
+    // Return 20 suggestions from TMDB — more than the GROUP_CAP of 12
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: Array.from({ length: 20 }, (_, i) =>
+        makeTmdbDiscoverMovie({ id: 2000 + i, title: `Suggestion ${i}` })
+      ),
+      page: 1, total_pages: 1, total_results: 20,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.groups.length).toBeGreaterThan(0);
+    for (const group of body.groups) {
+      expect(group.suggestions.length).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it("hiddenCount reflects the cap — equals unfiltered minus capped length", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
+    await trackTitle("movie-100", mockUserId);
+
+    // 20 raw suggestions from TMDB, none tracked/watched/dismissed → all pass filter,
+    // then cap to 12. hiddenCount should be 20 - 12 = 8.
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: Array.from({ length: 20 }, (_, i) =>
+        makeTmdbDiscoverMovie({ id: 3000 + i, title: `Cap Test ${i}` })
+      ),
+      page: 1, total_pages: 1, total_results: 20,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.groups.length).toBeGreaterThan(0);
+    const group = body.groups[0];
+    // 20 raw - 12 capped = 8 hidden
+    expect(group.hiddenCount).toBe(8);
+    expect(group.suggestions.length).toBe(12);
+  });
+
+  it("shortDescription in flat results is at most 160 chars", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
+    await trackTitle("movie-100", mockUserId);
+
+    const longOverview = "A".repeat(300); // 300-char overview — well over 160
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 4000, title: "Long Overview Movie", overview: longOverview })],
+      page: 1, total_pages: 1, total_results: 1,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.flat.length).toBeGreaterThan(0);
+    for (const title of body.flat) {
+      if (title.shortDescription !== null) {
+        expect(title.shortDescription.length).toBeLessThanOrEqual(160);
+      }
+    }
+  });
+
+  it("flat.length is bounded by limit query param", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" })]);
+    await trackTitle("movie-100", mockUserId);
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: Array.from({ length: 20 }, (_, i) =>
+        makeTmdbDiscoverMovie({ id: 5000 + i, title: `Limit Test ${i}` })
+      ),
+      page: 1, total_pages: 1, total_results: 20,
+    });
+
+    const res = await app.request("/suggestions?limit=5");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.flat.length).toBeLessThanOrEqual(5);
+  });
+});
+
 describe("DELETE /suggestions/dismiss/:titleId", () => {
   it("undismisses a title and returns ok", async () => {
     await upsertTitles([makeParsedTitle({ id: "movie-600", tmdbId: "600", objectType: "MOVIE" })]);

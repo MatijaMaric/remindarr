@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
 import { upsertTitles, createUser, trackTitle, upsertEpisodes, watchEpisode, watchEpisodesBulk } from "../repository";
-import { getUnwatchedEpisodes } from "./episodes";
+import { getUnwatchedEpisodes, getUnwatchedEpisodesWithMeta, getNextUnwatchedEpisodesForTitles } from "./episodes";
+import { getRawDb } from "../bun-db";
 
 let userId: string;
 
@@ -130,5 +131,112 @@ describe("getUnwatchedEpisodes", () => {
     expect(show2Episodes.map((e) => e.episode_number)).toEqual([1, 2]);
     const show3Episodes = results.filter((e) => e.title_id === "show-3");
     expect(show3Episodes.map((e) => e.episode_number)).toEqual([1, 2]);
+  });
+});
+
+describe("getUnwatchedEpisodesWithMeta", () => {
+  it("returns the same episodes as getUnwatchedEpisodes and includes a lastWatchedByTitle map", async () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: yesterday, still_path: null },
+      { title_id: "show-1", season_number: 1, episode_number: 2, name: "Ep2", overview: null, air_date: yesterday, still_path: null },
+    ]);
+
+    // Watch ep1 so lastWatchedByTitle is populated
+    const db = getRawDb();
+    const ep1 = db.prepare("SELECT id FROM episodes WHERE title_id='show-1' AND episode_number=1").get() as { id: number };
+    await watchEpisode(ep1.id, userId);
+
+    const plain = await getUnwatchedEpisodes(userId);
+    const { episodes: withMetaEps, lastWatchedByTitle } = await getUnwatchedEpisodesWithMeta(userId);
+
+    // Episode results must match
+    expect(withMetaEps.map((e) => e.id)).toEqual(plain.map((e) => e.id));
+
+    // lastWatchedByTitle must contain show-1 with a valid Date
+    expect(lastWatchedByTitle.has("show-1")).toBe(true);
+    expect(lastWatchedByTitle.get("show-1")).toBeInstanceOf(Date);
+  });
+
+  it("returns an empty lastWatchedByTitle map when nothing has been watched", async () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: yesterday, still_path: null },
+    ]);
+
+    const { lastWatchedByTitle } = await getUnwatchedEpisodesWithMeta(userId);
+    expect(lastWatchedByTitle.size).toBe(0);
+  });
+});
+
+describe("getNextUnwatchedEpisodesForTitles", () => {
+  it("returns empty map when given an empty titleIds array", async () => {
+    const result = await getNextUnwatchedEpisodesForTitles(userId, [], "UTC");
+    expect(result.size).toBe(0);
+  });
+
+  it("returns the correct next unwatched episode for each show", async () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+
+    // show-1: 3 episodes, first one already watched → next should be ep 2
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "S1E1 Watched", overview: null, air_date: twoDaysAgo, still_path: null },
+      { title_id: "show-1", season_number: 1, episode_number: 2, name: "S1E2 Next", overview: null, air_date: yesterday, still_path: null },
+      { title_id: "show-1", season_number: 1, episode_number: 3, name: "S1E3 Later", overview: null, air_date: yesterday, still_path: null },
+    ]);
+
+    // show-2 (needs to be created + tracked)
+    await upsertTitles([makeParsedTitle({ id: "show-next-2", objectType: "SHOW", title: "Next Show 2" })]);
+    await trackTitle("show-next-2", userId);
+    await upsertEpisodes([
+      { title_id: "show-next-2", season_number: 1, episode_number: 1, name: "B-S1E1 Watched", overview: null, air_date: twoDaysAgo, still_path: null },
+      { title_id: "show-next-2", season_number: 1, episode_number: 2, name: "B-S1E2 Next", overview: null, air_date: yesterday, still_path: null },
+    ]);
+
+    // Watch first episodes of both shows
+    const db = getRawDb();
+    const ep1Show1 = db.prepare("SELECT id FROM episodes WHERE title_id='show-1' AND season_number=1 AND episode_number=1").get() as { id: number };
+    const ep1Show2 = db.prepare("SELECT id FROM episodes WHERE title_id='show-next-2' AND season_number=1 AND episode_number=1").get() as { id: number };
+    await watchEpisode(ep1Show1.id, userId);
+    await watchEpisode(ep1Show2.id, userId);
+
+    const result = await getNextUnwatchedEpisodesForTitles(userId, ["show-1", "show-next-2"], "UTC");
+
+    expect(result.size).toBe(2);
+
+    const show1Next = result.get("show-1");
+    expect(show1Next).toBeDefined();
+    expect(show1Next!.episode_number).toBe(2);
+    expect(show1Next!.season_number).toBe(1);
+
+    const show2Next = result.get("show-next-2");
+    expect(show2Next).toBeDefined();
+    expect(show2Next!.episode_number).toBe(2);
+    expect(show2Next!.season_number).toBe(1);
+  });
+
+  it("omits a title when all its episodes are watched", async () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Only Episode", overview: null, air_date: yesterday, still_path: null },
+    ]);
+
+    const db = getRawDb();
+    const ep = db.prepare("SELECT id FROM episodes WHERE title_id='show-1' AND season_number=1 AND episode_number=1").get() as { id: number };
+    await watchEpisode(ep.id, userId);
+
+    const result = await getNextUnwatchedEpisodesForTitles(userId, ["show-1"], "UTC");
+    expect(result.has("show-1")).toBe(false);
+  });
+
+  it("omits a title when it has no aired episodes", async () => {
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    await upsertEpisodes([
+      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Future Ep", overview: null, air_date: tomorrow, still_path: null },
+    ]);
+
+    const result = await getNextUnwatchedEpisodesForTitles(userId, ["show-1"], "UTC");
+    expect(result.has("show-1")).toBe(false);
   });
 });

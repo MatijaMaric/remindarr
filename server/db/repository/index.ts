@@ -29,7 +29,9 @@ export {
   getEpisodesByDateRange,
   deleteEpisodesForTitle,
   getUnwatchedEpisodes,
+  getUnwatchedEpisodesWithMeta,
   getNextUnwatchedEpisode,
+  getNextUnwatchedEpisodesForTitles,
   getLastWatchedAtPerShow,
   getEpisodeAirDate,
   getEpisodeTitleId,
@@ -46,6 +48,7 @@ export {
   getWatchedEpisodesForExport,
   getEpisodeIdsBySE,
 } from "./episodes";
+export type { NextUnwatchedEpisodeRow } from "./episodes";
 
 export {
   logWatch,

@@ -109,16 +109,18 @@ app.get("/", async (c) => {
     const seen = new Set<string>();
     const flat: ParsedTitle[] = [];
 
+    const GROUP_CAP = 12;
     const groups = groupResults
       .map(({ source, suggestions }) => {
         const unfiltered = suggestions.length;
         const filtered = suggestions.filter(
           (t) => !trackedIds.has(t.id) && !watchedIds.has(t.id) && !dismissedIds.has(t.id),
         );
+        const capped = filtered.slice(0, GROUP_CAP);
         return {
           source: { id: source.id, title: source.title, posterUrl: source.posterUrl, reason: source.reason },
-          suggestions: filtered,
-          hiddenCount: unfiltered - filtered.length,
+          suggestions: capped,
+          hiddenCount: unfiltered - capped.length,
         };
       })
       .filter((g) => g.suggestions.length > 0);
