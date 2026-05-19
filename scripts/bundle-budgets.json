@@ -1,0 +1,5 @@
+{
+  "frontend_entry_gzip": 30000,
+  "frontend_css_gzip": 30000,
+  "worker_gzip": 1600000
+}
