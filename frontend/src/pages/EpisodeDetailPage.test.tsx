@@ -13,7 +13,7 @@ import "../i18n";
 let mockUser: any = { id: "user1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
 
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({ user: mockUser, loading: false }),
+  useAuth: () => ({ user: mockUser, loading: false, sessionStatus: "authenticated" }),
   AuthContext: { Provider: ({ children }: any) => children },
 }));
 

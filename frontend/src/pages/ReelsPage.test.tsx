@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({ subscriptions: null, user: null, providers: null }),
+  useAuth: () => ({ subscriptions: null, user: null, providers: null, loading: false, sessionStatus: "authenticated" }),
   AuthContext: { Provider: ({ children }: { children: ReactNode }) => children },
 }));
 

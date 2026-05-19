@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { authClient } from "../lib/auth-client";
 import { queryClient } from "../lib/queryClient";
 import { getSubscriptions } from "../api";
+import { resolveSession } from "../lib/sessionBootstrap";
 import type { UserSubscriptions } from "../types";
 
 interface User {
@@ -19,10 +20,13 @@ interface AuthProviders {
   passkey?: boolean;
 }
 
+export type SessionStatus = "authenticated" | "unauthenticated" | "unknown";
+
 interface AuthContextType {
   user: User | null;
   providers: AuthProviders | null;
   loading: boolean;
+  sessionStatus: SessionStatus;
   subscriptions: UserSubscriptions | null;
   refreshSubscriptions: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
@@ -53,7 +57,7 @@ function mapSessionToUser(session: BetterAuthSessionData | null): User | null {
     id: u.id,
     username: u.username || u.name || "",
     display_name: u.name || null,
-    auth_provider: "local", // better-auth doesn't expose this directly
+    auth_provider: "local",
     is_admin: u.role === "admin",
   };
 }
@@ -62,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("unknown");
   const [subscriptions, setSubscriptions] = useState<UserSubscriptions | null>(null);
 
   const refreshSubscriptions = useCallback(async () => {
@@ -74,38 +79,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    try {
-      const session = await authClient.getSession();
-      setUser(mapSessionToUser(session.data));
-    } catch {
+    const { verdict, data } = await resolveSession(() => authClient.getSession());
+    if (verdict === "authenticated") {
+      setUser(mapSessionToUser(data as BetterAuthSessionData | null));
+      setSessionStatus("authenticated");
+    } else if (verdict === "unauthenticated") {
       setUser(null);
+      setSessionStatus("unauthenticated");
     }
+    // indeterminate: leave current state unchanged
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function init() {
-      try {
-        const [sessionResult, provData] = await Promise.allSettled([
-          authClient.getSession().then((r) => r.data),
-          fetch("/api/auth/custom/providers").then((r) => r.json()),
-        ]);
-        const resolvedUser = sessionResult.status === "fulfilled"
-          ? mapSessionToUser(sessionResult.value)
-          : null;
-        setUser(resolvedUser);
+      const [sessionOutcome, provData] = await Promise.allSettled([
+        resolveSession(() => authClient.getSession()),
+        fetch("/api/auth/custom/providers").then((r) => r.json()),
+      ]);
+
+      if (!cancelled) {
+        if (sessionOutcome.status === "fulfilled") {
+          const { verdict, data } = sessionOutcome.value;
+          if (verdict === "authenticated") {
+            const resolved = mapSessionToUser(data as BetterAuthSessionData | null);
+            setUser(resolved);
+            setSessionStatus("authenticated");
+            if (resolved) {
+              getSubscriptions().then(setSubscriptions).catch(() => {});
+            }
+          } else if (verdict === "unauthenticated") {
+            setUser(null);
+            setSessionStatus("unauthenticated");
+          } else {
+            // indeterminate: leave user null, signal unknown state
+            setSessionStatus("unknown");
+          }
+        }
         if (provData.status === "fulfilled") {
-          setProviders(provData.value);
+          setProviders(provData.value as AuthProviders);
         }
-        if (resolvedUser) {
-          getSubscriptions().then(setSubscriptions).catch(() => {});
-        }
-      } catch {
-        setUser(null);
-      } finally {
         setLoading(false);
       }
     }
+
     init();
+    return () => { cancelled = true; };
   }, []);
 
   // Listen for 401 events from api.ts
@@ -113,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handler = () => {
       queryClient.clear();
       setUser(null);
+      setSessionStatus("unauthenticated");
     };
     window.addEventListener("auth:unauthorized", handler);
     return () => window.removeEventListener("auth:unauthorized", handler);
@@ -128,9 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const session = await authClient.getSession();
     setUser(mapSessionToUser(session.data));
+    setSessionStatus("authenticated");
     getSubscriptions().then(setSubscriptions).catch(() => {});
 
-    // Refresh providers in case OIDC was configured
     fetch("/api/auth/custom/providers")
       .then((r) => r.json())
       .then(setProviders)
@@ -149,17 +170,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const session = await authClient.getSession();
     setUser(mapSessionToUser(session.data));
+    setSessionStatus("authenticated");
     getSubscriptions().then(setSubscriptions).catch(() => {});
   };
 
   const logout = async () => {
     await authClient.signOut();
     setUser(null);
+    setSessionStatus("unauthenticated");
     setSubscriptions(null);
   };
 
   return (
-    <AuthContext value={{ user, providers, loading, subscriptions, refreshSubscriptions, login, signup, logout, refresh }}>
+    <AuthContext value={{ user, providers, loading, sessionStatus, subscriptions, refreshSubscriptions, login, signup, logout, refresh }}>
       {children}
     </AuthContext>
   );

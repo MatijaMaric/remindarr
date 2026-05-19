@@ -21,6 +21,7 @@ mock.module("../context/AuthContext", () => ({
     user: mockUser,
     providers: null,
     loading: mockAuthLoading,
+    sessionStatus: "authenticated",
     subscriptions: mockSubscriptions,
     refreshSubscriptions: mock(() => Promise.resolve()),
     login: mock(() => Promise.resolve()),
