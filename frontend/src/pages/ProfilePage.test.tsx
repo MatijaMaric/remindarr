@@ -50,6 +50,7 @@ mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
     user: { id: "u1", username: "testuser", display_name: "Test User", auth_provider: "local", is_admin: false },
     loading: false,
+    sessionStatus: "authenticated",
   }),
 }));
 

@@ -14,7 +14,7 @@ mock.module("../hooks/useIsMobile", () => ({
 // even when an earlier test file has leaked a broken mock.module for AuthContext.
 const MockAuthContext = createContext<any>(null);
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => useContext(MockAuthContext) ?? { user: null, providers: null, loading: false },
+  useAuth: () => useContext(MockAuthContext) ?? { user: null, providers: null, loading: false, sessionStatus: "authenticated" },
   AuthContext: MockAuthContext,
 }));
 
@@ -28,6 +28,7 @@ function makeAuth(overrides: Partial<{ user: unknown; loading: boolean }> = {}) 
     user: overrides.user ?? null,
     providers: null,
     loading: overrides.loading ?? false,
+    sessionStatus: "authenticated",
     login: mock(() => Promise.resolve()),
     signup: mock(() => Promise.resolve()),
     logout: mock(() => Promise.resolve()),

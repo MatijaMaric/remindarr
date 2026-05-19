@@ -18,6 +18,7 @@ mock.module("../context/AuthContext", () => ({
     },
     providers: { local: true, oidc: null },
     loading: false,
+    sessionStatus: "authenticated",
     login: mock(() => Promise.resolve()),
     signup: mock(() => Promise.resolve()),
     logout: mock(() => Promise.resolve()),

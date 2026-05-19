@@ -15,7 +15,7 @@ let mockUser: any = null;
 let mockAuthLoading = false;
 
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({ user: mockUser, loading: mockAuthLoading }),
+  useAuth: () => ({ user: mockUser, loading: mockAuthLoading, sessionStatus: "authenticated" }),
   AuthContext: { Provider: ({ children }: any) => children },
 }));
 
