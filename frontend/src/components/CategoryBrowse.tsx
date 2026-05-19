@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import * as api from "../api";
 import type { Title } from "../types";
@@ -159,7 +159,9 @@ export default function CategoryBrowse({
   // isFetchingNextPage change caused it to fire immediately (sentinel still
   // visible) → auto-chaining pages 1→6 in a single burst.
   const isFetchingNextPageRef = useRef(isFetchingNextPage);
-  isFetchingNextPageRef.current = isFetchingNextPage;
+  useLayoutEffect(() => {
+    isFetchingNextPageRef.current = isFetchingNextPage;
+  });
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
