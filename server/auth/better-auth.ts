@@ -230,6 +230,12 @@ export function createAuth(db: DrizzleDb, platform: Platform, oidcConfig?: {
     },
     session: {
       modelName: "session",
+      cookieCache: {
+        enabled: true,
+        maxAge: 60, // seconds — cached session lasts 60s, skipping per-request DB lookup
+        // 60-second cache: role/ban changes take up to 60s to propagate to normal routes.
+        // Admin routes bypass this via requireAdmin's fresh DB check.
+      },
     },
     account: {
       modelName: "account",
