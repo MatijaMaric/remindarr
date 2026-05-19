@@ -64,11 +64,39 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   await next();
 });
 
-/** Returns 403 if user is not admin. Must be used after requireAuth. */
+/**
+ * Returns 403 if user is not admin.
+ *
+ * Force-refresh: bypass cookie cache so revoked admin/banned users are caught immediately.
+ * This middleware re-fetches the session from the DB (disableCookieCache: true) rather
+ * than trusting the 60-second cached session cookie, ensuring that role/ban changes on
+ * admin routes take effect immediately rather than after the cache window expires.
+ */
 export const requireAdmin = createMiddleware<AppEnv>(async (c, next) => {
-  const user = c.get("user");
-  if (!user?.is_admin) {
+  const auth = c.get("auth");
+  if (!auth) {
     return c.json({ error: "Admin access required" }, 403);
   }
+
+  let freshUser: ReturnType<typeof toAuthUser> | null = null;
+  try {
+    // Force-refresh: bypass cookie cache so revoked admin/banned users are caught immediately.
+    const session = await auth.api.getSession({
+      headers: c.req.raw.headers,
+      query: { disableCookieCache: true },
+    });
+    if (session?.user) {
+      freshUser = toAuthUser(session.user as BetterAuthSessionUser);
+    }
+  } catch {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  if (!freshUser?.is_admin) {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
+  // Update context user with freshly fetched data
+  c.set("user", freshUser);
   await next();
 });
