@@ -154,22 +154,29 @@ export default function CategoryBrowse({
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // Keep a ref so the observer callback reads the latest isFetchingNextPage
+  // without re-creating the observer on every state flip. Re-creating on each
+  // isFetchingNextPage change caused it to fire immediately (sentinel still
+  // visible) → auto-chaining pages 1→6 in a single burst.
+  const isFetchingNextPageRef = useRef(isFetchingNextPage);
+  isFetchingNextPageRef.current = isFetchingNextPage;
+
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPageRef.current) {
           void fetchNextPage();
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "0px" }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, fetchNextPage]);
 
   // Stabilize the titles array passed into TitleList so React.memo can short-
   // circuit re-renders when neither `titles` nor `hideTracked` changed.
