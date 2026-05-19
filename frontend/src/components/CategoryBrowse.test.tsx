@@ -200,6 +200,46 @@ describe("CategoryBrowse pagination", () => {
     expect(browseSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("does not auto-chain to page 3 after page 2 resolves without a new intersection", async () => {
+    const browseSpy = spyOn(api, "browseTitles");
+    browseSpy.mockResolvedValueOnce(makeBrowseResponse(1, [makeSearchTitle(1)], 3));
+    browseSpy.mockResolvedValueOnce(makeBrowseResponse(2, [makeSearchTitle(2)], 3));
+    spies.push(browseSpy);
+
+    render(
+      <CategoryBrowse
+        category="popular"
+        type={[]}
+        onTypeChange={() => {}}
+        genre={[]}
+        onGenreChange={() => {}}
+        provider={[]}
+        onProviderChange={() => {}}
+        language={[]}
+        onLanguageChange={() => {}}
+        hideFilterBar
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(screen.getByText("Title 1")).toBeDefined());
+
+    // Explicitly trigger the scroll-to-bottom intersection → page 2
+    act(() => {
+      intersectionCallback!(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+
+    await waitFor(() => expect(browseSpy).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText("Title 2")).toBeDefined());
+
+    // After page 2 resolves, page 3 must NOT auto-load — requires another scroll
+    await new Promise<void>((r) => setTimeout(r, 50));
+    expect(browseSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("does not fire a duplicate request when parent re-renders with identical props", async () => {
     const browseSpy = spyOn(api, "browseTitles");
     browseSpy.mockImplementation(() =>
