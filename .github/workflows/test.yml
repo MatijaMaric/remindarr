@@ -110,6 +110,10 @@ jobs:
       - name: Build frontend
         run: cd frontend && bun run build
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Bundle size gate
         run: bunx wrangler deploy --dry-run --outdir .wrangler/dry-run && bun run check:bundle
 
