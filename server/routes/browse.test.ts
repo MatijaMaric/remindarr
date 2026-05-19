@@ -8,6 +8,8 @@ import { upsertTitles, trackTitle, createUser, getOffersForTitle } from "../db/r
 import { makeParsedTitle, makeTmdbDiscoverMovie, makeTmdbDiscoverTv, makeTmdbMovieDetails, makeTmdbTvDetails } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
 import * as repository from "../db/repository";
+import { initCache } from "../cache";
+import { MemoryCache } from "../cache/memory";
 
 // Verify cached wrappers are exported with correct signatures
 import { cachedFetchMovieDetails, cachedFetchTvDetails } from "../tmdb/client";
@@ -19,6 +21,7 @@ let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(() => {
   setupTestDb();
+  initCache(new MemoryCache(1000));
 
   app = new Hono<AppEnv>();
   app.route("/browse", browseApp);
@@ -599,6 +602,121 @@ describe("GET /browse", () => {
       const movieCallFilters = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
       const filters = movieCallFilters.filters as Record<string, string>;
       expect(filters.withProviders).toBe("8");
+    });
+  });
+
+  describe("browse response cache", () => {
+    it("cache hit: second identical request does not call TMDB discover/detail again", async () => {
+      const movie = makeTmdbDiscoverMovie({ id: 111 });
+      (tmdbClient.discoverMovies as any).mockResolvedValue({
+        results: [movie], total_pages: 1, total_results: 1, page: 1,
+      });
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValue(makeTmdbMovieDetails({ id: 111 }));
+
+      // First request — should populate cache
+      const res1 = await app.request("/browse?category=popular&type=MOVIE&page=1");
+      expect(res1.status).toBe(200);
+      const body1 = await res1.json();
+      expect(body1.titles).toHaveLength(1);
+      expect(body1.page).toBe(1);
+      expect(body1.totalPages).toBe(1);
+      expect(body1.totalResults).toBe(1);
+
+      // Second request — same params → cache hit, no extra TMDB calls
+      const res2 = await app.request("/browse?category=popular&type=MOVIE&page=1");
+      expect(res2.status).toBe(200);
+      const body2 = await res2.json();
+      expect(body2.titles).toHaveLength(1);
+
+      // discoverMovies and cachedFetchMovieDetails should have been called only once total
+      expect(tmdbClient.discoverMovies).toHaveBeenCalledTimes(1);
+      expect(tmdbClient.cachedFetchMovieDetails).toHaveBeenCalledTimes(1);
+    });
+
+    it("cache hit with authed user: isTracked is correctly applied per user, not cached", async () => {
+      await upsertTitles([makeParsedTitle({ id: "movie-222" })]);
+      const userId = await createUser("cache-tracked-user", "hash");
+      await trackTitle("movie-222", userId);
+
+      const movie = makeTmdbDiscoverMovie({ id: 222 });
+      (tmdbClient.discoverMovies as any).mockResolvedValue({
+        results: [movie], total_pages: 1, total_results: 1, page: 1,
+      });
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValue(makeTmdbMovieDetails({ id: 222 }));
+
+      // First request — anon user, populates cache, isTracked=false
+      const res1 = await app.request("/browse?category=popular&type=MOVIE&page=2");
+      expect(res1.status).toBe(200);
+      const body1 = await res1.json();
+      expect(body1.titles[0].isTracked).toBe(false);
+
+      // Second request — authed user with tracked title, hits cache but isTracked should be true
+      const authedApp = new Hono<AppEnv>();
+      authedApp.use("/browse/*", async (c, next) => {
+        c.set("user", { id: userId, username: "cache-tracked-user", name: null, role: null, is_admin: false });
+        await next();
+      });
+      authedApp.route("/browse", browseApp);
+
+      const res2 = await authedApp.request("/browse?category=popular&type=MOVIE&page=2");
+      expect(res2.status).toBe(200);
+      const body2 = await res2.json();
+      expect(body2.titles[0].isTracked).toBe(true);
+
+      // Cache was hit on second request (no extra TMDB calls)
+      expect(tmdbClient.discoverMovies).toHaveBeenCalledTimes(1);
+    });
+
+    it("cache key variation: different page params produce different cache entries", async () => {
+      const movie1 = makeTmdbDiscoverMovie({ id: 331 });
+      const movie2 = makeTmdbDiscoverMovie({ id: 332 });
+
+      // Page 1 returns movie1
+      (tmdbClient.discoverMovies as any)
+        .mockResolvedValueOnce({ results: [movie1], total_pages: 5, total_results: 100, page: 1 })
+        // Page 2 returns movie2
+        .mockResolvedValueOnce({ results: [movie2], total_pages: 5, total_results: 100, page: 2 });
+      (tmdbClient.cachedFetchMovieDetails as any)
+        .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 331 }))
+        .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 332 }));
+
+      const res1 = await app.request("/browse?category=popular&type=MOVIE&page=1");
+      const body1 = await res1.json();
+
+      const res2 = await app.request("/browse?category=popular&type=MOVIE&page=2");
+      const body2 = await res2.json();
+
+      expect(body1.titles[0].tmdbId).toBe("331");
+      expect(body2.titles[0].tmdbId).toBe("332");
+      // Both pages called TMDB (different cache entries)
+      expect(tmdbClient.discoverMovies).toHaveBeenCalledTimes(2);
+    });
+
+    it("onlyMine=true with empty subscriptions does NOT write to cache", async () => {
+      spies.push(
+        spyOn(repository, "getSubscribedProviderIds").mockResolvedValueOnce([])
+      );
+
+      const userId = await createUser("onlymine-nocache-user", "hash");
+      const authedApp = new Hono<AppEnv>();
+      authedApp.use("/browse/*", async (c, next) => {
+        c.set("user", { id: userId, username: "onlymine-nocache-user", name: null, role: null, is_admin: false });
+        await next();
+      });
+      authedApp.route("/browse", browseApp);
+
+      // Spy on the cache to verify no set() is called with an empty-title result
+      const cache = (await import("../cache")).getCache();
+      const cacheSpy = spyOn(cache, "set");
+      spies.push(cacheSpy);
+
+      const res = await authedApp.request("/browse?category=popular&onlyMine=true");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.titles).toHaveLength(0);
+
+      // No cache writes should have occurred (early return before cache logic)
+      expect(cacheSpy).not.toHaveBeenCalled();
     });
   });
 });

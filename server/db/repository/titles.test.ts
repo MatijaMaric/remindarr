@@ -411,3 +411,103 @@ describe("getGenres / getLanguages — single-flight cache stampede prevention",
     expect(traceSpy).not.toHaveBeenCalled();
   });
 });
+
+// ─── getTitlesByTmdbIds ───────────────────────────────────────────────────────
+
+import { getTitlesByTmdbIds } from "./titles";
+import type { ParsedOffer } from "../../tmdb/parser";
+
+describe("getTitlesByTmdbIds", () => {
+  it("returns [] for empty input", async () => {
+    const result = await getTitlesByTmdbIds([]);
+    expect(result).toEqual([]);
+  });
+
+  it("returns [] when none of the IDs exist in DB", async () => {
+    const result = await getTitlesByTmdbIds([{ tmdbId: 999999, objectType: "MOVIE" }]);
+    expect(result).toEqual([]);
+  });
+
+  it("returns a ParsedTitle for a stored movie with genres and scores", async () => {
+    const title = makeParsedTitle({
+      id: "movie-501",
+      tmdbId: "501",
+      objectType: "MOVIE",
+      title: "DB Movie",
+      genres: ["Action", "Drama"],
+      scores: { imdbScore: 7.5, imdbVotes: 1000, tmdbScore: 7.8 },
+    });
+    await upsertTitles([title]);
+
+    const result = await getTitlesByTmdbIds([{ tmdbId: 501, objectType: "MOVIE" }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("movie-501");
+    expect(result[0].objectType).toBe("MOVIE");
+    expect(result[0].title).toBe("DB Movie");
+    expect(result[0].genres.sort()).toEqual(["Action", "Drama"]);
+    expect(result[0].scores.imdbScore).toBe(7.5);
+    expect(result[0].scores.tmdbScore).toBe(7.8);
+    expect(Array.isArray(result[0].offers)).toBe(true);
+  });
+
+  it("returns a ParsedTitle for a stored show", async () => {
+    const title = makeParsedTitle({
+      id: "tv-601",
+      tmdbId: "601",
+      objectType: "SHOW",
+      title: "DB Show",
+      genres: ["Drama"],
+    });
+    await upsertTitles([title]);
+
+    const result = await getTitlesByTmdbIds([{ tmdbId: 601, objectType: "SHOW" }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("tv-601");
+    expect(result[0].objectType).toBe("SHOW");
+  });
+
+  it("returns offers when title has associated offers", async () => {
+    const offer = makeParsedOffer({ titleId: "movie-701", providerId: 8, monetizationType: "FLATRATE" });
+    const title = makeParsedTitle({
+      id: "movie-701",
+      tmdbId: "701",
+      objectType: "MOVIE",
+      title: "Movie With Offers",
+      offers: [offer],
+    });
+    await upsertTitles([title]);
+
+    const result = await getTitlesByTmdbIds([{ tmdbId: 701, objectType: "MOVIE" }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].offers.length).toBeGreaterThan(0);
+    const foundOffer = result[0].offers.find((o: ParsedOffer) => o.providerId === 8);
+    expect(foundOffer).toBeDefined();
+    expect(foundOffer?.monetizationType).toBe("FLATRATE");
+  });
+
+  it("handles mixed MOVIE and SHOW lookups in one batch", async () => {
+    const movie = makeParsedTitle({ id: "movie-801", tmdbId: "801", objectType: "MOVIE", title: "Batch Movie" });
+    const show = makeParsedTitle({ id: "tv-802", tmdbId: "802", objectType: "SHOW", title: "Batch Show" });
+    await upsertTitles([movie, show]);
+
+    const result = await getTitlesByTmdbIds([
+      { tmdbId: 801, objectType: "MOVIE" },
+      { tmdbId: 802, objectType: "SHOW" },
+    ]);
+    expect(result).toHaveLength(2);
+    const ids = result.map((r) => r.id).sort();
+    expect(ids).toEqual(["movie-801", "tv-802"]);
+  });
+
+  it("silently omits IDs that don't exist in DB", async () => {
+    const movie = makeParsedTitle({ id: "movie-901", tmdbId: "901", objectType: "MOVIE", title: "Existing Movie" });
+    await upsertTitles([movie]);
+
+    const result = await getTitlesByTmdbIds([
+      { tmdbId: 901, objectType: "MOVIE" },
+      { tmdbId: 902, objectType: "MOVIE" }, // doesn't exist
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("movie-901");
+  });
+});
