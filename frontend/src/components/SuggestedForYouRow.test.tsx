@@ -1,10 +1,12 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { SuggestionsAggregateResponse, SearchTitle } from "../types";
 import "../i18n";
+import * as api from "../api";
+import SuggestedForYouRow from "./SuggestedForYouRow";
 
 function makeSearchTitle(id: string): SearchTitle {
   return {
@@ -28,15 +30,18 @@ function makeSearchTitle(id: string): SearchTitle {
   };
 }
 
-const mockGetSuggestionsAggregate = mock<() => Promise<SuggestionsAggregateResponse>>(() =>
-  Promise.resolve({ flat: [], groups: [] }),
-);
+let mockGetSuggestionsAggregate: ReturnType<typeof spyOn>;
 
-mock.module("../api", () => ({
-  getSuggestionsAggregate: mockGetSuggestionsAggregate,
-}));
+beforeEach(() => {
+  mockGetSuggestionsAggregate = spyOn(api, "getSuggestionsAggregate").mockResolvedValue(
+    { flat: [], groups: [] } as unknown as SuggestionsAggregateResponse,
+  );
+});
 
-const { default: SuggestedForYouRow } = await import("./SuggestedForYouRow");
+afterEach(() => {
+  cleanup();
+  mockGetSuggestionsAggregate.mockRestore();
+});
 
 function newTestClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -50,18 +55,10 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-afterEach(() => {
-  cleanup();
-  mockGetSuggestionsAggregate.mockReset();
-  mockGetSuggestionsAggregate.mockImplementation(() =>
-    Promise.resolve({ flat: [], groups: [] }),
-  );
-});
-
 describe("SuggestedForYouRow", () => {
   it("calls getSuggestionsAggregate exactly once on mount", async () => {
-    mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve({ flat: [makeSearchTitle("s1"), makeSearchTitle("s2")], groups: [] }),
+    mockGetSuggestionsAggregate.mockResolvedValue(
+      { flat: [makeSearchTitle("s1"), makeSearchTitle("s2")], groups: [] } as unknown as SuggestionsAggregateResponse,
     );
 
     render(<SuggestedForYouRow />, { wrapper: Wrapper });
@@ -74,8 +71,8 @@ describe("SuggestedForYouRow", () => {
   });
 
   it("does not re-call getSuggestionsAggregate on parent re-render", async () => {
-    mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve({ flat: [makeSearchTitle("s1")], groups: [] }),
+    mockGetSuggestionsAggregate.mockResolvedValue(
+      { flat: [makeSearchTitle("s1")], groups: [] } as unknown as SuggestionsAggregateResponse,
     );
 
     function Parent() {
@@ -97,10 +94,6 @@ describe("SuggestedForYouRow", () => {
   });
 
   it("renders nothing when data is empty", async () => {
-    mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve({ flat: [], groups: [] }),
-    );
-
     const { container } = render(<SuggestedForYouRow />, { wrapper: Wrapper });
 
     await waitFor(() => {

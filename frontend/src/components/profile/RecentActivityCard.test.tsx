@@ -1,9 +1,10 @@
-import { describe, it, expect, afterEach, mock } from "bun:test";
+import { describe, it, expect, afterEach, spyOn } from "bun:test";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import "../../i18n";
+import * as api from "../../api";
 import RecentActivityCard from "./RecentActivityCard";
 import type { ActivityEvent, ActivityFeedResponse } from "../../types";
 
@@ -153,11 +154,7 @@ describe("RecentActivityCard", () => {
   });
 
   it("shows hide button when isOwnProfile is true and removes event on click", async () => {
-    const hideSpy = mock(async () => {});
-    mock.module("../../api", () => ({
-      getUserActivity: async () => ({ activities: [], has_more: false, next_cursor: null }),
-      hideActivityEvent: hideSpy,
-    }));
+    const hideSpy = spyOn(api, "hideActivityEvent").mockResolvedValue(undefined as never);
 
     const { fetcher } = makeFetcher([
       { activities: [event({ id: "rt:movie-1" })], has_more: false, next_cursor: null },
@@ -171,5 +168,6 @@ describe("RecentActivityCard", () => {
 
     await waitFor(() => expect(screen.queryByText("Halcyon Drift")).toBeNull());
     expect(hideSpy).toHaveBeenCalledWith("rating_title", "rt:movie-1");
+    hideSpy.mockRestore();
   });
 });

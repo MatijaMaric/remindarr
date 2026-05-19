@@ -1,17 +1,11 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Initialize i18n
 import "../i18n";
-
-// Mock the API module before importing BottomTabBar
-mock.module("../api", () => ({
-  getUnreadRecommendationCount: mock(() => Promise.resolve({ count: 0 })),
-}));
-
+import * as api from "../api";
 import BottomTabBar from "./BottomTabBar";
 import { AuthContext } from "../context/AuthContext";
 
@@ -40,8 +34,15 @@ function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typ
   );
 }
 
+let getCountSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+  getCountSpy = spyOn(api, "getUnreadRecommendationCount").mockResolvedValue({ count: 0 } as never);
+});
+
 afterEach(() => {
   cleanup();
+  getCountSpy.mockRestore();
 });
 
 describe("BottomTabBar", () => {
