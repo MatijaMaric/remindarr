@@ -87,6 +87,20 @@ export const notificationsSentTotal = new Counter(
   "Notification send results, labelled by provider, kind, and outcome",
 );
 
+// ─── Browse Cache Metrics ─────────────────────────────────────────────────────
+
+export const browseCacheTotal = new Counter(
+  "browse_cache_total",
+  "Browse response cache hit/miss",
+);
+
+// ─── TMDB Timeout Metrics ─────────────────────────────────────────────────────
+
+export const tmdbTimeoutsTotal = new Counter(
+  "tmdb_timeouts_total",
+  "TMDB API calls that timed out (AbortController)",
+);
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 const allMetrics = [
@@ -103,6 +117,8 @@ const allMetrics = [
   errorsByCategory,
   circuitBreakerStateChangesTotal,
   notificationsSentTotal,
+  browseCacheTotal,
+  tmdbTimeoutsTotal,
 ];
 
 export function renderMetrics(): string {

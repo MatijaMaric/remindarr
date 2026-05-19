@@ -646,3 +646,49 @@ describe("tmdbRequest timeout", () => {
     await expect(searchMulti("test")).rejects.toThrow("TMDB API error 404: Not Found");
   });
 });
+
+// ─── cachedTmdbRequest single-flight ────────────────────────────────────────
+
+describe("cachedTmdbRequest single-flight (via cachedFetchMovieDetails)", () => {
+  it("concurrent cold requests for the same key call the fetcher exactly once", async () => {
+    // Provide one network response — if the fetcher is called more than once it
+    // would need more mocked responses (or throw). The dedup ensures only 1 call.
+    const mockDetails = {
+      id: 9999,
+      title: "Single Flight Movie",
+      original_title: "Single Flight Movie",
+      overview: "desc",
+      release_date: "2024-01-01",
+      runtime: 120,
+      genres: [],
+      poster_path: null,
+      backdrop_path: null,
+      vote_average: 7,
+      vote_count: 100,
+      original_language: "en",
+      external_ids: { imdb_id: null },
+      "watch/providers": { results: {} },
+    };
+    // Fresh cache key — use an ID unlikely to exist in the shared module-level cache
+    fetchSpy.mockResolvedValue(jsonResponse(mockDetails));
+
+    // Import cachedFetchMovieDetails here (it's the public surface of cachedTmdbRequest)
+    const { cachedFetchMovieDetails: cachedFetch } = await import("./client");
+
+    // Fire N concurrent requests for the same ID
+    const N = 5;
+    const uniqueId = 99991;
+    const results = await Promise.all(
+      Array.from({ length: N }, () => cachedFetch(uniqueId)),
+    );
+
+    // All N should resolve to the same data
+    expect(results).toHaveLength(N);
+    for (const r of results) {
+      expect(r.id).toBe(9999);
+    }
+
+    // The underlying fetch should have been called only once (single-flight)
+    expect(fetchSpy.mock.calls.length).toBe(1);
+  });
+});

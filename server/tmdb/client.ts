@@ -3,6 +3,7 @@ import { traceHttp } from "../tracing";
 import { getCache } from "../cache";
 import { httpFetch } from "../lib/http";
 import Sentry from "../sentry";
+import { tmdbTimeoutsTotal } from "../metrics";
 import type {
   TmdbShowDetails,
   TmdbSeasonResponse,
@@ -56,13 +57,18 @@ async function tmdbRequest<T>(path: string, params?: Record<string, string>): Pr
         throw new Error(`TMDB API error ${res.status}: ${body}`);
       }
       return res.json() as Promise<T>;
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") {
+        tmdbTimeoutsTotal.inc({ path });
+      }
+      throw e;
     } finally {
       clearTimeout(timeout);
     }
   });
 }
 
-function tmdbLanguage(): string {
+export function tmdbLanguage(): string {
   return `${CONFIG.LANGUAGE}-${CONFIG.COUNTRY}`;
 }
 
@@ -291,6 +297,8 @@ export async function findByImdbId(imdbId: string): Promise<TmdbFindResponse> {
 
 // ─── Cached TMDB helper ─────────────────────────────────────────────────────
 
+const inFlight = new Map<string, Promise<unknown>>();
+
 async function cachedTmdbRequest<T>(
   cacheKey: string,
   ttlSeconds: number,
@@ -299,9 +307,19 @@ async function cachedTmdbRequest<T>(
   const cache = getCache();
   const cached = await cache.get<T>(cacheKey);
   if (cached !== null) return cached;
-  const result = await fetcher();
-  await cache.set(cacheKey, result, ttlSeconds);
-  return result;
+
+  // Coalesce concurrent cold requests for the same key
+  const existing = inFlight.get(cacheKey) as Promise<T> | undefined;
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const result = await fetcher();
+    await cache.set(cacheKey, result, ttlSeconds);
+    return result;
+  })().finally(() => inFlight.delete(cacheKey));
+
+  inFlight.set(cacheKey, promise as Promise<unknown>);
+  return promise;
 }
 
 // ─── Cached detail endpoints (for browse fan-out) ───────────────────────────

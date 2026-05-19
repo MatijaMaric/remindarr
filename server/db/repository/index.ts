@@ -16,6 +16,7 @@ export {
   getRecentTitles,
   searchLocalTitles,
   getTitlesByMonth,
+  getTitlesByTmdbIds,
   getProviders,
   getGenres,
   getLanguages,

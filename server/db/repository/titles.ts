@@ -4,7 +4,7 @@ import { titles, providers, offers, scores, tracked, titleGenres, watchedTitles 
 import type { ParsedTitle, ParsedOffer, ParsedProvider, ParsedScores } from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
-import { getOffersWithPlex } from "./offers";
+import { getOffersForTitles, getOffersWithPlex } from "./offers";
 import { toCanonicalGenre } from "../../genres";
 import { canonicalProviderId } from "../../streaming-availability/provider-map";
 import type { DrizzleDb } from "../../platform/types";
@@ -656,6 +656,104 @@ export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
     is_watched: Boolean(row.is_watched),
     offers: offersByTitle.get(row.id) ?? [],
   }));
+  });
+}
+
+// ─── Batch title lookup by TMDB IDs ─────────────────────────────────────────
+
+/**
+ * Batch-read stored titles with their offers, genres, and scores by TMDB IDs.
+ * Returns a ParsedTitle[] for each known title; unknown IDs are silently omitted.
+ * Used by the browse fan-out to skip TMDB detail calls for already-stored titles.
+ */
+export async function getTitlesByTmdbIds(
+  items: { tmdbId: number; objectType: "MOVIE" | "SHOW" }[],
+): Promise<ParsedTitle[]> {
+  if (items.length === 0) return [];
+
+  return traceDbQuery("getTitlesByTmdbIds", async () => {
+    const db = getDb();
+
+    // Reconstruct the stable title IDs: "movie-{tmdbId}" / "tv-{tmdbId}"
+    const titleIds = items.map((item) =>
+      item.objectType === "MOVIE" ? `movie-${item.tmdbId}` : `tv-${item.tmdbId}`,
+    );
+
+    const rows = await db
+      .select({
+        id: titles.id,
+        objectType: titles.objectType,
+        title: titles.title,
+        originalTitle: titles.originalTitle,
+        releaseYear: titles.releaseYear,
+        releaseDate: titles.releaseDate,
+        runtimeMinutes: titles.runtimeMinutes,
+        shortDescription: titles.shortDescription,
+        imdbId: titles.imdbId,
+        tmdbId: titles.tmdbId,
+        posterUrl: titles.posterUrl,
+        backdropUrl: titles.backdropUrl,
+        ageCertification: titles.ageCertification,
+        originalLanguage: titles.originalLanguage,
+        tmdbUrl: titles.tmdbUrl,
+        imdbScore: scores.imdbScore,
+        imdbVotes: scores.imdbVotes,
+        tmdbScore: scores.tmdbScore,
+      })
+      .from(titles)
+      .leftJoin(scores, eq(scores.titleId, titles.id))
+      .where(inArray(titles.id, titleIds))
+      .all();
+
+    if (rows.length === 0) return [];
+
+    const foundIds = rows.map((r) => r.id);
+    const [offersByTitle, genresByTitle] = await Promise.all([
+      getOffersForTitles(foundIds),
+      getGenresForTitles(foundIds),
+    ]);
+
+    return rows.map((row) => {
+      const rawOffers = offersByTitle.get(row.id) ?? [];
+      const parsedOffers: ParsedOffer[] = rawOffers.map((o) => ({
+        titleId: row.id,
+        providerId: o.provider_id ?? 0,
+        providerName: o.provider_name ?? "",
+        providerTechnicalName: o.provider_technical_name ?? "",
+        providerIconUrl: o.provider_icon_url ?? "",
+        monetizationType: o.monetization_type ?? "",
+        presentationType: o.presentation_type ?? "",
+        priceValue: o.price_value,
+        priceCurrency: o.price_currency,
+        url: o.url ?? "",
+        availableTo: o.available_to,
+      }));
+
+      return {
+        id: row.id,
+        objectType: row.objectType as "MOVIE" | "SHOW",
+        title: row.title,
+        originalTitle: row.originalTitle,
+        releaseYear: row.releaseYear,
+        releaseDate: row.releaseDate,
+        runtimeMinutes: row.runtimeMinutes,
+        shortDescription: row.shortDescription,
+        genres: genresByTitle.get(row.id) ?? [],
+        originalLanguage: row.originalLanguage,
+        imdbId: row.imdbId,
+        tmdbId: row.tmdbId,
+        posterUrl: row.posterUrl,
+        backdropUrl: row.backdropUrl,
+        ageCertification: row.ageCertification,
+        tmdbUrl: row.tmdbUrl,
+        offers: parsedOffers,
+        scores: {
+          imdbScore: row.imdbScore,
+          imdbVotes: row.imdbVotes,
+          tmdbScore: row.tmdbScore,
+        },
+      } satisfies ParsedTitle;
+    });
   });
 }
 
