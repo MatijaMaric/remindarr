@@ -109,6 +109,9 @@ jobs:
       - name: Build frontend
         run: cd frontend && bun run build
 
+      - name: Bundle size gate
+        run: bunx wrangler deploy --dry-run --outdir .wrangler/dry-run && bun run check:bundle
+
   all-passed:
     needs: [server, frontend]
     if: always()
