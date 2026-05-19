@@ -8,6 +8,7 @@ import {
   cachedFetchTvDetails,
   getMovieGenres,
   getTvGenres,
+  tmdbLanguage,
   type DiscoverFilters,
 } from "../tmdb/client";
 import {
@@ -17,16 +18,47 @@ import {
   parseTvDetails,
   type ParsedTitle,
 } from "../tmdb/parser";
-import { getTrackedTitleIds, upsertTitles, getSubscribedProviderIds } from "../db/repository";
+import { getTrackedTitleIds, upsertTitles, getSubscribedProviderIds, getTitlesByTmdbIds } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
-import { syncFailureTotal } from "../metrics";
+import { syncFailureTotal, browseCacheTotal } from "../metrics";
 import { ok, err } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
 import { zValidator } from "../lib/validator";
 import { expandGenreIds } from "../genres";
+import { getCache } from "../cache";
+import Sentry from "../sentry";
+import { CONFIG } from "../config";
 
 const log = logger.child({ module: "browse" });
+
+function buildBrowseCacheKey(params: {
+  category: string;
+  type: string[];
+  page: number;
+  genreParam: string | undefined;
+  providerValues: string[];
+  languageValues: string[];
+  yearMin: number | undefined;
+  yearMax: number | undefined;
+  minRating: number | undefined;
+  onlyMine: boolean;
+}): string {
+  return [
+    "browse:v1",
+    params.category,
+    [...params.type].sort().join(","),
+    params.page,
+    params.genreParam ?? "",
+    [...params.providerValues].sort().join(","),
+    params.languageValues[0] ?? "",
+    params.yearMin ?? "",
+    params.yearMax ?? "",
+    params.minRating ?? "",
+    params.onlyMine ? "1" : "0",
+    tmdbLanguage(),
+  ].join(":");
+}
 
 const VALID_CATEGORIES = ["popular", "upcoming", "top_rated"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
@@ -124,6 +156,37 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       }
     }
 
+    // ── Browse response cache ──────────────────────────────────────────────
+    const browseCacheKey = buildBrowseCacheKey({
+      category,
+      type: typeValues,
+      page,
+      genreParam,
+      providerValues,
+      languageValues,
+      yearMin,
+      yearMax,
+      minRating,
+      onlyMine,
+    });
+
+    const cachedPayload = await getCache().get<{ titles: ParsedTitle[]; page: number; totalPages: number; totalResults: number }>(browseCacheKey);
+    if (cachedPayload !== null) {
+      browseCacheTotal.inc({ result: "hit" });
+      Sentry.addBreadcrumb({
+        category: "browse",
+        message: "Browse cache hit",
+        level: "info",
+        data: { cacheKey: browseCacheKey },
+      });
+      const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
+      const titlesWithTracked = cachedPayload.titles.map((t) => ({ ...t, isTracked: trackedIds.has(t.id) }));
+      setPublicCacheIfAnon(c, 1800);
+      return ok(c, { ...cachedPayload, titles: titlesWithTracked });
+    }
+    browseCacheTotal.inc({ result: "miss" });
+    // ──────────────────────────────────────────────────────────────────────
+
     const [movieGenreMap, tvGenreMap] = await Promise.all([
       getMovieGenres(),
       getTvGenres(),
@@ -175,27 +238,58 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       totalResults = movieRes.total_results + tvRes.total_results;
     }
 
-    // Fetch full details with watch providers for each result — capped at 5
-    // concurrent requests to avoid bursting TMDB's rate limit.
-    const limit = pLimit(5);
-    const titles = await Promise.all(
-      basicTitles.map((t) =>
-        limit(async () => {
-          try {
-            const tmdbId = parseInt(t.tmdbId || "0", 10);
-            if (t.objectType === "MOVIE") {
-              return parseMovieDetails(await cachedFetchMovieDetails(tmdbId));
-            } else {
-              return parseTvDetails(await cachedFetchTvDetails(tmdbId));
-            }
-          } catch (err) {
-            log.warn("TMDB enrichment failed for title", { titleId: t.tmdbId, err });
-            syncFailureTotal.inc({ source: "tmdb" });
-            return t;
-          }
-        })
-      )
+    // Batch-read known titles from DB to skip TMDB calls for already-stored titles
+    const dbTitles = await getTitlesByTmdbIds(
+      basicTitles.map((t) => ({ tmdbId: parseInt(t.tmdbId || "0", 10), objectType: t.objectType })),
     );
+    const dbByKey = new Map(dbTitles.map((t) => [`${t.objectType}:${t.tmdbId}`, t]));
+
+    // Fetch full details with watch providers for each result — capped at 5
+    // concurrent requests to avoid bursting TMDB's rate limit. DB-stored titles
+    // skip the TMDB call entirely (fanout DB short-circuit).
+    const limit = pLimit(5);
+    let fanoutDbHits = 0;
+    let fanoutTmdbMisses = 0;
+
+    const titles = await Sentry.startSpan(
+      { name: "browse.enrich", op: "browse.fanout" },
+      () =>
+        Promise.all(
+          basicTitles.map((t) =>
+            limit(async () => {
+              const dbHit = dbByKey.get(`${t.objectType}:${t.tmdbId}`);
+              if (dbHit) {
+                fanoutDbHits++;
+                return dbHit;
+              }
+              fanoutTmdbMisses++;
+              try {
+                const tmdbId = parseInt(t.tmdbId || "0", 10);
+                if (t.objectType === "MOVIE") {
+                  return parseMovieDetails(await cachedFetchMovieDetails(tmdbId));
+                } else {
+                  return parseTvDetails(await cachedFetchTvDetails(tmdbId));
+                }
+              } catch (fanoutErr) {
+                log.warn("TMDB enrichment failed for title", { titleId: t.tmdbId, err: fanoutErr });
+                syncFailureTotal.inc({ source: "tmdb" });
+                return t;
+              }
+            })
+          )
+        ),
+    );
+
+    Sentry.addBreadcrumb({
+      category: "browse",
+      message: "Browse fan-out complete",
+      level: "info",
+      data: {
+        fanoutCount: String(basicTitles.length),
+        dbHits: String(fanoutDbHits),
+        tmdbMisses: String(fanoutTmdbMisses),
+      },
+    });
 
     // Persist titles with offers to DB so stream buttons appear on subsequent views
     const titlesWithOffers = titles.filter((t) => t.offers.length > 0);
@@ -204,6 +298,9 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
         log.error("Failed to persist browse titles", { error: (e as Error).message });
       });
     }
+
+    // Cache the user-agnostic payload (isTracked is applied after cache read)
+    await getCache().set(browseCacheKey, { titles, page, totalPages, totalResults }, CONFIG.CACHE_TTL_BROWSE);
 
     const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
     const titlesWithTracked = titles.map((t) => ({
