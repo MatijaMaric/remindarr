@@ -34,6 +34,7 @@ jobs:
               - '.github/workflows/**'
             frontend:
               - 'frontend/**'
+              - 'scripts/**'
               - 'package.json'
               - 'bunfig.toml'
               - 'bun.lock'
