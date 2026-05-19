@@ -19,12 +19,6 @@ export interface Budgets {
   worker_gzip: number;
 }
 
-export interface ArtifactCheck {
-  label: string;
-  filePath: string;
-  budgetKey: keyof Budgets;
-}
-
 export interface CheckResult {
   label: string;
   filePath: string;
@@ -119,6 +113,13 @@ function resolveEntryCss(distAssetsDir: string): string {
   );
   if (files.length === 0) {
     throw new Error(`No index-*.css found in ${distAssetsDir}`);
+  }
+  if (files.length > 1) {
+    // Pick the largest one as the main entry chunk
+    const sorted = files
+      .map((f) => ({ f, size: readFileSync(path.join(distAssetsDir, f)).length }))
+      .sort((a, b) => b.size - a.size);
+    return path.join(distAssetsDir, sorted[0].f);
   }
   return path.join(distAssetsDir, files[0]);
 }
