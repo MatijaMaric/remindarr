@@ -64,7 +64,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA(pwaOptions),
-    ...(process.env.ANALYZE ? [visualizer()] : []),
+    ...(process.env.ANALYZE ? [visualizer({ filename: 'dist/stats.html' })] : []),
   ] as PluginOption[],
   resolve: {
     alias: {
