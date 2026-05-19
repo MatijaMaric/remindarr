@@ -82,6 +82,8 @@ export default defineConfig({
           if (id.includes("@sentry/react")) return "vendor-sentry";
           if (id.includes("i18next") || id.includes("react-i18next")) return "vendor-i18n";
           if (id.includes("better-auth")) return "vendor-auth";
+          if (id.includes("/node_modules/react/") || id.includes("/node_modules/react-dom/") || id.includes("/node_modules/scheduler/")) return "vendor-react";
+          if (id.includes("@tanstack/react-query")) return "vendor-query";
         },
       },
     },
