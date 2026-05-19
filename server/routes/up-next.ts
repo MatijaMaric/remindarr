@@ -1,9 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import {
-  getUnwatchedEpisodes,
-  getNextUnwatchedEpisode,
-  getLastWatchedAtPerShow,
+  getUnwatchedEpisodesWithMeta,
+  getNextUnwatchedEpisodesForTitles,
   getDiscoveryFeed,
 } from "../db/repository";
 import { zValidator } from "../lib/validator";
@@ -45,7 +44,10 @@ app.get("/", zValidator("query", querySchema), async (c) => {
   log.debug("Building up-next queue", { userId: user.id, limit });
 
   // 1. Fetch all unwatched aired episodes for the user.
-  const unwatchedRows = await getUnwatchedEpisodes(user.id, timezone);
+  //    getUnwatchedEpisodesWithMeta calls getLastWatchedAtPerShow exactly once
+  //    and returns the map so we don't repeat that query.
+  const { episodes: unwatchedRows, lastWatchedByTitle: lastWatchedMap } =
+    await getUnwatchedEpisodesWithMeta(user.id, timezone);
 
   // Group by titleId so we can determine in-progress vs newly-aired.
   const byTitle = new Map<
@@ -78,16 +80,22 @@ app.get("/", zValidator("query", querySchema), async (c) => {
     }
   }
 
-  // 3. Sort in-progress by most recently watched.
-  const lastWatchedMap = await getLastWatchedAtPerShow(user.id);
-
+  // 3. Sort in-progress by most recently watched (map already obtained above).
   inProgressTitleIds.sort((a, b) => {
     const aDate = lastWatchedMap.get(a)?.getTime() ?? 0;
     const bDate = lastWatchedMap.get(b)?.getTime() ?? 0;
     return bDate - aDate;
   });
 
-  // 4. Build result items.
+  // 4. Batch-fetch next unwatched episode for every candidate title in one query,
+  //    eliminating the previous N+1 pattern (up to 2*limit sequential DB calls).
+  const candidateTitleIds = [
+    ...inProgressTitleIds.slice(0, limit),
+    ...newlyAiredTitleIds.slice(0, limit),
+  ];
+  const nextEpMap = await getNextUnwatchedEpisodesForTitles(user.id, candidateTitleIds, timezone);
+
+  // 5. Build result items.
   const items: UpNextItem[] = [];
   const seen = new Set<string>();
 
@@ -99,9 +107,7 @@ app.get("/", zValidator("query", querySchema), async (c) => {
 
     const entry = byTitle.get(titleId)!;
     const numericTitleId = parseInt(titleId, 10);
-
-    // Find the actual next episode to watch.
-    const nextEp = await getNextUnwatchedEpisode(user.id, titleId, timezone);
+    const nextEp = nextEpMap.get(titleId);
 
     items.push({
       kind: "in_progress",
@@ -125,8 +131,7 @@ app.get("/", zValidator("query", querySchema), async (c) => {
 
     const entry = byTitle.get(titleId)!;
     const numericTitleId = parseInt(titleId, 10);
-
-    const nextEp = await getNextUnwatchedEpisode(user.id, titleId, timezone);
+    const nextEp = nextEpMap.get(titleId);
 
     items.push({
       kind: "newly_aired",

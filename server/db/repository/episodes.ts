@@ -156,8 +156,12 @@ export async function deleteEpisodesForTitle(titleId: string) {
   });
 }
 
-export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
-  return traceDbQuery("getUnwatchedEpisodes", async () => {
+/**
+ * Core implementation: fetches unwatched episodes and returns them alongside
+ * the lastWatchedByTitle map so callers can reuse it without a second query.
+ */
+export async function getUnwatchedEpisodesWithMeta(userId: string, timezone = "UTC") {
+  return traceDbQuery("getUnwatchedEpisodesWithMeta", async () => {
     const db = getDb();
     const today = localDateForTimezone(timezone);
 
@@ -230,12 +234,20 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
     });
 
     const offersByTitle = await getOffersWithPlex([...new Set(sortedRows.map((r) => r.title_id))], userId);
-    return sortedRows.map((row) => ({
+    const episodeRows = sortedRows.map((row) => ({
       ...row,
       is_watched: false,
       offers: offersByTitle.get(row.title_id) ?? [],
     }));
+
+    return { episodes: episodeRows, lastWatchedByTitle };
   });
+}
+
+/** Convenience wrapper that preserves the original public signature. */
+export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
+  const { episodes: episodeRows } = await getUnwatchedEpisodesWithMeta(userId, timezone);
+  return episodeRows;
 }
 
 /**
@@ -277,6 +289,73 @@ export async function getNextUnwatchedEpisode(userId: string, titleId: string, t
       .get();
 
     return row ?? null;
+  });
+}
+
+export type NextUnwatchedEpisodeRow = {
+  id: number;
+  title_id: string;
+  season_number: number;
+  episode_number: number;
+  name: string | null;
+  air_date: string | null;
+};
+
+/**
+ * Batch variant of getNextUnwatchedEpisode. Returns a Map<titleId, row> for
+ * all requested titles in a single query using ROW_NUMBER() window function.
+ * Eliminates the N+1 pattern in the Up Next route.
+ */
+export async function getNextUnwatchedEpisodesForTitles(
+  userId: string,
+  titleIds: string[],
+  timezone = "UTC",
+): Promise<Map<string, NextUnwatchedEpisodeRow>> {
+  return traceDbQuery("getNextUnwatchedEpisodesForTitles", async () => {
+    if (titleIds.length === 0) return new Map();
+
+    const db = getDb();
+    const today = localDateForTimezone(timezone);
+
+    // Build a comma-separated list of quoted title IDs for the IN clause.
+    // We use sql.join to safely parameterise each value.
+    const titleIdList = sql.join(
+      titleIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+
+    const rows = await db.all<NextUnwatchedEpisodeRow>(sql`
+      SELECT id, title_id, season_number, episode_number, name, air_date
+      FROM (
+        SELECT
+          e.id,
+          e.title_id,
+          e.season_number,
+          e.episode_number,
+          e.name,
+          e.air_date,
+          ROW_NUMBER() OVER (
+            PARTITION BY e.title_id
+            ORDER BY e.season_number ASC, e.episode_number ASC
+          ) AS rn
+        FROM episodes e
+        INNER JOIN tracked t ON t.title_id = e.title_id AND t.user_id = ${userId}
+        WHERE e.title_id IN (${titleIdList})
+          AND e.air_date IS NOT NULL
+          AND e.air_date <= ${today}
+          AND NOT EXISTS (
+            SELECT 1 FROM watched_episodes we
+            WHERE we.episode_id = e.id AND we.user_id = ${userId}
+          )
+      )
+      WHERE rn = 1
+    `);
+
+    const result = new Map<string, NextUnwatchedEpisodeRow>();
+    for (const row of rows) {
+      result.set(row.title_id, row);
+    }
+    return result;
   });
 }
 
