@@ -63,6 +63,12 @@ export interface ParsedProvider {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+/** Truncate overview text for discover/listing payloads (not detail pages). */
+function truncateDesc(s: string | null | undefined, max = 160): string | null {
+  if (!s) return s ?? null;
+  return s.length <= max ? s : s.slice(0, max);
+}
+
 function posterUrl(path: string | null): string | null {
   if (!path) return null;
   return `${CONFIG.TMDB_IMAGE_BASE_URL}/w342${path}`;
@@ -219,7 +225,7 @@ export function parseDiscoverMovie(
     releaseYear: parseYear(movie.release_date),
     releaseDate: movie.release_date || null,
     runtimeMinutes: null,
-    shortDescription: movie.overview,
+    shortDescription: truncateDesc(movie.overview),
     genres: (movie.genre_ids ?? []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
     originalLanguage: movie.original_language || null,
     imdbId: null,
@@ -250,7 +256,7 @@ export function parseDiscoverTv(
     releaseYear: parseYear(tv.first_air_date),
     releaseDate: tv.first_air_date || null,
     runtimeMinutes: null,
-    shortDescription: tv.overview,
+    shortDescription: truncateDesc(tv.overview),
     genres: (tv.genre_ids ?? []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
     originalLanguage: tv.original_language || null,
     imdbId: null,
