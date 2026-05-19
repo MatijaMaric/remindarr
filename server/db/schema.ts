@@ -134,6 +134,7 @@ export const episodes = sqliteTable(
     ),
     index("idx_episodes_air_date").on(table.airDate),
     index("idx_episodes_title_id").on(table.titleId),
+    index("idx_episodes_title_air").on(table.titleId, table.airDate),
   ]
 );
 
@@ -300,6 +301,7 @@ export const watchedEpisodes = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.episodeId, table.userId] }),
     index("idx_watched_episodes_user_id").on(table.userId),
+    index("idx_watched_user_episode").on(table.userId, table.episodeId),
   ]
 );
 
