@@ -542,7 +542,7 @@ export async function processPendingJobs(): Promise<number> {
           extra: { attempts: newAttempts, maxAttempts: job.maxAttempts, lastError: message, data: job.data, runAt: job.runAt },
           fingerprint: ["job-permanent-failure", job.name],
         });
-        log.error("Job failed permanently", {
+        log.error(`Job ${job.name} failed permanently (id=${job.id}, attempts=${newAttempts}/${job.maxAttempts})`, {
           name: job.name,
           jobId: job.id,
           attempts: newAttempts,

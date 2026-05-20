@@ -155,6 +155,8 @@ export function normalizeRoutePath(path: string): string {
     .replace(/\/\d+(?=\/|$)/g, "/:id");
 }
 
+const SLOW_REQUEST_THRESHOLD_MS = 5000;
+
 export function requestLogger(): MiddlewareHandler {
   const log = logger.child({ module: "http" });
   return async (c, next) => {
@@ -164,6 +166,12 @@ export function requestLogger(): MiddlewareHandler {
     const status = c.res.status;
     const method = c.req.method;
     const route = normalizeRoutePath(c.req.path);
+
+    if (durationMs > SLOW_REQUEST_THRESHOLD_MS) {
+      log.warn(`Slow request: ${method} ${c.req.path} (${Math.round(durationMs)}ms)`, {
+        status, duration: Math.round(durationMs), route, method,
+      });
+    }
 
     // 5xx → error; 401/403 auth failures → info (expected from bots/expired sessions);
     // other 4xx → warn; 2xx/3xx → info

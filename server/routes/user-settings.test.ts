@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, upsertTitles, setHomepageLayout } from "../db/repository";
+import * as repository from "../db/repository";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import userSettingsApp, { DEFAULT_HOMEPAGE_LAYOUT, HOMEPAGE_SECTION_IDS } from "./user-settings";
 import type { AppEnv } from "../types";
+import Sentry from "../sentry";
 
 let userId: string;
 
@@ -32,6 +34,21 @@ afterAll(() => {
 });
 
 describe("GET /user/settings/homepage-layout", () => {
+  it("returns 500 with a structured error and captures via Sentry when DB query throws", async () => {
+    const app = makeAuthedApp();
+    const dbSpy = spyOn(repository, "getHomepageLayout").mockRejectedValueOnce(new Error("D1 connection lost"));
+    const captureSpy = spyOn(Sentry, "captureException");
+
+    const res = await app.request("/user/settings/homepage-layout");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("Failed to load homepage layout");
+    expect(captureSpy).toHaveBeenCalled();
+
+    dbSpy.mockRestore();
+    captureSpy.mockRestore();
+  });
+
   it("returns default layout for new user", async () => {
     const app = makeAuthedApp();
     const res = await app.request("/user/settings/homepage-layout");

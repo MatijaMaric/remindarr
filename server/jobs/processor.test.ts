@@ -180,6 +180,42 @@ describe("processPendingJobs", () => {
     expect(allJobs[0].completedAt).not.toBeNull();
   });
 
+  it("permanent failure log message embeds job name, id, and attempt count (#838)", async () => {
+    mockFetchNewReleases.mockRejectedValueOnce(new Error("TMDB 503"));
+    const captureSpy = spyOn(Sentry, "captureException");
+    const consoleSpy = spyOn(console, "error");
+
+    const db = getDb();
+    await db.insert(jobs).values({
+      name: "sync-titles",
+      status: "pending",
+      attempts: 2,
+      maxAttempts: 3,
+      runAt: new Date().toISOString(),
+    });
+    const inserted = await getAllJobs();
+    const jobId = inserted[0].id;
+
+    await processPendingJobs();
+
+    const permanentLogs = consoleSpy.mock.calls
+      .map(([line]) => (typeof line === "string" ? line : ""))
+      .filter((line) => line.includes("failed permanently"));
+
+    expect(permanentLogs.length).toBeGreaterThan(0);
+    const entry = JSON.parse(permanentLogs[0]);
+    expect(entry.msg).toContain("sync-titles failed permanently");
+    expect(entry.msg).toContain(`id=${jobId}`);
+    expect(entry.msg).toContain("attempts=3/3");
+    expect(captureSpy).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ fingerprint: ["job-permanent-failure", "sync-titles"] }),
+    );
+
+    consoleSpy.mockRestore();
+    captureSpy.mockRestore();
+  });
+
   it("marks unknown job types as failed", async () => {
     await insertJob("unknown-job-type");
     await processPendingJobs();
@@ -347,7 +383,7 @@ describe("processor error logging includes stack traces", () => {
       .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
       .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
 
-    const permanentLog = errorCalls.find((obj) => obj.msg === "Job failed permanently");
+    const permanentLog = errorCalls.find((obj) => typeof obj.msg === "string" && obj.msg.includes("failed permanently"));
     expect(permanentLog).toBeDefined();
     // stack must be a top-level string field (not nested inside err)
     expect(typeof permanentLog!.stack).toBe("string");
@@ -450,7 +486,7 @@ describe("processor Sentry capture on permanent failure", () => {
     const errorCalls = consoleErrorSpy.mock.calls
       .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
       .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
-    const permanentLog = errorCalls.find((obj) => obj.msg === "Job failed permanently");
+    const permanentLog = errorCalls.find((obj) => typeof obj.msg === "string" && obj.msg.includes("failed permanently"));
     expect(permanentLog).toBeDefined();
     expect(permanentLog!.data).toBe('{"marker":"p801"}');
     expect(typeof permanentLog!.runAt).toBe("string");
