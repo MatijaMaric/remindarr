@@ -736,7 +736,7 @@ export default function HomePage() {
       case "movies_to_watch":
         return movieData.to_watch.length > 0 ? (
           <section key="movies_to_watch">
-            <div className="flex items-baseline justify-between mb-4 px-4">
+            <div className="flex items-baseline justify-between mb-4">
               <div>
                 <Kicker>Movies</Kicker>
                 <h2 className="text-xl font-bold tracking-[-0.01em]">Movies to Watch</h2>
@@ -750,7 +750,7 @@ export default function HomePage() {
       case "upcoming_movies":
         return movieData.upcoming.length > 0 ? (
           <section key="upcoming_movies">
-            <div className="flex items-baseline justify-between mb-4 px-4">
+            <div className="flex items-baseline justify-between mb-4">
               <div>
                 <Kicker>Movies</Kicker>
                 <h2 className="text-xl font-bold tracking-[-0.01em]">Upcoming Movies</h2>

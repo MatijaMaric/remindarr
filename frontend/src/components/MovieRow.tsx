@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
 import * as api from "../api";
-import ScrollableRow from "./ScrollableRow";
+import FullBleedCarousel from "./FullBleedCarousel";
 import { posterUrl as buildPosterUrl } from "../lib/tmdb-images";
 import { MediaCard } from "./MediaCard";
 
@@ -81,9 +81,9 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
   }
 
   return (
-    <ScrollableRow className="gap-3 px-4 pb-2">
+    <FullBleedCarousel>
       {visible.map((movie) => (
-        <div key={movie.id} className="w-52 flex-shrink-0">
+        <div key={movie.id} className="w-52 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
           <MediaCard
             aspect="poster"
             to={`/title/${movie.id}`}
@@ -118,6 +118,6 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
           />
         </div>
       ))}
-    </ScrollableRow>
+    </FullBleedCarousel>
   );
 }
