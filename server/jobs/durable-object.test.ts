@@ -334,7 +334,7 @@ describe("JobQueueDO", () => {
     const errorCalls = consoleErrorSpy.mock.calls
       .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
       .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
-    const permanentLog = errorCalls.find((obj) => obj.msg === "Job failed permanently");
+    const permanentLog = errorCalls.find((obj) => typeof obj.msg === "string" && obj.msg.includes("failed permanently"));
     expect(permanentLog).toBeDefined();
     expect(permanentLog!.data).toBe('{"marker":"p801"}');
     expect(typeof permanentLog!.runAt).toBe("string");

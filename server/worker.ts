@@ -301,8 +301,18 @@ function createApp(env: Env) {
         stack: err instanceof Error ? err.stack : undefined,
       });
     }
-    const db = getDb();
-    c.set("auth", createAuth(db, platform, oidcConfig));
+    let db;
+    try {
+      db = getDb();
+      c.set("auth", createAuth(db, platform, oidcConfig));
+    } catch (err) {
+      logger.error("Auth context init failed", {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      Sentry.captureException(err);
+      return c.json({ error: "Service initializing, please retry" }, 503);
+    }
 
     await next();
   });

@@ -354,7 +354,7 @@ export class JobQueueDO {
           extra: { attempts: newAttempts, maxAttempts: job.max_attempts, lastError: message, data: job.data, runAt: job.run_at },
           fingerprint: ["job-permanent-failure", job.name],
         });
-        log.error("Job failed permanently", {
+        log.error(`Job ${job.name} failed permanently (id=${job.id}, attempts=${newAttempts}/${job.max_attempts})`, {
           name: job.name,
           jobId: job.id,
           attempts: newAttempts,

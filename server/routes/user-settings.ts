@@ -2,8 +2,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings, getCrowdedWeekSettings, updateCrowdedWeekSettings, getAppearanceSettings, updateAppearanceSettings, getSubscribedProviderIds, setSubscribedProviderIds, getOnlyMineFilter, setOnlyMineFilter, filterValidProviderIds } from "../db/repository";
 import type { AppEnv } from "../types";
-import { ok } from "./response";
+import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
+import Sentry from "../sentry";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "user-settings" });
 
 // Keep in sync with frontend/src/types.ts HomepageSectionId / DEFAULT_HOMEPAGE_LAYOUT.
 export const HOMEPAGE_SECTION_IDS = ["streak", "up_next", "unwatched", "movies_to_watch", "recommendations", "today", "upcoming", "upcoming_movies", "airing_soon", "friends_loved"] as const;
@@ -88,8 +92,16 @@ const app = new Hono<AppEnv>();
 
 app.get("/homepage-layout", async (c) => {
   const user = c.get("user")!;
-  const raw = await getHomepageLayout(user.id);
-  return ok(c, { homepage_layout: parseLayout(raw) });
+  try {
+    const raw = await getHomepageLayout(user.id);
+    return ok(c, { homepage_layout: parseLayout(raw) });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    const stack = e instanceof Error ? e.stack : undefined;
+    Sentry.captureException(e);
+    log.error("homepage-layout fetch failed", { userId: user.id, error: message, stack });
+    return err(c, "Failed to load homepage layout", 500);
+  }
 });
 
 app.put(
