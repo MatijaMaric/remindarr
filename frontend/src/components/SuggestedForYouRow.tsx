@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
 import FullBleedCarousel from "./FullBleedCarousel";
+import { MediaCard } from "./MediaCard";
 import { Kicker } from "./design";
 
 export default function SuggestedForYouRow() {
@@ -30,32 +31,21 @@ export default function SuggestedForYouRow() {
       </div>
       <FullBleedCarousel>
         {titles.map((title) => (
-          <Link
+          <div
             key={title.id}
-            to={`/title/${title.id}`}
-            className="w-32 flex-shrink-0 group"
+            className="w-52 flex-shrink-0"
             style={{ scrollSnapAlign: "start" }}
           >
-            <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800">
-              {title.posterUrl ? (
-                <img
-                  src={title.posterUrl}
-                  alt={title.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  loading="lazy"
-                  width={128}
-                  height={192}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
-                  N/A
-                </div>
-              )}
-            </div>
-            <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
-              {title.title}
-            </p>
-          </Link>
+            <MediaCard
+              aspect="poster"
+              hoverZoom
+              to={`/title/${title.id}`}
+              imageUrl={title.posterUrl}
+              imageAlt={title.title}
+              title={title.title}
+              titleClamp={2}
+            />
+          </div>
         ))}
       </FullBleedCarousel>
     </section>
