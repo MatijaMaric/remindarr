@@ -59,6 +59,8 @@ mock.module("../api", () => ({
   watchEpisode: mockWatchEpisode,
   unwatchEpisode: mockUnwatchEpisode,
   watchEpisodesBulk: mockWatchEpisodesBulk,
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
 }));
 
 const { default: EpisodeDetailPage } = await import("./EpisodeDetailPage");

@@ -38,6 +38,8 @@ mock.module("../api", () => ({
   trackTitle: mock(() => Promise.resolve()),
   untrackTitle: mock(() => Promise.resolve()),
   bulkTrackAction: mockBulkTrackAction,
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
 }));
 
 const { default: TrackedPage } = await import("./TrackedPage");

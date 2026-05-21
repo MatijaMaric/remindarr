@@ -38,6 +38,10 @@ const mockGetStats = mock(() => Promise.resolve(baseStats));
 
 mock.module("../api", () => ({
   getStats: mockGetStats,
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getMovieDetails: mock(() => Promise.resolve({})),
+  getShowDetails: mock(() => Promise.resolve({})),
 }));
 
 const { default: StatsPage, formatEta } = await import("./StatsPage");

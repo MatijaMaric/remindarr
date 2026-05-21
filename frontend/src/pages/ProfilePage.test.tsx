@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 
 // Mock browser Notification API
@@ -43,6 +44,20 @@ mock.module("../api", () => ({
   updateProfileVisibility: mock(() => Promise.resolve()),
   updateTitleVisibility: mock(() => Promise.resolve()),
   updateAllTitleVisibility: mock(() => Promise.resolve()),
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getUpcomingEpisodes: mock(() => Promise.resolve({ today: [], upcoming: [], unwatched: [] })),
+  watchEpisode: mock(() => Promise.resolve()),
+  unwatchEpisode: mock(() => Promise.resolve()),
+  watchEpisodesBulk: mock(() => Promise.resolve()),
+  browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
+  getRecommendations: mock(() => Promise.resolve({ recommendations: [], suggestions: [], hasMore: false })),
+  fetchFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
+  watchMovie: mock(() => Promise.resolve()),
+  unwatchMovie: mock(() => Promise.resolve()),
+  getMovieTracking: mock(() => Promise.resolve(null)),
+  rateEpisode: mock(() => Promise.resolve()),
+  unrateEpisode: mock(() => Promise.resolve()),
 }));
 
 // Mock AuthContext
@@ -57,8 +72,16 @@ mock.module("../context/AuthContext", () => ({
 // Import SettingsPage (which now contains the push notification sections)
 const { default: SettingsPage } = await import("./SettingsPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter initialEntries={["/settings?tab=notifications"]}>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/settings?tab=notifications"]}>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 afterEach(() => {

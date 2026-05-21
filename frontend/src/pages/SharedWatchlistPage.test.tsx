@@ -39,6 +39,8 @@ const mockGetSharedWatchlist = mock(() =>
 
 mock.module("../api", () => ({
   getSharedWatchlist: mockGetSharedWatchlist,
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
 }));
 
 const { default: SharedWatchlistPage } = await import("./SharedWatchlistPage");

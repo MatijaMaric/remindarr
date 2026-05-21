@@ -80,6 +80,7 @@ mock.module("../api", () => ({
   getFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
   getMovieTracking: mock(() => Promise.resolve(null)),
   getMyStreak: mock(() => Promise.resolve(null)),
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
 }));
 
 const { default: DiscoveryPage } = await import("./DiscoveryPage");

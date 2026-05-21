@@ -34,6 +34,8 @@ mock.module("../api", () => ({
   getNotifiers: mockGetNotifiers,
   getVapidPublicKey: mockGetVapidPublicKey,
   updateNotifier: mockUpdateNotifier,
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
 }));
 
 import { usePushSubscriptionSync } from "./usePushSubscriptionSync";
