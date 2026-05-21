@@ -34,6 +34,7 @@ beforeEach(() => {
     spyOn(tmdbClient, "fetchTvSuggestions").mockResolvedValue({ results: [], page: 1, total_pages: 0, total_results: 0 } as any),
     spyOn(tmdbClient, "getMovieGenres").mockResolvedValue(new Map() as any),
     spyOn(tmdbClient, "getTvGenres").mockResolvedValue(new Map() as any),
+    spyOn(tmdbClient, "fetchCollection").mockResolvedValue({ id: 119, name: "Test Collection", overview: "", poster_path: null, backdrop_path: null, parts: [] } as any),
   ];
 });
 
@@ -447,6 +448,52 @@ describe("GET /details/person/:personId", () => {
   it("returns 404 when TMDB fetch fails", async () => {
     (tmdbClient.fetchPersonDetails as any).mockRejectedValueOnce(new Error("Not found"));
     const res = await app.request("/details/person/999");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /details/collection/:id", () => {
+  it("returns 400 for non-numeric id", async () => {
+    const res = await app.request("/details/collection/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 for id=0 (min is 1)", async () => {
+    const res = await app.request("/details/collection/0");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns collection with parts for valid id", async () => {
+    (tmdbClient.fetchCollection as any).mockResolvedValueOnce({
+      id: 119,
+      name: "The Lord of the Rings Collection",
+      overview: "Epic fantasy trilogy",
+      poster_path: "/poster.jpg",
+      backdrop_path: "/backdrop.jpg",
+      parts: [
+        { id: 120, title: "The Fellowship of the Ring", poster_path: "/f.jpg", backdrop_path: null, release_date: "2001-12-19", overview: "", vote_average: 8.4 },
+        { id: 121, title: "The Two Towers", poster_path: "/t.jpg", backdrop_path: null, release_date: "2002-12-18", overview: "", vote_average: 8.4 },
+      ],
+    });
+
+    const res = await app.request("/details/collection/119");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.name).toBe("The Lord of the Rings Collection");
+    expect(Array.isArray(body.parts)).toBe(true);
+    expect(body.parts).toHaveLength(2);
+    expect(tmdbClient.fetchCollection).toHaveBeenCalledWith(119);
+  });
+
+  it("returns 404 when TMDB fetch fails", async () => {
+    (tmdbClient.fetchCollection as any).mockRejectedValueOnce(new Error("Not found"));
+    const res = await app.request("/details/collection/999");
     expect(res.status).toBe(404);
   });
 });

@@ -37,6 +37,7 @@ import type {
   UserAchievement,
   LeaderboardEntry,
   StreakData,
+  CollectionDetails,
 } from "./types";
 
 const BASE = "/api";
@@ -1235,6 +1236,10 @@ export async function setRemindOnRelease(
  */
 export async function fetchFriendsLoved(signal?: AbortSignal): Promise<{ titles: SearchTitle[] }> {
   return fetchJson("/social/friends-loved?limit=20", { signal });
+}
+
+export async function getCollection(id: number, signal?: AbortSignal): Promise<CollectionDetails> {
+  return fetchJson(`/details/collection/${id}`, { signal });
 }
 
 export async function getTitleSuggestions(

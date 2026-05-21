@@ -20,6 +20,7 @@ import { Section } from "../../components/title-detail/Section";
 import { formatCurrency } from "../../components/title-detail/utils";
 import SectionErrorBoundary from "../../components/SectionErrorBoundary";
 import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
+import CollectionRow from "../../components/title-detail/CollectionRow";
 import EditWatchedAtDialog from "../../components/EditWatchedAtDialog";
 
 export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
@@ -213,6 +214,15 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       <SectionErrorBoundary label="streaming providers">
         <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
       </SectionErrorBoundary>
+
+      {/* Collection */}
+      {tmdb?.belongs_to_collection && (
+        <CollectionRow
+          collectionId={tmdb.belongs_to_collection.id}
+          collectionName={tmdb.belongs_to_collection.name}
+          currentTitleId={title.id}
+        />
+      )}
 
       {/* Suggestions */}
       <SuggestionsRow titleId={title.id} type="movie" />

@@ -22,6 +22,7 @@ import type {
   TmdbSeasonDetails,
   TmdbEpisodeDetails,
   TmdbPersonDetails,
+  TmdbCollectionDetails,
 } from "./types";
 
 async function tmdbRequest<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -332,6 +333,14 @@ export async function cachedFetchMovieDetails(tmdbId: number): Promise<TmdbMovie
 export async function cachedFetchTvDetails(tmdbId: number): Promise<TmdbTvDetails> {
   const key = `tmdb:details:tv:${tmdbId}:${tmdbLanguage()}`;
   return cachedTmdbRequest(key, CONFIG.CACHE_TTL_DETAILS, () => fetchTvDetails(tmdbId));
+}
+
+export async function fetchCollection(collectionId: number): Promise<TmdbCollectionDetails> {
+  return cachedTmdbRequest(
+    `tmdb:collection:${collectionId}:${tmdbLanguage()}`,
+    CONFIG.CACHE_TTL_DETAILS,
+    () => tmdbRequest<TmdbCollectionDetails>(`/collection/${collectionId}`, { language: tmdbLanguage() }),
+  );
 }
 
 // ─── Suggestions endpoints ──────────────────────────────────────────────────

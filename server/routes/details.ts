@@ -14,6 +14,7 @@ import {
   fetchTvSuggestions,
   getMovieGenres,
   getTvGenres,
+  fetchCollection,
 } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails, parseDiscoverMovie, parseDiscoverTv } from "../tmdb/parser";
 import type { AppEnv } from "../types";
@@ -41,6 +42,9 @@ const personIdParam = z.object({
 });
 const suggestionsQuery = z.object({
   page: z.coerce.number().int().min(1).default(1),
+});
+const collectionIdParam = z.object({
+  id: z.coerce.number().int().min(1),
 });
 
 const app = new Hono<AppEnv>();
@@ -258,6 +262,19 @@ app.get("/show/:id/suggestions", zValidator("param", titleIdParam), zValidator("
   } catch (e) {
     log.error("TMDB show suggestions fetch failed", { tmdbId: parsed.tmdbId, err: e });
     return err(c, "Failed to fetch suggestions", 503);
+  }
+});
+
+app.get("/collection/:id", zValidator("param", collectionIdParam), async (c) => {
+  if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
+  const { id } = c.req.valid("param");
+  try {
+    const collection = await fetchCollection(id);
+    setPublicCacheIfAnon(c, 3600);
+    return c.json(collection);
+  } catch (e) {
+    log.error("TMDB collection fetch failed", { collectionId: id, err: e });
+    return err(c, "Collection not found", 404);
   }
 });
 

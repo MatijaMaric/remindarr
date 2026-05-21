@@ -231,6 +231,25 @@ export interface Network {
   origin_country: string;
 }
 
+export interface CollectionPart {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string | null;
+  overview: string;
+  vote_average: number;
+}
+
+export interface CollectionDetails {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  parts: CollectionPart[];
+}
+
 export interface MovieDetailsResponse {
   title: Title;
   tmdb: {
@@ -259,6 +278,7 @@ export interface MovieDetailsResponse {
     "watch/providers": { results: Record<string, WatchProviderCountry> };
     external_ids?: ExternalIds;
     videos?: { results: TmdbVideo[] };
+    belongs_to_collection?: { id: number; name: string; poster_path: string | null; backdrop_path: string | null } | null;
   } | null;
   country: string;
 }
