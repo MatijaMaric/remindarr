@@ -44,10 +44,8 @@ export default function StatusPicker({ titleId, objectType, currentStatus, onSta
 
   const statusMutation = useMutation({
     mutationFn: (status: UserStatus | null) => api.updateTrackedStatus(titleId, status),
-    onSuccess: (_data, status) => {
-      onStatusChange(status);
-      setOpen(false);
-    },
+    onMutate: () => setOpen(false),
+    onSuccess: (_data, status) => onStatusChange(status),
     onError: () => toast.error("Failed to update status"),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
   });

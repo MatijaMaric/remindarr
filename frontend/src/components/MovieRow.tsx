@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import FullBleedCarousel from "./FullBleedCarousel";
@@ -68,12 +69,14 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
   const watchMutation = useMutation({
     mutationFn: (id: string) => api.watchMovie(id),
     onMutate: (id) => setDismissed((prev) => new Set([...prev, id])),
-    onError: (_err, id) =>
+    onError: (_err, id) => {
       setDismissed((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
-      }),
+      });
+      toast.error("Failed to mark as watched — please try again");
+    },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["home", "auth"] });
       void qc.invalidateQueries({ queryKey: ["stats"] });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bell, BellRing, BellOff, BellDot } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import SnoozePicker from "./SnoozePicker";
@@ -40,6 +41,7 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
     onSuccess: (_data, { value }) => onModeChange?.(value),
     onError: (_err, _vars, ctx) => {
       if (ctx) setMode(ctx.prev);
+      toast.error("Failed to update notification mode");
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
   });
@@ -48,7 +50,10 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
     mutationFn: ({ newValue }: { newValue: boolean }) => api.setRemindOnRelease(titleId, newValue),
     onMutate: ({ newValue }) => setRemind(newValue),
     onSuccess: (_data, { newValue }) => onRemindOnReleaseChange?.(newValue),
-    onError: (_err, { newValue }) => setRemind(!newValue),
+    onError: (_err, { newValue }) => {
+      setRemind(!newValue);
+      toast.error("Failed to update reminder setting");
+    },
     onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
   });
 
