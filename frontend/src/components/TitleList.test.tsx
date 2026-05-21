@@ -1,11 +1,16 @@
 import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TitleList from "./TitleList";
 import { AuthContext } from "../context/AuthContext";
 import * as api from "../api";
 import type { Title } from "../types";
 import type { ReactNode } from "react";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 const mockAuthValue = {
   user: null,
@@ -18,9 +23,11 @@ const mockAuthValue = {
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <MemoryRouter>
-      <AuthContext value={mockAuthValue as any}>{children}</AuthContext>
-    </MemoryRouter>
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>
+        <AuthContext value={mockAuthValue as any}>{children}</AuthContext>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 

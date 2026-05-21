@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 
 interface Props {
@@ -10,18 +12,17 @@ interface Props {
 
 export default function TagList({ titleId, tags, onTagsChange }: Props) {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function saveTags(newTags: string[]) {
-    try {
-      await api.updateTrackedTags(titleId, newTags);
-      onTagsChange(newTags);
-    } catch (err) {
-      console.error("Failed to save tags", err);
-    }
-  }
+  const saveTagsMutation = useMutation({
+    mutationFn: (newTags: string[]) => api.updateTrackedTags(titleId, newTags),
+    onSuccess: (_data, newTags) => onTagsChange(newTags),
+    onError: () => toast.error("Failed to save tags"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
 
   function addTag(raw: string) {
     const tag = raw.trim().toLowerCase();
@@ -41,11 +42,11 @@ export default function TagList({ titleId, tags, onTagsChange }: Props) {
     }
     const next = [...tags, tag];
     setInput("");
-    void saveTags(next);
+    saveTagsMutation.mutate(next);
   }
 
   function removeTag(tag: string) {
-    void saveTags(tags.filter((t) => t !== tag));
+    saveTagsMutation.mutate(tags.filter((t) => t !== tag));
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

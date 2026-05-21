@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import { useAuth } from "../context/AuthContext";
 
@@ -11,34 +12,29 @@ interface Props {
 
 export default function FollowButton({ userId, initialIsFollowing, onToggle }: Props) {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [following, setFollowing] = useState(initialIsFollowing);
-  const [loading, setLoading] = useState(false);
   const [hovered, setHovered] = useState(false);
+
+  const toggleFollowMutation = useMutation({
+    mutationFn: ({ wasFollowing }: { wasFollowing: boolean }) =>
+      wasFollowing ? api.unfollowUser(userId) : api.followUser(userId),
+    onMutate: ({ wasFollowing }) => setFollowing(!wasFollowing),
+    onSuccess: (_data, { wasFollowing }) => {
+      onToggle?.(!wasFollowing);
+      toast.success(!wasFollowing ? "Following" : "Unfollowed");
+    },
+    onError: (_err, { wasFollowing }) => {
+      setFollowing(wasFollowing);
+      toast.error("Failed to update follow status");
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["user-profile"] }),
+  });
 
   // Don't render if not authenticated or viewing own profile
   if (!user || user.id === userId) return null;
 
-  async function handleClick() {
-    setLoading(true);
-    try {
-      if (following) {
-        await api.unfollowUser(userId);
-        setFollowing(false);
-        onToggle?.(false);
-        toast.success("Unfollowed");
-      } else {
-        await api.followUser(userId);
-        setFollowing(true);
-        onToggle?.(true);
-        toast.success("Following");
-      }
-    } catch (err: unknown) {
-      console.error("Follow toggle failed:", err);
-      toast.error("Failed to update follow status");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loading = toggleFollowMutation.isPending;
 
   const showUnfollow = following && hovered;
 
@@ -64,7 +60,7 @@ export default function FollowButton({ userId, initialIsFollowing, onToggle }: P
 
   return (
     <button
-      onClick={handleClick}
+      onClick={() => toggleFollowMutation.mutate({ wasFollowing: following })}
       disabled={loading}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

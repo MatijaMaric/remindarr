@@ -1,8 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import MovieRow from "./MovieRow";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
+function Wrapper({ children }: { children: ReactNode }) {
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
 
 let mockWatchMovie: ReturnType<typeof spyOn>;
 
@@ -34,11 +48,7 @@ const upcomingMovie = {
 };
 
 function renderRow(variant: "to_watch" | "upcoming", movies: typeof releasedMovie[]) {
-  return render(
-    <MemoryRouter>
-      <MovieRow variant={variant} movies={movies} />
-    </MemoryRouter>,
-  );
+  return render(<MovieRow variant={variant} movies={movies} />, { wrapper: Wrapper });
 }
 
 describe("MovieRow — to_watch variant", () => {

@@ -2,10 +2,15 @@ import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:te
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
 import "../i18n";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PinButton from "./PinButton";
 import * as api from "../api";
 import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 const mockUser = {
   id: "user-1",
@@ -25,7 +30,11 @@ const mockAuthValue = {
 };
 
 function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
-  return <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+    </QueryClientProvider>
+  );
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
@@ -61,9 +70,11 @@ describe("PinButton", () => {
   it("returns null when user is not logged in", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     const { container } = render(
-      <AuthContext value={noUserAuth as any}>
-        <PinButton titleId="movie-1" />
-      </AuthContext>
+      <QueryClientProvider client={newTestClient()}>
+        <AuthContext value={noUserAuth as any}>
+          <PinButton titleId="movie-1" />
+        </AuthContext>
+      </QueryClientProvider>
     );
     expect(container.innerHTML).toBe("");
   });
