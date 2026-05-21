@@ -328,8 +328,8 @@ export async function updateAllTitleVisibility(isPublic: boolean): Promise<void>
   });
 }
 
-export async function searchUsers(query: string): Promise<{ users: UserSummary[] }> {
-  return fetchJson(`/user/search?q=${encodeURIComponent(query)}`);
+export async function searchUsers(query: string, signal?: AbortSignal): Promise<{ users: UserSummary[] }> {
+  return fetchJson(`/user/search?q=${encodeURIComponent(query)}`, { signal });
 }
 
 export async function resolveImdb(url: string): Promise<{ success: boolean; title: SearchTitle }> {

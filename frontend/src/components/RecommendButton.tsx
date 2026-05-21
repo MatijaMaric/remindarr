@@ -77,6 +77,7 @@ export default function RecommendButton({ titleId }: Props) {
 
   function handleOpen() {
     if (recommended) {
+      if (!recId) return;
       deleteMutation.mutate();
       return;
     }
