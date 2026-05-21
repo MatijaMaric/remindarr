@@ -43,7 +43,10 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
       setTracked(false);
       toast.error("Failed to track — please try again");
     },
-    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["tracked"] });
+      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+    },
   });
 
   const untrackMutation = useMutation({
