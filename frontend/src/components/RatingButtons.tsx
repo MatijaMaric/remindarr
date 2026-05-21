@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
 import { HeartCrack, ThumbsDown, ThumbsUp, Heart } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import type { RatingValue, TitleRatingResponse } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -51,56 +51,42 @@ const RATING_CONFIG: {
 
 export default function RatingButtons({ titleId }: RatingButtonsProps) {
   const { user } = useAuth();
-  const [ratingData, setRatingData] = useState<TitleRatingResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const qc = useQueryClient();
 
-  const fetchRating = useCallback(async () => {
-    try {
-      const data = await api.getTitleRating(titleId);
-      setRatingData(data);
-    } catch {
-      // Silently handle — rating data is non-critical
-    } finally {
-      setLoading(false);
-    }
-  }, [titleId]);
+  const { data: ratingData, isLoading } = useQuery({
+    queryKey: ["title-rating", titleId],
+    queryFn: ({ signal }) => api.getTitleRating(titleId, signal),
+  });
 
-  useEffect(() => {
-    fetchRating();
-  }, [fetchRating]);
+  const rateMutation = useMutation({
+    mutationFn: ({ value }: { value: RatingValue }) => api.rateTitle(titleId, value),
+    onSuccess: () => toast.success("Rating saved"),
+    onError: () => toast.error("Failed to update rating"),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["title-rating", titleId] }),
+  });
 
-  async function handleRate(value: RatingValue) {
+  const unrateMutation = useMutation({
+    mutationFn: () => api.unrateTitle(titleId),
+    onSuccess: () => toast.success("Rating removed"),
+    onError: () => toast.error("Failed to update rating"),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["title-rating", titleId] }),
+  });
+
+  const submitting = rateMutation.isPending || unrateMutation.isPending;
+
+  function handleRate(value: RatingValue) {
     if (submitting || !user) return;
 
     const isActive = ratingData?.user_rating === value;
-    setSubmitting(true);
 
-    try {
-      if (isActive) {
-        await api.unrateTitle(titleId);
-        setRatingData((prev) =>
-          prev ? { ...prev, user_rating: null } : prev
-        );
-        toast.success("Rating removed");
-      } else {
-        await api.rateTitle(titleId, value);
-        setRatingData((prev) =>
-          prev ? { ...prev, user_rating: value } : prev
-        );
-        toast.success("Rating saved");
-      }
-      // Refresh to get updated aggregated counts
-      const updated = await api.getTitleRating(titleId);
-      setRatingData(updated);
-    } catch {
-      toast.error("Failed to update rating");
-    } finally {
-      setSubmitting(false);
+    if (isActive) {
+      unrateMutation.mutate();
+    } else {
+      rateMutation.mutate({ value });
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2" data-testid="rating-loading">
         {RATING_CONFIG.map(({ value }) => (

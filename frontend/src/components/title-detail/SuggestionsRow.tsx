@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../../api";
-import type { SearchTitle } from "../../types";
 import ScrollableRow from "../ScrollableRow";
 import { TitleCardSkeleton } from "../SkeletonComponents";
 import { Section } from "./Section";
@@ -15,27 +14,19 @@ interface SuggestionsRowProps {
 
 function SuggestionsRowInner({ titleId, type }: SuggestionsRowProps) {
   const { t } = useTranslation();
-  const [titles, setTitles] = useState<SearchTitle[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getTitleSuggestions(type, titleId, 1, controller.signal)
-      .then((res) => {
-        if (!controller.signal.aborted) setTitles(res.titles.slice(0, 20));
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [titleId, type]);
+  const { data, isLoading } = useQuery({
+    queryKey: ["title-suggestions", type, titleId],
+    queryFn: ({ signal }) => api.getTitleSuggestions(type, titleId, 1, signal),
+  });
 
-  if (!loading && titles.length === 0) return null;
+  const titles = data?.titles.slice(0, 20) ?? [];
+
+  if (!isLoading && titles.length === 0) return null;
 
   return (
     <Section title={t("suggestions.alsoLike")}>
-      {loading ? (
+      {isLoading ? (
         <div className="flex gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="w-28 flex-shrink-0">

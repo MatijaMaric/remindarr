@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { HeartCrack, ThumbsDown, ThumbsUp, Heart } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import type { RatingValue, EpisodeRatingResponse } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -25,73 +26,70 @@ const RATING_CONFIG: {
 
 export default function EpisodeRatingButtons({ episodeId }: EpisodeRatingButtonsProps) {
   const { user } = useAuth();
-  const [ratingData, setRatingData] = useState<EpisodeRatingResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const qc = useQueryClient();
   const [reviewText, setReviewText] = useState("");
   const [showReview, setShowReview] = useState(false);
 
-  const fetchRating = useCallback(async () => {
-    try {
-      const data = await api.getEpisodeRating(episodeId);
-      setRatingData(data);
-      if (data.user_review) {
-        setReviewText(data.user_review);
-        setShowReview(true);
-      }
-    } catch {
-      // non-critical
-    } finally {
-      setLoading(false);
-    }
-  }, [episodeId]);
+  const { data: ratingData, isLoading } = useQuery({
+    queryKey: ["episode-rating", episodeId],
+    queryFn: () => api.getEpisodeRating(episodeId),
+  });
 
+  // Sync reviewText and showReview when data loads with an existing review
   useEffect(() => {
-    fetchRating();
-  }, [fetchRating]);
+    if (ratingData?.user_review) {
+      setReviewText(ratingData.user_review); // eslint-disable-line react-hooks/set-state-in-effect -- syncing server-backed initial value into controlled input
+      setShowReview(true);
+    }
+  }, [ratingData?.user_review]);
+
+  const rateMutation = useMutation({
+    mutationFn: ({ value, review }: { value: RatingValue; review?: string }) =>
+      api.rateEpisode(episodeId, value, review),
+    onSuccess: () => {
+      setShowReview(true);
+      toast.success("Rating saved");
+    },
+    onError: () => toast.error("Failed to update rating"),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["episode-rating", episodeId] }),
+  });
+
+  const unrateMutation = useMutation({
+    mutationFn: () => api.unrateEpisode(episodeId),
+    onSuccess: () => {
+      setShowReview(false);
+      setReviewText("");
+      toast.success("Rating removed");
+    },
+    onError: () => toast.error("Failed to update rating"),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["episode-rating", episodeId] }),
+  });
+
+  const submitting = rateMutation.isPending || unrateMutation.isPending;
 
   async function handleRate(value: RatingValue) {
     if (submitting || !user) return;
 
     const isActive = ratingData?.user_rating === value;
-    setSubmitting(true);
 
-    try {
-      if (isActive) {
-        await api.unrateEpisode(episodeId);
-        setRatingData((prev) => prev ? { ...prev, user_rating: null, user_review: null } : prev);
-        setReviewText("");
-        setShowReview(false);
-        toast.success("Rating removed");
-      } else {
-        await api.rateEpisode(episodeId, value, reviewText || undefined);
-        setRatingData((prev) => prev ? { ...prev, user_rating: value } : prev);
-        setShowReview(true);
-        toast.success("Rating saved");
-      }
-      const updated = await api.getEpisodeRating(episodeId);
-      setRatingData(updated);
-    } catch {
-      toast.error("Failed to update rating");
-    } finally {
-      setSubmitting(false);
+    if (isActive) {
+      unrateMutation.mutate();
+    } else {
+      rateMutation.mutate({ value, review: reviewText || undefined });
     }
   }
 
   async function handleReviewSave() {
     if (submitting || !user || !ratingData?.user_rating) return;
-    setSubmitting(true);
     try {
       await api.rateEpisode(episodeId, ratingData.user_rating, reviewText || undefined);
       toast.success("Review saved");
     } catch {
       toast.error("Failed to save review");
-    } finally {
-      setSubmitting(false);
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2" data-testid="episode-rating-loading">
         {RATING_CONFIG.map(({ value }) => (

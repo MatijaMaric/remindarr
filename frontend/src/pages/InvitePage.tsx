@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Plus, Trash2, Clock, CheckCircle2, XCircle, UserPlus } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import type { InvitationItem } from "../types";
 import ShareButton from "../components/ShareButton";
@@ -34,26 +35,21 @@ function formatDate(dateStr: string): string {
 
 export default function InvitePage() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [invitations, setInvitations] = useState<InvitationItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [redeemResult, setRedeemResult] = useState<RedeemResult>(null);
   const [redeeming, setRedeeming] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const data = await api.getInvitations();
-      setInvitations(data.invitations.sort((a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ));
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: invitationsData, isLoading } = useQuery({
+    queryKey: ["invitations"],
+    queryFn: ({ signal }) => api.getInvitations(signal),
+  });
+
+  const invitations = (invitationsData?.invitations ?? []).slice().sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   // Auto-redeem from URL query parameter
   useEffect(() => {
@@ -79,15 +75,11 @@ export default function InvitePage() {
       });
   }, [searchParams, setSearchParams, redeeming, t]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
   async function handleCreate() {
     setCreating(true);
     try {
       await api.createInvitation();
-      await refresh();
+      await qc.invalidateQueries({ queryKey: ["invitations"] });
       toast.success(t("invite.created"));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -100,7 +92,7 @@ export default function InvitePage() {
     setRevoking(id);
     try {
       await api.revokeInvitation(id);
-      setInvitations((prev) => prev.filter((inv) => inv.id !== id));
+      await qc.invalidateQueries({ queryKey: ["invitations"] });
       toast.success(t("invite.revoked"));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -146,7 +138,7 @@ export default function InvitePage() {
       </button>
 
       {/* Invitations list */}
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-zinc-900 rounded-lg p-4 animate-pulse h-24" />

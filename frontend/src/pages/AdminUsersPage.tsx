@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Search, Shield, ShieldOff, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
-import type { AdminUser, AdminUsersResponse } from "../types";
+import type { AdminUser } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useAsyncError } from "../hooks/useAsyncError";
 import {
@@ -41,10 +42,8 @@ function BannedBadge() {
 export default function AdminUsersPage() {
   const { user: me } = useAuth();
   const { t } = useTranslation();
+  const qc = useQueryClient();
 
-  const [data, setData] = useState<AdminUsersResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(1);
@@ -53,33 +52,25 @@ export default function AdminUsersPage() {
   const [banReason, setBanReason] = useState("");
   const [banTarget, setBanTarget] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await api.getAdminUsers({ search, filter, page });
-      setData(res);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [search, filter, page]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
   // Reset to page 1 when search/filter changes
   useEffect(() => {
-    setPage(1);
+    setPage(1); // eslint-disable-line react-hooks/set-state-in-effect -- intentional: filter/search changes should reset pagination
   }, [search, filter]);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["admin-users", search, filter, page],
+    queryFn: ({ signal }) => api.getAdminUsers({ search, filter, page }, signal),
+  });
+
+  function invalidate() {
+    void qc.invalidateQueries({ queryKey: ["admin-users"] });
+  }
 
   async function handleRoleToggle(user: AdminUser) {
     const newRole = user.role === "admin" || user.is_admin === 1 ? "user" : "admin";
     await runAction(async () => {
       await api.setAdminUserRole(user.id, newRole);
-      await load();
+      invalidate();
     });
   }
 
@@ -88,14 +79,14 @@ export default function AdminUsersPage() {
       await api.banAdminUser(userId, banReason || undefined);
       setBanTarget(null);
       setBanReason("");
-      await load();
+      invalidate();
     });
   }
 
   async function handleUnban(userId: string) {
     await runAction(async () => {
       await api.unbanAdminUser(userId);
-      await load();
+      invalidate();
     });
   }
 
@@ -103,7 +94,7 @@ export default function AdminUsersPage() {
     await runAction(async () => {
       await api.deleteAdminUser(userId);
       setConfirmDelete(null);
-      await load();
+      invalidate();
     });
   }
 
@@ -226,10 +217,10 @@ export default function AdminUsersPage() {
       </AlertDialog>
 
       {/* User table */}
-      {loading ? (
+      {isLoading ? (
         <div className="text-zinc-500 text-sm py-8 text-center">{t("admin.users.loading")}</div>
-      ) : error ? (
-        <div className="text-red-400 text-sm">{error}</div>
+      ) : isError ? (
+        <div className="text-red-400 text-sm">{error instanceof Error ? error.message : String(error)}</div>
       ) : !data || data.users.length === 0 ? (
         <div className="text-zinc-500 text-sm py-8 text-center">{t("admin.users.empty")}</div>
       ) : (

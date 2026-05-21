@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Initialize i18n before anything else
 import "../i18n";
@@ -43,12 +44,24 @@ mock.module("../api", () => ({
 
 const { default: InvitePage } = await import("./InvitePage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function WrapperWithCode({ children }: { children: ReactNode }) {
-  return <MemoryRouter initialEntries={["/invite?code=TESTCODE"]}>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={["/invite?code=TESTCODE"]}>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function makeInvitation(overrides: Record<string, unknown> = {}) {
@@ -150,9 +163,14 @@ describe("InvitePage", () => {
 
   it("revoke button works", async () => {
     const invitations = [makeInvitation({ id: "inv-1", code: "REVOKEME" })];
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations })
-    );
+    let callCount = 0;
+    mockGetInvitations.mockImplementation(() => {
+      callCount++;
+      if (callCount > 1) {
+        return Promise.resolve({ invitations: [] });
+      }
+      return Promise.resolve({ invitations });
+    });
 
     render(<InvitePage />, { wrapper: Wrapper });
 
@@ -166,7 +184,7 @@ describe("InvitePage", () => {
       expect(mockRevokeInvitation).toHaveBeenCalledWith("inv-1");
     });
 
-    // Card should be removed after revoke
+    // Card should be removed after revoke (cache invalidated and refetched)
     await waitFor(() => {
       expect(screen.queryByText("REVOKEME")).toBeNull();
     });
