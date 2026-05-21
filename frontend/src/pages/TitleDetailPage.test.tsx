@@ -6,26 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import type { MovieDetailsResponse, ShowDetailsResponse } from "../types";
 
-// Mock AuthContext
-mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
-    user: { id: "u1", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
-    providers: { local: true, oidc: null },
-    loading: false,
-    sessionStatus: "authenticated",
-    subscriptions: null,
-    refreshSubscriptions: mock(() => Promise.resolve()),
-    login: mock(() => Promise.resolve()),
-    signup: mock(() => Promise.resolve()),
-    logout: mock(() => Promise.resolve()),
-    refresh: mock(() => Promise.resolve()),
-  }),
-  AuthContext: {
-    Provider: ({ children }: { children: ReactNode }) => children,
-  },
-}));
-
 // Mock MovieDetail and ShowDetail to avoid complex data requirements
+// (component stubs — lower risk than function mocks, kept as mock.module)
 mock.module("./title/MovieDetail", () => ({
   default: () => <div data-testid="movie-detail">MovieDetail</div>,
 }));

@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import "../../i18n";
 import * as api from "../../api";
+import * as AuthContextModule from "../../context/AuthContext";
 
 function newTestClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -20,20 +21,8 @@ function wrapper(client: QueryClient) {
   };
 }
 
-mock.module("../../context/AuthContext", () => ({
-  useAuth: () => ({
-    user: {
-      id: "u1",
-      username: "testuser",
-      display_name: null,
-      auth_provider: "local",
-      is_admin: false,
-    },
-    loading: false,
-    sessionStatus: "authenticated",
-  }),
-}));
-
+// Keep auth-client mock as mock.module — it's a complex external lib (better-auth)
+// and cannot be easily spyOn'd
 mock.module("../../lib/auth-client", () => ({
   authClient: {
     changePassword: mock(() => Promise.resolve({ error: null })),
@@ -52,6 +41,24 @@ let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(() => {
   spies = [
+    spyOn(AuthContextModule, "useAuth").mockReturnValue({
+      user: {
+        id: "u1",
+        username: "testuser",
+        display_name: null,
+        auth_provider: "local",
+        is_admin: false,
+      },
+      providers: { local: true, oidc: null },
+      loading: false,
+      sessionStatus: "authenticated",
+      subscriptions: null,
+      refreshSubscriptions: mock(() => Promise.resolve()),
+      login: mock(() => Promise.resolve()),
+      signup: mock(() => Promise.resolve()),
+      logout: mock(() => Promise.resolve()),
+      refresh: mock(() => Promise.resolve()),
+    }),
     spyOn(api, "getMyProfile").mockResolvedValue({
       display_name: "Test User",
       bio: null,
