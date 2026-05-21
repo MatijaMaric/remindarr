@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as api from "../../api";
 import type { Notifier } from "../../api";
+import type { UserSettings } from "../../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../../lib/push";
 import {
   SCard,
@@ -274,7 +275,7 @@ function formatAttemptedAt(ts: number): string {
 function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
   const { data: history, isLoading: loading } = useQuery({
     queryKey: ["notifier-history", notifierId],
-    queryFn: () => api.getNotifierHistory(notifierId),
+    queryFn: ({ signal }) => api.getNotifierHistory(notifierId, signal),
   });
 
   if (loading) {
@@ -921,26 +922,11 @@ function NotificationsSection() {
 
 const DEPARTURE_LEAD_DAY_OPTIONS = [1, 3, 7, 14, 30];
 
-function DepartureAlertsSection() {
-  const [departuresEnabled, setDeparturesEnabled] = useState(true);
-  const [leadDays, setLeadDays] = useState(7);
+function DepartureAlertsControls({ initialData }: { initialData: UserSettings }) {
+  const [departuresEnabled, setDeparturesEnabled] = useState(initialData.streamingDeparturesEnabled);
+  const [leadDays, setLeadDays] = useState(initialData.departureAlertLeadDays);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-
-  const { data, isLoading: loading } = useQuery({
-    queryKey: ["departure-alert-settings"],
-    queryFn: ({ signal }) => api.getDepartureAlertSettings(signal),
-  });
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    // syncing server-backed initial values into controlled toggles
-    if (data) {
-      setDeparturesEnabled(data.streamingDeparturesEnabled);
-      setLeadDays(data.departureAlertLeadDays);
-    }
-  }, [data]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleToggle(val: boolean) {
     setMsg("");
@@ -966,14 +952,6 @@ function DepartureAlertsSection() {
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     }
-  }
-
-  if (loading) {
-    return (
-      <SCard title="Streaming departure alerts" subtitle="Get notified when a tracked title is leaving a streaming service.">
-        <div className="text-zinc-500 text-sm">Loading...</div>
-      </SCard>
-    );
   }
 
   return (
@@ -1008,6 +986,25 @@ function DepartureAlertsSection() {
       </div>
     </SCard>
   );
+}
+
+function DepartureAlertsSection() {
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["departure-alert-settings"],
+    queryFn: ({ signal }) => api.getDepartureAlertSettings(signal),
+  });
+
+  if (loading) {
+    return (
+      <SCard title="Streaming departure alerts" subtitle="Get notified when a tracked title is leaving a streaming service.">
+        <div className="text-zinc-500 text-sm">Loading...</div>
+      </SCard>
+    );
+  }
+
+  if (!data) return null;
+
+  return <DepartureAlertsControls initialData={data} />;
 }
 
 export default function NotificationsTab() {

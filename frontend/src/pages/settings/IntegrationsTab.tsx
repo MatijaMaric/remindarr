@@ -478,7 +478,6 @@ function KioskSection() {
     queryFn: ({ signal }) => api.getKioskToken(signal),
   });
   const token = data?.token ?? null;
-  const kioskUrl = token ? `${window.location.origin}/kiosk/${token}` : null;
 
   const regenerateMutation = useMutation({
     mutationFn: () => api.regenerateKioskToken(),
@@ -492,9 +491,8 @@ function KioskSection() {
     onSettled: () => void qc.invalidateQueries({ queryKey: ["kiosk-token"] }),
   });
 
-  async function handleCopy() {
-    if (!kioskUrl) return;
-    await navigator.clipboard.writeText(kioskUrl);
+  async function handleCopy(url: string) {
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -507,13 +505,13 @@ function KioskSection() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <SInput
-              value={kioskUrl!}
+              value={`${window.location.origin}/kiosk/${token}`}
               mono
               readOnly
               aria-label={t("kiosk.title")}
             />
             <div className="flex gap-2 shrink-0">
-              <SButton variant="ghost" small onClick={handleCopy}>
+              <SButton variant="ghost" small onClick={() => handleCopy(`${window.location.origin}/kiosk/${token}`)}>
                 {copied ? t("kiosk.copied") : t("kiosk.copyUrl")}
               </SButton>
               <SButton
@@ -555,7 +553,6 @@ function WatchlistShareSection() {
     queryFn: ({ signal }) => api.getWatchlistShareToken(signal),
   });
   const token = data?.token ?? null;
-  const shareUrl = token ? `${window.location.origin}/share/watchlist/${token}` : null;
 
   const regenerateMutation = useMutation({
     mutationFn: () => api.regenerateWatchlistShareToken(),
@@ -569,9 +566,8 @@ function WatchlistShareSection() {
     onSettled: () => void qc.invalidateQueries({ queryKey: ["watchlist-share-token"] }),
   });
 
-  async function handleCopy() {
-    if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
+  async function handleCopy(url: string) {
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -584,13 +580,13 @@ function WatchlistShareSection() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <SInput
-              value={shareUrl!}
+              value={`${window.location.origin}/share/watchlist/${token}`}
               mono
               readOnly
               aria-label={t("share.title")}
             />
             <div className="flex gap-2 shrink-0">
-              <SButton variant="ghost" small onClick={handleCopy}>
+              <SButton variant="ghost" small onClick={() => handleCopy(`${window.location.origin}/share/watchlist/${token}`)}>
                 {copied ? t("share.copied") : t("share.copyUrl")}
               </SButton>
               <SButton
