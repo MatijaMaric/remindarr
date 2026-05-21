@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import * as api from "../../api";
-import type { CollectionPart } from "../../types";
 import { posterUrl } from "../../lib/tmdb-images";
 import ScrollableRow from "../ScrollableRow";
 import { TitleCardSkeleton } from "../SkeletonComponents";
@@ -15,35 +15,25 @@ interface CollectionRowProps {
 }
 
 function CollectionRowInner({ collectionId, collectionName, currentTitleId }: CollectionRowProps) {
-  const [parts, setParts] = useState<CollectionPart[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useQuery({
+    queryKey: ["collection", collectionId],
+    queryFn: ({ signal }) => api.getCollection(collectionId, signal),
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api
-      .getCollection(collectionId, controller.signal)
-      .then((res) => {
-        if (!controller.signal.aborted) {
-          const sorted = [...res.parts].sort((a, b) => {
-            if (!a.release_date) return 1;
-            if (!b.release_date) return -1;
-            return a.release_date.localeCompare(b.release_date);
-          });
-          setParts(sorted);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [collectionId]);
+  const parts = useMemo(() => {
+    const list = data?.parts ?? [];
+    return [...list].sort((a, b) => {
+      if (!a.release_date) return 1;
+      if (!b.release_date) return -1;
+      return a.release_date.localeCompare(b.release_date);
+    });
+  }, [data]);
 
-  if (!loading && parts.length === 0) return null;
+  if (!isLoading && parts.length === 0) return null;
 
   return (
     <Section title={collectionName}>
-      {loading ? (
+      {isLoading ? (
         <div className="flex gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="w-28 flex-shrink-0">
