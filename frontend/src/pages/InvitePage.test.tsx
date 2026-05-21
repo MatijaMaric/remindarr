@@ -1,46 +1,12 @@
-import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as api from "../api";
 
 // Initialize i18n before anything else
 import "../i18n";
-
-// Mock auth context
-mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
-    user: { id: "u1", username: "testuser", display_name: "Test User", auth_provider: "local", is_admin: false },
-    providers: { local: true, oidc: null },
-    loading: false,
-    sessionStatus: "authenticated",
-    login: mock(() => Promise.resolve()),
-    signup: mock(() => Promise.resolve()),
-    logout: mock(() => Promise.resolve()),
-    refresh: mock(() => Promise.resolve()),
-  }),
-  AuthContext: {
-    Provider: ({ children }: { children: ReactNode }) => children,
-  },
-}));
-
-const mockGetInvitations = mock(() =>
-  Promise.resolve({ invitations: [] })
-);
-const mockCreateInvitation = mock(() =>
-  Promise.resolve({ id: "inv-new", code: "NEWCODE", expires_at: new Date(Date.now() + 7 * 86400000).toISOString() })
-);
-const mockRevokeInvitation = mock(() => Promise.resolve());
-const mockRedeemInvitation = mock(() =>
-  Promise.resolve({ success: true, inviter: { id: "u2", username: "alice", display_name: "Alice", image: null } })
-);
-
-mock.module("../api", () => ({
-  getInvitations: mockGetInvitations,
-  createInvitation: mockCreateInvitation,
-  revokeInvitation: mockRevokeInvitation,
-  redeemInvitation: mockRedeemInvitation,
-}));
 
 const { default: InvitePage } = await import("./InvitePage");
 
@@ -76,25 +42,31 @@ function makeInvitation(overrides: Record<string, unknown> = {}) {
   };
 }
 
+let getInvitationsSpy: ReturnType<typeof spyOn<typeof api, "getInvitations">>;
+let createInvitationSpy: ReturnType<typeof spyOn<typeof api, "createInvitation">>;
+let revokeInvitationSpy: ReturnType<typeof spyOn<typeof api, "revokeInvitation">>;
+let redeemInvitationSpy: ReturnType<typeof spyOn<typeof api, "redeemInvitation">>;
+
 beforeEach(() => {
-  mockGetInvitations.mockImplementation(() =>
-    Promise.resolve({ invitations: [] })
-  );
-  mockCreateInvitation.mockImplementation(() =>
-    Promise.resolve({ id: "inv-new", code: "NEWCODE", expires_at: new Date(Date.now() + 7 * 86400000).toISOString() })
-  );
-  mockRevokeInvitation.mockImplementation(() => Promise.resolve());
-  mockRedeemInvitation.mockImplementation(() =>
-    Promise.resolve({ success: true, inviter: { id: "u2", username: "alice", display_name: "Alice", image: null } })
-  );
+  getInvitationsSpy = spyOn(api, "getInvitations").mockResolvedValue({ invitations: [] } as any);
+  createInvitationSpy = spyOn(api, "createInvitation").mockResolvedValue({
+    id: "inv-new",
+    code: "NEWCODE",
+    expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+  } as any);
+  revokeInvitationSpy = spyOn(api, "revokeInvitation").mockResolvedValue(undefined as any);
+  redeemInvitationSpy = spyOn(api, "redeemInvitation").mockResolvedValue({
+    success: true,
+    inviter: { id: "u2", username: "alice", display_name: "Alice", image: null },
+  } as any);
 });
 
 afterEach(() => {
+  getInvitationsSpy.mockRestore();
+  createInvitationSpy.mockRestore();
+  revokeInvitationSpy.mockRestore();
+  redeemInvitationSpy.mockRestore();
   cleanup();
-  mockGetInvitations.mockReset();
-  mockCreateInvitation.mockReset();
-  mockRevokeInvitation.mockReset();
-  mockRedeemInvitation.mockReset();
 });
 
 describe("InvitePage", () => {
@@ -103,8 +75,8 @@ describe("InvitePage", () => {
       makeInvitation({ id: "inv-1", code: "CODE1" }),
       makeInvitation({ id: "inv-2", code: "CODE2" }),
     ];
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations })
+    getInvitationsSpy.mockImplementation(() =>
+      Promise.resolve({ invitations } as any)
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -116,19 +88,16 @@ describe("InvitePage", () => {
   });
 
   it("generate button creates new invitation", async () => {
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations: [] })
-    );
     // After creation, refresh will return the new invitation
     let callCount = 0;
-    mockGetInvitations.mockImplementation(() => {
+    getInvitationsSpy.mockImplementation(() => {
       callCount++;
       if (callCount > 1) {
         return Promise.resolve({
           invitations: [makeInvitation({ id: "inv-new", code: "NEWCODE" })],
-        });
+        } as any);
       }
-      return Promise.resolve({ invitations: [] });
+      return Promise.resolve({ invitations: [] } as any);
     });
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -140,7 +109,7 @@ describe("InvitePage", () => {
     fireEvent.click(screen.getByText("Create Invite Link"));
 
     await waitFor(() => {
-      expect(mockCreateInvitation).toHaveBeenCalled();
+      expect(createInvitationSpy).toHaveBeenCalled();
     });
 
     await waitFor(() => {
@@ -150,8 +119,8 @@ describe("InvitePage", () => {
 
   it("share button present for pending invitations", async () => {
     const invitations = [makeInvitation()];
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations })
+    getInvitationsSpy.mockImplementation(() =>
+      Promise.resolve({ invitations } as any)
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -164,12 +133,12 @@ describe("InvitePage", () => {
   it("revoke button works", async () => {
     const invitations = [makeInvitation({ id: "inv-1", code: "REVOKEME" })];
     let callCount = 0;
-    mockGetInvitations.mockImplementation(() => {
+    getInvitationsSpy.mockImplementation(() => {
       callCount++;
       if (callCount > 1) {
-        return Promise.resolve({ invitations: [] });
+        return Promise.resolve({ invitations: [] } as any);
       }
-      return Promise.resolve({ invitations });
+      return Promise.resolve({ invitations } as any);
     });
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -181,7 +150,7 @@ describe("InvitePage", () => {
     fireEvent.click(screen.getByText("Revoke"));
 
     await waitFor(() => {
-      expect(mockRevokeInvitation).toHaveBeenCalledWith("inv-1");
+      expect(revokeInvitationSpy).toHaveBeenCalledWith("inv-1");
     });
 
     // Card should be removed after revoke (cache invalidated and refetched)
@@ -198,8 +167,8 @@ describe("InvitePage", () => {
         expires_at: new Date(Date.now() - 86400000).toISOString(),
       }),
     ];
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations })
+    getInvitationsSpy.mockImplementation(() =>
+      Promise.resolve({ invitations } as any)
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -222,8 +191,8 @@ describe("InvitePage", () => {
         used_by: { id: "u3", username: "bob", display_name: "Bob", image: null },
       }),
     ];
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations })
+    getInvitationsSpy.mockImplementation(() =>
+      Promise.resolve({ invitations } as any)
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -237,14 +206,14 @@ describe("InvitePage", () => {
   });
 
   it("auto-redeem from URL query parameter", async () => {
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations: [] })
+    getInvitationsSpy.mockImplementation(() =>
+      Promise.resolve({ invitations: [] } as any)
     );
 
     render(<InvitePage />, { wrapper: WrapperWithCode });
 
     await waitFor(() => {
-      expect(mockRedeemInvitation).toHaveBeenCalledWith("TESTCODE");
+      expect(redeemInvitationSpy).toHaveBeenCalledWith("TESTCODE");
     });
 
     await waitFor(() => {
@@ -253,8 +222,8 @@ describe("InvitePage", () => {
   });
 
   it("shows empty state when no invitations", async () => {
-    mockGetInvitations.mockImplementation(() =>
-      Promise.resolve({ invitations: [] })
+    getInvitationsSpy.mockImplementation(() =>
+      Promise.resolve({ invitations: [] } as any)
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -265,14 +234,14 @@ describe("InvitePage", () => {
   });
 
   it("shows error when redeem fails", async () => {
-    mockRedeemInvitation.mockImplementation(() =>
+    redeemInvitationSpy.mockImplementation(() =>
       Promise.reject(new Error("Invitation expired"))
     );
 
     render(<InvitePage />, { wrapper: WrapperWithCode });
 
     await waitFor(() => {
-      expect(mockRedeemInvitation).toHaveBeenCalledWith("TESTCODE");
+      expect(redeemInvitationSpy).toHaveBeenCalledWith("TESTCODE");
     });
 
     await waitFor(() => {

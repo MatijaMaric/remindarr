@@ -1,8 +1,11 @@
-import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import * as api from "../api";
+import * as AuthContextModule from "../context/AuthContext";
+import * as useIsMobileModule from "../hooks/useIsMobile";
 
 function newTestClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -11,37 +14,7 @@ function newTestClient() {
 // Initialize i18n before anything else (avoids mock.module leak)
 import "../i18n";
 
-// Mock useIsMobile hook
-let mockIsMobile = false;
-mock.module("../hooks/useIsMobile", () => ({
-  useIsMobile: () => mockIsMobile,
-}));
-
-mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({ subscriptions: null, user: null, providers: null, loading: false, sessionStatus: "authenticated" }),
-  AuthContext: { Provider: ({ children }: { children: ReactNode }) => children },
-}));
-
-const mockWatchMovie = mock((_id: string) => Promise.resolve());
-const mockUnwatchMovie = mock((_id: string) => Promise.resolve());
-
-// Mock API calls
-mock.module("../api", () => ({
-  getCalendarTitles: mock(() =>
-    Promise.resolve({ titles: [], episodes: [], count: 0 })
-  ),
-  watchEpisode: mock(() => Promise.resolve()),
-  unwatchEpisode: mock(() => Promise.resolve()),
-  watchEpisodesBulk: mock(() => Promise.resolve()),
-  getCrowdedWeekSettings: mock(() =>
-    Promise.resolve({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 })
-  ),
-  watchMovie: mockWatchMovie,
-  unwatchMovie: mockUnwatchMovie,
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
-}));
-
-// Must import after mocks
+// Must import after spies are set up in beforeEach
 const { default: CalendarPage, SlideOverPanel } = await import("./CalendarPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -52,12 +25,45 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-afterEach(() => {
-  cleanup();
-});
+let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
+let useIsMobileSpy: ReturnType<typeof spyOn<typeof useIsMobileModule, "useIsMobile">>;
+let apiSpies: ReturnType<typeof spyOn>[];
+let mockWatchMovie: ReturnType<typeof spyOn<typeof api, "watchMovie">>;
+let mockUnwatchMovie: ReturnType<typeof spyOn<typeof api, "unwatchMovie">>;
 
 beforeEach(() => {
-  mockIsMobile = false;
+  useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
+    user: null,
+    providers: null,
+    loading: false,
+    sessionStatus: "authenticated",
+    subscriptions: null,
+    refreshSubscriptions: mock(() => Promise.resolve()),
+    login: mock(() => Promise.resolve()),
+    signup: mock(() => Promise.resolve()),
+    logout: mock(() => Promise.resolve()),
+    refresh: mock(() => Promise.resolve()),
+  });
+  useIsMobileSpy = spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(false);
+  mockWatchMovie = spyOn(api, "watchMovie").mockResolvedValue(undefined as any);
+  mockUnwatchMovie = spyOn(api, "unwatchMovie").mockResolvedValue(undefined as any);
+  apiSpies = [
+    spyOn(api, "getCalendarTitles").mockResolvedValue({ titles: [], episodes: [], count: 0 } as any),
+    spyOn(api, "watchEpisode").mockResolvedValue(undefined as any),
+    spyOn(api, "unwatchEpisode").mockResolvedValue(undefined as any),
+    spyOn(api, "watchEpisodesBulk").mockResolvedValue(undefined as any),
+    spyOn(api, "getCrowdedWeekSettings").mockResolvedValue({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 } as any),
+    spyOn(api, "getSubscriptions").mockResolvedValue({ providerIds: [] } as any),
+  ];
+});
+
+afterEach(() => {
+  useAuthSpy.mockRestore();
+  useIsMobileSpy.mockRestore();
+  mockWatchMovie.mockRestore();
+  mockUnwatchMovie.mockRestore();
+  apiSpies.forEach(s => s.mockRestore());
+  cleanup();
 });
 
 describe("CalendarPage", () => {
@@ -111,7 +117,7 @@ describe("CalendarPage", () => {
   });
 
   it("renders agenda view on mobile without toggle", () => {
-    mockIsMobile = true;
+    useIsMobileSpy.mockReturnValue(true);
     render(<CalendarPage />, { wrapper: Wrapper });
 
     // No toggle buttons on mobile
@@ -147,7 +153,7 @@ describe("CalendarPage", () => {
   });
 
   it("shows hide watched toggle on mobile agenda", () => {
-    mockIsMobile = true;
+    useIsMobileSpy.mockReturnValue(true);
     render(<CalendarPage />, { wrapper: Wrapper });
 
     const toggle = screen.getByTitle("Show watched");

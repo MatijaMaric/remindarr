@@ -1,39 +1,13 @@
-import { describe, test, expect, afterEach, mock } from "bun:test";
+import { describe, test, expect, afterEach, mock, beforeEach, spyOn } from "bun:test";
 import { render, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as api from "../api";
+import * as AuthContextModule from "../context/AuthContext";
 
 // Mock i18n before anything
 import "../i18n";
-
-// Mock auth context
-mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
-    user: { id: "u1", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
-    subscriptions: null,
-    providers: null,
-    loading: false,
-    sessionStatus: "authenticated",
-  }),
-  AuthContext: {
-    Provider: ({ children }: { children: ReactNode }) => children,
-  },
-}));
-
-// Mock the api module — include all functions AgendaCalendar (and sub-components) may import
-mock.module("../api", () => ({
-  getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
-  getCrowdedWeekSettings: mock(() =>
-    Promise.resolve({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 })
-  ),
-  watchEpisode: mock(() => Promise.resolve()),
-  unwatchEpisode: mock(() => Promise.resolve()),
-  watchEpisodesBulk: mock(() => Promise.resolve()),
-  watchMovie: mock(() => Promise.resolve()),
-  unwatchMovie: mock(() => Promise.resolve()),
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
-}));
 
 const { default: AgendaCalendar } = await import("./AgendaCalendar");
 
@@ -49,7 +23,37 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
+let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
+let apiSpies: ReturnType<typeof spyOn>[];
+
+beforeEach(() => {
+  useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
+    user: { id: "u1", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
+    providers: null,
+    loading: false,
+    sessionStatus: "authenticated",
+    subscriptions: null,
+    refreshSubscriptions: mock(() => Promise.resolve()),
+    login: mock(() => Promise.resolve()),
+    signup: mock(() => Promise.resolve()),
+    logout: mock(() => Promise.resolve()),
+    refresh: mock(() => Promise.resolve()),
+  });
+  apiSpies = [
+    spyOn(api, "getCalendarTitles").mockResolvedValue({ titles: [], episodes: [] } as any),
+    spyOn(api, "getCrowdedWeekSettings").mockResolvedValue({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 } as any),
+    spyOn(api, "watchEpisode").mockResolvedValue(undefined as any),
+    spyOn(api, "unwatchEpisode").mockResolvedValue(undefined as any),
+    spyOn(api, "watchEpisodesBulk").mockResolvedValue(undefined as any),
+    spyOn(api, "watchMovie").mockResolvedValue(undefined as any),
+    spyOn(api, "unwatchMovie").mockResolvedValue(undefined as any),
+    spyOn(api, "getSubscriptions").mockResolvedValue({ providerIds: [] } as any),
+  ];
+});
+
 afterEach(() => {
+  useAuthSpy.mockRestore();
+  apiSpies.forEach(s => s.mockRestore());
   cleanup();
 });
 

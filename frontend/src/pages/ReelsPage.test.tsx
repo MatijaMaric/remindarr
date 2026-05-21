@@ -1,72 +1,10 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, waitFor, cleanup, act, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({ subscriptions: null, user: null, providers: null, loading: false, sessionStatus: "authenticated" }),
-  AuthContext: { Provider: ({ children }: { children: ReactNode }) => children },
-}));
-
-const mockGetUpcomingEpisodes = mock(() =>
-  Promise.resolve({ today: [], upcoming: [], unwatched: [] })
-);
-const mockWatchEpisode = mock(() => Promise.resolve());
-const mockUnwatchEpisode = mock(() => Promise.resolve());
-const mockWatchEpisodesBulk = mock(() => Promise.resolve());
-const mockBrowseTitles = mock(() =>
-  Promise.resolve({
-    titles: [],
-    page: 1,
-    totalPages: 1,
-    totalResults: 0,
-    availableGenres: [],
-    availableProviders: [],
-    availableLanguages: [],
-    regionProviderIds: [],
-    priorityLanguageCodes: [],
-  })
-);
-const mockGetRecommendations = mock(() =>
-  Promise.resolve({ recommendations: [], count: 0 })
-);
-const mockFetchFriendsLoved = mock(() =>
-  Promise.resolve({ titles: [] })
-);
-const mockWatchMovie = mock((_id: string) => Promise.resolve());
-const mockUnwatchMovie = mock((_id: string) => Promise.resolve());
-const mockGetMovieTracking = mock(() =>
-  Promise.resolve({
-    to_watch: [
-      {
-        id: "m-1",
-        title: "Inception",
-        release_date: "2024-01-01",
-        release_year: 2024,
-        poster_url: null,
-        offers: [],
-      },
-    ],
-    upcoming: [],
-  })
-);
-
-mock.module("../api", () => ({
-  getUpcomingEpisodes: mockGetUpcomingEpisodes,
-  watchEpisode: mockWatchEpisode,
-  unwatchEpisode: mockUnwatchEpisode,
-  watchEpisodesBulk: mockWatchEpisodesBulk,
-  browseTitles: mockBrowseTitles,
-  getRecommendations: mockGetRecommendations,
-  fetchFriendsLoved: mockFetchFriendsLoved,
-  watchMovie: mockWatchMovie,
-  unwatchMovie: mockUnwatchMovie,
-  getMovieTracking: mockGetMovieTracking,
-  rateEpisode: mock(() => Promise.resolve()),
-  unrateEpisode: mock(() => Promise.resolve()),
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
-}));
+import * as api from "../api";
+import * as AuthContextModule from "../context/AuthContext";
 
 const { default: ReelsPage, getFirstUnwatchedPerShow, normalizeMovieToReelItem } = await import("./ReelsPage");
 
@@ -92,18 +30,85 @@ function WrapperWithSearch(initialSearch: string) {
   };
 }
 
+let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
+let spies: ReturnType<typeof spyOn>[];
+let getUpcomingEpisodesSpy: ReturnType<typeof spyOn<typeof api, "getUpcomingEpisodes">>;
+let watchEpisodeSpy: ReturnType<typeof spyOn<typeof api, "watchEpisode">>;
+let unwatchEpisodeSpy: ReturnType<typeof spyOn<typeof api, "unwatchEpisode">>;
+let watchEpisodesBulkSpy: ReturnType<typeof spyOn<typeof api, "watchEpisodesBulk">>;
+let browseTitlesSpy: ReturnType<typeof spyOn<typeof api, "browseTitles">>;
+let getRecommendationsSpy: ReturnType<typeof spyOn<typeof api, "getRecommendations">>;
+let fetchFriendsLovedSpy: ReturnType<typeof spyOn<typeof api, "fetchFriendsLoved">>;
+let watchMovieSpy: ReturnType<typeof spyOn<typeof api, "watchMovie">>;
+let unwatchMovieSpy: ReturnType<typeof spyOn<typeof api, "unwatchMovie">>;
+let getMovieTrackingSpy: ReturnType<typeof spyOn<typeof api, "getMovieTracking">>;
+
+beforeEach(() => {
+  useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
+    user: { id: "u1", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
+    providers: { local: true, oidc: null },
+    loading: false,
+    sessionStatus: "authenticated",
+    subscriptions: null,
+    refreshSubscriptions: mock(() => Promise.resolve()),
+    login: mock(() => Promise.resolve()),
+    signup: mock(() => Promise.resolve()),
+    logout: mock(() => Promise.resolve()),
+    refresh: mock(() => Promise.resolve()),
+  });
+  getUpcomingEpisodesSpy = spyOn(api, "getUpcomingEpisodes").mockResolvedValue({ today: [], upcoming: [], unwatched: [] } as any);
+  watchEpisodeSpy = spyOn(api, "watchEpisode").mockResolvedValue(undefined as any);
+  unwatchEpisodeSpy = spyOn(api, "unwatchEpisode").mockResolvedValue(undefined as any);
+  watchEpisodesBulkSpy = spyOn(api, "watchEpisodesBulk").mockResolvedValue(undefined as any);
+  browseTitlesSpy = spyOn(api, "browseTitles").mockResolvedValue({
+    titles: [],
+    page: 1,
+    totalPages: 1,
+    totalResults: 0,
+    availableGenres: [],
+    availableProviders: [],
+    availableLanguages: [],
+    regionProviderIds: [],
+    priorityLanguageCodes: [],
+  } as any);
+  getRecommendationsSpy = spyOn(api, "getRecommendations").mockResolvedValue({ recommendations: [], count: 0 } as any);
+  fetchFriendsLovedSpy = spyOn(api, "fetchFriendsLoved").mockResolvedValue({ titles: [] } as any);
+  watchMovieSpy = spyOn(api, "watchMovie").mockResolvedValue(undefined as any);
+  unwatchMovieSpy = spyOn(api, "unwatchMovie").mockResolvedValue(undefined as any);
+  getMovieTrackingSpy = spyOn(api, "getMovieTracking").mockResolvedValue({
+    to_watch: [
+      {
+        id: "m-1",
+        title: "Inception",
+        release_date: "2024-01-01",
+        release_year: 2024,
+        poster_url: null,
+        offers: [],
+      },
+    ],
+    upcoming: [],
+  } as any);
+  spies = [
+    spyOn(api, "rateEpisode").mockResolvedValue(undefined as any),
+    spyOn(api, "unrateEpisode").mockResolvedValue(undefined as any),
+    spyOn(api, "getSubscriptions").mockResolvedValue({ providerIds: [] } as any),
+  ];
+});
+
 afterEach(() => {
+  useAuthSpy.mockRestore();
+  getUpcomingEpisodesSpy.mockRestore();
+  watchEpisodeSpy.mockRestore();
+  unwatchEpisodeSpy.mockRestore();
+  watchEpisodesBulkSpy.mockRestore();
+  browseTitlesSpy.mockRestore();
+  getRecommendationsSpy.mockRestore();
+  fetchFriendsLovedSpy.mockRestore();
+  watchMovieSpy.mockRestore();
+  unwatchMovieSpy.mockRestore();
+  getMovieTrackingSpy.mockRestore();
+  spies.forEach(s => s.mockRestore());
   cleanup();
-  mockGetUpcomingEpisodes.mockReset();
-  mockWatchEpisode.mockReset();
-  mockUnwatchEpisode.mockReset();
-  mockWatchEpisodesBulk.mockReset();
-  mockBrowseTitles.mockReset();
-  mockGetRecommendations.mockReset();
-  mockFetchFriendsLoved.mockReset();
-  mockWatchMovie.mockReset();
-  mockUnwatchMovie.mockReset();
-  mockGetMovieTracking.mockReset();
 });
 
 const sampleEpisode = {
@@ -123,14 +128,14 @@ const sampleEpisode = {
 
 describe("ReelsPage", () => {
   it("shows loading state initially", () => {
-    mockGetUpcomingEpisodes.mockImplementation(() => new Promise(() => {}));
+    getUpcomingEpisodesSpy.mockImplementation(() => new Promise(() => {}));
     const { container } = render(<ReelsPage />, { wrapper: Wrapper });
     // Skeleton loading UI uses animate-pulse divs instead of text
     expect(container.querySelector(".animate-pulse")).toBeDefined();
   });
 
   it("shows error UI when initial fetch fails", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.reject(new Error("API error"))
     );
     render(<ReelsPage />, { wrapper: Wrapper });
@@ -138,7 +143,7 @@ describe("ReelsPage", () => {
   });
 
   it("shows empty state when no unwatched episodes", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [] })
     );
     render(<ReelsPage />, { wrapper: Wrapper });
@@ -148,10 +153,10 @@ describe("ReelsPage", () => {
   });
 
   it("shows action error banner when markWatched fails", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [sampleEpisode] })
     );
-    mockWatchEpisode.mockImplementation(() =>
+    watchEpisodeSpy.mockImplementation(() =>
       Promise.reject(new Error("Watch failed"))
     );
 
@@ -174,26 +179,26 @@ describe("ReelsPage", () => {
 
 describe("ReelsPage source picker", () => {
   it("default (no ?source param) calls getUpcomingEpisodes", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [] })
     );
     render(<ReelsPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(mockGetUpcomingEpisodes).toHaveBeenCalled());
-    expect(mockBrowseTitles).not.toHaveBeenCalled();
-    expect(mockGetRecommendations).not.toHaveBeenCalled();
+    await waitFor(() => expect(getUpcomingEpisodesSpy).toHaveBeenCalled());
+    expect(browseTitlesSpy).not.toHaveBeenCalled();
+    expect(getRecommendationsSpy).not.toHaveBeenCalled();
   });
 
   it("?source=coming-soon calls getUpcomingEpisodes not browseTitles", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [] })
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=coming-soon") });
-    await waitFor(() => expect(mockGetUpcomingEpisodes).toHaveBeenCalled());
-    expect(mockBrowseTitles).not.toHaveBeenCalled();
+    await waitFor(() => expect(getUpcomingEpisodesSpy).toHaveBeenCalled());
+    expect(browseTitlesSpy).not.toHaveBeenCalled();
   });
 
   it("?source=popular calls browseTitles not getUpcomingEpisodes", async () => {
-    mockBrowseTitles.mockImplementation(() =>
+    browseTitlesSpy.mockImplementation(() =>
       Promise.resolve({
         titles: [
           {
@@ -225,16 +230,16 @@ describe("ReelsPage source picker", () => {
         availableLanguages: [],
         regionProviderIds: [],
         priorityLanguageCodes: [],
-      })
+      } as any)
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=popular") });
-    await waitFor(() => expect(mockBrowseTitles).toHaveBeenCalled());
+    await waitFor(() => expect(browseTitlesSpy).toHaveBeenCalled());
     await waitFor(() => expect(screen.getAllByText("Popular Movie").length).toBeGreaterThanOrEqual(1));
-    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
+    expect(getUpcomingEpisodesSpy).not.toHaveBeenCalled();
   });
 
   it("?source=from-your-genres calls getRecommendations not getUpcomingEpisodes", async () => {
-    mockGetRecommendations.mockImplementation(() =>
+    getRecommendationsSpy.mockImplementation(() =>
       Promise.resolve({
         recommendations: [
           {
@@ -247,27 +252,27 @@ describe("ReelsPage source picker", () => {
           },
         ],
         count: 1,
-      })
+      } as any)
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=from-your-genres") });
-    await waitFor(() => expect(mockGetRecommendations).toHaveBeenCalled());
+    await waitFor(() => expect(getRecommendationsSpy).toHaveBeenCalled());
     await waitFor(() => expect(screen.getAllByText("Rec Movie").length).toBeGreaterThanOrEqual(1));
-    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
+    expect(getUpcomingEpisodesSpy).not.toHaveBeenCalled();
   });
 
   it("?source=friends-loved with empty API response renders empty state", async () => {
-    mockFetchFriendsLoved.mockImplementation(() =>
-      Promise.resolve({ titles: [] })
+    fetchFriendsLovedSpy.mockImplementation(() =>
+      Promise.resolve({ titles: [] } as any)
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=friends-loved") });
     await waitFor(() =>
       expect(screen.getByText("Follow some friends to see what they love this week")).toBeDefined()
     );
-    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
+    expect(getUpcomingEpisodesSpy).not.toHaveBeenCalled();
   });
 
   it("?source=friends-loved when endpoint 404s renders empty state", async () => {
-    mockFetchFriendsLoved.mockImplementation(() =>
+    fetchFriendsLovedSpy.mockImplementation(() =>
       Promise.reject(new Error("Not found"))
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=friends-loved") });
@@ -277,7 +282,7 @@ describe("ReelsPage source picker", () => {
   });
 
   it("renders source picker chips including Movies", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [] })
     );
     render(<ReelsPage />, { wrapper: Wrapper });
@@ -289,12 +294,12 @@ describe("ReelsPage source picker", () => {
   });
 
   it("?source=movies calls getMovieTracking not getUpcomingEpisodes", async () => {
-    mockGetMovieTracking.mockImplementation(() =>
-      Promise.resolve({ to_watch: [], upcoming: [] })
+    getMovieTrackingSpy.mockImplementation(() =>
+      Promise.resolve({ to_watch: [], upcoming: [] } as any)
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
-    await waitFor(() => expect(mockGetMovieTracking).toHaveBeenCalled());
-    expect(mockGetUpcomingEpisodes).not.toHaveBeenCalled();
+    await waitFor(() => expect(getMovieTrackingSpy).toHaveBeenCalled());
+    expect(getUpcomingEpisodesSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -327,7 +332,7 @@ function simulateSwipeLeft(container: HTMLElement) {
 
 describe("ReelsPage swipe to open season panel", () => {
   async function renderWithShows() {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({
         today: [],
         upcoming: [],
@@ -386,7 +391,7 @@ describe("ReelsPage swipe to open season panel", () => {
   });
 
   it("swipe does not open panel for caught-up card", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({
         today: [],
         upcoming: [],
@@ -431,10 +436,10 @@ describe("ReelsPage progress bar updates after marking watched", () => {
   const ep2 = { ...baseEpisode, id: 502, season_number: 1, episode_number: 2 };
 
   it("advances progress bar when episode is marked watched", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
     );
-    mockWatchEpisode.mockImplementation(() => Promise.resolve());
+    watchEpisodeSpy.mockImplementation(() => Promise.resolve());
 
     render(<ReelsPage />, { wrapper: Wrapper });
 
@@ -451,11 +456,11 @@ describe("ReelsPage progress bar updates after marking watched", () => {
   });
 
   it("rewinds progress bar when undo is clicked", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
     );
-    mockWatchEpisode.mockImplementation(() => Promise.resolve());
-    mockUnwatchEpisode.mockImplementation(() => Promise.resolve());
+    watchEpisodeSpy.mockImplementation(() => Promise.resolve());
+    unwatchEpisodeSpy.mockImplementation(() => Promise.resolve());
 
     render(<ReelsPage />, { wrapper: Wrapper });
 
@@ -475,10 +480,10 @@ describe("ReelsPage progress bar updates after marking watched", () => {
   });
 
   it("rewinds progress bar when watchEpisode API fails", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    getUpcomingEpisodesSpy.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
     );
-    mockWatchEpisode.mockImplementation(() =>
+    watchEpisodeSpy.mockImplementation(() =>
       Promise.reject(new Error("Network error"))
     );
 
@@ -546,30 +551,30 @@ describe("normalizeMovieToReelItem", () => {
 
 describe("ReelsPage — movies source", () => {
   it("renders the movie title for movies source", async () => {
-    mockGetMovieTracking.mockImplementation(() =>
+    getMovieTrackingSpy.mockImplementation(() =>
       Promise.resolve({
         to_watch: [{ id: "m-1", title: "Inception", release_date: "2024-01-01", release_year: 2024, poster_url: null, offers: [] }],
         upcoming: [],
-      })
+      } as any)
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
     await waitFor(() => expect(screen.getAllByText("Inception").length).toBeGreaterThanOrEqual(1));
   });
 
   it("calls api.watchMovie (not watchEpisode) when marking a movie as watched", async () => {
-    mockGetMovieTracking.mockImplementation(() =>
+    getMovieTrackingSpy.mockImplementation(() =>
       Promise.resolve({
         to_watch: [{ id: "m-1", title: "Inception", release_date: "2024-01-01", release_year: 2024, poster_url: null, offers: [] }],
         upcoming: [],
-      })
+      } as any)
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
     const btn = await screen.findByRole("button", { name: /mark as watched/i });
     await act(async () => {
       fireEvent.click(btn);
     });
-    expect(mockWatchMovie).toHaveBeenCalledTimes(1);
-    expect(mockWatchMovie).toHaveBeenCalledWith("m-1");
-    expect(mockWatchEpisode).not.toHaveBeenCalled();
+    expect(watchMovieSpy).toHaveBeenCalledTimes(1);
+    expect(watchMovieSpy).toHaveBeenCalledWith("m-1");
+    expect(watchEpisodeSpy).not.toHaveBeenCalled();
   });
 });

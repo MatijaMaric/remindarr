@@ -4,29 +4,11 @@ import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
+import * as AuthContextModule from "../context/AuthContext";
 import type { AdminUsersResponse } from "../types";
 
 // Initialize i18n so t() returns real strings
 import "../i18n";
-
-// Mock AuthContext as admin user
-mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
-    user: { id: "admin-1", username: "admin", display_name: "Admin", auth_provider: "local", is_admin: true },
-    providers: { local: true, oidc: null },
-    loading: false,
-    sessionStatus: "authenticated",
-    subscriptions: null,
-    refreshSubscriptions: mock(() => Promise.resolve()),
-    login: mock(() => Promise.resolve()),
-    signup: mock(() => Promise.resolve()),
-    logout: mock(() => Promise.resolve()),
-    refresh: mock(() => Promise.resolve()),
-  }),
-  AuthContext: {
-    Provider: ({ children }: { children: ReactNode }) => children,
-  },
-}));
 
 const { default: AdminUsersPage } = await import("./AdminUsersPage");
 
@@ -94,6 +76,7 @@ const mockBannedUsersResponse: AdminUsersResponse = {
   total_pages: 1,
 };
 
+let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
 let getAdminUsersSpy: ReturnType<typeof spyOn<typeof api, "getAdminUsers">>;
 let setAdminUserRoleSpy: ReturnType<typeof spyOn<typeof api, "setAdminUserRole">>;
 let banAdminUserSpy: ReturnType<typeof spyOn<typeof api, "banAdminUser">>;
@@ -101,6 +84,18 @@ let unbanAdminUserSpy: ReturnType<typeof spyOn<typeof api, "unbanAdminUser">>;
 let deleteAdminUserSpy: ReturnType<typeof spyOn<typeof api, "deleteAdminUser">>;
 
 beforeEach(() => {
+  useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
+    user: { id: "admin-1", username: "admin", display_name: "Admin", auth_provider: "local", is_admin: true },
+    providers: { local: true, oidc: null },
+    loading: false,
+    sessionStatus: "authenticated",
+    subscriptions: null,
+    refreshSubscriptions: mock(() => Promise.resolve()),
+    login: mock(() => Promise.resolve()),
+    signup: mock(() => Promise.resolve()),
+    logout: mock(() => Promise.resolve()),
+    refresh: mock(() => Promise.resolve()),
+  });
   getAdminUsersSpy = spyOn(api, "getAdminUsers");
   setAdminUserRoleSpy = spyOn(api, "setAdminUserRole");
   banAdminUserSpy = spyOn(api, "banAdminUser");
@@ -109,6 +104,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  useAuthSpy.mockRestore();
   getAdminUsersSpy.mockRestore();
   setAdminUserRoleSpy.mockRestore();
   banAdminUserSpy.mockRestore();
