@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, screen, waitFor, cleanup, act, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({ subscriptions: null, user: null, providers: null, loading: false, sessionStatus: "authenticated" }),
@@ -69,13 +70,25 @@ mock.module("../api", () => ({
 
 const { default: ReelsPage, getFirstUnwatchedPerShow, normalizeMovieToReelItem } = await import("./ReelsPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function WrapperWithSearch(initialSearch: string) {
   return function W({ children }: { children: ReactNode }) {
-    return <MemoryRouter initialEntries={[`/reels${initialSearch}`]}>{children}</MemoryRouter>;
+    return (
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={[`/reels${initialSearch}`]}>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
   };
 }
 

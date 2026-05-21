@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Search, Shield, ShieldOff, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import * as api from "../api";
 import type { AdminUser } from "../types";
 import { useAuth } from "../context/AuthContext";
-import { useAsyncError } from "../hooks/useAsyncError";
 import {
   AlertDialog,
   AlertDialogPopup,
@@ -47,7 +47,6 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(1);
-  const { run: runAction, error: actionError } = useAsyncError();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [banReason, setBanReason] = useState("");
   const [banTarget, setBanTarget] = useState<string | null>(null);
@@ -62,40 +61,49 @@ export default function AdminUsersPage() {
     queryFn: ({ signal }) => api.getAdminUsers({ search, filter, page }, signal),
   });
 
-  function invalidate() {
-    void qc.invalidateQueries({ queryKey: ["admin-users"] });
-  }
+  const roleToggleMutation = useMutation({
+    mutationFn: ({ userId, newRole }: { userId: string; newRole: "admin" | "user" }) =>
+      api.setAdminUserRole(userId, newRole),
+    onError: () => toast.error("Failed to update role"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
+  });
 
-  async function handleRoleToggle(user: AdminUser) {
+  const banMutation = useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason?: string }) =>
+      api.banAdminUser(userId, reason),
+    onSuccess: () => { setBanTarget(null); setBanReason(""); },
+    onError: () => toast.error("Failed to ban user"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
+  });
+
+  const unbanMutation = useMutation({
+    mutationFn: (userId: string) => api.unbanAdminUser(userId),
+    onError: () => toast.error("Failed to unban user"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => api.deleteAdminUser(userId),
+    onSuccess: () => setConfirmDelete(null),
+    onError: () => toast.error("Failed to delete user"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
+  });
+
+  function handleRoleToggle(user: AdminUser) {
     const newRole = user.role === "admin" || user.is_admin === 1 ? "user" : "admin";
-    await runAction(async () => {
-      await api.setAdminUserRole(user.id, newRole);
-      invalidate();
-    });
+    roleToggleMutation.mutate({ userId: user.id, newRole });
   }
 
-  async function handleBan(userId: string) {
-    await runAction(async () => {
-      await api.banAdminUser(userId, banReason || undefined);
-      setBanTarget(null);
-      setBanReason("");
-      invalidate();
-    });
+  function handleBan(userId: string) {
+    banMutation.mutate({ userId, reason: banReason || undefined });
   }
 
-  async function handleUnban(userId: string) {
-    await runAction(async () => {
-      await api.unbanAdminUser(userId);
-      invalidate();
-    });
+  function handleUnban(userId: string) {
+    unbanMutation.mutate(userId);
   }
 
-  async function handleDelete(userId: string) {
-    await runAction(async () => {
-      await api.deleteAdminUser(userId);
-      setConfirmDelete(null);
-      invalidate();
-    });
+  function handleDelete(userId: string) {
+    deleteMutation.mutate(userId);
   }
 
   if (!me?.is_admin) {
@@ -142,12 +150,6 @@ export default function AdminUsersPage() {
           ))}
         </div>
       </div>
-
-      {actionError && (
-        <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-2 rounded-lg text-sm select-text">
-          {actionError}
-        </div>
-      )}
 
       {/* Ban reason modal */}
       <AlertDialog
