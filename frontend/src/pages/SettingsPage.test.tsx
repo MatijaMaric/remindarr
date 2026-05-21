@@ -2,6 +2,7 @@ import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, waitFor, cleanup, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Initialize i18n before anything else
 import "../i18n";
@@ -125,18 +126,62 @@ mock.module("../api", () => ({
   getMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
   updateMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
   previewNotifier: mock(() => Promise.resolve({ date: "2026-05-01", episodes: [], movies: [] })),
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSharedWatchlist: mock(() => Promise.resolve({ username: "", titles: [] })),
+  getStats: mock(() => Promise.resolve({})),
+  getMovieDetails: mock(() => Promise.resolve({})),
+  getShowDetails: mock(() => Promise.resolve({})),
+  bulkTrackAction: mock(() => Promise.resolve({ updated: 0 })),
+  trackTitle: mock(() => Promise.resolve()),
+  untrackTitle: mock(() => Promise.resolve()),
+  getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
+  getUpcomingEpisodes: mock(() => Promise.resolve({ today: [], upcoming: [], unwatched: [] })),
+  watchEpisode: mock(() => Promise.resolve()),
+  unwatchEpisode: mock(() => Promise.resolve()),
+  watchEpisodesBulk: mock(() => Promise.resolve()),
+  watchMovie: mock(() => Promise.resolve()),
+  unwatchMovie: mock(() => Promise.resolve()),
+  getMovieTracking: mock(() => Promise.resolve(null)),
+  browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
+  getRecommendations: mock(() => Promise.resolve({ recommendations: [], suggestions: [], hasMore: false })),
+  fetchFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
+  hideActivityEvent: mock(() => Promise.resolve()),
+  getCollection: mock(() => Promise.resolve({ collection: null, parts: [] })),
+  getTitleSuggestions: mock(() => Promise.resolve({ suggestions: [] })),
+  getActivitySettings: mock(() => Promise.resolve({ enabled: true, kind_visibility: {} })),
+  getNotifierHistory: mock(() => Promise.resolve({ rows: [], successRate: 100 })),
+  getDepartureAlertSettings: mock(() => Promise.resolve({})),
+  getProviders: mock(() => Promise.resolve({ providers: [], regionProviderIds: [] })),
+  updateSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
+  updateOnlyMine: mock(() => Promise.resolve({ onlyMine: false })),
+  getWatchlistShareToken: mock(() => Promise.resolve({ token: null })),
+  rateEpisode: mock(() => Promise.resolve()),
+  unrateEpisode: mock(() => Promise.resolve()),
 }));
 
 // Import after mocks
 const { default: SettingsPage } = await import("./SettingsPage");
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function WrapperWithPath(path: string) {
   return function ({ children }: { children: ReactNode }) {
-    return <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>;
+    return (
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
   };
 }
 

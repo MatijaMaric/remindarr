@@ -155,6 +155,8 @@ mock.module("../api", () => ({
   getMovieTracking: mockGetMovieTracking,
   getMyStreak: mockGetMyStreak,
   getSuggestionsAggregate: mockGetSuggestionsAggregate,
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
 }));
 
 const { default: HomePage } = await import("./HomePage");

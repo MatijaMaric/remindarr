@@ -17,6 +17,28 @@ mock.module("../api", () => ({
   watchEpisode: mockWatchEpisode,
   unwatchEpisode: mockUnwatchEpisode,
   getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
+  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
+  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  hideActivityEvent: mock(() => Promise.resolve()),
+  getCollection: mock(() => Promise.resolve({ collection: null, parts: [] })),
+  getTitleSuggestions: mock(() => Promise.resolve({ suggestions: [] })),
+  getMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
+  getTrackedTitles: mock(() => Promise.resolve({ titles: [], count: 0, profile_public: false })),
+  getActivitySettings: mock(() => Promise.resolve({ enabled: true, kind_visibility: {} })),
+  getJobs: mock(() => Promise.resolve({ crons: [], stats: {}, recentJobs: [] })),
+  getAdminSettings: mock(() => Promise.resolve({ oidc_configured: false, oidc: {} })),
+  getAdminConfig: mock(() => Promise.resolve({ safe: [], secrets: [] })),
+  getAdminLogs: mock(() => Promise.resolve({ entries: [], count: 0 })),
+  getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
+  getFeedToken: mock(() => Promise.resolve({ token: null })),
+  getKioskToken: mock(() => Promise.resolve({ token: null })),
+  getWatchlistShareToken: mock(() => Promise.resolve({ token: null })),
+  getNotifiers: mock(() => Promise.resolve({ notifiers: [] })),
+  getNotifierProviders: mock(() => Promise.resolve({ providers: [] })),
+  getDepartureAlertSettings: mock(() => Promise.resolve({})),
+  getProviders: mock(() => Promise.resolve({ providers: [], regionProviderIds: [] })),
+  updateSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
+  updateOnlyMine: mock(() => Promise.resolve({ onlyMine: false })),
 }));
 
 mock.module("../hooks/useIsMobile", () => ({
