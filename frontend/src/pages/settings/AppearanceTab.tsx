@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../../api";
 import type { HomepageSection, AppearanceSettings, AccentColor, Density } from "../../types";
 import { DEFAULT_HOMEPAGE_LAYOUT } from "../../types";
@@ -57,29 +58,31 @@ function AppearanceSection() {
   const [saved, setSaved] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { data } = useQuery({
+    queryKey: ["appearance-settings"],
+    queryFn: ({ signal }) => api.getAppearanceSettings(signal),
+  });
+
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
   useEffect(() => {
-    const controller = new AbortController();
-    api.getAppearanceSettings(controller.signal)
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setSettings(data);
-          applyAppearance(data);
-          if (data.themeVariant) setTheme(data.themeVariant as Parameters<typeof setTheme>[0]);
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only load
-  }, []);
+    // syncing server-backed initial values into controlled appearance state
+    if (data) {
+      setSettings(data);
+      applyAppearance(data);
+      if (data.themeVariant) setTheme(data.themeVariant as Parameters<typeof setTheme>[0]);
+    }
+  // mount-only load — setTheme identity not tracked intentionally
+  }, [data]);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   async function save(patch: Partial<AppearanceSettings>) {
     const next = { ...settings, ...patch };
     setSettings(next);
     applyAppearance(next);
     try {
-      const saved = await api.updateAppearanceSettings(patch);
-      setSettings(saved);
-      applyAppearance(saved);
+      const updated = await api.updateAppearanceSettings(patch);
+      setSettings(updated);
+      applyAppearance(updated);
       setSaved(true);
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => setSaved(false), 2000);
@@ -157,13 +160,16 @@ function HomepageLayoutSection() {
   const [saved, setSaved] = useState(false);
   const dragIndexRef = useRef<number | null>(null);
 
+  const { data } = useQuery({
+    queryKey: ["homepage-layout"],
+    queryFn: ({ signal }) => api.getHomepageLayout(signal),
+  });
+
   useEffect(() => {
-    const controller = new AbortController();
-    api.getHomepageLayout(controller.signal)
-      .then((res) => { if (!controller.signal.aborted) setLayout(res.homepage_layout); })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
+    if (data) {
+      setLayout(data.homepage_layout);
+    }
+  }, [data]);
 
   async function save(newLayout: HomepageSection[]) {
     setSaving(true);
@@ -265,18 +271,17 @@ function CrowdedWeekSection() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const { data } = useQuery({
+    queryKey: ["crowded-week-settings"],
+    queryFn: ({ signal }) => api.getCrowdedWeekSettings(signal),
+  });
+
   useEffect(() => {
-    const controller = new AbortController();
-    api.getCrowdedWeekSettings(controller.signal)
-      .then((res) => {
-        if (!controller.signal.aborted) {
-          setEnabled(res.crowdedWeekBadgeEnabled !== 0);
-          setThreshold(res.crowdedWeekThreshold);
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
+    if (data) {
+      setEnabled(data.crowdedWeekBadgeEnabled !== 0);
+      setThreshold(data.crowdedWeekThreshold);
+    }
+  }, [data]);
 
   async function save(updates: { crowdedWeekBadgeEnabled?: number; crowdedWeekThreshold?: number }) {
     setSaving(true);
