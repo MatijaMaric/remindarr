@@ -29,8 +29,8 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
   const { data, isFetching } = useQuery({
     queryKey: ["user-search", debouncedQuery],
     enabled: debouncedQuery.length >= 1,
-    queryFn: () =>
-      api.searchUsers(debouncedQuery).then((d) =>
+    queryFn: ({ signal }) =>
+      api.searchUsers(debouncedQuery, signal).then((d) =>
         d.users.map((u) => ({
           id: u.id,
           username: u.username,
@@ -43,7 +43,7 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
   });
 
   const results = data ?? [];
-  const open = debouncedQuery.length >= 1 && results.length > 0;
+  const open = query.length >= 1 && debouncedQuery.length >= 1 && results.length > 0;
   const loading = isFetching;
 
   // Close dropdown when clicking outside

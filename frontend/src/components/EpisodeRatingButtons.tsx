@@ -79,14 +79,9 @@ export default function EpisodeRatingButtons({ episodeId }: EpisodeRatingButtons
     }
   }
 
-  async function handleReviewSave() {
+  function handleReviewSave() {
     if (submitting || !user || !ratingData?.user_rating) return;
-    try {
-      await api.rateEpisode(episodeId, ratingData.user_rating, reviewText || undefined);
-      toast.success("Review saved");
-    } catch {
-      toast.error("Failed to save review");
-    }
+    rateMutation.mutate({ value: ratingData.user_rating, review: reviewText || undefined });
   }
 
   if (isLoading) {
