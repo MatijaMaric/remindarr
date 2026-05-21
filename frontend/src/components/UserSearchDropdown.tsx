@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
 
 export interface SelectedUser {
@@ -17,50 +18,39 @@ interface Props {
 
 export default function UserSearchDropdown({ onSelect, selected, onClear }: Props) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SelectedUser[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!query || query.length < 1) {
-      setResults([]);
-      setOpen(false);
-      return;
-    }
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const data = await api.searchUsers(query);
-        const mapped = data.users.map((u) => ({
+  const { data, isFetching } = useQuery({
+    queryKey: ["user-search", debouncedQuery],
+    enabled: debouncedQuery.length >= 1,
+    queryFn: () =>
+      api.searchUsers(debouncedQuery).then((d) =>
+        d.users.map((u) => ({
           id: u.id,
           username: u.username,
           displayName: u.display_name ?? null,
           image: u.image,
-        }));
-        setResults(mapped);
-        setOpen(mapped.length > 0);
-      } catch {
-        setResults([]);
-        setOpen(false);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
+        }))
+      ),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  });
 
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query]);
+  const results = data ?? [];
+  const open = debouncedQuery.length >= 1 && results.length > 0;
+  const loading = isFetching;
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        setQuery("");
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -112,7 +102,7 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
         />
       </div>
 
-      {open && results.length > 0 && (
+      {open && (
         <div className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-48 overflow-y-auto" data-testid="user-search-results">
           {results.map((user) => (
             <button
@@ -120,7 +110,6 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
               onClick={() => {
                 onSelect(user);
                 setQuery("");
-                setOpen(false);
               }}
               className="w-full flex items-center gap-3 px-3 py-2 hover:bg-zinc-700 transition-colors cursor-pointer text-left"
               data-testid="user-search-result"
@@ -147,7 +136,7 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
         </div>
       )}
 
-      {loading && query.length > 0 && (
+      {loading && query.length > 0 && !open && (
         <div className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-md shadow-lg px-3 py-2">
           <span className="text-sm text-zinc-400">Searching...</span>
         </div>

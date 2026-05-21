@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import ScrollableRow from "./ScrollableRow";
@@ -304,9 +305,14 @@ function AgendaCalendarImpl({
     "type"
   );
   const [hideWatched, setHideWatched] = useState(true);
-  const [crowdedWeekThreshold, setCrowdedWeekThreshold] = useState(5);
-  const [crowdedWeekBadgeEnabled, setCrowdedWeekBadgeEnabled] = useState(true);
   const [months, setMonths] = useState<AgendaMonth[]>([]);
+
+  const { data: crowdedWeekData } = useQuery({
+    queryKey: ["crowded-week-settings"],
+    queryFn: ({ signal }) => getCrowdedWeekSettings(signal),
+  });
+  const crowdedWeekThreshold = crowdedWeekData?.crowdedWeekThreshold ?? 5;
+  const crowdedWeekBadgeEnabled = crowdedWeekData ? crowdedWeekData.crowdedWeekBadgeEnabled !== 0 : true;
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [activeDate, setActiveDate] = useState(() => new Date());
@@ -333,20 +339,6 @@ function AgendaCalendarImpl({
   });
 
   const today = useMemo(() => formatDateKey(new Date()), []);
-
-  // Load crowded week settings once on mount
-  useEffect(() => {
-    const controller = new AbortController();
-    getCrowdedWeekSettings(controller.signal)
-      .then((s) => {
-        if (!controller.signal.aborted) {
-          setCrowdedWeekThreshold(s.crowdedWeekThreshold);
-          setCrowdedWeekBadgeEnabled(s.crowdedWeekBadgeEnabled !== 0);
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
 
   const loadMonth = useCallback(
     async (monthStr: string): Promise<AgendaMonth | null> => {

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Send, Check, Users, User } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -19,33 +20,64 @@ type AudienceMode = "all" | "pick";
 
 export default function RecommendButton({ titleId }: Props) {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [recommended, setRecommended] = useState(false);
-  const [recId, setRecId] = useState<string | null>(null);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>("all");
   const [targetUser, setTargetUser] = useState<SelectedUser | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    api.checkRecommendation(titleId).then((data) => {
-      if (cancelled) return;
-      setRecommended(data.recommended);
-      setRecId(data.id);
-    }).catch(() => {
-      // Silently ignore check failures
-    });
-    return () => { cancelled = true; };
-  }, [user, titleId]);
+  const { data: recData } = useQuery({
+    queryKey: ["recommendation-check", titleId],
+    enabled: !!user,
+    queryFn: () => api.checkRecommendation(titleId),
+  });
+
+  const recommended = recData?.recommended ?? false;
+  const recId = recData?.id ?? null;
+
+  const sendMutation = useMutation({
+    mutationFn: ({ message: msg, recipientId }: { message?: string; recipientId?: string }) =>
+      api.sendRecommendation(titleId, msg, recipientId),
+    onSuccess: () => {
+      setDialogOpen(false);
+      setMessage("");
+      setTargetUser(null);
+      const successMsg =
+        audienceMode === "pick" && targetUser
+          ? `Recommendation sent to @${targetUser.username}!`
+          : "Recommendation sent to all followers!";
+      toast.success(successMsg);
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Failed to send recommendation");
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["recommendation-check", titleId] });
+      void qc.invalidateQueries({ queryKey: ["recommendations"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteRecommendation(recId!),
+    onSuccess: () => {
+      toast.success("Recommendation removed");
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Failed to remove recommendation");
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["recommendation-check", titleId] });
+      void qc.invalidateQueries({ queryKey: ["recommendations"] });
+    },
+  });
 
   if (!user) return null;
 
+  const sending = sendMutation.isPending || deleteMutation.isPending;
+
   function handleOpen() {
     if (recommended) {
-      // Unrecommend
-      handleUnrecommend();
+      deleteMutation.mutate();
       return;
     }
     setMessage("");
@@ -54,49 +86,15 @@ export default function RecommendButton({ titleId }: Props) {
     setDialogOpen(true);
   }
 
-  async function handleUnrecommend() {
-    if (!recId) return;
-    setSending(true);
-    try {
-      await api.deleteRecommendation(recId);
-      setRecommended(false);
-      setRecId(null);
-      toast.success("Recommendation removed");
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to remove recommendation";
-      toast.error(errorMessage);
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function handleSend() {
+  function handleSend() {
     if (audienceMode === "pick" && !targetUser) {
       toast.error("Please select a recipient");
       return;
     }
-    setSending(true);
-    try {
-      const result = await api.sendRecommendation(
-        titleId,
-        message || undefined,
-        audienceMode === "pick" ? targetUser?.id : undefined,
-      );
-      const successMsg = audienceMode === "pick" && targetUser
-        ? `Recommendation sent to @${targetUser.username}!`
-        : "Recommendation sent to all followers!";
-      toast.success(successMsg);
-      setDialogOpen(false);
-      setMessage("");
-      setTargetUser(null);
-      setRecommended(true);
-      setRecId(result.id);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to send recommendation";
-      toast.error(errorMessage);
-    } finally {
-      setSending(false);
-    }
+    sendMutation.mutate({
+      message: message || undefined,
+      recipientId: audienceMode === "pick" ? targetUser?.id : undefined,
+    });
   }
 
   return (

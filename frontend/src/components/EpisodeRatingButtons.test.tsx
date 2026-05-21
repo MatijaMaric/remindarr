@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 import EpisodeRatingButtons from "./EpisodeRatingButtons";
 import * as api from "../api";
@@ -20,8 +21,16 @@ const mockAuthValue = {
   refresh: mock(() => Promise.resolve()),
 };
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
-  return <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+    </QueryClientProvider>
+  );
 }
 
 const emptyResponse: EpisodeRatingResponse = {
@@ -179,9 +188,11 @@ describe("EpisodeRatingButtons", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
 
     render(
-      <AuthContext value={noUserAuth as any}>
-        <EpisodeRatingButtons episodeId={1} />
-      </AuthContext>
+      <QueryClientProvider client={newTestClient()}>
+        <AuthContext value={noUserAuth as any}>
+          <EpisodeRatingButtons episodeId={1} />
+        </AuthContext>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {

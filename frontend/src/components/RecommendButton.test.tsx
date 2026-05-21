@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 import RecommendButton from "./RecommendButton";
 import * as api from "../api";
@@ -18,8 +19,16 @@ const mockAuthValue = {
   refresh: mock(() => Promise.resolve()),
 };
 
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
 function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
-  return <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+    </QueryClientProvider>
+  );
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
@@ -54,9 +63,11 @@ describe("RecommendButton", () => {
   it("returns null when not authenticated", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     const { container } = render(
-      <AuthContext value={noUserAuth as any}>
-        <RecommendButton titleId="movie-123" />
-      </AuthContext>
+      <QueryClientProvider client={newTestClient()}>
+        <AuthContext value={noUserAuth as any}>
+          <RecommendButton titleId="movie-123" />
+        </AuthContext>
+      </QueryClientProvider>
     );
     expect(container.innerHTML).toBe("");
   });
@@ -188,6 +199,11 @@ describe("RecommendButton", () => {
   });
 
   it("toggles to Recommended state after successful send", async () => {
+    // First call returns not recommended; after invalidation refetch returns recommended
+    (api.checkRecommendation as any)
+      .mockResolvedValueOnce({ recommended: false, id: null })
+      .mockResolvedValueOnce({ recommended: true, id: "rec-1" });
+
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
 
     await waitFor(() => {
