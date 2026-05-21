@@ -3,10 +3,15 @@ import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-libra
 import type { ReactNode } from "react";
 // Initialize i18n before anything else
 import "../i18n";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TrackButton from "./TrackButton";
 import * as api from "../api";
 import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
 
@@ -20,7 +25,11 @@ const mockAuthValue = {
 };
 
 function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
-  return <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+    </QueryClientProvider>
+  );
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
@@ -54,9 +63,11 @@ describe("TrackButton", () => {
   it("returns null when user is not logged in", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     const { container } = render(
-      <AuthContext value={noUserAuth as any}>
-        <TrackButton titleId="123" isTracked={false} />
-      </AuthContext>
+      <QueryClientProvider client={newTestClient()}>
+        <AuthContext value={noUserAuth as any}>
+          <TrackButton titleId="123" isTracked={false} />
+        </AuthContext>
+      </QueryClientProvider>
     );
     expect(container.innerHTML).toBe("");
   });

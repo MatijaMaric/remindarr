@@ -306,18 +306,20 @@ describe("SlideOverPanel — movie watched toggle", () => {
 
   function renderSlideOver(onToggleTitleWatched?: (id: string, watched: boolean) => void) {
     return render(
-      <MemoryRouter>
-        <SlideOverPanel
-          selectedDate="2024-03-01"
-          items={[{ type: "title", data: movieTitle }]}
-          episodes={[]}
-          titles={[movieTitle]}
-          onClose={noop}
-          onToggleWatched={noop as never}
-          onBulkToggle={noop as never}
-          onToggleTitleWatched={onToggleTitleWatched}
-        />
-      </MemoryRouter>,
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter>
+          <SlideOverPanel
+            selectedDate="2024-03-01"
+            items={[{ type: "title", data: movieTitle }]}
+            episodes={[]}
+            titles={[movieTitle]}
+            onClose={noop}
+            onToggleWatched={noop as never}
+            onBulkToggle={noop as never}
+            onToggleTitleWatched={onToggleTitleWatched}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
   }
 

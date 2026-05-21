@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bell, BellRing, BellOff, BellDot } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import SnoozePicker from "./SnoozePicker";
 
@@ -25,30 +26,31 @@ const MODES: { value: NotificationMode; icon: typeof Bell; labelKey: string }[] 
 
 export default function NotificationModePicker({ titleId, currentMode, onModeChange, snoozeUntil, remindOnRelease, releaseDate, onSnoozed, onRemindOnReleaseChange }: Props) {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [mode, setMode] = useState<NotificationMode | null>(currentMode ?? null);
   const [remind, setRemind] = useState<boolean>(remindOnRelease ?? false);
 
-  async function handleClick(newMode: NotificationMode) {
-    const value = newMode === mode ? null : newMode;
-    try {
-      await api.setNotificationMode(titleId, value);
+  const modeMutation = useMutation({
+    mutationFn: ({ value }: { value: NotificationMode | null }) => api.setNotificationMode(titleId, value),
+    onMutate: ({ value }) => {
+      const prev = mode;
       setMode(value);
-      onModeChange?.(value);
-    } catch (err) {
-      console.error("Failed to update notification mode", err);
-    }
-  }
+      return { prev };
+    },
+    onSuccess: (_data, { value }) => onModeChange?.(value),
+    onError: (_err, _vars, ctx) => {
+      if (ctx) setMode(ctx.prev);
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
 
-  async function handleRemindToggle() {
-    const newValue = !remind;
-    try {
-      await api.setRemindOnRelease(titleId, newValue);
-      setRemind(newValue);
-      onRemindOnReleaseChange?.(newValue);
-    } catch (err) {
-      console.error("Failed to update remind-on-release", err);
-    }
-  }
+  const remindMutation = useMutation({
+    mutationFn: ({ newValue }: { newValue: boolean }) => api.setRemindOnRelease(titleId, newValue),
+    onMutate: ({ newValue }) => setRemind(newValue),
+    onSuccess: (_data, { newValue }) => onRemindOnReleaseChange?.(newValue),
+    onError: (_err, { newValue }) => setRemind(!newValue),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
 
   const activeMode = mode ?? "all";
 
@@ -63,7 +65,11 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
             title={t(labelKey)}
             aria-label={t(labelKey)}
             aria-pressed={isActive}
-            onClick={() => handleClick(value)}
+            disabled={modeMutation.isPending || remindMutation.isPending}
+            onClick={() => {
+              const newValue = value === mode ? null : value;
+              modeMutation.mutate({ value: newValue });
+            }}
             className={`flex-1 flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs transition-colors ${
               isActive
                 ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
@@ -86,7 +92,8 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
           title={t("snooze.remindOnRelease")}
           aria-label={t("snooze.remindOnRelease")}
           aria-pressed={remind}
-          onClick={handleRemindToggle}
+          disabled={modeMutation.isPending || remindMutation.isPending}
+          onClick={() => remindMutation.mutate({ newValue: !remind })}
           className={`flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs transition-colors border ${
             remind
               ? "bg-purple-500/20 text-purple-400 border-purple-500/40"

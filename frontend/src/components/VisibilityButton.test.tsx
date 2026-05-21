@@ -1,10 +1,15 @@
 import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import VisibilityButton from "./VisibilityButton";
 import * as api from "../api";
 import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
 
@@ -18,7 +23,11 @@ const mockAuthValue = {
 };
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <AuthContext value={mockAuthValue as any}>{children}</AuthContext>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      <AuthContext value={mockAuthValue as any}>{children}</AuthContext>
+    </QueryClientProvider>
+  );
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
@@ -41,9 +50,11 @@ describe("VisibilityButton", () => {
   it("returns null when user is not logged in", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     const { container } = render(
-      <AuthContext value={noUserAuth as any}>
-        <VisibilityButton titleId="123" isPublic={true} isTracked={true} />
-      </AuthContext>
+      <QueryClientProvider client={newTestClient()}>
+        <AuthContext value={noUserAuth as any}>
+          <VisibilityButton titleId="123" isPublic={true} isTracked={true} />
+        </AuthContext>
+      </QueryClientProvider>
     );
     expect(container.innerHTML).toBe("");
   });

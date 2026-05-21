@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 
 type UserStatus = "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed";
@@ -34,31 +36,27 @@ const MOVIE_OPTIONS: StatusOption[] = [
 
 export default function StatusPicker({ titleId, objectType, currentStatus, onStatusChange }: Props) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
+  const qc = useQueryClient();
 
   const options = objectType === "SHOW" ? SHOW_OPTIONS : MOVIE_OPTIONS;
   const activeOption = options.find((o) => o.value === (currentStatus ?? null)) ?? options[0];
 
-  async function handleSelect(status: UserStatus | null) {
-    setOpen(false);
-    setLoading(true);
-    try {
-      await api.updateTrackedStatus(titleId, status);
+  const statusMutation = useMutation({
+    mutationFn: (status: UserStatus | null) => api.updateTrackedStatus(titleId, status),
+    onSuccess: (_data, status) => {
       onStatusChange(status);
-    } catch {
-      // API call failed — do not update the parent; the picker reverts visually
-      // since we haven't called onStatusChange
-    } finally {
-      setLoading(false);
-    }
-  }
+      setOpen(false);
+    },
+    onError: () => toast.error("Failed to update status"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
 
   return (
     <div className="relative">
       <button
         onClick={(e) => { e.preventDefault(); setOpen((v) => !v); }}
-        disabled={loading}
+        disabled={statusMutation.isPending}
         className={`w-full text-left text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 transition-colors flex items-center gap-1.5 ${activeOption.color}`}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -81,7 +79,7 @@ export default function StatusPicker({ titleId, objectType, currentStatus, onSta
                 <button
                   role="option"
                   aria-selected={opt.value === (currentStatus ?? null)}
-                  onClick={(e) => { e.preventDefault(); handleSelect(opt.value); }}
+                  onClick={(e) => { e.preventDefault(); statusMutation.mutate(opt.value); }}
                   className={`w-full text-left text-xs px-3 py-2 hover:bg-zinc-700 transition-colors ${opt.color} ${opt.value === (currentStatus ?? null) ? "bg-zinc-700" : ""}`}
                 >
                   {t(opt.labelKey)}

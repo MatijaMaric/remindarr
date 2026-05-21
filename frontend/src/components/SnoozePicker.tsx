@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { BellOff, Bell } from "lucide-react";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 
 interface Props {
@@ -10,56 +12,48 @@ interface Props {
   onSnoozed?: () => void;
 }
 
+type SnoozeType = "1d" | "1w" | "release" | "clear";
+
 interface SnoozeOption {
   labelKey: string;
-  getUntil: () => string | null;
+  type: SnoozeType;
   show?: boolean;
+}
+
+function computeUntil(type: SnoozeType, releaseDate?: string | null): string | null {
+  if (type === "1d") return new Date(Date.now() + 86400000).toISOString();
+  if (type === "1w") return new Date(Date.now() + 7 * 86400000).toISOString();
+  if (type === "release" && releaseDate)
+    return new Date(releaseDate + "T00:00:00.000Z").toISOString();
+  return null;
 }
 
 export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoozed }: Props) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
+  const qc = useQueryClient();
 
   const isSnoozed = snoozeUntil != null && new Date(snoozeUntil) > new Date();
 
-  const options: SnoozeOption[] = [
-    {
-      labelKey: "snooze.oneDay",
-      getUntil: () => new Date(Date.now() + 86400000).toISOString(),
-    },
-    {
-      labelKey: "snooze.oneWeek",
-      getUntil: () => new Date(Date.now() + 7 * 86400000).toISOString(),
-    },
-    ...(releaseDate
-      ? [
-          {
-            labelKey: "snooze.untilRelease",
-            getUntil: () => new Date(releaseDate + "T00:00:00.000Z").toISOString(),
-          },
-        ]
-      : []),
-    {
-      labelKey: "snooze.clear",
-      getUntil: () => null,
-      show: isSnoozed,
-    },
-  ];
-
-  async function handleSelect(getUntil: () => string | null) {
-    setOpen(false);
-    setLoading(true);
-    const until = getUntil();
-    try {
-      await api.setTitleSnooze(titleId, until);
+  const snoozeMutation = useMutation({
+    mutationFn: ({ until }: { until: string | null }) => api.setTitleSnooze(titleId, until),
+    onSuccess: () => {
       onSnoozed?.();
-    } catch (err) {
-      console.error("Failed to update snooze", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+      setOpen(false);
+    },
+    onError: () => toast.error("Failed to snooze title"),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["tracked"] });
+      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+    },
+  });
+
+  const options: SnoozeOption[] = [
+    { labelKey: "snooze.oneDay", type: "1d" },
+    { labelKey: "snooze.oneWeek", type: "1w" },
+    ...(releaseDate ? [{ labelKey: "snooze.untilRelease", type: "release" as SnoozeType }] : []),
+    { labelKey: "snooze.clear", type: "clear", show: isSnoozed },
+  ];
 
   const visibleOptions = options.filter((o) => o.show !== false);
 
@@ -70,7 +64,7 @@ export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoo
         title={isSnoozed ? t("snooze.snoozed") : t("snooze.snooze")}
         aria-label={isSnoozed ? t("snooze.snoozed") : t("snooze.snooze")}
         aria-pressed={isSnoozed}
-        disabled={loading}
+        disabled={snoozeMutation.isPending}
         onClick={(e) => {
           e.preventDefault();
           setOpen((v) => !v);
@@ -102,7 +96,7 @@ export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoo
                   aria-selected={false}
                   onClick={(e) => {
                     e.preventDefault();
-                    handleSelect(opt.getUntil);
+                    snoozeMutation.mutate({ until: computeUntil(opt.type, releaseDate) });
                   }}
                   className="w-full text-left text-xs px-3 py-2 hover:bg-zinc-700 transition-colors text-zinc-300"
                 >

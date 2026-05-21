@@ -1,8 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import type { ReactNode } from "react";
 import "../i18n";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import SnoozePicker from "./SnoozePicker";
+
+function newTestClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
+function Wrapper({ children }: { children: ReactNode }) {
+  return <QueryClientProvider client={newTestClient()}>{children}</QueryClientProvider>;
+}
 
 let mockSetTitleSnooze: ReturnType<typeof spyOn>;
 let mockSetRemindOnRelease: ReturnType<typeof spyOn>;
@@ -20,7 +30,7 @@ afterEach(() => {
 
 describe("SnoozePicker", () => {
   it("renders bell icon when not snoozed", () => {
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />);
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, { wrapper: Wrapper });
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     expect(btn).toBeTruthy();
     expect(btn.getAttribute("aria-pressed")).toBe("false");
@@ -28,14 +38,14 @@ describe("SnoozePicker", () => {
 
   it("renders bell-off icon and shows snoozed state when snoozed", () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} />);
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} />, { wrapper: Wrapper });
     const btn = screen.getByRole("button", { name: /notifications snoozed/i });
     expect(btn).toBeTruthy();
     expect(btn.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("opens dropdown on click", () => {
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />);
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, { wrapper: Wrapper });
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);
     expect(screen.getByRole("listbox")).toBeTruthy();
@@ -45,7 +55,7 @@ describe("SnoozePicker", () => {
 
   it("calls setTitleSnooze with ~1 day from now when Snooze 1 day is clicked", async () => {
     const onSnoozed = () => {};
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} onSnoozed={onSnoozed} />);
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} onSnoozed={onSnoozed} />, { wrapper: Wrapper });
 
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);
@@ -68,7 +78,7 @@ describe("SnoozePicker", () => {
   it("calls setTitleSnooze(id, null) when Clear snooze is clicked", async () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
     const onSnoozed = () => {};
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} onSnoozed={onSnoozed} />);
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} onSnoozed={onSnoozed} />, { wrapper: Wrapper });
 
     const btn = screen.getByRole("button", { name: /notifications snoozed/i });
     fireEvent.click(btn);
@@ -86,7 +96,7 @@ describe("SnoozePicker", () => {
 
   it("shows 'Until release' option when releaseDate is provided", () => {
     const futureRelease = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} releaseDate={futureRelease} />);
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} releaseDate={futureRelease} />, { wrapper: Wrapper });
 
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);
@@ -95,7 +105,7 @@ describe("SnoozePicker", () => {
   });
 
   it("does not show 'Clear snooze' when not snoozed", () => {
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />);
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, { wrapper: Wrapper });
 
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);

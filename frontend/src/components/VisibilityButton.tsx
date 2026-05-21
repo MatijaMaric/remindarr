@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import { useAuth } from "../context/AuthContext";
 
@@ -14,26 +15,29 @@ interface Props {
 
 export default function VisibilityButton({ titleId, isPublic, isTracked, onToggle, variant = "button" }: Props) {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [publicState, setPublicState] = useState(isPublic);
-  const [loading, setLoading] = useState(false);
+
+  const visibilityMutation = useMutation({
+    mutationFn: ({ newState }: { newState: boolean }) => api.updateTitleVisibility(titleId, newState),
+    onMutate: ({ newState }) => setPublicState(newState),
+    onSuccess: (_data, { newState }) => {
+      onToggle?.(newState);
+      toast.success(newState ? "Visible on profile" : "Hidden from profile");
+    },
+    onError: (_err, { newState }) => {
+      setPublicState(!newState);
+      toast.error("Failed to update visibility");
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
 
   if (!user || !isTracked) return null;
 
-  async function toggle(e: React.MouseEvent) {
+  function toggle(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setLoading(true);
-    try {
-      const newState = !publicState;
-      await api.updateTitleVisibility(titleId, newState);
-      setPublicState(newState);
-      onToggle?.(newState);
-      toast.success(newState ? "Visible on profile" : "Hidden from profile");
-    } catch {
-      toast.error("Failed to update visibility");
-    } finally {
-      setLoading(false);
-    }
+    visibilityMutation.mutate({ newState: !publicState });
   }
 
   const Icon = publicState ? Eye : EyeOff;
@@ -42,7 +46,7 @@ export default function VisibilityButton({ titleId, isPublic, isTracked, onToggl
     return (
       <button
         onClick={toggle}
-        disabled={loading}
+        disabled={visibilityMutation.isPending}
         className={`absolute top-2 right-2 z-10 p-1.5 rounded-full transition-colors ${
           publicState
             ? "bg-zinc-900/70 text-zinc-300 hover:bg-zinc-900/90 hover:text-white"
@@ -58,7 +62,7 @@ export default function VisibilityButton({ titleId, isPublic, isTracked, onToggl
   return (
     <button
       onClick={toggle}
-      disabled={loading}
+      disabled={visibilityMutation.isPending}
       className={`min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
         publicState
           ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"

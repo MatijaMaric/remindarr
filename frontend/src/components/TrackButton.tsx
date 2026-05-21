@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import type { Title } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -22,8 +23,8 @@ interface Props {
 export default function TrackButton({ titleId, isTracked, onToggle, titleData }: Props) {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [tracked, setTracked] = useState(isTracked);
-  const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Keep internal state in sync when parent prop changes (e.g., after data refetch)
@@ -31,37 +32,48 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
     setTracked(isTracked);
   }, [isTracked]);
 
-  if (!user) return null;
-
-  async function handleTrack() {
-    setLoading(true);
-    try {
-      await api.trackTitle(titleId, undefined, titleData);
-      setTracked(true);
+  const trackMutation = useMutation({
+    mutationFn: () => api.trackTitle(titleId, undefined, titleData),
+    onMutate: () => setTracked(true),
+    onSuccess: () => {
       onToggle?.(true);
       toast.success("Title tracked");
-    } catch (err) {
-      console.error("Track toggle failed:", err);
-      toast.error("Failed to track — please try again");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleUntrack() {
-    setConfirmOpen(false);
-    setLoading(true);
-    try {
-      await api.untrackTitle(titleId);
+    },
+    onError: () => {
       setTracked(false);
+      toast.error("Failed to track — please try again");
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
+
+  const untrackMutation = useMutation({
+    mutationFn: () => api.untrackTitle(titleId),
+    onMutate: () => setTracked(false),
+    onSuccess: () => {
       onToggle?.(false);
       toast.success("Removed from tracked");
-    } catch (err) {
-      console.error("Track toggle failed:", err);
+    },
+    onError: () => {
+      setTracked(true);
       toast.error("Failed to untrack — please try again");
-    } finally {
-      setLoading(false);
-    }
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["tracked"] });
+      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+    },
+  });
+
+  if (!user) return null;
+
+  const loading = trackMutation.isPending || untrackMutation.isPending;
+
+  function handleTrack() {
+    trackMutation.mutate();
+  }
+
+  function handleUntrack() {
+    setConfirmOpen(false);
+    untrackMutation.mutate();
   }
 
   function handleClick() {

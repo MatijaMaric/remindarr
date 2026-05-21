@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import FullBleedCarousel from "./FullBleedCarousel";
 import { posterUrl as buildPosterUrl } from "../lib/tmdb-images";
@@ -61,24 +62,28 @@ function releaseMeta(variant: "to_watch" | "upcoming", movie: MovieTrackItem): s
 }
 
 export default function MovieRow({ variant, movies }: MovieRowProps) {
+  const qc = useQueryClient();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  const visible = movies.filter((m) => !dismissed.has(m.id));
-
-  if (visible.length === 0) return null;
-
-  async function handleWatched(id: string) {
-    setDismissed((prev) => new Set([...prev, id]));
-    try {
-      await api.watchMovie(id);
-    } catch {
+  const watchMutation = useMutation({
+    mutationFn: (id: string) => api.watchMovie(id),
+    onMutate: (id) => setDismissed((prev) => new Set([...prev, id])),
+    onError: (_err, id) =>
       setDismissed((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
-      });
-    }
-  }
+      }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const visible = movies.filter((m) => !dismissed.has(m.id));
+
+  if (visible.length === 0) return null;
 
   return (
     <FullBleedCarousel>
@@ -106,7 +111,7 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
                 <button
                   onClick={(e) => {
                     e.preventDefault();
-                    void handleWatched(movie.id);
+                    watchMutation.mutate(movie.id);
                   }}
                   className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                 >
