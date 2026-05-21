@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import * as api from "../../api";
 import type { Integration, PlexServer } from "../../api";
 import {
@@ -22,8 +24,7 @@ const PLEX_POPUP_FEATURES = "width=800,height=700,menubar=no,toolbar=no,location
 const PIN_POLL_INTERVAL_MS = 2000;
 
 function PlexSection() {
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [step, setStep] = useState<ConnectStep>({ type: "idle" });
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
@@ -37,21 +38,22 @@ function PlexSection() {
   const [syncMovies, setSyncMovies] = useState(true);
   const [syncEpisodes, setSyncEpisodes] = useState(true);
 
-  const refresh = useCallback((signal?: AbortSignal) => {
-    api.getIntegrations(signal)
-      .then((r) => {
-        if (signal?.aborted) return;
-        setIntegrations(r.integrations.filter((i) => i.provider === "plex"));
-        setLoading(false);
-      })
-      .catch(() => { if (!signal?.aborted) setLoading(false); });
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["integrations"],
+    queryFn: ({ signal }) => api.getIntegrations(signal),
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    refresh(controller.signal);
-    return () => controller.abort();
-  }, [refresh]);
+  const integrations = (data?.integrations ?? []).filter((i) => i.provider === "plex");
+
+  const deleteIntegrationMutation = useMutation({
+    mutationFn: (id: string) => api.deleteIntegration(id),
+    onSuccess: () => setMsg("Plex integration disconnected."),
+    onError: () => {
+      setErr("Failed to disconnect integration.");
+      toast.error("Failed to disconnect integration");
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["integrations"] }),
+  });
 
   useEffect(() => {
     if (step.type !== "waiting") return;
@@ -140,7 +142,7 @@ function PlexSection() {
       });
       setStep({ type: "idle" });
       setMsg("Plex server connected successfully.");
-      refresh();
+      void qc.invalidateQueries({ queryKey: ["integrations"] });
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Failed to save integration.");
     } finally {
@@ -159,7 +161,7 @@ function PlexSection() {
       } else {
         setErr(result.error ?? "Sync failed.");
       }
-      refresh();
+      void qc.invalidateQueries({ queryKey: ["integrations"] });
     } catch {
       setErr("Sync failed.");
     } finally {
@@ -173,7 +175,7 @@ function PlexSection() {
     setToggling(integration.id);
     try {
       await api.updateIntegration(integration.id, { enabled: !integration.enabled });
-      refresh();
+      void qc.invalidateQueries({ queryKey: ["integrations"] });
     } catch {
       setErr("Failed to update integration.");
     } finally {
@@ -184,13 +186,7 @@ function PlexSection() {
   async function handleDelete(id: string) {
     setMsg("");
     setErr("");
-    try {
-      await api.deleteIntegration(id);
-      setMsg("Plex integration disconnected.");
-      refresh();
-    } catch {
-      setErr("Failed to disconnect integration.");
-    }
+    deleteIntegrationMutation.mutate(id);
   }
 
   function formatSyncTime(iso: string | null) {
@@ -403,28 +399,20 @@ const FEED_FLAVORS: FeedFlavor[] = [
 
 function CalendarFeedSection() {
   const { t } = useTranslation();
-  const [token, setToken] = useState<string | null>(null);
-  const [loadingToken, setLoadingToken] = useState(true);
-  const [regenerating, setRegenerating] = useState(false);
+  const qc = useQueryClient();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getFeedToken(controller.signal)
-      .then(({ token: tok }) => { if (!controller.signal.aborted) { setToken(tok); setLoadingToken(false); } })
-      .catch(() => { if (!controller.signal.aborted) setLoadingToken(false); });
-    return () => controller.abort();
-  }, []);
+  const { data, isLoading: loadingToken } = useQuery({
+    queryKey: ["feed-token"],
+    queryFn: ({ signal }) => api.getFeedToken(signal),
+  });
+  const token = data?.token ?? null;
 
-  async function handleRegenerate() {
-    setRegenerating(true);
-    try {
-      const { token: newToken } = await api.regenerateFeedToken();
-      setToken(newToken);
-    } finally {
-      setRegenerating(false);
-    }
-  }
+  const regenerateMutation = useMutation({
+    mutationFn: () => api.regenerateFeedToken(),
+    onError: () => toast.error("Failed to regenerate feed token"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["feed-token"] }),
+  });
 
   async function handleCopy(key: string, url: string) {
     await navigator.clipboard.writeText(url);
@@ -463,17 +451,17 @@ function CalendarFeedSection() {
             <SButton
               variant="ghost"
               small
-              onClick={handleRegenerate}
-              disabled={regenerating}
+              onClick={() => regenerateMutation.mutate()}
+              disabled={regenerateMutation.isPending}
             >
-              {regenerating ? t("feed.regenerating") : t("feed.regenerate")}
+              {regenerateMutation.isPending ? t("feed.regenerating") : t("feed.regenerate")}
             </SButton>
           </div>
           <SHint kind="info">{t("feed.warning")}</SHint>
         </div>
       ) : (
-        <SButton onClick={handleRegenerate} disabled={regenerating}>
-          {regenerating ? t("feed.generating") : t("feed.generate")}
+        <SButton onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending}>
+          {regenerateMutation.isPending ? t("feed.generating") : t("feed.generate")}
         </SButton>
       )}
     </SCard>
@@ -482,41 +470,27 @@ function CalendarFeedSection() {
 
 function KioskSection() {
   const { t } = useTranslation();
-  const [token, setToken] = useState<string | null>(null);
-  const [loadingToken, setLoadingToken] = useState(true);
-  const [regenerating, setRegenerating] = useState(false);
-  const [revoking, setRevoking] = useState(false);
+  const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getKioskToken(controller.signal)
-      .then(({ token: tok }) => { if (!controller.signal.aborted) { setToken(tok); setLoadingToken(false); } })
-      .catch(() => { if (!controller.signal.aborted) setLoadingToken(false); });
-    return () => controller.abort();
-  }, []);
-
+  const { data, isLoading: loadingToken } = useQuery({
+    queryKey: ["kiosk-token"],
+    queryFn: ({ signal }) => api.getKioskToken(signal),
+  });
+  const token = data?.token ?? null;
   const kioskUrl = token ? `${window.location.origin}/kiosk/${token}` : null;
 
-  async function handleRegenerate() {
-    setRegenerating(true);
-    try {
-      const { token: newToken } = await api.regenerateKioskToken();
-      setToken(newToken);
-    } finally {
-      setRegenerating(false);
-    }
-  }
+  const regenerateMutation = useMutation({
+    mutationFn: () => api.regenerateKioskToken(),
+    onError: () => toast.error("Failed to regenerate kiosk token"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["kiosk-token"] }),
+  });
 
-  async function handleRevoke() {
-    setRevoking(true);
-    try {
-      await api.revokeKioskToken();
-      setToken(null);
-    } finally {
-      setRevoking(false);
-    }
-  }
+  const revokeMutation = useMutation({
+    mutationFn: () => api.revokeKioskToken(),
+    onError: () => toast.error("Failed to revoke kiosk token"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["kiosk-token"] }),
+  });
 
   async function handleCopy() {
     if (!kioskUrl) return;
@@ -545,26 +519,26 @@ function KioskSection() {
               <SButton
                 variant="ghost"
                 small
-                onClick={handleRegenerate}
-                disabled={regenerating}
+                onClick={() => regenerateMutation.mutate()}
+                disabled={regenerateMutation.isPending}
               >
-                {regenerating ? t("kiosk.regenerating") : t("kiosk.regenerate")}
+                {regenerateMutation.isPending ? t("kiosk.regenerating") : t("kiosk.regenerate")}
               </SButton>
               <SButton
                 variant="ghost"
                 small
-                onClick={handleRevoke}
-                disabled={revoking}
+                onClick={() => revokeMutation.mutate()}
+                disabled={revokeMutation.isPending}
               >
-                {revoking ? t("kiosk.revoking") : t("kiosk.revoke")}
+                {revokeMutation.isPending ? t("kiosk.revoking") : t("kiosk.revoke")}
               </SButton>
             </div>
           </div>
           <SHint kind="info">{t("kiosk.warning")}</SHint>
         </div>
       ) : (
-        <SButton onClick={handleRegenerate} disabled={regenerating}>
-          {regenerating ? t("kiosk.generating") : t("kiosk.generate")}
+        <SButton onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending}>
+          {regenerateMutation.isPending ? t("kiosk.generating") : t("kiosk.generate")}
         </SButton>
       )}
     </SCard>
@@ -573,41 +547,27 @@ function KioskSection() {
 
 function WatchlistShareSection() {
   const { t } = useTranslation();
-  const [token, setToken] = useState<string | null>(null);
-  const [loadingToken, setLoadingToken] = useState(true);
-  const [regenerating, setRegenerating] = useState(false);
-  const [revoking, setRevoking] = useState(false);
+  const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getWatchlistShareToken(controller.signal)
-      .then(({ token: tok }) => { if (!controller.signal.aborted) { setToken(tok); setLoadingToken(false); } })
-      .catch(() => { if (!controller.signal.aborted) setLoadingToken(false); });
-    return () => controller.abort();
-  }, []);
-
+  const { data, isLoading: loadingToken } = useQuery({
+    queryKey: ["watchlist-share-token"],
+    queryFn: ({ signal }) => api.getWatchlistShareToken(signal),
+  });
+  const token = data?.token ?? null;
   const shareUrl = token ? `${window.location.origin}/share/watchlist/${token}` : null;
 
-  async function handleRegenerate() {
-    setRegenerating(true);
-    try {
-      const { token: newToken } = await api.regenerateWatchlistShareToken();
-      setToken(newToken);
-    } finally {
-      setRegenerating(false);
-    }
-  }
+  const regenerateMutation = useMutation({
+    mutationFn: () => api.regenerateWatchlistShareToken(),
+    onError: () => toast.error("Failed to regenerate watchlist share token"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["watchlist-share-token"] }),
+  });
 
-  async function handleRevoke() {
-    setRevoking(true);
-    try {
-      await api.revokeWatchlistShareToken();
-      setToken(null);
-    } finally {
-      setRevoking(false);
-    }
-  }
+  const revokeMutation = useMutation({
+    mutationFn: () => api.revokeWatchlistShareToken(),
+    onError: () => toast.error("Failed to revoke watchlist share token"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["watchlist-share-token"] }),
+  });
 
   async function handleCopy() {
     if (!shareUrl) return;
@@ -636,26 +596,26 @@ function WatchlistShareSection() {
               <SButton
                 variant="ghost"
                 small
-                onClick={handleRegenerate}
-                disabled={regenerating}
+                onClick={() => regenerateMutation.mutate()}
+                disabled={regenerateMutation.isPending}
               >
-                {regenerating ? t("share.regenerating") : t("share.regenerate")}
+                {regenerateMutation.isPending ? t("share.regenerating") : t("share.regenerate")}
               </SButton>
               <SButton
                 variant="ghost"
                 small
-                onClick={handleRevoke}
-                disabled={revoking}
+                onClick={() => revokeMutation.mutate()}
+                disabled={revokeMutation.isPending}
               >
-                {revoking ? t("share.revoking") : t("share.revoke")}
+                {revokeMutation.isPending ? t("share.revoking") : t("share.revoke")}
               </SButton>
             </div>
           </div>
           <SHint kind="info">{t("share.warning")}</SHint>
         </div>
       ) : (
-        <SButton onClick={handleRegenerate} disabled={regenerating}>
-          {regenerating ? t("share.generating") : t("share.generate")}
+        <SButton onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending}>
+          {regenerateMutation.isPending ? t("share.generating") : t("share.generate")}
         </SButton>
       )}
     </SCard>

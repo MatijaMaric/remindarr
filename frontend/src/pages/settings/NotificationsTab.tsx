@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import * as api from "../../api";
 import type { Notifier } from "../../api";
-import type { NotificationLogRow } from "../../types";
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../../lib/push";
 import {
   SCard,
@@ -251,11 +252,6 @@ function PushNotificationsSection() {
   );
 }
 
-type NotifierHistoryState = {
-  rows: NotificationLogRow[];
-  successRate: number;
-} | null;
-
 function statusPillKind(rate: number): "ok" | "warning" | "error" {
   if (rate >= 90) return "ok";
   if (rate >= 60) return "warning";
@@ -275,26 +271,11 @@ function formatAttemptedAt(ts: number): string {
   }
 }
 
-function NotifierDeliveryHistory({ notifierId, refreshKey }: { notifierId: string; refreshKey?: number }) {
-  const [history, setHistory] = useState<NotifierHistoryState>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const data = await api.getNotifierHistory(notifierId);
-        if (!cancelled) {
-          setHistory(data);
-          setLoading(false);
-        }
-      } catch {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [notifierId, refreshKey]);
+function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
+  const { data: history, isLoading: loading } = useQuery({
+    queryKey: ["notifier-history", notifierId],
+    queryFn: () => api.getNotifierHistory(notifierId),
+  });
 
   if (loading) {
     return <div className="text-zinc-500 text-xs font-mono mt-3">Loading history...</div>;
@@ -339,16 +320,13 @@ function NotifierDeliveryHistory({ notifierId, refreshKey }: { notifierId: strin
 }
 
 function NotificationsSection() {
-  const [notifiers, setNotifiers] = useState<Notifier[]>([]);
-  const [providers, setProviders] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [testing, setTesting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
-  const [historyKeys, setHistoryKeys] = useState<Record<string, number>>({});
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<Record<string, import("../../api").NotificationContent>>({});
 
@@ -372,22 +350,25 @@ function NotificationsSection() {
   const [formAchievements, setFormAchievements] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const refresh = useCallback((signal?: AbortSignal) => {
-    Promise.all([api.getNotifiers(signal), api.getNotifierProviders(signal)])
-      .then(([n, p]) => {
-        if (signal?.aborted) return;
-        setNotifiers(n.notifiers.filter((x) => x.provider !== "webpush"));
-        setProviders(p.providers.filter((x) => x !== "webpush"));
-        setLoading(false);
-      })
-      .catch(() => { if (!signal?.aborted) setLoading(false); });
-  }, []);
+  const { data: notifiersData, isLoading: notifiersLoading } = useQuery({
+    queryKey: ["notifiers"],
+    queryFn: ({ signal }) => api.getNotifiers(signal),
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    refresh(controller.signal);
-    return () => controller.abort();
-  }, [refresh]);
+  const { data: providersData, isLoading: providersLoading } = useQuery({
+    queryKey: ["notifier-providers"],
+    queryFn: ({ signal }) => api.getNotifierProviders(signal),
+  });
+
+  const notifiers = (notifiersData?.notifiers ?? []).filter((x) => x.provider !== "webpush");
+  const providers = (providersData?.providers ?? []).filter((x) => x !== "webpush");
+  const loading = notifiersLoading || providersLoading;
+
+  const deleteNotifierMutation = useMutation({
+    mutationFn: (id: string) => api.deleteNotifier(id),
+    onError: () => toast.error("Failed to delete notifier"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["notifiers"] }),
+  });
 
   function resetForm() {
     setFormProvider("discord");
@@ -497,7 +478,7 @@ function NotificationsSection() {
         setMsg("Notifier created");
       }
       resetForm();
-      refresh();
+      void qc.invalidateQueries({ queryKey: ["notifiers"] });
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -508,13 +489,9 @@ function NotificationsSection() {
   async function handleDelete(id: string) {
     setMsg("");
     setErr("");
-    try {
-      await api.deleteNotifier(id);
-      setMsg("Notifier deleted");
-      refresh();
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    }
+    deleteNotifierMutation.mutate(id, {
+      onSuccess: () => setMsg("Notifier deleted"),
+    });
   }
 
   async function handleTest(id: string) {
@@ -532,7 +509,7 @@ function NotificationsSection() {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setTesting(null);
-      setHistoryKeys((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+      void qc.invalidateQueries({ queryKey: ["notifier-history", id] });
     }
   }
 
@@ -556,7 +533,7 @@ function NotificationsSection() {
     setToggling(n.id);
     try {
       await api.updateNotifier(n.id, { enabled: !n.enabled });
-      refresh();
+      void qc.invalidateQueries({ queryKey: ["notifiers"] });
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -672,7 +649,7 @@ function NotificationsSection() {
                     </button>
                   </div>
                 )}
-                <NotifierDeliveryHistory notifierId={n.id} refreshKey={historyKeys[n.id] ?? 0} />
+                <NotifierDeliveryHistory notifierId={n.id} />
               </div>
             );
           })}
@@ -947,23 +924,23 @@ const DEPARTURE_LEAD_DAY_OPTIONS = [1, 3, 7, 14, 30];
 function DepartureAlertsSection() {
   const [departuresEnabled, setDeparturesEnabled] = useState(true);
   const [leadDays, setLeadDays] = useState(7);
-  const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["departure-alert-settings"],
+    queryFn: ({ signal }) => api.getDepartureAlertSettings(signal),
+  });
+
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    let cancelled = false;
-    api.getDepartureAlertSettings().then((s) => {
-      if (!cancelled) {
-        setDeparturesEnabled(s.streamingDeparturesEnabled);
-        setLeadDays(s.departureAlertLeadDays);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, []);
+    // syncing server-backed initial values into controlled toggles
+    if (data) {
+      setDeparturesEnabled(data.streamingDeparturesEnabled);
+      setLeadDays(data.departureAlertLeadDays);
+    }
+  }, [data]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleToggle(val: boolean) {
     setMsg("");

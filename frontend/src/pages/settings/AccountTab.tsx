@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useReducer } from "react";
+import { useState, useEffect, useReducer } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import * as api from "../../api";
-import type { Title, ActivitySettings, ActivityType, ActivityKindVisibility } from "../../types";
+import type { ActivitySettings, ActivityType, ActivityKindVisibility } from "../../types";
 import { authClient } from "../../lib/auth-client";
 import { UserPlus } from "lucide-react";
 import { useAsyncError } from "../../hooks/useAsyncError";
@@ -57,22 +59,24 @@ function ProfileEditSection() {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [countryCode, setCountryCode] = useState("");
-  const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState("");
   const { run, error: saveErr, pending: saving } = useAsyncError();
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: ({ signal }) => api.getMyProfile(signal),
+  });
+
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    let mounted = true;
-    const controller = new AbortController();
-    api.getMyProfile(controller.signal).then((data) => {
-      if (!mounted) return;
+    // syncing server-backed initial values into controlled form fields
+    if (data) {
       setDisplayName(data.display_name ?? "");
       setBio(data.bio ?? "");
       setCountryCode(data.country_code ?? "");
-      setLoaded(true);
-    }).catch(() => { if (mounted) setLoaded(true); });
-    return () => { mounted = false; controller.abort(); };
-  }, []);
+    }
+  }, [data]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -87,7 +91,7 @@ function ProfileEditSection() {
     });
   }
 
-  if (!loaded) return null;
+  if (isLoading) return null;
 
   return (
     <SCard
@@ -525,40 +529,42 @@ function PasskeySection() {
 
 function ProfileVisibilitySection() {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [visibility, setVisibility] = useState<string>("private");
-  const [titles, setTitles] = useState<(Title & { public: boolean })[]>([]);
+  const qc = useQueryClient();
   const [updatingGlobal, setUpdatingGlobal] = useState(false);
   const [updatingAll, setUpdatingAll] = useState(false);
   const [err, setErr] = useState("");
 
-  const refresh = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const data = await api.getTrackedTitles(signal);
-      if (signal?.aborted) return;
-      setVisibility(data.profile_visibility || (data.profile_public ? "public" : "private"));
-      setTitles(data.titles);
-    } catch {
-      // ignore
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["tracked"],
+    queryFn: ({ signal }) => api.getTrackedTitles(signal),
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    refresh(controller.signal);
-    return () => controller.abort();
-  }, [refresh]);
+  const visibility = data?.profile_visibility ?? (data?.profile_public ? "public" : "private");
+  const titles = data?.titles ?? [];
+
+  const updateVisibilityMutation = useMutation({
+    mutationFn: (newVisibility: string) => api.updateProfileVisibility(newVisibility),
+    onError: (e: unknown) => {
+      setErr(e instanceof Error ? e.message : String(e));
+      toast.error("Failed to update visibility");
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
+
+  const bulkVisibilityMutation = useMutation({
+    mutationFn: (isPublic: boolean) => api.updateAllTitleVisibility(isPublic),
+    onError: (e: unknown) => {
+      setErr(e instanceof Error ? e.message : String(e));
+      toast.error("Failed to update visibility");
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
+  });
 
   async function handleVisibilityChange(newVisibility: string) {
     setErr("");
     setUpdatingGlobal(true);
     try {
-      await api.updateProfileVisibility(newVisibility);
-      setVisibility(newVisibility);
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
+      await updateVisibilityMutation.mutateAsync(newVisibility);
     } finally {
       setUpdatingGlobal(false);
     }
@@ -568,10 +574,7 @@ function ProfileVisibilitySection() {
     setErr("");
     setUpdatingAll(true);
     try {
-      await api.updateAllTitleVisibility(isPublic);
-      setTitles((prev) => prev.map((x) => ({ ...x, public: isPublic })));
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
+      await bulkVisibilityMutation.mutateAsync(isPublic);
     } finally {
       setUpdatingAll(false);
     }
@@ -682,7 +685,6 @@ const KIND_VIS_OPTIONS: Array<{ value: "public" | "friends_only" | "private"; la
 ];
 
 function ActivityStreamSection() {
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ActivitySettings>({
     enabled: false,
@@ -690,23 +692,16 @@ function ActivityStreamSection() {
   });
   const [err, setErr] = useState("");
 
-  const refresh = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const data = await api.getActivitySettings(signal);
-      if (signal?.aborted) return;
-      setSettings(data);
-    } catch {
-      // ignore
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["activity-settings"],
+    queryFn: ({ signal }) => api.getActivitySettings(signal),
+  });
 
   useEffect(() => {
-    const controller = new AbortController();
-    refresh(controller.signal);
-    return () => controller.abort();
-  }, [refresh]);
+    if (data) {
+      setSettings(data);
+    }
+  }, [data]);
 
   async function handleToggle(next: boolean) {
     setSaving(true);

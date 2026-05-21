@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import * as api from "../../api";
-import type { JobsResponse, AdminConfigResponse, AdminLogEntry } from "../../api";
-import type { AdminSettings } from "../../types";
 import {
   SCard,
   SStatusPill,
@@ -39,41 +39,25 @@ function JobStatusBadge({ status }: { status: string }) {
 }
 
 function BackgroundJobsSection() {
-  const [data, setData] = useState<JobsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [triggering, setTriggering] = useState<string | null>(null);
+  const qc = useQueryClient();
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  const refresh = useCallback((signal?: AbortSignal) => {
-    api.getJobs(signal).then((d) => {
-      if (signal?.aborted) return;
-      setData(d);
-      setLoading(false);
-    }).catch(() => { if (!signal?.aborted) setLoading(false); });
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["admin-jobs"],
+    queryFn: ({ signal }) => api.getJobs(signal),
+    refetchInterval: 15_000,
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    refresh(controller.signal);
-    const interval = setInterval(() => refresh(), 15000);
-    return () => { controller.abort(); clearInterval(interval); };
-  }, [refresh]);
-
-  async function handleTrigger(name: string) {
-    setMsg("");
-    setErr("");
-    setTriggering(name);
-    try {
-      await api.triggerJob(name);
-      setMsg(`Job "${formatJobName(name)}" queued successfully`);
-      refresh();
-    } catch (e: unknown) {
+  const triggerJobMutation = useMutation({
+    mutationFn: (name: string) => api.triggerJob(name),
+    onSuccess: (_data, name) => setMsg(`Job "${formatJobName(name)}" queued successfully`),
+    onError: (e: unknown) => {
       setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setTriggering(null);
-    }
-  }
+      toast.error("Failed to trigger job");
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-jobs"] }),
+  });
 
   if (loading) {
     return (
@@ -152,10 +136,10 @@ function BackgroundJobsSection() {
                       <SButton
                         variant="ghost"
                         small
-                        onClick={() => handleTrigger(cron.name)}
-                        disabled={triggering === cron.name}
+                        onClick={() => triggerJobMutation.mutate(cron.name)}
+                        disabled={triggerJobMutation.isPending && triggerJobMutation.variables === cron.name}
                       >
-                        {triggering === cron.name ? "Queuing..." : "Run now"}
+                        {triggerJobMutation.isPending && triggerJobMutation.variables === cron.name ? "Queuing..." : "Run now"}
                       </SButton>
                     </div>
                   </div>
@@ -245,8 +229,7 @@ function SettingField({
 }
 
 function AdminSection() {
-  const [settings, setSettings] = useState<AdminSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -256,23 +239,23 @@ function AdminSection() {
   const [clientSecret, setClientSecret] = useState("");
   const [redirectUri, setRedirectUri] = useState("");
 
+  const { data: settings, isLoading: loading } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: ({ signal }) => api.getAdminSettings(signal),
+  });
+
   useEffect(() => {
-    const controller = new AbortController();
-    api.getAdminSettings(controller.signal).then((data) => {
-      if (controller.signal.aborted) return;
-      setSettings(data);
-      setIssuerUrl(data.oidc.issuer_url.source !== "env" ? data.oidc.issuer_url.value : "");
-      setClientId(data.oidc.client_id.source !== "env" ? data.oidc.client_id.value : "");
+    if (settings) {
+      setIssuerUrl(settings.oidc.issuer_url.source !== "env" ? settings.oidc.issuer_url.value : "");
+      setClientId(settings.oidc.client_id.source !== "env" ? settings.oidc.client_id.value : "");
       setClientSecret("");
       setRedirectUri(
-        data.oidc.redirect_uri.source !== "env"
-          ? data.oidc.redirect_uri.value || `${window.location.origin}/api/auth/oidc/callback`
+        settings.oidc.redirect_uri.source !== "env"
+          ? settings.oidc.redirect_uri.value || `${window.location.origin}/api/auth/oidc/callback`
           : ""
       );
-      setLoading(false);
-    }).catch(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, []);
+    }
+  }, [settings]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -290,8 +273,7 @@ function AdminSection() {
       }
       const result = await api.updateAdminSettings(body);
       setMsg(result.oidc_configured ? "OIDC configured successfully" : "Settings saved");
-      const data = await api.getAdminSettings();
-      setSettings(data);
+      void qc.invalidateQueries({ queryKey: ["admin-settings"] });
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -374,16 +356,10 @@ function AdminSection() {
 }
 
 function RuntimeConfigSection() {
-  const [config, setConfig] = useState<AdminConfigResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    api.getAdminConfig(controller.signal)
-      .then((d) => { if (!controller.signal.aborted) { setConfig(d); setLoading(false); } })
-      .catch(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, []);
+  const { data: config, isLoading: loading } = useQuery({
+    queryKey: ["admin-config"],
+    queryFn: ({ signal }) => api.getAdminConfig(signal),
+  });
 
   return (
     <SCard title="Runtime configuration" subtitle="Current server config. Secret values show only whether they are set.">
@@ -434,24 +410,15 @@ const LOG_LEVEL_COLORS: Record<string, string> = {
 };
 
 function LogTailSection() {
-  const [entries, setEntries] = useState<AdminLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState<string>("");
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchLogs = useCallback((signal?: AbortSignal) => {
-    api.getAdminLogs({ limit: 50, level: levelFilter || undefined }, signal)
-      .then((d) => { if (!signal?.aborted) { setEntries(d.entries); setLoading(false); } })
-      .catch(() => { if (!signal?.aborted) setLoading(false); });
-  }, [levelFilter]);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["admin-logs", levelFilter],
+    queryFn: ({ signal }) => api.getAdminLogs({ limit: 50, level: levelFilter || undefined }, signal),
+    refetchInterval: 5_000,
+  });
 
-  // Initial load + polling. Loading state resets via fetchLogs callback results.
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchLogs(controller.signal);
-    intervalRef.current = setInterval(() => fetchLogs(), 5000);
-    return () => { controller.abort(); if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [fetchLogs]);
+  const entries = data?.entries ?? [];
 
   return (
     <SCard
