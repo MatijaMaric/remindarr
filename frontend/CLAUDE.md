@@ -24,6 +24,32 @@
 
 **Avoiding `any`**: use `unknown` for catch blocks and proper types elsewhere. ESLint enforces this. Test files are exempt from `no-explicit-any`.
 
+## Data fetching (TanStack Query)
+
+Server-cache state lives in `@tanstack/react-query`. The `QueryClient` singleton is in `lib/queryClient.ts` (staleTime 30s, gcTime 5m, retry 1) and is mounted in `main.tsx`. Functions in `api.ts` are the raw fetchers — they belong inside `queryFn`/`mutationFn`, never called directly from a component's `useEffect`.
+
+**Reads → `useQuery`**: Any GET that renders server data.
+- `queryFn: ({ signal }) => api.foo(signal)` — always forward the `signal` for cancellation
+- Use a structured array key; **reuse an existing key when components share data** (e.g. `["filters"]`, `["stats"]`)
+- Gate auth-dependent queries with `enabled`
+- Read `isLoading` / `isError` / `data` instead of manual loading/error state
+- Reference: `HomePage.tsx` (`["home","auth"]` query, line ~297)
+
+**Writes → `useMutation`** with optimistic update + invalidation:
+- `onMutate`: `cancelQueries` → snapshot via `getQueryData` → `setQueryData` optimistic → return snapshot
+- `onError`: roll back from snapshot + `toast.error`
+- `onSettled`: `invalidateQueries` for **every** affected key (e.g. a watch toggle invalidates `["stats"]`, `["activity"]`, `["calendar"]`, `["home","auth"]`)
+- Reference: `HomePage.tsx` `toggleWatchedMutation` (line ~333)
+
+**Keep a raw `api.ts` call (no Query) when**:
+- One-shot imperative action with no cached view to update (file import/export, token download, share-link copy)
+- Auth/session flow owned by `AuthContext` / better-auth
+- The call is *inside* a `queryFn` or `mutationFn` — that is the correct home for `api.ts`
+
+**Deferred — do NOT migrate yet**: Settings-tab **form-value submit** handlers (`updateMyProfile`, `updateAdminSettings`, `updateAppearanceSettings`, `updateActivitySettings`, `updateHomepageLayout`, `updateCrowdedWeekSettings`, `updateDepartureAlertSettings`) wait for the planned react-hook-form work. Their reads and action writes (delete/test/trigger/regenerate) are fair game now.
+
+**Tests**: Every migrated component's colocated test must wrap in a fresh `new QueryClient({ defaultOptions: { queries: { retry: false } } })` provider (see any existing `*.test.tsx` for the pattern).
+
 ## Pages (`frontend/src/pages/`)
 
 | File | Purpose |
