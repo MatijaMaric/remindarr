@@ -374,6 +374,7 @@ export default function ReelsPage() {
       showActionError(err instanceof Error ? err.message : "Failed to mark as watched");
     },
     onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["reels", source] });
       void qc.invalidateQueries({ queryKey: ["stats"] });
       void qc.invalidateQueries({ queryKey: ["activity"] });
       void qc.invalidateQueries({ queryKey: ["home", "auth"] });
@@ -386,16 +387,17 @@ export default function ReelsPage() {
     onError: () => {
       showActionError("Failed to undo");
     },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["reels", source] }),
   });
 
   const bulkWatchMutation = useMutation({
     mutationFn: (episodeIds: number[]) => api.watchEpisodesBulk(episodeIds, true),
     onSuccess: () => {
       setSeasonPanel(null);
-      void qc.invalidateQueries({ queryKey: ["reels", source] });
     },
     onError: () => showActionError("Failed to mark episodes as watched"),
     onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["reels", source] });
       void qc.invalidateQueries({ queryKey: ["stats"] });
       void qc.invalidateQueries({ queryKey: ["activity"] });
     },
@@ -404,10 +406,10 @@ export default function ReelsPage() {
   const seasonToggleMutation = useMutation({
     mutationFn: ({ episodeId, currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
       currentlyWatched ? api.unwatchEpisode(episodeId) : api.watchEpisode(episodeId),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["reels", source] }),
     onError: (_err: unknown, { currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
       showActionError(currentlyWatched ? "Failed to unwatch episode" : "Failed to watch episode"),
     onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["reels", source] });
       void qc.invalidateQueries({ queryKey: ["stats"] });
       void qc.invalidateQueries({ queryKey: ["activity"] });
     },
@@ -418,6 +420,7 @@ export default function ReelsPage() {
       isActive ? api.unrateEpisode(episodeId) : api.rateEpisode(episodeId, value),
     onMutate: ({ value, isActive }) => setReelsRating(isActive ? null : value),
     onError: () => setReelsRating(null),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["reels", source] }),
   });
 
   const markWatched = useCallback((titleId: string) => {
