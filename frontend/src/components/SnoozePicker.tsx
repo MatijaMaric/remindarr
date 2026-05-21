@@ -37,10 +37,8 @@ export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoo
 
   const snoozeMutation = useMutation({
     mutationFn: ({ until }: { until: string | null }) => api.setTitleSnooze(titleId, until),
-    onSuccess: () => {
-      onSnoozed?.();
-      setOpen(false);
-    },
+    onMutate: () => setOpen(false),
+    onSuccess: () => onSnoozed?.(),
     onError: () => toast.error("Failed to snooze title"),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["tracked"] });
