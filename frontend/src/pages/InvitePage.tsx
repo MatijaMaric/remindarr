@@ -3,7 +3,7 @@ import { useSearchParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Plus, Trash2, Clock, CheckCircle2, XCircle, UserPlus } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import * as api from "../api";
 import type { InvitationItem } from "../types";
 import ShareButton from "../components/ShareButton";
@@ -37,8 +37,6 @@ export default function InvitePage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [creating, setCreating] = useState(false);
-  const [revoking, setRevoking] = useState<string | null>(null);
   const [redeemResult, setRedeemResult] = useState<RedeemResult>(null);
   const [redeeming, setRedeeming] = useState(false);
 
@@ -51,12 +49,26 @@ export default function InvitePage() {
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
+  const createMutation = useMutation({
+    mutationFn: () => api.createInvitation(),
+    onSuccess: () => toast.success(t("invite.created")),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["invitations"] }),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) => api.revokeInvitation(id),
+    onSuccess: () => toast.success(t("invite.revoked")),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["invitations"] }),
+  });
+
   // Auto-redeem from URL query parameter
   useEffect(() => {
     const code = searchParams.get("code");
     if (!code || redeeming) return;
 
-    setRedeeming(true);
+    setRedeeming(true); // eslint-disable-line react-hooks/set-state-in-effect -- guards against running the effect twice
     api.redeemInvitation(code)
       .then((result) => {
         const inviterName = result.inviter.display_name || result.inviter.username;
@@ -74,32 +86,6 @@ export default function InvitePage() {
         setSearchParams({}, { replace: true });
       });
   }, [searchParams, setSearchParams, redeeming, t]);
-
-  async function handleCreate() {
-    setCreating(true);
-    try {
-      await api.createInvitation();
-      await qc.invalidateQueries({ queryKey: ["invitations"] });
-      toast.success(t("invite.created"));
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function handleRevoke(id: string) {
-    setRevoking(id);
-    try {
-      await api.revokeInvitation(id);
-      await qc.invalidateQueries({ queryKey: ["invitations"] });
-      toast.success(t("invite.revoked"));
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setRevoking(null);
-    }
-  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -129,12 +115,12 @@ export default function InvitePage() {
 
       {/* Generate button */}
       <button
-        onClick={handleCreate}
-        disabled={creating}
+        onClick={() => createMutation.mutate()}
+        disabled={createMutation.isPending}
         className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
       >
         <Plus className="size-4" />
-        {creating ? t("invite.creating") : t("invite.createLink")}
+        {createMutation.isPending ? t("invite.creating") : t("invite.createLink")}
       </button>
 
       {/* Invitations list */}
@@ -152,8 +138,8 @@ export default function InvitePage() {
             <InvitationCard
               key={inv.id}
               invitation={inv}
-              revoking={revoking === inv.id}
-              onRevoke={handleRevoke}
+              revoking={revokeMutation.isPending && revokeMutation.variables === inv.id}
+              onRevoke={(id) => revokeMutation.mutate(id)}
             />
           ))}
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import * as api from "../api";
 import { normalizeSearchTitle } from "../types";
 import type { Episode, RatingValue, SearchTitle, Recommendation } from "../types";
@@ -202,6 +203,7 @@ export default function ReelsPage() {
     ? (rawSource as ReelsSource)
     : "coming-soon";
 
+  const qc = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<ShowCard[]>([]);
   // Ref is always derived from state — never updated independently.
@@ -209,8 +211,6 @@ export default function ReelsPage() {
   // needing to be recreated whenever `cards` changes.
   const cardsRef = useRef(cards);
   useLayoutEffect(() => { cardsRef.current = cards; });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [friendsLovedEmpty, setFriendsLovedEmpty] = useState(false);
   const [actionError, setActionError] = useState("");
   const actionErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -231,35 +231,23 @@ export default function ReelsPage() {
   // Track visible card index for swipe context
   const visibleCardIndexRef = useRef(0);
 
-  // Keep a stable ref to the current source so callbacks can read it without
-  // being recreated.
-  const sourceRef = useRef(source);
-  useLayoutEffect(() => { sourceRef.current = source; });
+  const { data: reelsData, isLoading, isError, error: loadError } = useQuery({
+    queryKey: ["reels", source],
+    queryFn: ({ signal }) => fetchCardsForSource(source, signal),
+    staleTime: 0, // always refetch on mount since user may have watched things elsewhere
+  });
 
+  // Initialize cards from query data.
+  // setState calls here are intentional — they sync local UI state from the query result
+  // so that swipe mutations can update cards independently without re-fetching.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    async function load() {
-      setLoading(true);
-      setError("");
-      setFriendsLovedEmpty(false);
-      try {
-        const { cards: c, friendsLovedEmpty: fl } = await fetchCardsForSource(source, signal);
-        if (!signal.aborted) {
-          setCards(c);
-          setFriendsLovedEmpty(fl);
-        }
-      } catch (err: unknown) {
-        if (!signal.aborted) setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
+    if (reelsData) {
+      setCards(reelsData.cards);
+      setFriendsLovedEmpty(reelsData.friendsLovedEmpty);
     }
-
-    void load();
-    return () => controller.abort();
-  }, [source]);
+  }, [reelsData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Track visible card via scroll position
   useEffect(() => {
@@ -362,7 +350,77 @@ export default function ReelsPage() {
     }
   }, []);
 
-  const markWatched = useCallback(async (titleId: string) => {
+  function showActionError(msg: string) {
+    if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
+    setActionError(msg);
+    actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
+  }
+
+  const watchMutation = useMutation({
+    mutationFn: ({ titleId, episodeId, isMovie }: { titleId: string; episodeId: number; isMovie?: boolean }) =>
+      isMovie ? api.watchMovie(titleId) : api.watchEpisode(episodeId),
+    onError: (err: unknown, { titleId }) => {
+      setCards((prev) =>
+        prev.map((c) => {
+          if (c.titleId !== titleId) return c;
+          const restoredEpisodes = adjustWatchedCount(c.episodes, -1);
+          if (c.caughtUp) {
+            return { ...c, episodes: restoredEpisodes, caughtUp: false, currentIndex: c.episodes.length - 1 };
+          }
+          return { ...c, episodes: restoredEpisodes, currentIndex: Math.max(0, c.currentIndex - 1) };
+        })
+      );
+      setUndoAction(null);
+      showActionError(err instanceof Error ? err.message : "Failed to mark as watched");
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+    },
+  });
+
+  const undoMutation = useMutation({
+    mutationFn: ({ titleId, episodeId, isMovie }: { titleId: string; episodeId: number; isMovie?: boolean }) =>
+      isMovie ? api.unwatchMovie(titleId) : api.unwatchEpisode(episodeId),
+    onError: () => {
+      showActionError("Failed to undo");
+    },
+  });
+
+  const bulkWatchMutation = useMutation({
+    mutationFn: (episodeIds: number[]) => api.watchEpisodesBulk(episodeIds, true),
+    onSuccess: () => {
+      setSeasonPanel(null);
+      void qc.invalidateQueries({ queryKey: ["reels", source] });
+    },
+    onError: () => showActionError("Failed to mark episodes as watched"),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const seasonToggleMutation = useMutation({
+    mutationFn: ({ episodeId, currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
+      currentlyWatched ? api.unwatchEpisode(episodeId) : api.watchEpisode(episodeId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["reels", source] }),
+    onError: (_err: unknown, { currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
+      showActionError(currentlyWatched ? "Failed to unwatch episode" : "Failed to watch episode"),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["stats"] });
+      void qc.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
+
+  const rateReelsMutation = useMutation({
+    mutationFn: ({ episodeId, value, isActive }: { episodeId: number; value: RatingValue; isActive: boolean }) =>
+      isActive ? api.unrateEpisode(episodeId) : api.rateEpisode(episodeId, value),
+    onMutate: ({ value, isActive }) => setReelsRating(isActive ? null : value),
+    onError: () => setReelsRating(null),
+  });
+
+  const markWatched = useCallback((titleId: string) => {
     const card = cardsRef.current.find((c) => c.titleId === titleId);
     if (!card || card.caughtUp) return;
     const episode = card.episodes[card.currentIndex];
@@ -377,6 +435,7 @@ export default function ReelsPage() {
       isMovie: card.isMovie,
     };
 
+    // Optimistic update
     setCards((prev) => {
       return prev.map((c) => {
         if (c.titleId !== titleId || c.caughtUp) return c;
@@ -401,48 +460,16 @@ export default function ReelsPage() {
       setCards((prev) => prev.filter((c) => !(c.titleId === titleId && c.caughtUp)));
     }, 5000);
 
-    try {
-      if (card.isMovie) {
-        await api.watchMovie(titleId);
-      } else {
-        await api.watchEpisode(episode.id);
-      }
-    } catch (err: unknown) {
-      // Revert on failure
-      setCards((prev) =>
-        prev.map((c) => {
-          if (c.titleId !== titleId) return c;
-          const restoredEpisodes = adjustWatchedCount(c.episodes, -1);
-          if (c.caughtUp) {
-            return { ...c, episodes: restoredEpisodes, caughtUp: false, currentIndex: c.episodes.length - 1 };
-          }
-          return { ...c, episodes: restoredEpisodes, currentIndex: Math.max(0, c.currentIndex - 1) };
-        })
-      );
-      setUndoAction(null);
-      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err instanceof Error ? err.message : "Failed to mark episode as watched");
-      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
-    }
-  }, []);
+    watchMutation.mutate({ titleId, episodeId: episode.id, isMovie: card.isMovie });
+  }, [watchMutation]);
 
-  const handleReelsRate = useCallback(async (value: RatingValue) => {
+  const handleReelsRate = useCallback((value: RatingValue) => {
     if (!undoAction) return;
     const isActive = reelsRating === value;
-    try {
-      if (isActive) {
-        await api.unrateEpisode(undoAction.episodeId);
-        setReelsRating(null);
-      } else {
-        await api.rateEpisode(undoAction.episodeId, value);
-        setReelsRating(value);
-      }
-    } catch {
-      // Non-critical: silently ignore rating errors in Reels
-    }
-  }, [undoAction, reelsRating]);
+    rateReelsMutation.mutate({ episodeId: undoAction.episodeId, value, isActive });
+  }, [undoAction, reelsRating, rateReelsMutation]);
 
-  const handleUndo = useCallback(async () => {
+  const handleUndo = useCallback(() => {
     if (!undoAction) return;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setUndoAction(null);
@@ -460,53 +487,18 @@ export default function ReelsPage() {
       })
     );
 
-    try {
-      if (undoAction.isMovie) {
-        await api.unwatchMovie(undoAction.titleId);
-      } else {
-        await api.unwatchEpisode(undoAction.episodeId);
-      }
-    } catch (err: unknown) {
-      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err instanceof Error ? err.message : "Failed to undo");
-      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
-    }
-  }, [undoAction]);
+    undoMutation.mutate({ titleId: undoAction.titleId, episodeId: undoAction.episodeId, isMovie: undoAction.isMovie });
+  }, [undoAction, undoMutation]);
 
   // Season panel: bulk mark watched
-  const handleBulkWatch = useCallback(async (episodeIds: number[]) => {
-    try {
-      await api.watchEpisodesBulk(episodeIds, true);
-      // Reload data for current source
-      const { cards: c, friendsLovedEmpty: fl } = await fetchCardsForSource(sourceRef.current);
-      setCards(c);
-      setFriendsLovedEmpty(fl);
-      setSeasonPanel(null);
-    } catch (err: unknown) {
-      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err instanceof Error ? err.message : "Failed to mark episodes as watched");
-      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
-    }
-  }, []);
+  const handleBulkWatch = useCallback((episodeIds: number[]) => {
+    bulkWatchMutation.mutate(episodeIds);
+  }, [bulkWatchMutation]);
 
   // Season panel: toggle individual episode watched
-  const handleSeasonToggleWatched = useCallback(async (episodeId: number, currentlyWatched: boolean) => {
-    try {
-      if (currentlyWatched) {
-        await api.unwatchEpisode(episodeId);
-      } else {
-        await api.watchEpisode(episodeId);
-      }
-      // Reload data for current source
-      const { cards: c, friendsLovedEmpty: fl } = await fetchCardsForSource(sourceRef.current);
-      setCards(c);
-      setFriendsLovedEmpty(fl);
-    } catch (err: unknown) {
-      if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
-      setActionError(err instanceof Error ? err.message : "Failed to update watched status");
-      actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
-    }
-  }, []);
+  const handleSeasonToggleWatched = useCallback((episodeId: number, currentlyWatched: boolean) => {
+    seasonToggleMutation.mutate({ episodeId, currentlyWatched });
+  }, [seasonToggleMutation]);
 
   const getUndoInfo = (titleId: string): UndoInfo | undefined => {
     if (!undoAction || undoAction.titleId !== titleId) return undefined;
@@ -533,15 +525,16 @@ export default function ReelsPage() {
     setSearchParams({ source: s }, { replace: true });
   }
 
-  if (loading) {
+  if (isLoading) {
     return <ReelsSkeleton />;
   }
 
-  if (error) {
+  if (isError) {
+    const errorMessage = loadError instanceof Error ? loadError.message : String(loadError);
     return (
       <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}>
         <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
+          <p className="text-red-400 mb-4">{errorMessage}</p>
           <Link to="/" className="text-amber-400 hover:text-amber-300">
             Go back
           </Link>
