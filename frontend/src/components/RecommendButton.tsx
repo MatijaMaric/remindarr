@@ -29,7 +29,7 @@ export default function RecommendButton({ titleId }: Props) {
   const { data: recData } = useQuery({
     queryKey: ["recommendation-check", titleId],
     enabled: !!user,
-    queryFn: () => api.checkRecommendation(titleId),
+    queryFn: ({ signal }) => api.checkRecommendation(titleId, signal),
   });
 
   const recommended = recData?.recommended ?? false;

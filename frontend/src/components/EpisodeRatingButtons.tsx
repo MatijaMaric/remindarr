@@ -32,7 +32,7 @@ export default function EpisodeRatingButtons({ episodeId }: EpisodeRatingButtons
 
   const { data: ratingData, isLoading } = useQuery({
     queryKey: ["episode-rating", episodeId],
-    queryFn: () => api.getEpisodeRating(episodeId),
+    queryFn: ({ signal }) => api.getEpisodeRating(episodeId, signal),
   });
 
   // Sync reviewText and showReview when data loads with an existing review
