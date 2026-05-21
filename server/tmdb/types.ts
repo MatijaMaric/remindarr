@@ -317,6 +317,26 @@ export interface TmdbMovieFullDetails {
   "watch/providers": { results: Record<string, TmdbWatchProviderCountry> };
   external_ids?: TmdbExternalIds;
   videos?: { results: TmdbVideo[] };
+  belongs_to_collection: { id: number; name: string; poster_path: string | null; backdrop_path: string | null } | null;
+}
+
+export interface TmdbCollectionPart {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string | null;
+  overview: string;
+  vote_average: number;
+}
+
+export interface TmdbCollectionDetails {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  parts: TmdbCollectionPart[];
 }
 
 export interface TmdbShowFullDetails {
