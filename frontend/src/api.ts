@@ -687,9 +687,10 @@ export async function testNotifier(
 }
 
 export async function getNotifierHistory(
-  id: string
+  id: string,
+  signal?: AbortSignal
 ): Promise<NotifierHistoryResponse> {
-  return fetchJson<NotifierHistoryResponse>(`/notifiers/${encodeURIComponent(id)}/history`);
+  return fetchJson<NotifierHistoryResponse>(`/notifiers/${encodeURIComponent(id)}/history`, { signal });
 }
 
 // ─── Social (Follow/Unfollow) ────────────────────────────────────────────────

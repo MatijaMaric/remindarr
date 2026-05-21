@@ -53,30 +53,14 @@ const COUNTRIES = [
   { code: "ZA", name: "South Africa" },
 ];
 
-function ProfileEditSection() {
+function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [countryCode, setCountryCode] = useState("");
+  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
+  const [bio, setBio] = useState(profile.bio ?? "");
+  const [countryCode, setCountryCode] = useState(profile.country_code ?? "");
   const [msg, setMsg] = useState("");
   const { run, error: saveErr, pending: saving } = useAsyncError();
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["my-profile"],
-    queryFn: ({ signal }) => api.getMyProfile(signal),
-  });
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    // syncing server-backed initial values into controlled form fields
-    if (data) {
-      setDisplayName(data.display_name ?? "");
-      setBio(data.bio ?? "");
-      setCountryCode(data.country_code ?? "");
-    }
-  }, [data]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -90,8 +74,6 @@ function ProfileEditSection() {
       setMsg(t("profile.profileSaved"));
     });
   }
-
-  if (isLoading) return null;
 
   return (
     <SCard
@@ -140,6 +122,18 @@ function ProfileEditSection() {
       </form>
     </SCard>
   );
+}
+
+function ProfileEditSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: ({ signal }) => api.getMyProfile(signal),
+  });
+
+  if (isLoading) return null;
+  if (!data) return null;
+
+  return <ProfileEditForm profile={data} />;
 }
 
 function passwordStrength(pw: string): number {

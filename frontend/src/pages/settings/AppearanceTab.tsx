@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import * as api from "../../api";
@@ -28,16 +28,6 @@ const SECTION_LABELS: Record<string, string> = {
   streak: "settings.homepage.sections.streak",
 };
 
-const DEFAULT_APPEARANCE: AppearanceSettings = {
-  themeVariant: "dark",
-  accentColor: "amber",
-  density: "comfortable",
-  reduceMotion: 0,
-  highContrast: 0,
-  hideEpisodeSpoilers: 0,
-  autoplayTrailers: 0,
-};
-
 function ThemeSection() {
   const { t } = useTranslation();
 
@@ -51,31 +41,21 @@ function ThemeSection() {
   );
 }
 
-function AppearanceSection() {
+function AppearanceControls({ initialData }: { initialData: AppearanceSettings }) {
   const { t } = useTranslation();
   const { setTheme } = useTheme();
-  const [settings, setSettings] = useState<AppearanceSettings>(DEFAULT_APPEARANCE);
+  const [settings, setSettings] = useState<AppearanceSettings>(initialData);
   const [saved, setSaved] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data } = useQuery({
-    queryKey: ["appearance-settings"],
-    queryFn: ({ signal }) => api.getAppearanceSettings(signal),
-  });
-
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  // Apply appearance and theme on mount from server-fetched data
   useEffect(() => {
-    // syncing server-backed initial values into controlled appearance state
-    if (data) {
-      setSettings(data);
-      applyAppearance(data);
-      if (data.themeVariant) setTheme(data.themeVariant as Parameters<typeof setTheme>[0]);
-    }
-  // mount-only load — setTheme identity not tracked intentionally
-  }, [data]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+    applyAppearance(initialData);
+    if (initialData.themeVariant) setTheme(initialData.themeVariant as Parameters<typeof setTheme>[0]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only — initialData is stable on first render; setTheme identity not tracked
 
-  async function save(patch: Partial<AppearanceSettings>) {
+  const save = useCallback(async (patch: Partial<AppearanceSettings>) => {
     const next = { ...settings, ...patch };
     setSettings(next);
     applyAppearance(next);
@@ -89,7 +69,7 @@ function AppearanceSection() {
     } catch {
       // silently ignore
     }
-  }
+  }, [settings]);
 
   function handleAccentChange(accent: AccentColor) {
     save({ accentColor: accent });
@@ -151,6 +131,17 @@ function AppearanceSection() {
       </SCard>
     </>
   );
+}
+
+function AppearanceSection() {
+  const { data } = useQuery({
+    queryKey: ["appearance-settings"],
+    queryFn: ({ signal }) => api.getAppearanceSettings(signal),
+  });
+
+  if (!data) return null;
+
+  return <AppearanceControls initialData={data} />;
 }
 
 function HomepageLayoutSection() {
