@@ -42,7 +42,7 @@ function CollectionRowInner({ collectionId, collectionName, currentTitleId }: Co
           ))}
         </div>
       ) : (
-        <ScrollableRow className="gap-3 pb-1">
+        <ScrollableRow className="gap-3 py-1">
           {parts.map((part) => {
             const isCurrent = `movie-${part.id}` === currentTitleId;
             const imgSrc = posterUrl(part.poster_path, "w185");
