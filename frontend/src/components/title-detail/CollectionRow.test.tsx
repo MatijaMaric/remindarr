@@ -88,6 +88,17 @@ describe("CollectionRow", () => {
     expect(towersLink?.getAttribute("aria-current")).toBeNull();
   });
 
+  it("gives the scroll row top padding so the current item's ring isn't clipped", async () => {
+    render(
+      <CollectionRow collectionId={119} collectionName="The Lord of the Rings Collection" currentTitleId="movie-120" />,
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => screen.getByText("The Fellowship of the Ring"));
+    const row = screen.getByText("The Fellowship of the Ring").closest("a")!.parentElement!;
+    expect(row.className).toContain("py-1");
+    expect(row.className).not.toContain("pb-1");
+  });
+
   it("renders nothing when there are no parts", () => {
     const testClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     testClient.setQueryData(["collection", 119], { ...mockCollection, parts: [] });
