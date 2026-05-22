@@ -1,5 +1,7 @@
 Scaffold a new Hono route with zod validation, colocated tests, and dual wiring.
 
+**Canonical references** (auto-loaded in your context): `server/routes/CLAUDE.md` — validation pattern and test block requirements; `server/CLAUDE.md` — entry-point sync invariant.
+
 **Usage**: `/new-route <name>`
 
 Example: `/new-route watchlist-export`

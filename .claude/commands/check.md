@@ -3,6 +3,7 @@ Run `bun run check` (the full CI pipeline: server tsc + frontend tsc + ESLint + 
 If it exits zero: report "✅ All checks passed" and the runtime.
 
 If it exits non-zero: group failures by phase. For each failing phase, quote the **first** failure with `file:line` and a one-line description. Use this grouping:
+
 - **server-tsc**: TypeScript errors in `server/`
 - **frontend-tsc**: TypeScript errors in `frontend/`
 - **lint**: ESLint errors or warnings
