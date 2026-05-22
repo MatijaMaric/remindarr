@@ -70,7 +70,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
 /** Fetches a binary response. Returns the raw Response so callers can read the
  *  blob and headers (e.g. Content-Disposition for downloads). */
-async function fetchBlob(url: string, options?: RequestInit): Promise<Response> {
+async function fetchBlob(
+  url: string,
+  options?: RequestInit,
+): Promise<Response> {
   return doFetch(url, { credentials: "include", ...options });
 }
 
@@ -80,17 +83,20 @@ async function fetchForm<T>(url: string, form: FormData): Promise<T> {
   return res.json();
 }
 
-export async function getTitles(params: {
-  daysBack?: number;
-  type?: string;
-  provider?: string;
-  genre?: string;
-  language?: string;
-  excludeTracked?: boolean;
-  onlyMine?: boolean;
-  limit?: number;
-  offset?: number;
-} = {}, signal?: AbortSignal): Promise<{ titles: Title[]; count: number }> {
+export async function getTitles(
+  params: {
+    daysBack?: number;
+    type?: string;
+    provider?: string;
+    genre?: string;
+    language?: string;
+    excludeTracked?: boolean;
+    onlyMine?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {},
+  signal?: AbortSignal,
+): Promise<{ titles: Title[]; count: number }> {
   const qs = new URLSearchParams();
   if (params.daysBack != null) qs.set("daysBack", String(params.daysBack));
   if (params.type) qs.set("type", params.type);
@@ -119,24 +125,28 @@ export async function searchTitles(
   qs.set("q", query);
   if (filters?.yearMin != null) qs.set("year_min", String(filters.yearMin));
   if (filters?.yearMax != null) qs.set("year_max", String(filters.yearMax));
-  if (filters?.minRating != null) qs.set("min_rating", String(filters.minRating));
+  if (filters?.minRating != null)
+    qs.set("min_rating", String(filters.minRating));
   if (filters?.language) qs.set("language", filters.language);
   if (filters?.type) qs.set("type", filters.type);
   return fetchJson(`/search?${qs}`, { signal });
 }
 
-export async function browseTitles(params: {
-  category: string;
-  type?: string;
-  page?: number;
-  genre?: string;
-  provider?: string;
-  language?: string;
-  yearMin?: number;
-  yearMax?: number;
-  minRating?: number;
-  onlyMine?: boolean;
-}, signal?: AbortSignal): Promise<{
+export async function browseTitles(
+  params: {
+    category: string;
+    type?: string;
+    page?: number;
+    genre?: string;
+    provider?: string;
+    language?: string;
+    yearMin?: number;
+    yearMax?: number;
+    minRating?: number;
+    onlyMine?: boolean;
+  },
+  signal?: AbortSignal,
+): Promise<{
   titles: SearchTitle[];
   page: number;
   totalPages: number;
@@ -156,19 +166,30 @@ export async function browseTitles(params: {
   return fetchJson(`/browse?${qs}`, { signal });
 }
 
-export async function syncReleases(daysBack = 30, type?: string): Promise<{ success: boolean; count: number; message: string }> {
+export async function syncReleases(
+  daysBack = 30,
+  type?: string,
+): Promise<{ success: boolean; count: number; message: string }> {
   return fetchJson("/sync", {
     method: "POST",
     body: JSON.stringify({ daysBack, type }),
   });
 }
 
-export async function trackTitle(id: string, notes?: string, titleData?: Title): Promise<void> {
+export async function trackTitle(
+  id: string,
+  notes?: string,
+  titleData?: Title,
+): Promise<void> {
   await fetchJson(`/track/${encodeURIComponent(id)}`, {
     method: "POST",
     body: JSON.stringify({ notes, titleData }),
   });
-  if (titleData && "serviceWorker" in navigator && navigator.serviceWorker.controller) {
+  if (
+    titleData &&
+    "serviceWorker" in navigator &&
+    navigator.serviceWorker.controller
+  ) {
     navigator.serviceWorker.controller.postMessage({
       type: "PRECACHE_TITLE",
       titleId: id,
@@ -183,7 +204,12 @@ export async function untrackTitle(id: string): Promise<void> {
   });
 }
 
-export async function getTrackedTitles(signal?: AbortSignal): Promise<{ titles: (Title & { public: boolean })[]; count: number; profile_public: boolean; profile_visibility: string }> {
+export async function getTrackedTitles(signal?: AbortSignal): Promise<{
+  titles: (Title & { public: boolean })[];
+  count: number;
+  profile_public: boolean;
+  profile_visibility: string;
+}> {
   return fetchJson("/track", { signal });
 }
 
@@ -200,7 +226,9 @@ export async function exportWatchlist(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-export async function importWatchlist(file: File): Promise<{ success: boolean; imported: number; skipped: number }> {
+export async function importWatchlist(
+  file: File,
+): Promise<{ success: boolean; imported: number; skipped: number }> {
   const text = await file.text();
   return fetchJson("/track/import", {
     method: "POST",
@@ -208,7 +236,12 @@ export async function importWatchlist(file: File): Promise<{ success: boolean; i
   });
 }
 
-export async function importCsv(file: File): Promise<{ imported: number; failed: number; skipped: number; errors: string[] }> {
+export async function importCsv(file: File): Promise<{
+  imported: number;
+  failed: number;
+  skipped: number;
+  errors: string[];
+}> {
   const form = new FormData();
   form.append("file", file);
   return fetchForm("/import/csv", form);
@@ -216,7 +249,10 @@ export async function importCsv(file: File): Promise<{ imported: number; failed:
 
 // ─── User Profile ──────────────────────────────────────────────────────────
 
-export async function getUserProfile(username: string, signal?: AbortSignal): Promise<UserProfileResponse> {
+export async function getUserProfile(
+  username: string,
+  signal?: AbortSignal,
+): Promise<UserProfileResponse> {
   return fetchJson(`/user/${encodeURIComponent(username)}`, { signal });
 }
 
@@ -229,10 +265,15 @@ export async function getUserActivity(
   if (options.limit) params.set("limit", String(options.limit));
   if (options.before) params.set("before", options.before);
   const qs = params.toString();
-  return fetchJson(`/user/${encodeURIComponent(username)}/activity${qs ? `?${qs}` : ""}`, { signal });
+  return fetchJson(
+    `/user/${encodeURIComponent(username)}/activity${qs ? `?${qs}` : ""}`,
+    { signal },
+  );
 }
 
-export async function updateMyBio(bio: string | null): Promise<{ bio: string | null }> {
+export async function updateMyBio(
+  bio: string | null,
+): Promise<{ bio: string | null }> {
   return fetchJson("/user/me/bio", {
     method: "PATCH",
     body: JSON.stringify({ bio }),
@@ -259,7 +300,9 @@ export async function updateMyProfile(
   });
 }
 
-export async function getActivitySettings(signal?: AbortSignal): Promise<ActivitySettings> {
+export async function getActivitySettings(
+  signal?: AbortSignal,
+): Promise<ActivitySettings> {
   return fetchJson("/user/me/activity-settings", { signal });
 }
 
@@ -272,90 +315,131 @@ export async function updateActivitySettings(
   });
 }
 
-export async function hideActivityEvent(eventKind: string, eventKey: string): Promise<void> {
+export async function hideActivityEvent(
+  eventKind: string,
+  eventKey: string,
+): Promise<void> {
   await fetchJson("/user/me/activity/hide", {
     method: "POST",
     body: JSON.stringify({ event_kind: eventKind, event_key: eventKey }),
   });
 }
 
-export async function unhideActivityEvent(eventKind: string, eventKey: string): Promise<void> {
-  await fetchJson(`/user/me/activity/hide/${encodeURIComponent(eventKind)}/${encodeURIComponent(eventKey)}`, {
+export async function unhideActivityEvent(
+  eventKind: string,
+  eventKey: string,
+): Promise<void> {
+  await fetchJson(
+    `/user/me/activity/hide/${encodeURIComponent(eventKind)}/${encodeURIComponent(eventKey)}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export async function pinTitle(titleId: string): Promise<{ pinned: boolean }> {
+  return fetchJson(`/user/me/pinned/${encodeURIComponent(titleId)}`, {
+    method: "POST",
+  });
+}
+
+export async function unpinTitle(
+  titleId: string,
+): Promise<{ pinned: boolean }> {
+  return fetchJson(`/user/me/pinned/${encodeURIComponent(titleId)}`, {
     method: "DELETE",
   });
 }
 
-export async function pinTitle(titleId: string): Promise<{ pinned: boolean }> {
-  return fetchJson(`/user/me/pinned/${encodeURIComponent(titleId)}`, { method: "POST" });
-}
-
-export async function unpinTitle(titleId: string): Promise<{ pinned: boolean }> {
-  return fetchJson(`/user/me/pinned/${encodeURIComponent(titleId)}`, { method: "DELETE" });
-}
-
-export async function reorderPinnedTitles(titleIds: string[]): Promise<{ ok: boolean }> {
+export async function reorderPinnedTitles(
+  titleIds: string[],
+): Promise<{ ok: boolean }> {
   return fetchJson("/user/me/pinned/order", {
     method: "PUT",
     body: JSON.stringify({ titleIds }),
   });
 }
 
-export async function updateProfileVisibility(visibility: string): Promise<void> {
+export async function updateProfileVisibility(
+  visibility: string,
+): Promise<void> {
   await fetchJson("/track/profile-visibility", {
     method: "PATCH",
     body: JSON.stringify({ visibility }),
   });
 }
 
-export async function updateTitleVisibility(titleId: string, isPublic: boolean): Promise<void> {
+export async function updateTitleVisibility(
+  titleId: string,
+  isPublic: boolean,
+): Promise<void> {
   await fetchJson(`/track/${encodeURIComponent(titleId)}/visibility`, {
     method: "PATCH",
     body: JSON.stringify({ public: isPublic }),
   });
 }
 
-export async function updateTrackedStatus(titleId: string, status: string | null): Promise<void> {
+export async function updateTrackedStatus(
+  titleId: string,
+  status: string | null,
+): Promise<void> {
   await fetchJson(`/track/${encodeURIComponent(titleId)}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
 }
 
-export async function updateAllTitleVisibility(isPublic: boolean): Promise<void> {
+export async function updateAllTitleVisibility(
+  isPublic: boolean,
+): Promise<void> {
   await fetchJson("/track/visibility", {
     method: "PATCH",
     body: JSON.stringify({ public: isPublic }),
   });
 }
 
-export async function searchUsers(query: string, signal?: AbortSignal): Promise<{ users: UserSummary[] }> {
+export async function searchUsers(
+  query: string,
+  signal?: AbortSignal,
+): Promise<{ users: UserSummary[] }> {
   return fetchJson(`/user/search?q=${encodeURIComponent(query)}`, { signal });
 }
 
-export async function resolveImdb(url: string): Promise<{ success: boolean; title: SearchTitle }> {
+export async function resolveImdb(
+  url: string,
+): Promise<{ success: boolean; title: SearchTitle }> {
   return fetchJson("/imdb", {
     method: "POST",
     body: JSON.stringify({ url }),
   });
 }
 
-export async function getProviders(signal?: AbortSignal): Promise<{ providers: Provider[]; regionProviderIds: number[] }> {
+export async function getProviders(
+  signal?: AbortSignal,
+): Promise<{ providers: Provider[]; regionProviderIds: number[] }> {
   return fetchJson("/titles/providers", { signal });
 }
 
-export async function getGenres(signal?: AbortSignal): Promise<{ genres: string[] }> {
+export async function getGenres(
+  signal?: AbortSignal,
+): Promise<{ genres: string[] }> {
   return fetchJson("/titles/genres", { signal });
 }
 
-export async function getLanguages(signal?: AbortSignal): Promise<{ languages: string[]; priorityLanguageCodes: string[] }> {
+export async function getLanguages(
+  signal?: AbortSignal,
+): Promise<{ languages: string[]; priorityLanguageCodes: string[] }> {
   return fetchJson("/titles/languages", { signal });
 }
 
-export async function getCalendarTitles(params: {
-  month: string;
-  type?: string;
-  provider?: string;
-}, signal?: AbortSignal): Promise<{ titles: Title[]; episodes: Episode[]; count: number }> {
+export async function getCalendarTitles(
+  params: {
+    month: string;
+    type?: string;
+    provider?: string;
+  },
+  signal?: AbortSignal,
+): Promise<{ titles: Title[]; episodes: Episode[]; count: number }> {
   const qs = new URLSearchParams();
   qs.set("month", params.month);
   if (params.type) qs.set("type", params.type);
@@ -363,11 +447,18 @@ export async function getCalendarTitles(params: {
   return fetchJson(`/calendar?${qs}`, { signal });
 }
 
-export async function syncEpisodes(): Promise<{ success: boolean; synced: number; shows: number; message: string }> {
+export async function syncEpisodes(): Promise<{
+  success: boolean;
+  synced: number;
+  shows: number;
+  message: string;
+}> {
   return fetchJson("/episodes/sync", { method: "POST" });
 }
 
-export async function getUpcomingEpisodes(signal?: AbortSignal): Promise<{ today: Episode[]; upcoming: Episode[]; unwatched: Episode[] }> {
+export async function getUpcomingEpisodes(
+  signal?: AbortSignal,
+): Promise<{ today: Episode[]; upcoming: Episode[]; unwatched: Episode[] }> {
   return fetchJson("/episodes/upcoming", { signal });
 }
 
@@ -375,8 +466,13 @@ export async function getSeasonEpisodeStatus(
   titleId: string,
   season: number,
   signal?: AbortSignal,
-): Promise<{ episodes: Array<{ episode_number: number; id: number; is_watched: boolean }> }> {
-  return fetchJson(`/episodes/status/${encodeURIComponent(titleId)}/${season}`, { signal });
+): Promise<{
+  episodes: Array<{ episode_number: number; id: number; is_watched: boolean }>;
+}> {
+  return fetchJson(
+    `/episodes/status/${encodeURIComponent(titleId)}/${season}`,
+    { signal },
+  );
 }
 
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
@@ -396,7 +492,11 @@ export async function watchEpisodesBulk(
 ): Promise<void> {
   await fetchJson("/watched/bulk", {
     method: "POST",
-    body: JSON.stringify({ episodeIds, watched, useAirDate: options?.useAirDate }),
+    body: JSON.stringify({
+      episodeIds,
+      watched,
+      useAirDate: options?.useAirDate,
+    }),
   });
 }
 
@@ -412,19 +512,39 @@ export async function backdateWatchedToAirDate(
 // ─── Watched Movies ──────────────────────────────────────────────────────────
 
 export async function watchMovie(titleId: string): Promise<void> {
-  await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, { method: "POST" });
+  await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, {
+    method: "POST",
+  });
 }
 
 export async function unwatchMovie(titleId: string): Promise<void> {
-  await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, { method: "DELETE" });
+  await fetchJson(`/watched/movies/${encodeURIComponent(titleId)}`, {
+    method: "DELETE",
+  });
 }
 
 export interface MovieTrackResponse {
-  to_watch: { id: string; title: string; release_date: string | null; release_year: number | null; poster_url: string | null; offers: { url: string; provider_name: string }[] }[];
-  upcoming: { id: string; title: string; release_date: string | null; release_year: number | null; poster_url: string | null; offers: { url: string; provider_name: string }[] }[];
+  to_watch: {
+    id: string;
+    title: string;
+    release_date: string | null;
+    release_year: number | null;
+    poster_url: string | null;
+    offers: { url: string; provider_name: string }[];
+  }[];
+  upcoming: {
+    id: string;
+    title: string;
+    release_date: string | null;
+    release_year: number | null;
+    poster_url: string | null;
+    offers: { url: string; provider_name: string }[];
+  }[];
 }
 
-export async function getMovieTracking(signal?: AbortSignal): Promise<MovieTrackResponse> {
+export async function getMovieTracking(
+  signal?: AbortSignal,
+): Promise<MovieTrackResponse> {
   return fetchJson("/movies/tracking", { signal });
 }
 
@@ -434,13 +554,22 @@ export async function getWatchHistory(
   titleId: string,
   options: { limit?: number; before?: string; episodeId?: number } = {},
   signal?: AbortSignal,
-): Promise<{ history: WatchHistoryEntry[]; playCount: number; has_more: boolean; next_cursor: string | null }> {
+): Promise<{
+  history: WatchHistoryEntry[];
+  playCount: number;
+  has_more: boolean;
+  next_cursor: string | null;
+}> {
   const params = new URLSearchParams();
   if (options.limit) params.set("limit", String(options.limit));
   if (options.before) params.set("before", options.before);
-  if (options.episodeId != null) params.set("episodeId", String(options.episodeId));
+  if (options.episodeId != null)
+    params.set("episodeId", String(options.episodeId));
   const qs = params.toString();
-  return fetchJson(`/watched/history/${encodeURIComponent(titleId)}${qs ? `?${qs}` : ""}`, { signal });
+  return fetchJson(
+    `/watched/history/${encodeURIComponent(titleId)}${qs ? `?${qs}` : ""}`,
+    { signal },
+  );
 }
 
 export async function patchWatchHistoryEntry(
@@ -456,29 +585,56 @@ export async function patchWatchHistoryEntry(
 
 // ─── Details ────────────────────────────────────────────────────────────────
 
-export async function getMovieDetails(titleId: string, signal?: AbortSignal): Promise<MovieDetailsResponse> {
+export async function getMovieDetails(
+  titleId: string,
+  signal?: AbortSignal,
+): Promise<MovieDetailsResponse> {
   return fetchJson(`/details/movie/${encodeURIComponent(titleId)}`, { signal });
 }
 
-export async function getShowDetails(titleId: string, signal?: AbortSignal): Promise<ShowDetailsResponse> {
+export async function getShowDetails(
+  titleId: string,
+  signal?: AbortSignal,
+): Promise<ShowDetailsResponse> {
   return fetchJson(`/details/show/${encodeURIComponent(titleId)}`, { signal });
 }
 
-export async function getSeasonDetails(titleId: string, season: number, signal?: AbortSignal): Promise<SeasonDetailsResponse> {
-  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}`, { signal });
+export async function getSeasonDetails(
+  titleId: string,
+  season: number,
+  signal?: AbortSignal,
+): Promise<SeasonDetailsResponse> {
+  return fetchJson(
+    `/details/show/${encodeURIComponent(titleId)}/season/${season}`,
+    { signal },
+  );
 }
 
-export async function getEpisodeDetails(titleId: string, season: number, episode: number, signal?: AbortSignal): Promise<EpisodeDetailsResponse> {
-  return fetchJson(`/details/show/${encodeURIComponent(titleId)}/season/${season}/episode/${episode}`, { signal });
+export async function getEpisodeDetails(
+  titleId: string,
+  season: number,
+  episode: number,
+  signal?: AbortSignal,
+): Promise<EpisodeDetailsResponse> {
+  return fetchJson(
+    `/details/show/${encodeURIComponent(titleId)}/season/${season}/episode/${episode}`,
+    { signal },
+  );
 }
 
-export async function getPersonDetails(personId: number, signal?: AbortSignal): Promise<PersonDetailsResponse> {
+export async function getPersonDetails(
+  personId: number,
+  signal?: AbortSignal,
+): Promise<PersonDetailsResponse> {
   return fetchJson(`/details/person/${personId}`, { signal });
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
-export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
   await fetchJson("/auth/change-password", {
     method: "POST",
     body: JSON.stringify({ currentPassword, newPassword }),
@@ -487,11 +643,15 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 
-export async function getAdminSettings(signal?: AbortSignal): Promise<AdminSettings> {
+export async function getAdminSettings(
+  signal?: AbortSignal,
+): Promise<AdminSettings> {
   return fetchJson("/admin/settings", { signal });
 }
 
-export async function updateAdminSettings(settings: AdminSettingsUpdateRequest): Promise<AdminSettingsUpdateResponse> {
+export async function updateAdminSettings(
+  settings: AdminSettingsUpdateRequest,
+): Promise<AdminSettingsUpdateResponse> {
   return fetchJson("/admin/settings", {
     method: "PUT",
     body: JSON.stringify(settings),
@@ -529,7 +689,9 @@ export interface AdminLogsResponse {
   count: number;
 }
 
-export async function getAdminConfig(signal?: AbortSignal): Promise<AdminConfigResponse> {
+export async function getAdminConfig(
+  signal?: AbortSignal,
+): Promise<AdminConfigResponse> {
   return fetchJson("/admin/config", { signal });
 }
 
@@ -578,7 +740,10 @@ export interface RecentJob {
 }
 
 export interface JobsResponse {
-  stats: Record<string, { pending: number; running: number; completed: number; failed: number }>;
+  stats: Record<
+    string,
+    { pending: number; running: number; completed: number; failed: number }
+  >;
   crons: CronJobInfo[];
   recentJobs: RecentJob[];
 }
@@ -587,7 +752,9 @@ export async function getJobs(signal?: AbortSignal): Promise<JobsResponse> {
   return fetchJson("/jobs", { signal });
 }
 
-export async function triggerJob(name: string): Promise<{ success: boolean; jobId: number }> {
+export async function triggerJob(
+  name: string,
+): Promise<{ success: boolean; jobId: number }> {
   return fetchJson(`/jobs/${encodeURIComponent(name)}`, { method: "POST" });
 }
 
@@ -616,15 +783,21 @@ export interface Notifier {
   updated_at: string;
 }
 
-export async function getVapidPublicKey(signal?: AbortSignal): Promise<{ publicKey: string }> {
+export async function getVapidPublicKey(
+  signal?: AbortSignal,
+): Promise<{ publicKey: string }> {
   return fetchJson("/notifiers/vapid-public-key", { signal });
 }
 
-export async function getNotifiers(signal?: AbortSignal): Promise<{ notifiers: Notifier[] }> {
+export async function getNotifiers(
+  signal?: AbortSignal,
+): Promise<{ notifiers: Notifier[] }> {
   return fetchJson("/notifiers", { signal });
 }
 
-export async function getNotifierProviders(signal?: AbortSignal): Promise<{ providers: string[] }> {
+export async function getNotifierProviders(
+  signal?: AbortSignal,
+): Promise<{ providers: string[] }> {
   return fetchJson("/notifiers/providers", { signal });
 }
 
@@ -645,7 +818,14 @@ export interface NotifierPayload {
   achievements_enabled?: boolean;
 }
 
-export async function createNotifier(data: NotifierPayload & { provider: string; config: Record<string, string>; notify_time: string; timezone: string }): Promise<{ notifier: Notifier }> {
+export async function createNotifier(
+  data: NotifierPayload & {
+    provider: string;
+    config: Record<string, string>;
+    notify_time: string;
+    timezone: string;
+  },
+): Promise<{ notifier: Notifier }> {
   return fetchJson("/notifiers", {
     method: "POST",
     body: JSON.stringify(data),
@@ -654,7 +834,7 @@ export async function createNotifier(data: NotifierPayload & { provider: string;
 
 export async function updateNotifier(
   id: string,
-  data: Partial<NotifierPayload>
+  data: Partial<NotifierPayload>,
 ): Promise<{ notifier: Notifier }> {
   return fetchJson(`/notifiers/${encodeURIComponent(id)}`, {
     method: "PUT",
@@ -664,11 +844,24 @@ export async function updateNotifier(
 
 export interface NotificationContent {
   date: string;
-  episodes: { showTitle: string; seasonNumber: number; episodeNumber: number; episodeName: string; posterUrl: string | null; offers: { providerName: string; providerIconUrl: string | null }[] }[];
-  movies: { title: string; posterUrl: string | null; offers: { providerName: string; providerIconUrl: string | null }[] }[];
+  episodes: {
+    showTitle: string;
+    seasonNumber: number;
+    episodeNumber: number;
+    episodeName: string;
+    posterUrl: string | null;
+    offers: { providerName: string; providerIconUrl: string | null }[];
+  }[];
+  movies: {
+    title: string;
+    posterUrl: string | null;
+    offers: { providerName: string; providerIconUrl: string | null }[];
+  }[];
 }
 
-export async function previewNotifier(id: string): Promise<NotificationContent> {
+export async function previewNotifier(
+  id: string,
+): Promise<NotificationContent> {
   return fetchJson(`/notifiers/${encodeURIComponent(id)}/preview`);
 }
 
@@ -679,7 +872,7 @@ export async function deleteNotifier(id: string): Promise<void> {
 }
 
 export async function testNotifier(
-  id: string
+  id: string,
 ): Promise<{ success: boolean; message: string }> {
   return fetchJson(`/notifiers/${encodeURIComponent(id)}/test`, {
     method: "POST",
@@ -688,9 +881,12 @@ export async function testNotifier(
 
 export async function getNotifierHistory(
   id: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<NotifierHistoryResponse> {
-  return fetchJson<NotifierHistoryResponse>(`/notifiers/${encodeURIComponent(id)}/history`, { signal });
+  return fetchJson<NotifierHistoryResponse>(
+    `/notifiers/${encodeURIComponent(id)}/history`,
+    { signal },
+  );
 }
 
 // ─── Social (Follow/Unfollow) ────────────────────────────────────────────────
@@ -707,14 +903,20 @@ export async function unfollowUser(userId: string): Promise<void> {
   });
 }
 
-export async function getFollowers(userId?: string, signal?: AbortSignal): Promise<{ followers: UserSummary[]; count: number }> {
+export async function getFollowers(
+  userId?: string,
+  signal?: AbortSignal,
+): Promise<{ followers: UserSummary[]; count: number }> {
   const path = userId
     ? `/social/followers/${encodeURIComponent(userId)}`
     : "/social/followers";
   return fetchJson(path, { signal });
 }
 
-export async function getFollowing(userId?: string, signal?: AbortSignal): Promise<{ following: UserSummary[]; count: number }> {
+export async function getFollowing(
+  userId?: string,
+  signal?: AbortSignal,
+): Promise<{ following: UserSummary[]; count: number }> {
   const path = userId
     ? `/social/following/${encodeURIComponent(userId)}`
     : "/social/following";
@@ -723,7 +925,10 @@ export async function getFollowing(userId?: string, signal?: AbortSignal): Promi
 
 // ─── Ratings ─────────────────────────────────────────────────────────────────
 
-export async function rateTitle(titleId: string, rating: string): Promise<void> {
+export async function rateTitle(
+  titleId: string,
+  rating: string,
+): Promise<void> {
   await fetchJson(`/ratings/${encodeURIComponent(titleId)}`, {
     method: "POST",
     body: JSON.stringify({ rating }),
@@ -736,11 +941,18 @@ export async function unrateTitle(titleId: string): Promise<void> {
   });
 }
 
-export async function getTitleRating(titleId: string, signal?: AbortSignal): Promise<TitleRatingResponse> {
+export async function getTitleRating(
+  titleId: string,
+  signal?: AbortSignal,
+): Promise<TitleRatingResponse> {
   return fetchJson(`/ratings/${encodeURIComponent(titleId)}`, { signal });
 }
 
-export async function rateEpisode(episodeId: number, rating: string, review?: string): Promise<void> {
+export async function rateEpisode(
+  episodeId: number,
+  rating: string,
+  review?: string,
+): Promise<void> {
   await fetchJson(`/ratings/episode/${episodeId}`, {
     method: "POST",
     body: JSON.stringify({ rating, review }),
@@ -753,28 +965,50 @@ export async function unrateEpisode(episodeId: number): Promise<void> {
   });
 }
 
-export async function getEpisodeRating(episodeId: number, signal?: AbortSignal): Promise<EpisodeRatingResponse> {
+export async function getEpisodeRating(
+  episodeId: number,
+  signal?: AbortSignal,
+): Promise<EpisodeRatingResponse> {
   return fetchJson(`/ratings/episode/${episodeId}`, { signal });
 }
 
-export async function getSeasonEpisodeRatings(titleId: string, season: number, signal?: AbortSignal): Promise<{ ratings: Record<number, Record<RatingValue, number>> }> {
-  return fetchJson(`/ratings/season/${encodeURIComponent(titleId)}/${season}`, { signal });
+export async function getSeasonEpisodeRatings(
+  titleId: string,
+  season: number,
+  signal?: AbortSignal,
+): Promise<{ ratings: Record<number, Record<RatingValue, number>> }> {
+  return fetchJson(`/ratings/season/${encodeURIComponent(titleId)}/${season}`, {
+    signal,
+  });
 }
 
 // ─── Recommendations ──────────────────────────────────────────────────────────
 
-export async function sendRecommendation(titleId: string, message?: string, targetUserId?: string): Promise<{ id: string }> {
+export async function sendRecommendation(
+  titleId: string,
+  message?: string,
+  targetUserId?: string,
+): Promise<{ id: string }> {
   return fetchJson("/recommendations", {
     method: "POST",
     body: JSON.stringify({ titleId, message, targetUserId }),
   });
 }
 
-export async function checkRecommendation(titleId: string, signal?: AbortSignal): Promise<{ recommended: boolean; id: string | null }> {
-  return fetchJson(`/recommendations/check/${encodeURIComponent(titleId)}`, { signal });
+export async function checkRecommendation(
+  titleId: string,
+  signal?: AbortSignal,
+): Promise<{ recommended: boolean; id: string | null }> {
+  return fetchJson(`/recommendations/check/${encodeURIComponent(titleId)}`, {
+    signal,
+  });
 }
 
-export async function getRecommendations(limit?: number, offset?: number, signal?: AbortSignal): Promise<RecommendationsResponse> {
+export async function getRecommendations(
+  limit?: number,
+  offset?: number,
+  signal?: AbortSignal,
+): Promise<RecommendationsResponse> {
   const qs = new URLSearchParams();
   if (limit != null) qs.set("limit", String(limit));
   if (offset != null) qs.set("offset", String(offset));
@@ -782,7 +1016,9 @@ export async function getRecommendations(limit?: number, offset?: number, signal
   return fetchJson(`/recommendations${query ? `?${query}` : ""}`, { signal });
 }
 
-export async function getSentRecommendations(signal?: AbortSignal): Promise<{ recommendations: SentRecommendation[] }> {
+export async function getSentRecommendations(
+  signal?: AbortSignal,
+): Promise<{ recommendations: SentRecommendation[] }> {
   return fetchJson("/recommendations/sent", { signal });
 }
 
@@ -798,26 +1034,40 @@ export async function deleteRecommendation(id: string): Promise<void> {
   });
 }
 
-export async function getUnreadRecommendationCount(signal?: AbortSignal): Promise<{ count: number }> {
+export async function getUnreadRecommendationCount(
+  signal?: AbortSignal,
+): Promise<{ count: number }> {
   return fetchJson("/recommendations/count", { signal });
 }
 
 // ─── Invitations ──────────────────────────────────────────────────────────
 
-export async function createInvitation(): Promise<{ id: string; code: string; expires_at: string }> {
+export async function createInvitation(): Promise<{
+  id: string;
+  code: string;
+  expires_at: string;
+}> {
   return fetchJson("/invitations", { method: "POST" });
 }
 
-export async function getInvitations(signal?: AbortSignal): Promise<{ invitations: InvitationItem[] }> {
+export async function getInvitations(
+  signal?: AbortSignal,
+): Promise<{ invitations: InvitationItem[] }> {
   return fetchJson("/invitations", { signal });
 }
 
-export async function redeemInvitation(code: string): Promise<{ success: boolean; inviter: UserSummary }> {
-  return fetchJson(`/invitations/redeem/${encodeURIComponent(code)}`, { method: "POST" });
+export async function redeemInvitation(
+  code: string,
+): Promise<{ success: boolean; inviter: UserSummary }> {
+  return fetchJson(`/invitations/redeem/${encodeURIComponent(code)}`, {
+    method: "POST",
+  });
 }
 
 export async function revokeInvitation(id: string): Promise<void> {
-  await fetchJson(`/invitations/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await fetchJson(`/invitations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 // ─── Integrations (Plex) ─────────────────────────────────────────────────────
@@ -850,7 +1100,9 @@ export interface PlexServer {
   connections: Array<{ uri: string; local: boolean; relay: boolean }>;
 }
 
-export async function getIntegrations(signal?: AbortSignal): Promise<{ integrations: Integration[] }> {
+export async function getIntegrations(
+  signal?: AbortSignal,
+): Promise<{ integrations: Integration[] }> {
   return fetchJson("/integrations", { signal });
 }
 
@@ -867,7 +1119,11 @@ export async function createIntegration(data: {
 
 export async function updateIntegration(
   id: string,
-  data: Partial<{ name: string; enabled: boolean; config: Partial<PlexIntegrationConfig> }>
+  data: Partial<{
+    name: string;
+    enabled: boolean;
+    config: Partial<PlexIntegrationConfig>;
+  }>,
 ): Promise<{ integration: Integration }> {
   return fetchJson(`/integrations/${encodeURIComponent(id)}`, {
     method: "PUT",
@@ -876,10 +1132,15 @@ export async function updateIntegration(
 }
 
 export async function deleteIntegration(id: string): Promise<void> {
-  await fetchJson(`/integrations/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await fetchJson(`/integrations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
-export async function createPlexPin(): Promise<{ pinId: number; authUrl: string }> {
+export async function createPlexPin(): Promise<{
+  pinId: number;
+  authUrl: string;
+}> {
   return fetchJson("/integrations/plex/pin", { method: "POST" });
 }
 
@@ -891,19 +1152,25 @@ export async function checkPlexPin(pinId: number): Promise<{
   return fetchJson(`/integrations/plex/pin/${pinId}`, { method: "POST" });
 }
 
-export async function refreshPlexServers(authToken: string): Promise<{ servers: PlexServer[] }> {
+export async function refreshPlexServers(
+  authToken: string,
+): Promise<{ servers: PlexServer[] }> {
   return fetchJson("/integrations/plex/servers", {
     method: "POST",
     body: JSON.stringify({ authToken }),
   });
 }
 
-export async function triggerPlexSync(
-  id: string
-): Promise<{ success: boolean; moviesMarked?: number; episodesMarked?: number; error?: string }> {
-  return fetchJson(`/integrations/${encodeURIComponent(id)}/sync`, { method: "POST" });
+export async function triggerPlexSync(id: string): Promise<{
+  success: boolean;
+  moviesMarked?: number;
+  episodesMarked?: number;
+  error?: string;
+}> {
+  return fetchJson(`/integrations/${encodeURIComponent(id)}/sync`, {
+    method: "POST",
+  });
 }
-
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
@@ -911,14 +1178,17 @@ export async function getStats(signal?: AbortSignal): Promise<StatsResponse> {
   return fetchJson("/stats", { signal });
 }
 
-
 // ─── User settings ────────────────────────────────────────────────────────────
 
-export async function getHomepageLayout(signal?: AbortSignal): Promise<{ homepage_layout: HomepageSection[] }> {
+export async function getHomepageLayout(
+  signal?: AbortSignal,
+): Promise<{ homepage_layout: HomepageSection[] }> {
   return fetchJson("/user/settings/homepage-layout", { signal });
 }
 
-export async function updateHomepageLayout(layout: HomepageSection[]): Promise<{ homepage_layout: HomepageSection[] }> {
+export async function updateHomepageLayout(
+  layout: HomepageSection[],
+): Promise<{ homepage_layout: HomepageSection[] }> {
   return fetchJson("/user/settings/homepage-layout", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -926,51 +1196,70 @@ export async function updateHomepageLayout(layout: HomepageSection[]): Promise<{
   });
 }
 
-export async function getDepartureAlertSettings(signal?: AbortSignal): Promise<UserSettings> {
+export async function getDepartureAlertSettings(
+  signal?: AbortSignal,
+): Promise<UserSettings> {
   return fetchJson("/user/settings/departure-alerts", { signal });
 }
 
-export async function updateDepartureAlertSettings(settings: Partial<UserSettings>): Promise<UserSettings> {
+export async function updateDepartureAlertSettings(
+  settings: Partial<UserSettings>,
+): Promise<UserSettings> {
   return fetchJson("/user/settings/departure-alerts", {
     method: "PUT",
     body: JSON.stringify(settings),
   });
 }
 
-export async function getCrowdedWeekSettings(signal?: AbortSignal): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
+export async function getCrowdedWeekSettings(
+  signal?: AbortSignal,
+): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
   return fetchJson("/user/settings/crowded-weeks", { signal });
 }
 
-export async function updateCrowdedWeekSettings(data: { crowdedWeekThreshold?: number; crowdedWeekBadgeEnabled?: number }): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
+export async function updateCrowdedWeekSettings(data: {
+  crowdedWeekThreshold?: number;
+  crowdedWeekBadgeEnabled?: number;
+}): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number }> {
   return fetchJson("/user/settings/crowded-weeks", {
     method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
-export async function getAppearanceSettings(signal?: AbortSignal): Promise<AppearanceSettings> {
+export async function getAppearanceSettings(
+  signal?: AbortSignal,
+): Promise<AppearanceSettings> {
   return fetchJson("/user/settings/appearance", { signal });
 }
 
-export async function updateAppearanceSettings(settings: Partial<AppearanceSettings>): Promise<AppearanceSettings> {
+export async function updateAppearanceSettings(
+  settings: Partial<AppearanceSettings>,
+): Promise<AppearanceSettings> {
   return fetchJson("/user/settings/appearance", {
     method: "PUT",
     body: JSON.stringify(settings),
   });
 }
 
-export async function getSubscriptions(signal?: AbortSignal): Promise<UserSubscriptions> {
+export async function getSubscriptions(
+  signal?: AbortSignal,
+): Promise<UserSubscriptions> {
   return fetchJson("/user/settings/subscriptions", { signal });
 }
 
-export async function updateSubscriptions(providerIds: number[]): Promise<{ providerIds: number[] }> {
+export async function updateSubscriptions(
+  providerIds: number[],
+): Promise<{ providerIds: number[] }> {
   return fetchJson("/user/settings/subscriptions", {
     method: "PUT",
     body: JSON.stringify({ providerIds }),
   });
 }
 
-export async function updateOnlyMine(onlyMine: boolean): Promise<{ onlyMine: boolean }> {
+export async function updateOnlyMine(
+  onlyMine: boolean,
+): Promise<{ onlyMine: boolean }> {
   return fetchJson("/user/settings/subscriptions/only-mine", {
     method: "PUT",
     body: JSON.stringify({ onlyMine }),
@@ -979,7 +1268,10 @@ export async function updateOnlyMine(onlyMine: boolean): Promise<{ onlyMine: boo
 
 // ─── Admin user management ────────────────────────────────────────────────────
 
-export async function getAdminUsers(opts: { search?: string; filter?: string; page?: number } = {}, signal?: AbortSignal): Promise<AdminUsersResponse> {
+export async function getAdminUsers(
+  opts: { search?: string; filter?: string; page?: number } = {},
+  signal?: AbortSignal,
+): Promise<AdminUsersResponse> {
   const params = new URLSearchParams();
   if (opts.search) params.set("search", opts.search);
   if (opts.filter) params.set("filter", opts.filter);
@@ -988,11 +1280,17 @@ export async function getAdminUsers(opts: { search?: string; filter?: string; pa
   return fetchJson(`/admin/users${qs ? `?${qs}` : ""}`, { signal });
 }
 
-export async function getAdminUser(userId: string, signal?: AbortSignal): Promise<{ user: AdminUser }> {
+export async function getAdminUser(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<{ user: AdminUser }> {
   return fetchJson(`/admin/users/${encodeURIComponent(userId)}`, { signal });
 }
 
-export async function setAdminUserRole(userId: string, role: "admin" | "user"): Promise<{ message: string }> {
+export async function setAdminUserRole(
+  userId: string,
+  role: "admin" | "user",
+): Promise<{ message: string }> {
   return fetchJson(`/admin/users/${encodeURIComponent(userId)}/role`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -1000,7 +1298,10 @@ export async function setAdminUserRole(userId: string, role: "admin" | "user"): 
   });
 }
 
-export async function banAdminUser(userId: string, reason?: string): Promise<{ message: string }> {
+export async function banAdminUser(
+  userId: string,
+  reason?: string,
+): Promise<{ message: string }> {
   return fetchJson(`/admin/users/${encodeURIComponent(userId)}/ban`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -1008,7 +1309,9 @@ export async function banAdminUser(userId: string, reason?: string): Promise<{ m
   });
 }
 
-export async function unbanAdminUser(userId: string): Promise<{ message: string }> {
+export async function unbanAdminUser(
+  userId: string,
+): Promise<{ message: string }> {
   return fetchJson(`/admin/users/${encodeURIComponent(userId)}/unban`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -1016,13 +1319,19 @@ export async function unbanAdminUser(userId: string): Promise<{ message: string 
   });
 }
 
-export async function deleteAdminUser(userId: string): Promise<{ message: string }> {
-  return fetchJson(`/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+export async function deleteAdminUser(
+  userId: string,
+): Promise<{ message: string }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
 }
 
 // ─── Calendar feed ────────────────────────────────────────────────────────────
 
-export async function getFeedToken(signal?: AbortSignal): Promise<{ token: string | null }> {
+export async function getFeedToken(
+  signal?: AbortSignal,
+): Promise<{ token: string | null }> {
   return fetchJson("/feed/token", { signal });
 }
 
@@ -1088,12 +1397,18 @@ export interface KioskData {
   unwatched_queue: KioskQueueItem[];
 }
 
-export async function getKioskData(token: string, display?: KioskFidelity, signal?: AbortSignal): Promise<KioskData> {
+export async function getKioskData(
+  token: string,
+  display?: KioskFidelity,
+  signal?: AbortSignal,
+): Promise<KioskData> {
   const params = display ? `?display=${encodeURIComponent(display)}` : "";
   return fetchJson(`/kiosk/${encodeURIComponent(token)}${params}`, { signal });
 }
 
-export async function getKioskToken(signal?: AbortSignal): Promise<{ token: string | null }> {
+export async function getKioskToken(
+  signal?: AbortSignal,
+): Promise<{ token: string | null }> {
   return fetchJson("/kiosk/token", { signal });
 }
 
@@ -1107,11 +1422,15 @@ export async function revokeKioskToken(): Promise<void> {
 
 // ─── Watchlist Share ──────────────────────────────────────────────────────────
 
-export async function getWatchlistShareToken(signal?: AbortSignal): Promise<{ token: string | null }> {
+export async function getWatchlistShareToken(
+  signal?: AbortSignal,
+): Promise<{ token: string | null }> {
   return fetchJson("/share/token", { signal });
 }
 
-export async function regenerateWatchlistShareToken(): Promise<{ token: string }> {
+export async function regenerateWatchlistShareToken(): Promise<{
+  token: string;
+}> {
   return fetchJson("/share/token", { method: "POST" });
 }
 
@@ -1119,13 +1438,19 @@ export async function revokeWatchlistShareToken(): Promise<void> {
   await doFetch("/share/token", { method: "DELETE" });
 }
 
-export async function getSharedWatchlist(token: string, signal?: AbortSignal): Promise<{ username: string; titles: Title[] }> {
+export async function getSharedWatchlist(
+  token: string,
+  signal?: AbortSignal,
+): Promise<{ username: string; titles: Title[] }> {
   return fetchJson(`/share/watchlist/${encodeURIComponent(token)}`, { signal });
 }
 
 // ─── Title Notes & Tags ───────────────────────────────────────────────────────
 
-export async function updateTrackedNotes(titleId: string, notes: string | null): Promise<void> {
+export async function updateTrackedNotes(
+  titleId: string,
+  notes: string | null,
+): Promise<void> {
   return fetchJson(`/track/${encodeURIComponent(titleId)}/notes`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -1133,7 +1458,10 @@ export async function updateTrackedNotes(titleId: string, notes: string | null):
   });
 }
 
-export async function updateTrackedTags(titleId: string, tags: string[]): Promise<void> {
+export async function updateTrackedTags(
+  titleId: string,
+  tags: string[],
+): Promise<void> {
   return fetchJson(`/track/${encodeURIComponent(titleId)}/tags`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -1143,7 +1471,7 @@ export async function updateTrackedTags(titleId: string, tags: string[]): Promis
 
 export async function setNotificationMode(
   titleId: string,
-  mode: "all" | "premieres_only" | "none" | null
+  mode: "all" | "premieres_only" | "none" | null,
 ): Promise<void> {
   return fetchJson(`/track/${encodeURIComponent(titleId)}/notification`, {
     method: "PATCH",
@@ -1180,7 +1508,10 @@ export interface UpNextItem {
   recommendationId?: number;
 }
 
-export async function getUpNext(limit = 12, signal?: AbortSignal): Promise<{ items: UpNextItem[] }> {
+export async function getUpNext(
+  limit = 12,
+  signal?: AbortSignal,
+): Promise<{ items: UpNextItem[] }> {
   const qs = new URLSearchParams();
   qs.set("limit", String(limit));
   return fetchJson(`/up-next?${qs}`, { signal });
@@ -1188,8 +1519,13 @@ export async function getUpNext(limit = 12, signal?: AbortSignal): Promise<{ ite
 
 // ─── Overlap / "Watch Together" ───────────────────────────────────────────────
 
-export async function getOverlap(friendUsername: string, signal?: AbortSignal): Promise<OverlapResponse> {
-  return fetchJson(`/overlap/${encodeURIComponent(friendUsername)}`, { signal });
+export async function getOverlap(
+  friendUsername: string,
+  signal?: AbortSignal,
+): Promise<OverlapResponse> {
+  return fetchJson(`/overlap/${encodeURIComponent(friendUsername)}`, {
+    signal,
+  });
 }
 
 // ─── Friends Loved This Week ─────────────────────────────────────────────────
@@ -1207,24 +1543,27 @@ export async function getFriendsLoved(
 
 export async function setTitleSnooze(
   titleId: string,
-  until: string | null
+  until: string | null,
 ): Promise<{ success: boolean }> {
-  return fetchJson<{ success: boolean }>(`/track/${encodeURIComponent(titleId)}/snooze`, {
-    method: "PATCH",
-    body: JSON.stringify({ until }),
-  });
+  return fetchJson<{ success: boolean }>(
+    `/track/${encodeURIComponent(titleId)}/snooze`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ until }),
+    },
+  );
 }
 
 export async function setRemindOnRelease(
   titleId: string,
-  enabled: boolean
+  enabled: boolean,
 ): Promise<{ success: boolean; scheduledFor: string | null }> {
   return fetchJson<{ success: boolean; scheduledFor: string | null }>(
     `/track/${encodeURIComponent(titleId)}/remind-on-release`,
     {
       method: "PATCH",
       body: JSON.stringify({ enabled }),
-    }
+    },
   );
 }
 
@@ -1235,11 +1574,16 @@ export async function setRemindOnRelease(
  * The `/api/social/friends-loved` endpoint ships in a sibling PR; until then
  * this function will 404 and callers should treat the result as empty.
  */
-export async function fetchFriendsLoved(signal?: AbortSignal): Promise<{ titles: SearchTitle[] }> {
+export async function fetchFriendsLoved(
+  signal?: AbortSignal,
+): Promise<{ titles: SearchTitle[] }> {
   return fetchJson("/social/friends-loved?limit=20", { signal });
 }
 
-export async function getCollection(id: number, signal?: AbortSignal): Promise<CollectionDetails> {
+export async function getCollection(
+  id: number,
+  signal?: AbortSignal,
+): Promise<CollectionDetails> {
   return fetchJson(`/details/collection/${id}`, { signal });
 }
 
@@ -1248,8 +1592,16 @@ export async function getTitleSuggestions(
   id: string,
   page = 1,
   signal?: AbortSignal,
-): Promise<{ titles: SearchTitle[]; page: number; totalPages: number; totalResults: number }> {
-  return fetchJson(`/details/${type}/${encodeURIComponent(id)}/suggestions?page=${page}`, { signal });
+): Promise<{
+  titles: SearchTitle[];
+  page: number;
+  totalPages: number;
+  totalResults: number;
+}> {
+  return fetchJson(
+    `/details/${type}/${encodeURIComponent(id)}/suggestions?page=${page}`,
+    { signal },
+  );
 }
 
 export async function getSuggestionsAggregate(
@@ -1262,28 +1614,56 @@ export async function getSuggestionsAggregate(
   return fetchJson(`/suggestions${query ? `?${query}` : ""}`, { signal });
 }
 
-export async function dismissSuggestion(titleId: string, signal?: AbortSignal): Promise<void> {
-  await fetchJson(`/suggestions/dismiss/${encodeURIComponent(titleId)}`, { method: "POST", signal });
+export async function dismissSuggestion(
+  titleId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await fetchJson(`/suggestions/dismiss/${encodeURIComponent(titleId)}`, {
+    method: "POST",
+    signal,
+  });
 }
 
-export async function undismissSuggestion(titleId: string, signal?: AbortSignal): Promise<void> {
-  await fetchJson(`/suggestions/dismiss/${encodeURIComponent(titleId)}`, { method: "DELETE", signal });
+export async function undismissSuggestion(
+  titleId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await fetchJson(`/suggestions/dismiss/${encodeURIComponent(titleId)}`, {
+    method: "DELETE",
+    signal,
+  });
 }
 
 // ─── Achievements ─────────────────────────────────────────────────────────────
 
-export async function getAchievementsRegistry(signal?: AbortSignal): Promise<AchievementDef[]> {
-  const data = await fetchJson<{ achievements: AchievementDef[] }>("/achievements", { signal });
+export async function getAchievementsRegistry(
+  signal?: AbortSignal,
+): Promise<AchievementDef[]> {
+  const data = await fetchJson<{ achievements: AchievementDef[] }>(
+    "/achievements",
+    { signal },
+  );
   return data.achievements;
 }
 
-export async function getMyAchievements(signal?: AbortSignal): Promise<UserAchievement[]> {
-  const data = await fetchJson<{ achievements: UserAchievement[] }>("/achievements/me", { signal });
+export async function getMyAchievements(
+  signal?: AbortSignal,
+): Promise<UserAchievement[]> {
+  const data = await fetchJson<{ achievements: UserAchievement[] }>(
+    "/achievements/me",
+    { signal },
+  );
   return data.achievements;
 }
 
-export async function getUserAchievements(username: string, signal?: AbortSignal): Promise<UserAchievement[]> {
-  const data = await fetchJson<{ achievements: UserAchievement[] }>(`/achievements/u/${encodeURIComponent(username)}`, { signal });
+export async function getUserAchievements(
+  username: string,
+  signal?: AbortSignal,
+): Promise<UserAchievement[]> {
+  const data = await fetchJson<{ achievements: UserAchievement[] }>(
+    `/achievements/u/${encodeURIComponent(username)}`,
+    { signal },
+  );
   // Server returns achievements without progress for other users; fill in defaults
   return data.achievements.map((a) => ({ ...a, progress: a.progress ?? 0 }));
 }
@@ -1303,18 +1683,36 @@ export interface AchievementDetail extends UserAchievement {
   history: Array<{ earnedAt: string; context: Record<string, unknown> | null }>;
 }
 
-export async function getMyAchievementDetail(key: string, signal?: AbortSignal): Promise<AchievementDetail> {
-  return await fetchJson<AchievementDetail>(`/achievements/${encodeURIComponent(key)}/me`, { signal });
+export async function getMyAchievementDetail(
+  key: string,
+  signal?: AbortSignal,
+): Promise<AchievementDetail> {
+  return await fetchJson<AchievementDetail>(
+    `/achievements/${encodeURIComponent(key)}/me`,
+    { signal },
+  );
 }
 
-export async function getUserAchievementDetail(username: string, key: string, signal?: AbortSignal): Promise<AchievementDetail> {
-  return await fetchJson<AchievementDetail>(`/achievements/u/${encodeURIComponent(username)}/${encodeURIComponent(key)}`, { signal });
+export async function getUserAchievementDetail(
+  username: string,
+  key: string,
+  signal?: AbortSignal,
+): Promise<AchievementDetail> {
+  return await fetchJson<AchievementDetail>(
+    `/achievements/u/${encodeURIComponent(username)}/${encodeURIComponent(key)}`,
+    { signal },
+  );
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
 
-export async function getLeaderboard(signal?: AbortSignal): Promise<LeaderboardEntry[]> {
-  const data = await fetchJson<{ entries: LeaderboardEntry[] }>("/leaderboard", { signal });
+export async function getLeaderboard(
+  signal?: AbortSignal,
+): Promise<LeaderboardEntry[]> {
+  const data = await fetchJson<{ entries: LeaderboardEntry[] }>(
+    "/leaderboard",
+    { signal },
+  );
   return data.entries;
 }
 

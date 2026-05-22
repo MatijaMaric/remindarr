@@ -38,9 +38,14 @@ const OIDC_SETTING_KEYS = [
 // (null or empty string deletes the setting). Unknown keys are ignored, which
 // preserves the existing behavior before validation was added.
 const updateSettingsSchema = z
-  .object(Object.fromEntries(
-    OIDC_SETTING_KEYS.map((k) => [k, z.string().nullable().optional()]),
-  ) as Record<(typeof OIDC_SETTING_KEYS)[number], z.ZodOptional<z.ZodNullable<z.ZodString>>>)
+  .object(
+    Object.fromEntries(
+      OIDC_SETTING_KEYS.map((k) => [k, z.string().nullable().optional()]),
+    ) as Record<
+      (typeof OIDC_SETTING_KEYS)[number],
+      z.ZodOptional<z.ZodNullable<z.ZodString>>
+    >,
+  )
   .passthrough();
 
 const updateRoleSchema = z.object({
@@ -72,27 +77,51 @@ app.get("/settings", async (c) => {
   const oidc = {
     issuer_url: {
       value: oidcConfig.issuerUrl,
-      source: CONFIG.OIDC_ISSUER_URL ? "env" : (dbSettings.oidc_issuer_url ? "db" : "unset"),
+      source: CONFIG.OIDC_ISSUER_URL
+        ? "env"
+        : dbSettings.oidc_issuer_url
+          ? "db"
+          : "unset",
     },
     client_id: {
       value: oidcConfig.clientId,
-      source: CONFIG.OIDC_CLIENT_ID ? "env" : (dbSettings.oidc_client_id ? "db" : "unset"),
+      source: CONFIG.OIDC_CLIENT_ID
+        ? "env"
+        : dbSettings.oidc_client_id
+          ? "db"
+          : "unset",
     },
     client_secret: {
       value: oidcConfig.clientSecret ? "********" : "",
-      source: CONFIG.OIDC_CLIENT_SECRET ? "env" : (dbSettings.oidc_client_secret ? "db" : "unset"),
+      source: CONFIG.OIDC_CLIENT_SECRET
+        ? "env"
+        : dbSettings.oidc_client_secret
+          ? "db"
+          : "unset",
     },
     redirect_uri: {
       value: oidcConfig.redirectUri,
-      source: CONFIG.OIDC_REDIRECT_URI ? "env" : (dbSettings.oidc_redirect_uri ? "db" : "unset"),
+      source: CONFIG.OIDC_REDIRECT_URI
+        ? "env"
+        : dbSettings.oidc_redirect_uri
+          ? "db"
+          : "unset",
     },
     admin_claim: {
       value: oidcConfig.adminClaim,
-      source: CONFIG.OIDC_ADMIN_CLAIM ? "env" : (dbSettings.oidc_admin_claim ? "db" : "unset"),
+      source: CONFIG.OIDC_ADMIN_CLAIM
+        ? "env"
+        : dbSettings.oidc_admin_claim
+          ? "db"
+          : "unset",
     },
     admin_value: {
       value: oidcConfig.adminValue,
-      source: CONFIG.OIDC_ADMIN_VALUE ? "env" : (dbSettings.oidc_admin_value ? "db" : "unset"),
+      source: CONFIG.OIDC_ADMIN_VALUE
+        ? "env"
+        : dbSettings.oidc_admin_value
+          ? "db"
+          : "unset",
     },
   };
 
@@ -104,7 +133,9 @@ app.get("/settings", async (c) => {
 
 // PUT /api/admin/settings
 app.put("/settings", zValidator("json", updateSettingsSchema), async (c) => {
-  const body = c.req.valid("json") as Partial<Record<(typeof OIDC_SETTING_KEYS)[number], string | null>>;
+  const body = c.req.valid("json") as Partial<
+    Record<(typeof OIDC_SETTING_KEYS)[number], string | null>
+  >;
 
   for (const key of OIDC_SETTING_KEYS) {
     if (key in body) {
@@ -190,7 +221,11 @@ app.put("/users/:id/role", zValidator("json", updateRoleSchema), async (c) => {
   if (!target) return c.json({ error: "User not found" }, 404);
 
   await updateUserAdmin(id, role === "admin");
-  log.info("Admin role changed", { targetUserId: id, newRole: role, by: actingUser.id });
+  log.info("Admin role changed", {
+    targetUserId: id,
+    newRole: role,
+    by: actingUser.id,
+  });
   return ok(c, { message: `User role updated to ${role}` });
 });
 
@@ -238,33 +273,117 @@ app.put("/users/:id/unban", async (c) => {
 // ─── Config dump ─────────────────────────────────────────────────────────────
 
 // Keys whose values are safe to expose to admins.
-const SAFE_CONFIG_KEYS: Array<{ key: string; value: () => unknown; envVar?: string }> = [
+const SAFE_CONFIG_KEYS: Array<{
+  key: string;
+  value: () => unknown;
+  envVar?: string;
+}> = [
   { key: "LOG_LEVEL", value: () => CONFIG.LOG_LEVEL, envVar: "LOG_LEVEL" },
   { key: "BASE_URL", value: () => CONFIG.BASE_URL, envVar: "BASE_URL" },
   { key: "TMDB_COUNTRY", value: () => CONFIG.COUNTRY, envVar: "TMDB_COUNTRY" },
-  { key: "TMDB_LANGUAGE", value: () => CONFIG.LANGUAGE, envVar: "TMDB_LANGUAGE" },
-  { key: "CACHE_BACKEND", value: () => CONFIG.CACHE_BACKEND, envVar: "CACHE_BACKEND" },
-  { key: "JOB_QUEUE_BACKEND", value: () => CONFIG.JOB_QUEUE_BACKEND, envVar: "JOB_QUEUE_BACKEND" },
-  { key: "CORS_ORIGIN", value: () => CONFIG.CORS_ORIGIN, envVar: "CORS_ORIGIN" },
-  { key: "OIDC_ISSUER_URL", value: () => CONFIG.OIDC_ISSUER_URL, envVar: "OIDC_ISSUER_URL" },
-  { key: "OIDC_REDIRECT_URI", value: () => CONFIG.OIDC_REDIRECT_URI, envVar: "OIDC_REDIRECT_URI" },
-  { key: "OIDC_ADMIN_CLAIM", value: () => CONFIG.OIDC_ADMIN_CLAIM, envVar: "OIDC_ADMIN_CLAIM" },
-  { key: "OIDC_ADMIN_VALUE", value: () => CONFIG.OIDC_ADMIN_VALUE, envVar: "OIDC_ADMIN_VALUE" },
-  { key: "PASSKEY_RP_ID", value: () => CONFIG.PASSKEY_RP_ID, envVar: "PASSKEY_RP_ID" },
-  { key: "PASSKEY_RP_NAME", value: () => CONFIG.PASSKEY_RP_NAME, envVar: "PASSKEY_RP_NAME" },
-  { key: "PASSKEY_ORIGIN", value: () => CONFIG.PASSKEY_ORIGIN, envVar: "PASSKEY_ORIGIN" },
-  { key: "VAPID_PUBLIC_KEY", value: () => CONFIG.VAPID_PUBLIC_KEY, envVar: "VAPID_PUBLIC_KEY" },
-  { key: "VAPID_SUBJECT", value: () => CONFIG.VAPID_SUBJECT, envVar: "VAPID_SUBJECT" },
+  {
+    key: "TMDB_LANGUAGE",
+    value: () => CONFIG.LANGUAGE,
+    envVar: "TMDB_LANGUAGE",
+  },
+  {
+    key: "CACHE_BACKEND",
+    value: () => CONFIG.CACHE_BACKEND,
+    envVar: "CACHE_BACKEND",
+  },
+  {
+    key: "JOB_QUEUE_BACKEND",
+    value: () => CONFIG.JOB_QUEUE_BACKEND,
+    envVar: "JOB_QUEUE_BACKEND",
+  },
+  {
+    key: "CORS_ORIGIN",
+    value: () => CONFIG.CORS_ORIGIN,
+    envVar: "CORS_ORIGIN",
+  },
+  {
+    key: "OIDC_ISSUER_URL",
+    value: () => CONFIG.OIDC_ISSUER_URL,
+    envVar: "OIDC_ISSUER_URL",
+  },
+  {
+    key: "OIDC_REDIRECT_URI",
+    value: () => CONFIG.OIDC_REDIRECT_URI,
+    envVar: "OIDC_REDIRECT_URI",
+  },
+  {
+    key: "OIDC_ADMIN_CLAIM",
+    value: () => CONFIG.OIDC_ADMIN_CLAIM,
+    envVar: "OIDC_ADMIN_CLAIM",
+  },
+  {
+    key: "OIDC_ADMIN_VALUE",
+    value: () => CONFIG.OIDC_ADMIN_VALUE,
+    envVar: "OIDC_ADMIN_VALUE",
+  },
+  {
+    key: "PASSKEY_RP_ID",
+    value: () => CONFIG.PASSKEY_RP_ID,
+    envVar: "PASSKEY_RP_ID",
+  },
+  {
+    key: "PASSKEY_RP_NAME",
+    value: () => CONFIG.PASSKEY_RP_NAME,
+    envVar: "PASSKEY_RP_NAME",
+  },
+  {
+    key: "PASSKEY_ORIGIN",
+    value: () => CONFIG.PASSKEY_ORIGIN,
+    envVar: "PASSKEY_ORIGIN",
+  },
+  {
+    key: "VAPID_PUBLIC_KEY",
+    value: () => CONFIG.VAPID_PUBLIC_KEY,
+    envVar: "VAPID_PUBLIC_KEY",
+  },
+  {
+    key: "VAPID_SUBJECT",
+    value: () => CONFIG.VAPID_SUBJECT,
+    envVar: "VAPID_SUBJECT",
+  },
   { key: "SENTRY_DSN", value: () => CONFIG.SENTRY_DSN, envVar: "SENTRY_DSN" },
-  { key: "PLEX_CLIENT_ID", value: () => CONFIG.PLEX_CLIENT_ID, envVar: "PLEX_CLIENT_ID" },
+  {
+    key: "PLEX_CLIENT_ID",
+    value: () => CONFIG.PLEX_CLIENT_ID,
+    envVar: "PLEX_CLIENT_ID",
+  },
   { key: "DB_PATH", value: () => CONFIG.DB_PATH, envVar: "DB_PATH" },
   { key: "BACKUP_DIR", value: () => CONFIG.BACKUP_DIR, envVar: "BACKUP_DIR" },
-  { key: "BACKUP_CRON", value: () => CONFIG.BACKUP_CRON, envVar: "BACKUP_CRON" },
-  { key: "BACKUP_RETAIN", value: () => CONFIG.BACKUP_RETAIN, envVar: "BACKUP_RETAIN" },
-  { key: "SYNC_TITLES_CRON", value: () => CONFIG.SYNC_TITLES_CRON, envVar: "SYNC_TITLES_CRON" },
-  { key: "SYNC_EPISODES_CRON", value: () => CONFIG.SYNC_EPISODES_CRON, envVar: "SYNC_EPISODES_CRON" },
-  { key: "GLOBAL_RATE_LIMIT_PER_MINUTE", value: () => CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE, envVar: "GLOBAL_RATE_LIMIT_PER_MINUTE" },
-  { key: "AUTH_RATE_LIMIT_PER_MINUTE", value: () => CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, envVar: "AUTH_RATE_LIMIT_PER_MINUTE" },
+  {
+    key: "BACKUP_CRON",
+    value: () => CONFIG.BACKUP_CRON,
+    envVar: "BACKUP_CRON",
+  },
+  {
+    key: "BACKUP_RETAIN",
+    value: () => CONFIG.BACKUP_RETAIN,
+    envVar: "BACKUP_RETAIN",
+  },
+  {
+    key: "SYNC_TITLES_CRON",
+    value: () => CONFIG.SYNC_TITLES_CRON,
+    envVar: "SYNC_TITLES_CRON",
+  },
+  {
+    key: "SYNC_EPISODES_CRON",
+    value: () => CONFIG.SYNC_EPISODES_CRON,
+    envVar: "SYNC_EPISODES_CRON",
+  },
+  {
+    key: "GLOBAL_RATE_LIMIT_PER_MINUTE",
+    value: () => CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE,
+    envVar: "GLOBAL_RATE_LIMIT_PER_MINUTE",
+  },
+  {
+    key: "AUTH_RATE_LIMIT_PER_MINUTE",
+    value: () => CONFIG.AUTH_RATE_LIMIT_PER_MINUTE,
+    envVar: "AUTH_RATE_LIMIT_PER_MINUTE",
+  },
 ];
 
 // Keys whose presence (but not value) is safe to expose.
@@ -276,7 +395,10 @@ const SECRET_CONFIG_KEYS: Array<{ key: string; present: () => boolean }> = [
   { key: "VAPID_PRIVATE_KEY", present: () => !!CONFIG.VAPID_PRIVATE_KEY },
   { key: "METRICS_TOKEN", present: () => !!CONFIG.METRICS_TOKEN },
   { key: "REDIS_URL", present: () => !!CONFIG.REDIS_URL },
-  { key: "STREAMING_AVAILABILITY_API_KEY", present: () => !!CONFIG.STREAMING_AVAILABILITY_API_KEY },
+  {
+    key: "STREAMING_AVAILABILITY_API_KEY",
+    present: () => !!CONFIG.STREAMING_AVAILABILITY_API_KEY,
+  },
 ];
 
 // GET /api/admin/config — sanitized runtime configuration dump
@@ -335,7 +457,10 @@ app.delete("/users/:id", async (c) => {
   const actingUser = c.get("user")!;
 
   if (id === actingUser.id) {
-    return c.json({ error: "Cannot delete your own account from admin panel" }, 400);
+    return c.json(
+      { error: "Cannot delete your own account from admin panel" },
+      400,
+    );
   }
 
   const target = await getUserById(id);

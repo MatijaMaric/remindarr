@@ -30,7 +30,8 @@ export function LadderProgress({ rungs, currentKey }: LadderProgressProps) {
               rung.earned
                 ? cn(colors.ring, colors.bg, "border-transparent")
                 : "border-zinc-600 bg-zinc-800",
-              isCurrent && "ring-2 ring-offset-1 ring-offset-zinc-900 scale-125"
+              isCurrent &&
+                "ring-2 ring-offset-1 ring-offset-zinc-900 scale-125",
             )}
           />
         );

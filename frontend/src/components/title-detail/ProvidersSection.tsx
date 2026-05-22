@@ -1,5 +1,9 @@
 import type { Title, WatchProviderCountry } from "../../types";
-import { PLEX_PROVIDER_ID, getPlexPlatform, plexDeepLink } from "../WatchButton";
+import {
+  PLEX_PROVIDER_ID,
+  getPlexPlatform,
+  plexDeepLink,
+} from "../WatchButton";
 import { getProviderColor } from "../../data/providerColors";
 import { Section } from "./Section";
 import { logoUrl } from "../../lib/tmdb-images";
@@ -17,7 +21,10 @@ function OfferChip({ offer }: { offer: Title["offers"][number] }) {
       target={useMobileDeepLink ? undefined : "_blank"}
       rel="noopener noreferrer"
       className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:opacity-90 transition-opacity"
-      style={{ backgroundColor: `${color.bg}20`, borderLeft: `3px solid ${color.bg}` }}
+      style={{
+        backgroundColor: `${color.bg}20`,
+        borderLeft: `3px solid ${color.bg}`,
+      }}
       title={offer.provider_name}
     >
       <img
@@ -42,7 +49,10 @@ function TmdbProviderChip({
   const chip = (
     <div
       className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5"
-      style={{ backgroundColor: `${color.bg}20`, borderLeft: `3px solid ${color.bg}` }}
+      style={{
+        backgroundColor: `${color.bg}20`,
+        borderLeft: `3px solid ${color.bg}`,
+      }}
     >
       <img
         src={logoUrl(provider.logo_path, "w45") ?? ""}
@@ -57,7 +67,12 @@ function TmdbProviderChip({
   );
   if (watchLink) {
     return (
-      <a href={watchLink} target="_blank" rel="noopener noreferrer" className="hover:opacity-90 transition-opacity">
+      <a
+        href={watchLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:opacity-90 transition-opacity"
+      >
         {chip}
       </a>
     );
@@ -76,9 +91,15 @@ function ProviderRow({
 }) {
   return (
     <div className="flex items-start gap-3.5">
-      <div className="w-[70px] shrink-0 pt-1.5 text-sm text-zinc-400">{label}</div>
+      <div className="w-[70px] shrink-0 pt-1.5 text-sm text-zinc-400">
+        {label}
+      </div>
       <div className="flex flex-wrap gap-2 items-center min-h-8">
-        {isEmpty ? <span className="text-xs text-zinc-600 italic">— not available</span> : children}
+        {isEmpty ? (
+          <span className="text-xs text-zinc-600 italic">— not available</span>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );
@@ -106,13 +127,20 @@ export interface ProvidersSectionProps {
   watchLink: string | undefined;
 }
 
-export default function ProvidersSection({ offers, watchProviders, watchLink }: ProvidersSectionProps) {
+export default function ProvidersSection({
+  offers,
+  watchProviders,
+  watchLink,
+}: ProvidersSectionProps) {
   const offerGroups = groupOffersByType(offers);
   const hasOffers = offerGroups.length > 0;
   const hasProviders = !!watchProviders;
   if (!hasOffers && !hasProviders) return null;
 
-  const providerMap: Record<MonetizationType, "flatrate" | "free" | "ads" | "rent" | "buy"> = {
+  const providerMap: Record<
+    MonetizationType,
+    "flatrate" | "free" | "ads" | "rent" | "buy"
+  > = {
     FLATRATE: "flatrate",
     FREE: "free",
     ADS: "ads",
@@ -124,18 +152,27 @@ export default function ProvidersSection({ offers, watchProviders, watchLink }: 
     <Section title="Where to Watch">
       <div className="flex flex-col gap-3 max-w-4xl">
         {MONETIZATION_ORDER.map(({ type, label }) => {
-          const groupOffers = hasOffers ? (offerGroups.find((g) => g.type === type)?.offers ?? []) : [];
+          const groupOffers = hasOffers
+            ? (offerGroups.find((g) => g.type === type)?.offers ?? [])
+            : [];
           const tmdbKey = providerMap[type];
           const tmdbProviders =
-            !hasOffers && hasProviders && watchProviders ? (watchProviders[tmdbKey] ?? []) : [];
-          const isEmpty = groupOffers.length === 0 && tmdbProviders.length === 0;
+            !hasOffers && hasProviders && watchProviders
+              ? (watchProviders[tmdbKey] ?? [])
+              : [];
+          const isEmpty =
+            groupOffers.length === 0 && tmdbProviders.length === 0;
           return (
             <ProviderRow key={type} label={label} isEmpty={isEmpty}>
               {groupOffers.map((offer) => (
                 <OfferChip key={offer.id} offer={offer} />
               ))}
               {tmdbProviders.map((p) => (
-                <TmdbProviderChip key={p.provider_id} provider={p} watchLink={watchLink} />
+                <TmdbProviderChip
+                  key={p.provider_id}
+                  provider={p}
+                  watchLink={watchLink}
+                />
               ))}
             </ProviderRow>
           );

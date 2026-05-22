@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { renderHook, act, cleanup } from "@testing-library/react";
 import { useInstallPrompt } from "./useInstallPrompt";
 
-function fireBeforeInstallPrompt(): { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> } {
+function fireBeforeInstallPrompt(): {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: string }>;
+} {
   let resolveChoice: (value: { outcome: string }) => void;
   const userChoice = new Promise<{ outcome: string }>((resolve) => {
     resolveChoice = resolve;

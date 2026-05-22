@@ -51,7 +51,8 @@ function BackgroundJobsSection() {
 
   const triggerJobMutation = useMutation({
     mutationFn: (name: string) => api.triggerJob(name),
-    onSuccess: (_data, name) => setMsg(`Job "${formatJobName(name)}" queued successfully`),
+    onSuccess: (_data, name) =>
+      setMsg(`Job "${formatJobName(name)}" queued successfully`),
     onError: (e: unknown) => {
       setErr(e instanceof Error ? e.message : String(e));
       toast.error("Failed to trigger job");
@@ -94,8 +95,20 @@ function BackgroundJobsSection() {
                 const stats = data.stats[cron.name];
                 const isRunning = stats?.running > 0;
                 const failed = stats && stats.failed > 0;
-                const pillKind = !cron.enabled ? "neutral" : isRunning ? "amber" : failed ? "error" : "ok";
-                const pillText = !cron.enabled ? "Off" : isRunning ? "Running" : failed ? "Fail" : "OK";
+                const pillKind = !cron.enabled
+                  ? "neutral"
+                  : isRunning
+                    ? "amber"
+                    : failed
+                      ? "error"
+                      : "ok";
+                const pillText = !cron.enabled
+                  ? "Off"
+                  : isRunning
+                    ? "Running"
+                    : failed
+                      ? "Fail"
+                      : "OK";
                 return (
                   <div
                     key={cron.name}
@@ -114,20 +127,31 @@ function BackgroundJobsSection() {
                     </code>
                     <div className="text-[11px] text-zinc-400 font-mono">
                       <div>Last: {formatDate(cron.last_run)}</div>
-                      <div className="text-zinc-500">Next: {formatDate(cron.next_run)}</div>
-                      {stats && (stats.pending > 0 || stats.running > 0 || stats.failed > 0) && (
-                        <div className="flex gap-2 mt-0.5">
-                          {stats.pending > 0 && (
-                            <span className="text-yellow-400">{stats.pending} pending</span>
-                          )}
-                          {stats.running > 0 && (
-                            <span className="text-blue-400">{stats.running} running</span>
-                          )}
-                          {stats.failed > 0 && (
-                            <span className="text-red-400">{stats.failed} failed</span>
-                          )}
-                        </div>
-                      )}
+                      <div className="text-zinc-500">
+                        Next: {formatDate(cron.next_run)}
+                      </div>
+                      {stats &&
+                        (stats.pending > 0 ||
+                          stats.running > 0 ||
+                          stats.failed > 0) && (
+                          <div className="flex gap-2 mt-0.5">
+                            {stats.pending > 0 && (
+                              <span className="text-yellow-400">
+                                {stats.pending} pending
+                              </span>
+                            )}
+                            {stats.running > 0 && (
+                              <span className="text-blue-400">
+                                {stats.running} running
+                              </span>
+                            )}
+                            {stats.failed > 0 && (
+                              <span className="text-red-400">
+                                {stats.failed} failed
+                              </span>
+                            )}
+                          </div>
+                        )}
                     </div>
                     <div>
                       <SStatusPill kind={pillKind}>{pillText}</SStatusPill>
@@ -137,9 +161,15 @@ function BackgroundJobsSection() {
                         variant="ghost"
                         small
                         onClick={() => triggerJobMutation.mutate(cron.name)}
-                        disabled={triggerJobMutation.isPending && triggerJobMutation.variables === cron.name}
+                        disabled={
+                          triggerJobMutation.isPending &&
+                          triggerJobMutation.variables === cron.name
+                        }
                       >
-                        {triggerJobMutation.isPending && triggerJobMutation.variables === cron.name ? "Queuing..." : "Run now"}
+                        {triggerJobMutation.isPending &&
+                        triggerJobMutation.variables === cron.name
+                          ? "Queuing..."
+                          : "Run now"}
                       </SButton>
                     </div>
                   </div>
@@ -156,16 +186,26 @@ function BackgroundJobsSection() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left">
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Job</th>
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Status</th>
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Started</th>
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Completed</th>
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      Job
+                    </th>
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      Status
+                    </th>
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      Started
+                    </th>
+                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      Completed
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
                   {data.recentJobs.map((job) => (
                     <tr key={job.id}>
-                      <td className="py-2 px-2 text-zinc-100 text-sm">{formatJobName(job.name)}</td>
+                      <td className="py-2 px-2 text-zinc-100 text-sm">
+                        {formatJobName(job.name)}
+                      </td>
                       <td className="py-2 px-2">
                         <JobStatusBadge status={job.status} />
                       </td>
@@ -214,7 +254,8 @@ function SettingField({
       </div>
       {isEnv ? (
         <div className="px-3 py-2.5 bg-zinc-800/50 border border-white/[0.08] rounded-lg text-zinc-400 text-[13px]">
-          {envValue} <span className="text-zinc-600">(set via environment variable)</span>
+          {envValue}{" "}
+          <span className="text-zinc-600">(set via environment variable)</span>
         </div>
       ) : (
         <SInput
@@ -246,13 +287,22 @@ function AdminSection() {
 
   useEffect(() => {
     if (settings) {
-      setIssuerUrl(settings.oidc.issuer_url.source !== "env" ? settings.oidc.issuer_url.value : "");
-      setClientId(settings.oidc.client_id.source !== "env" ? settings.oidc.client_id.value : "");
+      setIssuerUrl(
+        settings.oidc.issuer_url.source !== "env"
+          ? settings.oidc.issuer_url.value
+          : "",
+      );
+      setClientId(
+        settings.oidc.client_id.source !== "env"
+          ? settings.oidc.client_id.value
+          : "",
+      );
       setClientSecret("");
       setRedirectUri(
         settings.oidc.redirect_uri.source !== "env"
-          ? settings.oidc.redirect_uri.value || `${window.location.origin}/api/auth/oidc/callback`
-          : ""
+          ? settings.oidc.redirect_uri.value ||
+              `${window.location.origin}/api/auth/oidc/callback`
+          : "",
       );
     }
   }, [settings]);
@@ -272,7 +322,11 @@ function AdminSection() {
         body.oidc_client_secret = clientSecret;
       }
       const result = await api.updateAdminSettings(body);
-      setMsg(result.oidc_configured ? "OIDC configured successfully" : "Settings saved");
+      setMsg(
+        result.oidc_configured
+          ? "OIDC configured successfully"
+          : "Settings saved",
+      );
       void qc.invalidateQueries({ queryKey: ["admin-settings"] });
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -317,7 +371,11 @@ function AdminSection() {
           onChange={setIssuerUrl}
           placeholder="https://auth.example.com"
           source={settings?.oidc.issuer_url.source}
-          envValue={settings?.oidc.issuer_url.source === "env" ? settings.oidc.issuer_url.value : undefined}
+          envValue={
+            settings?.oidc.issuer_url.source === "env"
+              ? settings.oidc.issuer_url.value
+              : undefined
+          }
         />
         <SettingField
           label="Client ID"
@@ -325,16 +383,28 @@ function AdminSection() {
           onChange={setClientId}
           placeholder="my-client-id"
           source={settings?.oidc.client_id.source}
-          envValue={settings?.oidc.client_id.source === "env" ? settings.oidc.client_id.value : undefined}
+          envValue={
+            settings?.oidc.client_id.source === "env"
+              ? settings.oidc.client_id.value
+              : undefined
+          }
         />
         <SettingField
           label="Client Secret"
           value={clientSecret}
           onChange={setClientSecret}
-          placeholder={settings?.oidc.client_secret.source !== "unset" ? "••••••••  (leave blank to keep)" : ""}
+          placeholder={
+            settings?.oidc.client_secret.source !== "unset"
+              ? "••••••••  (leave blank to keep)"
+              : ""
+          }
           type="password"
           source={settings?.oidc.client_secret.source}
-          envValue={settings?.oidc.client_secret.source === "env" ? "********" : undefined}
+          envValue={
+            settings?.oidc.client_secret.source === "env"
+              ? "********"
+              : undefined
+          }
         />
         <SettingField
           label="Redirect URI"
@@ -342,7 +412,11 @@ function AdminSection() {
           onChange={setRedirectUri}
           placeholder={`${window.location.origin}/api/auth/oidc/callback`}
           source={settings?.oidc.redirect_uri.source}
-          envValue={settings?.oidc.redirect_uri.source === "env" ? settings.oidc.redirect_uri.value : undefined}
+          envValue={
+            settings?.oidc.redirect_uri.source === "env"
+              ? settings.oidc.redirect_uri.value
+              : undefined
+          }
         />
 
         <div>
@@ -362,35 +436,60 @@ function RuntimeConfigSection() {
   });
 
   return (
-    <SCard title="Runtime configuration" subtitle="Current server config. Secret values show only whether they are set.">
+    <SCard
+      title="Runtime configuration"
+      subtitle="Current server config. Secret values show only whether they are set."
+    >
       {loading && <div className="text-zinc-500 text-sm">Loading...</div>}
       {config && (
         <div className="space-y-4">
           <div>
             <div className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 pb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
-              <div>Key</div><div>Value</div><div>Source</div>
+              <div>Key</div>
+              <div>Value</div>
+              <div>Source</div>
             </div>
             <div className="space-y-0.5">
               {config.safe.map((entry) => (
-                <div key={entry.key} className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono">
+                <div
+                  key={entry.key}
+                  className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono"
+                >
                   <span className="text-zinc-300 truncate">{entry.key}</span>
-                  <span className="text-zinc-400 truncate">{String(entry.value) || <span className="text-zinc-600 italic">empty</span>}</span>
-                  <SStatusPill kind={entry.source === "env" ? "amber" : "neutral"}>{entry.source}</SStatusPill>
+                  <span className="text-zinc-400 truncate">
+                    {String(entry.value) || (
+                      <span className="text-zinc-600 italic">empty</span>
+                    )}
+                  </span>
+                  <SStatusPill
+                    kind={entry.source === "env" ? "amber" : "neutral"}
+                  >
+                    {entry.source}
+                  </SStatusPill>
                 </div>
               ))}
             </div>
           </div>
           {config.secrets.length > 0 && (
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 px-2 pb-1">Secrets</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 px-2 pb-1">
+                Secrets
+              </div>
               <div className="space-y-0.5">
                 {config.secrets.map((entry) => (
-                  <div key={entry.key} className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono">
+                  <div
+                    key={entry.key}
+                    className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono"
+                  >
                     <span className="text-zinc-300 truncate">{entry.key}</span>
                     <span className="text-zinc-600 italic">
                       {entry.source === "env" ? "•••••• (set)" : "not set"}
                     </span>
-                    <SStatusPill kind={entry.source === "env" ? "ok" : "neutral"}>{entry.source}</SStatusPill>
+                    <SStatusPill
+                      kind={entry.source === "env" ? "ok" : "neutral"}
+                    >
+                      {entry.source}
+                    </SStatusPill>
                   </div>
                 ))}
               </div>
@@ -414,7 +513,8 @@ function LogTailSection() {
 
   const { data, isLoading: loading } = useQuery({
     queryKey: ["admin-logs", levelFilter],
-    queryFn: ({ signal }) => api.getAdminLogs({ limit: 50, level: levelFilter || undefined }, signal),
+    queryFn: ({ signal }) =>
+      api.getAdminLogs({ limit: 50, level: levelFilter || undefined }, signal),
     refetchInterval: 5_000,
   });
 
@@ -441,17 +541,31 @@ function LogTailSection() {
             </button>
           ))}
         </div>
-        {loading && <div className="text-zinc-500 text-sm">Loading logs...</div>}
+        {loading && (
+          <div className="text-zinc-500 text-sm">Loading logs...</div>
+        )}
         {!loading && entries.length === 0 && (
-          <div className="text-zinc-600 text-sm font-mono italic">No entries</div>
+          <div className="text-zinc-600 text-sm font-mono italic">
+            No entries
+          </div>
         )}
         {entries.length > 0 && (
           <pre className="overflow-auto max-h-96 rounded bg-zinc-900 p-3 text-[11px] font-mono space-y-0.5">
             {entries.map((e, i) => (
               <div key={i} className="flex gap-2 min-w-0">
-                <span className="text-zinc-600 shrink-0">{e.time.slice(11, 19)}</span>
-                <span className={`uppercase w-[38px] shrink-0 ${LOG_LEVEL_COLORS[e.level] ?? "text-zinc-400"}`}>{e.level}</span>
-                {e.module && <span className="text-zinc-500 shrink-0">[{String(e.module)}]</span>}
+                <span className="text-zinc-600 shrink-0">
+                  {e.time.slice(11, 19)}
+                </span>
+                <span
+                  className={`uppercase w-[38px] shrink-0 ${LOG_LEVEL_COLORS[e.level] ?? "text-zinc-400"}`}
+                >
+                  {e.level}
+                </span>
+                {e.module && (
+                  <span className="text-zinc-500 shrink-0">
+                    [{String(e.module)}]
+                  </span>
+                )}
                 <span className="text-zinc-300 break-all">{e.msg}</span>
               </div>
             ))}
@@ -482,7 +596,10 @@ function MaintenanceSection() {
   }
 
   return (
-    <SCard title="Maintenance" subtitle="One-click server operations. Each action will ask for confirmation.">
+    <SCard
+      title="Maintenance"
+      subtitle="One-click server operations. Each action will ask for confirmation."
+    >
       <div className="space-y-3">
         {msg && <SMessage kind="success">{msg}</SMessage>}
         {err && <SMessage kind="error">{err}</SMessage>}
@@ -490,7 +607,11 @@ function MaintenanceSection() {
           <SButton
             variant="ghost"
             onClick={() => {
-              if (confirm("Flush all cache entries? Active requests may slow down briefly.")) {
+              if (
+                confirm(
+                  "Flush all cache entries? Active requests may slow down briefly.",
+                )
+              ) {
                 run("Cache flushed", api.flushCache);
               }
             }}

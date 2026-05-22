@@ -1,7 +1,12 @@
 import { Undo2, HeartCrack, ThumbsDown, ThumbsUp, Heart } from "lucide-react";
 import type { RatingValue } from "../types";
 
-const RATING_OPTIONS: { value: RatingValue; Icon: typeof ThumbsDown; label: string; filled?: boolean }[] = [
+const RATING_OPTIONS: {
+  value: RatingValue;
+  Icon: typeof ThumbsDown;
+  label: string;
+  filled?: boolean;
+}[] = [
   { value: "HATE", Icon: HeartCrack, label: "Hate", filled: true },
   { value: "DISLIKE", Icon: ThumbsDown, label: "Dislike" },
   { value: "LIKE", Icon: ThumbsUp, label: "Like" },
@@ -15,7 +20,12 @@ export interface ReelsUndoBarProps {
   onUndo: () => void;
 }
 
-export default function ReelsUndoBar({ episodeCode, currentRating, onRate, onUndo }: ReelsUndoBarProps) {
+export default function ReelsUndoBar({
+  episodeCode,
+  currentRating,
+  onRate,
+  onUndo,
+}: ReelsUndoBarProps) {
   return (
     <div className="flex items-center gap-2 bg-zinc-800/80 backdrop-blur-sm rounded-xl px-3 py-2 mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
       <span className="text-xs text-zinc-400 whitespace-nowrap mr-auto">
@@ -32,7 +42,9 @@ export default function ReelsUndoBar({ episodeCode, currentRating, onRate, onUnd
               aria-label={label}
               aria-pressed={isActive}
               className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                isActive ? "bg-amber-500 text-zinc-950" : "text-zinc-400 hover:text-white"
+                isActive
+                  ? "bg-amber-500 text-zinc-950"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               <Icon

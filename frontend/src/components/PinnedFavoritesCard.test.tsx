@@ -1,5 +1,19 @@
-import { describe, it, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import PinnedFavoritesCard, { reorderPinned } from "./PinnedFavoritesCard";
 import * as api from "../api";
@@ -91,32 +105,42 @@ describe("PinnedFavoritesCard", () => {
   });
 
   it("shows placeholder for owner with empty pinned list", () => {
-    render(<PinnedFavoritesCard pinned={[]} isOwnProfile={true} />, { wrapper: Wrapper });
+    render(<PinnedFavoritesCard pinned={[]} isOwnProfile={true} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByText(/pin your favorite titles/i)).toBeDefined();
   });
 
   it("does not show Edit button for non-owners", () => {
     const pinned = makePinned(2);
-    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={false} />, { wrapper: Wrapper });
+    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={false} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.queryByRole("button", { name: /edit/i })).toBeNull();
   });
 
   it("shows Edit button for owner when pinned list is non-empty", () => {
     const pinned = makePinned(2);
-    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, { wrapper: Wrapper });
+    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByRole("button", { name: /edit/i })).toBeDefined();
   });
 
   it("toggles to Done when Edit is clicked", () => {
     const pinned = makePinned(2);
-    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, { wrapper: Wrapper });
+    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, {
+      wrapper: Wrapper,
+    });
     fireEvent.click(screen.getByRole("button", { name: /edit/i }));
     expect(screen.getByRole("button", { name: /done/i })).toBeDefined();
   });
 
   it("shows unpin buttons in edit mode", () => {
     const pinned = makePinned(2);
-    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, { wrapper: Wrapper });
+    render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, {
+      wrapper: Wrapper,
+    });
     fireEvent.click(screen.getByRole("button", { name: /edit/i }));
     const unpinButtons = screen.getAllByTitle("Unpin");
     expect(unpinButtons.length).toBe(2);
@@ -127,7 +151,11 @@ describe("PinnedFavoritesCard", () => {
       const pinned = makePinned(3);
       const onChanged = mock(() => {});
       render(
-        <PinnedFavoritesCard pinned={pinned} isOwnProfile={true} onPinnedChanged={onChanged} />,
+        <PinnedFavoritesCard
+          pinned={pinned}
+          isOwnProfile={true}
+          onPinnedChanged={onChanged}
+        />,
         { wrapper: Wrapper },
       );
 
@@ -148,10 +176,9 @@ describe("PinnedFavoritesCard", () => {
 
     it("stays in edit mode after unpin (no page-flash)", async () => {
       const pinned = makePinned(3);
-      render(
-        <PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />,
-        { wrapper: Wrapper },
-      );
+      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, {
+        wrapper: Wrapper,
+      });
 
       fireEvent.click(screen.getByRole("button", { name: /edit/i }));
       const unpinButtons = screen.getAllByTitle("Unpin");
@@ -169,7 +196,11 @@ describe("PinnedFavoritesCard", () => {
       const onChanged = mock(() => {});
       const pinned = makePinned(2);
       render(
-        <PinnedFavoritesCard pinned={pinned} isOwnProfile={true} onPinnedChanged={onChanged} />,
+        <PinnedFavoritesCard
+          pinned={pinned}
+          isOwnProfile={true}
+          onPinnedChanged={onChanged}
+        />,
         { wrapper: Wrapper },
       );
 
@@ -185,12 +216,16 @@ describe("PinnedFavoritesCard", () => {
 
     it("shows success toast on successful unpin", async () => {
       const pinned = makePinned(2);
-      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, { wrapper: Wrapper });
+      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, {
+        wrapper: Wrapper,
+      });
       fireEvent.click(screen.getByRole("button", { name: /edit/i }));
       fireEvent.click(screen.getAllByTitle("Unpin")[0]);
 
       await waitFor(() => {
-        expect(sonner.toast.success).toHaveBeenCalledWith("Removed from pinned favorites");
+        expect(sonner.toast.success).toHaveBeenCalledWith(
+          "Removed from pinned favorites",
+        );
       });
     });
   });
@@ -198,14 +233,18 @@ describe("PinnedFavoritesCard", () => {
   describe("display", () => {
     it("shows at most 4 items in non-edit mode", () => {
       const pinned = makePinned(6);
-      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={false} />, { wrapper: Wrapper });
+      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={false} />, {
+        wrapper: Wrapper,
+      });
       const items = screen.getAllByText(/Movie \d/);
       expect(items.length).toBe(4);
     });
 
     it("shows all items (up to 8) in edit mode", () => {
       const pinned = makePinned(6);
-      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, { wrapper: Wrapper });
+      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, {
+        wrapper: Wrapper,
+      });
       fireEvent.click(screen.getByRole("button", { name: /edit/i }));
       const items = screen.getAllByText(/Movie \d/);
       expect(items.length).toBe(6);
@@ -213,21 +252,37 @@ describe("PinnedFavoritesCard", () => {
 
     it("shows empty-slot placeholders for owner with fewer than 4 pins", () => {
       const pinned = makePinned(2);
-      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, { wrapper: Wrapper });
+      render(<PinnedFavoritesCard pinned={pinned} isOwnProfile={true} />, {
+        wrapper: Wrapper,
+      });
       const plusSlots = screen.getAllByText("+");
       expect(plusSlots.length).toBe(2);
     });
 
     it("links each tile to /title/:id (matching the SPA route)", () => {
       const pinned: PinnedTitle[] = [
-        { id: "42", title: "Foundation", poster_url: null, object_type: "SHOW", position: 0 },
-        { id: "99", title: "Blade Runner 2049", poster_url: null, object_type: "MOVIE", position: 1 },
+        {
+          id: "42",
+          title: "Foundation",
+          poster_url: null,
+          object_type: "SHOW",
+          position: 0,
+        },
+        {
+          id: "99",
+          title: "Blade Runner 2049",
+          poster_url: null,
+          object_type: "MOVIE",
+          position: 1,
+        },
       ];
       const { container } = render(
         <PinnedFavoritesCard pinned={pinned} isOwnProfile={false} />,
         { wrapper: Wrapper },
       );
-      const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+      const hrefs = Array.from(container.querySelectorAll("a")).map((a) =>
+        a.getAttribute("href"),
+      );
       expect(hrefs).toContain("/title/42");
       expect(hrefs).toContain("/title/99");
       expect(hrefs.some((h) => h?.startsWith("/details/"))).toBe(false);

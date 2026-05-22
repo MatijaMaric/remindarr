@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { isPushSupported, subscribeToPush, getExistingSubscription } from "../lib/push";
+import {
+  isPushSupported,
+  subscribeToPush,
+  getExistingSubscription,
+} from "../lib/push";
 import * as api from "../api";
 
 const DISMISSED_KEY = "notification-prompt-dismissed";
@@ -26,7 +30,9 @@ export default function NotificationPrompt() {
         setVisible(true);
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   if (!visible) return null;
@@ -78,7 +84,9 @@ export default function NotificationPrompt() {
         disabled={enabling}
         className="shrink-0 rounded-md bg-amber-500 px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-amber-400 disabled:opacity-50"
       >
-        {enabling ? t("notificationPrompt.enabling") : t("notificationPrompt.enable")}
+        {enabling
+          ? t("notificationPrompt.enabling")
+          : t("notificationPrompt.enable")}
       </button>
       <button
         onClick={handleDismiss}

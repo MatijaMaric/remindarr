@@ -43,8 +43,10 @@ export default function ProfileHero({
   const displayName = user.display_name || user.username;
 
   function countryFlag(code: string): string {
-    const offset = 0x1F1E6 - 65;
-    return Array.from(code.toUpperCase()).map((c) => String.fromCodePoint(c.charCodeAt(0) + offset)).join("");
+    const offset = 0x1f1e6 - 65;
+    return Array.from(code.toUpperCase())
+      .map((c) => String.fromCodePoint(c.charCodeAt(0) + offset))
+      .join("");
   }
 
   async function handleShare() {
@@ -54,7 +56,11 @@ export default function ProfileHero({
       text: `Check out @${user.username}'s watchlist on Remindarr`,
       url: shareUrl,
     };
-    if (typeof navigator !== "undefined" && "share" in navigator && typeof navigator.share === "function") {
+    if (
+      typeof navigator !== "undefined" &&
+      "share" in navigator &&
+      typeof navigator.share === "function"
+    ) {
       try {
         await navigator.share(payload);
         return;
@@ -167,7 +173,10 @@ export default function ProfileHero({
               <div className="mt-2 font-mono text-[13px] text-zinc-300 flex items-center gap-2 select-text">
                 @{user.username}
                 {user.country_code && (
-                  <span title={user.country_code} aria-label={user.country_code}>
+                  <span
+                    title={user.country_code}
+                    aria-label={user.country_code}
+                  >
                     {countryFlag(user.country_code)}
                   </span>
                 )}

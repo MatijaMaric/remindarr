@@ -19,13 +19,22 @@ import { createUser } from "../db/repository";
 
 function insertTitle(id: string, objectType: string, tmdbId: string) {
   getRawDb()
-    .prepare(`INSERT INTO titles (id, object_type, tmdb_id, title, release_date) VALUES (?, ?, ?, ?, '2024-01-01')`)
+    .prepare(
+      `INSERT INTO titles (id, object_type, tmdb_id, title, release_date) VALUES (?, ?, ?, ?, '2024-01-01')`,
+    )
     .run(id, objectType, tmdbId, `Title ${id}`);
 }
 
-function insertEpisode(id: number, titleId: string, season: number, episode: number) {
+function insertEpisode(
+  id: number,
+  titleId: string,
+  season: number,
+  episode: number,
+) {
   getRawDb()
-    .prepare(`INSERT INTO episodes (id, title_id, season_number, episode_number, air_date) VALUES (?, ?, ?, ?, '2024-01-01')`)
+    .prepare(
+      `INSERT INTO episodes (id, title_id, season_number, episode_number, air_date) VALUES (?, ?, ?, ?, '2024-01-01')`,
+    )
     .run(id, titleId, season, episode);
 }
 
@@ -38,15 +47,23 @@ function isMovieWatched(titleId: string, userId: string): boolean {
 
 function isEpisodeWatched(episodeId: number, userId: string): boolean {
   const row = getRawDb()
-    .prepare(`SELECT 1 FROM watched_episodes WHERE episode_id = ? AND user_id = ?`)
+    .prepare(
+      `SELECT 1 FROM watched_episodes WHERE episode_id = ? AND user_id = ?`,
+    )
     .get(episodeId, userId);
   return !!row;
 }
 
 function getIntegration(id: string) {
   return getRawDb()
-    .prepare(`SELECT last_sync_at, last_sync_error, enabled FROM integrations WHERE id = ?`)
-    .get(id) as { last_sync_at: string | null; last_sync_error: string | null; enabled: number } | null;
+    .prepare(
+      `SELECT last_sync_at, last_sync_error, enabled FROM integrations WHERE id = ?`,
+    )
+    .get(id) as {
+    last_sync_at: string | null;
+    last_sync_error: string | null;
+    enabled: number;
+  } | null;
 }
 
 let userId: string;
@@ -57,7 +74,9 @@ beforeEach(async () => {
   userId = await createUser("plexuser", "hash");
 
   getRawDb()
-    .prepare(`INSERT INTO integrations (id, user_id, provider, name, config, enabled) VALUES (?, ?, 'plex', 'My Plex', '{}', 1)`)
+    .prepare(
+      `INSERT INTO integrations (id, user_id, provider, name, config, enabled) VALUES (?, ?, 'plex', 'My Plex', '{}', 1)`,
+    )
     .run("int-1", userId);
   integrationId = "int-1";
 
@@ -91,9 +110,16 @@ const integration = (overrides = {}) => ({
 describe("syncPlexWatched — movies", () => {
   it("marks a watched movie as watched in Remindarr", async () => {
     insertTitle("movie-100", "MOVIE", "100");
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetWatchedMovies.mockResolvedValue([
-      { ratingKey: "1", title: "Movie A", viewCount: 2, Guid: [{ id: "tmdb://100" }] },
+      {
+        ratingKey: "1",
+        title: "Movie A",
+        viewCount: 2,
+        Guid: [{ id: "tmdb://100" }],
+      },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([]);
 
@@ -104,9 +130,16 @@ describe("syncPlexWatched — movies", () => {
 
   it("skips movies without TMDB GUID", async () => {
     insertTitle("movie-200", "MOVIE", "200");
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetWatchedMovies.mockResolvedValue([
-      { ratingKey: "2", title: "Unknown Movie", viewCount: 1, Guid: [{ id: "imdb://tt9999999" }] },
+      {
+        ratingKey: "2",
+        title: "Unknown Movie",
+        viewCount: 1,
+        Guid: [{ id: "imdb://tt9999999" }],
+      },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([]);
 
@@ -117,9 +150,16 @@ describe("syncPlexWatched — movies", () => {
 
   it("skips movies not in Remindarr DB", async () => {
     // title movie-999 doesn't exist in DB
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetWatchedMovies.mockResolvedValue([
-      { ratingKey: "3", title: "Unknown", viewCount: 1, Guid: [{ id: "tmdb://999" }] },
+      {
+        ratingKey: "3",
+        title: "Unknown",
+        viewCount: 1,
+        Guid: [{ id: "tmdb://999" }],
+      },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([]);
 
@@ -129,9 +169,16 @@ describe("syncPlexWatched — movies", () => {
 
   it("respects syncMovies: false", async () => {
     insertTitle("movie-100", "MOVIE", "100");
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetWatchedMovies.mockResolvedValue([
-      { ratingKey: "1", title: "Movie A", viewCount: 1, Guid: [{ id: "tmdb://100" }] },
+      {
+        ratingKey: "1",
+        title: "Movie A",
+        viewCount: 1,
+        Guid: [{ id: "tmdb://100" }],
+      },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([]);
 
@@ -157,18 +204,32 @@ describe("syncPlexWatched — episodes", () => {
     insertEpisode(10, "tv-50", 1, 1);
     insertEpisode(11, "tv-50", 1, 2);
 
-    mockGetLibrarySections.mockResolvedValue([{ key: "2", type: "show", title: "TV" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "2", type: "show", title: "TV" },
+    ]);
     mockGetShowsInSection.mockResolvedValue([
       { ratingKey: "show-1", title: "Show A", Guid: [{ id: "tmdb://50" }] },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([
       {
-        ratingKey: "ep-10", title: "Ep 1", parentTitle: "S1", grandparentTitle: "Show A",
-        seasonNumber: 1, index: 1, viewCount: 1, grandparentRatingKey: "show-1",
+        ratingKey: "ep-10",
+        title: "Ep 1",
+        parentTitle: "S1",
+        grandparentTitle: "Show A",
+        seasonNumber: 1,
+        index: 1,
+        viewCount: 1,
+        grandparentRatingKey: "show-1",
       },
       {
-        ratingKey: "ep-11", title: "Ep 2", parentTitle: "S1", grandparentTitle: "Show A",
-        seasonNumber: 1, index: 2, viewCount: 2, grandparentRatingKey: "show-1",
+        ratingKey: "ep-11",
+        title: "Ep 2",
+        parentTitle: "S1",
+        grandparentTitle: "Show A",
+        seasonNumber: 1,
+        index: 2,
+        viewCount: 2,
+        grandparentRatingKey: "show-1",
       },
     ]);
     mockGetWatchedMovies.mockResolvedValue([]);
@@ -180,14 +241,26 @@ describe("syncPlexWatched — episodes", () => {
   });
 
   it("skips shows whose TMDB ID is not in Remindarr DB", async () => {
-    mockGetLibrarySections.mockResolvedValue([{ key: "2", type: "show", title: "TV" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "2", type: "show", title: "TV" },
+    ]);
     mockGetShowsInSection.mockResolvedValue([
-      { ratingKey: "show-x", title: "Unknown Show", Guid: [{ id: "tmdb://9999" }] },
+      {
+        ratingKey: "show-x",
+        title: "Unknown Show",
+        Guid: [{ id: "tmdb://9999" }],
+      },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([
       {
-        ratingKey: "ep-x", title: "Ep", parentTitle: "S1", grandparentTitle: "Unknown",
-        seasonNumber: 1, index: 1, viewCount: 1, grandparentRatingKey: "show-x",
+        ratingKey: "ep-x",
+        title: "Ep",
+        parentTitle: "S1",
+        grandparentTitle: "Unknown",
+        seasonNumber: 1,
+        index: 1,
+        viewCount: 1,
+        grandparentRatingKey: "show-x",
       },
     ]);
     mockGetWatchedMovies.mockResolvedValue([]);
@@ -198,9 +271,13 @@ describe("syncPlexWatched — episodes", () => {
 
 describe("syncPlexWatched — error handling", () => {
   it("disables integration on PlexAuthError and records error", async () => {
-    mockGetLibrarySections.mockRejectedValue(new plexClient.PlexAuthError("Token revoked"));
+    mockGetLibrarySections.mockRejectedValue(
+      new plexClient.PlexAuthError("Token revoked"),
+    );
 
-    await expect(syncPlexWatched(integration())).rejects.toThrow("Token revoked");
+    await expect(syncPlexWatched(integration())).rejects.toThrow(
+      "Token revoked",
+    );
 
     const row = getIntegration(integrationId);
     expect(row?.enabled).toBe(0);
@@ -210,7 +287,9 @@ describe("syncPlexWatched — error handling", () => {
   it("records error without disabling on non-auth errors", async () => {
     mockGetLibrarySections.mockRejectedValue(new Error("Network error"));
 
-    await expect(syncPlexWatched(integration())).rejects.toThrow("Network error");
+    await expect(syncPlexWatched(integration())).rejects.toThrow(
+      "Network error",
+    );
 
     const row = getIntegration(integrationId);
     expect(row?.enabled).toBe(1);
@@ -221,9 +300,16 @@ describe("syncPlexWatched — error handling", () => {
 describe("syncPlexWatched — per-title failure summary", () => {
   it("returns correct { succeeded, failed } shape when all titles succeed", async () => {
     insertTitle("movie-101", "MOVIE", "101");
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetWatchedMovies.mockResolvedValue([
-      { ratingKey: "1", title: "Movie A", viewCount: 1, Guid: [{ id: "tmdb://101" }] },
+      {
+        ratingKey: "1",
+        title: "Movie A",
+        viewCount: 1,
+        Guid: [{ id: "tmdb://101" }],
+      },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([]);
 
@@ -236,9 +322,16 @@ describe("syncPlexWatched — per-title failure summary", () => {
 
   it("does not throw and returns { succeeded, failed } shape when a title is not in DB", async () => {
     // movie-9999 does not exist in DB — watchTitle will throw a FK constraint error
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetWatchedMovies.mockResolvedValue([
-      { ratingKey: "3", title: "Unknown", viewCount: 1, Guid: [{ id: "tmdb://9999" }] },
+      {
+        ratingKey: "3",
+        title: "Unknown",
+        viewCount: 1,
+        Guid: [{ id: "tmdb://9999" }],
+      },
     ]);
     mockGetWatchedEpisodes.mockResolvedValue([]);
 

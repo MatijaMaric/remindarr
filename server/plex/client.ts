@@ -28,17 +28,25 @@ export class PlexAuthError extends Error {
 export class PlexApiError extends Error {
   constructor(
     message: string,
-    public readonly status?: number
+    public readonly status?: number,
   ) {
     super(message);
     this.name = "PlexApiError";
   }
 }
 
-async function plexFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
+async function plexFetch<T>(
+  url: string,
+  options: RequestInit = {},
+): Promise<T> {
   const res = await httpFetch(url, options);
-  if (res.status === 401) throw new PlexAuthError("Plex token is invalid or revoked");
-  if (!res.ok) throw new PlexApiError(`Plex API error: ${res.status} ${res.statusText}`, res.status);
+  if (res.status === 401)
+    throw new PlexAuthError("Plex token is invalid or revoked");
+  if (!res.ok)
+    throw new PlexApiError(
+      `Plex API error: ${res.status} ${res.statusText}`,
+      res.status,
+    );
   return res.json() as Promise<T>;
 }
 
@@ -53,7 +61,12 @@ export type PlexPin = {
 
 export async function createPin(): Promise<PlexPin> {
   const url = `${PLEX_TV_BASE}/api/v2/pins?strong=true`;
-  const data = await plexFetch<{ id: number; code: string; authToken: string | null; expiresAt: string }>(url, {
+  const data = await plexFetch<{
+    id: number;
+    code: string;
+    authToken: string | null;
+    expiresAt: string;
+  }>(url, {
     method: "POST",
     headers: plexHeaders(),
   });
@@ -91,7 +104,9 @@ interface PlexResource extends PlexServer {
 
 export async function getServers(token: string): Promise<PlexServer[]> {
   const url = `${PLEX_TV_BASE}/api/v2/resources?includeHttps=1&includeRelay=1`;
-  const data = await plexFetch<PlexResource[]>(url, { headers: plexHeaders(token) });
+  const data = await plexFetch<PlexResource[]>(url, {
+    headers: plexHeaders(token),
+  });
   // Only return MediaServer resources
   return data.filter((r: PlexResource) => r.provides?.includes("server"));
 }
@@ -104,15 +119,23 @@ export type PlexSection = {
   title: string;
 };
 
-export async function getLibrarySections(serverUrl: string, token: string): Promise<PlexSection[]> {
+export async function getLibrarySections(
+  serverUrl: string,
+  token: string,
+): Promise<PlexSection[]> {
   const url = `${serverUrl}/library/sections`;
-  const data = await plexFetch<{ MediaContainer: { Directory: Array<{ key: string; type: string; title: string }> } }>(
-    url,
-    { headers: plexHeaders(token) }
-  );
+  const data = await plexFetch<{
+    MediaContainer: {
+      Directory: Array<{ key: string; type: string; title: string }>;
+    };
+  }>(url, { headers: plexHeaders(token) });
   return (data.MediaContainer?.Directory ?? [])
     .filter((d) => d.type === "movie" || d.type === "show")
-    .map((d) => ({ key: d.key, type: d.type as "movie" | "show", title: d.title }));
+    .map((d) => ({
+      key: d.key,
+      type: d.type as "movie" | "show",
+      title: d.title,
+    }));
 }
 
 // ─── Watched status ───────────────────────────────────────────────────────────
@@ -151,13 +174,12 @@ export type PlexShowItem = {
 export async function getWatchedMovies(
   serverUrl: string,
   token: string,
-  sectionKey: string
+  sectionKey: string,
 ): Promise<PlexMovieItem[]> {
   const url = `${serverUrl}/library/sections/${sectionKey}/all?type=1&includeGuids=1`;
-  const data = await plexFetch<{ MediaContainer: { Metadata?: PlexMovieItem[] } }>(
-    url,
-    { headers: plexHeaders(token) }
-  );
+  const data = await plexFetch<{
+    MediaContainer: { Metadata?: PlexMovieItem[] };
+  }>(url, { headers: plexHeaders(token) });
   const items = data.MediaContainer?.Metadata ?? [];
   return items.filter((m) => (m.viewCount ?? 0) > 0);
 }
@@ -165,26 +187,24 @@ export async function getWatchedMovies(
 export async function getAllMoviesInSection(
   serverUrl: string,
   token: string,
-  sectionKey: string
+  sectionKey: string,
 ): Promise<PlexMovieItem[]> {
   const url = `${serverUrl}/library/sections/${sectionKey}/all?type=1&includeGuids=1`;
-  const data = await plexFetch<{ MediaContainer: { Metadata?: PlexMovieItem[] } }>(
-    url,
-    { headers: plexHeaders(token) }
-  );
+  const data = await plexFetch<{
+    MediaContainer: { Metadata?: PlexMovieItem[] };
+  }>(url, { headers: plexHeaders(token) });
   return data.MediaContainer?.Metadata ?? [];
 }
 
 export async function getWatchedEpisodes(
   serverUrl: string,
   token: string,
-  sectionKey: string
+  sectionKey: string,
 ): Promise<PlexEpisodeItem[]> {
   const url = `${serverUrl}/library/sections/${sectionKey}/all?type=4&includeGuids=1`;
-  const data = await plexFetch<{ MediaContainer: { Metadata?: PlexEpisodeItem[] } }>(
-    url,
-    { headers: plexHeaders(token) }
-  );
+  const data = await plexFetch<{
+    MediaContainer: { Metadata?: PlexEpisodeItem[] };
+  }>(url, { headers: plexHeaders(token) });
   const items = data.MediaContainer?.Metadata ?? [];
   return items.filter((e) => (e.viewCount ?? 0) > 0);
 }
@@ -192,13 +212,12 @@ export async function getWatchedEpisodes(
 export async function getShowsInSection(
   serverUrl: string,
   token: string,
-  sectionKey: string
+  sectionKey: string,
 ): Promise<PlexShowItem[]> {
   const url = `${serverUrl}/library/sections/${sectionKey}/all?type=2&includeGuids=1`;
-  const data = await plexFetch<{ MediaContainer: { Metadata?: PlexShowItem[] } }>(
-    url,
-    { headers: plexHeaders(token) }
-  );
+  const data = await plexFetch<{
+    MediaContainer: { Metadata?: PlexShowItem[] };
+  }>(url, { headers: plexHeaders(token) });
   return data.MediaContainer?.Metadata ?? [];
 }
 
@@ -211,15 +230,14 @@ export async function getShowsInSection(
 export async function getPlexMetadataSlug(
   tmdbId: string,
   mediaType: "movie" | "show",
-  token: string
+  token: string,
 ): Promise<string | null> {
   const type = mediaType === "movie" ? 1 : 2;
   const url = `https://metadata.provider.plex.tv/library/metadata/matches?guid=tmdb://${tmdbId}&type=${type}`;
   try {
-    const data = await plexFetch<{ MediaContainer?: { Metadata?: Array<{ slug?: string }> } }>(
-      url,
-      { headers: plexHeaders(token) }
-    );
+    const data = await plexFetch<{
+      MediaContainer?: { Metadata?: Array<{ slug?: string }> };
+    }>(url, { headers: plexHeaders(token) });
     return data.MediaContainer?.Metadata?.[0]?.slug ?? null;
   } catch {
     return null;

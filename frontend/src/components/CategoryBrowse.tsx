@@ -9,13 +9,26 @@ import type { BrowseCategory } from "./CategoryBar";
 
 export function filterBrowseTitles(
   titles: Title[],
-  filters: { genre: string[]; provider: string[]; language: string[] }
+  filters: { genre: string[]; provider: string[]; language: string[] },
 ): Title[] {
   return titles.filter((t) => {
-    if (filters.genre.length > 0 && !filters.genre.some((g) => t.genres.includes(g))) return false;
-    if (filters.provider.length > 0 && !t.offers.some((o) => filters.provider.includes(o.provider_technical_name)))
+    if (
+      filters.genre.length > 0 &&
+      !filters.genre.some((g) => t.genres.includes(g))
+    )
       return false;
-    if (filters.language.length > 0 && !filters.language.includes(t.original_language ?? "")) return false;
+    if (
+      filters.provider.length > 0 &&
+      !t.offers.some((o) =>
+        filters.provider.includes(o.provider_technical_name),
+      )
+    )
+      return false;
+    if (
+      filters.language.length > 0 &&
+      !filters.language.includes(t.original_language ?? "")
+    )
+      return false;
     return true;
   });
 }
@@ -45,7 +58,7 @@ export function extractBrowseProviders(titles: Title[]): Provider[] {
           icon_url: o.provider_icon_url,
         });
       }
-    })
+    }),
   );
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -112,7 +125,18 @@ export default function CategoryBrowse({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["browse", category, type, genre, provider, language, yearMin, yearMax, minRating, onlyMine],
+    queryKey: [
+      "browse",
+      category,
+      type,
+      genre,
+      provider,
+      language,
+      yearMin,
+      yearMax,
+      minRating,
+      onlyMine,
+    ],
     queryFn: ({ pageParam, signal }) =>
       api.browseTitles(
         {
@@ -169,11 +193,15 @@ export default function CategoryBrowse({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPageRef.current) {
+        if (
+          entries[0].isIntersecting &&
+          hasNextPage &&
+          !isFetchingNextPageRef.current
+        ) {
           void fetchNextPage();
         }
       },
-      { rootMargin: "0px" }
+      { rootMargin: "0px" },
     );
 
     observer.observe(sentinel);
@@ -184,10 +212,15 @@ export default function CategoryBrowse({
   // circuit re-renders when neither `titles` nor `hideTracked` changed.
   const visibleTitles = useMemo(
     () => (hideTracked ? titles.filter((t) => !t.is_tracked) : titles),
-    [titles, hideTracked]
+    [titles, hideTracked],
   );
 
-  const errorMessage = isError && error instanceof Error ? error.message : isError ? "Failed to load titles" : null;
+  const errorMessage =
+    isError && error instanceof Error
+      ? error.message
+      : isError
+        ? "Failed to load titles"
+        : null;
 
   return (
     <div className="space-y-4">

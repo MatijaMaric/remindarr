@@ -73,8 +73,12 @@ function ToastItem({ achievement, onDismiss }: ToastItemProps) {
         <div className="text-xs font-mono font-semibold uppercase tracking-widest text-amber-400 mb-0.5">
           Achievement unlocked
         </div>
-        <div className="text-sm font-bold text-zinc-100 truncate">{achievement.title}</div>
-        <div className="text-xs text-zinc-400 truncate">{achievement.description}</div>
+        <div className="text-sm font-bold text-zinc-100 truncate">
+          {achievement.title}
+        </div>
+        <div className="text-xs text-zinc-400 truncate">
+          {achievement.description}
+        </div>
       </div>
     </div>
   );
@@ -95,7 +99,11 @@ export default function AchievementToast() {
   return (
     <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 sm:bottom-6">
       {visible.map((a) => (
-        <ToastItem key={a.key} achievement={a} onDismiss={() => dismiss(a.key)} />
+        <ToastItem
+          key={a.key}
+          achievement={a}
+          onDismiss={() => dismiss(a.key)}
+        />
       ))}
     </div>
   );

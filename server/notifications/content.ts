@@ -11,7 +11,10 @@ import type { NotificationContent } from "./types";
  *   formatLeavingCopy("Netflix", null)          → "Leaving Netflix soon"
  *   formatLeavingCopy("Netflix", "2025-06-01")  → "Leaving Netflix on Jun 1, 2025"
  */
-export function formatLeavingCopy(providerName: string, leavingAt: string | null | undefined): string {
+export function formatLeavingCopy(
+  providerName: string,
+  leavingAt: string | null | undefined,
+): string {
   if (!leavingAt) return `Leaving ${providerName} soon`;
   try {
     const date = new Date(leavingAt);
@@ -30,7 +33,7 @@ export function formatLeavingCopy(providerName: string, leavingAt: string | null
 
 export async function buildNotificationContent(
   userId: string,
-  date: string
+  date: string,
 ): Promise<NotificationContent> {
   // Get the next day for the date range query
   const d = new Date(date + "T00:00:00Z");
@@ -90,7 +93,7 @@ export async function buildNotificationContent(
 export async function buildWeeklyDigestContent(
   userId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
 ): Promise<NotificationContent> {
   const now = new Date();
 
@@ -118,7 +121,11 @@ export async function buildWeeklyDigestContent(
     }));
 
   // Tracked movies releasing in the range
-  const rawMovies = await getTrackedMoviesByReleaseDateRange(startDate, endDate, userId);
+  const rawMovies = await getTrackedMoviesByReleaseDateRange(
+    startDate,
+    endDate,
+    userId,
+  );
   const movies = rawMovies
     .filter((m) => {
       // Skip snoozed titles

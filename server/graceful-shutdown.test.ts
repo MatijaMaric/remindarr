@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, spyOn, beforeAll, afterAll } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  spyOn,
+  beforeAll,
+  afterAll,
+} from "bun:test";
 import Sentry from "./sentry";
 import { createShutdownHandler } from "./graceful-shutdown";
 
@@ -26,7 +34,11 @@ describe("createShutdownHandler", () => {
     const stopWorker = mock(() => {});
     const closeDb = mock(() => {});
 
-    const shutdown = createShutdownHandler({ server: { stop: serverStop }, stopWorker, closeDb });
+    const shutdown = createShutdownHandler({
+      server: { stop: serverStop },
+      stopWorker,
+      closeDb,
+    });
     await shutdown("SIGTERM");
 
     expect(serverStop).toHaveBeenCalledTimes(1);
@@ -54,13 +66,25 @@ describe("createShutdownHandler", () => {
     const callOrder: string[] = [];
 
     const shutdown = createShutdownHandler({
-      server: { stop: mock(() => { callOrder.push("server.stop"); }) },
-      stopWorker: mock(() => { callOrder.push("stopWorker"); }),
-      closeDb: mock(() => { callOrder.push("closeDb"); }),
+      server: {
+        stop: mock(() => {
+          callOrder.push("server.stop");
+        }),
+      },
+      stopWorker: mock(() => {
+        callOrder.push("stopWorker");
+      }),
+      closeDb: mock(() => {
+        callOrder.push("closeDb");
+      }),
     });
     await shutdown("SIGTERM");
 
-    expect(callOrder.indexOf("server.stop")).toBeLessThan(callOrder.indexOf("closeDb"));
-    expect(callOrder.indexOf("stopWorker")).toBeLessThan(callOrder.indexOf("closeDb"));
+    expect(callOrder.indexOf("server.stop")).toBeLessThan(
+      callOrder.indexOf("closeDb"),
+    );
+    expect(callOrder.indexOf("stopWorker")).toBeLessThan(
+      callOrder.indexOf("closeDb"),
+    );
   });
 });

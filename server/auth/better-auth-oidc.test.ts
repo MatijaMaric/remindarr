@@ -3,10 +3,7 @@ import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createAuth, checkAdminClaim } from "./better-auth";
 import { getDb } from "../db/schema";
 import { users, account } from "../db/schema";
-import {
-  createOidcState,
-  consumeOidcState,
-} from "../db/repository";
+import { createOidcState, consumeOidcState } from "../db/repository";
 import type { Platform } from "../platform/types";
 
 const platform: Platform = {
@@ -47,9 +44,12 @@ function makeIdToken(claims: Record<string, unknown>): string {
 /** Build a standard mock fetch handler for the OIDC provider. */
 function makeMockFetch(
   userinfoClaims: Record<string, unknown>,
-  opts?: { tokenStatus?: number; userinfoStatus?: number }
+  opts?: { tokenStatus?: number; userinfoStatus?: number },
 ) {
-  return async (input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
+  return async (
+    input: RequestInfo | URL,
+    _init?: RequestInit,
+  ): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input);
 
     if (url.includes(".well-known/openid-configuration")) {
@@ -59,7 +59,10 @@ function makeMockFetch(
     if (url === MOCK_DISCOVERY.token_endpoint) {
       const status = opts?.tokenStatus ?? 200;
       if (status !== 200) {
-        return jsonResponse({ error: "invalid_grant", error_description: "Code expired" }, status);
+        return jsonResponse(
+          { error: "invalid_grant", error_description: "Code expired" },
+          status,
+        );
       }
       const idToken = makeIdToken(userinfoClaims);
       return jsonResponse({
@@ -94,11 +97,15 @@ describe("checkAdminClaim", () => {
   });
 
   test("returns true when array claim contains the value", () => {
-    expect(checkAdminClaim({ groups: ["users", "admins"] }, "groups", "admins")).toBe(true);
+    expect(
+      checkAdminClaim({ groups: ["users", "admins"] }, "groups", "admins"),
+    ).toBe(true);
   });
 
   test("returns false when array claim does not contain the value", () => {
-    expect(checkAdminClaim({ groups: ["users", "viewers"] }, "groups", "admins")).toBe(false);
+    expect(
+      checkAdminClaim({ groups: ["users", "viewers"] }, "groups", "admins"),
+    ).toBe(false);
   });
 
   test("returns false when array claim is empty", () => {
@@ -177,15 +184,15 @@ describe("OIDC authorize endpoint", () => {
 
   beforeEach(() => {
     setupTestDb();
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-      (async (input: RequestInfo | URL) => {
-        const url = input instanceof Request ? input.url : String(input);
-        if (url.includes(".well-known/openid-configuration")) {
-          return jsonResponse(MOCK_DISCOVERY);
-        }
-        throw new Error(`Unexpected fetch: ${url}`);
-      }) as typeof fetch
-    );
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+      input: RequestInfo | URL,
+    ) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes(".well-known/openid-configuration")) {
+        return jsonResponse(MOCK_DISCOVERY);
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    }) as typeof fetch);
   });
 
   afterEach(() => {
@@ -215,7 +222,7 @@ describe("OIDC authorize endpoint", () => {
           provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
-      })
+      }),
     );
 
     // better-auth returns 302 redirect or 200 with { url } in body
@@ -227,7 +234,7 @@ describe("OIDC authorize endpoint", () => {
       expect(location).toBeTruthy();
       authUrl = new URL(location);
     } else {
-      const body = await res.json() as { url?: string };
+      const body = (await res.json()) as { url?: string };
       expect(body.url).toBeTruthy();
       authUrl = new URL(body.url!);
     }
@@ -246,14 +253,14 @@ describe("OIDC authorize endpoint", () => {
           provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
-      })
+      }),
     );
 
     let authUrl: URL;
     if (res.status === 302) {
       authUrl = new URL(res.headers.get("location") ?? "");
     } else {
-      const body = await res.json() as { url?: string };
+      const body = (await res.json()) as { url?: string };
       authUrl = new URL(body.url!);
     }
 
@@ -273,14 +280,14 @@ describe("OIDC authorize endpoint", () => {
           provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
-      })
+      }),
     );
 
     let authUrl: URL;
     if (res.status === 302) {
       authUrl = new URL(res.headers.get("location") ?? "");
     } else {
-      const body = await res.json() as { url?: string };
+      const body = (await res.json()) as { url?: string };
       authUrl = new URL(body.url!);
     }
 
@@ -299,7 +306,7 @@ describe("OIDC authorize endpoint", () => {
           provider: "nonexistent-provider",
           callbackURL: "http://localhost:3000/",
         }),
-      })
+      }),
     );
 
     expect(res.status).not.toBe(200);
@@ -350,16 +357,19 @@ describe("OIDC callback flow", () => {
       adminValue?: string;
       tokenStatus?: number;
       userinfoStatus?: number;
-    }
+    },
   ): Promise<{ callbackRes: Response }> {
     fetchSpy.mockImplementation(
       makeMockFetch(userinfoClaims, {
         tokenStatus: opts?.tokenStatus,
         userinfoStatus: opts?.userinfoStatus,
-      })
+      }),
     );
 
-    const auth = makeAuth({ adminClaim: opts?.adminClaim, adminValue: opts?.adminValue });
+    const auth = makeAuth({
+      adminClaim: opts?.adminClaim,
+      adminValue: opts?.adminValue,
+    });
 
     // Step 1: initiate the OAuth flow to obtain a valid state
     const authorizeRes = await auth.handler(
@@ -370,7 +380,7 @@ describe("OIDC callback flow", () => {
           provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
-      })
+      }),
     );
 
     let state: string;
@@ -378,7 +388,7 @@ describe("OIDC callback flow", () => {
       const location = authorizeRes.headers.get("location") ?? "";
       state = new URL(location).searchParams.get("state") ?? "";
     } else {
-      const body = await authorizeRes.json() as { url?: string };
+      const body = (await authorizeRes.json()) as { url?: string };
       state = new URL(body.url!).searchParams.get("state") ?? "";
     }
     expect(state).toBeTruthy();
@@ -394,8 +404,8 @@ describe("OIDC callback flow", () => {
         {
           method: "GET",
           headers: cookieHeader ? { Cookie: cookieHeader } : {},
-        }
-      )
+        },
+      ),
     );
 
     return { callbackRes };
@@ -424,7 +434,9 @@ describe("OIDC callback flow", () => {
     const db = getDb();
     const accounts = await db.select().from(account).all();
     expect(
-      accounts.some((a) => a.providerId === "pocketid" && a.accountId === "oidc-user-002")
+      accounts.some(
+        (a) => a.providerId === "pocketid" && a.accountId === "oidc-user-002",
+      ),
     ).toBe(true);
   });
 
@@ -438,7 +450,7 @@ describe("OIDC callback flow", () => {
     // On success, better-auth sets a session cookie and redirects (302)
     const cookies = callbackRes.headers.getSetCookie?.() ?? [];
     const hasBetterAuthCookie = cookies.some((c) =>
-      c.includes("better-auth.session_token")
+      c.includes("better-auth.session_token"),
     );
     expect(hasBetterAuthCookie).toBe(true);
   });
@@ -451,7 +463,7 @@ describe("OIDC callback flow", () => {
         email: "admin-array@example.com",
         groups: ["users", "admins"],
       },
-      { adminClaim: "groups", adminValue: "admins" }
+      { adminClaim: "groups", adminValue: "admins" },
     );
 
     const db = getDb();
@@ -469,7 +481,7 @@ describe("OIDC callback flow", () => {
         email: "regular@example.com",
         groups: ["users"],
       },
-      { adminClaim: "groups", adminValue: "admins" }
+      { adminClaim: "groups", adminValue: "admins" },
     );
 
     const db = getDb();
@@ -487,7 +499,7 @@ describe("OIDC callback flow", () => {
         email: "scalar-admin@example.com",
         role: "superadmin",
       },
-      { adminClaim: "role", adminValue: "superadmin" }
+      { adminClaim: "role", adminValue: "superadmin" },
     );
 
     const db = getDb();
@@ -521,7 +533,7 @@ describe("OIDC callback flow", () => {
         email: "returning@example.com",
         groups: ["users"],
       },
-      { adminClaim: "groups", adminValue: "admins" }
+      { adminClaim: "groups", adminValue: "admins" },
     );
 
     // Verify not admin after first login
@@ -538,7 +550,7 @@ describe("OIDC callback flow", () => {
         email: "returning@example.com",
         groups: ["users", "admins"],
       },
-      { adminClaim: "groups", adminValue: "admins" }
+      { adminClaim: "groups", adminValue: "admins" },
     );
 
     allUsers = await db.select().from(users).all();
@@ -560,8 +572,8 @@ describe("OIDC callback flow", () => {
     const res = await auth.handler(
       new Request(
         "http://localhost:3000/api/auth/callback/pocketid?code=some-code&state=invalid-state-xyz",
-        { method: "GET" }
-      )
+        { method: "GET" },
+      ),
     );
 
     // Should not succeed
@@ -571,7 +583,7 @@ describe("OIDC callback flow", () => {
   test("callback with failed token exchange returns an error response", async () => {
     const { callbackRes } = await runOidcFlow(
       { sub: "token-fail-user", name: "Token Fail User" },
-      { tokenStatus: 400 }
+      { tokenStatus: 400 },
     );
 
     // The provider returned an error; better-auth should return non-200
@@ -596,7 +608,7 @@ describe("OIDC callback flow", () => {
             providerId: "pocketid",
             callbackURL: "http://localhost:3000/",
           }),
-        })
+        }),
       );
     } catch (e) {
       error = e;
@@ -624,16 +636,19 @@ describe("OIDC callback flow", () => {
           provider: "pocketid",
           callbackURL: "http://localhost:3000/",
         }),
-      })
+      }),
     );
 
     let state: string;
     const setCookies = authorizeRes.headers.getSetCookie?.() ?? [];
     const cookieHeader = setCookies.map((c) => c.split(";")[0]).join("; ");
     if (authorizeRes.status === 302) {
-      state = new URL(authorizeRes.headers.get("location") ?? "").searchParams.get("state") ?? "";
+      state =
+        new URL(authorizeRes.headers.get("location") ?? "").searchParams.get(
+          "state",
+        ) ?? "";
     } else {
-      const body = await authorizeRes.json() as { url?: string };
+      const body = (await authorizeRes.json()) as { url?: string };
       state = new URL(body.url!).searchParams.get("state") ?? "";
     }
 
@@ -644,8 +659,8 @@ describe("OIDC callback flow", () => {
         {
           method: "GET",
           headers: cookieHeader ? { Cookie: cookieHeader } : {},
-        }
-      )
+        },
+      ),
     );
 
     expect(res.status).not.toBe(200);

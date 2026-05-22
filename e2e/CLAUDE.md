@@ -14,29 +14,29 @@ Playwright config: `playwright.config.ts` (root). Three browser projects: chromi
 
 ## Fixtures (`e2e/fixtures/`)
 
-| File | Purpose |
-|------|---------|
-| `auth.ts` | Playwright fixtures for logged-in user sessions |
-| `constants.ts` | Shared constants (URLs, credentials, timeouts) |
-| `global-setup.ts` | DB wipe, mock servers, app start |
-| `global-teardown.ts` | Clean shutdown |
-| `mock-oidc.ts` | In-process OIDC provider mock (avoids real IdP) |
-| `mock-webhook.ts` | In-process webhook receiver for notification testing |
+| File                 | Purpose                                              |
+| -------------------- | ---------------------------------------------------- |
+| `auth.ts`            | Playwright fixtures for logged-in user sessions      |
+| `constants.ts`       | Shared constants (URLs, credentials, timeouts)       |
+| `global-setup.ts`    | DB wipe, mock servers, app start                     |
+| `global-teardown.ts` | Clean shutdown                                       |
+| `mock-oidc.ts`       | In-process OIDC provider mock (avoids real IdP)      |
+| `mock-webhook.ts`    | In-process webhook receiver for notification testing |
 
 Helpers shared across specs: `e2e/helpers.ts`.
 
 ## Spec files
 
-| Spec | Status | Notes |
-|------|--------|-------|
-| `auth.spec.ts` | CI-skipped | Deemed flaky/redundant |
-| `calendar-feed.spec.ts` | CI-enabled | |
-| `episodes.spec.ts` | CI-skipped | Deemed flaky/redundant |
-| `notifications.spec.ts` | CI-enabled | Uses mock-webhook |
-| `oidc.spec.ts` | CI-enabled | Uses mock-oidc |
-| `passkey.spec.ts` | CI-enabled | |
-| `search.spec.ts` | CI-skipped | Deemed flaky/redundant |
-| `tracking.spec.ts` | CI-skipped | Deemed flaky/redundant |
+| Spec                    | Status     | Notes                  |
+| ----------------------- | ---------- | ---------------------- |
+| `auth.spec.ts`          | CI-skipped | Deemed flaky/redundant |
+| `calendar-feed.spec.ts` | CI-enabled |                        |
+| `episodes.spec.ts`      | CI-skipped | Deemed flaky/redundant |
+| `notifications.spec.ts` | CI-enabled | Uses mock-webhook      |
+| `oidc.spec.ts`          | CI-enabled | Uses mock-oidc         |
+| `passkey.spec.ts`       | CI-enabled |                        |
+| `search.spec.ts`        | CI-skipped | Deemed flaky/redundant |
+| `tracking.spec.ts`      | CI-skipped | Deemed flaky/redundant |
 
 ## Running locally
 

@@ -22,7 +22,7 @@ test.describe("Track and untrack titles", () => {
           titles: [{ ...MOCK_SEARCH_TITLE, isTracked }],
           count: 1,
         },
-      })
+      }),
     );
     await page.route("**/api/track/tt1234567", async (route) => {
       if (route.request().method() === "POST") {
@@ -35,7 +35,9 @@ test.describe("Track and untrack titles", () => {
     await mockTitleEndpoints(page);
 
     await page.goto("/browse");
-    await page.getByPlaceholder(/search titles or paste imdb link/i).fill("Test Movie");
+    await page
+      .getByPlaceholder(/search titles or paste imdb link/i)
+      .fill("Test Movie");
     await page.getByRole("button", { name: /^search$/i }).click();
 
     const trackButton = page.getByRole("button", { name: /^track$/i });
@@ -43,7 +45,9 @@ test.describe("Track and untrack titles", () => {
     await trackButton.click();
 
     // Button should change to "Tracked"
-    await expect(page.getByRole("button", { name: /^tracked$/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^tracked$/i }),
+    ).toBeVisible();
   });
 
   test("untracks a tracked title", async ({ page }) => {
@@ -54,7 +58,7 @@ test.describe("Track and untrack titles", () => {
           titles: [{ ...MOCK_SEARCH_TITLE, isTracked }],
           count: 1,
         },
-      })
+      }),
     );
     // The TitleList uses normalizeSearchTitle which converts isTracked -> is_tracked
     await page.route("**/api/track/tt1234567", async (route) => {
@@ -68,7 +72,9 @@ test.describe("Track and untrack titles", () => {
     await mockTitleEndpoints(page);
 
     await page.goto("/browse");
-    await page.getByPlaceholder(/search titles or paste imdb link/i).fill("Test Movie");
+    await page
+      .getByPlaceholder(/search titles or paste imdb link/i)
+      .fill("Test Movie");
     await page.getByRole("button", { name: /^search$/i }).click();
 
     // Title is already tracked, button shows "Tracked"
@@ -80,12 +86,14 @@ test.describe("Track and untrack titles", () => {
     await expect(page.getByRole("button", { name: /^track$/i })).toBeVisible();
   });
 
-  test("redirects unauthenticated user from /tracked to /login", async ({ page }) => {
+  test("redirects unauthenticated user from /tracked to /login", async ({
+    page,
+  }) => {
     await page.route("**/api/auth/get-session", (route) =>
-      route.fulfill({ json: null })
+      route.fulfill({ json: null }),
     );
     await page.route("**/api/auth/custom/providers", (route) =>
-      route.fulfill({ json: { local: true, oidc: null } })
+      route.fulfill({ json: { local: true, oidc: null } }),
     );
 
     await page.goto("/tracked");
@@ -112,7 +120,9 @@ test.describe("Watchlist management", () => {
 
     await page.goto("/tracked");
 
-    await expect(page.getByRole("heading", { name: /tracked titles/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /tracked titles/i }),
+    ).toBeVisible();
     await expect(page.getByText("Test Movie")).toBeVisible();
   });
 

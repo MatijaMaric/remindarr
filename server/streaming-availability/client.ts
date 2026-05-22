@@ -41,7 +41,10 @@ export async function fetchStreamingOptions(
 
   return traceHttp("GET", url.toString(), async () => {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CONFIG.TMDB_API_TIMEOUT_MS);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      CONFIG.TMDB_API_TIMEOUT_MS,
+    );
     let failureRecorded = false;
     try {
       // maxRetries: 0 — SA has custom 429/403 handling; don't retry at the httpFetch layer
@@ -54,7 +57,7 @@ export async function fetchStreamingOptions(
           },
           signal: controller.signal,
         },
-        { maxRetries: 0 }
+        { maxRetries: 0 },
       );
 
       if (res.status === 404) {

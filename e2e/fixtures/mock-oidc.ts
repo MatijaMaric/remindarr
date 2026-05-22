@@ -61,7 +61,7 @@ function sendJson(res: http.ServerResponse, status: number, payload: unknown) {
 }
 
 export async function startMockOidcServer(
-  options: MockOidcOptions = {}
+  options: MockOidcOptions = {},
 ): Promise<MockOidcServer> {
   const sub = options.sub ?? "oidc-user-1";
   const username = options.username ?? "oidcuser";
@@ -109,7 +109,10 @@ export async function startMockOidcServer(
       const url = new URL(req.url ?? "/", issuer);
       const pathname = url.pathname;
 
-      if (req.method === "GET" && pathname === "/.well-known/openid-configuration") {
+      if (
+        req.method === "GET" &&
+        pathname === "/.well-known/openid-configuration"
+      ) {
         return sendJson(res, 200, {
           issuer,
           authorization_endpoint: `${issuer}/authorize`,
@@ -120,8 +123,18 @@ export async function startMockOidcServer(
           subject_types_supported: ["public"],
           id_token_signing_alg_values_supported: ["RS256"],
           scopes_supported: ["openid", "profile", "email", "groups"],
-          token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
-          claims_supported: ["sub", "name", "preferred_username", "email", "email_verified", "groups"],
+          token_endpoint_auth_methods_supported: [
+            "client_secret_post",
+            "client_secret_basic",
+          ],
+          claims_supported: [
+            "sub",
+            "name",
+            "preferred_username",
+            "email",
+            "email_verified",
+            "groups",
+          ],
         });
       }
 

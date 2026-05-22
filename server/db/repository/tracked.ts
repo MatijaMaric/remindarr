@@ -6,7 +6,13 @@ import { getOffersWithPlex } from "./offers";
 import { getGenresForTitles } from "./titles";
 import { getTagsForUser } from "./tags";
 
-type ShowStatus = "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
+type ShowStatus =
+  | "watching"
+  | "caught_up"
+  | "completed"
+  | "not_started"
+  | "unreleased"
+  | null;
 
 function computeShowStatus(
   objectType: string,
@@ -17,16 +23,31 @@ function computeShowStatus(
   if (objectType !== "SHOW") return null;
   if (releasedEpisodesCount === 0) return "unreleased";
   if (watchedEpisodesCount === 0) return "not_started";
-  if (totalEpisodes > 0 && totalEpisodes === watchedEpisodesCount && totalEpisodes === releasedEpisodesCount) return "completed";
-  if (releasedEpisodesCount > 0 && releasedEpisodesCount === watchedEpisodesCount && totalEpisodes > releasedEpisodesCount) return "caught_up";
+  if (
+    totalEpisodes > 0 &&
+    totalEpisodes === watchedEpisodesCount &&
+    totalEpisodes === releasedEpisodesCount
+  )
+    return "completed";
+  if (
+    releasedEpisodesCount > 0 &&
+    releasedEpisodesCount === watchedEpisodesCount &&
+    totalEpisodes > releasedEpisodesCount
+  )
+    return "caught_up";
   if (releasedEpisodesCount > watchedEpisodesCount) return "watching";
   return null;
 }
 
-export async function trackTitle(titleId: string, userId: string, notes?: string) {
+export async function trackTitle(
+  titleId: string,
+  userId: string,
+  notes?: string,
+) {
   return traceDbQuery("trackTitle", async () => {
     const db = getDb();
-    await db.insert(tracked)
+    await db
+      .insert(tracked)
       .values({ titleId, userId, notes: notes || null })
       .onConflictDoUpdate({
         target: [tracked.titleId, tracked.userId],
@@ -39,7 +60,8 @@ export async function trackTitle(titleId: string, userId: string, notes?: string
 export async function untrackTitle(titleId: string, userId: string) {
   return traceDbQuery("untrackTitle", async () => {
     const db = getDb();
-    await db.delete(tracked)
+    await db
+      .delete(tracked)
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
   });
@@ -92,8 +114,12 @@ export async function getTrackedTitles(userId: string) {
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
         watched_episodes_count: sql<number>`(SELECT COUNT(*) FROM watched_episodes we INNER JOIN episodes e ON e.id = we.episode_id WHERE e.title_id = ${titles.id} AND we.user_id = ${userId})`,
         released_episodes_count: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
-        latest_released_air_date: sql<string | null>`(SELECT MAX(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
-        next_episode_air_date: sql<string | null>`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
+        latest_released_air_date: sql<
+          string | null
+        >`(SELECT MAX(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
+        next_episode_air_date: sql<
+          string | null
+        >`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
         remaining_runtime_minutes: sql<number | null>`(
           CASE WHEN ${titles.runtimeMinutes} IS NULL THEN NULL
           ELSE (
@@ -128,7 +154,12 @@ export async function getTrackedTitles(userId: string) {
       is_watched: Boolean(row.is_watched),
       public: Boolean(row.public),
       offers: offersByTitle.get(row.id) ?? [],
-      show_status: computeShowStatus(row.object_type, row.released_episodes_count, row.watched_episodes_count, row.total_episodes),
+      show_status: computeShowStatus(
+        row.object_type,
+        row.released_episodes_count,
+        row.watched_episodes_count,
+        row.total_episodes,
+      ),
     }));
   });
 }
@@ -164,8 +195,12 @@ export async function getPublicTrackedTitles(userId: string) {
         total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
         watched_episodes_count: sql<number>`(SELECT COUNT(*) FROM watched_episodes we INNER JOIN episodes e ON e.id = we.episode_id WHERE e.title_id = ${titles.id} AND we.user_id = ${userId})`,
         released_episodes_count: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
-        latest_released_air_date: sql<string | null>`(SELECT MAX(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
-        next_episode_air_date: sql<string | null>`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
+        latest_released_air_date: sql<
+          string | null
+        >`(SELECT MAX(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
+        next_episode_air_date: sql<
+          string | null
+        >`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))
@@ -186,25 +221,39 @@ export async function getPublicTrackedTitles(userId: string) {
       is_tracked: true,
       is_watched: Boolean(row.is_watched),
       offers: offersByTitle.get(row.id) ?? [],
-      show_status: computeShowStatus(row.object_type, row.released_episodes_count, row.watched_episodes_count, row.total_episodes),
+      show_status: computeShowStatus(
+        row.object_type,
+        row.released_episodes_count,
+        row.watched_episodes_count,
+        row.total_episodes,
+      ),
     }));
   });
 }
 
-export async function updateTrackedVisibility(titleId: string, userId: string, isPublic: boolean) {
+export async function updateTrackedVisibility(
+  titleId: string,
+  userId: string,
+  isPublic: boolean,
+) {
   return traceDbQuery("updateTrackedVisibility", async () => {
     const db = getDb();
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ public: isPublic ? 1 : 0 })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
   });
 }
 
-export async function updateAllTrackedVisibility(userId: string, isPublic: boolean) {
+export async function updateAllTrackedVisibility(
+  userId: string,
+  isPublic: boolean,
+) {
   return traceDbQuery("updateAllTrackedVisibility", async () => {
     const db = getDb();
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ public: isPublic ? 1 : 0 })
       .where(eq(tracked.userId, userId))
       .run();
@@ -223,7 +272,10 @@ export async function getPublicTrackedCount(userId: string): Promise<number> {
   });
 }
 
-export async function getTrackedMoviesByReleaseDate(date: string, userId: string) {
+export async function getTrackedMoviesByReleaseDate(
+  date: string,
+  userId: string,
+) {
   return traceDbQuery("getTrackedMoviesByReleaseDate", async () => {
     const db = getDb();
     const rows = await db
@@ -236,11 +288,17 @@ export async function getTrackedMoviesByReleaseDate(date: string, userId: string
         snooze_until: tracked.snoozeUntil,
       })
       .from(titles)
-      .innerJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+      .innerJoin(
+        tracked,
+        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+      )
       .where(and(eq(titles.releaseDate, date), eq(titles.objectType, "MOVIE")))
       .all();
 
-    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
+    const offersByTitle = await getOffersWithPlex(
+      rows.map((r) => r.id),
+      userId,
+    );
     return rows.map((row) => ({
       ...row,
       offers: offersByTitle.get(row.id) ?? [],
@@ -268,13 +326,19 @@ export async function getReleasedUnwatchedTrackedMovies(userId: string) {
           sql`${titles.releaseDate} IS NOT NULL AND ${titles.releaseDate} != ''`,
           lte(titles.releaseDate, sql`date('now')`),
           sql`NOT EXISTS (SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
-        )
+        ),
       )
       .orderBy(desc(titles.releaseDate))
       .all();
 
-    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
-    return rows.map((row) => ({ ...row, offers: offersByTitle.get(row.id) ?? [] }));
+    const offersByTitle = await getOffersWithPlex(
+      rows.map((r) => r.id),
+      userId,
+    );
+    return rows.map((row) => ({
+      ...row,
+      offers: offersByTitle.get(row.id) ?? [],
+    }));
   });
 }
 
@@ -297,19 +361,34 @@ export async function getUpcomingTrackedMoviesOpen(userId: string) {
           eq(titles.objectType, "MOVIE"),
           sql`${titles.releaseDate} IS NOT NULL AND ${titles.releaseDate} != ''`,
           sql`${titles.releaseDate} > date('now')`,
-        )
+        ),
       )
       .orderBy(asc(titles.releaseDate))
       .all();
 
-    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
-    return rows.map((row) => ({ ...row, offers: offersByTitle.get(row.id) ?? [] }));
+    const offersByTitle = await getOffersWithPlex(
+      rows.map((r) => r.id),
+      userId,
+    );
+    return rows.map((row) => ({
+      ...row,
+      offers: offersByTitle.get(row.id) ?? [],
+    }));
   });
 }
 
-export type UserStatus = "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed";
+export type UserStatus =
+  | "plan_to_watch"
+  | "watching"
+  | "on_hold"
+  | "dropped"
+  | "completed";
 
-export async function getUpcomingTrackedMovies(userId: string, startDate: string, endDate: string) {
+export async function getUpcomingTrackedMovies(
+  userId: string,
+  startDate: string,
+  endDate: string,
+) {
   return traceDbQuery("getUpcomingTrackedMovies", async () => {
     const db = getDb();
     return db
@@ -326,27 +405,46 @@ export async function getUpcomingTrackedMovies(userId: string, startDate: string
           sql`${titles.objectType} = 'MOVIE'`,
           gte(titles.releaseDate, startDate),
           lt(titles.releaseDate, endDate),
-        )
+        ),
       )
       .orderBy(asc(titles.releaseDate))
       .all();
   });
 }
 
-export async function updateTrackedStatus(titleId: string, userId: string, status: UserStatus | null) {
+export async function updateTrackedStatus(
+  titleId: string,
+  userId: string,
+  status: UserStatus | null,
+) {
   return traceDbQuery("updateTrackedStatus", async () => {
     const db = getDb();
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ userStatus: status })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
-    const titleRow = await db.select({ objectType: titles.objectType }).from(titles).where(eq(titles.id, titleId)).get();
+    const titleRow = await db
+      .select({ objectType: titles.objectType })
+      .from(titles)
+      .where(eq(titles.id, titleId))
+      .get();
     if (titleRow?.objectType === "MOVIE") {
       if (status === "completed") {
-        await db.insert(watchedTitles).values({ titleId, userId }).onConflictDoNothing().run();
+        await db
+          .insert(watchedTitles)
+          .values({ titleId, userId })
+          .onConflictDoNothing()
+          .run();
       } else {
-        await db.delete(watchedTitles)
-          .where(and(eq(watchedTitles.titleId, titleId), eq(watchedTitles.userId, userId)))
+        await db
+          .delete(watchedTitles)
+          .where(
+            and(
+              eq(watchedTitles.titleId, titleId),
+              eq(watchedTitles.userId, userId),
+            ),
+          )
           .run();
       }
     }
@@ -358,11 +456,12 @@ export type NotificationMode = "all" | "premieres_only" | "none";
 export async function updateNotificationMode(
   titleId: string,
   userId: string,
-  mode: NotificationMode | null
+  mode: NotificationMode | null,
 ): Promise<void> {
   return traceDbQuery("updateNotificationMode", async () => {
     const db = getDb();
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ notificationMode: mode })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
@@ -383,10 +482,15 @@ export async function getTrackedTitlesForNotifications(userId: string) {
   });
 }
 
-export async function updateTrackedNotes(titleId: string, userId: string, notes: string | null) {
+export async function updateTrackedNotes(
+  titleId: string,
+  userId: string,
+  notes: string | null,
+) {
   return traceDbQuery("updateTrackedNotes", async () => {
     const db = getDb();
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ notes })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
@@ -397,7 +501,11 @@ export async function updateTrackedNotes(titleId: string, userId: string, notes:
  * Get tracked movies releasing within [startDate, endDate) for a user.
  * Used for weekly digest notifications.
  */
-export async function getTrackedMoviesByReleaseDateRange(startDate: string, endDate: string, userId: string) {
+export async function getTrackedMoviesByReleaseDateRange(
+  startDate: string,
+  endDate: string,
+  userId: string,
+) {
   return traceDbQuery("getTrackedMoviesByReleaseDateRange", async () => {
     const db = getDb();
     const rows = await db
@@ -410,17 +518,23 @@ export async function getTrackedMoviesByReleaseDateRange(startDate: string, endD
         snooze_until: tracked.snoozeUntil,
       })
       .from(titles)
-      .innerJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
+      .innerJoin(
+        tracked,
+        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+      )
       .where(
         and(
           gte(titles.releaseDate, startDate),
           lt(titles.releaseDate, endDate),
-          eq(titles.objectType, "MOVIE")
-        )
+          eq(titles.objectType, "MOVIE"),
+        ),
       )
       .all();
 
-    const offersByTitle = await getOffersWithPlex(rows.map((r) => r.id), userId);
+    const offersByTitle = await getOffersWithPlex(
+      rows.map((r) => r.id),
+      userId,
+    );
     return rows.map((row) => ({
       ...row,
       offers: offersByTitle.get(row.id) ?? [],
@@ -432,7 +546,9 @@ export async function getTrackedMoviesByReleaseDateRange(startDate: string, endD
  * Returns a map of titleId -> userIds for all users tracking any of the given titleIds.
  * Used during sync to find who should receive streaming availability alerts.
  */
-export async function getUsersTrackingTitles(titleIds: string[]): Promise<Map<string, string[]>> {
+export async function getUsersTrackingTitles(
+  titleIds: string[],
+): Promise<Map<string, string[]>> {
   return traceDbQuery("getUsersTrackingTitles", async () => {
     if (titleIds.length === 0) return new Map();
     const db = getDb();
@@ -454,11 +570,12 @@ export async function getUsersTrackingTitles(titleIds: string[]): Promise<Map<st
 export async function setSnooze(
   titleId: string,
   userId: string,
-  until: string | null
+  until: string | null,
 ): Promise<void> {
   return traceDbQuery("setSnooze", async () => {
     const db = getDb();
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ snoozeUntil: until })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();
@@ -484,47 +601,98 @@ const titleSelectFields = {
   posterUrl: titles.posterUrl,
 };
 
-export async function getSuggestionSeedTitles(userId: string, limit: number): Promise<SuggestionSourceTitle[]> {
+export async function getSuggestionSeedTitles(
+  userId: string,
+  limit: number,
+): Promise<SuggestionSourceTitle[]> {
   return traceDbQuery("getSuggestionSeedTitles", async () => {
     const db = getDb();
     const tmdbNotNull = sql`${titles.tmdbId} IS NOT NULL`;
     const seen = new Set<string>();
     const result: SuggestionSourceTitle[] = [];
 
-    const addRows = (rows: { id: string; tmdbId: string | null; objectType: string; title: string; posterUrl: string | null }[], reason: SuggestionSeedReason) => {
+    const addRows = (
+      rows: {
+        id: string;
+        tmdbId: string | null;
+        objectType: string;
+        title: string;
+        posterUrl: string | null;
+      }[],
+      reason: SuggestionSeedReason,
+    ) => {
       for (const r of rows) {
         if (result.length >= limit) break;
         if (!r.tmdbId || seen.has(r.id)) continue;
         seen.add(r.id);
-        result.push({ id: r.id, tmdbId: r.tmdbId, objectType: r.objectType as "MOVIE" | "SHOW", title: r.title, posterUrl: r.posterUrl, reason });
+        result.push({
+          id: r.id,
+          tmdbId: r.tmdbId,
+          objectType: r.objectType as "MOVIE" | "SHOW",
+          title: r.title,
+          posterUrl: r.posterUrl,
+          reason,
+        });
       }
     };
 
     // Tier 1: loved titles
-    const loved = await db.select(titleSelectFields).from(ratings).innerJoin(titles, eq(titles.id, ratings.titleId))
-      .where(and(eq(ratings.userId, userId), eq(ratings.rating, "LOVE"), tmdbNotNull))
-      .orderBy(desc(ratings.createdAt)).limit(limit).all();
+    const loved = await db
+      .select(titleSelectFields)
+      .from(ratings)
+      .innerJoin(titles, eq(titles.id, ratings.titleId))
+      .where(
+        and(
+          eq(ratings.userId, userId),
+          eq(ratings.rating, "LOVE"),
+          tmdbNotNull,
+        ),
+      )
+      .orderBy(desc(ratings.createdAt))
+      .limit(limit)
+      .all();
     addRows(loved, "loved");
     if (result.length >= limit) return result;
 
     // Tier 2: liked titles
-    const liked = await db.select(titleSelectFields).from(ratings).innerJoin(titles, eq(titles.id, ratings.titleId))
-      .where(and(eq(ratings.userId, userId), eq(ratings.rating, "LIKE"), tmdbNotNull))
-      .orderBy(desc(ratings.createdAt)).limit(limit).all();
+    const liked = await db
+      .select(titleSelectFields)
+      .from(ratings)
+      .innerJoin(titles, eq(titles.id, ratings.titleId))
+      .where(
+        and(
+          eq(ratings.userId, userId),
+          eq(ratings.rating, "LIKE"),
+          tmdbNotNull,
+        ),
+      )
+      .orderBy(desc(ratings.createdAt))
+      .limit(limit)
+      .all();
     addRows(liked, "liked");
     if (result.length >= limit) return result;
 
     // Tier 3: watched titles
-    const watched = await db.select(titleSelectFields).from(watchedTitles).innerJoin(titles, eq(titles.id, watchedTitles.titleId))
+    const watched = await db
+      .select(titleSelectFields)
+      .from(watchedTitles)
+      .innerJoin(titles, eq(titles.id, watchedTitles.titleId))
       .where(and(eq(watchedTitles.userId, userId), tmdbNotNull))
-      .orderBy(desc(watchedTitles.watchedAt)).limit(limit).all();
+      .orderBy(desc(watchedTitles.watchedAt))
+      .limit(limit)
+      .all();
     addRows(watched, "watched");
     if (result.length >= limit) return result;
 
     // Tier 4: tracked (fallback for new users)
-    const trackedRows = await db.select(titleSelectFields).from(tracked).innerJoin(titles, eq(titles.id, tracked.titleId))
+    const trackedRows = await db
+      .select(titleSelectFields)
+      .from(tracked)
+      .innerJoin(titles, eq(titles.id, tracked.titleId))
       .where(and(eq(tracked.userId, userId), tmdbNotNull))
-      .orderBy(desc(tracked.trackedAt)).limit(limit).all();
+      .orderBy(desc(tracked.trackedAt))
+      .limit(limit)
+      .all();
     addRows(trackedRows, "tracked");
 
     return result;
@@ -534,11 +702,12 @@ export async function getSuggestionSeedTitles(userId: string, limit: number): Pr
 export async function setRemindOnRelease(
   titleId: string,
   userId: string,
-  enabled: boolean
+  enabled: boolean,
 ): Promise<void> {
   return traceDbQuery("setRemindOnRelease", async () => {
     const db = getDb();
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ remindOnRelease: enabled ? 1 : 0 })
       .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
       .run();

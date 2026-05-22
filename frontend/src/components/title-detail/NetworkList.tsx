@@ -10,7 +10,9 @@ export function NetworkList({
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasMore = networks.length > NETWORK_DISPLAY_LIMIT;
-  const visible = expanded ? networks : networks.slice(0, NETWORK_DISPLAY_LIMIT);
+  const visible = expanded
+    ? networks
+    : networks.slice(0, NETWORK_DISPLAY_LIMIT);
   return (
     <div className="flex flex-wrap items-center gap-3">
       {visible.map((n) => (
@@ -33,7 +35,9 @@ export function NetworkList({
           onClick={() => setExpanded(!expanded)}
           className="text-sm text-amber-400 hover:text-amber-300 transition-colors"
         >
-          {expanded ? "Show less" : `+${networks.length - NETWORK_DISPLAY_LIMIT} more`}
+          {expanded
+            ? "Show less"
+            : `+${networks.length - NETWORK_DISPLAY_LIMIT} more`}
         </button>
       )}
     </div>

@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
@@ -9,7 +23,13 @@ import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 import type { TitleRatingResponse } from "../types";
 
-const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -22,13 +42,23 @@ const mockAuthValue = {
 };
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+function Wrapper({
+  children,
+  authValue,
+}: {
+  children: ReactNode;
+  authValue?: typeof mockAuthValue;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>
+        {children}
+      </AuthContext>
     </QueryClientProvider>
   );
 }
@@ -88,7 +118,7 @@ describe("RatingButtons", () => {
   it("shows loading skeleton on mount", () => {
     // Make getTitleRating hang
     (api.getTitleRating as any).mockImplementation(
-      () => new Promise<TitleRatingResponse>(() => {})
+      () => new Promise<TitleRatingResponse>(() => {}),
     );
 
     render(<RatingButtons titleId="title-1" />, { wrapper: Wrapper });
@@ -100,7 +130,11 @@ describe("RatingButtons", () => {
     // After rating, the refresh call returns the new state
     (api.getTitleRating as any)
       .mockResolvedValueOnce(emptyRatingResponse)
-      .mockResolvedValueOnce({ ...emptyRatingResponse, user_rating: "LIKE", aggregated: { ...emptyRatingResponse.aggregated, LIKE: 1 } });
+      .mockResolvedValueOnce({
+        ...emptyRatingResponse,
+        user_rating: "LIKE",
+        aggregated: { ...emptyRatingResponse.aggregated, LIKE: 1 },
+      });
 
     render(<RatingButtons titleId="title-1" />, { wrapper: Wrapper });
 
@@ -120,7 +154,11 @@ describe("RatingButtons", () => {
   it("clicking active rating calls unrateTitle API", async () => {
     (api.getTitleRating as any)
       .mockResolvedValueOnce(ratedResponse)
-      .mockResolvedValueOnce({ ...ratedResponse, user_rating: null, aggregated: { ...ratedResponse.aggregated, LIKE: 2 } });
+      .mockResolvedValueOnce({
+        ...ratedResponse,
+        user_rating: null,
+        aggregated: { ...ratedResponse.aggregated, LIKE: 2 },
+      });
 
     render(<RatingButtons titleId="title-1" />, { wrapper: Wrapper });
 
@@ -143,13 +181,25 @@ describe("RatingButtons", () => {
     render(<RatingButtons titleId="title-1" />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Like" }).getAttribute("aria-pressed")).toBe("true");
+      expect(
+        screen
+          .getByRole("button", { name: "Like" })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
     });
 
     // Others should be false
-    expect(screen.getByRole("button", { name: "Hate" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByRole("button", { name: "Dislike" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByRole("button", { name: "Love" }).getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "Hate" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: "Dislike" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "Love" }).getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 
   it("shows aggregated counts when > 0", async () => {
@@ -175,7 +225,10 @@ describe("RatingButtons", () => {
   it("buttons are disabled during API call", async () => {
     let resolveRate: () => void;
     (api.rateTitle as any).mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveRate = resolve; })
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRate = resolve;
+        }),
     );
 
     render(<RatingButtons titleId="title-1" />, { wrapper: Wrapper });
@@ -187,13 +240,21 @@ describe("RatingButtons", () => {
     fireEvent.click(screen.getByRole("button", { name: "Like" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Like" }).hasAttribute("disabled")).toBe(true);
+      expect(
+        screen.getByRole("button", { name: "Like" }).hasAttribute("disabled"),
+      ).toBe(true);
     });
 
     // All buttons should be disabled
-    expect(screen.getByRole("button", { name: "Hate" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Dislike" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Love" }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Hate" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Dislike" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Love" }).hasAttribute("disabled"),
+    ).toBe(true);
 
     resolveRate!();
   });
@@ -210,7 +271,9 @@ describe("RatingButtons", () => {
     fireEvent.click(screen.getByRole("button", { name: "Love" }));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update rating");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Failed to update rating",
+      );
     });
   });
 
@@ -222,7 +285,7 @@ describe("RatingButtons", () => {
         <AuthContext value={noUserAuth as any}>
           <RatingButtons titleId="title-1" />
         </AuthContext>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     await waitFor(() => {
@@ -230,10 +293,18 @@ describe("RatingButtons", () => {
     });
 
     // All buttons should be disabled
-    expect(screen.getByRole("button", { name: "Hate" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Dislike" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Like" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Love" }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Hate" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Dislike" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Like" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Love" }).hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   it("displays friends' ratings summary", async () => {
@@ -264,7 +335,10 @@ describe("RatingButtons", () => {
     render(<RatingButtons titleId="title-42" />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(api.getTitleRating).toHaveBeenCalledWith("title-42", expect.anything());
+      expect(api.getTitleRating).toHaveBeenCalledWith(
+        "title-42",
+        expect.anything(),
+      );
     });
   });
 });

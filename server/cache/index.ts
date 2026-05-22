@@ -24,7 +24,9 @@ export function getCache(): Cache {
   const alsCache = cacheStorage.getStore();
   if (alsCache) return alsCache;
   if (singletonCache) return singletonCache;
-  throw new Error("Cache not initialized. Call initCache() or use runWithCache().");
+  throw new Error(
+    "Cache not initialized. Call initCache() or use runWithCache().",
+  );
 }
 
 /**

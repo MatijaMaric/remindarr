@@ -1,5 +1,11 @@
 import type { ParsedTitle, ParsedOffer } from "../tmdb/parser";
-import type { TmdbMovieDetails, TmdbTvDetails, TmdbDiscoverMovieResult, TmdbDiscoverTvResult, TmdbSearchMultiResult } from "../tmdb/types";
+import type {
+  TmdbMovieDetails,
+  TmdbTvDetails,
+  TmdbDiscoverMovieResult,
+  TmdbDiscoverTvResult,
+  TmdbSearchMultiResult,
+} from "../tmdb/types";
 
 export function makeParsedTitle(overrides?: Partial<ParsedTitle>): ParsedTitle {
   return {
@@ -42,7 +48,9 @@ export function makeParsedOffer(overrides?: Partial<ParsedOffer>): ParsedOffer {
   };
 }
 
-export function makeTmdbMovieDetails(overrides?: Partial<TmdbMovieDetails>): TmdbMovieDetails {
+export function makeTmdbMovieDetails(
+  overrides?: Partial<TmdbMovieDetails>,
+): TmdbMovieDetails {
   return {
     id: 123,
     title: "Test Movie",
@@ -62,7 +70,9 @@ export function makeTmdbMovieDetails(overrides?: Partial<TmdbMovieDetails>): Tmd
   };
 }
 
-export function makeTmdbTvDetails(overrides?: Partial<TmdbTvDetails>): TmdbTvDetails {
+export function makeTmdbTvDetails(
+  overrides?: Partial<TmdbTvDetails>,
+): TmdbTvDetails {
   return {
     id: 456,
     name: "Test Show",
@@ -83,7 +93,9 @@ export function makeTmdbTvDetails(overrides?: Partial<TmdbTvDetails>): TmdbTvDet
   };
 }
 
-export function makeTmdbDiscoverMovie(overrides?: Partial<TmdbDiscoverMovieResult>): TmdbDiscoverMovieResult {
+export function makeTmdbDiscoverMovie(
+  overrides?: Partial<TmdbDiscoverMovieResult>,
+): TmdbDiscoverMovieResult {
   return {
     id: 789,
     title: "Discover Movie",
@@ -101,7 +113,9 @@ export function makeTmdbDiscoverMovie(overrides?: Partial<TmdbDiscoverMovieResul
   };
 }
 
-export function makeTmdbDiscoverTv(overrides?: Partial<TmdbDiscoverTvResult>): TmdbDiscoverTvResult {
+export function makeTmdbDiscoverTv(
+  overrides?: Partial<TmdbDiscoverTvResult>,
+): TmdbDiscoverTvResult {
   return {
     id: 101,
     name: "Discover Show",
@@ -118,7 +132,9 @@ export function makeTmdbDiscoverTv(overrides?: Partial<TmdbDiscoverTvResult>): T
   };
 }
 
-export function makeTmdbSearchMultiMovie(overrides?: Partial<TmdbSearchMultiResult>): TmdbSearchMultiResult {
+export function makeTmdbSearchMultiMovie(
+  overrides?: Partial<TmdbSearchMultiResult>,
+): TmdbSearchMultiResult {
   return {
     id: 200,
     media_type: "movie",
@@ -134,7 +150,9 @@ export function makeTmdbSearchMultiMovie(overrides?: Partial<TmdbSearchMultiResu
   };
 }
 
-export function makeTmdbSearchMultiTv(overrides?: Partial<TmdbSearchMultiResult>): TmdbSearchMultiResult {
+export function makeTmdbSearchMultiTv(
+  overrides?: Partial<TmdbSearchMultiResult>,
+): TmdbSearchMultiResult {
   return {
     id: 300,
     media_type: "tv",

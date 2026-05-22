@@ -18,7 +18,7 @@ describe("PWA configuration", () => {
   it("configures glob patterns for precaching", () => {
     expect(pwaOptions.injectManifest?.globPatterns).toBeDefined();
     expect(pwaOptions.injectManifest!.globPatterns!).toContain(
-      "**/*.{js,css,html,ico,png,svg,woff2}"
+      "**/*.{js,css,html,ico,png,svg,woff2}",
     );
   });
 });

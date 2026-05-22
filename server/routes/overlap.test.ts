@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser, trackTitle } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+  trackTitle,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import { getDb } from "../db/schema";
 import { users } from "../db/schema";
@@ -45,9 +50,16 @@ function authHeaders(token: string) {
   return { Cookie: `better-auth.session_token=${token}` };
 }
 
-async function setProfileVisibility(userId: string, visibility: "public" | "friends_only" | "private") {
+async function setProfileVisibility(
+  userId: string,
+  visibility: "public" | "friends_only" | "private",
+) {
   const db = getDb();
-  await db.update(users).set({ profileVisibility: visibility }).where(eq(users.id, userId)).run();
+  await db
+    .update(users)
+    .set({ profileVisibility: visibility })
+    .where(eq(users.id, userId))
+    .run();
 }
 
 async function follow(followerId: string, followingId: string) {
@@ -58,22 +70,26 @@ async function follow(followerId: string, followingId: string) {
 async function insertTitle(id: string) {
   const db = getDb();
   const { titles } = await import("../db/schema");
-  await db.insert(titles).values({
-    id,
-    objectType: "MOVIE",
-    title: `Title ${id}`,
-    originalTitle: null,
-    releaseYear: 2024,
-    releaseDate: "2024-01-01",
-    runtimeMinutes: 120,
-    shortDescription: null,
-    imdbId: null,
-    tmdbId: null,
-    posterUrl: null,
-    ageCertification: null,
-    originalLanguage: "en",
-    tmdbUrl: null,
-  }).onConflictDoNothing().run();
+  await db
+    .insert(titles)
+    .values({
+      id,
+      objectType: "MOVIE",
+      title: `Title ${id}`,
+      originalTitle: null,
+      releaseYear: 2024,
+      releaseDate: "2024-01-01",
+      runtimeMinutes: 120,
+      shortDescription: null,
+      imdbId: null,
+      tmdbId: null,
+      posterUrl: null,
+      ageCertification: null,
+      originalLanguage: "en",
+      tmdbUrl: null,
+    })
+    .onConflictDoNothing()
+    .run();
 }
 
 beforeEach(async () => {
@@ -196,7 +212,8 @@ describe("GET /overlap/:friendUsername — visibility", () => {
     // tracked.public defaults to 1; set title-priv to private (public=0) for bob
     const db = getDb();
     const { tracked } = await import("../db/schema");
-    await db.update(tracked)
+    await db
+      .update(tracked)
       .set({ public: 0 })
       .where(eq(tracked.titleId, "title-priv"))
       .run();

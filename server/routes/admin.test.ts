@@ -45,7 +45,14 @@ beforeEach(async () => {
 
   // Create admin user
   const hash = await Bun.password.hash("admin123");
-  const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
+  const adminId = await createUser(
+    "admin",
+    hash,
+    "Admin",
+    "local",
+    undefined,
+    true,
+  );
   const token = await createSession(adminId);
   adminCookie = `better-auth.session_token=${token}`;
 
@@ -122,7 +129,9 @@ describe("PUT /admin/settings", () => {
     expect(body.oidc_configured).toBeDefined();
 
     // Verify settings persisted
-    expect(await getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
+    expect(await getSetting("oidc_issuer_url")).toBe(
+      "https://auth.example.com",
+    );
     expect(await getSetting("oidc_client_id")).toBe("test-client");
   });
 
@@ -154,11 +163,16 @@ describe("PUT /admin/settings", () => {
     const res = await app.request("/admin/settings", {
       method: "PUT",
       headers: { Cookie: adminCookie, "Content-Type": "application/json" },
-      body: JSON.stringify({ unknown_key: "value", oidc_issuer_url: "https://auth.example.com" }),
+      body: JSON.stringify({
+        unknown_key: "value",
+        oidc_issuer_url: "https://auth.example.com",
+      }),
     });
     expect(res.status).toBe(200);
     expect(await getSetting("unknown_key")).toBeNull();
-    expect(await getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
+    expect(await getSetting("oidc_issuer_url")).toBe(
+      "https://auth.example.com",
+    );
   });
 
   it("returns 401 without auth", async () => {
@@ -216,7 +230,11 @@ describe("GET /admin/users", () => {
       headers: { Cookie: adminCookie },
     });
     const body = await res.json();
-    expect(body.users.some((u: { username: string }) => u.username === "searchable_user")).toBe(true);
+    expect(
+      body.users.some(
+        (u: { username: string }) => u.username === "searchable_user",
+      ),
+    ).toBe(true);
   });
 
   it("filters banned users", async () => {
@@ -230,7 +248,9 @@ describe("GET /admin/users", () => {
       headers: { Cookie: adminCookie },
     });
     const body = await res.json();
-    expect(body.users.some((u: { username: string }) => u.username === "tobebanned")).toBe(true);
+    expect(
+      body.users.some((u: { username: string }) => u.username === "tobebanned"),
+    ).toBe(true);
   });
 
   it("accepts a valid filter + page", async () => {
@@ -359,7 +379,14 @@ describe("PUT /admin/users/:id/role", () => {
   });
 
   it("demotes admin to user", async () => {
-    const userId = await createUser("toDemote", "hash", undefined, "local", undefined, true);
+    const userId = await createUser(
+      "toDemote",
+      "hash",
+      undefined,
+      "local",
+      undefined,
+      true,
+    );
     const res = await app.request(`/admin/users/${userId}/role`, {
       method: "PUT",
       headers: { Cookie: adminCookie, "Content-Type": "application/json" },
@@ -471,9 +498,18 @@ describe("GET /admin/config", () => {
     expect(Array.isArray(body.safe)).toBe(true);
     expect(Array.isArray(body.secrets)).toBe(true);
     // Safe entries have key, value, source fields
-    expect(body.safe.every((e: { key: string; value: unknown; source: string }) => e.key && "value" in e && e.source)).toBe(true);
+    expect(
+      body.safe.every(
+        (e: { key: string; value: unknown; source: string }) =>
+          e.key && "value" in e && e.source,
+      ),
+    ).toBe(true);
     // Secret entries have key and source, but NO value
-    for (const entry of body.secrets as { key: string; source: string; value?: unknown }[]) {
+    for (const entry of body.secrets as {
+      key: string;
+      source: string;
+      value?: unknown;
+    }[]) {
       expect("value" in entry).toBe(false);
       expect(entry.source === "env" || entry.source === "unset").toBe(true);
     }
@@ -484,7 +520,9 @@ describe("GET /admin/config", () => {
       headers: { Cookie: adminCookie },
     });
     const body = await res.json();
-    const logLevel = body.safe.find((e: { key: string }) => e.key === "LOG_LEVEL");
+    const logLevel = body.safe.find(
+      (e: { key: string }) => e.key === "LOG_LEVEL",
+    );
     expect(logLevel).toBeDefined();
     expect(logLevel.value).toBe("info");
   });
@@ -568,12 +606,16 @@ describe("PUT /admin/settings — OIDC reload callback error handling", () => {
     expect(body.message).toContain("discovery doc unreachable");
 
     // Settings must still have been persisted despite the reload failure
-    expect(await getSetting("oidc_issuer_url")).toBe("https://auth.example.com");
+    expect(await getSetting("oidc_issuer_url")).toBe(
+      "https://auth.example.com",
+    );
   });
 
   it("returns 200 when callback succeeds", async () => {
     let called = false;
-    setOnOidcSettingsChanged(async () => { called = true; });
+    setOnOidcSettingsChanged(async () => {
+      called = true;
+    });
 
     const res = await app.request("/admin/settings", {
       method: "PUT",

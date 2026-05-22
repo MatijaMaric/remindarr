@@ -45,8 +45,20 @@ export interface Title {
   total_episodes?: number;
   watched_episodes_count?: number;
   released_episodes_count?: number;
-  show_status?: "watching" | "caught_up" | "completed" | "not_started" | "unreleased" | null;
-  user_status?: "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null;
+  show_status?:
+    | "watching"
+    | "caught_up"
+    | "completed"
+    | "not_started"
+    | "unreleased"
+    | null;
+  user_status?:
+    | "plan_to_watch"
+    | "watching"
+    | "on_hold"
+    | "dropped"
+    | "completed"
+    | null;
   notification_mode?: "all" | "premieres_only" | "none" | null;
   snooze_until?: string | null;
   remind_on_release?: boolean;
@@ -278,7 +290,12 @@ export interface MovieDetailsResponse {
     "watch/providers": { results: Record<string, WatchProviderCountry> };
     external_ids?: ExternalIds;
     videos?: { results: TmdbVideo[] };
-    belongs_to_collection?: { id: number; name: string; poster_path: string | null; backdrop_path: string | null } | null;
+    belongs_to_collection?: {
+      id: number;
+      name: string;
+      poster_path: string | null;
+      backdrop_path: string | null;
+    } | null;
   } | null;
   country: string;
 }
@@ -632,7 +649,9 @@ export type ActivityType =
   | "tracked"
   | "recommendation";
 
-export type ActivityKindVisibility = Partial<Record<ActivityType, "public" | "friends_only" | "private">>;
+export type ActivityKindVisibility = Partial<
+  Record<ActivityType, "public" | "friends_only" | "private">
+>;
 
 export interface ActivitySettings {
   enabled: boolean;
@@ -663,7 +682,13 @@ export interface ActivityEvent {
   rating?: "HATE" | "DISLIKE" | "LIKE" | "LOVE";
   review?: string | null;
   message?: string | null;
-  status?: "plan_to_watch" | "watching" | "on_hold" | "dropped" | "completed" | null;
+  status?:
+    | "plan_to_watch"
+    | "watching"
+    | "on_hold"
+    | "dropped"
+    | "completed"
+    | null;
 }
 
 export interface ActivityFeedResponse {
@@ -699,7 +724,12 @@ export interface EpisodeRatingResponse {
 export interface Recommendation {
   id: string;
   from_user: UserSummary;
-  title: { id: string; title: string; object_type: string; poster_url: string | null };
+  title: {
+    id: string;
+    title: string;
+    object_type: string;
+    poster_url: string | null;
+  };
   message: string | null;
   created_at: string;
   read_at: string | null;
@@ -709,11 +739,20 @@ export interface Recommendation {
 
 export interface SentRecommendation {
   id: string;
-  title: { id: string; title: string; object_type: string; poster_url: string | null };
+  title: {
+    id: string;
+    title: string;
+    object_type: string;
+    poster_url: string | null;
+  };
   message: string | null;
   created_at: string;
   /** Present when sent to a specific user; null means broadcast to all followers */
-  target_user: { id: string; username: string; display_name: string | null } | null;
+  target_user: {
+    id: string;
+    username: string;
+    display_name: string | null;
+  } | null;
 }
 
 export interface RecommendationsResponse {
@@ -739,8 +778,21 @@ export interface UserSettings {
   departureAlertLeadDays: number;
 }
 
-export type ThemeVariant = "dark" | "light" | "oled" | "midnight" | "moss" | "plum" | "auto";
-export type AccentColor = "amber" | "ember" | "plum" | "cobalt" | "moss" | "sand";
+export type ThemeVariant =
+  | "dark"
+  | "light"
+  | "oled"
+  | "midnight"
+  | "moss"
+  | "plum"
+  | "auto";
+export type AccentColor =
+  | "amber"
+  | "ember"
+  | "plum"
+  | "cobalt"
+  | "moss"
+  | "sand";
 export type Density = "comfortable" | "cozy" | "compact";
 
 export interface AppearanceSettings {
@@ -753,7 +805,17 @@ export interface AppearanceSettings {
   autoplayTrailers: number;
 }
 
-export type HomepageSectionId = "up_next" | "unwatched" | "recommendations" | "today" | "upcoming" | "airing_soon" | "friends_loved" | "streak" | "movies_to_watch" | "upcoming_movies";
+export type HomepageSectionId =
+  | "up_next"
+  | "unwatched"
+  | "recommendations"
+  | "today"
+  | "upcoming"
+  | "airing_soon"
+  | "friends_loved"
+  | "streak"
+  | "movies_to_watch"
+  | "upcoming_movies";
 
 export interface HomepageSection {
   id: HomepageSectionId;
@@ -867,7 +929,12 @@ export interface NotifierHistoryResponse {
 export type SuggestionSeedReason = "loved" | "liked" | "watched" | "tracked";
 
 export interface SuggestionsGroup {
-  source: { id: string; title: string; posterUrl: string | null; reason: SuggestionSeedReason };
+  source: {
+    id: string;
+    title: string;
+    posterUrl: string | null;
+    reason: SuggestionSeedReason;
+  };
   suggestions: SearchTitle[];
   hiddenCount: number;
 }
@@ -879,7 +946,15 @@ export interface SuggestionsAggregateResponse {
 
 // ─── Gamification Types ───────────────────────────────────────────────────────
 
-export type Category = 'watching' | 'streaks' | 'genres' | 'social' | 'special' | 'explorer' | 'habit' | 'long-haul';
+export type Category =
+  | "watching"
+  | "streaks"
+  | "genres"
+  | "social"
+  | "special"
+  | "explorer"
+  | "habit"
+  | "long-haul";
 
 export interface AchievementDef {
   key: string;
@@ -893,7 +968,7 @@ export interface AchievementDef {
   windowHours?: number;
   // PR1 additions (computed server-side from registry)
   category: Category;
-  tier: 'ladder' | 'one-shot';
+  tier: "ladder" | "one-shot";
   repeatable: boolean;
   family: string | null;
   rungIndex: number | null;
@@ -906,8 +981,16 @@ export interface UserAchievement extends AchievementDef {
   // PR1 additions
   earnedCount: number;
   lastEarnedAt: string | null;
-  nextRung: { key: string; threshold: number; rungIndex: number; points: number } | null;
-  rarity: { pct: number; bucket: 'common' | 'rare' | 'epic' | 'legendary' } | null;
+  nextRung: {
+    key: string;
+    threshold: number;
+    rungIndex: number;
+    points: number;
+  } | null;
+  rarity: {
+    pct: number;
+    bucket: "common" | "rare" | "epic" | "legendary";
+  } | null;
 }
 
 export interface LeaderboardEntry {

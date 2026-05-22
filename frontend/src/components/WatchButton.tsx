@@ -52,12 +52,18 @@ interface WatchButtonProps {
 
 export function monetizationLabel(type?: string): string | null {
   switch (type) {
-    case "FLATRATE": return "Stream";
-    case "FREE": return "Free";
-    case "ADS": return "Ads";
-    case "RENT": return "Rent";
-    case "BUY": return "Buy";
-    default: return null;
+    case "FLATRATE":
+      return "Stream";
+    case "FREE":
+      return "Free";
+    case "ADS":
+      return "Ads";
+    case "RENT":
+      return "Rent";
+    case "BUY":
+      return "Buy";
+    default:
+      return null;
   }
 }
 

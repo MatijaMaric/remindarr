@@ -3,7 +3,9 @@ import { buildCategoryParams, FILTER_KEYS } from "./BrowsePage";
 
 describe("buildCategoryParams", () => {
   it("preserves filter params when switching category", () => {
-    const prev = new URLSearchParams("category=popular&type=MOVIE&genre=Action&provider=8&language=en");
+    const prev = new URLSearchParams(
+      "category=popular&type=MOVIE&genre=Action&provider=8&language=en",
+    );
     const result = buildCategoryParams(prev, "upcoming");
 
     expect(result.get("category")).toBe("upcoming");
@@ -29,7 +31,9 @@ describe("buildCategoryParams", () => {
   });
 
   it("preserves daysBack when switching categories", () => {
-    const prev = new URLSearchParams("category=new_releases&daysBack=7&type=MOVIE");
+    const prev = new URLSearchParams(
+      "category=new_releases&daysBack=7&type=MOVIE",
+    );
     const result = buildCategoryParams(prev, "popular");
 
     expect(result.has("category")).toBe(false);

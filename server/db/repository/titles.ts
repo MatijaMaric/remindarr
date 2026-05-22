@@ -1,7 +1,34 @@
-import { eq, and, or, sql, gte, lte, lt, desc, asc, exists, notExists, inArray, like } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  sql,
+  gte,
+  lte,
+  lt,
+  desc,
+  asc,
+  exists,
+  notExists,
+  inArray,
+  like,
+} from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, providers, offers, scores, tracked, titleGenres, watchedTitles } from "../schema";
-import type { ParsedTitle, ParsedOffer, ParsedProvider, ParsedScores } from "../../tmdb/parser";
+import {
+  titles,
+  providers,
+  offers,
+  scores,
+  tracked,
+  titleGenres,
+  watchedTitles,
+} from "../schema";
+import type {
+  ParsedTitle,
+  ParsedOffer,
+  ParsedProvider,
+  ParsedScores,
+} from "../../tmdb/parser";
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles, getOffersWithPlex } from "./offers";
@@ -43,7 +70,8 @@ export async function upsertProviderRows(
   tx: DrizzleDb,
 ): Promise<void> {
   for (const p of providerList) {
-    await tx.insert(providers)
+    await tx
+      .insert(providers)
       .values({
         id: p.id,
         name: p.name,
@@ -70,7 +98,8 @@ export async function upsertTitleRow(
   t: ParsedTitle,
   tx: DrizzleDb,
 ): Promise<void> {
-  await tx.insert(titles)
+  await tx
+    .insert(titles)
     .values({
       id: t.id,
       objectType: t.objectType,
@@ -122,8 +151,9 @@ export async function upsertTitleGenres(
   tx: DrizzleDb,
 ): Promise<void> {
   await tx.delete(titleGenres).where(eq(titleGenres.titleId, titleId)).run();
-  for (const genre of (genres ?? [])) {
-    await tx.insert(titleGenres)
+  for (const genre of genres ?? []) {
+    await tx
+      .insert(titleGenres)
       .values({ titleId, genre })
       .onConflictDoNothing()
       .run();
@@ -171,8 +201,10 @@ export async function mergeOffers(
 
   await tx.delete(offers).where(eq(offers.titleId, titleId)).run();
   for (const o of newOffers) {
-    const preservedDeepLink = deepLinkMap.get(`${o.providerId}:${o.monetizationType}`) ?? null;
-    await tx.insert(offers)
+    const preservedDeepLink =
+      deepLinkMap.get(`${o.providerId}:${o.monetizationType}`) ?? null;
+    await tx
+      .insert(offers)
       .values({
         titleId: o.titleId,
         providerId: o.providerId,
@@ -197,7 +229,8 @@ export async function upsertScores(
   parsedScores: ParsedScores,
   tx: DrizzleDb,
 ): Promise<void> {
-  await tx.insert(scores)
+  await tx
+    .insert(scores)
     .values({
       titleId,
       imdbScore: parsedScores.imdbScore,
@@ -245,7 +278,9 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
 
 // ─── Genre helpers ───────────────────────────────────────────────────────────
 
-export async function getGenresForTitles(titleIds: string[]): Promise<Map<string, string[]>> {
+export async function getGenresForTitles(
+  titleIds: string[],
+): Promise<Map<string, string[]>> {
   if (titleIds.length === 0) return new Map();
   const db = getDb();
   const rows = await db
@@ -291,9 +326,7 @@ export async function getTitleById(titleId: string, userId?: string) {
         is_tracked: userId
           ? sql<number>`CASE WHEN ${tracked.titleId} IS NOT NULL THEN 1 ELSE 0 END`
           : sql<number>`0`,
-        is_public: userId
-          ? tracked.public
-          : sql<number | null>`NULL`,
+        is_public: userId ? tracked.public : sql<number | null>`NULL`,
         is_watched: userId
           ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
           : sql<number>`0`,
@@ -302,10 +335,16 @@ export async function getTitleById(titleId: string, userId?: string) {
       .leftJoin(scores, eq(scores.titleId, titles.id))
       .$dynamic();
 
-    const row = await (userId
-      ? queryBuilder.leftJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
-      : queryBuilder
-    ).where(eq(titles.id, titleId)).get();
+    const row = await (
+      userId
+        ? queryBuilder.leftJoin(
+            tracked,
+            and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+          )
+        : queryBuilder
+    )
+      .where(eq(titles.id, titleId))
+      .get();
 
     if (!row) return null;
 
@@ -337,10 +376,22 @@ export interface TitleFilters {
   offset?: number;
 }
 
-export async function getRecentTitles(filters: TitleFilters = {}, userId?: string) {
+export async function getRecentTitles(
+  filters: TitleFilters = {},
+  userId?: string,
+) {
   return traceDbQuery("getRecentTitles", async () => {
     const db = getDb();
-    const { daysBack = 30, objectTypes, providers: filterProviders, genres, languages, excludeTracked, limit = 100, offset = 0 } = filters;
+    const {
+      daysBack = 30,
+      objectTypes,
+      providers: filterProviders,
+      genres,
+      languages,
+      excludeTracked,
+      limit = 100,
+      offset = 0,
+    } = filters;
 
     const conditions: ReturnType<typeof eq>[] = [];
 
@@ -363,7 +414,12 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
             db
               .select({ one: sql`1` })
               .from(offers)
-              .where(and(eq(offers.titleId, titles.id), eq(offers.providerId, providerId)))
+              .where(
+                and(
+                  eq(offers.titleId, titles.id),
+                  eq(offers.providerId, providerId),
+                ),
+              ),
           );
         } else {
           return exists(
@@ -371,11 +427,20 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
               .select({ one: sql`1` })
               .from(offers)
               .innerJoin(providers, eq(offers.providerId, providers.id))
-              .where(and(eq(offers.titleId, titles.id), eq(providers.technicalName, p)))
+              .where(
+                and(
+                  eq(offers.titleId, titles.id),
+                  eq(providers.technicalName, p),
+                ),
+              ),
           );
         }
       });
-      conditions.push(providerConditions.length === 1 ? providerConditions[0] : or(...providerConditions)!);
+      conditions.push(
+        providerConditions.length === 1
+          ? providerConditions[0]
+          : or(...providerConditions)!,
+      );
     }
     if (genres && genres.length > 0) {
       const genreConditions = genres.map((g) =>
@@ -383,10 +448,16 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
           db
             .select({ one: sql`1` })
             .from(titleGenres)
-            .where(and(eq(titleGenres.titleId, titles.id), eq(titleGenres.genre, g)))
-        )
+            .where(
+              and(eq(titleGenres.titleId, titles.id), eq(titleGenres.genre, g)),
+            ),
+        ),
       );
-      conditions.push(genreConditions.length === 1 ? genreConditions[0] : or(...genreConditions)!);
+      conditions.push(
+        genreConditions.length === 1
+          ? genreConditions[0]
+          : or(...genreConditions)!,
+      );
     }
     if (languages && languages.length > 0) {
       conditions.push(inArray(titles.originalLanguage, languages));
@@ -397,8 +468,10 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
           db
             .select({ one: sql`1` })
             .from(tracked)
-            .where(and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
-        )
+            .where(
+              and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+            ),
+        ),
       );
     }
 
@@ -433,9 +506,13 @@ export async function getRecentTitles(filters: TitleFilters = {}, userId?: strin
       .leftJoin(scores, eq(scores.titleId, titles.id))
       .$dynamic();
 
-    const rows = await (userId
-      ? queryBuilder.leftJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
-      : queryBuilder
+    const rows = await (
+      userId
+        ? queryBuilder.leftJoin(
+            tracked,
+            and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+          )
+        : queryBuilder
     )
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(titles.releaseDate))
@@ -466,7 +543,12 @@ export interface LocalSearchFilters {
   language?: string;
 }
 
-export async function searchLocalTitles(query: string, limit = 50, userId?: string, filters: LocalSearchFilters = {}) {
+export async function searchLocalTitles(
+  query: string,
+  limit = 50,
+  userId?: string,
+  filters: LocalSearchFilters = {},
+) {
   return traceDbQuery("searchLocalTitles", async () => {
     const db = getDb();
 
@@ -501,14 +583,20 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
       .leftJoin(scores, eq(scores.titleId, titles.id))
       .$dynamic();
 
-    const conditions: ReturnType<typeof eq>[] = [like(titles.title, `%${query}%`)];
+    const conditions: ReturnType<typeof eq>[] = [
+      like(titles.title, `%${query}%`),
+    ];
 
     if (filters.yearMin != null) {
       conditions.push(gte(titles.releaseYear, filters.yearMin));
     }
     if (filters.yearMax != null) {
       // Use sql<number> cast to silence type mismatch between number and number | null column
-      conditions.push(sql`${titles.releaseYear} <= ${filters.yearMax}` as ReturnType<typeof eq>);
+      conditions.push(
+        sql`${titles.releaseYear} <= ${filters.yearMax}` as ReturnType<
+          typeof eq
+        >,
+      );
     }
     if (filters.minRating != null) {
       conditions.push(gte(scores.imdbScore, filters.minRating));
@@ -520,9 +608,13 @@ export async function searchLocalTitles(query: string, limit = 50, userId?: stri
       conditions.push(eq(titles.originalLanguage, filters.language));
     }
 
-    const rows = await (userId
-      ? queryBuilder.leftJoin(tracked, and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)))
-      : queryBuilder
+    const rows = await (
+      userId
+        ? queryBuilder.leftJoin(
+            tracked,
+            and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+          )
+        : queryBuilder
     )
       .where(and(...conditions))
       .orderBy(desc(titles.releaseDate))
@@ -554,108 +646,118 @@ export interface MonthFilters {
 
 export async function getTitlesByMonth(filters: MonthFilters, userId?: string) {
   return traceDbQuery("getTitlesByMonth", async () => {
-  const db = getDb();
-  const { month, objectType, provider } = filters;
+    const db = getDb();
+    const { month, objectType, provider } = filters;
 
-  const [year, mon] = month.split("-").map(Number);
-  const startDate = `${year}-${String(mon).padStart(2, "0")}-01`;
-  const nextMonth =
-    mon === 12
-      ? `${year + 1}-01-01`
-      : `${year}-${String(mon + 1).padStart(2, "0")}-01`;
+    const [year, mon] = month.split("-").map(Number);
+    const startDate = `${year}-${String(mon).padStart(2, "0")}-01`;
+    const nextMonth =
+      mon === 12
+        ? `${year + 1}-01-01`
+        : `${year}-${String(mon + 1).padStart(2, "0")}-01`;
 
-  const conditions: ReturnType<typeof eq>[] = [
-    gte(titles.releaseDate, startDate),
-    lt(titles.releaseDate, nextMonth),
-  ];
+    const conditions: ReturnType<typeof eq>[] = [
+      gte(titles.releaseDate, startDate),
+      lt(titles.releaseDate, nextMonth),
+    ];
 
-  // Only tracked titles for the given user
-  if (userId) {
-    conditions.push(
-      exists(
-        db
-          .select({ one: sql`1` })
-          .from(tracked)
-          .where(
-            and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
-          )
-      )
-    );
-  } else {
-    // No user = no results (same behavior as before: conditions.push("0"))
-    conditions.push(sql`0` as any);
-  }
-
-  if (objectType) {
-    conditions.push(eq(titles.objectType, objectType));
-  }
-  if (provider) {
-    const providerId = Number(provider);
-    if (!isNaN(providerId)) {
+    // Only tracked titles for the given user
+    if (userId) {
       conditions.push(
         exists(
           db
             .select({ one: sql`1` })
-            .from(offers)
-            .where(and(eq(offers.titleId, titles.id), eq(offers.providerId, providerId)))
-        )
+            .from(tracked)
+            .where(
+              and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+            ),
+        ),
       );
     } else {
-      conditions.push(
-        exists(
-          db
-            .select({ one: sql`1` })
-            .from(offers)
-            .innerJoin(providers, eq(offers.providerId, providers.id))
-            .where(and(eq(offers.titleId, titles.id), eq(providers.technicalName, provider)))
-        )
-      );
+      // No user = no results (same behavior as before: conditions.push("0"))
+      conditions.push(sql`0` as any);
     }
-  }
 
-  const rows = await db
-    .select({
-      id: titles.id,
-      object_type: titles.objectType,
-      title: titles.title,
-      original_title: titles.originalTitle,
-      release_year: titles.releaseYear,
-      release_date: titles.releaseDate,
-      runtime_minutes: titles.runtimeMinutes,
-      short_description: titles.shortDescription,
-      imdb_id: titles.imdbId,
-      tmdb_id: titles.tmdbId,
-      poster_url: titles.posterUrl,
-      age_certification: titles.ageCertification,
-      original_language: titles.originalLanguage,
-      tmdb_url: titles.tmdbUrl,
-      updated_at: titles.updatedAt,
-      imdb_score: scores.imdbScore,
-      imdb_votes: scores.imdbVotes,
-      tmdb_score: scores.tmdbScore,
-      is_tracked: sql<number>`1`,
-      is_watched: userId
-        ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
-        : sql<number>`0`,
-    })
-    .from(titles)
-    .leftJoin(scores, eq(scores.titleId, titles.id))
-    .where(and(...conditions))
-    .orderBy(asc(titles.releaseDate))
-    .all();
+    if (objectType) {
+      conditions.push(eq(titles.objectType, objectType));
+    }
+    if (provider) {
+      const providerId = Number(provider);
+      if (!isNaN(providerId)) {
+        conditions.push(
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(offers)
+              .where(
+                and(
+                  eq(offers.titleId, titles.id),
+                  eq(offers.providerId, providerId),
+                ),
+              ),
+          ),
+        );
+      } else {
+        conditions.push(
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(offers)
+              .innerJoin(providers, eq(offers.providerId, providers.id))
+              .where(
+                and(
+                  eq(offers.titleId, titles.id),
+                  eq(providers.technicalName, provider),
+                ),
+              ),
+          ),
+        );
+      }
+    }
 
-  const titleIds = rows.map((r) => r.id);
-  const [offersByTitle, genresByTitle] = await Promise.all([
-    getOffersWithPlex(titleIds, userId),
-    getGenresForTitles(titleIds),
-  ]);
-  return rows.map((row) => ({
-    ...row,
-    genres: genresByTitle.get(row.id) ?? [],
-    is_tracked: Boolean(row.is_tracked),
-    is_watched: Boolean(row.is_watched),
-    offers: offersByTitle.get(row.id) ?? [],
-  }));
+    const rows = await db
+      .select({
+        id: titles.id,
+        object_type: titles.objectType,
+        title: titles.title,
+        original_title: titles.originalTitle,
+        release_year: titles.releaseYear,
+        release_date: titles.releaseDate,
+        runtime_minutes: titles.runtimeMinutes,
+        short_description: titles.shortDescription,
+        imdb_id: titles.imdbId,
+        tmdb_id: titles.tmdbId,
+        poster_url: titles.posterUrl,
+        age_certification: titles.ageCertification,
+        original_language: titles.originalLanguage,
+        tmdb_url: titles.tmdbUrl,
+        updated_at: titles.updatedAt,
+        imdb_score: scores.imdbScore,
+        imdb_votes: scores.imdbVotes,
+        tmdb_score: scores.tmdbScore,
+        is_tracked: sql<number>`1`,
+        is_watched: userId
+          ? sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`
+          : sql<number>`0`,
+      })
+      .from(titles)
+      .leftJoin(scores, eq(scores.titleId, titles.id))
+      .where(and(...conditions))
+      .orderBy(asc(titles.releaseDate))
+      .all();
+
+    const titleIds = rows.map((r) => r.id);
+    const [offersByTitle, genresByTitle] = await Promise.all([
+      getOffersWithPlex(titleIds, userId),
+      getGenresForTitles(titleIds),
+    ]);
+    return rows.map((row) => ({
+      ...row,
+      genres: genresByTitle.get(row.id) ?? [],
+      is_tracked: Boolean(row.is_tracked),
+      is_watched: Boolean(row.is_watched),
+      offers: offersByTitle.get(row.id) ?? [],
+    }));
   });
 }
 
@@ -676,7 +778,9 @@ export async function getTitlesByTmdbIds(
 
     // Reconstruct the stable title IDs: "movie-{tmdbId}" / "tv-{tmdbId}"
     const titleIds = items.map((item) =>
-      item.objectType === "MOVIE" ? `movie-${item.tmdbId}` : `tv-${item.tmdbId}`,
+      item.objectType === "MOVIE"
+        ? `movie-${item.tmdbId}`
+        : `tv-${item.tmdbId}`,
     );
 
     const rows = await db
@@ -789,12 +893,14 @@ export function getGenres(): Promise<string[]> {
       .all();
     const rawGenres = rows.map((r) => r.genre);
     return [...new Set(rawGenres.map(toCanonicalGenre))].sort();
-  }).then((result) => {
-    genresCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
-    return result;
-  }).finally(() => {
-    genresInflight = null;
-  });
+  })
+    .then((result) => {
+      genresCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
+      return result;
+    })
+    .finally(() => {
+      genresInflight = null;
+    });
 
   return genresInflight;
 }
@@ -815,12 +921,14 @@ export function getLanguages(): Promise<string[]> {
       .orderBy(asc(titles.originalLanguage))
       .all();
     return rows.map((r) => r.original_language!);
-  }).then((result) => {
-    languagesCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
-    return result;
-  }).finally(() => {
-    languagesInflight = null;
-  });
+  })
+    .then((result) => {
+      languagesCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
+      return result;
+    })
+    .finally(() => {
+      languagesInflight = null;
+    });
 
   return languagesInflight;
 }

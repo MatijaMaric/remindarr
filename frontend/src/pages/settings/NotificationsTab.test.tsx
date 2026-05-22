@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  beforeEach,
+  afterEach,
+  spyOn,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -6,12 +14,16 @@ import "../../i18n";
 import * as api from "../../api";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function wrapper(client: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
   };
 }
 
@@ -30,7 +42,9 @@ let spies: ReturnType<typeof spyOn>[] = [];
 beforeEach(() => {
   spies = [
     spyOn(api, "getNotifiers").mockResolvedValue({ notifiers: [] } as any),
-    spyOn(api, "getNotifierProviders").mockResolvedValue({ providers: ["discord"] } as any),
+    spyOn(api, "getNotifierProviders").mockResolvedValue({
+      providers: ["discord"],
+    } as any),
     spyOn(api, "getDepartureAlertSettings").mockResolvedValue({
       streamingDeparturesEnabled: true,
       departureAlertLeadDays: 7,

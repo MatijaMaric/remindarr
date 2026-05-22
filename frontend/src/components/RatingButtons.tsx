@@ -59,17 +59,20 @@ export default function RatingButtons({ titleId }: RatingButtonsProps) {
   });
 
   const rateMutation = useMutation({
-    mutationFn: ({ value }: { value: RatingValue }) => api.rateTitle(titleId, value),
+    mutationFn: ({ value }: { value: RatingValue }) =>
+      api.rateTitle(titleId, value),
     onSuccess: () => toast.success("Rating saved"),
     onError: () => toast.error("Failed to update rating"),
-    onSettled: () => qc.invalidateQueries({ queryKey: ["title-rating", titleId] }),
+    onSettled: () =>
+      qc.invalidateQueries({ queryKey: ["title-rating", titleId] }),
   });
 
   const unrateMutation = useMutation({
     mutationFn: () => api.unrateTitle(titleId),
     onSuccess: () => toast.success("Rating removed"),
     onError: () => toast.error("Failed to update rating"),
-    onSettled: () => qc.invalidateQueries({ queryKey: ["title-rating", titleId] }),
+    onSettled: () =>
+      qc.invalidateQueries({ queryKey: ["title-rating", titleId] }),
   });
 
   const submitting = rateMutation.isPending || unrateMutation.isPending;
@@ -90,7 +93,10 @@ export default function RatingButtons({ titleId }: RatingButtonsProps) {
     return (
       <div className="flex items-center gap-2" data-testid="rating-loading">
         {RATING_CONFIG.map(({ value }) => (
-          <div key={value} className="h-9 w-16 rounded-lg bg-zinc-800 animate-pulse" />
+          <div
+            key={value}
+            className="h-9 w-16 rounded-lg bg-zinc-800 animate-pulse"
+          />
         ))}
       </div>
     );
@@ -103,32 +109,34 @@ export default function RatingButtons({ titleId }: RatingButtonsProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        {RATING_CONFIG.map(({ value, Icon, label, activeColor, activeBg, filled }) => {
-          const isActive = ratingData.user_rating === value;
-          const count = ratingData.aggregated[value] || 0;
+        {RATING_CONFIG.map(
+          ({ value, Icon, label, activeColor, activeBg, filled }) => {
+            const isActive = ratingData.user_rating === value;
+            const count = ratingData.aggregated[value] || 0;
 
-          return (
-            <button
-              key={value}
-              onClick={() => handleRate(value)}
-              disabled={submitting || isReadOnly}
-              aria-label={label}
-              aria-pressed={isActive}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                isActive
-                  ? `${activeBg} ${activeColor}`
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
-              } disabled:cursor-default ${isReadOnly ? "" : "disabled:opacity-50"}`}
-            >
-              <Icon
-                className="w-4 h-4"
-                fill={isActive && filled ? "currentColor" : "none"}
-                strokeWidth={value === "HATE" ? 2.5 : 2}
-              />
-              {count > 0 && <span className="text-xs">{count}</span>}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={value}
+                onClick={() => handleRate(value)}
+                disabled={submitting || isReadOnly}
+                aria-label={label}
+                aria-pressed={isActive}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  isActive
+                    ? `${activeBg} ${activeColor}`
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
+                } disabled:cursor-default ${isReadOnly ? "" : "disabled:opacity-50"}`}
+              >
+                <Icon
+                  className="w-4 h-4"
+                  fill={isActive && filled ? "currentColor" : "none"}
+                  strokeWidth={value === "HATE" ? 2.5 : 2}
+                />
+                {count > 0 && <span className="text-xs">{count}</span>}
+              </button>
+            );
+          },
+        )}
       </div>
 
       {/* Friends' Ratings */}
@@ -139,7 +147,11 @@ export default function RatingButtons({ titleId }: RatingButtonsProps) {
   );
 }
 
-function FriendsRatings({ ratings }: { ratings: TitleRatingResponse["friends_ratings"] }) {
+function FriendsRatings({
+  ratings,
+}: {
+  ratings: TitleRatingResponse["friends_ratings"];
+}) {
   const ratingLabels: Record<RatingValue, string> = {
     HATE: "hated",
     DISLIKE: "disliked",
@@ -148,7 +160,7 @@ function FriendsRatings({ ratings }: { ratings: TitleRatingResponse["friends_rat
   };
 
   const parts = ratings.map(
-    (fr) => `${fr.user.username} ${ratingLabels[fr.rating]}`
+    (fr) => `${fr.user.username} ${ratingLabels[fr.rating]}`,
   );
 
   // Show up to 3 friends inline, then "+N more"

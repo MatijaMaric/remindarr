@@ -18,10 +18,13 @@ export default function SubscriptionsTab() {
 
   useEffect(() => {
     const controller = new AbortController();
-    api.getProviders(controller.signal).then((data) => {
-      setAllProviders(data.providers);
-      setRegionProviderIds(data.regionProviderIds);
-    }).catch(() => {});
+    api
+      .getProviders(controller.signal)
+      .then((data) => {
+        setAllProviders(data.providers);
+        setRegionProviderIds(data.regionProviderIds);
+      })
+      .catch(() => {});
     return () => controller.abort();
   }, []);
 
@@ -79,15 +82,34 @@ export default function SubscriptionsTab() {
           onChange={() => toggleProvider(provider.id)}
           disabled={saving}
         />
-        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked ? "border-amber-400 bg-amber-400" : "border-zinc-600 bg-transparent"}`}>
+        <div
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked ? "border-amber-400 bg-amber-400" : "border-zinc-600 bg-transparent"}`}
+        >
           {checked && (
-            <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 12 12" aria-hidden="true">
-              <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            <svg
+              className="w-3 h-3 text-black"
+              fill="currentColor"
+              viewBox="0 0 12 12"
+              aria-hidden="true"
+            >
+              <path
+                d="M10 3L5 8.5 2 5.5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
             </svg>
           )}
         </div>
         {provider.icon_url && (
-          <img src={provider.icon_url} alt="" className="w-6 h-6 rounded flex-shrink-0" loading="lazy" />
+          <img
+            src={provider.icon_url}
+            alt=""
+            className="w-6 h-6 rounded flex-shrink-0"
+            loading="lazy"
+          />
         )}
         <span className="text-sm text-zinc-200">{provider.name}</span>
       </label>
@@ -97,14 +119,18 @@ export default function SubscriptionsTab() {
   return (
     <div>
       {saveError && (
-        <p className="text-sm text-red-400 mb-3">{t("settings.subscriptions.saveError")}</p>
+        <p className="text-sm text-red-400 mb-3">
+          {t("settings.subscriptions.saveError")}
+        </p>
       )}
       <SCard
         title={t("settings.subscriptions.title")}
         subtitle={t("settings.subscriptions.subtitle")}
       >
         {allProviders.length === 0 ? (
-          <p className="text-sm text-zinc-500">{t("settings.subscriptions.empty")}</p>
+          <p className="text-sm text-zinc-500">
+            {t("settings.subscriptions.empty")}
+          </p>
         ) : (
           <div className="space-y-6">
             {regionProviders.length > 0 && (
@@ -113,7 +139,9 @@ export default function SubscriptionsTab() {
                   {t("settings.subscriptions.regionProviders")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-0.5">
-                  {regionProviders.map((p) => <ProviderRow key={p.id} provider={p} />)}
+                  {regionProviders.map((p) => (
+                    <ProviderRow key={p.id} provider={p} />
+                  ))}
                 </div>
               </div>
             )}
@@ -123,7 +151,9 @@ export default function SubscriptionsTab() {
                   {t("settings.subscriptions.otherProviders")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-0.5">
-                  {otherProviders.map((p) => <ProviderRow key={p.id} provider={p} />)}
+                  {otherProviders.map((p) => (
+                    <ProviderRow key={p.id} provider={p} />
+                  ))}
                 </div>
               </div>
             )}

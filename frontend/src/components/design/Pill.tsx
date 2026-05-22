@@ -17,7 +17,7 @@ export function Pill({ children, active, onClick, className }: PillProps) {
         active
           ? "bg-amber-400 text-black border-transparent"
           : "bg-white/[0.04] border border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.08]",
-        className
+        className,
       )}
     >
       {children}

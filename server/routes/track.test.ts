@@ -2,7 +2,15 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, upsertEpisodes, createUser, createSession, getSessionWithUser, setTags, getTagsForTitle } from "../db/repository";
+import {
+  upsertTitles,
+  upsertEpisodes,
+  createUser,
+  createSession,
+  getSessionWithUser,
+  setTags,
+  getTagsForTitle,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import { getRawDb } from "../db/bun-db";
 import { CONFIG } from "../config";
@@ -93,7 +101,12 @@ describe("POST /track/:id", () => {
   });
 
   it("enqueues sync-show-episodes job when tracking a SHOW with tmdb_id", async () => {
-    const showTitle = makeParsedTitle({ id: "tv-456", objectType: "SHOW", tmdbId: "456", title: "Test Show" });
+    const showTitle = makeParsedTitle({
+      id: "tv-456",
+      objectType: "SHOW",
+      tmdbId: "456",
+      title: "Test Show",
+    });
     await upsertTitles([showTitle]);
 
     const originalKey = CONFIG.TMDB_API_KEY;
@@ -114,15 +127,26 @@ describe("POST /track/:id", () => {
     expect(res.status).toBe(200);
 
     const db = getRawDb();
-    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' LIMIT 1").get() as any;
+    const job = db
+      .prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' LIMIT 1")
+      .get() as any;
     expect(job).toBeTruthy();
-    expect(JSON.parse(job.data)).toMatchObject({ titleId: "tv-456", tmdbId: "456", title: "Test Show" });
+    expect(JSON.parse(job.data)).toMatchObject({
+      titleId: "tv-456",
+      tmdbId: "456",
+      title: "Test Show",
+    });
 
     CONFIG.TMDB_API_KEY = originalKey;
   });
 
   it("does not enqueue sync-show-episodes job when TMDB_API_KEY is not set", async () => {
-    const showTitle = makeParsedTitle({ id: "tv-789", objectType: "SHOW", tmdbId: "789", title: "Another Show" });
+    const showTitle = makeParsedTitle({
+      id: "tv-789",
+      objectType: "SHOW",
+      tmdbId: "789",
+      title: "Another Show",
+    });
     await upsertTitles([showTitle]);
 
     const originalKey = CONFIG.TMDB_API_KEY;
@@ -143,7 +167,11 @@ describe("POST /track/:id", () => {
     expect(res.status).toBe(200);
 
     const db = getRawDb();
-    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-789' LIMIT 1").get();
+    const job = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-789' LIMIT 1",
+      )
+      .get();
     expect(job).toBeNull();
 
     CONFIG.TMDB_API_KEY = originalKey;
@@ -175,11 +203,31 @@ describe("DELETE /track/:id", () => {
   });
 
   it("does not delete episodes from DB when untracking a show", async () => {
-    const showTitle = makeParsedTitle({ id: "tv-show-1", objectType: "SHOW", title: "Test Show" });
+    const showTitle = makeParsedTitle({
+      id: "tv-show-1",
+      objectType: "SHOW",
+      title: "Test Show",
+    });
     await upsertTitles([showTitle]);
     await upsertEpisodes([
-      { title_id: "tv-show-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "tv-show-1", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+      {
+        title_id: "tv-show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "tv-show-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
     ]);
 
     // Track the show
@@ -191,7 +239,9 @@ describe("DELETE /track/:id", () => {
 
     // Verify episodes exist before untrack
     const db = getRawDb();
-    const episodesBefore = db.prepare("SELECT id FROM episodes WHERE title_id = 'tv-show-1'").all();
+    const episodesBefore = db
+      .prepare("SELECT id FROM episodes WHERE title_id = 'tv-show-1'")
+      .all();
     expect(episodesBefore).toHaveLength(2);
 
     // Untrack
@@ -202,7 +252,9 @@ describe("DELETE /track/:id", () => {
     expect(res.status).toBe(200);
 
     // Episodes must still exist in DB (they are global TMDB data shared across users)
-    const episodesAfter = db.prepare("SELECT id FROM episodes WHERE title_id = 'tv-show-1'").all();
+    const episodesAfter = db
+      .prepare("SELECT id FROM episodes WHERE title_id = 'tv-show-1'")
+      .all();
     expect(episodesAfter).toHaveLength(2);
   });
 });
@@ -348,7 +400,10 @@ describe("POST /track/import", () => {
           object_type: "SHOW",
           title: "Test Show",
           genres: [],
-          watched_episodes: [{ season: 1, episode: 1 }, { season: 1, episode: 2 }],
+          watched_episodes: [
+            { season: 1, episode: 1 },
+            { season: 1, episode: 2 },
+          ],
         },
       ],
     };
@@ -363,11 +418,22 @@ describe("POST /track/import", () => {
     expect(body.imported).toBe(1);
 
     const db = getRawDb();
-    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-999' LIMIT 1").get() as any;
+    const job = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-999' LIMIT 1",
+      )
+      .get() as any;
     expect(job).toBeTruthy();
     const jobData = JSON.parse(job.data);
-    expect(jobData).toMatchObject({ titleId: "tv-999", tmdbId: "999", title: "Test Show" });
-    expect(jobData.watchedEpisodes).toEqual([{ season: 1, episode: 1 }, { season: 1, episode: 2 }]);
+    expect(jobData).toMatchObject({
+      titleId: "tv-999",
+      tmdbId: "999",
+      title: "Test Show",
+    });
+    expect(jobData.watchedEpisodes).toEqual([
+      { season: 1, episode: 1 },
+      { season: 1, episode: 2 },
+    ]);
     expect(jobData.userId).toBeTruthy();
 
     CONFIG.TMDB_API_KEY = originalKey;
@@ -400,7 +466,11 @@ describe("POST /track/import", () => {
     expect(res.status).toBe(200);
 
     const db = getRawDb();
-    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-888' LIMIT 1").get() as any;
+    const job = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-888' LIMIT 1",
+      )
+      .get() as any;
     expect(job).toBeTruthy();
     const jobData = JSON.parse(job.data);
     expect(jobData.watchedEpisodes).toBeUndefined();
@@ -436,7 +506,11 @@ describe("POST /track/import", () => {
     expect(res.status).toBe(200);
 
     const db = getRawDb();
-    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-777' LIMIT 1").get();
+    const job = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-777' LIMIT 1",
+      )
+      .get();
     expect(job).toBeNull();
 
     CONFIG.TMDB_API_KEY = originalKey;
@@ -479,13 +553,27 @@ describe("POST /track/import", () => {
     expect(body.imported).toBe(2);
 
     const db = getRawDb();
-    const movieJob = db.prepare("SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '600' LIMIT 1").get() as any;
+    const movieJob = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '600' LIMIT 1",
+      )
+      .get() as any;
     expect(movieJob).toBeTruthy();
-    expect(JSON.parse(movieJob.data)).toMatchObject({ tmdbId: "600", objectType: "MOVIE" });
+    expect(JSON.parse(movieJob.data)).toMatchObject({
+      tmdbId: "600",
+      objectType: "MOVIE",
+    });
 
-    const showJob = db.prepare("SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '601' LIMIT 1").get() as any;
+    const showJob = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '601' LIMIT 1",
+      )
+      .get() as any;
     expect(showJob).toBeTruthy();
-    expect(JSON.parse(showJob.data)).toMatchObject({ tmdbId: "601", objectType: "SHOW" });
+    expect(JSON.parse(showJob.data)).toMatchObject({
+      tmdbId: "601",
+      objectType: "SHOW",
+    });
 
     CONFIG.TMDB_API_KEY = originalKey;
   });
@@ -517,7 +605,11 @@ describe("POST /track/import", () => {
     expect(res.status).toBe(200);
 
     const db = getRawDb();
-    const job = db.prepare("SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '602' LIMIT 1").get();
+    const job = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'backfill-title-offers' AND json_extract(data, '$.tmdbId') = '602' LIMIT 1",
+      )
+      .get();
     expect(job).toBeNull();
 
     CONFIG.TMDB_API_KEY = originalKey;
@@ -575,7 +667,11 @@ describe("POST /track/import", () => {
     expect(res.status).toBe(200);
 
     const db = getRawDb();
-    const job = db.prepare("SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'movie-555' LIMIT 1").get();
+    const job = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'movie-555' LIMIT 1",
+      )
+      .get();
     expect(job).toBeNull();
 
     CONFIG.TMDB_API_KEY = originalKey;
@@ -987,7 +1083,21 @@ describe("PATCH /track/:id/tags", () => {
     const res = await app.request("/track/movie-123/tags", {
       method: "PATCH",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ tags: ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11"] }),
+      body: JSON.stringify({
+        tags: [
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t10",
+          "t11",
+        ],
+      }),
     });
     expect(res.status).toBe(400);
   });
@@ -1053,7 +1163,10 @@ describe("POST /track/bulk", () => {
     const res = await app.request("/track/bulk", {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleIds: ["movie-1", "movie-2", "movie-3"], action: "untrack" }),
+      body: JSON.stringify({
+        titleIds: ["movie-1", "movie-2", "movie-3"],
+        action: "untrack",
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -1081,7 +1194,11 @@ describe("POST /track/bulk", () => {
     const res = await app.request("/track/bulk", {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleIds: ["movie-1", "movie-2"], action: "set_status", payload: { status: "completed" } }),
+      body: JSON.stringify({
+        titleIds: ["movie-1", "movie-2"],
+        action: "set_status",
+        payload: { status: "completed" },
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -1089,7 +1206,9 @@ describe("POST /track/bulk", () => {
 
     const listRes = await app.request("/track", { headers: headers() });
     const listBody = await listRes.json();
-    expect(listBody.titles.every((t: any) => t.user_status === "completed")).toBe(true);
+    expect(
+      listBody.titles.every((t: any) => t.user_status === "completed"),
+    ).toBe(true);
   });
 
   it("bulk add_tag adds tag to all selected titles", async () => {
@@ -1108,7 +1227,11 @@ describe("POST /track/bulk", () => {
     const res = await app.request("/track/bulk", {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleIds: ["movie-1", "movie-2"], action: "add_tag", payload: { tag: "favorite" } }),
+      body: JSON.stringify({
+        titleIds: ["movie-1", "movie-2"],
+        action: "add_tag",
+        payload: { tag: "favorite" },
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -1116,7 +1239,9 @@ describe("POST /track/bulk", () => {
 
     const listRes = await app.request("/track", { headers: headers() });
     const listBody = await listRes.json();
-    expect(listBody.titles.every((t: any) => t.tags?.includes("favorite"))).toBe(true);
+    expect(
+      listBody.titles.every((t: any) => t.tags?.includes("favorite")),
+    ).toBe(true);
   });
 
   it("bulk add_tag enforces 10-tag cap per title", async () => {
@@ -1128,13 +1253,28 @@ describe("POST /track/bulk", () => {
     });
 
     const currentUser = await getSessionWithUser(userToken);
-    const existingTags = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10"];
+    const existingTags = [
+      "t1",
+      "t2",
+      "t3",
+      "t4",
+      "t5",
+      "t6",
+      "t7",
+      "t8",
+      "t9",
+      "t10",
+    ];
     await setTags(currentUser!.id, "movie-capped", existingTags);
 
     const res = await app.request("/track/bulk", {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleIds: ["movie-capped"], action: "add_tag", payload: { tag: "eleventh" } }),
+      body: JSON.stringify({
+        titleIds: ["movie-capped"],
+        action: "add_tag",
+        payload: { tag: "eleventh" },
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -1157,7 +1297,11 @@ describe("POST /track/bulk", () => {
       const res = await app.request("/track/bulk", {
         method: "POST",
         headers: { ...headers(), "Content-Type": "application/json" },
-        body: JSON.stringify({ titleIds: ["movie-idem"], action: "add_tag", payload: { tag: "unique" } }),
+        body: JSON.stringify({
+          titleIds: ["movie-idem"],
+          action: "add_tag",
+          payload: { tag: "unique" },
+        }),
       });
       expect(res.status).toBe(200);
     }
@@ -1178,7 +1322,11 @@ describe("POST /track/bulk", () => {
     const res = await app.request("/track/bulk", {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleIds: ["movie-norm"], action: "add_tag", payload: { tag: "  Favorite  " } }),
+      body: JSON.stringify({
+        titleIds: ["movie-norm"],
+        action: "add_tag",
+        payload: { tag: "  Favorite  " },
+      }),
     });
     expect(res.status).toBe(200);
 
@@ -1204,7 +1352,11 @@ describe("POST /track/bulk", () => {
     const res = await app.request("/track/bulk", {
       method: "POST",
       headers: { ...headers(), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleIds: ["movie-1", "movie-2"], action: "set_notification_mode", payload: { mode: "none" } }),
+      body: JSON.stringify({
+        titleIds: ["movie-1", "movie-2"],
+        action: "set_notification_mode",
+        payload: { mode: "none" },
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -1212,7 +1364,9 @@ describe("POST /track/bulk", () => {
 
     const listRes = await app.request("/track", { headers: headers() });
     const listBody = await listRes.json();
-    expect(listBody.titles.every((t: any) => t.notification_mode === "none")).toBe(true);
+    expect(
+      listBody.titles.every((t: any) => t.notification_mode === "none"),
+    ).toBe(true);
   });
 
   it("returns 401 without auth", async () => {
@@ -1241,7 +1395,10 @@ describe("POST /track/bulk", () => {
       const res = await app.request("/track/bulk", {
         method: "POST",
         headers: { ...headers(), "Content-Type": "application/json" },
-        body: JSON.stringify({ titleIds: ["movie-1"], action: "delete_everything" }),
+        body: JSON.stringify({
+          titleIds: ["movie-1"],
+          action: "delete_everything",
+        }),
       });
       expect(res.status).toBe(400);
       const body = await res.json();

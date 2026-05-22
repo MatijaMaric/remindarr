@@ -46,7 +46,18 @@ interface Props {
   onClearFilters: () => void;
 }
 
-const RATING_OPTIONS = ["5", "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5"] as const;
+const RATING_OPTIONS = [
+  "5",
+  "5.5",
+  "6",
+  "6.5",
+  "7",
+  "7.5",
+  "8",
+  "8.5",
+  "9",
+  "9.5",
+] as const;
 
 function languageLabel(code: string): string {
   try {
@@ -58,13 +69,26 @@ function languageLabel(code: string): string {
 
 export default function BrowseFilterCard(props: Props) {
   const {
-    genre, onGenreChange, genres,
-    provider, onProviderChange, providers, regionProviderIds,
-    yearMin, yearMax, onYearChange,
-    minRating, onMinRatingChange,
-    type, onTypeChange,
-    language, onLanguageChange, languages, priorityLanguageCodes,
-    hideTracked, onHideTrackedChange,
+    genre,
+    onGenreChange,
+    genres,
+    provider,
+    onProviderChange,
+    providers,
+    regionProviderIds,
+    yearMin,
+    yearMax,
+    onYearChange,
+    minRating,
+    onMinRatingChange,
+    type,
+    onTypeChange,
+    language,
+    onLanguageChange,
+    languages,
+    priorityLanguageCodes,
+    hideTracked,
+    onHideTrackedChange,
     onClearFilters,
   } = props;
   const { t } = useTranslation();
@@ -79,9 +103,12 @@ export default function BrowseFilterCard(props: Props) {
     minRating !== "";
 
   // Genre summary
-  const genreSummary = genre.length === 0
-    ? "All genres"
-    : genre.length <= 2 ? genre.join(", ") : `${genre.length} selected`;
+  const genreSummary =
+    genre.length === 0
+      ? "All genres"
+      : genre.length <= 2
+        ? genre.join(", ")
+        : `${genre.length} selected`;
 
   // Provider summary (use provider names)
   const providerById = useMemo(() => {
@@ -89,23 +116,24 @@ export default function BrowseFilterCard(props: Props) {
     for (const p of providers) m.set(String(p.id), p);
     return m;
   }, [providers]);
-  const providerSummary = provider.length === 0
-    ? "All providers"
-    : provider.length <= 2
-      ? provider.map((id) => providerById.get(id)?.name ?? id).join(", ")
-      : `${providerById.get(provider[0])?.name ?? provider[0]}, ${providerById.get(provider[1])?.name ?? provider[1]} +${provider.length - 2}`;
+  const providerSummary =
+    provider.length === 0
+      ? "All providers"
+      : provider.length <= 2
+        ? provider.map((id) => providerById.get(id)?.name ?? id).join(", ")
+        : `${providerById.get(provider[0])?.name ?? provider[0]}, ${providerById.get(provider[1])?.name ?? provider[1]} +${provider.length - 2}`;
 
   // Year summary
-  const yearSummary = yearMin || yearMax
-    ? `${yearMin || "…"} – ${yearMax || "…"}`
-    : "Any year";
+  const yearSummary =
+    yearMin || yearMax ? `${yearMin || "…"} – ${yearMax || "…"}` : "Any year";
 
   // Rating summary
   const ratingSummary = minRating ? `★ ${minRating}+` : "Any rating";
 
   // Provider sections (region first, then others)
   const providerSections = useMemo(() => {
-    if (!providers || providers.length === 0) return [{ label: undefined, options: [] as ProviderOption[] }];
+    if (!providers || providers.length === 0)
+      return [{ label: undefined, options: [] as ProviderOption[] }];
     if (!regionProviderIds || regionProviderIds.length === 0) {
       return [{ label: undefined, options: providers }];
     }
@@ -121,7 +149,9 @@ export default function BrowseFilterCard(props: Props) {
   // Language sections
   const languageOptions = useMemo(() => {
     return (languages as (string | LanguageOption)[]).map((l) =>
-      typeof l === "string" ? { value: l, label: languageLabel(l) } : { value: l.code, label: l.name }
+      typeof l === "string"
+        ? { value: l, label: languageLabel(l) }
+        : { value: l.code, label: l.name },
     );
   }, [languages]);
   const languageSections = useMemo(() => {
@@ -131,17 +161,21 @@ export default function BrowseFilterCard(props: Props) {
     const prioritySet = new Set(priorityLanguageCodes);
     const priority = languageOptions.filter((o) => prioritySet.has(o.value));
     const other = languageOptions.filter((o) => !prioritySet.has(o.value));
-    const sections: { label?: string; options: { value: string; label: string }[] }[] = [];
+    const sections: {
+      label?: string;
+      options: { value: string; label: string }[];
+    }[] = [];
     if (priority.length) sections.push({ options: priority });
     if (other.length) sections.push({ label: "Other", options: other });
     return sections;
   }, [languageOptions, priorityLanguageCodes]);
 
-  const languageSummary = language.length === 0
-    ? t("filter.allLanguages")
-    : language.length <= 2
-      ? language.map((code) => languageLabel(code)).join(", ")
-      : `${language.length} selected`;
+  const languageSummary =
+    language.length === 0
+      ? t("filter.allLanguages")
+      : language.length <= 2
+        ? language.map((code) => languageLabel(code)).join(", ")
+        : `${language.length} selected`;
 
   return (
     <div className="space-y-3">
@@ -149,7 +183,9 @@ export default function BrowseFilterCard(props: Props) {
       <Card className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[repeat(4,1fr)_auto] gap-3 items-end">
         <FilterField label="Genre" summary={genreSummary}>
           <CheckboxList
-            sections={[{ options: genres.map((g) => ({ value: g, label: g })) }]}
+            sections={[
+              { options: genres.map((g) => ({ value: g, label: g })) },
+            ]}
             selected={genre}
             onChange={onGenreChange}
             searchable
@@ -159,7 +195,11 @@ export default function BrowseFilterCard(props: Props) {
           <CheckboxList
             sections={providerSections.map((s) => ({
               label: s.label,
-              options: s.options.map((p) => ({ value: String(p.id), label: p.name, iconUrl: p.iconUrl })),
+              options: s.options.map((p) => ({
+                value: String(p.id),
+                label: p.name,
+                iconUrl: p.iconUrl,
+              })),
             }))}
             selected={provider}
             onChange={onProviderChange}
@@ -188,21 +228,31 @@ export default function BrowseFilterCard(props: Props) {
 
       {/* Secondary chip row: Type / Language / Hide tracked */}
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Content type" className="flex gap-1 bg-zinc-800/50 rounded-lg p-1">
+        <div
+          role="group"
+          aria-label="Content type"
+          className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
+        >
           <button
             aria-pressed={type.length === 0}
             onClick={() => onTypeChange([])}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              type.length === 0 ? "bg-amber-500/15 text-amber-400" : "text-zinc-400 hover:text-white"
+              type.length === 0
+                ? "bg-amber-500/15 text-amber-400"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             {t("filter.all")}
           </button>
           <button
             aria-pressed={type.includes("MOVIE")}
-            onClick={() => onTypeChange(type.includes("MOVIE") ? [] : ["MOVIE"])}
+            onClick={() =>
+              onTypeChange(type.includes("MOVIE") ? [] : ["MOVIE"])
+            }
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              type.includes("MOVIE") ? "bg-amber-500/15 text-amber-400" : "text-zinc-400 hover:text-white"
+              type.includes("MOVIE")
+                ? "bg-amber-500/15 text-amber-400"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             {t("filter.movies")}
@@ -211,7 +261,9 @@ export default function BrowseFilterCard(props: Props) {
             aria-pressed={type.includes("SHOW")}
             onClick={() => onTypeChange(type.includes("SHOW") ? [] : ["SHOW"])}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              type.includes("SHOW") ? "bg-amber-500/15 text-amber-400" : "text-zinc-400 hover:text-white"
+              type.includes("SHOW")
+                ? "bg-amber-500/15 text-amber-400"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             {t("filter.shows")}
@@ -234,7 +286,9 @@ export default function BrowseFilterCard(props: Props) {
             aria-pressed={hideTracked}
             onClick={() => onHideTrackedChange(!hideTracked)}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              hideTracked ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"
+              hideTracked
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-800 text-zinc-400 hover:text-white"
             }`}
           >
             {t("filter.hideTracked")}
@@ -260,7 +314,8 @@ function FilterField({
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -293,7 +348,12 @@ function FilterField({
           viewBox="0 0 24 24"
           aria-hidden="true"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
       {open && (
@@ -320,7 +380,8 @@ function ChipDropdown({
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -353,7 +414,12 @@ function ChipDropdown({
           viewBox="0 0 24 24"
           aria-hidden="true"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
       {open && (
@@ -419,7 +485,9 @@ function CheckboxList({
       )}
       <div className="overflow-y-auto py-1">
         {sections.map((section, idx) => {
-          const filtered = section.options.filter((o) => !query || o.label.toLowerCase().includes(lower));
+          const filtered = section.options.filter(
+            (o) => !query || o.label.toLowerCase().includes(lower),
+          );
           if (filtered.length === 0) return null;
           return (
             <div key={idx}>
@@ -440,7 +508,13 @@ function CheckboxList({
                     onChange={() => toggle(opt.value)}
                     className="rounded border-white/[0.10] bg-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
                   />
-                  {opt.iconUrl && <img src={opt.iconUrl} alt="" className="w-4 h-4 rounded-sm" />}
+                  {opt.iconUrl && (
+                    <img
+                      src={opt.iconUrl}
+                      alt=""
+                      className="w-4 h-4 rounded-sm"
+                    />
+                  )}
                   <span className="truncate">{opt.label}</span>
                 </label>
               ))}
@@ -489,8 +563,16 @@ function YearRangeInput({
       </div>
       <div className="flex flex-wrap gap-1">
         {[
-          { label: "This year", min: String(currentYear), max: String(currentYear) },
-          { label: "Last 5y", min: String(currentYear - 5), max: String(currentYear) },
+          {
+            label: "This year",
+            min: String(currentYear),
+            max: String(currentYear),
+          },
+          {
+            label: "Last 5y",
+            min: String(currentYear - 5),
+            max: String(currentYear),
+          },
           { label: "2010s", min: "2010", max: "2019" },
           { label: "2000s", min: "2000", max: "2009" },
         ].map((preset) => (
@@ -517,14 +599,22 @@ function YearRangeInput({
   );
 }
 
-function RatingList({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function RatingList({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="py-1">
       <button
         type="button"
         onClick={() => onChange("")}
         className={`w-full text-left px-3 py-1.5 text-xs cursor-pointer ${
-          value === "" ? "bg-zinc-700 text-amber-400" : "text-zinc-300 hover:bg-zinc-700"
+          value === ""
+            ? "bg-zinc-700 text-amber-400"
+            : "text-zinc-300 hover:bg-zinc-700"
         }`}
       >
         Any rating
@@ -535,7 +625,9 @@ function RatingList({ value, onChange }: { value: string; onChange: (v: string) 
           type="button"
           onClick={() => onChange(r)}
           className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 cursor-pointer ${
-            value === r ? "bg-zinc-700 text-amber-400" : "text-zinc-300 hover:bg-zinc-700"
+            value === r
+              ? "bg-zinc-700 text-amber-400"
+              : "text-zinc-300 hover:bg-zinc-700"
           }`}
         >
           <span className="text-amber-400">★</span>

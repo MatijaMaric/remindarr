@@ -28,11 +28,11 @@ export async function loadFilters(signal?: AbortSignal): Promise<{
         : [],
     regionProviderIds:
       providersResult.status === "fulfilled"
-        ? providersResult.value.regionProviderIds ?? []
+        ? (providersResult.value.regionProviderIds ?? [])
         : [],
     priorityLanguageCodes:
       languagesResult.status === "fulfilled"
-        ? languagesResult.value.priorityLanguageCodes ?? []
+        ? (languagesResult.value.priorityLanguageCodes ?? [])
         : [],
   };
 }

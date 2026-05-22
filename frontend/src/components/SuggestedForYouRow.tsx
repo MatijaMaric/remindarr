@@ -23,9 +23,14 @@ export default function SuggestedForYouRow() {
       <div className="flex items-baseline justify-between mb-4">
         <div>
           <Kicker>For you</Kicker>
-          <h2 className="text-xl font-bold tracking-[-0.01em]">{t("suggestions.forYou")}</h2>
+          <h2 className="text-xl font-bold tracking-[-0.01em]">
+            {t("suggestions.forYou")}
+          </h2>
         </div>
-        <Link to="/discovery" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
+        <Link
+          to="/discovery"
+          className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
+        >
           View all →
         </Link>
       </div>

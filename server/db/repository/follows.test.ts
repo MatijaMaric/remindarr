@@ -42,7 +42,9 @@ describe("follow", () => {
   });
 
   it("throws when trying to follow yourself", async () => {
-    await expect(follow(userA, userA)).rejects.toThrow("Cannot follow yourself");
+    await expect(follow(userA, userA)).rejects.toThrow(
+      "Cannot follow yourself",
+    );
   });
 });
 

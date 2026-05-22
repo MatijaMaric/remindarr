@@ -4,7 +4,10 @@ import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, upsertTitles, setHomepageLayout } from "../db/repository";
 import * as repository from "../db/repository";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
-import userSettingsApp, { DEFAULT_HOMEPAGE_LAYOUT, HOMEPAGE_SECTION_IDS } from "./user-settings";
+import userSettingsApp, {
+  DEFAULT_HOMEPAGE_LAYOUT,
+  HOMEPAGE_SECTION_IDS,
+} from "./user-settings";
 import type { AppEnv } from "../types";
 import Sentry from "../sentry";
 
@@ -13,7 +16,13 @@ let userId: string;
 function makeAuthedApp() {
   const a = new Hono<AppEnv>();
   a.use("*", async (c, next) => {
-    c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+    c.set("user", {
+      id: userId,
+      username: "testuser",
+      name: null,
+      role: null,
+      is_admin: false,
+    });
     await next();
   });
   a.route("/user/settings", userSettingsApp);
@@ -36,7 +45,9 @@ afterAll(() => {
 describe("GET /user/settings/homepage-layout", () => {
   it("returns 500 with a structured error and captures via Sentry when DB query throws", async () => {
     const app = makeAuthedApp();
-    const dbSpy = spyOn(repository, "getHomepageLayout").mockRejectedValueOnce(new Error("D1 connection lost"));
+    const dbSpy = spyOn(repository, "getHomepageLayout").mockRejectedValueOnce(
+      new Error("D1 connection lost"),
+    );
     const captureSpy = spyOn(Sentry, "captureException");
 
     const res = await app.request("/user/settings/homepage-layout");
@@ -113,7 +124,9 @@ describe("PUT /user/settings/homepage-layout", () => {
     const res = await app.request("/user/settings/homepage-layout", {
       method: "PUT",
       headers: jsonHeaders(),
-      body: JSON.stringify({ homepage_layout: [{ id: "unknown_section", enabled: true }] }),
+      body: JSON.stringify({
+        homepage_layout: [{ id: "unknown_section", enabled: true }],
+      }),
     });
     expect(res.status).toBe(400);
   });
@@ -175,7 +188,9 @@ describe("validation", () => {
     const res = await app.request("/user/settings/homepage-layout", {
       method: "PUT",
       headers: jsonHeaders(),
-      body: JSON.stringify({ homepage_layout: [{ id: "garbage", enabled: true }] }),
+      body: JSON.stringify({
+        homepage_layout: [{ id: "garbage", enabled: true }],
+      }),
     });
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -240,7 +255,9 @@ describe("validation", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.homepage_layout.some((s: { id: string }) => s.id === "airing_soon")).toBe(true);
+    expect(
+      body.homepage_layout.some((s: { id: string }) => s.id === "airing_soon"),
+    ).toBe(true);
   });
 });
 
@@ -290,7 +307,11 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
     expect(ids).toContain("upcoming_movies");
     expect(ids).toContain("streak");
     expect(ids).toContain("friends_loved");
-    expect(body.homepage_layout.find((s: { id: string; enabled: boolean }) => s.id === "upcoming_movies")?.enabled).toBe(false);
+    expect(
+      body.homepage_layout.find(
+        (s: { id: string; enabled: boolean }) => s.id === "upcoming_movies",
+      )?.enabled,
+    ).toBe(false);
   });
 
   it("PUT accepts movies_to_watch and upcoming_movies — does not 400", async () => {
@@ -315,7 +336,10 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
 
   it("PUT with all 10 sections returns 200 and round-trips them", async () => {
     const app = makeAuthedApp();
-    const fullLayout = HOMEPAGE_SECTION_IDS.map((id, i) => ({ id, enabled: i % 2 === 0 }));
+    const fullLayout = HOMEPAGE_SECTION_IDS.map((id, i) => ({
+      id,
+      enabled: i % 2 === 0,
+    }));
     const res = await app.request("/user/settings/homepage-layout", {
       method: "PUT",
       headers: jsonHeaders(),
@@ -325,7 +349,9 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
     const body = await res.json();
     expect(body.homepage_layout).toHaveLength(10);
     for (const id of HOMEPAGE_SECTION_IDS) {
-      expect(body.homepage_layout.some((s: { id: string }) => s.id === id)).toBe(true);
+      expect(
+        body.homepage_layout.some((s: { id: string }) => s.id === id),
+      ).toBe(true);
     }
   });
 });
@@ -359,7 +385,10 @@ describe("PUT /user/settings/departure-alerts", () => {
     const res = await app.request("/user/settings/departure-alerts", {
       method: "PUT",
       headers: jsonHeaders(),
-      body: JSON.stringify({ streamingDeparturesEnabled: false, departureAlertLeadDays: 14 }),
+      body: JSON.stringify({
+        streamingDeparturesEnabled: false,
+        departureAlertLeadDays: 14,
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -410,7 +439,14 @@ describe("PUT /user/settings/subscriptions", () => {
     await upsertTitles([
       makeParsedTitle({
         id: "movie-settings-sub-1",
-        offers: [makeParsedOffer({ titleId: "movie-settings-sub-1", providerId: 8, providerName: "Netflix", providerTechnicalName: "netflix" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-settings-sub-1",
+            providerId: 8,
+            providerName: "Netflix",
+            providerTechnicalName: "netflix",
+          }),
+        ],
       }),
     ]);
   });
@@ -532,7 +568,10 @@ describe("PUT /user/settings/crowded-weeks", () => {
     const res = await app.request("/user/settings/crowded-weeks", {
       method: "PUT",
       headers: jsonHeaders(),
-      body: JSON.stringify({ crowdedWeekThreshold: 10, crowdedWeekBadgeEnabled: 0 }),
+      body: JSON.stringify({
+        crowdedWeekThreshold: 10,
+        crowdedWeekBadgeEnabled: 0,
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -717,7 +756,15 @@ describe("validation — appearance", () => {
 
   it("accepts all valid theme variants", async () => {
     const app = makeAuthedApp();
-    for (const variant of ["dark", "light", "oled", "midnight", "moss", "plum", "auto"]) {
+    for (const variant of [
+      "dark",
+      "light",
+      "oled",
+      "midnight",
+      "moss",
+      "plum",
+      "auto",
+    ]) {
       const res = await app.request("/user/settings/appearance", {
         method: "PUT",
         headers: jsonHeaders(),

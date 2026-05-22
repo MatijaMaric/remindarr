@@ -33,11 +33,14 @@ describe("better-auth signup", () => {
       name: "Test User",
     });
 
-    const request = new Request("http://localhost:3000/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
+    const request = new Request(
+      "http://localhost:3000/api/auth/sign-up/email",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      },
+    );
 
     const response = await auth.handler(request);
     const data = await response.json();

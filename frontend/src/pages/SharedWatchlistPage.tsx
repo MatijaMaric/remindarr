@@ -7,7 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 export default function SharedWatchlistPage() {
   const { token } = useParams<{ token: string }>();
 
-  const { data, isLoading: loading, isError: error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+  } = useQuery({
     queryKey: ["shared-watchlist", token],
     queryFn: ({ signal }) => getSharedWatchlist(token!, signal),
     enabled: !!token,
@@ -26,9 +30,16 @@ export default function SharedWatchlistPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
         <div className="text-4xl">🔗</div>
-        <h1 className="text-xl font-bold text-zinc-100">This link is invalid or has been revoked</h1>
-        <p className="text-sm text-zinc-500">The watchlist you are looking for is no longer available.</p>
-        <Link to="/" className="text-amber-400 hover:text-amber-300 text-sm transition-colors">
+        <h1 className="text-xl font-bold text-zinc-100">
+          This link is invalid or has been revoked
+        </h1>
+        <p className="text-sm text-zinc-500">
+          The watchlist you are looking for is no longer available.
+        </p>
+        <Link
+          to="/"
+          className="text-amber-400 hover:text-amber-300 text-sm transition-colors"
+        >
           Go to Remindarr
         </Link>
       </div>
@@ -44,7 +55,9 @@ export default function SharedWatchlistPage() {
           {titles.length} title{titles.length !== 1 ? "s" : ""} shared by{" "}
           <span className="text-amber-400">@{username}</span>
         </h1>
-        <p className="text-sm text-zinc-500">Read-only view — sign in to track these titles</p>
+        <p className="text-sm text-zinc-500">
+          Read-only view — sign in to track these titles
+        </p>
       </div>
 
       {titles.length === 0 ? (
@@ -78,7 +91,9 @@ export default function SharedWatchlistPage() {
                   {title.title}
                 </div>
                 {title.release_year && (
-                  <div className="text-[10px] text-zinc-500">{title.release_year}</div>
+                  <div className="text-[10px] text-zinc-500">
+                    {title.release_year}
+                  </div>
                 )}
               </div>
             </Link>
@@ -88,7 +103,10 @@ export default function SharedWatchlistPage() {
 
       <footer className="text-center text-xs text-zinc-600 pt-8 pb-4">
         Powered by{" "}
-        <a href="/" className="text-amber-400 hover:text-amber-300 transition-colors">
+        <a
+          href="/"
+          className="text-amber-400 hover:text-amber-300 transition-colors"
+        >
           Remindarr
         </a>
       </footer>

@@ -48,4 +48,3 @@ jobs:
           claude_args: >-
             --append-system-prompt "Follow CLAUDE.md strictly. Branch names must use claude/NNN-description format. Always run bun run check before opening a PR. Always link issues with Closes #NNN in the PR body."
             --allowed-tools "Bash(bun *),Bash(git *),Bash(gh *),Read,Edit,Write,Glob,Grep"
-

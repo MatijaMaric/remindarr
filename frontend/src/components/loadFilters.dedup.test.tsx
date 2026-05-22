@@ -1,6 +1,10 @@
 import { describe, it, expect, afterEach, spyOn } from "bun:test";
 import { render, cleanup, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
 import * as api from "../api";
 import { loadFilters } from "./loadFilters";
 
@@ -24,18 +28,26 @@ afterEach(() => {
 
 describe("filters shared-cache dedup", () => {
   it("fetches filters once when two consumers share the ['filters'] key", async () => {
-    const getGenres = spyOn(api, "getGenres").mockResolvedValue({ genres: ["Action"] } as any);
-    const getProviders = spyOn(api, "getProviders").mockResolvedValue({ providers: [] } as any);
-    const getLanguages = spyOn(api, "getLanguages").mockResolvedValue({ languages: ["en"] } as any);
+    const getGenres = spyOn(api, "getGenres").mockResolvedValue({
+      genres: ["Action"],
+    } as any);
+    const getProviders = spyOn(api, "getProviders").mockResolvedValue({
+      providers: [],
+    } as any);
+    const getLanguages = spyOn(api, "getLanguages").mockResolvedValue({
+      languages: ["en"],
+    } as any);
     spies = [getGenres, getProviders, getLanguages];
 
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
 
     render(
       <QueryClientProvider client={client}>
         <FiltersConsumer />
         <FiltersConsumer />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     await waitFor(() => expect(getGenres).toHaveBeenCalledTimes(1));

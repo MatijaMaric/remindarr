@@ -8,10 +8,12 @@ test.describe.configure({ mode: "serial" });
 test.describe("Calendar feed token flow", () => {
   test.skip(
     ({ browserName }) => browserName !== "chromium",
-    "HTTP-only flow; running once under chromium is sufficient"
+    "HTTP-only flow; running once under chromium is sufficient",
   );
 
-  test("registered user can mint a feed token and fetch a valid .ics", async ({ request }) => {
+  test("registered user can mint a feed token and fetch a valid .ics", async ({
+    request,
+  }) => {
     const user = await registerUser(request);
 
     // sign-up implicitly returns a session cookie; request fixture auto-stores it.
@@ -28,7 +30,7 @@ test.describe("Calendar feed token flow", () => {
     expect(token).toBeTruthy();
 
     const feedRes = await request.get(
-      `/api/feed/calendar.ics?token=${encodeURIComponent(token!)}`
+      `/api/feed/calendar.ics?token=${encodeURIComponent(token!)}`,
     );
     expect(feedRes.status()).toBe(200);
     expect(feedRes.headers()["content-type"]).toMatch(/text\/calendar/i);
@@ -40,7 +42,9 @@ test.describe("Calendar feed token flow", () => {
   });
 
   test("feed endpoint rejects invalid tokens", async ({ request }) => {
-    const res = await request.get("/api/feed/calendar.ics?token=definitely-not-valid");
+    const res = await request.get(
+      "/api/feed/calendar.ics?token=definitely-not-valid",
+    );
     expect(res.status()).toBe(401);
   });
 });

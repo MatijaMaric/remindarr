@@ -72,22 +72,28 @@ export async function migrateAuthData(): Promise<void> {
     if (!existingAccount) {
       if (user.authProvider === "local" && user.passwordHash) {
         // Local user: create credential account
-        await db.insert(account).values({
-          id: crypto.randomUUID(),
-          userId: user.id,
-          accountId: user.username,
-          providerId: "credential",
-          password: user.passwordHash,
-        }).run();
+        await db
+          .insert(account)
+          .values({
+            id: crypto.randomUUID(),
+            userId: user.id,
+            accountId: user.username,
+            providerId: "credential",
+            password: user.passwordHash,
+          })
+          .run();
         accountsCreated++;
       } else if (user.authProvider === "oidc" && user.providerSubject) {
         // OIDC user: create pocketid account
-        await db.insert(account).values({
-          id: crypto.randomUUID(),
-          userId: user.id,
-          accountId: user.providerSubject,
-          providerId: "pocketid",
-        }).run();
+        await db
+          .insert(account)
+          .values({
+            id: crypto.randomUUID(),
+            userId: user.id,
+            accountId: user.providerSubject,
+            providerId: "pocketid",
+          })
+          .run();
         accountsCreated++;
       }
     }
@@ -96,15 +102,13 @@ export async function migrateAuthData(): Promise<void> {
     const role = user.isAdmin ? "admin" : "user";
     if (!user.name && user.username) {
       // Populate name from username if missing
-      await db.update(users)
+      await db
+        .update(users)
         .set({ role, name: user.username })
         .where(eq(users.id, user.id))
         .run();
     } else {
-      await db.update(users)
-        .set({ role })
-        .where(eq(users.id, user.id))
-        .run();
+      await db.update(users).set({ role }).where(eq(users.id, user.id)).run();
     }
     rolesSet++;
   }
@@ -117,7 +121,8 @@ export async function migrateAuthData(): Promise<void> {
     .all();
 
   for (const sess of sessionsWithoutToken) {
-    await db.update(sessions)
+    await db
+      .update(sessions)
       .set({ token: crypto.randomUUID() })
       .where(eq(sessions.id, sess.id))
       .run();

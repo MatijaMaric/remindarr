@@ -5,7 +5,12 @@ import { HTTPException } from "hono/http-exception";
 import { serveStatic } from "hono/bun";
 import { CONFIG } from "./config";
 import { initBunDb, migrateTrackedData, getRawDb } from "./db/bun-db";
-import { getUserCount, createUser, getUserByWatchlistShareToken, getTrackedTitles } from "./db/repository";
+import {
+  getUserCount,
+  createUser,
+  getUserByWatchlistShareToken,
+  getTrackedTitles,
+} from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter, MemoryRateLimitStore } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -41,7 +46,10 @@ import upNextRoutes from "./routes/up-next";
 import moviesRoutes from "./routes/movies";
 import shareRoutes from "./routes/share";
 import overlapRoutes from "./routes/overlap";
-import achievementsRoutes, { leaderboardApp, streakApp } from "./routes/achievements";
+import achievementsRoutes, {
+  leaderboardApp,
+  streakApp,
+} from "./routes/achievements";
 import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
@@ -58,7 +66,10 @@ import { createShutdownHandler } from "./graceful-shutdown";
 import { registerCron } from "./jobs/queue";
 import { setScheduleCallback } from "./jobs/schedule";
 import { BunPlatform } from "./platform/bun";
-import { createAuthWithOidc, type BetterAuthInstance } from "./auth/better-auth";
+import {
+  createAuthWithOidc,
+  type BetterAuthInstance,
+} from "./auth/better-auth";
 import { migrateAuthData } from "./db/migrate-auth";
 import { validateStartup } from "./startup-validation";
 import { createCache, initCache } from "./cache";
@@ -88,24 +99,33 @@ const platform = new BunPlatform();
 await migrateAuthData();
 
 // Create admin account on first launch
-if (await getUserCount() === 0) {
+if ((await getUserCount()) === 0) {
   const password = crypto.randomUUID().slice(0, 16);
   const hash = await platform.hashPassword(password);
-  const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
+  const adminId = await createUser(
+    "admin",
+    hash,
+    "Admin",
+    "local",
+    undefined,
+    true,
+  );
   migrateTrackedData(adminId);
 
   // Write the password to a file next to the DB rather than stdout so that
   // log aggregators don't permanently archive the initial secret. Chmod 600
   // on POSIX; on Windows we fall back to the default ACL.
   const passwordFile = path.resolve(
-    path.dirname(CONFIG.DB_PATH === ":memory:" ? "./remindarr.db" : CONFIG.DB_PATH),
-    "admin-password.txt"
+    path.dirname(
+      CONFIG.DB_PATH === ":memory:" ? "./remindarr.db" : CONFIG.DB_PATH,
+    ),
+    "admin-password.txt",
   );
   try {
     fs.writeFileSync(
       passwordFile,
       `Default admin password: ${password}\nChange it after first login, then delete this file.\n`,
-      { mode: 0o600 }
+      { mode: 0o600 },
     );
     logger.warn("Admin account created — default password written to file", {
       username: "admin",
@@ -114,11 +134,14 @@ if (await getUserCount() === 0) {
   } catch (err) {
     // If we can't write the file (read-only FS, permissions), fall back to
     // the structured log so the operator can still recover the password.
-    logger.warn("Admin account created — could not write password file, logging instead", {
-      username: "admin",
-      password,
-      error: err instanceof Error ? err.message : String(err),
-    });
+    logger.warn(
+      "Admin account created — could not write password file, logging instead",
+      {
+        username: "admin",
+        password,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    );
   }
 }
 
@@ -161,13 +184,25 @@ app.onError((err, c) => {
 
   const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
 
-  (Sentry.addBreadcrumb as (opts: { message: string; data: Record<string, string> }) => void)?.({
+  (
+    Sentry.addBreadcrumb as (opts: {
+      message: string;
+      data: Record<string, string>;
+    }) => void
+  )?.({
     message: "Unhandled error",
     data: { category, requestId, path: c.req.path, method: c.req.method },
   });
   Sentry.captureException(err);
 
-  log.error("Unhandled error", { category, requestId, path: c.req.path, method: c.req.method, error: err.message, stack: err.stack });
+  log.error("Unhandled error", {
+    category,
+    requestId,
+    path: c.req.path,
+    method: c.req.method,
+    error: err.message,
+    stack: err.stack,
+  });
 
   return c.json({ error: "Internal server error" }, 500, {
     "X-Request-Id": requestId,
@@ -177,7 +212,9 @@ app.onError((err, c) => {
 // CORS — restricted to explicit origins via CORS_ORIGIN env var (comma-separated).
 // When not set, no CORS headers are sent (same-origin policy applies).
 if (CONFIG.CORS_ORIGIN) {
-  const origins = CONFIG.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+  const origins = CONFIG.CORS_ORIGIN.split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
   app.use(
     "/api/*",
     cors({
@@ -194,7 +231,12 @@ app.use("/api/*", requestLogger());
 // Prevents aggregate abuse across routes from a single client.
 app.use(
   "/api/*",
-  rateLimiter({ store: rateLimitStore, scope: "global", limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
+  rateLimiter({
+    store: rateLimitStore,
+    scope: "global",
+    limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE,
+    windowMs: 60_000,
+  }),
 );
 
 // Health check (public — used by Sentry uptime monitoring)
@@ -208,7 +250,12 @@ app.route("/metrics", metricsRoutes);
 // need a higher cap.
 app.use(
   "/api/auth/*",
-  rateLimiter({ store: rateLimitStore, scope: "auth", limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
+  rateLimiter({
+    store: rateLimitStore,
+    scope: "auth",
+    limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE,
+    windowMs: 60_000,
+  }),
 );
 
 // Custom auth routes (providers endpoint) — must be before better-auth catch-all
@@ -225,12 +272,22 @@ app.use("/api/titles", optionalAuth);
 app.route("/api/titles", titlesRoutes);
 
 // Rate limit search: 30 requests per minute
-const searchRateLimiter = rateLimiter({ store: rateLimitStore, scope: "search", limit: 30, windowMs: 60_000 });
+const searchRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "search",
+  limit: 30,
+  windowMs: 60_000,
+});
 app.use("/api/search/*", searchRateLimiter, optionalAuth);
 app.use("/api/search", searchRateLimiter, optionalAuth);
 app.route("/api/search", searchRoutes);
 
-const browseRateLimiter = rateLimiter({ store: rateLimitStore, scope: "browse", limit: 30, windowMs: 60_000 });
+const browseRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "browse",
+  limit: 30,
+  windowMs: 60_000,
+});
 app.use("/api/browse/*", browseRateLimiter, optionalAuth);
 app.use("/api/browse", browseRateLimiter, optionalAuth);
 app.route("/api/browse", browseRoutes);
@@ -255,7 +312,12 @@ app.route("/api/social", socialRoutes);
 
 // Rate limit write-heavy routes: 60 requests per minute per IP.
 // Applied before requireAuth so floods are rejected cheaply.
-const writeRateLimiter = rateLimiter({ store: rateLimitStore, scope: "writes", limit: 60, windowMs: 60_000 });
+const writeRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "writes",
+  limit: 60,
+  windowMs: 60_000,
+});
 
 // Ratings routes — optionalAuth base, POST/DELETE check auth internally.
 // Rate-limit applies to all (reads + writes) so unauth scrapers get throttled too.
@@ -269,7 +331,12 @@ app.use("/api/recommendations", requireAuth);
 app.route("/api/recommendations", recommendationsRoutes);
 
 // Suggestions routes (TMDB-based, auth required for aggregate)
-const suggestionsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "suggestions", limit: 20, windowMs: 60_000 });
+const suggestionsRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "suggestions",
+  limit: 20,
+  windowMs: 60_000,
+});
 app.use("/api/suggestions/*", suggestionsRateLimiter, requireAuth);
 app.use("/api/suggestions", suggestionsRateLimiter, requireAuth);
 app.route("/api/suggestions", suggestionsRoutes);
@@ -304,7 +371,12 @@ app.use("/api/integrations", writeRateLimiter, requireAuth);
 app.route("/api/integrations", integrationRoutes);
 
 // Import is more expensive per request — tighter cap.
-const importRateLimiter = rateLimiter({ store: rateLimitStore, scope: "import", limit: 10, windowMs: 60_000 });
+const importRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "import",
+  limit: 10,
+  windowMs: 60_000,
+});
 app.use("/api/import/*", importRateLimiter, requireAuth);
 app.use("/api/import", importRateLimiter, requireAuth);
 app.route("/api/import", importRoutes);
@@ -365,13 +437,23 @@ app.use("/api/jobs", requireAuth, requireAdmin);
 app.route("/api/jobs", jobsRoutes);
 
 // Detail pages (optionalAuth for is_tracked)
-const detailsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "details", limit: 60, windowMs: 60_000 });
+const detailsRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "details",
+  limit: 60,
+  windowMs: 60_000,
+});
 app.use("/api/details/*", detailsRateLimiter, optionalAuth);
 app.use("/api/details", detailsRateLimiter, optionalAuth);
 app.route("/api/details", detailsRoutes);
 
 // Sync (admin only — rate limited + require admin)
-const syncRateLimiter = rateLimiter({ store: rateLimitStore, scope: "sync", limit: 5, windowMs: 60_000 });
+const syncRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "sync",
+  limit: 5,
+  windowMs: 60_000,
+});
 app.use("/api/sync/*", syncRateLimiter);
 app.use("/api/sync", syncRateLimiter);
 app.use("/api/sync/*", requireAuth, requireAdmin);
@@ -421,7 +503,9 @@ app.get("/share/watchlist/:token", async (c) => {
   } catch {
     // Fall through to static serving if dist/index.html doesn't exist (dev mode)
   }
-  return c.html("<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>");
+  return c.html(
+    "<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>",
+  );
 });
 
 // Serve frontend static files in production
@@ -450,5 +534,9 @@ const shutdown = createShutdownHandler({
   closeCache: () => cache.close?.() ?? Promise.resolve(),
 });
 
-process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
-process.on("SIGINT", () => { void shutdown("SIGINT"); });
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});

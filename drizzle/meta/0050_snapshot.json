@@ -104,9 +104,7 @@
       "indexes": {
         "idx_account_user_id": {
           "name": "idx_account_user_id",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -114,13 +112,9 @@
         "account_user_id_users_id_fk": {
           "name": "account_user_id_users_id_fk",
           "tableFrom": "account",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -246,25 +240,17 @@
       "indexes": {
         "episodes_title_season_episode": {
           "name": "episodes_title_season_episode",
-          "columns": [
-            "title_id",
-            "season_number",
-            "episode_number"
-          ],
+          "columns": ["title_id", "season_number", "episode_number"],
           "isUnique": true
         },
         "idx_episodes_air_date": {
           "name": "idx_episodes_air_date",
-          "columns": [
-            "air_date"
-          ],
+          "columns": ["air_date"],
           "isUnique": false
         },
         "idx_episodes_title_id": {
           "name": "idx_episodes_title_id",
-          "columns": [
-            "title_id"
-          ],
+          "columns": ["title_id"],
           "isUnique": false
         }
       },
@@ -272,13 +258,9 @@
         "episodes_title_id_titles_id_fk": {
           "name": "episodes_title_id_titles_id_fk",
           "tableFrom": "episodes",
-          "columnsFrom": [
-            "title_id"
-          ],
+          "columnsFrom": ["title_id"],
           "tableTo": "titles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -376,17 +358,12 @@
       "indexes": {
         "idx_jobs_status_run_at": {
           "name": "idx_jobs_status_run_at",
-          "columns": [
-            "status",
-            "run_at"
-          ],
+          "columns": ["status", "run_at"],
           "isUnique": false
         },
         "idx_jobs_name": {
           "name": "idx_jobs_name",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": false
         }
       },
@@ -484,17 +461,12 @@
       "indexes": {
         "idx_notifiers_user_id": {
           "name": "idx_notifiers_user_id",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         },
         "idx_notifiers_enabled_time": {
           "name": "idx_notifiers_enabled_time",
-          "columns": [
-            "enabled",
-            "notify_time"
-          ],
+          "columns": ["enabled", "notify_time"],
           "isUnique": false
         }
       },
@@ -502,13 +474,9 @@
         "notifiers_user_id_users_id_fk": {
           "name": "notifiers_user_id_users_id_fk",
           "tableFrom": "notifiers",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -587,16 +555,12 @@
       "indexes": {
         "idx_offers_title_id": {
           "name": "idx_offers_title_id",
-          "columns": [
-            "title_id"
-          ],
+          "columns": ["title_id"],
           "isUnique": false
         },
         "idx_offers_provider_id": {
           "name": "idx_offers_provider_id",
-          "columns": [
-            "provider_id"
-          ],
+          "columns": ["provider_id"],
           "isUnique": false
         }
       },
@@ -604,26 +568,18 @@
         "offers_title_id_titles_id_fk": {
           "name": "offers_title_id_titles_id_fk",
           "tableFrom": "offers",
-          "columnsFrom": [
-            "title_id"
-          ],
+          "columnsFrom": ["title_id"],
           "tableTo": "titles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "offers_provider_id_providers_id_fk": {
           "name": "offers_provider_id_providers_id_fk",
           "tableFrom": "offers",
-          "columnsFrom": [
-            "provider_id"
-          ],
+          "columnsFrom": ["provider_id"],
           "tableTo": "providers",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -691,9 +647,7 @@
       "indexes": {
         "idx_providers_technical_name": {
           "name": "idx_providers_technical_name",
-          "columns": [
-            "technical_name"
-          ],
+          "columns": ["technical_name"],
           "isUnique": false
         }
       },
@@ -739,13 +693,9 @@
         "scores_title_id_titles_id_fk": {
           "name": "scores_title_id_titles_id_fk",
           "tableFrom": "scores",
-          "columnsFrom": [
-            "title_id"
-          ],
+          "columnsFrom": ["title_id"],
           "tableTo": "titles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -826,16 +776,12 @@
       "indexes": {
         "sessions_token_unique": {
           "name": "sessions_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         },
         "idx_sessions_expires_at": {
           "name": "idx_sessions_expires_at",
-          "columns": [
-            "expires_at"
-          ],
+          "columns": ["expires_at"],
           "isUnique": false
         }
       },
@@ -843,13 +789,9 @@
         "sessions_user_id_users_id_fk": {
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1002,16 +944,12 @@
       "indexes": {
         "idx_titles_release_date": {
           "name": "idx_titles_release_date",
-          "columns": [
-            "release_date"
-          ],
+          "columns": ["release_date"],
           "isUnique": false
         },
         "idx_titles_object_type": {
           "name": "idx_titles_object_type",
-          "columns": [
-            "object_type"
-          ],
+          "columns": ["object_type"],
           "isUnique": false
         }
       },
@@ -1058,36 +996,25 @@
         "tracked_title_id_titles_id_fk": {
           "name": "tracked_title_id_titles_id_fk",
           "tableFrom": "tracked",
-          "columnsFrom": [
-            "title_id"
-          ],
+          "columnsFrom": ["title_id"],
           "tableTo": "titles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "tracked_user_id_users_id_fk": {
           "name": "tracked_user_id_users_id_fk",
           "tableFrom": "tracked",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "tracked_title_id_user_id_pk": {
-          "columns": [
-            "title_id",
-            "user_id"
-          ],
+          "columns": ["title_id", "user_id"],
           "name": "tracked_title_id_user_id_pk"
         }
       },
@@ -1226,17 +1153,12 @@
       "indexes": {
         "users_username_unique": {
           "name": "users_username_unique",
-          "columns": [
-            "username"
-          ],
+          "columns": ["username"],
           "isUnique": true
         },
         "users_auth_provider_subject": {
           "name": "users_auth_provider_subject",
-          "columns": [
-            "auth_provider",
-            "provider_subject"
-          ],
+          "columns": ["auth_provider", "provider_subject"],
           "isUnique": true
         }
       },
@@ -1328,9 +1250,7 @@
       "indexes": {
         "idx_watched_episodes_user_id": {
           "name": "idx_watched_episodes_user_id",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -1338,36 +1258,25 @@
         "watched_episodes_episode_id_episodes_id_fk": {
           "name": "watched_episodes_episode_id_episodes_id_fk",
           "tableFrom": "watched_episodes",
-          "columnsFrom": [
-            "episode_id"
-          ],
+          "columnsFrom": ["episode_id"],
           "tableTo": "episodes",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "watched_episodes_user_id_users_id_fk": {
           "name": "watched_episodes_user_id_users_id_fk",
           "tableFrom": "watched_episodes",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "watched_episodes_episode_id_user_id_pk": {
-          "columns": [
-            "episode_id",
-            "user_id"
-          ],
+          "columns": ["episode_id", "user_id"],
           "name": "watched_episodes_episode_id_user_id_pk"
         }
       },

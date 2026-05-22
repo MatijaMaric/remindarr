@@ -8,7 +8,9 @@ afterEach(() => cleanup());
 describe("BioCard", () => {
   it("renders the bio text when provided", () => {
     render(<BioCard bio="Tracking 42 shows." isOwnProfile={false} />);
-    expect(screen.getByTestId("bio-text").textContent).toBe("Tracking 42 shows.");
+    expect(screen.getByTestId("bio-text").textContent).toBe(
+      "Tracking 42 shows.",
+    );
   });
 
   it("shows empty placeholder for visitors when bio is null", () => {
@@ -18,7 +20,9 @@ describe("BioCard", () => {
 
   it("shows own-profile placeholder when user is viewing their own empty bio", () => {
     render(<BioCard bio={null} isOwnProfile={true} />);
-    expect(screen.getByTestId("bio-text").textContent).toMatch(/Add a short bio/);
+    expect(screen.getByTestId("bio-text").textContent).toMatch(
+      /Add a short bio/,
+    );
   });
 
   it("shows edit button only for own profile", () => {

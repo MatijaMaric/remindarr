@@ -4,8 +4,8 @@
  * The SA_TO_TMDB_PROVIDER map should always use the canonical IDs.
  */
 export const DUPLICATE_TO_CANONICAL_PROVIDER: Record<number, number> = {
-  1899: 384,  // HBO Max (hbo_max) → HBO Max (hbo)
-  119: 9,     // Amazon Prime Video → Prime Video (prime)
+  1899: 384, // HBO Max (hbo_max) → HBO Max (hbo)
+  119: 9, // Amazon Prime Video → Prime Video (prime)
 };
 
 export function canonicalProviderId(id: number): number {

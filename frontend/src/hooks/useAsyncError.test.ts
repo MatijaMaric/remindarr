@@ -24,7 +24,10 @@ describe("useAsyncError", () => {
 
   it("run() sets pending true during execution and false after", async () => {
     let resolveFn!: () => void;
-    const fn = () => new Promise<void>((res) => { resolveFn = res; });
+    const fn = () =>
+      new Promise<void>((res) => {
+        resolveFn = res;
+      });
 
     const { result } = renderHook(() => useAsyncError());
 
@@ -34,7 +37,9 @@ describe("useAsyncError", () => {
     });
 
     // Flush the microtask that defers setPending(true)
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(result.current.pending).toBe(true);
 
@@ -64,7 +69,9 @@ describe("useAsyncError", () => {
     const { result } = renderHook(() => useAsyncError());
 
     await act(async () => {
-      await result.current.run(() => Promise.reject(new Error("something went wrong")));
+      await result.current.run(() =>
+        Promise.reject(new Error("something went wrong")),
+      );
     });
 
     expect(result.current.error).toBe("something went wrong");
@@ -88,10 +95,9 @@ describe("useAsyncError", () => {
     const { result } = renderHook(() => useAsyncError());
 
     await act(async () => {
-      await result.current.run(
-        () => Promise.reject(new Error("silent fail")),
-        { silent: true },
-      );
+      await result.current.run(() => Promise.reject(new Error("silent fail")), {
+        silent: true,
+      });
     });
 
     expect(result.current.error).toBe("silent fail");

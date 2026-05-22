@@ -5,7 +5,7 @@ describe("buildPlexDeepLink", () => {
   it("builds a valid deep link with correct server ID and rating key", () => {
     const url = buildPlexDeepLink("abc123", "456");
     expect(url).toBe(
-      "https://app.plex.tv/#!/server/abc123/details?key=%2Flibrary%2Fmetadata%2F456"
+      "https://app.plex.tv/#!/server/abc123/details?key=%2Flibrary%2Fmetadata%2F456",
     );
   });
 

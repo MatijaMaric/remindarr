@@ -91,7 +91,9 @@ describe("evaluateCountMovies", () => {
   });
 
   it("does not count SHOW titles", async () => {
-    await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show" }),
+    ]);
     await watchTitle("show-1", userId);
 
     const result = await evaluateCountMovies(userId, 1);
@@ -106,7 +108,13 @@ describe("evaluateCountEpisodes", () => {
   const showId = "show-eps-test";
 
   beforeEach(async () => {
-    await upsertTitles([makeParsedTitle({ id: showId, objectType: "SHOW", title: "Episode Test Show" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: showId,
+        objectType: "SHOW",
+        title: "Episode Test Show",
+      }),
+    ]);
   });
 
   it("returns zero progress with no watched episodes", async () => {
@@ -117,8 +125,24 @@ describe("evaluateCountEpisodes", () => {
 
   it("returns partial progress below threshold", async () => {
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 2, name: "E2", overview: null, air_date: "2024-01-08", still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 2,
+        name: "E2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
     ]);
     const db = getDb();
     const epRows = await db.select().from(episodes).all();
@@ -133,7 +157,15 @@ describe("evaluateCountEpisodes", () => {
 
   it("earned = true at threshold", async () => {
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: "2024-01-01", still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
     ]);
     const db = getDb();
     const ep = await db.select().from(episodes).all();
@@ -191,8 +223,14 @@ describe("evaluateGenreCount", () => {
     const db = getDb();
     for (let i = 0; i < 3; i++) {
       const id = `action-${i}`;
-      await upsertTitles([makeParsedTitle({ id, objectType: "MOVIE", genres: ["Action"] })]);
-      await db.insert(titleGenres).values({ titleId: id, genre: "Action" }).onConflictDoNothing().run();
+      await upsertTitles([
+        makeParsedTitle({ id, objectType: "MOVIE", genres: ["Action"] }),
+      ]);
+      await db
+        .insert(titleGenres)
+        .values({ titleId: id, genre: "Action" })
+        .onConflictDoNothing()
+        .run();
       await watchTitle(id, userId);
     }
 
@@ -207,9 +245,21 @@ describe("evaluateGenreCount", () => {
     const m2 = "genre-any-2";
     await upsertTitles([makeParsedTitle({ id: m1, objectType: "MOVIE" })]);
     await upsertTitles([makeParsedTitle({ id: m2, objectType: "MOVIE" })]);
-    await db.insert(titleGenres).values({ titleId: m1, genre: "Action" }).onConflictDoNothing().run();
-    await db.insert(titleGenres).values({ titleId: m1, genre: "Drama" }).onConflictDoNothing().run();
-    await db.insert(titleGenres).values({ titleId: m2, genre: "Comedy" }).onConflictDoNothing().run();
+    await db
+      .insert(titleGenres)
+      .values({ titleId: m1, genre: "Action" })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(titleGenres)
+      .values({ titleId: m1, genre: "Drama" })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(titleGenres)
+      .values({ titleId: m2, genre: "Comedy" })
+      .onConflictDoNothing()
+      .run();
     await watchTitle(m1, userId);
     await watchTitle(m2, userId);
 
@@ -222,7 +272,9 @@ describe("evaluateGenreCount", () => {
   it("__any__ returns false when below threshold", async () => {
     const m1 = "genre-any-few";
     // Use genres: [] to avoid the default ["Action", "Drama"] from the fixture
-    await upsertTitles([makeParsedTitle({ id: m1, objectType: "MOVIE", genres: ["Thriller"] })]);
+    await upsertTitles([
+      makeParsedTitle({ id: m1, objectType: "MOVIE", genres: ["Thriller"] }),
+    ]);
     await watchTitle(m1, userId);
 
     // Only 1 distinct genre watched — below threshold of 5
@@ -239,12 +291,26 @@ describe("evaluateCompletionist", () => {
   const pastDate = "2024-01-01";
 
   beforeEach(async () => {
-    await upsertTitles([makeParsedTitle({ id: showId, objectType: "SHOW", title: "Completionist Show" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: showId,
+        objectType: "SHOW",
+        title: "Completionist Show",
+      }),
+    ]);
   });
 
   it("returns zero when no episodes watched", async () => {
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: pastDate, still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: pastDate,
+        still_path: null,
+      },
     ]);
     const result = await evaluateCompletionist(userId, 1);
     expect(result.progress).toBe(0);
@@ -253,8 +319,24 @@ describe("evaluateCompletionist", () => {
 
   it("earned when all released episodes of a show are watched (titleId mode)", async () => {
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: pastDate, still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 2, name: "E2", overview: null, air_date: pastDate, still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: pastDate,
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 2,
+        name: "E2",
+        overview: null,
+        air_date: pastDate,
+        still_path: null,
+      },
     ]);
     const db = getDb();
     const eps = await db.select().from(episodes).all();
@@ -268,8 +350,24 @@ describe("evaluateCompletionist", () => {
 
   it("not earned with only partial episodes watched (titleId mode)", async () => {
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: pastDate, still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 2, name: "E2", overview: null, air_date: pastDate, still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: pastDate,
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 2,
+        name: "E2",
+        overview: null,
+        air_date: pastDate,
+        still_path: null,
+      },
     ]);
     const db = getDb();
     const eps = await db.select().from(episodes).all();
@@ -281,7 +379,15 @@ describe("evaluateCompletionist", () => {
 
   it("counts completed shows in null titleId mode", async () => {
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: pastDate, still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: pastDate,
+        still_path: null,
+      },
     ]);
     const db = getDb();
     const eps = await db.select().from(episodes).all();
@@ -303,7 +409,9 @@ describe("evaluateSocialFirstRecommendation", () => {
   });
 
   it("earned after sending first recommendation", async () => {
-    await upsertTitles([makeParsedTitle({ id: "rec-movie", objectType: "MOVIE" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "rec-movie", objectType: "MOVIE" }),
+    ]);
     const userId2 = await createUser("receiver", "hash");
     await createRecommendation(userId, "rec-movie", undefined, userId2);
 
@@ -313,7 +421,9 @@ describe("evaluateSocialFirstRecommendation", () => {
   });
 
   it("progress capped at 1 even with multiple recommendations", async () => {
-    await upsertTitles([makeParsedTitle({ id: "rec-movie2", objectType: "MOVIE" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "rec-movie2", objectType: "MOVIE" }),
+    ]);
     const userId2 = await createUser("receiver2", "hash");
     await createRecommendation(userId, "rec-movie2", undefined, userId2);
     await createRecommendation(userId, "rec-movie2", undefined, userId2);
@@ -348,7 +458,13 @@ describe("evaluateSpeedBingeSeason", () => {
   const showId = "show-speed-binge";
 
   beforeEach(async () => {
-    await upsertTitles([makeParsedTitle({ id: showId, objectType: "SHOW", title: "Speed Binge Show" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: showId,
+        objectType: "SHOW",
+        title: "Speed Binge Show",
+      }),
+    ]);
   });
 
   it("returns zero progress with no watched episodes", async () => {
@@ -367,7 +483,7 @@ describe("evaluateSpeedBingeSeason", () => {
         overview: null,
         air_date: "2024-01-01",
         still_path: null,
-      }))
+      })),
     );
     const db = getDb();
     const eps = await db.select().from(episodes).all();
@@ -375,7 +491,9 @@ describe("evaluateSpeedBingeSeason", () => {
     // Watch all 8 within the same hour
     const baseTime = new Date("2024-06-01T10:00:00.000Z");
     for (let i = 0; i < eps.length; i++) {
-      const watchedAt = new Date(baseTime.getTime() + i * 5 * 60 * 1000).toISOString();
+      const watchedAt = new Date(
+        baseTime.getTime() + i * 5 * 60 * 1000,
+      ).toISOString();
       await db
         .insert(watchedEpisodes)
         .values({ episodeId: eps[i].id, userId, watchedAt })
@@ -398,7 +516,7 @@ describe("evaluateSpeedBingeSeason", () => {
         overview: null,
         air_date: "2024-01-01",
         still_path: null,
-      }))
+      })),
     );
     const db = getDb();
     const eps = await db.select().from(episodes).all();
@@ -409,7 +527,11 @@ describe("evaluateSpeedBingeSeason", () => {
       watchedAt.setDate(watchedAt.getDate() + i);
       await db
         .insert(watchedEpisodes)
-        .values({ episodeId: eps[i].id, userId, watchedAt: watchedAt.toISOString() })
+        .values({
+          episodeId: eps[i].id,
+          userId,
+          watchedAt: watchedAt.toISOString(),
+        })
         .onConflictDoNothing()
         .run();
     }
@@ -428,13 +550,15 @@ describe("evaluateSpeedBingeSeason", () => {
         overview: null,
         air_date: "2024-01-01",
         still_path: null,
-      }))
+      })),
     );
     const db = getDb();
     const eps = await db.select().from(episodes).all();
     const baseTime = new Date("2024-06-01T10:00:00.000Z");
     for (let i = 0; i < eps.length; i++) {
-      const watchedAt = new Date(baseTime.getTime() + i * 10 * 60 * 1000).toISOString();
+      const watchedAt = new Date(
+        baseTime.getTime() + i * 10 * 60 * 1000,
+      ).toISOString();
       await db
         .insert(watchedEpisodes)
         .values({ episodeId: eps[i].id, userId, watchedAt })
@@ -464,12 +588,50 @@ describe("evaluateMonthlyCountRepeatable", () => {
       description: "Watch 2 episodes in a month",
       icon: "Calendar",
     });
-    await upsertTitles([makeParsedTitle({ id: showId, objectType: "SHOW", title: "Monthly Show" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: showId,
+        objectType: "SHOW",
+        title: "Monthly Show",
+      }),
+    ]);
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 2, name: "E2", overview: null, air_date: "2024-01-02", still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 3, name: "E3", overview: null, air_date: "2024-02-01", still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 4, name: "E4", overview: null, air_date: "2024-02-02", still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 2,
+        name: "E2",
+        overview: null,
+        air_date: "2024-01-02",
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 3,
+        name: "E3",
+        overview: null,
+        air_date: "2024-02-01",
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 4,
+        name: "E4",
+        overview: null,
+        air_date: "2024-02-02",
+        still_path: null,
+      },
     ]);
   });
 
@@ -478,15 +640,53 @@ describe("evaluateMonthlyCountRepeatable", () => {
     const eps = await db.select().from(episodes).all();
 
     // Watch 2 episodes in Jan and 2 in Feb
-    await db.insert(watchedEpisodes).values({ episodeId: eps[0].id, userId, watchedAt: "2024-01-10T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[1].id, userId, watchedAt: "2024-01-15T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[2].id, userId, watchedAt: "2024-02-10T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[3].id, userId, watchedAt: "2024-02-15T10:00:00.000Z" }).onConflictDoNothing().run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[0].id,
+        userId,
+        watchedAt: "2024-01-10T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[1].id,
+        userId,
+        watchedAt: "2024-01-15T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[2].id,
+        userId,
+        watchedAt: "2024-02-10T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[3].id,
+        userId,
+        watchedAt: "2024-02-15T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
 
-    const result = await evaluateMonthlyCountRepeatable(userId, 2, achievementKey);
+    const result = await evaluateMonthlyCountRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
     expect(result.progress).toBe(2); // 2 months hit threshold
     expect(result.newEarns).toHaveLength(2);
-    const months = result.newEarns.map((e) => (e.context as { month: string }).month);
+    const months = result.newEarns.map(
+      (e) => (e.context as { month: string }).month,
+    );
     expect(months).toContain("2024-01");
     expect(months).toContain("2024-02");
   });
@@ -496,23 +696,64 @@ describe("evaluateMonthlyCountRepeatable", () => {
     const eps = await db.select().from(episodes).all();
 
     // Watch 2 episodes in Jan and 2 in Feb
-    await db.insert(watchedEpisodes).values({ episodeId: eps[0].id, userId, watchedAt: "2024-01-10T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[1].id, userId, watchedAt: "2024-01-15T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[2].id, userId, watchedAt: "2024-02-10T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[3].id, userId, watchedAt: "2024-02-15T10:00:00.000Z" }).onConflictDoNothing().run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[0].id,
+        userId,
+        watchedAt: "2024-01-10T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[1].id,
+        userId,
+        watchedAt: "2024-01-15T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[2].id,
+        userId,
+        watchedAt: "2024-02-10T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[3].id,
+        userId,
+        watchedAt: "2024-02-15T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
 
     // Stamp Jan as already earned
-    await db.insert(userAchievementEarns).values({
-      userId,
-      achievementKey,
-      earnedAt: "2024-01-01T00:00:00.000Z",
-      context: null,
-    }).run();
+    await db
+      .insert(userAchievementEarns)
+      .values({
+        userId,
+        achievementKey,
+        earnedAt: "2024-01-01T00:00:00.000Z",
+        context: null,
+      })
+      .run();
 
-    const result = await evaluateMonthlyCountRepeatable(userId, 2, achievementKey);
+    const result = await evaluateMonthlyCountRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
     expect(result.progress).toBe(2);
     expect(result.newEarns).toHaveLength(1); // only Feb is new
-    expect((result.newEarns[0].context as { month: string }).month).toBe("2024-02");
+    expect((result.newEarns[0].context as { month: string }).month).toBe(
+      "2024-02",
+    );
   });
 
   it("returns zero when no months hit threshold", async () => {
@@ -520,9 +761,21 @@ describe("evaluateMonthlyCountRepeatable", () => {
     const eps = await db.select().from(episodes).all();
 
     // Only 1 episode in Jan (below threshold of 2)
-    await db.insert(watchedEpisodes).values({ episodeId: eps[0].id, userId, watchedAt: "2024-01-10T10:00:00.000Z" }).onConflictDoNothing().run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[0].id,
+        userId,
+        watchedAt: "2024-01-10T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
 
-    const result = await evaluateMonthlyCountRepeatable(userId, 2, achievementKey);
+    const result = await evaluateMonthlyCountRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
     expect(result.progress).toBe(0);
     expect(result.newEarns).toHaveLength(0);
   });
@@ -544,11 +797,41 @@ describe("evaluateWeekendWarriorRepeatable", () => {
       description: "Watch 2 episodes on a weekend",
       icon: "Zap",
     });
-    await upsertTitles([makeParsedTitle({ id: showId, objectType: "SHOW", title: "Weekend Show" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: showId,
+        objectType: "SHOW",
+        title: "Weekend Show",
+      }),
+    ]);
     await upsertEpisodes([
-      { title_id: showId, season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 2, name: "E2", overview: null, air_date: "2024-01-06", still_path: null },
-      { title_id: showId, season_number: 1, episode_number: 3, name: "E3", overview: null, air_date: "2024-01-07", still_path: null },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 2,
+        name: "E2",
+        overview: null,
+        air_date: "2024-01-06",
+        still_path: null,
+      },
+      {
+        title_id: showId,
+        season_number: 1,
+        episode_number: 3,
+        name: "E3",
+        overview: null,
+        air_date: "2024-01-07",
+        still_path: null,
+      },
     ]);
   });
 
@@ -557,10 +840,30 @@ describe("evaluateWeekendWarriorRepeatable", () => {
     const eps = await db.select().from(episodes).all();
 
     // 2024-01-06 is Saturday, 2024-01-07 is Sunday — both in week W01
-    await db.insert(watchedEpisodes).values({ episodeId: eps[1].id, userId, watchedAt: "2024-01-06T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[2].id, userId, watchedAt: "2024-01-07T10:00:00.000Z" }).onConflictDoNothing().run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[1].id,
+        userId,
+        watchedAt: "2024-01-06T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[2].id,
+        userId,
+        watchedAt: "2024-01-07T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
 
-    const result = await evaluateWeekendWarriorRepeatable(userId, 2, achievementKey);
+    const result = await evaluateWeekendWarriorRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
     expect(result.progress).toBe(1); // 1 week hit threshold
     expect(result.newEarns).toHaveLength(1);
   });
@@ -570,22 +873,45 @@ describe("evaluateWeekendWarriorRepeatable", () => {
     const eps = await db.select().from(episodes).all();
 
     // 2024-01-06 Saturday, 2024-01-07 Sunday
-    await db.insert(watchedEpisodes).values({ episodeId: eps[1].id, userId, watchedAt: "2024-01-06T10:00:00.000Z" }).onConflictDoNothing().run();
-    await db.insert(watchedEpisodes).values({ episodeId: eps[2].id, userId, watchedAt: "2024-01-07T10:00:00.000Z" }).onConflictDoNothing().run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[1].id,
+        userId,
+        watchedAt: "2024-01-06T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[2].id,
+        userId,
+        watchedAt: "2024-01-07T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
 
     // Stamp this week as already earned — earnedAt is within the same week
     // evaluateWeekendWarriorRepeatable stamps with new Date().toISOString(), so we use a known date
     // The stamped weeks logic uses getUTCDate() / 7 which can be imprecise; stamp with the earn timestamp
-    await db.insert(userAchievementEarns).values({
-      userId,
-      achievementKey,
-      earnedAt: new Date().toISOString(), // this gets ceil'd via getUTCDate/7
-      context: null,
-    }).run();
+    await db
+      .insert(userAchievementEarns)
+      .values({
+        userId,
+        achievementKey,
+        earnedAt: new Date().toISOString(), // this gets ceil'd via getUTCDate/7
+        context: null,
+      })
+      .run();
 
     // With existing stamp for current week, and watching on week W01 (2024),
     // the week keys won't match the current week, so new earns are still returned
-    const result = await evaluateWeekendWarriorRepeatable(userId, 2, achievementKey);
+    const result = await evaluateWeekendWarriorRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
     expect(result.newEarns).toHaveLength(1); // W01-2024 not stamped yet
   });
 
@@ -594,9 +920,21 @@ describe("evaluateWeekendWarriorRepeatable", () => {
     const eps = await db.select().from(episodes).all();
 
     // 2024-01-01 is a Monday (weekday) — won't count
-    await db.insert(watchedEpisodes).values({ episodeId: eps[0].id, userId, watchedAt: "2024-01-01T10:00:00.000Z" }).onConflictDoNothing().run();
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[0].id,
+        userId,
+        watchedAt: "2024-01-01T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
 
-    const result = await evaluateWeekendWarriorRepeatable(userId, 2, achievementKey);
+    const result = await evaluateWeekendWarriorRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
     expect(result.progress).toBe(0);
     expect(result.newEarns).toHaveLength(0);
   });
@@ -613,9 +951,27 @@ describe("evaluateDecadeCount", () => {
 
   it("counts distinct decades across watched titles", async () => {
     // Titles from 3 different decades: 1980s, 1990s, 2000s
-    await upsertTitles([makeParsedTitle({ id: "decade-1980", objectType: "MOVIE", releaseYear: 1985 })]);
-    await upsertTitles([makeParsedTitle({ id: "decade-1990", objectType: "MOVIE", releaseYear: 1995 })]);
-    await upsertTitles([makeParsedTitle({ id: "decade-2000", objectType: "MOVIE", releaseYear: 2005 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "decade-1980",
+        objectType: "MOVIE",
+        releaseYear: 1985,
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "decade-1990",
+        objectType: "MOVIE",
+        releaseYear: 1995,
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "decade-2000",
+        objectType: "MOVIE",
+        releaseYear: 2005,
+      }),
+    ]);
     await watchTitle("decade-1980", userId);
     await watchTitle("decade-1990", userId);
     await watchTitle("decade-2000", userId);
@@ -627,8 +983,20 @@ describe("evaluateDecadeCount", () => {
 
   it("does not double-count titles from the same decade", async () => {
     // Both titles are from the 2010s
-    await upsertTitles([makeParsedTitle({ id: "decade-2010a", objectType: "MOVIE", releaseYear: 2011 })]);
-    await upsertTitles([makeParsedTitle({ id: "decade-2010b", objectType: "MOVIE", releaseYear: 2019 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "decade-2010a",
+        objectType: "MOVIE",
+        releaseYear: 2011,
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "decade-2010b",
+        objectType: "MOVIE",
+        releaseYear: 2019,
+      }),
+    ]);
     await watchTitle("decade-2010a", userId);
     await watchTitle("decade-2010b", userId);
 
@@ -638,7 +1006,13 @@ describe("evaluateDecadeCount", () => {
   });
 
   it("returns false when below threshold", async () => {
-    await upsertTitles([makeParsedTitle({ id: "decade-single", objectType: "MOVIE", releaseYear: 2024 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "decade-single",
+        objectType: "MOVIE",
+        releaseYear: 2024,
+      }),
+    ]);
     await watchTitle("decade-single", userId);
 
     const result = await evaluateDecadeCount(userId, 3);
@@ -657,9 +1031,27 @@ describe("evaluateLanguageCount", () => {
   });
 
   it("counts distinct languages across watched titles", async () => {
-    await upsertTitles([makeParsedTitle({ id: "lang-en", objectType: "MOVIE", originalLanguage: "en" })]);
-    await upsertTitles([makeParsedTitle({ id: "lang-fr", objectType: "MOVIE", originalLanguage: "fr" })]);
-    await upsertTitles([makeParsedTitle({ id: "lang-ja", objectType: "MOVIE", originalLanguage: "ja" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "lang-en",
+        objectType: "MOVIE",
+        originalLanguage: "en",
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "lang-fr",
+        objectType: "MOVIE",
+        originalLanguage: "fr",
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "lang-ja",
+        objectType: "MOVIE",
+        originalLanguage: "ja",
+      }),
+    ]);
     await watchTitle("lang-en", userId);
     await watchTitle("lang-fr", userId);
     await watchTitle("lang-ja", userId);
@@ -670,8 +1062,20 @@ describe("evaluateLanguageCount", () => {
   });
 
   it("does not double-count titles with the same language", async () => {
-    await upsertTitles([makeParsedTitle({ id: "lang-en1", objectType: "MOVIE", originalLanguage: "en" })]);
-    await upsertTitles([makeParsedTitle({ id: "lang-en2", objectType: "MOVIE", originalLanguage: "en" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "lang-en1",
+        objectType: "MOVIE",
+        originalLanguage: "en",
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "lang-en2",
+        objectType: "MOVIE",
+        originalLanguage: "en",
+      }),
+    ]);
     await watchTitle("lang-en1", userId);
     await watchTitle("lang-en2", userId);
 
@@ -681,8 +1085,20 @@ describe("evaluateLanguageCount", () => {
   });
 
   it("earned = true at threshold", async () => {
-    await upsertTitles([makeParsedTitle({ id: "lang-de", objectType: "MOVIE", originalLanguage: "de" })]);
-    await upsertTitles([makeParsedTitle({ id: "lang-es", objectType: "MOVIE", originalLanguage: "es" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "lang-de",
+        objectType: "MOVIE",
+        originalLanguage: "de",
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "lang-es",
+        objectType: "MOVIE",
+        originalLanguage: "es",
+      }),
+    ]);
     await watchTitle("lang-de", userId);
     await watchTitle("lang-es", userId);
 
@@ -702,7 +1118,13 @@ describe("evaluateLongFilm", () => {
   });
 
   it("not earned when movie runtime is below 180 minutes", async () => {
-    await upsertTitles([makeParsedTitle({ id: "short-film", objectType: "MOVIE", runtimeMinutes: 120 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "short-film",
+        objectType: "MOVIE",
+        runtimeMinutes: 120,
+      }),
+    ]);
     await watchTitle("short-film", userId);
 
     const result = await evaluateLongFilm(userId);
@@ -711,7 +1133,13 @@ describe("evaluateLongFilm", () => {
   });
 
   it("earned when user has watched a movie with runtime >= 180 minutes", async () => {
-    await upsertTitles([makeParsedTitle({ id: "long-film", objectType: "MOVIE", runtimeMinutes: 195 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "long-film",
+        objectType: "MOVIE",
+        runtimeMinutes: 195,
+      }),
+    ]);
     await watchTitle("long-film", userId);
 
     const result = await evaluateLongFilm(userId);
@@ -720,7 +1148,13 @@ describe("evaluateLongFilm", () => {
   });
 
   it("earned at exactly 180 minutes", async () => {
-    await upsertTitles([makeParsedTitle({ id: "exactly-180", objectType: "MOVIE", runtimeMinutes: 180 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "exactly-180",
+        objectType: "MOVIE",
+        runtimeMinutes: 180,
+      }),
+    ]);
     await watchTitle("exactly-180", userId);
 
     const result = await evaluateLongFilm(userId);
@@ -729,8 +1163,20 @@ describe("evaluateLongFilm", () => {
   });
 
   it("progress is capped at 1 even with multiple long films watched", async () => {
-    await upsertTitles([makeParsedTitle({ id: "long-film-1", objectType: "MOVIE", runtimeMinutes: 185 })]);
-    await upsertTitles([makeParsedTitle({ id: "long-film-2", objectType: "MOVIE", runtimeMinutes: 200 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "long-film-1",
+        objectType: "MOVIE",
+        runtimeMinutes: 185,
+      }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "long-film-2",
+        objectType: "MOVIE",
+        runtimeMinutes: 200,
+      }),
+    ]);
     await watchTitle("long-film-1", userId);
     await watchTitle("long-film-2", userId);
 
@@ -740,7 +1186,14 @@ describe("evaluateLongFilm", () => {
   });
 
   it("does not count SHOW titles", async () => {
-    await upsertTitles([makeParsedTitle({ id: "long-show", objectType: "SHOW", title: "Long Show", runtimeMinutes: 999 })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "long-show",
+        objectType: "SHOW",
+        title: "Long Show",
+        runtimeMinutes: 999,
+      }),
+    ]);
     await watchTitle("long-show", userId);
 
     const result = await evaluateLongFilm(userId);

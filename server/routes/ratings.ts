@@ -150,9 +150,13 @@ app.get(
     const user = c.get("user");
     const { episodeId } = c.req.valid("param");
 
-    const userRatingData = user ? await getUserEpisodeRating(user.id, episodeId) : null;
+    const userRatingData = user
+      ? await getUserEpisodeRating(user.id, episodeId)
+      : null;
     const aggregated = await getEpisodeRatings(episodeId);
-    const friendsRaw = user ? await getFriendsEpisodeRatings(user.id, episodeId) : [];
+    const friendsRaw = user
+      ? await getFriendsEpisodeRatings(user.id, episodeId)
+      : [];
 
     const friendsRatings = friendsRaw.map((f) => ({
       user: {

@@ -31,7 +31,9 @@ describe("FilterBar", () => {
 
   it("calls onTypeChange with MOVIE when 'Movies' is clicked from empty", () => {
     const onTypeChange = mock(() => {});
-    render(<FilterBar {...defaultProps} type={[]} onTypeChange={onTypeChange} />);
+    render(
+      <FilterBar {...defaultProps} type={[]} onTypeChange={onTypeChange} />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Movies" }));
     expect(onTypeChange).toHaveBeenCalledWith(["MOVIE"]);
@@ -39,7 +41,13 @@ describe("FilterBar", () => {
 
   it("calls onTypeChange to deselect when clicking already selected type", () => {
     const onTypeChange = mock(() => {});
-    render(<FilterBar {...defaultProps} type={["MOVIE"]} onTypeChange={onTypeChange} />);
+    render(
+      <FilterBar
+        {...defaultProps}
+        type={["MOVIE"]}
+        onTypeChange={onTypeChange}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Movies" }));
     expect(onTypeChange).toHaveBeenCalledWith([]);
@@ -47,7 +55,13 @@ describe("FilterBar", () => {
 
   it("normalizes to empty when both types are selected", () => {
     const onTypeChange = mock(() => {});
-    render(<FilterBar {...defaultProps} type={["MOVIE"]} onTypeChange={onTypeChange} />);
+    render(
+      <FilterBar
+        {...defaultProps}
+        type={["MOVIE"]}
+        onTypeChange={onTypeChange}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Shows" }));
     expect(onTypeChange).toHaveBeenCalledWith([]);
@@ -61,7 +75,7 @@ describe("FilterBar", () => {
         showDaysFilter={true}
         daysBack={30}
         onDaysBackChange={onDaysBackChange}
-      />
+      />,
     );
 
     expect(screen.getByRole("button", { name: "7d" })).toBeDefined();
@@ -84,7 +98,7 @@ describe("FilterBar", () => {
         showDaysFilter={true}
         daysBack={30}
         onDaysBackChange={onDaysBackChange}
-      />
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "7d" }));
@@ -99,7 +113,7 @@ describe("FilterBar", () => {
         genres={["Action", "Comedy"]}
         genre={[]}
         onGenreChange={onGenreChange}
-      />
+      />,
     );
 
     // Real MultiSelectDropdown renders a button with the label text
@@ -117,7 +131,7 @@ describe("FilterBar", () => {
         ]}
         provider={[]}
         onProviderChange={onProviderChange}
-      />
+      />,
     );
 
     expect(screen.getByRole("button", { name: "All Platforms" })).toBeDefined();
@@ -130,7 +144,7 @@ describe("FilterBar", () => {
         {...defaultProps}
         hideTracked={false}
         onHideTrackedChange={onHideTrackedChange}
-      />
+      />,
     );
 
     const btn = screen.getByRole("button", { name: "Hide Tracked" });
@@ -147,7 +161,7 @@ describe("FilterBar", () => {
         {...defaultProps}
         type={["MOVIE"]}
         onClearFilters={onClearFilters}
-      />
+      />,
     );
 
     const btn = screen.getByRole("button", { name: "Clear filters" });
@@ -160,11 +174,7 @@ describe("FilterBar", () => {
   it("hides Clear filters button when no filters are active", () => {
     const onClearFilters = mock(() => {});
     render(
-      <FilterBar
-        {...defaultProps}
-        type={[]}
-        onClearFilters={onClearFilters}
-      />
+      <FilterBar {...defaultProps} type={[]} onClearFilters={onClearFilters} />,
     );
 
     expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
@@ -173,17 +183,37 @@ describe("FilterBar", () => {
   it("type toggle buttons have correct aria-pressed when nothing selected", () => {
     render(<FilterBar {...defaultProps} type={[]} />);
 
-    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Movies" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByRole("button", { name: "Shows" }).getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: "Movies" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: "Shows" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 
   it("type toggle buttons have correct aria-pressed when Movies selected", () => {
     render(<FilterBar {...defaultProps} type={["MOVIE"]} />);
 
-    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByRole("button", { name: "Movies" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Shows" }).getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: "Movies" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: "Shows" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 
   it("days buttons have correct aria-pressed for selected day", () => {
@@ -194,11 +224,15 @@ describe("FilterBar", () => {
         showDaysFilter={true}
         daysBack={30}
         onDaysBackChange={onDaysBackChange}
-      />
+      />,
     );
 
-    expect(screen.getByRole("button", { name: "30d" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "7d" }).getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "30d" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "7d" }).getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 
   it("type toggle group has accessible group label", () => {
@@ -214,7 +248,7 @@ describe("FilterBar", () => {
         showDaysFilter={true}
         daysBack={30}
         onDaysBackChange={onDaysBackChange}
-      />
+      />,
     );
     expect(screen.getByRole("group", { name: "Time period" })).toBeDefined();
   });

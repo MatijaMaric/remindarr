@@ -3,13 +3,16 @@ import { getDb } from "../schema";
 import { invitations, users } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
-export async function createInvitation(createdById: string): Promise<{ id: string; code: string; expiresAt: string }> {
+export async function createInvitation(
+  createdById: string,
+): Promise<{ id: string; code: string; expiresAt: string }> {
   return traceDbQuery("createInvitation", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
     const code = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
-    await db.insert(invitations)
+    await db
+      .insert(invitations)
       .values({ id, code, createdById, expiresAt })
       .run();
     return { id, code, expiresAt };
@@ -19,25 +22,30 @@ export async function createInvitation(createdById: string): Promise<{ id: strin
 export async function getInvitation(code: string) {
   return traceDbQuery("getInvitation", async () => {
     const db = getDb();
-    return await db
-      .select({
-        id: invitations.id,
-        code: invitations.code,
-        createdById: invitations.createdById,
-        createdByUsername: users.username,
-        usedById: invitations.usedById,
-        createdAt: invitations.createdAt,
-        usedAt: invitations.usedAt,
-        expiresAt: invitations.expiresAt,
-      })
-      .from(invitations)
-      .innerJoin(users, eq(users.id, invitations.createdById))
-      .where(eq(invitations.code, code))
-      .get() ?? null;
+    return (
+      (await db
+        .select({
+          id: invitations.id,
+          code: invitations.code,
+          createdById: invitations.createdById,
+          createdByUsername: users.username,
+          usedById: invitations.usedById,
+          createdAt: invitations.createdAt,
+          usedAt: invitations.usedAt,
+          expiresAt: invitations.expiresAt,
+        })
+        .from(invitations)
+        .innerJoin(users, eq(users.id, invitations.createdById))
+        .where(eq(invitations.code, code))
+        .get()) ?? null
+    );
   });
 }
 
-export async function redeemInvitation(code: string, usedById: string): Promise<boolean> {
+export async function redeemInvitation(
+  code: string,
+  usedById: string,
+): Promise<boolean> {
   return traceDbQuery("redeemInvitation", async () => {
     const db = getDb();
 
@@ -56,7 +64,8 @@ export async function redeemInvitation(code: string, usedById: string): Promise<
     if (invitation.usedById !== null) return false;
     if (new Date(invitation.expiresAt) < new Date()) return false;
 
-    await db.update(invitations)
+    await db
+      .update(invitations)
       .set({ usedById, usedAt: sql`(datetime('now'))` })
       .where(eq(invitations.id, invitation.id))
       .run();
@@ -87,13 +96,18 @@ export async function getUserInvitations(userId: string) {
 export async function revokeInvitation(id: string, userId: string) {
   return traceDbQuery("revokeInvitation", async () => {
     const db = getDb();
-    await db.delete(invitations)
+    await db
+      .delete(invitations)
       .where(and(eq(invitations.id, id), eq(invitations.createdById, userId)))
       .run();
   });
 }
 
-export async function getUsersByIds(ids: string[]): Promise<Map<string, { id: string; username: string; display_name: string | null }>> {
+export async function getUsersByIds(
+  ids: string[],
+): Promise<
+  Map<string, { id: string; username: string; display_name: string | null }>
+> {
   if (ids.length === 0) return new Map();
   return traceDbQuery("getUsersByIds", async () => {
     const db = getDb();
@@ -106,7 +120,10 @@ export async function getUsersByIds(ids: string[]): Promise<Map<string, { id: st
       .from(users)
       .where(inArray(users.id, ids))
       .all();
-    const map = new Map<string, { id: string; username: string; display_name: string | null }>();
+    const map = new Map<
+      string,
+      { id: string; username: string; display_name: string | null }
+    >();
     for (const row of rows) {
       map.set(row.id, row);
     }

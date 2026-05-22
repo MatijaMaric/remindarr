@@ -8,12 +8,17 @@ interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({ kicker, title, right, className }: PageHeaderProps) {
+export function PageHeader({
+  kicker,
+  title,
+  right,
+  className,
+}: PageHeaderProps) {
   return (
     <div
       className={cn(
         "pt-4 pb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-3",
-        className
+        className,
       )}
     >
       <div className="min-w-0">

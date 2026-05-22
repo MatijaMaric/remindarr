@@ -19,9 +19,21 @@ describe("i18n", () => {
 
   it("has all required top-level namespaces", () => {
     const requiredNamespaces = [
-      "nav", "bottomNav", "home", "tracked", "upcoming",
-      "browse", "login", "profile", "filter", "search",
-      "releases", "track", "episodes", "calendar", "common"
+      "nav",
+      "bottomNav",
+      "home",
+      "tracked",
+      "upcoming",
+      "browse",
+      "login",
+      "profile",
+      "filter",
+      "search",
+      "releases",
+      "track",
+      "episodes",
+      "calendar",
+      "common",
     ];
     for (const ns of requiredNamespaces) {
       expect(en).toHaveProperty(ns);
@@ -57,7 +69,9 @@ describe("i18n", () => {
   });
 
   it("handles interpolation in login failed message", () => {
-    const result = i18n.t("login.loginFailed", { error: "invalid credentials" });
+    const result = i18n.t("login.loginFailed", {
+      error: "invalid credentials",
+    });
     expect(result).toBe("Login failed: invalid credentials");
   });
 });

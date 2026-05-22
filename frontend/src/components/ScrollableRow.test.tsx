@@ -70,10 +70,21 @@ describe("ScrollableRow", () => {
     );
 
     // Simulate overflow by manipulating the scroll container
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
-    Object.defineProperty(scrollDiv, "scrollWidth", { value: 1000, configurable: true });
-    Object.defineProperty(scrollDiv, "clientWidth", { value: 400, configurable: true });
-    Object.defineProperty(scrollDiv, "scrollLeft", { value: 100, writable: true });
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
+    Object.defineProperty(scrollDiv, "scrollWidth", {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientWidth", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollLeft", {
+      value: 100,
+      writable: true,
+    });
     scrollDiv.scrollBy = scrollByMock;
 
     // Trigger scroll event to update button visibility
@@ -104,10 +115,21 @@ describe("ScrollableRow", () => {
       </ScrollableRow>,
     );
 
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
-    Object.defineProperty(scrollDiv, "scrollWidth", { value: 1000, configurable: true });
-    Object.defineProperty(scrollDiv, "clientWidth", { value: 400, configurable: true });
-    Object.defineProperty(scrollDiv, "scrollLeft", { value: 0, writable: true });
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
+    Object.defineProperty(scrollDiv, "scrollWidth", {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientWidth", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollLeft", {
+      value: 0,
+      writable: true,
+    });
 
     fireEvent.scroll(scrollDiv);
 
@@ -122,10 +144,21 @@ describe("ScrollableRow", () => {
       </ScrollableRow>,
     );
 
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
-    Object.defineProperty(scrollDiv, "scrollWidth", { value: 1000, configurable: true });
-    Object.defineProperty(scrollDiv, "clientWidth", { value: 400, configurable: true });
-    Object.defineProperty(scrollDiv, "scrollLeft", { value: 600, writable: true });
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
+    Object.defineProperty(scrollDiv, "scrollWidth", {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientWidth", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollLeft", {
+      value: 600,
+      writable: true,
+    });
 
     fireEvent.scroll(scrollDiv);
 

@@ -1,20 +1,40 @@
-import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  mock,
+  spyOn,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { enqueueJob, registerCron, getCronJobs, claimNextJob, getJobStats } from "./queue";
+import {
+  enqueueJob,
+  registerCron,
+  getCronJobs,
+  claimNextJob,
+  getJobStats,
+} from "./queue";
 import { registerHandler, processJobs, stopWorker } from "./worker";
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 // Mock Sentry to avoid side effects
 import Sentry from "../sentry";
-spyOn(Sentry, "withMonitor").mockImplementation(
-  ((_slug: string, fn: () => unknown) => fn()) as typeof Sentry.withMonitor
+spyOn(Sentry, "withMonitor").mockImplementation(((
+  _slug: string,
+  fn: () => unknown,
+) => fn()) as typeof Sentry.withMonitor);
+const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue(
+  "test-event-id",
 );
-const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id");
 
 // Mock TMDB sync-titles — use spyOn to avoid clobbering the module
 import * as syncTitlesModule from "../tmdb/sync-titles";
-const mockFetchNewReleases = spyOn(syncTitlesModule, "fetchNewReleases").mockResolvedValue([]);
+const mockFetchNewReleases = spyOn(
+  syncTitlesModule,
+  "fetchNewReleases",
+).mockResolvedValue([]);
 
 // Mock upsertTitles via spyOn to avoid clobbering the entire repository module
 import * as repository from "../db/repository";
@@ -22,30 +42,67 @@ const mockUpsertTitles = spyOn(repository, "upsertTitles").mockResolvedValue(0);
 
 // Mock tmdb/sync syncEpisodes and syncEpisodesForShow — use spyOn
 import * as syncModule from "../tmdb/sync";
-const mockSyncEpisodes = spyOn(syncModule, "syncEpisodes").mockResolvedValue({ synced: 0, shows: 0 });
-const mockSyncEpisodesForShow = spyOn(syncModule, "syncEpisodesForShow").mockResolvedValue(0);
+const mockSyncEpisodes = spyOn(syncModule, "syncEpisodes").mockResolvedValue({
+  synced: 0,
+  shows: 0,
+});
+const mockSyncEpisodesForShow = spyOn(
+  syncModule,
+  "syncEpisodesForShow",
+).mockResolvedValue(0);
 
 // Mock TMDB client for backfill-title-offers
 import * as tmdbClient from "../tmdb/client";
-const mockFetchMovieDetails = spyOn(tmdbClient, "fetchMovieDetails").mockResolvedValue({} as any);
-const mockFetchTvDetails = spyOn(tmdbClient, "fetchTvDetails").mockResolvedValue({} as any);
+const mockFetchMovieDetails = spyOn(
+  tmdbClient,
+  "fetchMovieDetails",
+).mockResolvedValue({} as any);
+const mockFetchTvDetails = spyOn(
+  tmdbClient,
+  "fetchTvDetails",
+).mockResolvedValue({} as any);
 
 // Mock parser
 import * as parser from "../tmdb/parser";
-const mockParseMovieDetails = spyOn(parser, "parseMovieDetails").mockReturnValue({ id: "movie-1", title: "Test", offers: [], scores: { imdbScore: null, imdbVotes: null, tmdbScore: null } } as any);
-const mockParseTvDetails = spyOn(parser, "parseTvDetails").mockReturnValue({ id: "tv-1", title: "Test", offers: [], scores: { imdbScore: null, imdbVotes: null, tmdbScore: null } } as any);
+const mockParseMovieDetails = spyOn(
+  parser,
+  "parseMovieDetails",
+).mockReturnValue({
+  id: "movie-1",
+  title: "Test",
+  offers: [],
+  scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
+} as any);
+const mockParseTvDetails = spyOn(parser, "parseTvDetails").mockReturnValue({
+  id: "tv-1",
+  title: "Test",
+  offers: [],
+  scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
+} as any);
 
 // Mock episode repository functions for watched episode restoration
-const mockGetEpisodeIdsBySE = spyOn(repository, "getEpisodeIdsBySE").mockResolvedValue([]);
-const mockWatchEpisodesBulk = spyOn(repository, "watchEpisodesBulk").mockResolvedValue(undefined);
+const mockGetEpisodeIdsBySE = spyOn(
+  repository,
+  "getEpisodeIdsBySE",
+).mockResolvedValue([]);
+const mockWatchEpisodesBulk = spyOn(
+  repository,
+  "watchEpisodesBulk",
+).mockResolvedValue(undefined);
 
 // Mock migrate-titles — use spyOn
 import * as migrateTitlesModule from "./migrate-titles";
-const mockMigrateTitles = spyOn(migrateTitlesModule, "migrateTitles").mockResolvedValue({ updated: 0, failed: 0 });
+const mockMigrateTitles = spyOn(
+  migrateTitlesModule,
+  "migrateTitles",
+).mockResolvedValue({ updated: 0, failed: 0 });
 
 // Mock migrate-offers — use spyOn
 import * as migrateOffersModule from "./migrate-offers";
-const mockMigrateOffers = spyOn(migrateOffersModule, "migrateOffers").mockResolvedValue({ updated: 0, skipped: 0, failed: 0, hasMore: false });
+const mockMigrateOffers = spyOn(
+  migrateOffersModule,
+  "migrateOffers",
+).mockResolvedValue({ updated: 0, skipped: 0, failed: 0, hasMore: false });
 
 // Mock Plex sync modules
 import * as plexSync from "../plex/sync";
@@ -54,7 +111,10 @@ const mockSyncPlexWatched = spyOn(plexSync, "syncPlexWatched");
 const mockSyncPlexLibrary = spyOn(plexLibrarySync, "syncPlexLibrary");
 
 // Mock getEnabledIntegrationsByProvider for Plex tests
-const mockGetEnabledIntegrations = spyOn(repository, "getEnabledIntegrationsByProvider");
+const mockGetEnabledIntegrations = spyOn(
+  repository,
+  "getEnabledIntegrationsByProvider",
+);
 
 import { CONFIG } from "../config";
 
@@ -152,7 +212,8 @@ describe("registerSyncJobs", () => {
     const stats = getJobStats();
     const migrateTitlesStats = stats["migrate-titles"];
     // Should have exactly 1 job total (pending + running + completed = 1)
-    const total = (migrateTitlesStats?.pending ?? 0) +
+    const total =
+      (migrateTitlesStats?.pending ?? 0) +
       (migrateTitlesStats?.running ?? 0) +
       (migrateTitlesStats?.completed ?? 0) +
       (migrateTitlesStats?.failed ?? 0);
@@ -165,7 +226,8 @@ describe("registerSyncJobs", () => {
 
     const stats = getJobStats();
     const migrateBackdropsStats = stats["migrate-backdrops"];
-    const total = (migrateBackdropsStats?.pending ?? 0) +
+    const total =
+      (migrateBackdropsStats?.pending ?? 0) +
       (migrateBackdropsStats?.running ?? 0) +
       (migrateBackdropsStats?.completed ?? 0) +
       (migrateBackdropsStats?.failed ?? 0);
@@ -178,7 +240,8 @@ describe("registerSyncJobs", () => {
 
     const stats = getJobStats();
     const migrateOffersStats = stats["migrate-offers"];
-    const total = (migrateOffersStats?.pending ?? 0) +
+    const total =
+      (migrateOffersStats?.pending ?? 0) +
       (migrateOffersStats?.running ?? 0) +
       (migrateOffersStats?.completed ?? 0) +
       (migrateOffersStats?.failed ?? 0);
@@ -343,12 +406,20 @@ describe("sync-show-episodes handler", () => {
       titleId: "tv-100",
       tmdbId: "100",
       title: "Test Show",
-      watchedEpisodes: [{ season: 1, episode: 1 }, { season: 1, episode: 2 }, { season: 1, episode: 3 }],
+      watchedEpisodes: [
+        { season: 1, episode: 1 },
+        { season: 1, episode: 2 },
+        { season: 1, episode: 3 },
+      ],
       userId: "user-abc",
     });
     await processJobs();
 
-    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith("tv-100", "100", "Test Show");
+    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith(
+      "tv-100",
+      "100",
+      "Test Show",
+    );
     expect(mockGetEpisodeIdsBySE).toHaveBeenCalledWith("tv-100", [
       { season: 1, episode: 1 },
       { season: 1, episode: 2 },
@@ -367,7 +438,11 @@ describe("sync-show-episodes handler", () => {
     });
     await processJobs();
 
-    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith("tv-200", "200", "Another Show");
+    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith(
+      "tv-200",
+      "200",
+      "Another Show",
+    );
     expect(mockGetEpisodeIdsBySE).not.toHaveBeenCalled();
     expect(mockWatchEpisodesBulk).not.toHaveBeenCalled();
   });
@@ -421,7 +496,11 @@ describe("backfill-title-offers handler", () => {
   });
 
   it("fetches movie details and upserts when offers are found", async () => {
-    const fakeTitle = { id: "movie-50", title: "Backfill Movie", offers: [{ providerId: 1 }] } as any;
+    const fakeTitle = {
+      id: "movie-50",
+      title: "Backfill Movie",
+      offers: [{ providerId: 1 }],
+    } as any;
     mockFetchMovieDetails.mockResolvedValueOnce({} as any);
     mockParseMovieDetails.mockReturnValueOnce(fakeTitle);
     mockUpsertTitles.mockResolvedValueOnce(1);
@@ -435,7 +514,11 @@ describe("backfill-title-offers handler", () => {
   });
 
   it("fetches TV details for SHOW type", async () => {
-    const fakeTitle = { id: "tv-60", title: "Backfill Show", offers: [{ providerId: 2 }] } as any;
+    const fakeTitle = {
+      id: "tv-60",
+      title: "Backfill Show",
+      offers: [{ providerId: 2 }],
+    } as any;
     mockFetchTvDetails.mockResolvedValueOnce({} as any);
     mockParseTvDetails.mockReturnValueOnce(fakeTitle);
     mockUpsertTitles.mockResolvedValueOnce(1);
@@ -449,7 +532,11 @@ describe("backfill-title-offers handler", () => {
   });
 
   it("does not upsert when no offers are found", async () => {
-    const fakeTitle = { id: "movie-70", title: "No Offers Movie", offers: [] } as any;
+    const fakeTitle = {
+      id: "movie-70",
+      title: "No Offers Movie",
+      offers: [],
+    } as any;
     mockFetchMovieDetails.mockResolvedValueOnce({} as any);
     mockParseMovieDetails.mockReturnValueOnce(fakeTitle);
 
@@ -474,7 +561,12 @@ describe("backfill-title-offers handler", () => {
 // ─── sync-plex-watched handler ───────────────────────────────────────────────
 
 describe("sync-plex-watched handler — error handling", () => {
-  const fakeIntegration = { id: "int-1", user_id: "user-1", provider: "plex", config: {} };
+  const fakeIntegration = {
+    id: "int-1",
+    user_id: "user-1",
+    provider: "plex",
+    config: {},
+  };
 
   beforeEach(() => {
     registerSyncJobs();
@@ -486,10 +578,23 @@ describe("sync-plex-watched handler — error handling", () => {
   });
 
   it("continues processing remaining integrations when one throws", async () => {
-    const secondIntegration = { id: "int-2", user_id: "user-2", provider: "plex", config: {} };
-    mockGetEnabledIntegrations.mockResolvedValue([fakeIntegration as any, secondIntegration as any]);
+    const secondIntegration = {
+      id: "int-2",
+      user_id: "user-2",
+      provider: "plex",
+      config: {},
+    };
+    mockGetEnabledIntegrations.mockResolvedValue([
+      fakeIntegration as any,
+      secondIntegration as any,
+    ]);
 
-    const successResult = { moviesMarked: 1, episodesMarked: 0, succeeded: 1, failed: [] };
+    const successResult = {
+      moviesMarked: 1,
+      episodesMarked: 0,
+      succeeded: 1,
+      failed: [],
+    };
     mockSyncPlexWatched
       .mockRejectedValueOnce(new Error("Plex connection refused"))
       .mockResolvedValueOnce(successResult as any);
@@ -509,7 +614,12 @@ describe("sync-plex-watched handler — error handling", () => {
   });
 
   it("surfaces succeeded/failed counts from syncPlexWatched result", async () => {
-    const result = { moviesMarked: 3, episodesMarked: 2, succeeded: 3, failed: [{ id: "movie-x", error: "not found" }] };
+    const result = {
+      moviesMarked: 3,
+      episodesMarked: 2,
+      succeeded: 3,
+      failed: [{ id: "movie-x", error: "not found" }],
+    };
     mockSyncPlexWatched.mockResolvedValue(result as any);
 
     enqueueJob("sync-plex-watched");

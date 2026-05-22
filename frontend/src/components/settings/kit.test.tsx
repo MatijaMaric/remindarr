@@ -91,7 +91,9 @@ describe("SLabel a11y", () => {
   });
 
   it("renders a <label> element when htmlFor is provided", () => {
-    const { container } = render(<SLabel htmlFor="my-test-input">Field name here</SLabel>);
+    const { container } = render(
+      <SLabel htmlFor="my-test-input">Field name here</SLabel>,
+    );
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.tagName.toLowerCase()).toBe("label");
     expect(wrapper.getAttribute("for")).toBe("my-test-input");
@@ -100,7 +102,9 @@ describe("SLabel a11y", () => {
 
 describe("SSwitch", () => {
   it("renders a switch button with a non-empty aria-labelledby pointing to the label element", () => {
-    render(<SSwitch label="Enable notifications" on={false} onChange={() => {}} />);
+    render(
+      <SSwitch label="Enable notifications" on={false} onChange={() => {}} />,
+    );
 
     const switchBtn = screen.getByRole("switch");
     expect(switchBtn).toBeDefined();

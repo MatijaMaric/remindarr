@@ -103,9 +103,7 @@ describe("upsertTitles", () => {
 
   it("upserts providers and offers", async () => {
     const title = makeParsedTitle({
-      offers: [
-        makeParsedOffer({ providerId: 8, providerName: "Netflix" }),
-      ],
+      offers: [makeParsedOffer({ providerId: 8, providerName: "Netflix" })],
     });
     await upsertTitles([title]);
 
@@ -119,12 +117,24 @@ describe("upsertTitles", () => {
       makeParsedTitle({
         id: "movie-1",
         title: "Movie One",
-        offers: [makeParsedOffer({ titleId: "movie-1", providerId: 8, providerName: "Netflix" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-1",
+            providerId: 8,
+            providerName: "Netflix",
+          }),
+        ],
       }),
       makeParsedTitle({
         id: "movie-2",
         title: "Movie Two",
-        offers: [makeParsedOffer({ titleId: "movie-2", providerId: 337, providerName: "Disney Plus" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-2",
+            providerId: 337,
+            providerName: "Disney Plus",
+          }),
+        ],
       }),
       makeParsedTitle({
         id: "movie-3",
@@ -133,7 +143,11 @@ describe("upsertTitles", () => {
       }),
     ]);
 
-    const offerMap = await getOffersForTitles(["movie-1", "movie-2", "movie-3"]);
+    const offerMap = await getOffersForTitles([
+      "movie-1",
+      "movie-2",
+      "movie-3",
+    ]);
     expect(offerMap.get("movie-1")).toHaveLength(1);
     expect(offerMap.get("movie-1")![0].provider_name).toBe("Netflix");
     expect(offerMap.get("movie-2")).toHaveLength(1);
@@ -147,15 +161,25 @@ describe("upsertTitles", () => {
   });
 
   it("upserts scores", async () => {
-    await upsertTitles([makeParsedTitle({ scores: { imdbScore: 8.0, imdbVotes: 5000, tmdbScore: 7.5 } })]);
+    await upsertTitles([
+      makeParsedTitle({
+        scores: { imdbScore: 8.0, imdbVotes: 5000, tmdbScore: 7.5 },
+      }),
+    ]);
     const result = await getTitleById("movie-123");
     expect(result!.imdb_score).toBe(8.0);
     expect(result!.tmdb_score).toBe(7.5);
   });
 
   it("replaces offers on re-upsert", async () => {
-    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8 })] })]);
-    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 337, providerName: "Disney" })] })]);
+    await upsertTitles([
+      makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8 })] }),
+    ]);
+    await upsertTitles([
+      makeParsedTitle({
+        offers: [makeParsedOffer({ providerId: 337, providerName: "Disney" })],
+      }),
+    ]);
 
     const offers = await getOffersForTitle("movie-123");
     expect(offers).toHaveLength(1);
@@ -163,7 +187,9 @@ describe("upsertTitles", () => {
   });
 
   it("preserves existing offers when re-upserting with empty offers", async () => {
-    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8 })] })]);
+    await upsertTitles([
+      makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8 })] }),
+    ]);
     await upsertTitles([makeParsedTitle({ offers: [] })]);
 
     const offers = await getOffersForTitle("movie-123");
@@ -172,7 +198,13 @@ describe("upsertTitles", () => {
   });
 
   it("returns deep_link via COALESCE when available", async () => {
-    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" })] })]);
+    await upsertTitles([
+      makeParsedTitle({
+        offers: [
+          makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" }),
+        ],
+      }),
+    ]);
 
     // Manually set deep_link
     const db = getRawDb();
@@ -187,7 +219,13 @@ describe("upsertTitles", () => {
   });
 
   it("falls back to url when deep_link is null", async () => {
-    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" })] })]);
+    await upsertTitles([
+      makeParsedTitle({
+        offers: [
+          makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" }),
+        ],
+      }),
+    ]);
 
     const offers = await getOffersForTitle("movie-123");
     expect(offers).toHaveLength(1);
@@ -195,7 +233,13 @@ describe("upsertTitles", () => {
   });
 
   it("preserves deep_link when re-upserting offers from TMDB", async () => {
-    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" })] })]);
+    await upsertTitles([
+      makeParsedTitle({
+        offers: [
+          makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123" }),
+        ],
+      }),
+    ]);
 
     // Set deep_link
     const db = getRawDb();
@@ -205,7 +249,16 @@ describe("upsertTitles", () => {
     );
 
     // Re-upsert with TMDB data (same provider)
-    await upsertTitles([makeParsedTitle({ offers: [makeParsedOffer({ providerId: 8, url: "https://tmdb.org/movie/123-updated" })] })]);
+    await upsertTitles([
+      makeParsedTitle({
+        offers: [
+          makeParsedOffer({
+            providerId: 8,
+            url: "https://tmdb.org/movie/123-updated",
+          }),
+        ],
+      }),
+    ]);
 
     const offers = await getOffersForTitle("movie-123");
     expect(offers).toHaveLength(1);
@@ -268,8 +321,18 @@ describe("getTitleById", () => {
 describe("getRecentTitles", () => {
   it("returns titles sorted by release date desc", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", title: "Old", releaseDate: "2020-01-01", releaseYear: 2020 }),
-      makeParsedTitle({ id: "movie-2", title: "New", releaseDate: "2025-01-01", releaseYear: 2025 }),
+      makeParsedTitle({
+        id: "movie-1",
+        title: "Old",
+        releaseDate: "2020-01-01",
+        releaseYear: 2020,
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "New",
+        releaseDate: "2025-01-01",
+        releaseYear: 2025,
+      }),
     ]);
     const results = await getRecentTitles({ daysBack: 0 });
     expect(results).toHaveLength(2);
@@ -281,7 +344,13 @@ describe("getRecentTitles", () => {
       makeParsedTitle({
         id: "movie-1",
         releaseDate: "2025-01-01",
-        offers: [makeParsedOffer({ titleId: "movie-1", providerId: 8, providerName: "Netflix" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-1",
+            providerId: 8,
+            providerName: "Netflix",
+          }),
+        ],
       }),
       makeParsedTitle({
         id: "movie-2",
@@ -301,10 +370,22 @@ describe("getRecentTitles", () => {
 
   it("filters by objectType", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: "2025-01-01" }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        releaseDate: "2025-01-01",
+      }),
+      makeParsedTitle({
+        id: "tv-1",
+        objectType: "SHOW",
+        title: "Show",
+        releaseDate: "2025-01-01",
+      }),
     ]);
-    const results = await getRecentTitles({ daysBack: 0, objectTypes: ["SHOW"] });
+    const results = await getRecentTitles({
+      daysBack: 0,
+      objectTypes: ["SHOW"],
+    });
     expect(results).toHaveLength(1);
     expect(results[0].object_type).toBe("SHOW");
   });
@@ -312,8 +393,16 @@ describe("getRecentTitles", () => {
   it("respects limit and offset", async () => {
     await upsertTitles([
       makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Movie 2", releaseDate: "2025-01-02" }),
-      makeParsedTitle({ id: "movie-3", title: "Movie 3", releaseDate: "2025-01-03" }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Movie 2",
+        releaseDate: "2025-01-02",
+      }),
+      makeParsedTitle({
+        id: "movie-3",
+        title: "Movie 3",
+        releaseDate: "2025-01-03",
+      }),
     ]);
     const results = await getRecentTitles({ daysBack: 0, limit: 1, offset: 1 });
     expect(results).toHaveLength(1);
@@ -322,8 +411,17 @@ describe("getRecentTitles", () => {
 
   it("filters by genre", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", genres: ["Action", "Drama"], releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: "2025-01-02" }),
+      makeParsedTitle({
+        id: "movie-1",
+        genres: ["Action", "Drama"],
+        releaseDate: "2025-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Comedy Film",
+        genres: ["Comedy"],
+        releaseDate: "2025-01-02",
+      }),
     ]);
     const results = await getRecentTitles({ daysBack: 0, genres: ["Comedy"] });
     expect(results).toHaveLength(1);
@@ -332,8 +430,17 @@ describe("getRecentTitles", () => {
 
   it("filters by language", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: "2025-01-02" }),
+      makeParsedTitle({
+        id: "movie-1",
+        originalLanguage: "en",
+        releaseDate: "2025-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Japanese Movie",
+        originalLanguage: "ja",
+        releaseDate: "2025-01-02",
+      }),
     ]);
     const results = await getRecentTitles({ daysBack: 0, languages: ["ja"] });
     expect(results).toHaveLength(1);
@@ -342,46 +449,96 @@ describe("getRecentTitles", () => {
 
   it("combines genre and language filters", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", genres: ["Action"], originalLanguage: "en", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Korean Action", genres: ["Action"], originalLanguage: "ko", releaseDate: "2025-01-02" }),
-      makeParsedTitle({ id: "movie-3", title: "Korean Drama", genres: ["Drama"], originalLanguage: "ko", releaseDate: "2025-01-03" }),
+      makeParsedTitle({
+        id: "movie-1",
+        genres: ["Action"],
+        originalLanguage: "en",
+        releaseDate: "2025-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Korean Action",
+        genres: ["Action"],
+        originalLanguage: "ko",
+        releaseDate: "2025-01-02",
+      }),
+      makeParsedTitle({
+        id: "movie-3",
+        title: "Korean Drama",
+        genres: ["Drama"],
+        originalLanguage: "ko",
+        releaseDate: "2025-01-03",
+      }),
     ]);
-    const results = await getRecentTitles({ daysBack: 0, genres: ["Action"], languages: ["ko"] });
+    const results = await getRecentTitles({
+      daysBack: 0,
+      genres: ["Action"],
+      languages: ["ko"],
+    });
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Korean Action");
   });
 
   it("excludes tracked titles when excludeTracked is true", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", title: "Tracked Movie", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Untracked Movie", releaseDate: "2025-01-02" }),
+      makeParsedTitle({
+        id: "movie-1",
+        title: "Tracked Movie",
+        releaseDate: "2025-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Untracked Movie",
+        releaseDate: "2025-01-02",
+      }),
     ]);
     const userId = await createUser("testuser", "hash");
     await trackTitle("movie-1", userId);
 
-    const results = await getRecentTitles({ daysBack: 0, excludeTracked: true }, userId);
+    const results = await getRecentTitles(
+      { daysBack: 0, excludeTracked: true },
+      userId,
+    );
     expect(results).toHaveLength(1);
     expect(results[0].title).toBe("Untracked Movie");
   });
 
   it("includes tracked titles when excludeTracked is false", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", title: "Tracked Movie", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Untracked Movie", releaseDate: "2025-01-02" }),
+      makeParsedTitle({
+        id: "movie-1",
+        title: "Tracked Movie",
+        releaseDate: "2025-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Untracked Movie",
+        releaseDate: "2025-01-02",
+      }),
     ]);
     const userId = await createUser("testuser", "hash");
     await trackTitle("movie-1", userId);
 
-    const results = await getRecentTitles({ daysBack: 0, excludeTracked: false }, userId);
+    const results = await getRecentTitles(
+      { daysBack: 0, excludeTracked: false },
+      userId,
+    );
     expect(results).toHaveLength(2);
   });
 
   it("ignores excludeTracked when no userId is provided", async () => {
     await upsertTitles([
       makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Movie 2", releaseDate: "2025-01-02" }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Movie 2",
+        releaseDate: "2025-01-02",
+      }),
     ]);
-    const results = await getRecentTitles({ daysBack: 0, excludeTracked: true });
+    const results = await getRecentTitles({
+      daysBack: 0,
+      excludeTracked: true,
+    });
     expect(results).toHaveLength(2);
   });
 
@@ -391,8 +548,16 @@ describe("getRecentTitles", () => {
     const future = new Date();
     future.setDate(future.getDate() + 365);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-past", title: "Past Movie", releaseDate: past.toISOString().slice(0, 10) }),
-      makeParsedTitle({ id: "movie-future", title: "Future Movie", releaseDate: future.toISOString().slice(0, 10) }),
+      makeParsedTitle({
+        id: "movie-past",
+        title: "Past Movie",
+        releaseDate: past.toISOString().slice(0, 10),
+      }),
+      makeParsedTitle({
+        id: "movie-future",
+        title: "Future Movie",
+        releaseDate: future.toISOString().slice(0, 10),
+      }),
     ]);
     const results = await getRecentTitles({ daysBack: 0 });
     expect(results.some((r) => r.id === "movie-future")).toBe(false);
@@ -400,15 +565,25 @@ describe("getRecentTitles", () => {
   });
 
   it("returns is_tracked=false without userId", async () => {
-    await upsertTitles([makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", releaseDate: "2025-01-01" }),
+    ]);
     const results = await getRecentTitles({ daysBack: 0 });
     expect(results[0].is_tracked).toBe(false);
   });
 
   it("returns correct is_tracked via LEFT JOIN when userId is provided", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", title: "Tracked", releaseDate: "2025-01-01" }),
-      makeParsedTitle({ id: "movie-2", title: "Untracked", releaseDate: "2025-01-02" }),
+      makeParsedTitle({
+        id: "movie-1",
+        title: "Tracked",
+        releaseDate: "2025-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Untracked",
+        releaseDate: "2025-01-02",
+      }),
     ]);
     const userId = await createUser("testuser2", "hash");
     await trackTitle("movie-1", userId);
@@ -447,7 +622,9 @@ describe("getGenres", () => {
   it("reflects new genres after upsertTitles invalidates cache", async () => {
     await upsertTitles([makeParsedTitle({ id: "movie-1", genres: ["Drama"] })]);
     expect(await getGenres()).toEqual(["Drama"]);
-    await upsertTitles([makeParsedTitle({ id: "movie-2", genres: ["Comedy"] })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-2", genres: ["Comedy"] }),
+    ]);
     expect(await getGenres()).toEqual(["Comedy", "Drama"]);
   });
 });
@@ -473,16 +650,22 @@ describe("getLanguages", () => {
   });
 
   it("returns cached value on subsequent calls without upsert", async () => {
-    await upsertTitles([makeParsedTitle({ id: "movie-1", originalLanguage: "en" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", originalLanguage: "en" }),
+    ]);
     const first = await getLanguages();
     const second = await getLanguages();
     expect(second).toBe(first);
   });
 
   it("reflects new languages after upsertTitles invalidates cache", async () => {
-    await upsertTitles([makeParsedTitle({ id: "movie-1", originalLanguage: "en" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", originalLanguage: "en" }),
+    ]);
     expect(await getLanguages()).toEqual(["en"]);
-    await upsertTitles([makeParsedTitle({ id: "movie-2", originalLanguage: "ja" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-2", originalLanguage: "ja" }),
+    ]);
     expect(await getLanguages()).toEqual(["en", "ja"]);
   });
 });
@@ -504,7 +687,9 @@ describe("searchLocalTitles", () => {
   });
 
   it("returns is_tracked=false without userId", async () => {
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Test Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Test Movie" }),
+    ]);
     const results = await searchLocalTitles("Test");
     expect(results[0].is_tracked).toBe(false);
   });
@@ -563,7 +748,10 @@ describe("tracking", () => {
   });
 
   it("getTrackedTitleIds returns set of tracked title IDs", async () => {
-    await upsertTitles([makeParsedTitle({ id: "movie-1" }), makeParsedTitle({ id: "movie-2" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+    ]);
     const userId = await createUser("testuser", "hash");
 
     await trackTitle("movie-1", userId);
@@ -673,7 +861,14 @@ describe("sessions", () => {
   });
 
   it("returns is_admin as boolean", async () => {
-    const userId = await createUser("admin", "hash", undefined, "local", undefined, true);
+    const userId = await createUser(
+      "admin",
+      "hash",
+      undefined,
+      "local",
+      undefined,
+      true,
+    );
     const token = await createSession(userId);
     const session = await getSessionWithUser(token);
     expect(session!.is_admin).toBe(true);
@@ -767,15 +962,39 @@ describe("episodes", () => {
     await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
 
     const count = await upsertEpisodes([
-      { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "tv-1", season_number: 1, episode_number: 2, name: "Episode 2", overview: null, air_date: "2024-01-08", still_path: null },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Episode 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
     ]);
     expect(count).toBe(2);
 
     await deleteEpisodesForTitle("tv-1");
     // After delete, no episodes should exist — verify via upsert working again without conflicts
     const count2 = await upsertEpisodes([
-      { title_id: "tv-1", season_number: 1, episode_number: 1, name: "New Pilot", overview: null, air_date: "2024-01-01", still_path: null },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "New Pilot",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
     ]);
     expect(count2).toBe(1);
   });
@@ -784,21 +1003,41 @@ describe("episodes", () => {
     await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
 
     await upsertEpisodes([
-      { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Original", overview: null, air_date: "2024-01-01", still_path: null },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Original",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
     ]);
     await upsertEpisodes([
-      { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Updated", overview: null, air_date: "2024-01-01", still_path: null },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Updated",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
     ]);
 
-    const row = getRawDb().prepare(
-      "SELECT count(*) as cnt FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1"
-    ).get() as { cnt: number };
+    const row = getRawDb()
+      .prepare(
+        "SELECT count(*) as cnt FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1",
+      )
+      .get() as { cnt: number };
     expect(row.cnt).toBe(1);
 
     // Also verify the upsert updated the name
-    const ep = getRawDb().prepare(
-      "SELECT name FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1"
-    ).get() as { name: string };
+    const ep = getRawDb()
+      .prepare(
+        "SELECT name FROM episodes WHERE title_id = 'tv-1' AND season_number = 1 AND episode_number = 1",
+      )
+      .get() as { name: string };
     expect(ep.name).toBe("Updated");
   });
 });
@@ -809,7 +1048,15 @@ describe("watched episodes", () => {
   it("watches and unwatches an episode", async () => {
     await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
     await upsertEpisodes([
-      { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: "2024-01-01", still_path: null },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
     ]);
     const userId = await createUser("user", "hash");
 
@@ -826,8 +1073,24 @@ describe("watched episodes", () => {
   it("bulk watch and unwatch", async () => {
     await upsertTitles([makeParsedTitle({ id: "tv-1", objectType: "SHOW" })]);
     await upsertEpisodes([
-      { title_id: "tv-1", season_number: 1, episode_number: 1, name: "Ep1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "tv-1", season_number: 1, episode_number: 2, name: "Ep2", overview: null, air_date: "2024-01-08", still_path: null },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "tv-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
     ]);
     const userId = await createUser("user", "hash");
 
@@ -860,8 +1123,18 @@ describe("getProviders", () => {
       makeParsedTitle({
         id: "movie-dedup-1",
         offers: [
-          makeParsedOffer({ titleId: "movie-dedup-1", providerId: 9, providerName: "Amazon Prime Video", providerTechnicalName: "amazon_prime_video" }),
-          makeParsedOffer({ titleId: "movie-dedup-1", providerId: 384, providerName: "HBO Max", providerTechnicalName: "hbo_max" }),
+          makeParsedOffer({
+            titleId: "movie-dedup-1",
+            providerId: 9,
+            providerName: "Amazon Prime Video",
+            providerTechnicalName: "amazon_prime_video",
+          }),
+          makeParsedOffer({
+            titleId: "movie-dedup-1",
+            providerId: 384,
+            providerName: "HBO Max",
+            providerTechnicalName: "hbo_max",
+          }),
         ],
       }),
     ]);
@@ -884,12 +1157,21 @@ describe("notifier config parsing", () => {
 
   function corruptNotifierConfig(notifierId: string) {
     const raw = getRawDb();
-    raw.prepare("UPDATE notifiers SET config = '{invalid json' WHERE id = ?").run(notifierId);
+    raw
+      .prepare("UPDATE notifiers SET config = '{invalid json' WHERE id = ?")
+      .run(notifierId);
   }
 
   it("getNotifiersByUser returns empty config for corrupted JSON", async () => {
     const userId = await createTestUser();
-    const id = await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    const id = await createNotifier(
+      userId,
+      "email",
+      "Test",
+      { url: "http://example.com" },
+      "09:00",
+      "UTC",
+    );
     corruptNotifierConfig(id);
 
     const notifiers = await getNotifiersByUser(userId);
@@ -899,7 +1181,14 @@ describe("notifier config parsing", () => {
 
   it("getNotifierById returns empty config for corrupted JSON", async () => {
     const userId = await createTestUser();
-    const id = await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    const id = await createNotifier(
+      userId,
+      "email",
+      "Test",
+      { url: "http://example.com" },
+      "09:00",
+      "UTC",
+    );
     corruptNotifierConfig(id);
 
     const notifier = await getNotifierById(id, userId);
@@ -909,7 +1198,14 @@ describe("notifier config parsing", () => {
 
   it("getDueNotifiers returns empty config for corrupted JSON", async () => {
     const userId = await createTestUser();
-    const id = await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    const id = await createNotifier(
+      userId,
+      "email",
+      "Test",
+      { url: "http://example.com" },
+      "09:00",
+      "UTC",
+    );
     corruptNotifierConfig(id);
 
     const timesByTimezone = new Map([
@@ -922,7 +1218,14 @@ describe("notifier config parsing", () => {
 
   it("getNotifiersByUser parses valid config correctly", async () => {
     const userId = await createTestUser();
-    await createNotifier(userId, "email", "Test", { url: "http://example.com" }, "09:00", "UTC");
+    await createNotifier(
+      userId,
+      "email",
+      "Test",
+      { url: "http://example.com" },
+      "09:00",
+      "UTC",
+    );
 
     const notifiers = await getNotifiersByUser(userId);
     expect(notifiers).toHaveLength(1);
@@ -937,53 +1240,97 @@ describe("quiet hours filtering in getDueNotifiers", () => {
   });
 
   it("skips a notifier when current time is inside the quiet window", async () => {
-    await createNotifier(quietUserId, "discord", "Night", { webhookUrl: "https://x.com" }, "01:00", "UTC", null, null, true, {
-      quietHoursStart: "23:00",
-      quietHoursEnd: "07:00",
-    });
+    await createNotifier(
+      quietUserId,
+      "discord",
+      "Night",
+      { webhookUrl: "https://x.com" },
+      "01:00",
+      "UTC",
+      null,
+      null,
+      true,
+      {
+        quietHoursStart: "23:00",
+        quietHoursEnd: "07:00",
+      },
+    );
 
     const due = await getDueNotifiers(
-      new Map([["UTC", { time: "01:00", date: "2026-05-01", dayOfWeek: 4 }]])
+      new Map([["UTC", { time: "01:00", date: "2026-05-01", dayOfWeek: 4 }]]),
     );
     expect(due).toHaveLength(0);
   });
 
   it("does not skip when current time is outside the quiet window", async () => {
-    await createNotifier(quietUserId, "discord", "Day", { webhookUrl: "https://x.com" }, "09:00", "UTC", null, null, true, {
-      quietHoursStart: "23:00",
-      quietHoursEnd: "07:00",
-    });
+    await createNotifier(
+      quietUserId,
+      "discord",
+      "Day",
+      { webhookUrl: "https://x.com" },
+      "09:00",
+      "UTC",
+      null,
+      null,
+      true,
+      {
+        quietHoursStart: "23:00",
+        quietHoursEnd: "07:00",
+      },
+    );
 
     const due = await getDueNotifiers(
-      new Map([["UTC", { time: "09:00", date: "2026-05-01", dayOfWeek: 4 }]])
+      new Map([["UTC", { time: "09:00", date: "2026-05-01", dayOfWeek: 4 }]]),
     );
     expect(due).toHaveLength(1);
   });
 
   it("skips only on matching quiet_hours_days", async () => {
     // Quiet Mon–Fri (1-5), current day is Sunday (0) — should NOT be skipped
-    await createNotifier(quietUserId, "discord", "Weekday", { webhookUrl: "https://x.com" }, "01:00", "UTC", null, null, true, {
-      quietHoursStart: "00:00",
-      quietHoursEnd: "06:00",
-      quietHoursDays: "1,2,3,4,5",
-    });
+    await createNotifier(
+      quietUserId,
+      "discord",
+      "Weekday",
+      { webhookUrl: "https://x.com" },
+      "01:00",
+      "UTC",
+      null,
+      null,
+      true,
+      {
+        quietHoursStart: "00:00",
+        quietHoursEnd: "06:00",
+        quietHoursDays: "1,2,3,4,5",
+      },
+    );
 
     const due = await getDueNotifiers(
-      new Map([["UTC", { time: "01:00", date: "2026-05-03", dayOfWeek: 0 }]])
+      new Map([["UTC", { time: "01:00", date: "2026-05-03", dayOfWeek: 0 }]]),
     );
     expect(due).toHaveLength(1);
   });
 
   it("skips when current day matches quiet_hours_days and inside window", async () => {
     // Quiet Mon–Fri, current day is Monday (1), inside window
-    await createNotifier(quietUserId, "discord", "Work", { webhookUrl: "https://x.com" }, "01:00", "UTC", null, null, true, {
-      quietHoursStart: "00:00",
-      quietHoursEnd: "06:00",
-      quietHoursDays: "1,2,3,4,5",
-    });
+    await createNotifier(
+      quietUserId,
+      "discord",
+      "Work",
+      { webhookUrl: "https://x.com" },
+      "01:00",
+      "UTC",
+      null,
+      null,
+      true,
+      {
+        quietHoursStart: "00:00",
+        quietHoursEnd: "06:00",
+        quietHoursDays: "1,2,3,4,5",
+      },
+    );
 
     const due = await getDueNotifiers(
-      new Map([["UTC", { time: "01:00", date: "2026-05-04", dayOfWeek: 1 }]])
+      new Map([["UTC", { time: "01:00", date: "2026-05-04", dayOfWeek: 1 }]]),
     );
     expect(due).toHaveLength(0);
   });

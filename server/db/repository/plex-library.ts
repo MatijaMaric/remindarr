@@ -25,7 +25,8 @@ export async function upsertPlexLibraryItems(items: PlexLibraryItem[]) {
     if (items.length === 0) return;
     const db = getDb();
     for (const item of items) {
-      await db.insert(plexLibraryItems)
+      await db
+        .insert(plexLibraryItems)
         .values({
           integrationId: item.integrationId,
           userId: item.userId,
@@ -53,7 +54,7 @@ export async function upsertPlexLibraryItems(items: PlexLibraryItem[]) {
 
 export async function deleteStaleLibraryItems(
   integrationId: string,
-  currentTitleIds: string[]
+  currentTitleIds: string[],
 ): Promise<number> {
   return traceDbQuery("deleteStaleLibraryItems", async () => {
     const db = getDb();
@@ -78,7 +79,8 @@ export async function deleteStaleLibraryItems(
     // Delete by PK in chunks to stay under D1's 100-param limit
     for (let i = 0; i < staleIds.length; i += PLEX_TITLEIDS_CHUNK_SIZE) {
       const chunk = staleIds.slice(i, i + PLEX_TITLEIDS_CHUNK_SIZE);
-      await db.delete(plexLibraryItems)
+      await db
+        .delete(plexLibraryItems)
         .where(inArray(plexLibraryItems.id, chunk))
         .run();
     }
@@ -90,7 +92,8 @@ export async function deleteStaleLibraryItems(
 export async function deletePlexLibraryByIntegration(integrationId: string) {
   return traceDbQuery("deletePlexLibraryByIntegration", async () => {
     const db = getDb();
-    await db.delete(plexLibraryItems)
+    await db
+      .delete(plexLibraryItems)
       .where(eq(plexLibraryItems.integrationId, integrationId))
       .run();
   });
@@ -113,13 +116,19 @@ type SyntheticOffer = {
 
 export async function getPlexOffersForUser(
   titleIds: string[],
-  userId: string
+  userId: string,
 ): Promise<Map<string, SyntheticOffer[]>> {
   return traceDbQuery("getPlexOffersForUser", async () => {
     if (titleIds.length === 0) return new Map();
 
     const db = getDb();
-    const allRows: Array<{ titleId: string; ratingKey: string; mediaType: string; plexSlug: string | null; config: string }> = [];
+    const allRows: Array<{
+      titleId: string;
+      ratingKey: string;
+      mediaType: string;
+      plexSlug: string | null;
+      config: string;
+    }> = [];
     for (let i = 0; i < titleIds.length; i += PLEX_TITLEIDS_CHUNK_SIZE) {
       const chunk = titleIds.slice(i, i + PLEX_TITLEIDS_CHUNK_SIZE);
       const rows = await db
@@ -131,12 +140,15 @@ export async function getPlexOffersForUser(
           config: integrations.config,
         })
         .from(plexLibraryItems)
-        .innerJoin(integrations, eq(plexLibraryItems.integrationId, integrations.id))
+        .innerJoin(
+          integrations,
+          eq(plexLibraryItems.integrationId, integrations.id),
+        )
         .where(
           and(
             eq(plexLibraryItems.userId, userId),
-            inArray(plexLibraryItems.titleId, chunk)
-          )
+            inArray(plexLibraryItems.titleId, chunk),
+          ),
         )
         .all();
       allRows.push(...rows);
@@ -162,7 +174,12 @@ export async function getPlexOffersForUser(
         presentation_type: null,
         price_value: null,
         price_currency: null,
-        url: buildPlexDeepLink(serverId, row.ratingKey, row.plexSlug, row.mediaType),
+        url: buildPlexDeepLink(
+          serverId,
+          row.ratingKey,
+          row.plexSlug,
+          row.mediaType,
+        ),
         available_to: null,
         provider_name: "Plex",
         provider_technical_name: "plex",

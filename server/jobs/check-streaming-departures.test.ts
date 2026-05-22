@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  mock,
+  spyOn,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser } from "../db/repository";
 import { getDb } from "../db/schema";
@@ -22,12 +30,15 @@ const mockSend = mock(async () => {});
 
 async function insertTitle(id: string) {
   const db = getDb();
-  await db.insert(titles).values({
-    id,
-    objectType: "MOVIE",
-    title: `Title ${id}`,
-    offersChecked: 0,
-  }).run();
+  await db
+    .insert(titles)
+    .values({
+      id,
+      objectType: "MOVIE",
+      title: `Title ${id}`,
+      offersChecked: 0,
+    })
+    .run();
 }
 
 async function insertProvider(id: number, name: string) {
@@ -35,14 +46,21 @@ async function insertProvider(id: number, name: string) {
   await db.insert(providers).values({ id, name }).onConflictDoNothing().run();
 }
 
-async function insertOffer(titleId: string, providerId: number, monetizationType = "FLATRATE") {
+async function insertOffer(
+  titleId: string,
+  providerId: number,
+  monetizationType = "FLATRATE",
+) {
   const db = getDb();
-  await db.insert(offers).values({
-    titleId,
-    providerId,
-    monetizationType,
-    url: "https://example.com",
-  }).run();
+  await db
+    .insert(offers)
+    .values({
+      titleId,
+      providerId,
+      monetizationType,
+      url: "https://example.com",
+    })
+    .run();
 }
 
 async function insertTracked(userId: string, titleId: string) {
@@ -50,42 +68,53 @@ async function insertTracked(userId: string, titleId: string) {
   await db.insert(tracked).values({ userId, titleId }).run();
 }
 
-async function insertArrivalAlert(userId: string, titleId: string, providerId: number, providerName: string) {
+async function insertArrivalAlert(
+  userId: string,
+  titleId: string,
+  providerId: number,
+  providerName: string,
+) {
   const db = getDb();
-  await db.insert(streamingAlerts).values({
-    id: crypto.randomUUID(),
-    userId,
-    titleId,
-    providerId,
-    providerName,
-    kind: "arrival",
-  }).run();
+  await db
+    .insert(streamingAlerts)
+    .values({
+      id: crypto.randomUUID(),
+      userId,
+      titleId,
+      providerId,
+      providerName,
+      kind: "arrival",
+    })
+    .run();
 }
 
 async function insertNotifier(userId: string) {
   const db = getDb();
   const id = crypto.randomUUID();
-  await db.insert(notifiers).values({
-    id,
-    userId,
-    provider: "discord",
-    name: "test",
-    config: JSON.stringify({ webhookUrl: "https://discord.com/api/webhooks/123/abc" }),
-    notifyTime: "09:00",
-    timezone: "UTC",
-    streamingAlertsEnabled: 1,
-  }).run();
+  await db
+    .insert(notifiers)
+    .values({
+      id,
+      userId,
+      provider: "discord",
+      name: "test",
+      config: JSON.stringify({
+        webhookUrl: "https://discord.com/api/webhooks/123/abc",
+      }),
+      notifyTime: "09:00",
+      timezone: "UTC",
+      streamingAlertsEnabled: 1,
+    })
+    .run();
   return id;
 }
 
 async function getDepartureAlerts(userId: string, titleId: string) {
   const db = getDb();
-  const rows = await db
-    .select()
-    .from(streamingAlerts)
-    .all();
+  const rows = await db.select().from(streamingAlerts).all();
   return rows.filter(
-    (r) => r.userId === userId && r.titleId === titleId && r.kind === "departure"
+    (r) =>
+      r.userId === userId && r.titleId === titleId && r.kind === "departure",
   );
 }
 

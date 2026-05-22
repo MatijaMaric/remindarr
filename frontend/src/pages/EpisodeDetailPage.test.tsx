@@ -1,49 +1,70 @@
 import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 import * as sonner from "sonner";
 import "../i18n";
 
-let mockUser: any = { id: "user1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+let mockUser: any = {
+  id: "user1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({ user: mockUser, loading: false, sessionStatus: "authenticated" }),
+  useAuth: () => ({
+    user: mockUser,
+    loading: false,
+    sessionStatus: "authenticated",
+  }),
   AuthContext: { Provider: ({ children }: any) => children },
 }));
 
-const mockGetEpisodeDetails = mock(() => Promise.resolve({
-  title: { id: "tv-100", title: "Test Show" },
-  tmdb: {
-    id: 101,
-    name: "Pilot",
-    overview: "First episode",
-    air_date: "2024-01-01",
-    episode_number: 1,
-    season_number: 1,
-    still_path: null,
-    runtime: 45,
-    vote_average: 8.5,
-    vote_count: 100,
-    guest_stars: [],
-    crew: [],
-    credits: { cast: [], crew: [] },
-  },
-  seasonNumber: 1,
-  episodeNumber: 1,
-  country: "US",
-}));
+const mockGetEpisodeDetails = mock(() =>
+  Promise.resolve({
+    title: { id: "tv-100", title: "Test Show" },
+    tmdb: {
+      id: 101,
+      name: "Pilot",
+      overview: "First episode",
+      air_date: "2024-01-01",
+      episode_number: 1,
+      season_number: 1,
+      still_path: null,
+      runtime: 45,
+      vote_average: 8.5,
+      vote_count: 100,
+      guest_stars: [],
+      crew: [],
+      credits: { cast: [], crew: [] },
+    },
+    seasonNumber: 1,
+    episodeNumber: 1,
+    country: "US",
+  }),
+);
 
-const mockGetSeasonEpisodeStatus = mock(() => Promise.resolve({
-  episodes: [
-    { episode_number: 1, id: 10, is_watched: false },
-  ],
-}));
+const mockGetSeasonEpisodeStatus = mock(() =>
+  Promise.resolve({
+    episodes: [{ episode_number: 1, id: 10, is_watched: false }],
+  }),
+);
 
 const mockWatchEpisode = mock(() => Promise.resolve());
 const mockUnwatchEpisode = mock(() => Promise.resolve());
@@ -60,7 +81,9 @@ mock.module("../api", () => ({
   unwatchEpisode: mockUnwatchEpisode,
   watchEpisodesBulk: mockWatchEpisodesBulk,
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
 }));
 
 const { default: EpisodeDetailPage } = await import("./EpisodeDetailPage");
@@ -70,7 +93,10 @@ function Wrapper({ children }: { children: ReactNode }) {
     <QueryClientProvider client={newTestClient()}>
       <MemoryRouter initialEntries={["/title/tv-100/season/1/episode/1"]}>
         <Routes>
-          <Route path="/title/:id/season/:season/episode/:episode" element={children} />
+          <Route
+            path="/title/:id/season/:season/episode/:episode"
+            element={children}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -83,22 +109,43 @@ afterEach(() => {
   mockGetSeasonEpisodeStatus.mockReset();
   mockWatchEpisode.mockReset();
   mockUnwatchEpisode.mockReset();
-  mockUser = { id: "user1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+  mockUser = {
+    id: "user1",
+    username: "test",
+    display_name: null,
+    auth_provider: "local",
+    is_admin: false,
+  };
 
-  mockGetEpisodeDetails.mockImplementation(() => Promise.resolve({
-    title: { id: "tv-100", title: "Test Show" },
-    tmdb: {
-      id: 101, name: "Pilot", overview: "First episode", air_date: "2024-01-01",
-      episode_number: 1, season_number: 1, still_path: null, runtime: 45,
-      vote_average: 8.5, vote_count: 100, guest_stars: [], crew: [],
-      credits: { cast: [], crew: [] },
-    },
-    seasonNumber: 1, episodeNumber: 1, country: "US",
-  }));
+  mockGetEpisodeDetails.mockImplementation(() =>
+    Promise.resolve({
+      title: { id: "tv-100", title: "Test Show" },
+      tmdb: {
+        id: 101,
+        name: "Pilot",
+        overview: "First episode",
+        air_date: "2024-01-01",
+        episode_number: 1,
+        season_number: 1,
+        still_path: null,
+        runtime: 45,
+        vote_average: 8.5,
+        vote_count: 100,
+        guest_stars: [],
+        crew: [],
+        credits: { cast: [], crew: [] },
+      },
+      seasonNumber: 1,
+      episodeNumber: 1,
+      country: "US",
+    }),
+  );
 
-  mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({
-    episodes: [{ episode_number: 1, id: 10, is_watched: false }],
-  }));
+  mockGetSeasonEpisodeStatus.mockImplementation(() =>
+    Promise.resolve({
+      episodes: [{ episode_number: 1, id: 10, is_watched: false }],
+    }),
+  );
 });
 
 describe("EpisodeDetailPage", () => {
@@ -116,7 +163,9 @@ describe("EpisodeDetailPage", () => {
 
   it("does not render watched icon when not authenticated", async () => {
     mockUser = null;
-    mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({ episodes: [] }));
+    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({ episodes: [] }),
+    );
 
     render(<EpisodeDetailPage />, { wrapper: Wrapper });
 
@@ -130,26 +179,44 @@ describe("EpisodeDetailPage", () => {
   });
 
   it("shows disabled icon for unreleased episode", async () => {
-    mockGetEpisodeDetails.mockImplementation(() => Promise.resolve({
-      title: { id: "tv-100", title: "Test Show" },
-      tmdb: {
-        id: 103, name: "Future Episode", overview: "Not yet", air_date: "2099-12-31",
-        episode_number: 3, season_number: 1, still_path: null, runtime: null,
-        vote_average: 0, vote_count: 0, guest_stars: [], crew: [],
-        credits: { cast: [], crew: [] },
-      },
-      seasonNumber: 1, episodeNumber: 3, country: "US",
-    }));
+    mockGetEpisodeDetails.mockImplementation(() =>
+      Promise.resolve({
+        title: { id: "tv-100", title: "Test Show" },
+        tmdb: {
+          id: 103,
+          name: "Future Episode",
+          overview: "Not yet",
+          air_date: "2099-12-31",
+          episode_number: 3,
+          season_number: 1,
+          still_path: null,
+          runtime: null,
+          vote_average: 0,
+          vote_count: 0,
+          guest_stars: [],
+          crew: [],
+          credits: { cast: [], crew: [] },
+        },
+        seasonNumber: 1,
+        episodeNumber: 3,
+        country: "US",
+      }),
+    );
 
-    mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({
-      episodes: [{ episode_number: 3, id: 12, is_watched: false }],
-    }));
+    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({
+        episodes: [{ episode_number: 3, id: 12, is_watched: false }],
+      }),
+    );
 
     const UnreleasedWrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={newTestClient()}>
         <MemoryRouter initialEntries={["/title/tv-100/season/1/episode/3"]}>
           <Routes>
-            <Route path="/title/:id/season/:season/episode/:episode" element={children} />
+            <Route
+              path="/title/:id/season/:season/episode/:episode"
+              element={children}
+            />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -157,7 +224,9 @@ describe("EpisodeDetailPage", () => {
 
     render(<EpisodeDetailPage />, { wrapper: UnreleasedWrapper });
 
-    await waitFor(() => expect(screen.getByText("Future Episode")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Future Episode")).toBeDefined(),
+    );
 
     // Disabled icon should be present (role="img"), no button
     await waitFor(() => {
@@ -187,9 +256,11 @@ describe("EpisodeDetailPage", () => {
   });
 
   it("calls unwatchEpisode when toggling watched episode", async () => {
-    mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({
-      episodes: [{ episode_number: 1, id: 10, is_watched: true }],
-    }));
+    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({
+        episodes: [{ episode_number: 1, id: 10, is_watched: true }],
+      }),
+    );
 
     render(<EpisodeDetailPage />, { wrapper: Wrapper });
 
@@ -211,8 +282,12 @@ describe("EpisodeDetailPage", () => {
   });
 
   it("shows toast on toggle error and reverts", async () => {
-    const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(() => "1" as any);
-    mockWatchEpisode.mockImplementation(() => Promise.reject(new Error("fail")));
+    const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(
+      () => "1" as any,
+    );
+    mockWatchEpisode.mockImplementation(() =>
+      Promise.reject(new Error("fail")),
+    );
 
     render(<EpisodeDetailPage />, { wrapper: Wrapper });
 

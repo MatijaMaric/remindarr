@@ -10,7 +10,7 @@ describe("requestLogger — slow request warning", () => {
   it("emits a warn log when handler duration exceeds 5000ms", async () => {
     const consoleSpy = spyOn(console, "error");
     const nowSpy = spyOn(performance, "now")
-      .mockReturnValueOnce(0)     // start
+      .mockReturnValueOnce(0) // start
       .mockReturnValueOnce(6000); // end → 6000ms elapsed
 
     const app = new Hono();
@@ -62,7 +62,9 @@ describe("getRecentLogs", () => {
   });
 
   it("accepts limit, level, and module filters without throwing", () => {
-    expect(Array.isArray(getRecentLogs(10, "warn" as LogLevel, "admin"))).toBe(true);
+    expect(Array.isArray(getRecentLogs(10, "warn" as LogLevel, "admin"))).toBe(
+      true,
+    );
   });
 
   it("returns at most limit entries", () => {

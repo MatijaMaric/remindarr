@@ -15,7 +15,9 @@ describe("useIsMobile", () => {
     globalThis.matchMedia = mock((query: string) => ({
       matches: true,
       media: query,
-      addEventListener: (_: string, cb: any) => { _listenerCallback = cb; },
+      addEventListener: (_: string, cb: any) => {
+        _listenerCallback = cb;
+      },
       removeEventListener: mock(() => {}),
     })) as any;
 

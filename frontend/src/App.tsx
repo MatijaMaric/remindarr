@@ -1,5 +1,13 @@
 import { Suspense, useState } from "react";
-import { Routes, Route, NavLink, Link, Navigate, useLocation, useNavigate } from "react-router";
+import {
+  Routes,
+  Route,
+  NavLink,
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
@@ -29,8 +37,12 @@ const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"));
 const UserProfilePage = lazyWithRetry(() => import("./pages/UserProfilePage"));
 const SettingsPage = lazyWithRetry(() => import("./pages/SettingsPage"));
 const TitleDetailPage = lazyWithRetry(() => import("./pages/TitleDetailPage"));
-const SeasonDetailPage = lazyWithRetry(() => import("./pages/SeasonDetailPage"));
-const EpisodeDetailPage = lazyWithRetry(() => import("./pages/EpisodeDetailPage"));
+const SeasonDetailPage = lazyWithRetry(
+  () => import("./pages/SeasonDetailPage"),
+);
+const EpisodeDetailPage = lazyWithRetry(
+  () => import("./pages/EpisodeDetailPage"),
+);
 const PersonPage = lazyWithRetry(() => import("./pages/PersonPage"));
 const ReelsPage = lazyWithRetry(() => import("./pages/ReelsPage"));
 const DiscoveryPage = lazyWithRetry(() => import("./pages/DiscoveryPage"));
@@ -39,11 +51,17 @@ const AdminUsersPage = lazyWithRetry(() => import("./pages/AdminUsersPage"));
 const NotFoundPage = lazyWithRetry(() => import("./pages/NotFoundPage"));
 const MorePage = lazyWithRetry(() => import("./pages/MorePage"));
 const KioskPage = lazyWithRetry(() => import("./pages/KioskPage"));
-const SharedWatchlistPage = lazyWithRetry(() => import("./pages/SharedWatchlistPage"));
+const SharedWatchlistPage = lazyWithRetry(
+  () => import("./pages/SharedWatchlistPage"),
+);
 const UserOverlapPage = lazyWithRetry(() => import("./pages/UserOverlapPage"));
 const LeaderboardPage = lazyWithRetry(() => import("./pages/LeaderboardPage"));
-const AchievementsPage = lazyWithRetry(() => import("./pages/AchievementsPage"));
-const AchievementDetailPage = lazyWithRetry(() => import("./pages/AchievementDetailPage"));
+const AchievementsPage = lazyWithRetry(
+  () => import("./pages/AchievementsPage"),
+);
+const AchievementDetailPage = lazyWithRetry(
+  () => import("./pages/AchievementDetailPage"),
+);
 
 // Wraps a route element in an inline ErrorBoundary so a single page crash
 // shows a contained fallback instead of taking down the whole shell.
@@ -51,10 +69,18 @@ function Page({ children }: { children: React.ReactNode }) {
   return <ErrorBoundary variant="inline">{children}</ErrorBoundary>;
 }
 
-function focusOrNavigateSearch(navigate: ReturnType<typeof useNavigate>, currentPath: string) {
+function focusOrNavigateSearch(
+  navigate: ReturnType<typeof useNavigate>,
+  currentPath: string,
+) {
   if (currentPath === "/browse") {
-    const input = document.getElementById("search-input") as HTMLInputElement | null;
-    if (input) { input.focus(); input.select(); }
+    const input = document.getElementById(
+      "search-input",
+    ) as HTMLInputElement | null;
+    if (input) {
+      input.focus();
+      input.select();
+    }
   } else {
     navigate("/browse?focus=search");
   }
@@ -72,7 +98,9 @@ export default function App() {
   const { theme } = useTheme();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useKeyboardShortcut("?", () => setShortcutsOpen((v) => !v));
-  useKeyboardShortcut("/", () => focusOrNavigateSearch(navigate, location.pathname));
+  useKeyboardShortcut("/", () =>
+    focusOrNavigateSearch(navigate, location.pathname),
+  );
 
   return (
     <div
@@ -87,14 +115,22 @@ export default function App() {
         {t("nav.skipToMain")}
       </a>
       {/* Hide top nav on reels page (mobile) and kiosk page (all sizes) */}
-      <nav aria-label="Main navigation" className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isKioskPage ? "hidden" : isReelsPage ? "hidden sm:block" : ""}`}>
+      <nav
+        aria-label="Main navigation"
+        className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isKioskPage ? "hidden" : isReelsPage ? "hidden sm:block" : ""}`}
+      >
         <div className="max-w-[1440px] mx-auto px-4 flex items-center gap-8 h-14">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
+          <Link
+            to="/"
+            className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity"
+          >
             <div className="w-6 h-6 rounded-md bg-amber-400 flex items-center justify-center font-extrabold text-sm text-black leading-none select-none">
               R
             </div>
-            <span className="text-base font-bold text-white tracking-tight">Remindarr</span>
+            <span className="text-base font-bold text-white tracking-tight">
+              Remindarr
+            </span>
           </Link>
           {/* Desktop nav links */}
           <div className="hidden sm:flex items-center gap-6">
@@ -142,8 +178,15 @@ export default function App() {
             className="hidden sm:flex items-center gap-2 w-[260px] bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
           >
             <span className="opacity-60 text-base leading-none">⌕</span>
-            <span className="flex-1 text-left text-[13px]">Search titles, people…</span>
-            <span aria-hidden="true" className="font-mono text-[11px] opacity-75">⌘K</span>
+            <span className="flex-1 text-left text-[13px]">
+              Search titles, people…
+            </span>
+            <span
+              aria-hidden="true"
+              className="font-mono text-[11px] opacity-75"
+            >
+              ⌘K
+            </span>
           </button>
           {/* Desktop user section */}
           <div className="hidden sm:flex items-center gap-3">
@@ -185,44 +228,276 @@ export default function App() {
       </nav>
       <ScrollToTop />
       {!isKioskPage && <InstallPrompt />}
-      <main id="main-content" className={isReelsPage || isKioskPage ? "" : "max-w-[1440px] mx-auto px-4 py-6 pb-20 sm:pb-6"}>
+      <main
+        id="main-content"
+        className={
+          isReelsPage || isKioskPage
+            ? ""
+            : "max-w-[1440px] mx-auto px-4 py-6 pb-20 sm:pb-6"
+        }
+      >
         {user && !isKioskPage && <NotificationPrompt />}
-        <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
+        <Suspense
+          fallback={
+            <div className="text-center py-12 text-zinc-500">Loading...</div>
+          }
+        >
           <Routes>
             <Route path="/" element={<HomeRoute />} />
-            <Route path="/browse" element={<Page><BrowsePage /></Page>} />
-            <Route path="/login" element={<Page><LoginPage /></Page>} />
-            <Route path="/signup" element={<Page><SignupPage /></Page>} />
-            <Route path="/tracked" element={<RequireAuth><Page><TrackedPage /></Page></RequireAuth>} />
-            <Route path="/calendar" element={<RequireAuth><Page><CalendarPage /></Page></RequireAuth>} />
-            <Route path="/reels" element={<RequireAuth><Page><ReelsPage /></Page></RequireAuth>} />
-            <Route path="/upcoming" element={<RequireAuth><Navigate to="/calendar" replace /></RequireAuth>} />
-            <Route path="/more" element={<RequireAuth><Page><MorePage /></Page></RequireAuth>} />
-            <Route path="/discovery" element={<RequireAuth><Page><DiscoveryPage /></Page></RequireAuth>} />
-            <Route path="/suggestions" element={<Navigate to="/discovery" replace />} />
-            <Route path="/invite" element={<RequireAuth><Page><InvitePage /></Page></RequireAuth>} />
-            <Route path="/stats" element={<Navigate to="/tracked?view=stats" replace />} />
-            <Route path="/admin/users" element={<RequireAuth><Page><AdminUsersPage /></Page></RequireAuth>} />
-            <Route path="/leaderboard" element={<RequireAuth><Page><LeaderboardPage /></Page></RequireAuth>} />
-            <Route path="/user/:username" element={<Page><UserProfilePage /></Page>} />
-            <Route path="/u/:username/overlap/:friendUsername" element={<RequireAuth><Page><UserOverlapPage /></Page></RequireAuth>} />
-            <Route path="/u/:username/achievements" element={<Page><AchievementsPage /></Page>} />
-            <Route path="/achievements" element={<RequireAuth><Page><AchievementsPage /></Page></RequireAuth>} />
-            <Route path="/achievements/:key" element={<RequireAuth><Page><AchievementDetailPage /></Page></RequireAuth>} />
-            <Route path="/u/:username/achievements/:key" element={<Page><AchievementDetailPage /></Page>} />
-            <Route path="/settings" element={<RequireAuth><Page><SettingsPage /></Page></RequireAuth>} />
-            <Route path="/profile" element={<Page><ProfilePage /></Page>} />
-            <Route path="/title/:id" element={<Page><TitleDetailPage /></Page>} />
-            <Route path="/title/:id/season/:season" element={<Page><SeasonDetailPage /></Page>} />
-            <Route path="/title/:id/season/:season/episode/:episode" element={<Page><EpisodeDetailPage /></Page>} />
-            <Route path="/person/:personId" element={<Page><PersonPage /></Page>} />
-            <Route path="/kiosk/:token" element={<Page><KioskPage /></Page>} />
-            <Route path="/share/watchlist/:token" element={<Page><SharedWatchlistPage /></Page>} />
-            <Route path="*" element={<Page><NotFoundPage /></Page>} />
+            <Route
+              path="/browse"
+              element={
+                <Page>
+                  <BrowsePage />
+                </Page>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <Page>
+                  <LoginPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <Page>
+                  <SignupPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/tracked"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <TrackedPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <CalendarPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/reels"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <ReelsPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/upcoming"
+              element={
+                <RequireAuth>
+                  <Navigate to="/calendar" replace />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/more"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <MorePage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/discovery"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <DiscoveryPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/suggestions"
+              element={<Navigate to="/discovery" replace />}
+            />
+            <Route
+              path="/invite"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <InvitePage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/stats"
+              element={<Navigate to="/tracked?view=stats" replace />}
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <AdminUsersPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/leaderboard"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <LeaderboardPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/user/:username"
+              element={
+                <Page>
+                  <UserProfilePage />
+                </Page>
+              }
+            />
+            <Route
+              path="/u/:username/overlap/:friendUsername"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <UserOverlapPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/u/:username/achievements"
+              element={
+                <Page>
+                  <AchievementsPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/achievements"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <AchievementsPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/achievements/:key"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <AchievementDetailPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/u/:username/achievements/:key"
+              element={
+                <Page>
+                  <AchievementDetailPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <SettingsPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <Page>
+                  <ProfilePage />
+                </Page>
+              }
+            />
+            <Route
+              path="/title/:id"
+              element={
+                <Page>
+                  <TitleDetailPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/title/:id/season/:season"
+              element={
+                <Page>
+                  <SeasonDetailPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/title/:id/season/:season/episode/:episode"
+              element={
+                <Page>
+                  <EpisodeDetailPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/person/:personId"
+              element={
+                <Page>
+                  <PersonPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/kiosk/:token"
+              element={
+                <Page>
+                  <KioskPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/share/watchlist/:token"
+              element={
+                <Page>
+                  <SharedWatchlistPage />
+                </Page>
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <Page>
+                  <NotFoundPage />
+                </Page>
+              }
+            />
           </Routes>
         </Suspense>
       </main>
-      <footer className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden sm:block"}`}>
+      <footer
+        className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden sm:block"}`}
+      >
         <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>
           <a
@@ -239,8 +514,15 @@ export default function App() {
       {!isKioskPage && <BottomTabBar />}
       <OfflineIndicator />
       {user && <AchievementToast />}
-      <Toaster theme={theme === "light" ? "light" : "dark"} position="bottom-center" richColors />
-      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <Toaster
+        theme={theme === "light" ? "light" : "dark"}
+        position="bottom-center"
+        richColors
+      />
+      <KeyboardShortcutsModal
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+      />
     </div>
   );
 }

@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
-import { MOCK_OIDC_URL, E2E_DB_DIR, E2E_DB_PATH } from "./e2e/fixtures/constants";
+import {
+  MOCK_OIDC_URL,
+  E2E_DB_DIR,
+  E2E_DB_PATH,
+} from "./e2e/fixtures/constants";
 
 // Playwright starts the webServer BEFORE globalSetup, so the DB directory
 // must exist by the time the backend's startup validation runs. This config

@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,11 +14,17 @@ import * as sonner from "sonner";
 import StatusPicker from "./StatusPicker";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={newTestClient()}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      {children}
+    </QueryClientProvider>
+  );
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
@@ -33,7 +45,12 @@ afterEach(() => {
 describe("StatusPicker", () => {
   it("renders the current status", () => {
     render(
-      <StatusPicker titleId="t-1" objectType="SHOW" currentStatus="watching" onStatusChange={() => {}} />,
+      <StatusPicker
+        titleId="t-1"
+        objectType="SHOW"
+        currentStatus="watching"
+        onStatusChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
     expect(screen.getByText(/watching/i)).toBeTruthy();
@@ -41,7 +58,12 @@ describe("StatusPicker", () => {
 
   it("renders 'Auto' when status is null", () => {
     render(
-      <StatusPicker titleId="t-1" objectType="SHOW" currentStatus={null} onStatusChange={() => {}} />,
+      <StatusPicker
+        titleId="t-1"
+        objectType="SHOW"
+        currentStatus={null}
+        onStatusChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
     expect(screen.getByText(/auto/i)).toBeTruthy();
@@ -49,7 +71,12 @@ describe("StatusPicker", () => {
 
   it("opens dropdown on click", () => {
     render(
-      <StatusPicker titleId="t-1" objectType="SHOW" currentStatus={null} onStatusChange={() => {}} />,
+      <StatusPicker
+        titleId="t-1"
+        objectType="SHOW"
+        currentStatus={null}
+        onStatusChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
     fireEvent.click(screen.getByRole("button", { expanded: false }));
@@ -84,7 +111,9 @@ describe("StatusPicker", () => {
         titleId="t-1"
         objectType="SHOW"
         currentStatus={null}
-        onStatusChange={(s) => { called = s; }}
+        onStatusChange={(s) => {
+          called = s;
+        }}
       />,
       { wrapper: Wrapper },
     );
@@ -101,7 +130,12 @@ describe("StatusPicker", () => {
     (api.updateTrackedStatus as any).mockRejectedValueOnce(new Error("fail"));
 
     render(
-      <StatusPicker titleId="t-1" objectType="SHOW" currentStatus={null} onStatusChange={() => {}} />,
+      <StatusPicker
+        titleId="t-1"
+        objectType="SHOW"
+        currentStatus={null}
+        onStatusChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
 
@@ -109,13 +143,20 @@ describe("StatusPicker", () => {
     fireEvent.click(screen.getByRole("option", { name: /watching/i }));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update status");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Failed to update status",
+      );
     });
   });
 
   it("renders movie options for MOVIE objectType", () => {
     render(
-      <StatusPicker titleId="t-1" objectType="MOVIE" currentStatus={null} onStatusChange={() => {}} />,
+      <StatusPicker
+        titleId="t-1"
+        objectType="MOVIE"
+        currentStatus={null}
+        onStatusChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
 

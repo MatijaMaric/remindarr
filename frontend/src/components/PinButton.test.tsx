@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,7 +23,9 @@ import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 const mockUser = {
@@ -29,10 +45,18 @@ const mockAuthValue = {
   refresh: mock(() => Promise.resolve()),
 };
 
-function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+function Wrapper({
+  children,
+  authValue,
+}: {
+  children: ReactNode;
+  authValue?: typeof mockAuthValue;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>
+        {children}
+      </AuthContext>
     </QueryClientProvider>
   );
 }
@@ -56,13 +80,17 @@ afterEach(() => {
 
 describe("PinButton", () => {
   it("renders 'Pin' when not pinned", () => {
-    render(<PinButton titleId="movie-1" isPinned={false} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-1" isPinned={false} />, {
+      wrapper: Wrapper,
+    });
     const button = screen.getByRole("button");
     expect(button.textContent).toContain("Pin");
   });
 
   it("renders 'Pinned' when already pinned", () => {
-    render(<PinButton titleId="movie-1" isPinned={true} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-1" isPinned={true} />, {
+      wrapper: Wrapper,
+    });
     const button = screen.getByRole("button");
     expect(button.textContent).toContain("Pinned");
   });
@@ -74,13 +102,15 @@ describe("PinButton", () => {
         <AuthContext value={noUserAuth as any}>
           <PinButton titleId="movie-1" />
         </AuthContext>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     expect(container.innerHTML).toBe("");
   });
 
   it("calls api.pinTitle on click when not pinned", async () => {
-    render(<PinButton titleId="movie-123" isPinned={false} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-123" isPinned={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button"));
 
@@ -90,7 +120,9 @@ describe("PinButton", () => {
   });
 
   it("calls api.unpinTitle on click when pinned", async () => {
-    render(<PinButton titleId="movie-123" isPinned={true} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-123" isPinned={true} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button"));
 
@@ -100,39 +132,55 @@ describe("PinButton", () => {
   });
 
   it("shows success toast after pinning", async () => {
-    render(<PinButton titleId="movie-1" isPinned={false} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-1" isPinned={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button"));
 
     await waitFor(() => {
-      expect(sonner.toast.success).toHaveBeenCalledWith("Added to pinned favorites");
+      expect(sonner.toast.success).toHaveBeenCalledWith(
+        "Added to pinned favorites",
+      );
     });
   });
 
   it("shows success toast after unpinning", async () => {
-    render(<PinButton titleId="movie-1" isPinned={true} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-1" isPinned={true} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button"));
 
     await waitFor(() => {
-      expect(sonner.toast.success).toHaveBeenCalledWith("Removed from pinned favorites");
+      expect(sonner.toast.success).toHaveBeenCalledWith(
+        "Removed from pinned favorites",
+      );
     });
   });
 
   it("shows error toast when pin API fails with max 8 message", async () => {
-    (api.pinTitle as any).mockRejectedValueOnce(new Error("Maximum of 8 pinned titles reached"));
+    (api.pinTitle as any).mockRejectedValueOnce(
+      new Error("Maximum of 8 pinned titles reached"),
+    );
 
-    render(<PinButton titleId="movie-1" isPinned={false} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-1" isPinned={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button"));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Maximum of 8 pinned titles reached");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Maximum of 8 pinned titles reached",
+      );
     });
   });
 
   it("updates to 'Pinned' after pinning", async () => {
-    render(<PinButton titleId="movie-1" isPinned={false} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-1" isPinned={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button"));
 
@@ -143,7 +191,9 @@ describe("PinButton", () => {
   });
 
   it("updates to 'Pin' after unpinning", async () => {
-    render(<PinButton titleId="movie-1" isPinned={true} />, { wrapper: Wrapper });
+    render(<PinButton titleId="movie-1" isPinned={true} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button"));
 

@@ -4,7 +4,8 @@ const MOBILE_QUERY = "(max-width: 639px)";
 
 export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches
+    () =>
+      typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches,
   );
 
   useEffect(() => {

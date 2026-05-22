@@ -9,6 +9,7 @@ Current providers: Discord, Telegram, Gotify, Ntfy, Webhook, Web Push.
 ## Implementing a new provider
 
 Read these files first (in order):
+
 1. `server/notifications/types.ts` — `NotificationProvider` interface
 2. `server/notifications/discord.ts` — reference implementation
 3. `server/notifications/content.ts` — content builder (titles, episodes, streaming alerts)
@@ -31,6 +32,7 @@ Belongs in the provider, not in the zod schema. Runs AFTER shape validation, ins
 ## Test requirements
 
 Every provider must have a colocated `*.test.ts` covering all four cases:
+
 1. Title notification (movie or show)
 2. Episode notification
 3. Streaming alert with `streamingAlerts.length > 0`

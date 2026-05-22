@@ -38,10 +38,16 @@ export default function AchievementsPage() {
 
   const isOwnProfile = !username || user?.username === username;
   const mode: "self" | "other" = isOwnProfile ? "self" : "other";
-  const baseHref = isOwnProfile ? "/achievements" : `/u/${username}/achievements`;
+  const baseHref = isOwnProfile
+    ? "/achievements"
+    : `/u/${username}/achievements`;
   const activeCategory = searchParams.get("cat") as Category | null;
 
-  const { data, isLoading: loading, isError: error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+  } = useQuery({
     queryKey: ["achievements", username ?? "me"],
     queryFn: ({ signal }) =>
       isOwnProfile
@@ -60,7 +66,9 @@ export default function AchievementsPage() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="text-zinc-500 text-sm">Failed to load achievements.</div>
+        <div className="text-zinc-500 text-sm">
+          Failed to load achievements.
+        </div>
       </div>
     );
   }
@@ -83,7 +91,9 @@ export default function AchievementsPage() {
 
   // Collect unique categories present in the data, in display order
   const presentCategorySet = new Set(achievements.map((a) => a.category));
-  const presentCategories = DISPLAY_ORDER.filter((cat) => presentCategorySet.has(cat));
+  const presentCategories = DISPLAY_ORDER.filter((cat) =>
+    presentCategorySet.has(cat),
+  );
 
   // Categories to render: all or filtered
   const visibleCategories =
@@ -92,11 +102,14 @@ export default function AchievementsPage() {
       : presentCategories;
 
   // Group achievements by category
-  const byCategory = achievements.reduce<Record<string, UserAchievement[]>>((acc, a) => {
-    if (!acc[a.category]) acc[a.category] = [];
-    acc[a.category].push(a);
-    return acc;
-  }, {});
+  const byCategory = achievements.reduce<Record<string, UserAchievement[]>>(
+    (acc, a) => {
+      if (!acc[a.category]) acc[a.category] = [];
+      acc[a.category].push(a);
+      return acc;
+    },
+    {},
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
@@ -111,16 +124,28 @@ export default function AchievementsPage() {
       {/* Next up (self only) */}
       {isOwnProfile && (
         <section>
-          <Kicker color="zinc" className="mb-2">Next up</Kicker>
-          <NextUpStrip achievements={achievements} mode="self" baseHref={baseHref} />
+          <Kicker color="zinc" className="mb-2">
+            Next up
+          </Kicker>
+          <NextUpStrip
+            achievements={achievements}
+            mode="self"
+            baseHref={baseHref}
+          />
         </section>
       )}
 
       {/* Recently earned */}
       {earned.length > 0 && (
         <section>
-          <Kicker color="zinc" className="mb-2">Recently earned</Kicker>
-          <RecentlyEarnedStrip achievements={achievements} mode={mode} baseHref={baseHref} />
+          <Kicker color="zinc" className="mb-2">
+            Recently earned
+          </Kicker>
+          <RecentlyEarnedStrip
+            achievements={achievements}
+            mode={mode}
+            baseHref={baseHref}
+          />
         </section>
       )}
 
@@ -128,16 +153,24 @@ export default function AchievementsPage() {
       <CategoryFilter categories={presentCategories} />
 
       {/* Category-grouped grids */}
-      {DISPLAY_ORDER.filter((cat) => visibleCategories.includes(cat)).map((cat) => {
-        const catAchievements = byCategory[cat];
-        if (!catAchievements || catAchievements.length === 0) return null;
-        return (
-          <section key={cat}>
-            <Kicker color="zinc" className="mb-2">{CATEGORY_LABELS[cat]}</Kicker>
-            <BadgeGrid achievements={catAchievements} mode={mode} baseHref={baseHref} />
-          </section>
-        );
-      })}
+      {DISPLAY_ORDER.filter((cat) => visibleCategories.includes(cat)).map(
+        (cat) => {
+          const catAchievements = byCategory[cat];
+          if (!catAchievements || catAchievements.length === 0) return null;
+          return (
+            <section key={cat}>
+              <Kicker color="zinc" className="mb-2">
+                {CATEGORY_LABELS[cat]}
+              </Kicker>
+              <BadgeGrid
+                achievements={catAchievements}
+                mode={mode}
+                baseHref={baseHref}
+              />
+            </section>
+          );
+        },
+      )}
     </div>
   );
 }

@@ -9,12 +9,25 @@ import { SettingsTabSkeleton } from "../components/SkeletonComponents";
 
 const AccountTab = lazyWithRetry(() => import("./settings/AccountTab"));
 const AppearanceTab = lazyWithRetry(() => import("./settings/AppearanceTab"));
-const SubscriptionsTab = lazyWithRetry(() => import("./settings/SubscriptionsTab"));
-const NotificationsTab = lazyWithRetry(() => import("./settings/NotificationsTab"));
-const IntegrationsTab = lazyWithRetry(() => import("./settings/IntegrationsTab"));
+const SubscriptionsTab = lazyWithRetry(
+  () => import("./settings/SubscriptionsTab"),
+);
+const NotificationsTab = lazyWithRetry(
+  () => import("./settings/NotificationsTab"),
+);
+const IntegrationsTab = lazyWithRetry(
+  () => import("./settings/IntegrationsTab"),
+);
 const AdminTab = lazyWithRetry(() => import("./settings/AdminTab"));
 
-const VALID_TABS = ["account", "appearance", "subscriptions", "notifications", "integrations", "admin"] as const;
+const VALID_TABS = [
+  "account",
+  "appearance",
+  "subscriptions",
+  "notifications",
+  "integrations",
+  "admin",
+] as const;
 type SettingsTab = (typeof VALID_TABS)[number];
 
 export default function SettingsPage() {
@@ -26,7 +39,8 @@ export default function SettingsPage() {
 
   const rawTab = searchParams.get("tab") ?? "account";
   const activeTab: SettingsTab =
-    (VALID_TABS as readonly string[]).includes(rawTab) && (rawTab !== "admin" || user.is_admin)
+    (VALID_TABS as readonly string[]).includes(rawTab) &&
+    (rawTab !== "admin" || user.is_admin)
       ? (rawTab as SettingsTab)
       : "account";
 
@@ -52,10 +66,13 @@ export default function SettingsPage() {
     { value: "subscriptions", label: t("settings.tabs.subscriptions") },
     { value: "notifications", label: t("settings.tabs.notifications") },
     { value: "integrations", label: t("settings.tabs.integrations") },
-    ...(user.is_admin ? [{ value: "admin", label: t("settings.tabs.admin") }] : []),
+    ...(user.is_admin
+      ? [{ value: "admin", label: t("settings.tabs.admin") }]
+      : []),
   ];
 
-  const breadcrumbLabel = TABS.find((x) => x.value === activeTab)?.label ?? activeTab;
+  const breadcrumbLabel =
+    TABS.find((x) => x.value === activeTab)?.label ?? activeTab;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -84,7 +101,9 @@ export default function SettingsPage() {
           buildInfo={
             <div className="space-y-0.5">
               <div>Remindarr · self-hosted</div>
-              <div className="text-zinc-500">TMDB · {navigator.language || "en"}</div>
+              <div className="text-zinc-500">
+                TMDB · {navigator.language || "en"}
+              </div>
             </div>
           }
         />

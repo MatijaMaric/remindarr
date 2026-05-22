@@ -32,7 +32,10 @@ describe("MemoryCache", () => {
   });
 
   it("stores and retrieves array values", async () => {
-    const arr = [[1, "Action"], [2, "Comedy"]] as [number, string][];
+    const arr = [
+      [1, "Action"],
+      [2, "Comedy"],
+    ] as [number, string][];
     await cache.set("arr", arr, 60);
     expect(await cache.get<[number, string][]>("arr")).toEqual(arr);
   });
@@ -79,7 +82,10 @@ describe("MemoryCache", () => {
 
   it("round-trips complex nested data through JSON serialization", async () => {
     const data = {
-      genres: [[28, "Action"], [35, "Comedy"]] as [number, string][],
+      genres: [
+        [28, "Action"],
+        [35, "Comedy"],
+      ] as [number, string][],
       providers: [{ id: 8, name: "Netflix", iconUrl: "/nf.png" }],
       empty: null,
       flag: false,

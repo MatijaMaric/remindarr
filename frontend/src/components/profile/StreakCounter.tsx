@@ -49,7 +49,9 @@ export default function StreakCounter({ streak, variant }: StreakCounterProps) {
             <span className="text-xl font-extrabold text-amber-400 tabular-nums">
               {streak.currentStreak}
             </span>
-            <span className="text-sm text-zinc-300 font-medium">day streak</span>
+            <span className="text-sm text-zinc-300 font-medium">
+              day streak
+            </span>
           </div>
           {streak.longestStreak > 0 && (
             <p className="text-[11px] text-zinc-500 font-mono">

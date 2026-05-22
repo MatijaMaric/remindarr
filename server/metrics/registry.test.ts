@@ -94,7 +94,11 @@ describe("Histogram", () => {
   let hist: Histogram;
 
   beforeEach(() => {
-    hist = new Histogram("test_duration_seconds", "Test histogram", [0.01, 0.1, 1]);
+    hist = new Histogram(
+      "test_duration_seconds",
+      "Test histogram",
+      [0.01, 0.1, 1],
+    );
   });
 
   it("renders no data when no observations", () => {
@@ -106,8 +110,8 @@ describe("Histogram", () => {
 
   it("records observations into cumulative buckets", () => {
     hist.observe({}, 0.005); // falls in le=0.01, 0.1, 1 buckets
-    hist.observe({}, 0.05);  // falls in le=0.1, 1 buckets
-    hist.observe({}, 0.5);   // falls in le=1 bucket only
+    hist.observe({}, 0.05); // falls in le=0.1, 1 buckets
+    hist.observe({}, 0.5); // falls in le=1 bucket only
 
     const out = hist.render();
     expect(out).toContain('test_duration_seconds_bucket{le="0.01"} 1');
@@ -129,9 +133,15 @@ describe("Histogram", () => {
     hist.observe({ method: "POST" }, 0.5);
 
     const out = hist.render();
-    expect(out).toContain('test_duration_seconds_bucket{method="GET",le="0.01"} 1');
-    expect(out).toContain('test_duration_seconds_bucket{method="POST",le="0.01"} 0');
-    expect(out).toContain('test_duration_seconds_bucket{method="POST",le="1"} 1');
+    expect(out).toContain(
+      'test_duration_seconds_bucket{method="GET",le="0.01"} 1',
+    );
+    expect(out).toContain(
+      'test_duration_seconds_bucket{method="POST",le="0.01"} 0',
+    );
+    expect(out).toContain(
+      'test_duration_seconds_bucket{method="POST",le="1"} 1',
+    );
   });
 
   it("resets data", () => {

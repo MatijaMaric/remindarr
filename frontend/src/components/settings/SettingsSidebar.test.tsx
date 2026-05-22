@@ -15,11 +15,7 @@ afterEach(() => {
 describe("SettingsSidebar", () => {
   it("marks the active tab buttons with aria-selected=true and inactive tabs with aria-selected=false", () => {
     render(
-      <SettingsSidebar
-        tabs={tabs}
-        active="integrations"
-        onSelect={vi.fn()}
-      />,
+      <SettingsSidebar tabs={tabs} active="integrations" onSelect={vi.fn()} />,
     );
 
     // Both mobile and desktop render in JSDOM (CSS visibility not applied).
@@ -29,7 +25,9 @@ describe("SettingsSidebar", () => {
       expect(btn.getAttribute("aria-selected")).toBe("true");
     }
 
-    const inactiveButtons = screen.getAllByRole("tab", { name: "Notifications" });
+    const inactiveButtons = screen.getAllByRole("tab", {
+      name: "Notifications",
+    });
     for (const btn of inactiveButtons) {
       expect(btn.getAttribute("aria-selected")).toBe("false");
     }
@@ -37,17 +35,15 @@ describe("SettingsSidebar", () => {
 
   it("renders tablist roles on nav elements with the expected accessible label", () => {
     render(
-      <SettingsSidebar
-        tabs={tabs}
-        active="notifications"
-        onSelect={vi.fn()}
-      />,
+      <SettingsSidebar tabs={tabs} active="notifications" onSelect={vi.fn()} />,
     );
 
     // Both mobile and desktop navs have role=tablist.
     // In JSDOM both render regardless of Tailwind sm:hidden,
     // so we expect 2 tablists (mobile + desktop).
-    const tablists = screen.getAllByRole("tablist", { name: "Settings sections" });
+    const tablists = screen.getAllByRole("tablist", {
+      name: "Settings sections",
+    });
     expect(tablists.length).toBe(2);
   });
 

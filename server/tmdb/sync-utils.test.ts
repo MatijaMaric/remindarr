@@ -175,7 +175,10 @@ describe("syncEachWithDelay", () => {
 
     expect(failures).toHaveLength(1);
     expect(errSpy).toHaveBeenCalledTimes(1);
-    const [msg, data] = errSpy.mock.calls[0] as unknown as [string, Record<string, unknown>];
+    const [msg, data] = errSpy.mock.calls[0] as unknown as [
+      string,
+      Record<string, unknown>,
+    ];
     expect(msg).toContain("my-label");
     expect(data).toHaveProperty("err");
   });

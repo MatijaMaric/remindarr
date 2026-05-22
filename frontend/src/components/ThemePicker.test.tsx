@@ -1,4 +1,12 @@
-import { describe, it, expect, afterEach, beforeEach, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  afterEach,
+  beforeEach,
+  mock,
+  spyOn,
+} from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "../i18n";
 import ThemePicker from "./ThemePicker";
@@ -19,7 +27,9 @@ const mockAppearance: AppearanceSettings = {
 let apiSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-  apiSpy = spyOn(api, "updateAppearanceSettings").mockResolvedValue(mockAppearance);
+  apiSpy = spyOn(api, "updateAppearanceSettings").mockResolvedValue(
+    mockAppearance,
+  );
 });
 
 afterEach(() => {

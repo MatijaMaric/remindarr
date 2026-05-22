@@ -6,7 +6,13 @@ import { setPublicCacheIfAnon } from "./cache-headers";
 const ANON_RE = /^public, s-maxage=\d+, stale-while-revalidate=\d+$/;
 
 function fakeUser() {
-  return { id: "u1", username: "alice", name: null, role: null, is_admin: false };
+  return {
+    id: "u1",
+    username: "alice",
+    name: null,
+    role: null,
+    is_admin: false,
+  };
 }
 
 describe("setPublicCacheIfAnon", () => {
@@ -19,7 +25,9 @@ describe("setPublicCacheIfAnon", () => {
     const res = await app.request("/");
     expect(res.headers.get("cache-control")).toMatch(ANON_RE);
     expect(res.headers.get("cache-control")).toContain("s-maxage=3600");
-    expect(res.headers.get("cache-control")).toContain("stale-while-revalidate=604800");
+    expect(res.headers.get("cache-control")).toContain(
+      "stale-while-revalidate=604800",
+    );
   });
 
   it("emits private no-store for authenticated requests", async () => {
@@ -41,7 +49,9 @@ describe("setPublicCacheIfAnon", () => {
       return c.json({ ok: true });
     });
     const res = await app.request("/");
-    expect(res.headers.get("cache-control")).toContain("stale-while-revalidate=86400");
+    expect(res.headers.get("cache-control")).toContain(
+      "stale-while-revalidate=86400",
+    );
   });
 
   it("does not bleed authed user header into subsequent anon response", async () => {

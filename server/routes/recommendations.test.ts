@@ -1,12 +1,16 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser, follow } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+  follow,
+} from "../db/repository";
 import { getRawDb } from "../db/bun-db";
 import { requireAuth } from "../middleware/auth";
 import recommendationsApp from "./recommendations";
 import type { AppEnv } from "../types";
-
 
 function createMockAuth() {
   return {
@@ -75,7 +79,7 @@ function authHeaders(token: string) {
 function insertTitle(id: string, objectType = "MOVIE", name = "Title") {
   const db = getRawDb();
   db.prepare(
-    `INSERT INTO titles (id, object_type, title, release_date, poster_url) VALUES (?, ?, ?, '2024-01-01', 'https://example.com/poster.jpg')`
+    `INSERT INTO titles (id, object_type, title, release_date, poster_url) VALUES (?, ?, ?, '2024-01-01', 'https://example.com/poster.jpg')`,
   ).run(id, objectType, name);
 }
 
@@ -219,12 +223,18 @@ describe("GET /recommendations", () => {
     // Alice recommends two titles
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "show-456" }),
     });
 
@@ -258,7 +268,10 @@ describe("GET /recommendations/sent", () => {
   it("lists user's own recommendations", async () => {
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", message: "Enjoy!" }),
     });
 
@@ -284,7 +297,10 @@ describe("GET /recommendations/check/:titleId", () => {
   it("returns recommended true if user already recommended", async () => {
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
 
@@ -320,7 +336,10 @@ describe("POST /recommendations/:id/read", () => {
     // Alice recommends
     const createRes = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
     const { id } = await createRes.json();
@@ -354,7 +373,10 @@ describe("DELETE /recommendations/:id", () => {
   it("creator can delete their recommendation", async () => {
     const createRes = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
     const { id } = await createRes.json();
@@ -379,7 +401,10 @@ describe("DELETE /recommendations/:id", () => {
   it("non-creator cannot delete", async () => {
     const createRes = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
     const { id } = await createRes.json();
@@ -410,7 +435,10 @@ describe("validation", () => {
   it("rejects POST / with empty titleId via zod", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "" }),
     });
     expect(res.status).toBe(400);
@@ -423,7 +451,10 @@ describe("validation", () => {
   it("rejects POST / when message exceeds 500 chars", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", message: "x".repeat(501) }),
     });
     expect(res.status).toBe(400);
@@ -460,8 +491,15 @@ describe("POST /recommendations — targeted", () => {
 
     const res = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleId: "movie-123", message: "Just for you!", targetUserId: userBId }),
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        titleId: "movie-123",
+        message: "Just for you!",
+        targetUserId: userBId,
+      }),
     });
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -472,7 +510,10 @@ describe("POST /recommendations — targeted", () => {
   it("returns 400 when targeting yourself", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userAId }),
     });
     expect(res.status).toBe(400);
@@ -484,7 +525,10 @@ describe("POST /recommendations — targeted", () => {
     // Alice does not follow Carol
     const res = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userCId }),
     });
     expect(res.status).toBe(403);
@@ -498,14 +542,20 @@ describe("POST /recommendations — targeted", () => {
 
     const resB = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
     });
     expect(resB.status).toBe(201);
 
     const resC = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userCId }),
     });
     expect(resC.status).toBe(201);
@@ -516,13 +566,19 @@ describe("POST /recommendations — targeted", () => {
 
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
     });
 
     const res = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
     });
     expect(res.status).toBe(409);
@@ -534,8 +590,15 @@ describe("POST /recommendations — targeted", () => {
 
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ titleId: "movie-123", message: "Direct rec!", targetUserId: userBId }),
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        titleId: "movie-123",
+        message: "Direct rec!",
+        targetUserId: userBId,
+      }),
     });
 
     // Bob should see it in his feed despite not following Alice
@@ -557,7 +620,10 @@ describe("POST /recommendations — targeted", () => {
     // Alice sends a targeted rec to Bob
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
     });
 
@@ -579,14 +645,20 @@ describe("POST /recommendations — targeted", () => {
     // Alice sends a broadcast
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
 
     // Alice sends a targeted rec to Bob
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "show-456", targetUserId: userBId }),
     });
 
@@ -614,7 +686,10 @@ describe("GET /recommendations — targeted visibility", () => {
 
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: userBId }),
     });
 
@@ -631,7 +706,10 @@ describe("validation — targetUserId", () => {
   it("rejects POST / with targetUserId as a number (not string)", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123", targetUserId: 123 }),
     });
     expect(res.status).toBe(400);
@@ -648,12 +726,18 @@ describe("GET /recommendations/count", () => {
     // Alice recommends two titles
     await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "movie-123" }),
     });
     const createRes = await app.request("/recommendations", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ titleId: "show-456" }),
     });
     const { id: secondId } = await createRes.json();

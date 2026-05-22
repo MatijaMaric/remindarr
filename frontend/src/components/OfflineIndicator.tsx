@@ -5,7 +5,8 @@ async function queryCacheAge(cacheName: string): Promise<number | null> {
   if (!sw) return null;
   return new Promise((resolve) => {
     const mc = new MessageChannel();
-    mc.port1.onmessage = (e) => resolve((e.data as { ageMs: number | null }).ageMs);
+    mc.port1.onmessage = (e) =>
+      resolve((e.data as { ageMs: number | null }).ageMs);
     sw.postMessage({ type: "GET_CACHE_AGE", cacheName }, [mc.port2]);
     setTimeout(() => resolve(null), 2000);
   });
@@ -51,12 +52,12 @@ export default function OfflineIndicator() {
   if (isOnline) return null;
 
   const isStale = cacheAgeMs !== null && cacheAgeMs > STALE_THRESHOLD_MS;
-  const bgClass = isStale
-    ? "bg-orange-500/90"
-    : "bg-yellow-500/90";
+  const bgClass = isStale ? "bg-orange-500/90" : "bg-yellow-500/90";
 
   return (
-    <div className={`fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-1 rounded-xl ${bgClass} px-4 py-2.5 text-sm font-medium text-black shadow-lg backdrop-blur max-w-xs w-max`}>
+    <div
+      className={`fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-1 rounded-xl ${bgClass} px-4 py-2.5 text-sm font-medium text-black shadow-lg backdrop-blur max-w-xs w-max`}
+    >
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-black/40 shrink-0" />
         You&apos;re offline

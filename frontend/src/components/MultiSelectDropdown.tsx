@@ -79,7 +79,9 @@ export default function MultiSelectDropdown({
   }
 
   // Resolve all options flat for summary display
-  const allOptions = sections ? sections.flatMap((s) => s.options) : options || [];
+  const allOptions = sections
+    ? sections.flatMap((s) => s.options)
+    : options || [];
 
   const summary =
     selected.length === 0
@@ -158,7 +160,12 @@ export default function MultiSelectDropdown({
           viewBox="0 0 24 24"
           aria-hidden="true"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
       {open && (
@@ -182,9 +189,7 @@ export default function MultiSelectDropdown({
               </button>
             )}
           </div>
-          <div className="overflow-y-auto py-1">
-            {renderContent()}
-          </div>
+          <div className="overflow-y-auto py-1">{renderContent()}</div>
         </div>
       )}
     </div>

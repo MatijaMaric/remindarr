@@ -89,5 +89,5 @@ export class Logger {
 }
 
 export const logger = new Logger(
-  (import.meta.env.VITE_LOG_LEVEL as LogLevel) || "info"
+  (import.meta.env.VITE_LOG_LEVEL as LogLevel) || "info",
 );

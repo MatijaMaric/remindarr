@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import ShareButton from "./ShareButton";
 import * as sonner from "sonner";
 
@@ -18,7 +24,11 @@ afterEach(() => {
   spies = [];
   // Restore navigator.share if it was modified
   if ("share" in navigator) {
-    Object.defineProperty(navigator, "share", { value: undefined, writable: true, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
   }
 });
 
@@ -39,9 +49,15 @@ describe("ShareButton", () => {
 
   it("copies URL to clipboard when navigator.share is not available", async () => {
     // Ensure navigator.share is undefined
-    Object.defineProperty(navigator, "share", { value: undefined, writable: true, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
 
-    const writeText = spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+    const writeText = spyOn(navigator.clipboard, "writeText").mockResolvedValue(
+      undefined,
+    );
     spies.push(writeText);
 
     render(<ShareButton url="https://example.com/movie/123" />);
@@ -49,15 +65,25 @@ describe("ShareButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /share/i }));
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://example.com/movie/123");
-      expect(sonner.toast.success).toHaveBeenCalledWith("Link copied to clipboard");
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "https://example.com/movie/123",
+      );
+      expect(sonner.toast.success).toHaveBeenCalledWith(
+        "Link copied to clipboard",
+      );
     });
   });
 
   it("falls back to window.location.href when no url prop provided", async () => {
-    Object.defineProperty(navigator, "share", { value: undefined, writable: true, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
 
-    const writeText = spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+    const writeText = spyOn(navigator.clipboard, "writeText").mockResolvedValue(
+      undefined,
+    );
     spies.push(writeText);
 
     render(<ShareButton />);
@@ -65,14 +91,22 @@ describe("ShareButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /share/i }));
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(window.location.href);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        window.location.href,
+      );
     });
   });
 
   it("shows error toast when clipboard write fails", async () => {
-    Object.defineProperty(navigator, "share", { value: undefined, writable: true, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
 
-    const writeText = spyOn(navigator.clipboard, "writeText").mockRejectedValue(new Error("Clipboard failed"));
+    const writeText = spyOn(navigator.clipboard, "writeText").mockRejectedValue(
+      new Error("Clipboard failed"),
+    );
     spies.push(writeText);
 
     render(<ShareButton url="https://example.com/test" />);
@@ -85,12 +119,24 @@ describe("ShareButton", () => {
   });
 
   it("uses navigator.share when available", async () => {
-    const shareFn = spyOn(navigator, "share" as any).mockResolvedValue(undefined);
+    const shareFn = spyOn(navigator, "share" as any).mockResolvedValue(
+      undefined,
+    );
     // Ensure share is defined as a function
-    Object.defineProperty(navigator, "share", { value: shareFn, writable: true, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: shareFn,
+      writable: true,
+      configurable: true,
+    });
     spies.push(shareFn);
 
-    render(<ShareButton title="Test Movie" text="Check this out" url="https://example.com/movie/1" />);
+    render(
+      <ShareButton
+        title="Test Movie"
+        text="Check this out"
+        url="https://example.com/movie/1"
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /share/i }));
 
@@ -106,7 +152,11 @@ describe("ShareButton", () => {
   it("silently handles user cancelling the share dialog", async () => {
     const abortError = new DOMException("Share canceled", "AbortError");
     const shareFn = () => Promise.reject(abortError);
-    Object.defineProperty(navigator, "share", { value: shareFn, writable: true, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: shareFn,
+      writable: true,
+      configurable: true,
+    });
 
     render(<ShareButton url="https://example.com/test" />);
 

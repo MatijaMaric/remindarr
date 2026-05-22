@@ -10,7 +10,7 @@ import { describe, it, expect, mock } from "bun:test";
  */
 async function subscribeToPush(
   vapidPublicKey: string,
-  registration: { pushManager: PushManager }
+  registration: { pushManager: PushManager },
 ): Promise<{ endpoint: string; p256dh: string; auth: string }> {
   const existing = await registration.pushManager.getSubscription();
   if (existing) {
@@ -44,7 +44,7 @@ function makeRegistration(opts: {
 }) {
   const mockSubscribe = mock(() => Promise.resolve(opts.newSubscription));
   const mockGetSubscription = mock(() =>
-    Promise.resolve(opts.existingSubscription ?? null)
+    Promise.resolve(opts.existingSubscription ?? null),
   );
 
   return {
@@ -71,13 +71,17 @@ const VALID_SUBSCRIPTION = {
  */
 async function getExistingSubscription(
   isPushSupportedFn: () => boolean,
-  serviceWorkerReady: Promise<{ pushManager: { getSubscription: () => Promise<PushSubscription | null> } }>,
-  timeoutMs = 5000
+  serviceWorkerReady: Promise<{
+    pushManager: { getSubscription: () => Promise<PushSubscription | null> };
+  }>,
+  timeoutMs = 5000,
 ): Promise<PushSubscription | null> {
   if (!isPushSupportedFn()) return null;
-  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
-  const getSubscription = serviceWorkerReady.then(
-    (registration) => registration.pushManager.getSubscription()
+  const timeout = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), timeoutMs),
+  );
+  const getSubscription = serviceWorkerReady.then((registration) =>
+    registration.pushManager.getSubscription(),
   );
   return Promise.race([getSubscription, timeout]);
 }
@@ -86,17 +90,23 @@ describe("getExistingSubscription", () => {
   it("returns null immediately when push is not supported", async () => {
     const result = await getExistingSubscription(
       () => false,
-      Promise.resolve({ pushManager: { getSubscription: () => Promise.resolve(null) } })
+      Promise.resolve({
+        pushManager: { getSubscription: () => Promise.resolve(null) },
+      }),
     );
     expect(result).toBeNull();
   });
 
   it("returns subscription when service worker is ready", async () => {
-    const fakeSubscription = { endpoint: "https://fcm.example.com/send/abc" } as PushSubscription;
+    const fakeSubscription = {
+      endpoint: "https://fcm.example.com/send/abc",
+    } as PushSubscription;
     const mockGetSubscription = mock(() => Promise.resolve(fakeSubscription));
     const result = await getExistingSubscription(
       () => true,
-      Promise.resolve({ pushManager: { getSubscription: mockGetSubscription } })
+      Promise.resolve({
+        pushManager: { getSubscription: mockGetSubscription },
+      }),
     );
     expect(result).toBe(fakeSubscription);
     expect(mockGetSubscription).toHaveBeenCalled();
@@ -106,8 +116,12 @@ describe("getExistingSubscription", () => {
     const neverResolves = new Promise<never>(() => {});
     const result = await getExistingSubscription(
       () => true,
-      neverResolves as unknown as Promise<{ pushManager: { getSubscription: () => Promise<PushSubscription | null> } }>,
-      10 // very short timeout for tests
+      neverResolves as unknown as Promise<{
+        pushManager: {
+          getSubscription: () => Promise<PushSubscription | null>;
+        };
+      }>,
+      10, // very short timeout for tests
     );
     expect(result).toBeNull();
   });
@@ -134,7 +148,7 @@ describe("subscribeToPush", () => {
 
   it("proceeds even if existing unsubscribe fails", async () => {
     const mockUnsubscribe = mock(() =>
-      Promise.reject(new Error("unsubscribe failed"))
+      Promise.reject(new Error("unsubscribe failed")),
     );
     const { mockSubscribe, registration } = makeRegistration({
       existingSubscription: { unsubscribe: mockUnsubscribe },
@@ -173,7 +187,7 @@ describe("subscribeToPush", () => {
     });
 
     await expect(
-      subscribeToPush("test-vapid-key", registration)
+      subscribeToPush("test-vapid-key", registration),
     ).rejects.toThrow("Invalid push subscription");
   });
 });

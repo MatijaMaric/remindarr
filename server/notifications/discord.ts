@@ -22,9 +22,10 @@ const EMBED_COLOR = 0x4f46e5; // indigo-600
 export class DiscordProvider implements NotificationProvider {
   readonly name = "discord";
 
-  validateConfig(
-    config: Record<string, string>
-  ): { valid: boolean; error?: string } {
+  validateConfig(config: Record<string, string>): {
+    valid: boolean;
+    error?: string;
+  } {
     if (!config.webhookUrl) {
       return { valid: false, error: "Webhook URL is required" };
     }
@@ -39,7 +40,7 @@ export class DiscordProvider implements NotificationProvider {
 
   async send(
     config: Record<string, string>,
-    content: NotificationContent
+    content: NotificationContent,
   ): Promise<void> {
     const embeds = this.buildEmbeds(content);
     if (embeds.length === 0) return;
@@ -56,39 +57,61 @@ export class DiscordProvider implements NotificationProvider {
 
       if (!response.ok) {
         const text = await response.text().catch(() => "");
-        throw new Error(
-          `Discord webhook failed (${response.status}): ${text}`
-        );
+        throw new Error(`Discord webhook failed (${response.status}): ${text}`);
       }
     });
   }
 
-  private buildEmbeds(content: NotificationContent, _config?: Record<string, string>) {
+  private buildEmbeds(
+    content: NotificationContent,
+    _config?: Record<string, string>,
+  ) {
     const embeds: DiscordEmbed[] = [];
-    const { episodes, movies, date, streamingAlerts = [], achievementsEarned = [] } = content;
+    const {
+      episodes,
+      movies,
+      date,
+      streamingAlerts = [],
+      achievementsEarned = [],
+    } = content;
 
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return [];
+    if (
+      episodes.length === 0 &&
+      movies.length === 0 &&
+      streamingAlerts.length === 0 &&
+      achievementsEarned.length === 0
+    )
+      return [];
 
     // Header embed
     const parts: string[] = [];
     if (episodes.length > 0) {
-      parts.push(`${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`);
+      parts.push(
+        `${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`,
+      );
     }
     if (movies.length > 0) {
       parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
     }
 
     const arrivalAlerts = streamingAlerts.filter((a) => a.kind === "arrival");
-    const departureAlerts = streamingAlerts.filter((a) => a.kind === "departure");
+    const departureAlerts = streamingAlerts.filter(
+      (a) => a.kind === "departure",
+    );
 
     if (streamingAlerts.length > 0 || parts.length > 0) {
       const descParts: string[] = [];
-      if (parts.length > 0) descParts.push(`${parts.join(" and ")} releasing today`);
+      if (parts.length > 0)
+        descParts.push(`${parts.join(" and ")} releasing today`);
       if (arrivalAlerts.length > 0) {
-        descParts.push(`${arrivalAlerts.length} title${arrivalAlerts.length !== 1 ? "s" : ""} now streaming`);
+        descParts.push(
+          `${arrivalAlerts.length} title${arrivalAlerts.length !== 1 ? "s" : ""} now streaming`,
+        );
       }
       if (departureAlerts.length > 0) {
-        descParts.push(`${departureAlerts.length} title${departureAlerts.length !== 1 ? "s" : ""} leaving soon`);
+        descParts.push(
+          `${departureAlerts.length} title${departureAlerts.length !== 1 ? "s" : ""} leaving soon`,
+        );
       }
       embeds.push({
         title: `📺 Releases for ${date}`,
@@ -155,9 +178,10 @@ export class DiscordProvider implements NotificationProvider {
 
     // Streaming alert embeds
     for (const alert of streamingAlerts) {
-      const description = alert.kind === "departure"
-        ? formatLeavingCopy(alert.providerName, alert.leavingAt)
-        : `Now available on **${alert.providerName}**`;
+      const description =
+        alert.kind === "departure"
+          ? formatLeavingCopy(alert.providerName, alert.leavingAt)
+          : `Now available on **${alert.providerName}**`;
       const embed: DiscordEmbed = {
         title: `🎬 ${alert.title}`,
         description,

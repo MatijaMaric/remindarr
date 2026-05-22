@@ -6,7 +6,10 @@ import VisibilityButton from "../VisibilityButton";
 import WatchButtonGroup from "../WatchButtonGroup";
 import { Chip, Kicker } from "../design";
 import { RatingBadge } from "./RatingBadge";
-import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
+import {
+  backdropUrl as mkBackdropUrl,
+  posterUrl as mkPosterUrl,
+} from "../../lib/tmdb-images";
 import { formatRuntime } from "./utils";
 import TrailerEmbed, { hasTrailer } from "./TrailerEmbed";
 
@@ -19,7 +22,12 @@ export interface MovieHeroProps {
   watchHistoryPanel: ReactNode;
 }
 
-export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPanel }: MovieHeroProps) {
+export default function MovieHero({
+  title,
+  tmdb,
+  watchedActions,
+  watchHistoryPanel,
+}: MovieHeroProps) {
   const [showTrailer, setShowTrailer] = useState(false);
   const videos = tmdb?.videos?.results ?? [];
   const trailerAvailable = hasTrailer(videos);
@@ -70,16 +78,24 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
         {/* Title info */}
         <div className="flex-1 space-y-3 max-w-[820px]">
           <div>
-            {tmdb?.tagline && <p className="text-sm text-amber-400 italic mb-1 select-text">{tmdb.tagline}</p>}
+            {tmdb?.tagline && (
+              <p className="text-sm text-amber-400 italic mb-1 select-text">
+                {tmdb.tagline}
+              </p>
+            )}
             <Kicker className="mb-2">
               Movie{title.release_year ? ` · ${title.release_year}` : ""}
-              {title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
+              {title.offers[0]?.provider_name
+                ? ` · ${title.offers[0].provider_name}`
+                : ""}
             </Kicker>
             <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white select-text">
               {displayTitle}
             </h1>
             {originalTitle && originalTitle !== displayTitle && (
-              <p className="text-sm text-zinc-400 mt-1 select-text">{originalTitle}</p>
+              <p className="text-sm text-zinc-400 mt-1 select-text">
+                {originalTitle}
+              </p>
             )}
           </div>
 
@@ -88,13 +104,17 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
             {(title.runtime_minutes || tmdb?.runtime) && (
               <>
                 <span className="text-zinc-600">·</span>
-                <span>{formatRuntime(tmdb?.runtime || title.runtime_minutes)}</span>
+                <span>
+                  {formatRuntime(tmdb?.runtime || title.runtime_minutes)}
+                </span>
               </>
             )}
             {certification && (
               <>
                 <span className="text-zinc-600">·</span>
-                <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">{certification}</span>
+                <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">
+                  {certification}
+                </span>
               </>
             )}
             {tmdb?.status && (
@@ -112,18 +132,27 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
                   {g}
                 </Chip>
               ))}
-              {title.imdb_score && <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>}
+              {title.imdb_score && (
+                <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>
+              )}
             </div>
           )}
 
           {/* Ratings */}
           <div className="flex items-center gap-6 pt-2">
             <RatingBadge label="IMDb" score={title.imdb_score} />
-            <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
+            <RatingBadge
+              label="TMDB"
+              score={tmdb?.vote_average ?? title.tmdb_score}
+            />
           </div>
 
           <div className="pt-2 flex flex-wrap items-center gap-2">
-            <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+            <TrackButton
+              titleId={title.id}
+              isTracked={title.is_tracked}
+              titleData={title}
+            />
             <PinButton titleId={title.id} />
             <VisibilityButton
               titleId={title.id}
@@ -131,14 +160,23 @@ export default function MovieHero({ title, tmdb, watchedActions, watchHistoryPan
               isTracked={title.is_tracked}
             />
             {watchedActions}
-            <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
+            <WatchButtonGroup
+              offers={title.offers}
+              variant="inline"
+              maxVisible={3}
+            />
             {trailerAvailable && (
               <button
                 type="button"
                 onClick={() => setShowTrailer((prev) => !prev)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
               >
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h7A1.5 1.5 0 0 1 13 3.5v9A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-9ZM6 5.5v5l4.5-2.5L6 5.5Z" />
                 </svg>
                 {showTrailer ? "Hide Trailer" : "Watch Trailer"}

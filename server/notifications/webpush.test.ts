@@ -51,7 +51,10 @@ beforeEach(() => {
   CONFIG.VAPID_PUBLIC_KEY = "test-public-key";
   CONFIG.VAPID_PRIVATE_KEY = "test-private-key";
   CONFIG.VAPID_SUBJECT = "mailto:test@example.com";
-  setVapidDetailsSpy = spyOn(webpush.default, "setVapidDetails").mockImplementation(() => {});
+  setVapidDetailsSpy = spyOn(
+    webpush.default,
+    "setVapidDetails",
+  ).mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -89,12 +92,13 @@ describe("WebPushProvider.validateConfig", () => {
 describe("WebPushProvider.send", () => {
   it("sends push notification with correct payload", async () => {
     let sentPayload: string | undefined;
-    const sendSpy = spyOn(webpush.default, "sendNotification").mockImplementation(
-      async (_sub: any, payload: any) => {
-        sentPayload = payload;
-        return { statusCode: 201 } as any;
-      }
-    );
+    const sendSpy = spyOn(
+      webpush.default,
+      "sendNotification",
+    ).mockImplementation(async (_sub: any, payload: any) => {
+      sentPayload = payload;
+      return { statusCode: 201 } as any;
+    });
 
     await provider.send(validConfig, sampleContent);
 
@@ -111,42 +115,57 @@ describe("WebPushProvider.send", () => {
   it("skips sending when content is empty", async () => {
     const sendSpy = spyOn(webpush.default, "sendNotification");
 
-    await provider.send(validConfig, { date: "2026-03-15", episodes: [], movies: [] });
+    await provider.send(validConfig, {
+      date: "2026-03-15",
+      episodes: [],
+      movies: [],
+    });
 
     expect(sendSpy).not.toHaveBeenCalled();
     sendSpy.mockRestore();
   });
 
   it("throws SubscriptionExpiredError on 410", async () => {
-    const sendSpy = spyOn(webpush.default, "sendNotification").mockImplementation(async () => {
+    const sendSpy = spyOn(
+      webpush.default,
+      "sendNotification",
+    ).mockImplementation(async () => {
       const err: any = new Error("Gone");
       err.statusCode = 410;
       throw err;
     });
 
     await expect(provider.send(validConfig, sampleContent)).rejects.toThrow(
-      SubscriptionExpiredError
+      SubscriptionExpiredError,
     );
 
     sendSpy.mockRestore();
   });
 
   it("throws generic error on other failures", async () => {
-    const sendSpy = spyOn(webpush.default, "sendNotification").mockImplementation(async () => {
+    const sendSpy = spyOn(
+      webpush.default,
+      "sendNotification",
+    ).mockImplementation(async () => {
       const err: any = new Error("Server Error");
       err.statusCode = 500;
       err.body = "Internal Server Error";
       throw err;
     });
 
-    await expect(provider.send(validConfig, sampleContent)).rejects.toThrow("Web push failed");
+    await expect(provider.send(validConfig, sampleContent)).rejects.toThrow(
+      "Web push failed",
+    );
 
     sendSpy.mockRestore();
   });
 
   it("includes achievement info in body when achievementsEarned is populated", async () => {
     let capturedPayload: string | null = null;
-    const sendSpy = spyOn(webpush.default, "sendNotification").mockImplementation(async (_sub: any, payload: any) => {
+    const sendSpy = spyOn(
+      webpush.default,
+      "sendNotification",
+    ).mockImplementation(async (_sub: any, payload: any) => {
       capturedPayload = payload;
       return { statusCode: 201, body: "", headers: {} } as any;
     });
@@ -154,7 +173,14 @@ describe("WebPushProvider.send", () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,
       achievementsEarned: [
-        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+        {
+          key: "movies_10",
+          title: "Cinephile I",
+          description: "Watch 10 movies",
+          icon: "Film",
+          points: 10,
+          earnedAt: "2026-01-01T00:00:00.000Z",
+        },
       ],
     };
     await provider.send(validConfig, contentWithAchievements);
@@ -168,7 +194,10 @@ describe("WebPushProvider.send", () => {
 
   it("does NOT include achievement info when achievementsEarned is empty", async () => {
     let capturedPayload: string | null = null;
-    const sendSpy = spyOn(webpush.default, "sendNotification").mockImplementation(async (_sub: any, payload: any) => {
+    const sendSpy = spyOn(
+      webpush.default,
+      "sendNotification",
+    ).mockImplementation(async (_sub: any, payload: any) => {
       capturedPayload = payload;
       return { statusCode: 201, body: "", headers: {} } as any;
     });

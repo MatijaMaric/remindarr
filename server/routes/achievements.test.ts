@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser, upsertTitles } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+  upsertTitles,
+} from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
 import { optionalAuth } from "../middleware/auth";
 import { upsertAchievementDef } from "../db/repository/achievements";
@@ -48,7 +53,13 @@ beforeEach(async () => {
   userBId = await createUser("bob", "hash", "Bob");
   userBToken = await createSession(userBId);
 
-  await upsertTitles([makeParsedTitle({ id: "movie-1", objectType: "MOVIE", title: "Test Movie" })]);
+  await upsertTitles([
+    makeParsedTitle({
+      id: "movie-1",
+      objectType: "MOVIE",
+      title: "Test Movie",
+    }),
+  ]);
 
   app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
@@ -126,7 +137,9 @@ describe("GET /achievements", () => {
   it("computes one-shot tier and null family for social achievements", async () => {
     const res = await app.request("/achievements");
     const body = await res.json();
-    const socialRow = body.achievements.find((a: any) => a.key === "first_recommendation");
+    const socialRow = body.achievements.find(
+      (a: any) => a.key === "first_recommendation",
+    );
     expect(socialRow.category).toBe("social");
     expect(socialRow.family).toBeNull();
     expect(socialRow.tier).toBe("one-shot");
@@ -136,7 +149,9 @@ describe("GET /achievements", () => {
   it("genre_explorer has null family and one-shot tier", async () => {
     const res = await app.request("/achievements");
     const body = await res.json();
-    const explorerRow = body.achievements.find((a: any) => a.key === "genre_explorer");
+    const explorerRow = body.achievements.find(
+      (a: any) => a.key === "genre_explorer",
+    );
     expect(explorerRow.category).toBe("genres");
     expect(explorerRow.family).toBeNull();
     expect(explorerRow.tier).toBe("one-shot");
@@ -146,7 +161,9 @@ describe("GET /achievements", () => {
   it("specific genre achievements have family and ladder tier", async () => {
     const res = await app.request("/achievements");
     const body = await res.json();
-    const actionRow = body.achievements.find((a: any) => a.key === "genre_action_25");
+    const actionRow = body.achievements.find(
+      (a: any) => a.key === "genre_action_25",
+    );
     expect(actionRow.category).toBe("genres");
     expect(actionRow.family).toBe("genre_action");
     expect(actionRow.tier).toBe("ladder");
@@ -192,19 +209,24 @@ describe("GET /achievements/me", () => {
     const { getDb } = await import("../db/schema");
     const { userAchievements } = await import("../db/schema");
     const db = getDb();
-    await db.insert(userAchievements).values({
-      userId: userAId,
-      achievementKey: "movies_10",
-      progress: 10,
-      earnedAt: new Date().toISOString(),
-    }).run();
+    await db
+      .insert(userAchievements)
+      .values({
+        userId: userAId,
+        achievementKey: "movies_10",
+        progress: 10,
+        earnedAt: new Date().toISOString(),
+      })
+      .run();
 
     const res = await app.request("/achievements/me", {
       headers: authHeaders(userAToken),
     });
     const body = await res.json();
     const earnedRow = body.achievements.find((a: any) => a.key === "movies_10");
-    const unearnedRow = body.achievements.find((a: any) => a.key === "movies_50");
+    const unearnedRow = body.achievements.find(
+      (a: any) => a.key === "movies_50",
+    );
     expect(earnedRow.earnedCount).toBe(1);
     expect(earnedRow.lastEarnedAt).not.toBeNull();
     expect(unearnedRow.earnedCount).toBe(0);
@@ -238,7 +260,11 @@ describe("GET /achievements/u/:username", () => {
     const { users } = await import("../db/schema");
     const { eq } = await import("drizzle-orm");
     const db = getDb();
-    await db.update(users).set({ profileVisibility: "friends_only" }).where(eq(users.id, userBId)).run();
+    await db
+      .update(users)
+      .set({ profileVisibility: "friends_only" })
+      .where(eq(users.id, userBId))
+      .run();
 
     const res = await app.request("/achievements/u/bob", {
       headers: authHeaders(userAToken),
@@ -252,7 +278,11 @@ describe("GET /achievements/u/:username", () => {
     const { users } = await import("../db/schema");
     const { eq } = await import("drizzle-orm");
     const db = getDb();
-    await db.update(users).set({ profileVisibility: "public" }).where(eq(users.id, userBId)).run();
+    await db
+      .update(users)
+      .set({ profileVisibility: "public" })
+      .where(eq(users.id, userBId))
+      .run();
 
     const res = await app.request("/achievements/u/bob", {
       headers: authHeaders(userAToken),
@@ -267,19 +297,26 @@ describe("GET /achievements/u/:username", () => {
     const { users, userAchievements } = await import("../db/schema");
     const { eq } = await import("drizzle-orm");
     const db = getDb();
-    await db.update(users).set({ profileVisibility: "public" }).where(eq(users.id, userBId)).run();
+    await db
+      .update(users)
+      .set({ profileVisibility: "public" })
+      .where(eq(users.id, userBId))
+      .run();
 
     // Seed the achievement definition (FK parent) then insert user row
     const streakDef = ACHIEVEMENTS.find((a) => a.key === "streak_7")!;
     await upsertAchievementDef(streakDef);
 
     // Give bob an earned achievement
-    await db.insert(userAchievements).values({
-      userId: userBId,
-      achievementKey: "streak_7",
-      progress: 7,
-      earnedAt: new Date().toISOString(),
-    }).run();
+    await db
+      .insert(userAchievements)
+      .values({
+        userId: userBId,
+        achievementKey: "streak_7",
+        progress: 7,
+        earnedAt: new Date().toISOString(),
+      })
+      .run();
 
     const res = await app.request("/achievements/u/bob", {
       headers: authHeaders(userAToken),
@@ -389,7 +426,11 @@ describe("GET /achievements/u/:username/:key", () => {
     const { users } = await import("../db/schema");
     const { eq } = await import("drizzle-orm");
     const db = getDb();
-    await db.update(users).set({ profileVisibility: "public" }).where(eq(users.id, userBId)).run();
+    await db
+      .update(users)
+      .set({ profileVisibility: "public" })
+      .where(eq(users.id, userBId))
+      .run();
 
     const res = await app.request("/achievements/u/bob/nonexistent_key_xyz", {
       headers: authHeaders(userAToken),
@@ -402,7 +443,11 @@ describe("GET /achievements/u/:username/:key", () => {
     const { users } = await import("../db/schema");
     const { eq } = await import("drizzle-orm");
     const db = getDb();
-    await db.update(users).set({ profileVisibility: "public" }).where(eq(users.id, userBId)).run();
+    await db
+      .update(users)
+      .set({ profileVisibility: "public" })
+      .where(eq(users.id, userBId))
+      .run();
 
     const res = await app.request("/achievements/u/bob/movies_10", {
       headers: authHeaders(userAToken),
@@ -422,7 +467,11 @@ describe("GET /achievements/u/:username/:key", () => {
     const { users } = await import("../db/schema");
     const { eq } = await import("drizzle-orm");
     const db = getDb();
-    await db.update(users).set({ profileVisibility: "friends_only" }).where(eq(users.id, userBId)).run();
+    await db
+      .update(users)
+      .set({ profileVisibility: "friends_only" })
+      .where(eq(users.id, userBId))
+      .run();
 
     const res = await app.request("/achievements/u/bob/movies_10", {
       headers: authHeaders(userAToken),

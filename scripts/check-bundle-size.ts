@@ -42,7 +42,12 @@ export function measureGzip(filePath: string): number {
 }
 
 export function evaluateChecks(
-  checks: Array<{ label: string; actual: number; budget: number; filePath: string }>,
+  checks: Array<{
+    label: string;
+    actual: number;
+    budget: number;
+    filePath: string;
+  }>,
 ): CheckResult[] {
   return checks.map(({ label, actual, budget, filePath }) => ({
     label,
@@ -55,9 +60,18 @@ export function evaluateChecks(
 
 export function printTable(results: CheckResult[]): void {
   const labelWidth = Math.max(...results.map((r) => r.label.length), 5);
-  const fileWidth = Math.max(...results.map((r) => path.relative(REPO_ROOT, r.filePath).length), 4);
-  const actualWidth = Math.max(...results.map((r) => formatBytes(r.actual).length), 6);
-  const budgetWidth = Math.max(...results.map((r) => formatBytes(r.budget).length), 6);
+  const fileWidth = Math.max(
+    ...results.map((r) => path.relative(REPO_ROOT, r.filePath).length),
+    4,
+  );
+  const actualWidth = Math.max(
+    ...results.map((r) => formatBytes(r.actual).length),
+    6,
+  );
+  const budgetWidth = Math.max(
+    ...results.map((r) => formatBytes(r.budget).length),
+    6,
+  );
 
   const header = [
     "ARTIFACT".padEnd(labelWidth),
@@ -100,7 +114,10 @@ function resolveEntryJs(distAssetsDir: string): string {
   if (files.length > 1) {
     // Pick the largest one as the main entry chunk
     const sorted = files
-      .map((f) => ({ f, size: readFileSync(path.join(distAssetsDir, f)).length }))
+      .map((f) => ({
+        f,
+        size: readFileSync(path.join(distAssetsDir, f)).length,
+      }))
       .sort((a, b) => b.size - a.size);
     return path.join(distAssetsDir, sorted[0].f);
   }
@@ -117,7 +134,10 @@ function resolveEntryCss(distAssetsDir: string): string {
   if (files.length > 1) {
     // Pick the largest one as the main entry chunk
     const sorted = files
-      .map((f) => ({ f, size: readFileSync(path.join(distAssetsDir, f)).length }))
+      .map((f) => ({
+        f,
+        size: readFileSync(path.join(distAssetsDir, f)).length,
+      }))
       .sort((a, b) => b.size - a.size);
     return path.join(distAssetsDir, sorted[0].f);
   }
@@ -130,7 +150,9 @@ function run(): void {
     console.error(`check-bundle-size: budgets file not found: ${BUDGETS_FILE}`);
     process.exit(1);
   }
-  const budgets: Budgets = JSON.parse(readFileSync(BUDGETS_FILE, "utf8")) as Budgets;
+  const budgets: Budgets = JSON.parse(
+    readFileSync(BUDGETS_FILE, "utf8"),
+  ) as Budgets;
 
   // Resolve artifact paths
   const distAssetsDir = path.join(REPO_ROOT, "frontend", "dist", "assets");
@@ -139,9 +161,7 @@ function run(): void {
   const missing: string[] = [];
 
   if (!existsSync(distAssetsDir)) {
-    missing.push(
-      `frontend/dist/assets/ — run "bun run build" first`,
-    );
+    missing.push(`frontend/dist/assets/ — run "bun run build" first`);
   }
   if (!existsSync(workerPath)) {
     missing.push(
@@ -209,9 +229,7 @@ function run(): void {
         `  ${f.label}: ${formatBytes(f.actual)} > ${formatBytes(f.budget)} (over by ${formatBytes(f.actual - f.budget)})`,
       );
     }
-    console.error(
-      "\nTo update budgets, edit scripts/bundle-budgets.json.",
-    );
+    console.error("\nTo update budgets, edit scripts/bundle-budgets.json.");
     process.exit(1);
   }
 

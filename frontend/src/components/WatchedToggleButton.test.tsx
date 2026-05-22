@@ -7,7 +7,9 @@ afterEach(cleanup);
 
 describe("WatchedToggleButton", () => {
   it("renders unwatched state with 'Watch' label (sm)", () => {
-    render(<WatchedToggleButton watched={false} onClick={() => {}} size="sm" />);
+    render(
+      <WatchedToggleButton watched={false} onClick={() => {}} size="sm" />,
+    );
     const button = screen.getByRole("button");
     expect(button.textContent).toContain("Watch");
     expect(button.getAttribute("aria-pressed")).toBe("false");
@@ -21,7 +23,9 @@ describe("WatchedToggleButton", () => {
   });
 
   it("renders unwatched state with 'Mark watched' label (md)", () => {
-    render(<WatchedToggleButton watched={false} onClick={() => {}} size="md" />);
+    render(
+      <WatchedToggleButton watched={false} onClick={() => {}} size="md" />,
+    );
     const button = screen.getByRole("button");
     expect(button.textContent).toContain("Mark watched");
   });
@@ -69,7 +73,9 @@ describe("WatchedToggleButton", () => {
   });
 
   it("uses rounded-lg for md size", () => {
-    render(<WatchedToggleButton watched={false} onClick={() => {}} size="md" />);
+    render(
+      <WatchedToggleButton watched={false} onClick={() => {}} size="md" />,
+    );
     const button = screen.getByRole("button");
     expect(button.className).toContain("rounded-lg");
   });
@@ -87,7 +93,14 @@ describe("WatchedToggleButton", () => {
   });
 
   it("hides label on mobile when compactOnMobile is true", () => {
-    render(<WatchedToggleButton watched={true} onClick={() => {}} size="md" compactOnMobile />);
+    render(
+      <WatchedToggleButton
+        watched={true}
+        onClick={() => {}}
+        size="md"
+        compactOnMobile
+      />,
+    );
     const button = screen.getByRole("button");
     const labelSpan = button.querySelector("span.hidden.sm\\:inline");
     expect(labelSpan).toBeTruthy();
@@ -96,7 +109,12 @@ describe("WatchedToggleButton", () => {
 
   it("hides label on mobile for disabled state when compactOnMobile is true", () => {
     const { container } = render(
-      <WatchedToggleButton watched={false} onClick={() => {}} disabled compactOnMobile />,
+      <WatchedToggleButton
+        watched={false}
+        onClick={() => {}}
+        disabled
+        compactOnMobile
+      />,
     );
     const span = container.querySelector("span");
     expect(span).toBeTruthy();
@@ -105,7 +123,14 @@ describe("WatchedToggleButton", () => {
   });
 
   it("uses compact padding when compactOnMobile is true (md size)", () => {
-    render(<WatchedToggleButton watched={false} onClick={() => {}} size="md" compactOnMobile />);
+    render(
+      <WatchedToggleButton
+        watched={false}
+        onClick={() => {}}
+        size="md"
+        compactOnMobile
+      />,
+    );
     const button = screen.getByRole("button");
     expect(button.className).toContain("px-1.5");
     expect(button.className).toContain("sm:px-2.5");

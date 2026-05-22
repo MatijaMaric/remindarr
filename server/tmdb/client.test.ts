@@ -1,4 +1,12 @@
-import { describe, it, test, expect, spyOn, afterEach, beforeEach } from "bun:test";
+import {
+  describe,
+  it,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+} from "bun:test";
 import Sentry from "../sentry";
 import { MemoryCache } from "../cache/memory";
 import { initCache } from "../cache";
@@ -25,7 +33,9 @@ function textResponse(body: string, status: number): Response {
 let fetchSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-  sentrySpy = spyOn(Sentry, "startSpan").mockImplementation((_opts: any, fn: any) => fn({}));
+  sentrySpy = spyOn(Sentry, "startSpan").mockImplementation(
+    (_opts: any, fn: any) => fn({}),
+  );
   fetchSpy = spyOn(globalThis, "fetch");
 });
 
@@ -66,9 +76,11 @@ import {
 
 describe("tmdbRequest error handling", () => {
   it("throws on 4xx response with body", async () => {
-    fetchSpy.mockResolvedValueOnce(textResponse('{"status_message":"Invalid API key"}', 401));
+    fetchSpy.mockResolvedValueOnce(
+      textResponse('{"status_message":"Invalid API key"}', 401),
+    );
     await expect(fetchShowDetails("123")).rejects.toThrow(
-      'TMDB API error 401: {"status_message":"Invalid API key"}'
+      'TMDB API error 401: {"status_message":"Invalid API key"}',
     );
   });
 
@@ -76,27 +88,44 @@ describe("tmdbRequest error handling", () => {
     // httpFetch retries on 500; mock all attempts to return 500 so the TMDB
     // client still sees a 500 error after retries are exhausted.
     fetchSpy.mockResolvedValue(textResponse("Internal Server Error", 500));
-    await expect(fetchShowDetails("123")).rejects.toThrow("TMDB API error 500: Internal Server Error");
+    await expect(fetchShowDetails("123")).rejects.toThrow(
+      "TMDB API error 500: Internal Server Error",
+    );
   });
 
   it("throws on 404 response", async () => {
     // 404 is not retried by httpFetch, so a single mock is sufficient.
     fetchSpy.mockResolvedValueOnce(textResponse("Not Found", 404));
-    await expect(fetchMovieDetails(999)).rejects.toThrow("TMDB API error 404: Not Found");
+    await expect(fetchMovieDetails(999)).rejects.toThrow(
+      "TMDB API error 404: Not Found",
+    );
   });
 
   it("throws on 429 rate limit response", async () => {
     // httpFetch retries on 429; mock all attempts so TMDB client sees the error.
     fetchSpy.mockResolvedValue(textResponse("Rate limit exceeded", 429));
-    await expect(searchMulti("test")).rejects.toThrow("TMDB API error 429: Rate limit exceeded");
+    await expect(searchMulti("test")).rejects.toThrow(
+      "TMDB API error 429: Rate limit exceeded",
+    );
   });
 
   it("sends correct Authorization header", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 1, name: "Test", status: "Returning", number_of_seasons: 1, next_episode_to_air: null, last_episode_to_air: null }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        id: 1,
+        name: "Test",
+        status: "Returning",
+        number_of_seasons: 1,
+        next_episode_to_air: null,
+        last_episode_to_air: null,
+      }),
+    );
     await fetchShowDetails("1");
     const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
     expect(options.headers).toEqual(
-      expect.objectContaining({ Authorization: expect.stringContaining("Bearer ") })
+      expect.objectContaining({
+        Authorization: expect.stringContaining("Bearer "),
+      }),
     );
   });
 });
@@ -105,7 +134,14 @@ describe("tmdbRequest error handling", () => {
 
 describe("fetchShowDetails", () => {
   it("calls /tv/{id} and returns response", async () => {
-    const mockShow = { id: 456, name: "Test Show", status: "Returning", number_of_seasons: 3, next_episode_to_air: null, last_episode_to_air: null };
+    const mockShow = {
+      id: 456,
+      name: "Test Show",
+      status: "Returning",
+      number_of_seasons: 3,
+      next_episode_to_air: null,
+      last_episode_to_air: null,
+    };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockShow));
     const result = await fetchShowDetails("456");
     expect(result).toEqual(mockShow);
@@ -118,7 +154,21 @@ describe("fetchShowDetails", () => {
 
 describe("fetchSeasonEpisodes", () => {
   it("calls /tv/{id}/season/{num} and returns response", async () => {
-    const mockSeason = { id: 1, season_number: 2, episodes: [{ id: 10, name: "Ep1", overview: "", air_date: "2024-01-01", episode_number: 1, season_number: 2, still_path: null }] };
+    const mockSeason = {
+      id: 1,
+      season_number: 2,
+      episodes: [
+        {
+          id: 10,
+          name: "Ep1",
+          overview: "",
+          air_date: "2024-01-01",
+          episode_number: 1,
+          season_number: 2,
+          still_path: null,
+        },
+      ],
+    };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockSeason));
     const result = await fetchSeasonEpisodes("100", 2);
     expect(result).toEqual(mockSeason);
@@ -135,7 +185,9 @@ describe("fetchMovieDetails", () => {
     await fetchMovieDetails(42);
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/movie/42");
-    expect(url.searchParams.get("append_to_response")).toBe("watch/providers,external_ids");
+    expect(url.searchParams.get("append_to_response")).toBe(
+      "watch/providers,external_ids",
+    );
     expect(url.searchParams.get("language")).toBeTruthy();
   });
 });
@@ -148,7 +200,9 @@ describe("fetchTvDetails", () => {
     await fetchTvDetails(99);
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/tv/99");
-    expect(url.searchParams.get("append_to_response")).toBe("watch/providers,external_ids");
+    expect(url.searchParams.get("append_to_response")).toBe(
+      "watch/providers,external_ids",
+    );
   });
 });
 
@@ -160,7 +214,9 @@ describe("fetchMovieFullDetails", () => {
     await fetchMovieFullDetails("55");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/movie/55");
-    expect(url.searchParams.get("append_to_response")).toBe("credits,release_dates,watch/providers,external_ids,videos");
+    expect(url.searchParams.get("append_to_response")).toBe(
+      "credits,release_dates,watch/providers,external_ids,videos",
+    );
   });
 });
 
@@ -172,7 +228,9 @@ describe("fetchShowFullDetails", () => {
     await fetchShowFullDetails("77");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/tv/77");
-    expect(url.searchParams.get("append_to_response")).toBe("credits,content_ratings,watch/providers,external_ids,videos");
+    expect(url.searchParams.get("append_to_response")).toBe(
+      "credits,content_ratings,watch/providers,external_ids,videos",
+    );
   });
 });
 
@@ -204,13 +262,27 @@ describe("fetchEpisodeDetails", () => {
 
 describe("fetchPersonDetails", () => {
   it("calls /person/{id} with combined_credits appended", async () => {
-    const mockPerson = { id: 200, name: "Actor Name", biography: "Bio", birthday: null, deathday: null, place_of_birth: null, known_for_department: "Acting", profile_path: null, also_known_as: [], popularity: 5, combined_credits: { cast: [], crew: [] } };
+    const mockPerson = {
+      id: 200,
+      name: "Actor Name",
+      biography: "Bio",
+      birthday: null,
+      deathday: null,
+      place_of_birth: null,
+      known_for_department: "Acting",
+      profile_path: null,
+      also_known_as: [],
+      popularity: 5,
+      combined_credits: { cast: [], crew: [] },
+    };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockPerson));
     const result = await fetchPersonDetails(200);
     expect(result.name).toBe("Actor Name");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/person/200");
-    expect(url.searchParams.get("append_to_response")).toBe("combined_credits,external_ids");
+    expect(url.searchParams.get("append_to_response")).toBe(
+      "combined_credits,external_ids",
+    );
   });
 });
 
@@ -218,7 +290,9 @@ describe("fetchPersonDetails", () => {
 
 describe("discoverMovies", () => {
   it("builds correct query params with defaults", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverMovies({});
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/discover/movie");
@@ -229,17 +303,28 @@ describe("discoverMovies", () => {
   });
 
   it("applies date range filters", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
-    await discoverMovies({ releaseDateGte: "2024-01-01", releaseDateLte: "2024-12-31" });
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
+    await discoverMovies({
+      releaseDateGte: "2024-01-01",
+      releaseDateLte: "2024-12-31",
+    });
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.get("release_date.gte")).toBe("2024-01-01");
     expect(url.searchParams.get("release_date.lte")).toBe("2024-12-31");
   });
 
   it("applies genre, provider, and language filters", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverMovies({
-      filters: { withGenres: "28,12", withProviders: "8", withOriginalLanguage: "en" },
+      filters: {
+        withGenres: "28,12",
+        withProviders: "8",
+        withOriginalLanguage: "en",
+      },
     });
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.get("with_genres")).toBe("28,12");
@@ -248,7 +333,9 @@ describe("discoverMovies", () => {
   });
 
   it("does not include optional filters when not specified", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverMovies({});
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.has("release_date.gte")).toBe(false);
@@ -259,8 +346,19 @@ describe("discoverMovies", () => {
   });
 
   it("uses custom sortBy and page", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 3, total_pages: 5, total_results: 100, results: [] }));
-    await discoverMovies({ page: 3, sortBy: "popularity.desc", voteCountGte: "100" });
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        page: 3,
+        total_pages: 5,
+        total_results: 100,
+        results: [],
+      }),
+    );
+    await discoverMovies({
+      page: 3,
+      sortBy: "popularity.desc",
+      voteCountGte: "100",
+    });
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.get("page")).toBe("3");
     expect(url.searchParams.get("sort_by")).toBe("popularity.desc");
@@ -272,7 +370,22 @@ describe("discoverMovies", () => {
       page: 1,
       total_pages: 1,
       total_results: 1,
-      results: [{ id: 1, title: "Movie", original_title: "Movie", overview: null, release_date: "2024-01-01", poster_path: null, genre_ids: [], vote_average: 7, vote_count: 100, popularity: 50, adult: false, original_language: "en" }],
+      results: [
+        {
+          id: 1,
+          title: "Movie",
+          original_title: "Movie",
+          overview: null,
+          release_date: "2024-01-01",
+          poster_path: null,
+          genre_ids: [],
+          vote_average: 7,
+          vote_count: 100,
+          popularity: 50,
+          adult: false,
+          original_language: "en",
+        },
+      ],
     };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockResponse));
     const result = await discoverMovies({});
@@ -281,7 +394,9 @@ describe("discoverMovies", () => {
   });
 
   it("translates yearMin/yearMax filters into release_date bounds", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverMovies({ filters: { yearMin: 2020, yearMax: 2024 } });
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.get("release_date.gte")).toBe("2020-01-01");
@@ -289,7 +404,9 @@ describe("discoverMovies", () => {
   });
 
   it("intersects year filter with category-supplied date range (more restrictive wins)", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     // category default: future window 2026-01-01 -> 2026-06-30; user wants <= 2024
     await discoverMovies({
       releaseDateGte: "2026-01-01",
@@ -304,7 +421,9 @@ describe("discoverMovies", () => {
   });
 
   it("translates voteAverageGte filter into vote_average.gte", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverMovies({ filters: { voteAverageGte: 7.5 } });
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.get("vote_average.gte")).toBe("7.5");
@@ -315,7 +434,9 @@ describe("discoverMovies", () => {
 
 describe("discoverTv", () => {
   it("builds correct query params with defaults", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverTv({});
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/discover/tv");
@@ -324,12 +445,18 @@ describe("discoverTv", () => {
   });
 
   it("applies date range and filters", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverTv({
       firstAirDateGte: "2024-01-01",
       firstAirDateLte: "2024-06-30",
       voteCountGte: "50",
-      filters: { withGenres: "18", withProviders: "337", withOriginalLanguage: "ko" },
+      filters: {
+        withGenres: "18",
+        withProviders: "337",
+        withOriginalLanguage: "ko",
+      },
     });
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.get("first_air_date.gte")).toBe("2024-01-01");
@@ -341,7 +468,9 @@ describe("discoverTv", () => {
   });
 
   it("does not set vote_count.gte when not provided", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await discoverTv({});
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.has("vote_count.gte")).toBe(false);
@@ -409,7 +538,9 @@ describe("category endpoints", () => {
 
 describe("searchMulti", () => {
   it("passes query and pagination params", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await searchMulti("breaking bad", 2);
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/search/multi");
@@ -419,7 +550,9 @@ describe("searchMulti", () => {
   });
 
   it("defaults to page 1", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ page: 1, total_pages: 1, total_results: 0, results: [] }),
+    );
     await searchMulti("test");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.searchParams.get("page")).toBe("1");
@@ -447,7 +580,9 @@ describe("searchMulti", () => {
 
 describe("findByImdbId", () => {
   it("calls /find/{imdbId} with external_source param", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ movie_results: [], tv_results: [] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ movie_results: [], tv_results: [] }),
+    );
     await findByImdbId("tt1234567");
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/find/tt1234567");
@@ -456,7 +591,22 @@ describe("findByImdbId", () => {
 
   it("returns find response with movie results", async () => {
     const mockResponse = {
-      movie_results: [{ id: 42, title: "Found Movie", original_title: "Found Movie", overview: "desc", release_date: "2024-01-01", poster_path: null, genre_ids: [], vote_average: 8, vote_count: 500, popularity: 30, adult: false, original_language: "en" }],
+      movie_results: [
+        {
+          id: 42,
+          title: "Found Movie",
+          original_title: "Found Movie",
+          overview: "desc",
+          release_date: "2024-01-01",
+          poster_path: null,
+          genre_ids: [],
+          vote_average: 8,
+          vote_count: 500,
+          popularity: 30,
+          adult: false,
+          original_language: "en",
+        },
+      ],
       tv_results: [],
     };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockResponse));
@@ -473,7 +623,12 @@ describe("findByImdbId", () => {
 
 describe("getMovieGenres", () => {
   it("returns a Map of genre id to name", async () => {
-    const mockGenres = { genres: [{ id: 28, name: "Action" }, { id: 35, name: "Comedy" }] };
+    const mockGenres = {
+      genres: [
+        { id: 28, name: "Action" },
+        { id: 35, name: "Comedy" },
+      ],
+    };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockGenres));
     const result = await getMovieGenres();
     expect(result).toBeInstanceOf(Map);
@@ -490,7 +645,12 @@ describe("getMovieGenres", () => {
 
 describe("getTvGenres", () => {
   it("returns a Map of genre id to name", async () => {
-    const mockGenres = { genres: [{ id: 18, name: "Drama" }, { id: 10765, name: "Sci-Fi & Fantasy" }] };
+    const mockGenres = {
+      genres: [
+        { id: 18, name: "Drama" },
+        { id: 10765, name: "Sci-Fi & Fantasy" },
+      ],
+    };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockGenres));
     const result = await getTvGenres();
     expect(result).toBeInstanceOf(Map);
@@ -502,7 +662,13 @@ describe("getMovieWatchProviders", () => {
   it("returns array of provider objects with id, name, iconUrl", async () => {
     const mockProviders = {
       results: [
-        { provider_id: 8, provider_name: "Netflix", logo_path: "/netflix.png", display_priority: 1, display_priorities: {} },
+        {
+          provider_id: 8,
+          provider_name: "Netflix",
+          logo_path: "/netflix.png",
+          display_priority: 1,
+          display_priorities: {},
+        },
       ],
     };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockProviders));
@@ -519,7 +685,13 @@ describe("getTvWatchProviders", () => {
   it("returns array of provider objects with id, name, iconUrl", async () => {
     const mockProviders = {
       results: [
-        { provider_id: 9, provider_name: "Amazon Prime", logo_path: "/prime.png", display_priority: 1, display_priorities: {} },
+        {
+          provider_id: 9,
+          provider_name: "Amazon Prime",
+          logo_path: "/prime.png",
+          display_priority: 1,
+          display_priorities: {},
+        },
       ],
     };
     fetchSpy.mockResolvedValueOnce(jsonResponse(mockProviders));
@@ -564,13 +736,29 @@ describe("malformed responses", () => {
   });
 
   it("handles response with extra unexpected fields", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 1, name: "Show", unexpected_field: true, nested: { deep: true } }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        id: 1,
+        name: "Show",
+        unexpected_field: true,
+        nested: { deep: true },
+      }),
+    );
     const result = await fetchShowDetails("1");
     expect((result as any).id).toBe(1);
   });
 
   it("handles null values in response gracefully", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 1, name: null, status: null, number_of_seasons: null, next_episode_to_air: null, last_episode_to_air: null }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        id: 1,
+        name: null,
+        status: null,
+        number_of_seasons: null,
+        next_episode_to_air: null,
+        last_episode_to_air: null,
+      }),
+    );
     const result = await fetchShowDetails("1");
     expect((result as any).name).toBeNull();
   });
@@ -583,11 +771,13 @@ describe("slow TMDB response breadcrumb", () => {
   let dateSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
-    addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(() => {});
+    addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(
+      () => {},
+    );
     // Simulate a 2500ms elapsed time by returning controlled values from Date.now()
     dateSpy = (spyOn(Date, "now") as ReturnType<typeof spyOn>)
-      .mockReturnValueOnce(1000)   // startMs
-      .mockReturnValueOnce(3500);  // after fetch → elapsedMs = 2500
+      .mockReturnValueOnce(1000) // startMs
+      .mockReturnValueOnce(3500); // after fetch → elapsedMs = 2500
   });
 
   afterEach(() => {
@@ -599,9 +789,11 @@ describe("slow TMDB response breadcrumb", () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 42 }));
     await fetchMovieDetails(42);
 
-    const bc = (addBreadcrumbSpy.mock.calls as unknown as Array<[{ message?: string; data?: { elapsedMs?: string } }]>).find(
-      ([arg]) => arg.message === "Slow TMDB response",
-    );
+    const bc = (
+      addBreadcrumbSpy.mock.calls as unknown as Array<
+        [{ message?: string; data?: { elapsedMs?: string } }]
+      >
+    ).find(([arg]) => arg.message === "Slow TMDB response");
     expect(bc).toBeDefined();
     expect(Number(bc![0].data?.elapsedMs)).toBeGreaterThan(2000);
   });
@@ -616,9 +808,9 @@ describe("slow TMDB response breadcrumb", () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse({ id: 42 }));
     await fetchMovieDetails(42);
 
-    const bc = (addBreadcrumbSpy.mock.calls as unknown as Array<[{ message?: string }]>).find(
-      ([arg]) => arg.message === "Slow TMDB response",
-    );
+    const bc = (
+      addBreadcrumbSpy.mock.calls as unknown as Array<[{ message?: string }]>
+    ).find(([arg]) => arg.message === "Slow TMDB response");
     expect(bc).toBeUndefined();
   });
 });
@@ -627,23 +819,41 @@ describe("slow TMDB response breadcrumb", () => {
 
 describe("tmdbRequest timeout", () => {
   test("passes abort signal to fetch", async () => {
-    fetchSpy.mockImplementationOnce(async (_url: string | URL | Request, init?: RequestInit) => {
-      expect(init?.signal).toBeDefined();
-      expect(init?.signal).toBeInstanceOf(AbortSignal);
-      return jsonResponse({ id: 1, name: "Test", status: "Returning", number_of_seasons: 1, next_episode_to_air: null, last_episode_to_air: null });
-    });
+    fetchSpy.mockImplementationOnce(
+      async (_url: string | URL | Request, init?: RequestInit) => {
+        expect(init?.signal).toBeDefined();
+        expect(init?.signal).toBeInstanceOf(AbortSignal);
+        return jsonResponse({
+          id: 1,
+          name: "Test",
+          status: "Returning",
+          number_of_seasons: 1,
+          next_episode_to_air: null,
+          last_episode_to_air: null,
+        });
+      },
+    );
     await fetchShowDetails("1");
   });
 
   test("completes successfully when response is fast", async () => {
-    fetchSpy.mockResolvedValueOnce(jsonResponse({ page: 1, total_pages: 1, total_results: 1, results: [{ id: 1 }] }));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        page: 1,
+        total_pages: 1,
+        total_results: 1,
+        results: [{ id: 1 }],
+      }),
+    );
     const result = await searchMulti("test");
     expect(result.results).toHaveLength(1);
   });
 
   test("throws on non-ok response", async () => {
     fetchSpy.mockResolvedValueOnce(textResponse("Not Found", 404));
-    await expect(searchMulti("test")).rejects.toThrow("TMDB API error 404: Not Found");
+    await expect(searchMulti("test")).rejects.toThrow(
+      "TMDB API error 404: Not Found",
+    );
   });
 });
 

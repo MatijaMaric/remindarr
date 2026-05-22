@@ -36,8 +36,13 @@ export default function RecommendButton({ titleId }: Props) {
   const recId = recData?.id ?? null;
 
   const sendMutation = useMutation({
-    mutationFn: ({ message: msg, recipientId }: { message?: string; recipientId?: string }) =>
-      api.sendRecommendation(titleId, msg, recipientId),
+    mutationFn: ({
+      message: msg,
+      recipientId,
+    }: {
+      message?: string;
+      recipientId?: string;
+    }) => api.sendRecommendation(titleId, msg, recipientId),
     onSuccess: () => {
       setDialogOpen(false);
       setMessage("");
@@ -49,10 +54,14 @@ export default function RecommendButton({ titleId }: Props) {
       toast.success(successMsg);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Failed to send recommendation");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to send recommendation",
+      );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["recommendation-check", titleId] });
+      void qc.invalidateQueries({
+        queryKey: ["recommendation-check", titleId],
+      });
       void qc.invalidateQueries({ queryKey: ["recommendations"] });
     },
   });
@@ -63,10 +72,14 @@ export default function RecommendButton({ titleId }: Props) {
       toast.success("Recommendation removed");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Failed to remove recommendation");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to remove recommendation",
+      );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["recommendation-check", titleId] });
+      void qc.invalidateQueries({
+        queryKey: ["recommendation-check", titleId],
+      });
       void qc.invalidateQueries({ queryKey: ["recommendations"] });
     },
   });
@@ -110,7 +123,11 @@ export default function RecommendButton({ titleId }: Props) {
         } disabled:opacity-50 disabled:cursor-not-allowed`}
         title={recommended ? "Recommended" : "Recommend"}
       >
-        {recommended ? <Check className="size-3.5" /> : <Send className="size-3.5" />}
+        {recommended ? (
+          <Check className="size-3.5" />
+        ) : (
+          <Send className="size-3.5" />
+        )}
         {recommended ? "Recommended" : "Recommend"}
       </button>
 
@@ -121,11 +138,16 @@ export default function RecommendButton({ titleId }: Props) {
           <div className="mt-4 space-y-4">
             {/* Audience picker */}
             <div>
-              <label className="block text-sm text-zinc-400 mb-1.5">Send to</label>
+              <label className="block text-sm text-zinc-400 mb-1.5">
+                Send to
+              </label>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setAudienceMode("all"); setTargetUser(null); }}
+                  onClick={() => {
+                    setAudienceMode("all");
+                    setTargetUser(null);
+                  }}
                   className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
                     audienceMode === "all"
                       ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
@@ -155,7 +177,9 @@ export default function RecommendButton({ titleId }: Props) {
             {/* User picker — shown when "Pick a person" is selected */}
             {audienceMode === "pick" && (
               <div>
-                <label className="block text-sm text-zinc-400 mb-1.5">Recipient</label>
+                <label className="block text-sm text-zinc-400 mb-1.5">
+                  Recipient
+                </label>
                 <UserSearchDropdown
                   selected={targetUser}
                   onSelect={(u) => setTargetUser(u)}
@@ -185,9 +209,7 @@ export default function RecommendButton({ titleId }: Props) {
           </div>
 
           <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose
-              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors"
-            >
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
               Cancel
             </AlertDialogClose>
             <button

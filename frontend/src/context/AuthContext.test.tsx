@@ -25,7 +25,10 @@ type SessionStatus = "authenticated" | "unauthenticated" | "unknown";
 
 interface TestAuthState {
   user: { username: string } | null;
-  providers: { local: boolean; oidc: { name: string; providerId: string } | null } | null;
+  providers: {
+    local: boolean;
+    oidc: { name: string; providerId: string } | null;
+  } | null;
   loading: boolean;
   sessionStatus: SessionStatus;
 }
@@ -34,7 +37,14 @@ const TestContext = createContext<TestAuthState>(null!);
 const useTestAuth = () => useContext(TestContext);
 
 type RawSessionData = {
-  data: { user?: { id?: string; username?: string; name?: string; role?: string | null } | null } | null;
+  data: {
+    user?: {
+      id?: string;
+      username?: string;
+      name?: string;
+      role?: string | null;
+    } | null;
+  } | null;
   error?: { status?: number } | null;
 };
 
@@ -79,16 +89,21 @@ function TestAuthProvider({
     }
 
     init().finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <TestContext value={{ user, providers, loading, sessionStatus }}>{children}</TestContext>;
+  return (
+    <TestContext value={{ user, providers, loading, sessionStatus }}>
+      {children}
+    </TestContext>
+  );
 }
 
 function ProvidersDisplay() {
   const { providers, loading } = useTestAuth();
   if (loading) return <div>loading</div>;
-  if (providers?.oidc) return <div data-testid="oidc-provider">{providers.oidc.name}</div>;
+  if (providers?.oidc)
+    return <div data-testid="oidc-provider">{providers.oidc.name}</div>;
   return <div data-testid="no-oidc">no oidc</div>;
 }
 
@@ -112,14 +127,19 @@ describe("AuthContext", () => {
     render(
       <MemoryRouter>
         <TestAuthProvider
-          getSession={() => Promise.reject(new Error("Invalid session signature"))}
+          getSession={() =>
+            Promise.reject(new Error("Invalid session signature"))
+          }
           fetchProviders={() =>
-            Promise.resolve({ local: true, oidc: { name: "PocketID", providerId: "pocketid" } })
+            Promise.resolve({
+              local: true,
+              oidc: { name: "PocketID", providerId: "pocketid" },
+            })
           }
         >
           <ProvidersDisplay />
         </TestAuthProvider>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -133,7 +153,14 @@ describe("AuthContext", () => {
         <TestAuthProvider
           getSession={() =>
             Promise.resolve({
-              data: { user: { id: "u1", username: "testuser", name: "Test User", role: "admin" } },
+              data: {
+                user: {
+                  id: "u1",
+                  username: "testuser",
+                  name: "Test User",
+                  role: "admin",
+                },
+              },
               error: null,
             })
           }
@@ -141,7 +168,7 @@ describe("AuthContext", () => {
         >
           <UserDisplay />
         </TestAuthProvider>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -159,7 +186,7 @@ describe("AuthContext", () => {
           <SessionStatusDisplay />
           <UserDisplay />
         </TestAuthProvider>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {

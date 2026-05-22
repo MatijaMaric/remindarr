@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { createUser } from "../repository";
-import { dismissTitle, undismissTitle, getDismissedTitleIds, getDismissedCount } from "./dismissed";
+import {
+  dismissTitle,
+  undismissTitle,
+  getDismissedTitleIds,
+  getDismissedCount,
+} from "./dismissed";
 import { upsertTitles } from "./titles";
 
 let userId: string;
@@ -12,8 +17,46 @@ beforeEach(async () => {
   setupTestDb();
   userId = await createUser("alice", "hash");
   await upsertTitles([
-    { id: titleId, objectType: "SHOW", title: "Test Show", originalTitle: null, releaseYear: 2024, releaseDate: null, runtimeMinutes: null, shortDescription: null, genres: [], originalLanguage: "en", imdbId: null, tmdbId: null, posterUrl: null, backdropUrl: null, ageCertification: null, tmdbUrl: null, offers: [], scores: { imdbScore: null, imdbVotes: null, tmdbScore: null } },
-    { id: titleId2, objectType: "MOVIE", title: "Test Movie", originalTitle: null, releaseYear: 2024, releaseDate: null, runtimeMinutes: null, shortDescription: null, genres: [], originalLanguage: "en", imdbId: null, tmdbId: null, posterUrl: null, backdropUrl: null, ageCertification: null, tmdbUrl: null, offers: [], scores: { imdbScore: null, imdbVotes: null, tmdbScore: null } },
+    {
+      id: titleId,
+      objectType: "SHOW",
+      title: "Test Show",
+      originalTitle: null,
+      releaseYear: 2024,
+      releaseDate: null,
+      runtimeMinutes: null,
+      shortDescription: null,
+      genres: [],
+      originalLanguage: "en",
+      imdbId: null,
+      tmdbId: null,
+      posterUrl: null,
+      backdropUrl: null,
+      ageCertification: null,
+      tmdbUrl: null,
+      offers: [],
+      scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
+    },
+    {
+      id: titleId2,
+      objectType: "MOVIE",
+      title: "Test Movie",
+      originalTitle: null,
+      releaseYear: 2024,
+      releaseDate: null,
+      runtimeMinutes: null,
+      shortDescription: null,
+      genres: [],
+      originalLanguage: "en",
+      imdbId: null,
+      tmdbId: null,
+      posterUrl: null,
+      backdropUrl: null,
+      ageCertification: null,
+      tmdbUrl: null,
+      offers: [],
+      scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
+    },
   ]);
 });
 

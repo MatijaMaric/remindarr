@@ -7,7 +7,10 @@ import {
   evaluateSocialFirstRecommendation,
   type RepeatEvalResult,
 } from "./evaluate";
-import { upsertUserAchievement, appendUserAchievementEarns } from "../db/repository/achievements";
+import {
+  upsertUserAchievement,
+  appendUserAchievementEarns,
+} from "../db/repository/achievements";
 import { bumpStreak } from "../db/repository/streaks";
 import { getEpisodeTitleId } from "../db/repository";
 import { enqueueAdhoc } from "../jobs/backend";
@@ -19,13 +22,23 @@ async function evaluateAndPersist(
   userId: string,
   key: string,
   kind: AchievementKind,
-  evaluator: () => Promise<{ progress: number; earned: boolean }>
+  evaluator: () => Promise<{ progress: number; earned: boolean }>,
 ): Promise<void> {
   const result = await evaluator();
   const earnedAt = result.earned ? new Date().toISOString() : null;
-  const { newlyEarned } = await upsertUserAchievement(userId, key, result.progress, earnedAt);
+  const { newlyEarned } = await upsertUserAchievement(
+    userId,
+    key,
+    result.progress,
+    earnedAt,
+  );
   if (newlyEarned) {
-    log.info("Achievement newly earned", { userId, key, kind, progress: result.progress });
+    log.info("Achievement newly earned", {
+      userId,
+      key,
+      kind,
+      progress: result.progress,
+    });
   }
 }
 
@@ -33,7 +46,7 @@ async function evaluateAndPersistRepeatable(
   userId: string,
   key: string,
   kind: AchievementKind,
-  evaluator: () => Promise<RepeatEvalResult>
+  evaluator: () => Promise<RepeatEvalResult>,
 ): Promise<void> {
   const result = await evaluator();
   if (result.newEarns.length === 0) return;
@@ -41,18 +54,27 @@ async function evaluateAndPersistRepeatable(
   // Ensure there's a user_achievements row first (earned_at set to first earn)
   const firstEarnedAt = result.newEarns.reduce(
     (min, e) => (e.earnedAt < min ? e.earnedAt : min),
-    result.newEarns[0].earnedAt
+    result.newEarns[0].earnedAt,
   );
   await upsertUserAchievement(userId, key, result.progress, firstEarnedAt);
   await appendUserAchievementEarns(userId, key, result.newEarns);
 
-  log.info("Repeatable achievement newly earned", { userId, key, kind, newEarns: result.newEarns.length });
+  log.info("Repeatable achievement newly earned", {
+    userId,
+    key,
+    kind,
+    newEarns: result.newEarns.length,
+  });
 }
 
 /**
  * Called after watchTitle + logWatch (movies only triggers count_movies inline)
  */
-export async function onWatchedTitle(userId: string, titleId: string, isMovie?: boolean): Promise<void> {
+export async function onWatchedTitle(
+  userId: string,
+  titleId: string,
+  isMovie?: boolean,
+): Promise<void> {
   try {
     await bumpStreak(userId);
 
@@ -60,7 +82,7 @@ export async function onWatchedTitle(userId: string, titleId: string, isMovie?: 
     if (isMovie) {
       for (const a of ACHIEVEMENTS.filter((a) => a.kind === "count_movies")) {
         await evaluateAndPersist(userId, a.key, a.kind, () =>
-          evaluateCountMovies(userId, a.threshold)
+          evaluateCountMovies(userId, a.threshold),
         );
       }
     }
@@ -68,12 +90,22 @@ export async function onWatchedTitle(userId: string, titleId: string, isMovie?: 
     // Inline: streak_days
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "streak_days")) {
       await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateStreak(userId, a.threshold)
+        evaluateStreak(userId, a.threshold),
       );
     }
 
     // Deferred: completionist + genre_count + explorer/long-haul
-    await enqueueAdhoc("evaluate-achievements", { userId, kinds: ["completionist", "genre_count", "decade_count", "language_count", "long_film"] as AchievementKind[], titleId });
+    await enqueueAdhoc("evaluate-achievements", {
+      userId,
+      kinds: [
+        "completionist",
+        "genre_count",
+        "decade_count",
+        "language_count",
+        "long_film",
+      ] as AchievementKind[],
+      titleId,
+    });
   } catch (err) {
     log.error("onWatchedTitle trigger failed", { userId, titleId, err });
   }
@@ -82,21 +114,25 @@ export async function onWatchedTitle(userId: string, titleId: string, isMovie?: 
 /**
  * Called after watchEpisode + logWatch
  */
-export async function onWatchedEpisode(userId: string, episodeId: string, watchedAt?: string): Promise<void> {
+export async function onWatchedEpisode(
+  userId: string,
+  episodeId: string,
+  watchedAt?: string,
+): Promise<void> {
   try {
     await bumpStreak(userId, watchedAt);
 
     // Inline: count_episodes
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "count_episodes")) {
       await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateCountEpisodes(userId, a.threshold)
+        evaluateCountEpisodes(userId, a.threshold),
       );
     }
 
     // Inline: streak_days
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "streak_days")) {
       await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateStreak(userId, a.threshold)
+        evaluateStreak(userId, a.threshold),
       );
     }
 
@@ -105,7 +141,15 @@ export async function onWatchedEpisode(userId: string, episodeId: string, watche
     if (titleId) {
       await enqueueAdhoc("evaluate-achievements", {
         userId,
-        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable", "miniseries_completed", "deep_show_completed"] as AchievementKind[],
+        kinds: [
+          "completionist",
+          "genre_count",
+          "speed_binge_season",
+          "monthly_count_repeatable",
+          "weekend_warrior_repeatable",
+          "miniseries_completed",
+          "deep_show_completed",
+        ] as AchievementKind[],
         titleId,
       });
     }
@@ -121,7 +165,7 @@ export async function onWatchedEpisodesBulk(
   userId: string,
   episodeIds: (string | number)[],
   titleIds: Set<string>,
-  watchedAt?: string
+  watchedAt?: string,
 ): Promise<void> {
   try {
     await bumpStreak(userId, watchedAt);
@@ -129,14 +173,14 @@ export async function onWatchedEpisodesBulk(
     // Inline: count_episodes
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "count_episodes")) {
       await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateCountEpisodes(userId, a.threshold)
+        evaluateCountEpisodes(userId, a.threshold),
       );
     }
 
     // Inline: streak_days
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "streak_days")) {
       await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateStreak(userId, a.threshold)
+        evaluateStreak(userId, a.threshold),
       );
     }
 
@@ -144,7 +188,15 @@ export async function onWatchedEpisodesBulk(
     for (const titleId of titleIds) {
       await enqueueAdhoc("evaluate-achievements", {
         userId,
-        kinds: ["completionist", "genre_count", "speed_binge_season", "monthly_count_repeatable", "weekend_warrior_repeatable", "miniseries_completed", "deep_show_completed"] as AchievementKind[],
+        kinds: [
+          "completionist",
+          "genre_count",
+          "speed_binge_season",
+          "monthly_count_repeatable",
+          "weekend_warrior_repeatable",
+          "miniseries_completed",
+          "deep_show_completed",
+        ] as AchievementKind[],
         titleId,
       });
     }
@@ -158,9 +210,11 @@ export async function onWatchedEpisodesBulk(
  */
 export async function onFollow(followerId: string): Promise<void> {
   try {
-    for (const a of ACHIEVEMENTS.filter((a) => a.kind === "social_first_follow")) {
+    for (const a of ACHIEVEMENTS.filter(
+      (a) => a.kind === "social_first_follow",
+    )) {
       await evaluateAndPersist(followerId, a.key, a.kind, () =>
-        evaluateSocialFirstFollow(followerId)
+        evaluateSocialFirstFollow(followerId),
       );
     }
     // No job enqueued for social triggers
@@ -174,9 +228,11 @@ export async function onFollow(followerId: string): Promise<void> {
  */
 export async function onRecommendation(fromUserId: string): Promise<void> {
   try {
-    for (const a of ACHIEVEMENTS.filter((a) => a.kind === "social_first_recommendation")) {
+    for (const a of ACHIEVEMENTS.filter(
+      (a) => a.kind === "social_first_recommendation",
+    )) {
       await evaluateAndPersist(fromUserId, a.key, a.kind, () =>
-        evaluateSocialFirstRecommendation(fromUserId)
+        evaluateSocialFirstRecommendation(fromUserId),
       );
     }
     // No job enqueued for social triggers

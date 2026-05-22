@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, afterAll, afterEach } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  afterEach,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { createUser } from "../repository";
 import {
@@ -57,7 +64,10 @@ describe("upsertAchievementDef", () => {
 
   it("updates an existing definition on conflict", async () => {
     await upsertAchievementDef(makeAchievementDef("test_key_2", 10));
-    await upsertAchievementDef({ ...makeAchievementDef("test_key_2", 50), title: "Updated Title" });
+    await upsertAchievementDef({
+      ...makeAchievementDef("test_key_2", 50),
+      title: "Updated Title",
+    });
     const defs = await listAchievementDefs();
     const found = defs.find((d) => d.key === "test_key_2");
     expect(found?.points).toBe(50);
@@ -115,15 +125,30 @@ describe("upsertUserAchievement newlyEarned detection", () => {
     const userId = await createUser("newly-earned-2", "hash");
     await upsertAchievementDef(makeAchievementDef("ne_key_2"));
     await upsertUserAchievement(userId, "ne_key_2", 5, null);
-    const result = await upsertUserAchievement(userId, "ne_key_2", 10, "2024-01-01T00:00:00.000Z");
+    const result = await upsertUserAchievement(
+      userId,
+      "ne_key_2",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
     expect(result.newlyEarned).toBe(true);
   });
 
   it("newlyEarned = false when already earned", async () => {
     const userId = await createUser("newly-earned-3", "hash");
     await upsertAchievementDef(makeAchievementDef("ne_key_3"));
-    await upsertUserAchievement(userId, "ne_key_3", 10, "2024-01-01T00:00:00.000Z");
-    const result = await upsertUserAchievement(userId, "ne_key_3", 15, "2024-01-02T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "ne_key_3",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
+    const result = await upsertUserAchievement(
+      userId,
+      "ne_key_3",
+      15,
+      "2024-01-02T00:00:00.000Z",
+    );
     expect(result.newlyEarned).toBe(false);
   });
 });
@@ -134,8 +159,18 @@ describe("listEarnedSince", () => {
     await upsertAchievementDef(makeAchievementDef("es_key_1"));
     await upsertAchievementDef(makeAchievementDef("es_key_2"));
 
-    await upsertUserAchievement(userId, "es_key_1", 10, "2024-01-01T00:00:00.000Z");
-    await upsertUserAchievement(userId, "es_key_2", 10, "2024-06-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "es_key_1",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
+    await upsertUserAchievement(
+      userId,
+      "es_key_2",
+      10,
+      "2024-06-01T00:00:00.000Z",
+    );
 
     const result = await listEarnedSince(userId, "2024-03-01T00:00:00.000Z");
     expect(result).toHaveLength(1);
@@ -145,7 +180,12 @@ describe("listEarnedSince", () => {
   it("returns empty when no achievements earned since the timestamp", async () => {
     const userId = await createUser("earned-since-2", "hash");
     await upsertAchievementDef(makeAchievementDef("es_key_3"));
-    await upsertUserAchievement(userId, "es_key_3", 10, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "es_key_3",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
 
     const result = await listEarnedSince(userId, "2025-01-01T00:00:00.000Z");
     expect(result).toHaveLength(0);
@@ -156,7 +196,12 @@ describe("markAchievementsNotified", () => {
   it("sets earnedNotified = 1 for specified keys", async () => {
     const userId = await createUser("notified-1", "hash");
     await upsertAchievementDef(makeAchievementDef("notif_key_1"));
-    await upsertUserAchievement(userId, "notif_key_1", 10, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "notif_key_1",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
 
     await markAchievementsNotified(userId, ["notif_key_1"]);
 
@@ -182,7 +227,12 @@ describe("sumXpForUser", () => {
     const userId = await createUser("xp-user-2", "hash");
     await upsertAchievementDef(makeAchievementDef("xp_key_1", 10));
     await upsertAchievementDef(makeAchievementDef("xp_key_2", 25));
-    await upsertUserAchievement(userId, "xp_key_1", 10, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "xp_key_1",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
     await upsertUserAchievement(userId, "xp_key_2", 5, null); // not earned
 
     const xp = await sumXpForUser(userId);
@@ -200,7 +250,12 @@ describe("sumXpBatch with >50 users (chunking)", () => {
     for (let i = 0; i < 51; i++) {
       const uid = await createUser(`batch-user-${i}`, "hash");
       userIds.push(uid);
-      await upsertUserAchievement(uid, "batch_key", 10, "2024-01-01T00:00:00.000Z");
+      await upsertUserAchievement(
+        uid,
+        "batch_key",
+        10,
+        "2024-01-01T00:00:00.000Z",
+      );
     }
 
     const result = await sumXpBatch(userIds);
@@ -233,11 +288,22 @@ describe("appendUserAchievementEarns", () => {
     const userId = await createUser("append-earns-1", "hash");
     await upsertAchievementDef(makeAchievementDef("repeatable_key_1"));
     // Create the user_achievements row first
-    await upsertUserAchievement(userId, "repeatable_key_1", 2, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "repeatable_key_1",
+      2,
+      "2024-01-01T00:00:00.000Z",
+    );
 
     const earns = [
-      { earnedAt: "2024-01-01T00:00:00.000Z", context: { month: "2024-01", count: 10 } },
-      { earnedAt: "2024-02-01T00:00:00.000Z", context: { month: "2024-02", count: 12 } },
+      {
+        earnedAt: "2024-01-01T00:00:00.000Z",
+        context: { month: "2024-01", count: 10 },
+      },
+      {
+        earnedAt: "2024-02-01T00:00:00.000Z",
+        context: { month: "2024-02", count: 12 },
+      },
     ];
     await appendUserAchievementEarns(userId, "repeatable_key_1", earns);
 
@@ -266,12 +332,26 @@ describe("getEarnHistory", () => {
   it("returns earn rows ordered by earnedAt descending", async () => {
     const userId = await createUser("earn-history-1", "hash");
     await upsertAchievementDef(makeAchievementDef("earn_hist_key_1"));
-    await upsertUserAchievement(userId, "earn_hist_key_1", 3, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "earn_hist_key_1",
+      3,
+      "2024-01-01T00:00:00.000Z",
+    );
 
     const earns = [
-      { earnedAt: "2024-01-01T00:00:00.000Z", context: { month: "2024-01", count: 5 } },
-      { earnedAt: "2024-02-01T00:00:00.000Z", context: { month: "2024-02", count: 7 } },
-      { earnedAt: "2024-03-01T00:00:00.000Z", context: { month: "2024-03", count: 9 } },
+      {
+        earnedAt: "2024-01-01T00:00:00.000Z",
+        context: { month: "2024-01", count: 5 },
+      },
+      {
+        earnedAt: "2024-02-01T00:00:00.000Z",
+        context: { month: "2024-02", count: 7 },
+      },
+      {
+        earnedAt: "2024-03-01T00:00:00.000Z",
+        context: { month: "2024-03", count: 9 },
+      },
     ];
     await appendUserAchievementEarns(userId, "earn_hist_key_1", earns);
 
@@ -285,7 +365,12 @@ describe("getEarnHistory", () => {
   it("respects the limit parameter", async () => {
     const userId = await createUser("earn-history-2", "hash");
     await upsertAchievementDef(makeAchievementDef("earn_hist_key_2"));
-    await upsertUserAchievement(userId, "earn_hist_key_2", 3, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "earn_hist_key_2",
+      3,
+      "2024-01-01T00:00:00.000Z",
+    );
 
     const earns = [
       { earnedAt: "2024-01-01T00:00:00.000Z" },
@@ -306,8 +391,18 @@ describe("getRecentlyEarned", () => {
     await upsertAchievementDef(makeAchievementDef("recent_key_2", 20));
 
     // recent_key_1 earned in Jan, recent_key_2 in June
-    await upsertUserAchievement(userId, "recent_key_1", 10, "2024-01-01T00:00:00.000Z");
-    await upsertUserAchievement(userId, "recent_key_2", 10, "2024-06-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "recent_key_1",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
+    await upsertUserAchievement(
+      userId,
+      "recent_key_2",
+      10,
+      "2024-06-01T00:00:00.000Z",
+    );
 
     const result = await getRecentlyEarned(userId);
     expect(result).toHaveLength(2);
@@ -322,7 +417,12 @@ describe("getRecentlyEarned", () => {
     await upsertAchievementDef(makeAchievementDef("recent_key_4", 10));
 
     await upsertUserAchievement(userId, "recent_key_3", 5, null); // not earned
-    await upsertUserAchievement(userId, "recent_key_4", 10, "2024-01-01T00:00:00.000Z"); // earned
+    await upsertUserAchievement(
+      userId,
+      "recent_key_4",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    ); // earned
 
     const result = await getRecentlyEarned(userId);
     expect(result).toHaveLength(1);
@@ -335,11 +435,24 @@ describe("getRecentlyEarned", () => {
     await upsertAchievementDef(makeAchievementDef("recent_key_6", 10));
 
     // One-shot earned in June, repeatable earned first in Jan but has lastEarnedAt in December
-    await upsertUserAchievement(userId, "recent_key_5", 10, "2024-06-01T00:00:00.000Z");
-    await upsertUserAchievement(userId, "recent_key_6", 5, "2024-01-01T00:00:00.000Z");
+    await upsertUserAchievement(
+      userId,
+      "recent_key_5",
+      10,
+      "2024-06-01T00:00:00.000Z",
+    );
+    await upsertUserAchievement(
+      userId,
+      "recent_key_6",
+      5,
+      "2024-01-01T00:00:00.000Z",
+    );
     // Bump the repeatable's lastEarnedAt to December (more recent)
     await appendUserAchievementEarns(userId, "recent_key_6", [
-      { earnedAt: "2024-12-01T00:00:00.000Z", context: { month: "2024-12", count: 3 } },
+      {
+        earnedAt: "2024-12-01T00:00:00.000Z",
+        context: { month: "2024-12", count: 3 },
+      },
     ]);
 
     const result = await getRecentlyEarned(userId);
@@ -352,8 +465,15 @@ describe("getRecentlyEarned", () => {
   it("respects the limit parameter", async () => {
     const userId = await createUser("recently-earned-4", "hash");
     for (let i = 0; i < 5; i++) {
-      await upsertAchievementDef(makeAchievementDef(`recent_limit_key_${i}`, 10));
-      await upsertUserAchievement(userId, `recent_limit_key_${i}`, 10, "2024-01-01T00:00:00.000Z");
+      await upsertAchievementDef(
+        makeAchievementDef(`recent_limit_key_${i}`, 10),
+      );
+      await upsertUserAchievement(
+        userId,
+        `recent_limit_key_${i}`,
+        10,
+        "2024-01-01T00:00:00.000Z",
+      );
     }
 
     const result = await getRecentlyEarned(userId, 3);
@@ -370,7 +490,12 @@ describe("getRarityForKey", () => {
     // Only 4 earners — below the RARITY_MIN_EARNERS threshold of 5
     for (let i = 0; i < 4; i++) {
       const uid = await createUser(`rarity-sparse-${i}`, "hash");
-      await upsertUserAchievement(uid, "rarity_test_sparse", 10, "2024-01-01T00:00:00.000Z");
+      await upsertUserAchievement(
+        uid,
+        "rarity_test_sparse",
+        10,
+        "2024-01-01T00:00:00.000Z",
+      );
     }
 
     const result = await getRarityForKey("rarity_test_sparse");
@@ -383,7 +508,12 @@ describe("getRarityForKey", () => {
     // Create 10 users, all earn — 100% earner rate → common
     for (let i = 0; i < 10; i++) {
       const uid = await createUser(`rarity-common-${i}`, "hash");
-      await upsertUserAchievement(uid, "rarity_test_common", 10, "2024-01-01T00:00:00.000Z");
+      await upsertUserAchievement(
+        uid,
+        "rarity_test_common",
+        10,
+        "2024-01-01T00:00:00.000Z",
+      );
     }
 
     const result = await getRarityForKey("rarity_test_common");
@@ -402,7 +532,12 @@ describe("getRarityForKey", () => {
       if (i < 10) earnerIds.push(uid);
     }
     for (const uid of earnerIds) {
-      await upsertUserAchievement(uid, "rarity_test_rare", 10, "2024-01-01T00:00:00.000Z");
+      await upsertUserAchievement(
+        uid,
+        "rarity_test_rare",
+        10,
+        "2024-01-01T00:00:00.000Z",
+      );
     }
 
     const result = await getRarityForKey("rarity_test_rare");
@@ -418,7 +553,12 @@ describe("getRarityForKey", () => {
     // Create 8 users (>= min earners) all earning
     for (let i = 0; i < 8; i++) {
       const uid = await createUser(`rarity-cache-${i}`, "hash");
-      await upsertUserAchievement(uid, "rarity_test_cache", 10, "2024-01-01T00:00:00.000Z");
+      await upsertUserAchievement(
+        uid,
+        "rarity_test_cache",
+        10,
+        "2024-01-01T00:00:00.000Z",
+      );
     }
 
     const first = await getRarityForKey("rarity_test_cache");
@@ -431,12 +571,19 @@ describe("getRarityForKey", () => {
   });
 
   it("caches null result for sparse achievements", async () => {
-    await upsertAchievementDef(makeAchievementDef("rarity_test_null_cache", 10));
+    await upsertAchievementDef(
+      makeAchievementDef("rarity_test_null_cache", 10),
+    );
 
     // Only 2 earners — below threshold
     for (let i = 0; i < 2; i++) {
       const uid = await createUser(`rarity-null-cache-${i}`, "hash");
-      await upsertUserAchievement(uid, "rarity_test_null_cache", 10, "2024-01-01T00:00:00.000Z");
+      await upsertUserAchievement(
+        uid,
+        "rarity_test_null_cache",
+        10,
+        "2024-01-01T00:00:00.000Z",
+      );
     }
 
     const first = await getRarityForKey("rarity_test_null_cache");

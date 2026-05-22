@@ -5,10 +5,13 @@ import { registerUser, loginUi } from "./fixtures/auth";
 test.describe("Passkey signup + login", () => {
   test.skip(
     ({ browserName }) => browserName !== "chromium",
-    "virtual authenticator only reliable on chromium"
+    "virtual authenticator only reliable on chromium",
   );
 
-  test("registers a passkey and signs back in with it", async ({ page, request }) => {
+  test("registers a passkey and signs back in with it", async ({
+    page,
+    request,
+  }) => {
     // Register via the request fixture — that context is discarded before we
     // touch page cookies, keeping the two auth contexts independent.
     const user = await registerUser(request);
@@ -17,15 +20,18 @@ test.describe("Passkey signup + login", () => {
     // so the page can enrol + assert passkeys without human interaction.
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("WebAuthn.enable", { enableUI: false });
-    const { authenticatorId } = await cdp.send("WebAuthn.addVirtualAuthenticator", {
-      options: {
-        protocol: "ctap2",
-        transport: "internal",
-        hasResidentKey: true,
-        hasUserVerification: true,
-        isUserVerified: true,
+    const { authenticatorId } = await cdp.send(
+      "WebAuthn.addVirtualAuthenticator",
+      {
+        options: {
+          protocol: "ctap2",
+          transport: "internal",
+          hasResidentKey: true,
+          hasUserVerification: true,
+          isUserVerified: true,
+        },
       },
-    });
+    );
 
     await loginUi(page, user.username, user.password);
 
@@ -37,12 +43,23 @@ test.describe("Passkey signup + login", () => {
     const addResult = await page.evaluate(async () => {
       // @ts-expect-error dynamic import resolved by the Vite dev server at runtime
       const mod = await import("/src/lib/auth-client.ts");
-      const client = (mod as { authClient: { passkey: { addPasskey: (opts?: Record<string, unknown>) => Promise<unknown> } } }).authClient;
+      const client = (
+        mod as {
+          authClient: {
+            passkey: {
+              addPasskey: (opts?: Record<string, unknown>) => Promise<unknown>;
+            };
+          };
+        }
+      ).authClient;
       try {
         const r = await client.passkey.addPasskey({ name: "e2e-passkey" });
         return { ok: true, result: r };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
     });
 
@@ -51,7 +68,7 @@ test.describe("Passkey signup + login", () => {
     // reviewer can see why — shipping 3 solid specs beats failing 4.
     test.skip(
       !addResult.ok,
-      `passkey enrolment unavailable in this build: ${"error" in addResult ? addResult.error : "unknown"}`
+      `passkey enrolment unavailable in this build: ${"error" in addResult ? addResult.error : "unknown"}`,
     );
 
     // Sign the user out to prove the passkey alone can sign them back in.
@@ -60,7 +77,9 @@ test.describe("Passkey signup + login", () => {
     await page.context().clearCookies();
 
     await page.goto("/login");
-    const passkeyButton = page.getByRole("button", { name: /sign in with passkey/i });
+    const passkeyButton = page.getByRole("button", {
+      name: /sign in with passkey/i,
+    });
     await expect(passkeyButton).toBeVisible({ timeout: 15_000 });
     await passkeyButton.click();
 

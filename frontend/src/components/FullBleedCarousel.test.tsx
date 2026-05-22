@@ -33,7 +33,9 @@ describe("FullBleedCarousel", () => {
         <div>Item</div>
       </FullBleedCarousel>,
     );
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
     expect(scrollDiv.className).toContain("overflow-y-hidden");
   });
 
@@ -43,7 +45,9 @@ describe("FullBleedCarousel", () => {
         <div>Item</div>
       </FullBleedCarousel>,
     );
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
     const style = scrollDiv.getAttribute("style") ?? "";
     expect(style).toContain("scroll-padding-left");
     expect(style).toContain("scroll-padding-right");
@@ -70,10 +74,21 @@ describe("FullBleedCarousel", () => {
       </FullBleedCarousel>,
     );
 
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
-    Object.defineProperty(scrollDiv, "scrollWidth", { value: 2000, configurable: true });
-    Object.defineProperty(scrollDiv, "clientWidth", { value: 400, configurable: true });
-    Object.defineProperty(scrollDiv, "scrollLeft", { value: 300, writable: true });
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
+    Object.defineProperty(scrollDiv, "scrollWidth", {
+      value: 2000,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientWidth", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollLeft", {
+      value: 300,
+      writable: true,
+    });
 
     fireEvent.scroll(scrollDiv);
 
@@ -88,10 +103,21 @@ describe("FullBleedCarousel", () => {
       </FullBleedCarousel>,
     );
 
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
-    Object.defineProperty(scrollDiv, "scrollWidth", { value: 2000, configurable: true });
-    Object.defineProperty(scrollDiv, "clientWidth", { value: 400, configurable: true });
-    Object.defineProperty(scrollDiv, "scrollLeft", { value: 0, writable: true });
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
+    Object.defineProperty(scrollDiv, "scrollWidth", {
+      value: 2000,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientWidth", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollLeft", {
+      value: 0,
+      writable: true,
+    });
 
     fireEvent.scroll(scrollDiv);
 
@@ -121,10 +147,21 @@ describe("FullBleedCarousel", () => {
       </FullBleedCarousel>,
     );
 
-    const scrollDiv = container.querySelector(".overflow-x-auto") as HTMLDivElement;
-    Object.defineProperty(scrollDiv, "scrollWidth", { value: 2000, configurable: true });
-    Object.defineProperty(scrollDiv, "clientWidth", { value: 400, configurable: true });
-    Object.defineProperty(scrollDiv, "scrollLeft", { value: 300, writable: true });
+    const scrollDiv = container.querySelector(
+      ".overflow-x-auto",
+    ) as HTMLDivElement;
+    Object.defineProperty(scrollDiv, "scrollWidth", {
+      value: 2000,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "clientWidth", {
+      value: 400,
+      configurable: true,
+    });
+    Object.defineProperty(scrollDiv, "scrollLeft", {
+      value: 300,
+      writable: true,
+    });
     scrollDiv.scrollBy = scrollByMock;
 
     fireEvent.scroll(scrollDiv);

@@ -1,12 +1,23 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { CircuitBreaker, BreakerOpenError, getBreaker, _resetBreakersForTest } from "./circuit-breaker";
+import {
+  CircuitBreaker,
+  BreakerOpenError,
+  getBreaker,
+  _resetBreakersForTest,
+} from "./circuit-breaker";
 import { resetMetrics, circuitBreakerStateChangesTotal } from "../metrics";
 
 // Helpers
-function makeBreaker(overrides?: { threshold?: number; windowMs?: number; openMs?: number }) {
+function makeBreaker(overrides?: {
+  threshold?: number;
+  windowMs?: number;
+  openMs?: number;
+}) {
   let t = 0;
   const now = () => t;
-  const advanceMs = (ms: number) => { t += ms; };
+  const advanceMs = (ms: number) => {
+    t += ms;
+  };
   const breaker = new CircuitBreaker("test.host", {
     failureThreshold: overrides?.threshold ?? 3,
     failureWindowMs: overrides?.windowMs ?? 10_000,
@@ -38,16 +49,22 @@ describe("CircuitBreaker — closed state", () => {
   });
 
   it("does not count failures older than the window", () => {
-    const { breaker, advanceMs } = makeBreaker({ threshold: 3, windowMs: 10_000 });
+    const { breaker, advanceMs } = makeBreaker({
+      threshold: 3,
+      windowMs: 10_000,
+    });
     breaker.recordFailure();
     breaker.recordFailure();
-    advanceMs(11_000);       // first two failures slide out of the window
+    advanceMs(11_000); // first two failures slide out of the window
     breaker.recordFailure(); // only 1 in-window failure
     expect(() => breaker.beforeCall()).not.toThrow();
   });
 
   it("opens for the default duration", () => {
-    const { breaker, advanceMs } = makeBreaker({ threshold: 2, openMs: 60_000 });
+    const { breaker, advanceMs } = makeBreaker({
+      threshold: 2,
+      openMs: 60_000,
+    });
     breaker.recordFailure();
     breaker.recordFailure();
     expect(() => breaker.beforeCall()).toThrow(BreakerOpenError);
@@ -81,7 +98,13 @@ describe("CircuitBreaker — open state", () => {
     const { breaker } = makeBreaker({ threshold: 2 });
     breaker.recordFailure();
     breaker.recordFailure();
-    const err = (() => { try { breaker.beforeCall(); } catch (e) { return e; } })();
+    const err = (() => {
+      try {
+        breaker.beforeCall();
+      } catch (e) {
+        return e;
+      }
+    })();
     expect(err).toBeInstanceOf(BreakerOpenError);
     expect((err as BreakerOpenError).host).toBe("test.host");
   });
@@ -112,7 +135,7 @@ describe("CircuitBreaker — half-open state", () => {
 
   it("closes on probe success and clears failure history", () => {
     const { breaker } = openedBreaker();
-    breaker.beforeCall();    // probe admitted
+    breaker.beforeCall(); // probe admitted
     breaker.recordSuccess(); // probe success
     expect(() => breaker.beforeCall()).not.toThrow();
     expect(() => breaker.beforeCall()).not.toThrow(); // subsequent calls normal
@@ -121,8 +144,8 @@ describe("CircuitBreaker — half-open state", () => {
   it("re-opens on probe failure with the supplied duration", () => {
     const LONG = 10_000;
     const { breaker, advanceMs } = openedBreaker();
-    breaker.beforeCall();             // probe admitted
-    breaker.recordFailure(LONG);      // probe fails
+    breaker.beforeCall(); // probe admitted
+    breaker.recordFailure(LONG); // probe fails
     expect(() => breaker.beforeCall()).toThrow(BreakerOpenError);
     advanceMs(5_000);
     expect(() => breaker.beforeCall()).toThrow(BreakerOpenError); // still open
@@ -133,8 +156,8 @@ describe("CircuitBreaker — half-open state", () => {
     breaker.recordFailure();
     breaker.recordFailure();
     advanceMs(2_001);
-    breaker.beforeCall();        // probe admitted
-    breaker.recordFailure();     // probe fails — re-open for another 2s
+    breaker.beforeCall(); // probe admitted
+    breaker.recordFailure(); // probe fails — re-open for another 2s
     expect(() => breaker.beforeCall()).toThrow(BreakerOpenError);
     advanceMs(2_001);
     expect(() => breaker.beforeCall()).not.toThrow(); // half-open again
@@ -149,7 +172,11 @@ describe("CircuitBreaker — registry isolation", () => {
   });
 
   it("getBreaker keeps different hosts isolated", () => {
-    const opts = { failureThreshold: 2, failureWindowMs: 10_000, defaultOpenDurationMs: 5_000 };
+    const opts = {
+      failureThreshold: 2,
+      failureWindowMs: 10_000,
+      defaultOpenDurationMs: 5_000,
+    };
     // Open the breaker for host-x
     const x = getBreaker("host-x", opts);
     x.recordFailure();
@@ -173,7 +200,7 @@ describe("CircuitBreaker — metrics", () => {
     breaker.recordFailure();
     breaker.recordFailure(); // closed → open
     advanceMs(1_001);
-    breaker.beforeCall();    // open → half-open
+    breaker.beforeCall(); // open → half-open
     breaker.recordSuccess(); // half-open → closed
     const rendered = circuitBreakerStateChangesTotal.render();
     expect(rendered).toContain('to="open"');

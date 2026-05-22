@@ -1,8 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 import { renderHook, waitFor, cleanup } from "@testing-library/react";
 
-const mockSubscription = { endpoint: "https://push.example.com/sub/new", p256dh: "key", auth: "auth" };
-const mockNotifier = { id: "n1", provider: "webpush", enabled: true, config: {} };
+const mockSubscription = {
+  endpoint: "https://push.example.com/sub/new",
+  p256dh: "key",
+  auth: "auth",
+};
+const mockNotifier = {
+  id: "n1",
+  provider: "webpush",
+  enabled: true,
+  config: {},
+};
 
 // Use mock.module (hoisted before imports) to guarantee this file controls
 // the push and api modules even when other test files have called
@@ -10,7 +19,9 @@ const mockNotifier = { id: "n1", provider: "webpush", enabled: true, config: {} 
 const mockIsPushSupported = mock(() => true as boolean);
 const mockSubscribeToPush = mock(() => Promise.resolve(mockSubscription));
 const mockGetExistingSubscription = mock(() =>
-  Promise.resolve({ endpoint: "https://push.example.com/sub/old" } as PushSubscription | null),
+  Promise.resolve({
+    endpoint: "https://push.example.com/sub/old",
+  } as PushSubscription | null),
 );
 
 mock.module("../lib/push", () => ({
@@ -35,7 +46,9 @@ mock.module("../api", () => ({
   getVapidPublicKey: mockGetVapidPublicKey,
   updateNotifier: mockUpdateNotifier,
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
 }));
 
 import { usePushSubscriptionSync } from "./usePushSubscriptionSync";
@@ -57,7 +70,9 @@ function mockServiceWorker() {
     }),
     removeEventListener: mock((event: string, handler: (e: Event) => void) => {
       if (event === "controllerchange") {
-        controllerChangeListeners = controllerChangeListeners.filter((l) => l !== handler);
+        controllerChangeListeners = controllerChangeListeners.filter(
+          (l) => l !== handler,
+        );
       }
     }),
   };
@@ -76,7 +91,9 @@ beforeEach(() => {
 
   // Reset all mocks to default behavior
   mockIsPushSupported.mockReturnValue(true);
-  mockSubscribeToPush.mockImplementation(() => Promise.resolve(mockSubscription));
+  mockSubscribeToPush.mockImplementation(() =>
+    Promise.resolve(mockSubscription),
+  );
   mockGetExistingSubscription.mockImplementation(() =>
     Promise.resolve({ endpoint: "https://push.example.com/sub/old" } as any),
   );
@@ -114,12 +131,17 @@ describe("usePushSubscriptionSync", () => {
   });
 
   it("re-subscribes on mount when notifier is disabled", async () => {
-    mockGetNotifiers.mockResolvedValue({ notifiers: [{ ...mockNotifier, enabled: false }] });
+    mockGetNotifiers.mockResolvedValue({
+      notifiers: [{ ...mockNotifier, enabled: false }],
+    });
 
     renderHook(() => usePushSubscriptionSync());
 
     await waitFor(() => {
-      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
+      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", {
+        config: mockSubscription,
+        enabled: true,
+      });
     });
   });
 
@@ -129,7 +151,10 @@ describe("usePushSubscriptionSync", () => {
     renderHook(() => usePushSubscriptionSync());
 
     await waitFor(() => {
-      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
+      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", {
+        config: mockSubscription,
+        enabled: true,
+      });
     });
   });
 
@@ -175,13 +200,18 @@ describe("usePushSubscriptionSync", () => {
     await waitFor(() => expect(mockGetNotifiers).toHaveBeenCalledTimes(1));
 
     // Simulate the notifier becoming disabled after a SW update
-    mockGetNotifiers.mockResolvedValue({ notifiers: [{ ...mockNotifier, enabled: false }] });
+    mockGetNotifiers.mockResolvedValue({
+      notifiers: [{ ...mockNotifier, enabled: false }],
+    });
 
     // Fire controllerchange
     controllerChangeListeners.forEach((l) => l(new Event("controllerchange")));
 
     await waitFor(() => {
-      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", { config: mockSubscription, enabled: true });
+      expect(mockUpdateNotifier).toHaveBeenCalledWith("n1", {
+        config: mockSubscription,
+        enabled: true,
+      });
     });
   });
 
@@ -191,7 +221,10 @@ describe("usePushSubscriptionSync", () => {
 
     unmount();
 
-    expect(sw.removeEventListener).toHaveBeenCalledWith("controllerchange", expect.any(Function));
+    expect(sw.removeEventListener).toHaveBeenCalledWith(
+      "controllerchange",
+      expect.any(Function),
+    );
   });
 
   it("swallows errors silently", async () => {

@@ -20,7 +20,12 @@ interface Props {
   titleData?: Title;
 }
 
-export default function TrackButton({ titleId, isTracked, onToggle, titleData }: Props) {
+export default function TrackButton({
+  titleId,
+  isTracked,
+  onToggle,
+  titleData,
+}: Props) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -113,9 +118,7 @@ export default function TrackButton({ titleId, isTracked, onToggle, titleData }:
             {t("track.confirmUntrackDescription")}
           </AlertDialogDescription>
           <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose
-              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors"
-            >
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
               {t("common.cancel")}
             </AlertDialogClose>
             <button

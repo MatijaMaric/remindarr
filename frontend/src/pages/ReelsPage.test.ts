@@ -3,7 +3,12 @@ import { getFirstUnwatchedPerShow } from "./ReelsPage";
 import type { Episode } from "../types";
 
 function makeEpisode(
-  overrides: Partial<Episode> & { id: number; title_id: string; season_number: number; episode_number: number }
+  overrides: Partial<Episode> & {
+    id: number;
+    title_id: string;
+    season_number: number;
+    episode_number: number;
+  },
 ): Episode {
   return {
     name: `Episode ${overrides.episode_number}`,
@@ -23,10 +28,30 @@ describe("getFirstUnwatchedPerShow", () => {
 
   it("groups episodes by show and sorts by season then episode", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 2, episode_number: 1 }),
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2 }),
-      makeEpisode({ id: 4, title_id: "show-2", season_number: 1, episode_number: 1 }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+      }),
+      makeEpisode({
+        id: 4,
+        title_id: "show-2",
+        season_number: 1,
+        episode_number: 1,
+      }),
     ];
 
     const cards = getFirstUnwatchedPerShow(episodes);
@@ -47,7 +72,12 @@ describe("getFirstUnwatchedPerShow", () => {
 
   it("handles single episode", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 3, episode_number: 5 }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 3,
+        episode_number: 5,
+      }),
     ];
 
     const cards = getFirstUnwatchedPerShow(episodes);
@@ -60,8 +90,22 @@ describe("getFirstUnwatchedPerShow", () => {
 
   it("uses show_title and poster_url from first sorted episode", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 2, episode_number: 1, show_title: "Show One", poster_url: "/poster2.jpg" }),
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1, show_title: "Show One", poster_url: "/poster1.jpg" }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+        show_title: "Show One",
+        poster_url: "/poster2.jpg",
+      }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        show_title: "Show One",
+        poster_url: "/poster1.jpg",
+      }),
     ];
 
     const cards = getFirstUnwatchedPerShow(episodes);
@@ -71,11 +115,36 @@ describe("getFirstUnwatchedPerShow", () => {
 
   it("sorts episodes correctly across multiple seasons", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 5, title_id: "show-1", season_number: 3, episode_number: 2 }),
-      makeEpisode({ id: 4, title_id: "show-1", season_number: 3, episode_number: 1 }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 3 }),
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 2, episode_number: 1 }),
+      makeEpisode({
+        id: 5,
+        title_id: "show-1",
+        season_number: 3,
+        episode_number: 2,
+      }),
+      makeEpisode({
+        id: 4,
+        title_id: "show-1",
+        season_number: 3,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 3,
+      }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+      }),
     ];
 
     const cards = getFirstUnwatchedPerShow(episodes);
@@ -87,8 +156,18 @@ describe("getFirstUnwatchedPerShow", () => {
 describe("ShowCard advancement logic", () => {
   it("advancing currentIndex past all episodes means caught up", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2 }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+      }),
     ];
 
     const cards = getFirstUnwatchedPerShow(episodes);
@@ -105,7 +184,12 @@ describe("ShowCard advancement logic", () => {
 
   it("single episode show becomes caught up after one mark", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
     ];
 
     const cards = getFirstUnwatchedPerShow(episodes);

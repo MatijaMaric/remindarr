@@ -1,5 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import { SA_TO_TMDB_PROVIDER, mapSAMonetizationType, canonicalProviderId } from "./provider-map";
+import {
+  SA_TO_TMDB_PROVIDER,
+  mapSAMonetizationType,
+  canonicalProviderId,
+} from "./provider-map";
 
 describe("canonicalProviderId", () => {
   it("collapses HBO Max hbo_max (1899) to hbo (384)", () => {
@@ -11,10 +15,10 @@ describe("canonicalProviderId", () => {
   });
 
   it("returns the same ID for non-duplicate providers", () => {
-    expect(canonicalProviderId(8)).toBe(8);   // Netflix
+    expect(canonicalProviderId(8)).toBe(8); // Netflix
     expect(canonicalProviderId(337)).toBe(337); // Disney+
     expect(canonicalProviderId(384)).toBe(384); // HBO Max canonical
-    expect(canonicalProviderId(9)).toBe(9);   // Prime Video canonical
+    expect(canonicalProviderId(9)).toBe(9); // Prime Video canonical
   });
 });
 

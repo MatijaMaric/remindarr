@@ -21,7 +21,11 @@ export function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function formatRuntime(minutes: number | null | undefined): string {
@@ -56,6 +60,8 @@ export function getCertification(
   country: string,
 ): string | null {
   if (!results) return null;
-  const match = results.find((r) => r.iso_3166_1 === country) || results.find((r) => r.iso_3166_1 === "US");
+  const match =
+    results.find((r) => r.iso_3166_1 === country) ||
+    results.find((r) => r.iso_3166_1 === "US");
   return match?.rating || null;
 }

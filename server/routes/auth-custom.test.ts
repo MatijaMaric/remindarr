@@ -1,4 +1,12 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import * as repository from "../db/repository";
 import Sentry from "../sentry";
@@ -31,7 +39,9 @@ describe("GET /providers", () => {
       new Error("SQLITE_BUSY"),
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const capSpy = spyOn(Sentry, "captureException").mockReturnValue("evt" as any);
+    const capSpy = spyOn(Sentry, "captureException").mockReturnValue(
+      "evt" as any,
+    );
     capSpy.mockClear();
 
     const res = await app.request("/providers");

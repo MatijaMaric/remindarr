@@ -56,7 +56,7 @@ describe("WatchButtonGroup", () => {
     const { container } = render(
       <Wrapper>
         <WatchButtonGroup offers={[]} />
-      </Wrapper>
+      </Wrapper>,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -64,8 +64,13 @@ describe("WatchButtonGroup", () => {
   it("returns null for RENT/BUY-only offers", () => {
     const { container } = render(
       <Wrapper>
-        <WatchButtonGroup offers={[makeOffer({ monetization_type: "RENT" }), makeOffer({ monetization_type: "BUY", id: 2 })]} />
-      </Wrapper>
+        <WatchButtonGroup
+          offers={[
+            makeOffer({ monetization_type: "RENT" }),
+            makeOffer({ monetization_type: "BUY", id: 2 }),
+          ]}
+        />
+      </Wrapper>,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -74,7 +79,7 @@ describe("WatchButtonGroup", () => {
     render(
       <Wrapper>
         <WatchButtonGroup offers={[makeOffer()]} />
-      </Wrapper>
+      </Wrapper>,
     );
     const link = screen.getByRole("link");
     expect(link.getAttribute("href")).toBe("https://netflix.com/watch");
@@ -84,12 +89,18 @@ describe("WatchButtonGroup", () => {
   it("renders a split button with caret for 2 providers", () => {
     const offers = [
       makeOffer(),
-      makeOffer({ id: 2, provider_id: 15, provider_name: "Hulu", url: "https://hulu.com/watch", provider_icon_url: "https://example.com/hulu.png" }),
+      makeOffer({
+        id: 2,
+        provider_id: 15,
+        provider_name: "Hulu",
+        url: "https://hulu.com/watch",
+        provider_icon_url: "https://example.com/hulu.png",
+      }),
     ];
     render(
       <Wrapper>
         <WatchButtonGroup offers={offers} />
-      </Wrapper>
+      </Wrapper>,
     );
     const primaryLink = screen.getByRole("link");
     expect(primaryLink.getAttribute("href")).toBe("https://netflix.com/watch");
@@ -100,12 +111,16 @@ describe("WatchButtonGroup", () => {
   it("deduplicates providers by provider_id", () => {
     const offers = [
       makeOffer({ id: 1, presentation_type: "HD" }),
-      makeOffer({ id: 2, presentation_type: "4K", url: "https://netflix.com/4k" }),
+      makeOffer({
+        id: 2,
+        presentation_type: "4K",
+        url: "https://netflix.com/4k",
+      }),
     ];
     render(
       <Wrapper>
         <WatchButtonGroup offers={offers} />
-      </Wrapper>
+      </Wrapper>,
     );
     // Same provider_id=8, deduped → single provider, no caret
     const links = screen.getAllByRole("link");
@@ -116,12 +131,18 @@ describe("WatchButtonGroup", () => {
   it("renders inline variant with multiple buttons", () => {
     const offers = [
       makeOffer(),
-      makeOffer({ id: 2, provider_id: 15, provider_name: "Hulu", url: "https://hulu.com/watch", provider_icon_url: "https://example.com/hulu.png" }),
+      makeOffer({
+        id: 2,
+        provider_id: 15,
+        provider_name: "Hulu",
+        url: "https://hulu.com/watch",
+        provider_icon_url: "https://example.com/hulu.png",
+      }),
     ];
     render(
       <Wrapper>
         <WatchButtonGroup offers={offers} variant="inline" />
-      </Wrapper>
+      </Wrapper>,
     );
     const links = screen.getAllByRole("link");
     expect(links.length).toBe(2);
@@ -136,7 +157,7 @@ describe("WatchButtonGroup", () => {
     render(
       <Wrapper>
         <WatchButtonGroup offers={offers} variant="inline" maxVisible={2} />
-      </Wrapper>
+      </Wrapper>,
     );
     const links = screen.getAllByRole("link");
     expect(links.length).toBe(2);
@@ -145,8 +166,12 @@ describe("WatchButtonGroup", () => {
   it("applies buttonClassName to inline buttons, overriding default sizing", () => {
     render(
       <Wrapper>
-        <WatchButtonGroup offers={[makeOffer()]} variant="inline" buttonClassName="text-sm px-4 h-10" />
-      </Wrapper>
+        <WatchButtonGroup
+          offers={[makeOffer()]}
+          variant="inline"
+          buttonClassName="text-sm px-4 h-10"
+        />
+      </Wrapper>,
     );
     const link = screen.getByRole("link");
     expect(link.className).toContain("text-sm");
@@ -161,7 +186,7 @@ describe("WatchButtonGroup", () => {
     render(
       <Wrapper>
         <WatchButtonGroup offers={[makeOffer()]} />
-      </Wrapper>
+      </Wrapper>,
     );
     expect(screen.getByText("Stream")).toBeDefined();
   });
@@ -170,14 +195,18 @@ describe("WatchButtonGroup", () => {
     render(
       <Wrapper>
         <WatchButtonGroup offers={[makeOffer({ monetization_type: "FREE" })]} />
-      </Wrapper>
+      </Wrapper>,
     );
     expect(screen.getByText("Free")).toBeDefined();
   });
 });
 
 describe("WatchButtonGroup subscription dimming", () => {
-  const netflixOffer = makeOffer({ id: 1, provider_id: 8, provider_name: "Netflix" });
+  const netflixOffer = makeOffer({
+    id: 1,
+    provider_id: 8,
+    provider_name: "Netflix",
+  });
   const disneyOffer = makeOffer({
     id: 2,
     provider_id: 337,
@@ -189,8 +218,11 @@ describe("WatchButtonGroup subscription dimming", () => {
   it("dims non-subscribed offer in inline variant", () => {
     render(
       <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>
-        <WatchButtonGroup offers={[netflixOffer, disneyOffer]} variant="inline" />
-      </Wrapper>
+        <WatchButtonGroup
+          offers={[netflixOffer, disneyOffer]}
+          variant="inline"
+        />
+      </Wrapper>,
     );
     // Disney+ wrapper should have opacity-50
     const disneyLink = screen.getByRole("link", { name: /disney/i });
@@ -205,8 +237,11 @@ describe("WatchButtonGroup subscription dimming", () => {
   it("does not dim when user has no subscriptions", () => {
     render(
       <Wrapper subscriptions={null}>
-        <WatchButtonGroup offers={[netflixOffer, disneyOffer]} variant="inline" />
-      </Wrapper>
+        <WatchButtonGroup
+          offers={[netflixOffer, disneyOffer]}
+          variant="inline"
+        />
+      </Wrapper>,
     );
     const links = screen.getAllByRole("link");
     for (const link of links) {
@@ -219,11 +254,13 @@ describe("WatchButtonGroup subscription dimming", () => {
     render(
       <Wrapper subscriptions={{ providerIds: [337], onlyMine: false }}>
         <WatchButtonGroup offers={[netflixOffer, disneyOffer]} />
-      </Wrapper>
+      </Wrapper>,
     );
     // Primary link should point to Disney+ (subscribed provider sorts first)
     const primaryLink = screen.getByRole("link");
-    expect(primaryLink.getAttribute("href")).toBe("https://disneyplus.com/watch");
+    expect(primaryLink.getAttribute("href")).toBe(
+      "https://disneyplus.com/watch",
+    );
   });
 
   it("does not dim Plex even when not in subscriptions list", () => {
@@ -237,7 +274,7 @@ describe("WatchButtonGroup subscription dimming", () => {
     render(
       <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>
         <WatchButtonGroup offers={[netflixOffer, plexOffer]} variant="inline" />
-      </Wrapper>
+      </Wrapper>,
     );
     const plexLink = screen.getByRole("link", { name: /plex/i });
     expect(plexLink.parentElement?.className ?? "").not.toContain("opacity-50");
@@ -254,7 +291,7 @@ describe("WatchButtonGroup subscription dimming", () => {
     render(
       <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>
         <WatchButtonGroup offers={[disneyOffer, plexOffer]} />
-      </Wrapper>
+      </Wrapper>,
     );
     // Primary should be Netflix-subscribed... wait, neither Disney nor Plex is in [8].
     // Plex should sort to front because it's treated as always-subscribed.
@@ -266,7 +303,7 @@ describe("WatchButtonGroup subscription dimming", () => {
     render(
       <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>
         <WatchButtonGroup offers={[netflixOffer, disneyOffer]} />
-      </Wrapper>
+      </Wrapper>,
     );
     // The dropdown trigger exists (2 providers → split button)
     const trigger = screen.getByLabelText(/More streaming options/);

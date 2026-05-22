@@ -16,9 +16,15 @@ afterEach(() => {
 describe("loadFilters", () => {
   it("returns all filter data when all API calls succeed", async () => {
     spies = [
-      spyOn(api, "getGenres").mockResolvedValue({ genres: ["Action", "Drama"] } as any),
-      spyOn(api, "getProviders").mockResolvedValue({ providers: mockProviders } as any),
-      spyOn(api, "getLanguages").mockResolvedValue({ languages: ["en", "fr"] } as any),
+      spyOn(api, "getGenres").mockResolvedValue({
+        genres: ["Action", "Drama"],
+      } as any),
+      spyOn(api, "getProviders").mockResolvedValue({
+        providers: mockProviders,
+      } as any),
+      spyOn(api, "getLanguages").mockResolvedValue({
+        languages: ["en", "fr"],
+      } as any),
     ];
 
     const result = await loadFilters();
@@ -31,8 +37,12 @@ describe("loadFilters", () => {
   it("returns empty genres when getGenres fails", async () => {
     spies = [
       spyOn(api, "getGenres").mockRejectedValue(new Error("Network error")),
-      spyOn(api, "getProviders").mockResolvedValue({ providers: mockProviders } as any),
-      spyOn(api, "getLanguages").mockResolvedValue({ languages: ["en"] } as any),
+      spyOn(api, "getProviders").mockResolvedValue({
+        providers: mockProviders,
+      } as any),
+      spyOn(api, "getLanguages").mockResolvedValue({
+        languages: ["en"],
+      } as any),
     ];
 
     const result = await loadFilters();
@@ -46,7 +56,9 @@ describe("loadFilters", () => {
     spies = [
       spyOn(api, "getGenres").mockResolvedValue({ genres: ["Action"] } as any),
       spyOn(api, "getProviders").mockRejectedValue(new Error("Server error")),
-      spyOn(api, "getLanguages").mockResolvedValue({ languages: ["en"] } as any),
+      spyOn(api, "getLanguages").mockResolvedValue({
+        languages: ["en"],
+      } as any),
     ];
 
     const result = await loadFilters();
@@ -59,7 +71,9 @@ describe("loadFilters", () => {
   it("returns empty languages when getLanguages fails", async () => {
     spies = [
       spyOn(api, "getGenres").mockResolvedValue({ genres: ["Action"] } as any),
-      spyOn(api, "getProviders").mockResolvedValue({ providers: mockProviders } as any),
+      spyOn(api, "getProviders").mockResolvedValue({
+        providers: mockProviders,
+      } as any),
       spyOn(api, "getLanguages").mockRejectedValue(new Error("Timeout")),
     ];
 

@@ -1,4 +1,12 @@
-import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
@@ -10,7 +18,9 @@ mock.module("../../i18n", () => ({}));
 const { default: SuggestionsRow } = await import("./SuggestionsRow");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -22,11 +32,25 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 const mockTitles = [
-  { id: "movie-1", title: "Movie One", posterUrl: null, releaseYear: 2024, object_type: "MOVIE" },
-  { id: "movie-2", title: "Movie Two", posterUrl: null, releaseYear: 2023, object_type: "MOVIE" },
+  {
+    id: "movie-1",
+    title: "Movie One",
+    posterUrl: null,
+    releaseYear: 2024,
+    object_type: "MOVIE",
+  },
+  {
+    id: "movie-2",
+    title: "Movie Two",
+    posterUrl: null,
+    releaseYear: 2023,
+    object_type: "MOVIE",
+  },
 ];
 
-let getSuggestionsSpy: ReturnType<typeof spyOn<typeof api, "getTitleSuggestions">>;
+let getSuggestionsSpy: ReturnType<
+  typeof spyOn<typeof api, "getTitleSuggestions">
+>;
 
 beforeEach(() => {
   getSuggestionsSpy = spyOn(api, "getTitleSuggestions");
@@ -41,7 +65,9 @@ describe("SuggestionsRow", () => {
   test("renders loading skeletons while fetching", () => {
     getSuggestionsSpy.mockImplementation(() => new Promise(() => {}));
 
-    render(<SuggestionsRow titleId="movie-1" type="movie" />, { wrapper: Wrapper });
+    render(<SuggestionsRow titleId="movie-1" type="movie" />, {
+      wrapper: Wrapper,
+    });
 
     const skeletons = document.querySelectorAll(".animate-pulse");
     expect(skeletons.length).toBeGreaterThan(0);
@@ -55,7 +81,9 @@ describe("SuggestionsRow", () => {
       totalResults: 2,
     });
 
-    render(<SuggestionsRow titleId="movie-1" type="movie" />, { wrapper: Wrapper });
+    render(<SuggestionsRow titleId="movie-1" type="movie" />, {
+      wrapper: Wrapper,
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Movie One")).toBeDefined();
@@ -71,7 +99,10 @@ describe("SuggestionsRow", () => {
       totalResults: 0,
     });
 
-    const { container } = render(<SuggestionsRow titleId="movie-1" type="movie" />, { wrapper: Wrapper });
+    const { container } = render(
+      <SuggestionsRow titleId="movie-1" type="movie" />,
+      { wrapper: Wrapper },
+    );
 
     await waitFor(() => {
       expect(getSuggestionsSpy).toHaveBeenCalled();

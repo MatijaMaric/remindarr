@@ -1,7 +1,12 @@
 import { CONFIG } from "../config";
 CONFIG.DB_PATH = ":memory:";
 
-import { initBunDb, initBunDbFromSnapshot, resetDb, snapshotDb } from "../db/bun-db";
+import {
+  initBunDb,
+  initBunDbFromSnapshot,
+  resetDb,
+  snapshotDb,
+} from "../db/bun-db";
 
 let cachedSnapshot: Uint8Array | null = null;
 

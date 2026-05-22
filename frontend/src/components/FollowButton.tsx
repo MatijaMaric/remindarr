@@ -10,7 +10,11 @@ interface Props {
   onToggle?: (isFollowing: boolean) => void;
 }
 
-export default function FollowButton({ userId, initialIsFollowing, onToggle }: Props) {
+export default function FollowButton({
+  userId,
+  initialIsFollowing,
+  onToggle,
+}: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [following, setFollowing] = useState(initialIsFollowing);
@@ -55,7 +59,8 @@ export default function FollowButton({ userId, initialIsFollowing, onToggle }: P
   } else if (following) {
     className = "bg-amber-500 text-zinc-950";
   } else {
-    className = "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950";
+    className =
+      "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950";
   }
 
   return (

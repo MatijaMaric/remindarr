@@ -1,5 +1,12 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -70,7 +77,7 @@ const mockGetTrackedTitles = mock(() =>
     count: 2,
     profile_public: true,
     profile_visibility: "public",
-  })
+  }),
 );
 
 mock.module("../api", () => ({
@@ -87,7 +94,9 @@ mock.module("../api", () => ({
   deleteNotifier: mock(() => Promise.resolve()),
   testNotifier: mock(() => Promise.resolve({ success: true })),
   getVapidPublicKey: mock(() => Promise.resolve({ publicKey: "" })),
-  getJobs: mock(() => Promise.resolve({ stats: {}, crons: [], recentJobs: [] })),
+  getJobs: mock(() =>
+    Promise.resolve({ stats: {}, crons: [], recentJobs: [] }),
+  ),
   triggerJob: mock(() => Promise.resolve({ success: true, jobId: 1 })),
   getAdminSettings: mock(() =>
     Promise.resolve({
@@ -100,7 +109,7 @@ mock.module("../api", () => ({
         admin_value: { value: "", source: "unset" },
       },
       oidc_configured: false,
-    })
+    }),
   ),
   updateAdminSettings: mock(() => Promise.resolve({})),
   getAdminConfig: mock(() => Promise.resolve({ safe: [], secrets: [] })),
@@ -108,8 +117,26 @@ mock.module("../api", () => ({
   flushCache: mock(() => Promise.resolve({ flushed: true })),
   runAllJobs: mock(() => Promise.resolve({ queued: [] })),
   triggerBackup: mock(() => Promise.resolve({ queued: true })),
-  getHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [{ id: "unwatched", enabled: true }, { id: "recommendations", enabled: true }, { id: "today", enabled: true }, { id: "upcoming", enabled: true }] })),
-  updateHomepageLayout: mock(() => Promise.resolve({ homepage_layout: [{ id: "unwatched", enabled: true }, { id: "recommendations", enabled: true }, { id: "today", enabled: true }, { id: "upcoming", enabled: true }] })),
+  getHomepageLayout: mock(() =>
+    Promise.resolve({
+      homepage_layout: [
+        { id: "unwatched", enabled: true },
+        { id: "recommendations", enabled: true },
+        { id: "today", enabled: true },
+        { id: "upcoming", enabled: true },
+      ],
+    }),
+  ),
+  updateHomepageLayout: mock(() =>
+    Promise.resolve({
+      homepage_layout: [
+        { id: "unwatched", enabled: true },
+        { id: "recommendations", enabled: true },
+        { id: "today", enabled: true },
+        { id: "upcoming", enabled: true },
+      ],
+    }),
+  ),
   getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
   createPlexPin: mock(() => Promise.resolve({ pinId: 0, authUrl: "" })),
   checkPlexPin: mock(() => Promise.resolve({ status: "pending" })),
@@ -121,13 +148,33 @@ mock.module("../api", () => ({
   getFeedToken: mock(() => Promise.resolve({ token: "test-token" })),
   regenerateFeedToken: mock(() => Promise.resolve({ token: "new-token" })),
   getKioskToken: mock(() => Promise.resolve({ token: null })),
-  regenerateKioskToken: mock(() => Promise.resolve({ token: "kiosk-token-123" })),
+  regenerateKioskToken: mock(() =>
+    Promise.resolve({ token: "kiosk-token-123" }),
+  ),
   revokeKioskToken: mock(() => Promise.resolve()),
-  getMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
-  updateMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
-  previewNotifier: mock(() => Promise.resolve({ date: "2026-05-01", episodes: [], movies: [] })),
+  getMyProfile: mock(() =>
+    Promise.resolve({
+      display_name: null,
+      bio: null,
+      country_code: null,
+      locale: null,
+    }),
+  ),
+  updateMyProfile: mock(() =>
+    Promise.resolve({
+      display_name: null,
+      bio: null,
+      country_code: null,
+      locale: null,
+    }),
+  ),
+  previewNotifier: mock(() =>
+    Promise.resolve({ date: "2026-05-01", episodes: [], movies: [] }),
+  ),
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
   getSharedWatchlist: mock(() => Promise.resolve({ username: "", titles: [] })),
   getStats: mock(() => Promise.resolve({})),
   getMovieDetails: mock(() => Promise.resolve({})),
@@ -136,7 +183,9 @@ mock.module("../api", () => ({
   trackTitle: mock(() => Promise.resolve()),
   untrackTitle: mock(() => Promise.resolve()),
   getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
-  getUpcomingEpisodes: mock(() => Promise.resolve({ today: [], upcoming: [], unwatched: [] })),
+  getUpcomingEpisodes: mock(() =>
+    Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
+  ),
   watchEpisode: mock(() => Promise.resolve()),
   unwatchEpisode: mock(() => Promise.resolve()),
   watchEpisodesBulk: mock(() => Promise.resolve()),
@@ -144,15 +193,23 @@ mock.module("../api", () => ({
   unwatchMovie: mock(() => Promise.resolve()),
   getMovieTracking: mock(() => Promise.resolve(null)),
   browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
-  getRecommendations: mock(() => Promise.resolve({ recommendations: [], suggestions: [], hasMore: false })),
+  getRecommendations: mock(() =>
+    Promise.resolve({ recommendations: [], suggestions: [], hasMore: false }),
+  ),
   fetchFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
   hideActivityEvent: mock(() => Promise.resolve()),
   getCollection: mock(() => Promise.resolve({ collection: null, parts: [] })),
   getTitleSuggestions: mock(() => Promise.resolve({ suggestions: [] })),
-  getActivitySettings: mock(() => Promise.resolve({ enabled: true, kind_visibility: {} })),
-  getNotifierHistory: mock(() => Promise.resolve({ rows: [], successRate: 100 })),
+  getActivitySettings: mock(() =>
+    Promise.resolve({ enabled: true, kind_visibility: {} }),
+  ),
+  getNotifierHistory: mock(() =>
+    Promise.resolve({ rows: [], successRate: 100 }),
+  ),
   getDepartureAlertSettings: mock(() => Promise.resolve({})),
-  getProviders: mock(() => Promise.resolve({ providers: [], regionProviderIds: [] })),
+  getProviders: mock(() =>
+    Promise.resolve({ providers: [], regionProviderIds: [] }),
+  ),
   updateSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
   updateOnlyMine: mock(() => Promise.resolve({ onlyMine: false })),
   getWatchlistShareToken: mock(() => Promise.resolve({ token: null })),
@@ -164,7 +221,9 @@ mock.module("../api", () => ({
 const { default: SettingsPage } = await import("./SettingsPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -202,7 +261,9 @@ describe("ProfileVisibilitySection", () => {
     expect(screen.getByText("Public")).toBeDefined();
     expect(screen.getByText("Everyone can see your watchlist")).toBeDefined();
     expect(screen.getByText("Friends Only")).toBeDefined();
-    expect(screen.getByText("Only mutual followers can see your watchlist")).toBeDefined();
+    expect(
+      screen.getByText("Only mutual followers can see your watchlist"),
+    ).toBeDefined();
     expect(screen.getByText("Private")).toBeDefined();
     expect(screen.getByText("Your watchlist is hidden")).toBeDefined();
 
@@ -222,7 +283,7 @@ describe("ProfileVisibilitySection", () => {
         count: 0,
         profile_public: false,
         profile_visibility: "private",
-      })
+      }),
     );
 
     render(<SettingsPage />, { wrapper: Wrapper });
@@ -242,11 +303,19 @@ describe("ProfileVisibilitySection", () => {
   it("selects the correct radio button based on profile_visibility", async () => {
     mockGetTrackedTitles.mockImplementation(() =>
       Promise.resolve({
-        titles: [{ id: "m1", title: "Movie", object_type: "movie", poster_url: null, public: true }],
+        titles: [
+          {
+            id: "m1",
+            title: "Movie",
+            object_type: "movie",
+            poster_url: null,
+            public: true,
+          },
+        ],
         count: 1,
         profile_public: false,
         profile_visibility: "friends_only",
-      })
+      }),
     );
 
     render(<SettingsPage />, { wrapper: Wrapper });
@@ -258,7 +327,9 @@ describe("ProfileVisibilitySection", () => {
     const radios = screen.getAllByRole("radio");
     expect(radios).toHaveLength(3);
     // friends_only should be checked (second option)
-    const friendsRadio = radios.find((r) => (r as HTMLInputElement).value === "friends_only") as HTMLInputElement | undefined;
+    const friendsRadio = radios.find(
+      (r) => (r as HTMLInputElement).value === "friends_only",
+    ) as HTMLInputElement | undefined;
     expect(friendsRadio).toBeDefined();
     expect(friendsRadio!.checked).toBe(true);
   });
@@ -275,9 +346,15 @@ describe("Settings tabs", () => {
     });
 
     // Sidebar nav tabs for each tab should exist
-    expect(screen.getAllByRole("tab", { name: "Appearance" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("tab", { name: "Notifications" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("tab", { name: "Integrations" }).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByRole("tab", { name: "Appearance" }).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByRole("tab", { name: "Notifications" }).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByRole("tab", { name: "Integrations" }).length,
+    ).toBeGreaterThanOrEqual(1);
     // Admin tab should not appear for non-admin users
     expect(screen.queryByRole("tab", { name: "Admin" })).toBeNull();
   });
@@ -294,7 +371,9 @@ describe("Settings tabs", () => {
   });
 
   it("shows notifications tab content when ?tab=notifications", async () => {
-    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=notifications") });
+    render(<SettingsPage />, {
+      wrapper: WrapperWithPath("/settings?tab=notifications"),
+    });
 
     // The notifications card title and the sidebar button both say "Notifications" —
     // use the SettingsCard subtitle which is unique to the notifications tab content
@@ -318,11 +397,17 @@ describe("PasskeySection", () => {
   });
 
   it("delete success: shows success message and removes passkey from list", async () => {
-    const { authClient } = await import("../lib/auth-client") as any;
+    const { authClient } = (await import("../lib/auth-client")) as any;
     authClient.passkey.listUserPasskeys
-      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "My Key", createdAt: null }] }))
+      .mockImplementationOnce(() =>
+        Promise.resolve({
+          data: [{ id: "pk-1", name: "My Key", createdAt: null }],
+        }),
+      )
       .mockImplementationOnce(() => Promise.resolve({ data: [] }));
-    authClient.passkey.deletePasskey.mockImplementationOnce(() => Promise.resolve({}));
+    authClient.passkey.deletePasskey.mockImplementationOnce(() =>
+      Promise.resolve({}),
+    );
 
     render(<SettingsPage />, { wrapper: Wrapper });
 
@@ -330,7 +415,9 @@ describe("PasskeySection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    await waitFor(() => expect(screen.getByText("Passkey deleted")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Passkey deleted")).toBeDefined(),
+    );
 
     expect(screen.queryByText("Passkey deleted")).toBeDefined();
     expect(screen.queryByText("My Key")).toBeNull();
@@ -338,11 +425,14 @@ describe("PasskeySection", () => {
   });
 
   it("delete error: shows error message, clears success, list unchanged", async () => {
-    const { authClient } = await import("../lib/auth-client") as any;
-    authClient.passkey.listUserPasskeys
-      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "My Key", createdAt: null }] }));
+    const { authClient } = (await import("../lib/auth-client")) as any;
+    authClient.passkey.listUserPasskeys.mockImplementationOnce(() =>
+      Promise.resolve({
+        data: [{ id: "pk-1", name: "My Key", createdAt: null }],
+      }),
+    );
     authClient.passkey.deletePasskey.mockImplementationOnce(() =>
-      Promise.resolve({ error: { message: "Network error" } })
+      Promise.resolve({ error: { message: "Network error" } }),
     );
 
     render(<SettingsPage />, { wrapper: Wrapper });
@@ -351,42 +441,29 @@ describe("PasskeySection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    await waitFor(() => expect(screen.getByText("Network error")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Network error")).toBeDefined(),
+    );
 
     expect(screen.queryByText("Passkey deleted")).toBeNull();
     expect(screen.getByText("My Key")).toBeDefined();
   });
 
   it("rename success: shows success message and exits edit mode", async () => {
-    const { authClient } = await import("../lib/auth-client") as any;
+    const { authClient } = (await import("../lib/auth-client")) as any;
     authClient.passkey.listUserPasskeys
-      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "Old Name", createdAt: null }] }))
-      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "New Name", createdAt: null }] }));
-    authClient.passkey.updatePasskey.mockImplementationOnce(() => Promise.resolve({}));
-
-    render(<SettingsPage />, { wrapper: Wrapper });
-
-    await waitFor(() => expect(screen.getByText("Old Name")).toBeDefined());
-
-    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
-
-    const editInput = screen.getByRole("textbox", { name: "Passkey name" });
-    fireEvent.change(editInput, { target: { value: "New Name" } });
-
-    fireEvent.click(within(editInput.closest("form")!).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(screen.getByText("Passkey renamed")).toBeDefined());
-
-    // Edit input closed after success
-    expect(screen.queryByRole("textbox", { name: "Passkey name" })).toBeNull();
-  });
-
-  it("rename error: shows error and keeps edit mode open for retry", async () => {
-    const { authClient } = await import("../lib/auth-client") as any;
-    authClient.passkey.listUserPasskeys
-      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: "pk-1", name: "Old Name", createdAt: null }] }));
+      .mockImplementationOnce(() =>
+        Promise.resolve({
+          data: [{ id: "pk-1", name: "Old Name", createdAt: null }],
+        }),
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve({
+          data: [{ id: "pk-1", name: "New Name", createdAt: null }],
+        }),
+      );
     authClient.passkey.updatePasskey.mockImplementationOnce(() =>
-      Promise.resolve({ error: { message: "Rename failed" } })
+      Promise.resolve({}),
     );
 
     render(<SettingsPage />, { wrapper: Wrapper });
@@ -398,9 +475,45 @@ describe("PasskeySection", () => {
     const editInput = screen.getByRole("textbox", { name: "Passkey name" });
     fireEvent.change(editInput, { target: { value: "New Name" } });
 
-    fireEvent.click(within(editInput.closest("form")!).getByRole("button", { name: "Save" }));
+    fireEvent.click(
+      within(editInput.closest("form")!).getByRole("button", { name: "Save" }),
+    );
 
-    await waitFor(() => expect(screen.getByText("Rename failed")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Passkey renamed")).toBeDefined(),
+    );
+
+    // Edit input closed after success
+    expect(screen.queryByRole("textbox", { name: "Passkey name" })).toBeNull();
+  });
+
+  it("rename error: shows error and keeps edit mode open for retry", async () => {
+    const { authClient } = (await import("../lib/auth-client")) as any;
+    authClient.passkey.listUserPasskeys.mockImplementationOnce(() =>
+      Promise.resolve({
+        data: [{ id: "pk-1", name: "Old Name", createdAt: null }],
+      }),
+    );
+    authClient.passkey.updatePasskey.mockImplementationOnce(() =>
+      Promise.resolve({ error: { message: "Rename failed" } }),
+    );
+
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Old Name")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+
+    const editInput = screen.getByRole("textbox", { name: "Passkey name" });
+    fireEvent.change(editInput, { target: { value: "New Name" } });
+
+    fireEvent.click(
+      within(editInput.closest("form")!).getByRole("button", { name: "Save" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("Rename failed")).toBeDefined(),
+    );
 
     // Edit input stays visible so user can retry
     expect(screen.getByRole("textbox", { name: "Passkey name" })).toBeDefined();
@@ -410,24 +523,32 @@ describe("PasskeySection", () => {
 
 describe("KioskSection", () => {
   it("renders the Kiosk Display section in the integrations tab", async () => {
-    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=integrations") });
+    render(<SettingsPage />, {
+      wrapper: WrapperWithPath("/settings?tab=integrations"),
+    });
     await waitFor(() => {
       expect(screen.getByText("Kiosk Display")).toBeDefined();
     });
   });
 
   it("shows generate button when no token exists", async () => {
-    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=integrations") });
+    render(<SettingsPage />, {
+      wrapper: WrapperWithPath("/settings?tab=integrations"),
+    });
     await waitFor(() => {
       expect(screen.getByText("Generate Kiosk URL")).toBeDefined();
     });
   });
 
   it("shows kiosk URL and action buttons when token exists", async () => {
-    const { getKioskToken } = await import("../api") as any;
-    getKioskToken.mockImplementation(() => Promise.resolve({ token: "existingtoken123" }));
+    const { getKioskToken } = (await import("../api")) as any;
+    getKioskToken.mockImplementation(() =>
+      Promise.resolve({ token: "existingtoken123" }),
+    );
 
-    render(<SettingsPage />, { wrapper: WrapperWithPath("/settings?tab=integrations") });
+    render(<SettingsPage />, {
+      wrapper: WrapperWithPath("/settings?tab=integrations"),
+    });
     await waitFor(() => {
       expect(screen.getByText("Copy URL")).toBeDefined();
       expect(screen.getByText("Regenerate")).toBeDefined();

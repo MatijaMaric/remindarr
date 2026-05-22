@@ -1,6 +1,20 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getHomepageLayout, setHomepageLayout, getUserDepartureSettings, updateUserDepartureSettings, getCrowdedWeekSettings, updateCrowdedWeekSettings, getAppearanceSettings, updateAppearanceSettings, getSubscribedProviderIds, setSubscribedProviderIds, getOnlyMineFilter, setOnlyMineFilter, filterValidProviderIds } from "../db/repository";
+import {
+  getHomepageLayout,
+  setHomepageLayout,
+  getUserDepartureSettings,
+  updateUserDepartureSettings,
+  getCrowdedWeekSettings,
+  updateCrowdedWeekSettings,
+  getAppearanceSettings,
+  updateAppearanceSettings,
+  getSubscribedProviderIds,
+  setSubscribedProviderIds,
+  getOnlyMineFilter,
+  setOnlyMineFilter,
+  filterValidProviderIds,
+} from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
@@ -10,7 +24,18 @@ import { logger } from "../logger";
 const log = logger.child({ module: "user-settings" });
 
 // Keep in sync with frontend/src/types.ts HomepageSectionId / DEFAULT_HOMEPAGE_LAYOUT.
-export const HOMEPAGE_SECTION_IDS = ["streak", "up_next", "unwatched", "movies_to_watch", "recommendations", "today", "upcoming", "upcoming_movies", "airing_soon", "friends_loved"] as const;
+export const HOMEPAGE_SECTION_IDS = [
+  "streak",
+  "up_next",
+  "unwatched",
+  "movies_to_watch",
+  "recommendations",
+  "today",
+  "upcoming",
+  "upcoming_movies",
+  "airing_soon",
+  "friends_loved",
+] as const;
 export type HomepageSectionId = (typeof HOMEPAGE_SECTION_IDS)[number];
 
 export interface HomepageSection {
@@ -99,7 +124,11 @@ app.get("/homepage-layout", async (c) => {
     const message = e instanceof Error ? e.message : String(e);
     const stack = e instanceof Error ? e.stack : undefined;
     Sentry.captureException(e);
-    log.error("homepage-layout fetch failed", { userId: user.id, error: message, stack });
+    log.error("homepage-layout fetch failed", {
+      userId: user.id,
+      error: message,
+      stack,
+    });
     return err(c, "Failed to load homepage layout", 500);
   }
 });
@@ -134,7 +163,9 @@ app.get("/departure-alerts", async (c) => {
   const user = c.get("user")!;
   const settings = await getUserDepartureSettings(user.id);
   return ok(c, {
-    streamingDeparturesEnabled: settings ? settings.streamingDeparturesEnabled !== 0 : true,
+    streamingDeparturesEnabled: settings
+      ? settings.streamingDeparturesEnabled !== 0
+      : true,
     departureAlertLeadDays: settings?.departureAlertLeadDays ?? 7,
   });
 });
@@ -148,7 +179,9 @@ app.put(
     await updateUserDepartureSettings(user.id, body);
     const settings = await getUserDepartureSettings(user.id);
     return ok(c, {
-      streamingDeparturesEnabled: settings ? settings.streamingDeparturesEnabled !== 0 : true,
+      streamingDeparturesEnabled: settings
+        ? settings.streamingDeparturesEnabled !== 0
+        : true,
       departureAlertLeadDays: settings?.departureAlertLeadDays ?? 7,
     });
   },
@@ -187,8 +220,23 @@ app.put(
 
 // ─── Appearance settings ──────────────────────────────────────────────────────
 
-const THEME_VARIANTS = ["dark", "light", "oled", "midnight", "moss", "plum", "auto"] as const;
-const ACCENT_COLORS = ["amber", "ember", "plum", "cobalt", "moss", "sand"] as const;
+const THEME_VARIANTS = [
+  "dark",
+  "light",
+  "oled",
+  "midnight",
+  "moss",
+  "plum",
+  "auto",
+] as const;
+const ACCENT_COLORS = [
+  "amber",
+  "ember",
+  "plum",
+  "cobalt",
+  "moss",
+  "sand",
+] as const;
 const DENSITIES = ["comfortable", "cozy", "compact"] as const;
 
 const updateAppearanceSchema = z.object({
@@ -265,7 +313,7 @@ app.put(
     await setSubscribedProviderIds(user.id, providerIds);
     const updated = await getSubscribedProviderIds(user.id);
     return ok(c, { providerIds: updated });
-  }
+  },
 );
 
 app.put(
@@ -276,7 +324,7 @@ app.put(
     const { onlyMine } = c.req.valid("json");
     await setOnlyMineFilter(user.id, onlyMine);
     return ok(c, { onlyMine });
-  }
+  },
 );
 
 export default app;

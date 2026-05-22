@@ -60,8 +60,12 @@ describe("OfflineIndicator", () => {
   it("shows available features when offline", () => {
     setOnline(false);
     render(<OfflineIndicator />);
-    expect(screen.getByText(/Browsing, details & calendar available/)).toBeDefined();
-    expect(screen.getByText(/Episode & watchlist changes will sync/)).toBeDefined();
+    expect(
+      screen.getByText(/Browsing, details & calendar available/),
+    ).toBeDefined();
+    expect(
+      screen.getByText(/Episode & watchlist changes will sync/),
+    ).toBeDefined();
   });
 
   it("shows banner when offline event fires", () => {
@@ -107,7 +111,9 @@ describe("OfflineIndicator", () => {
       expect(screen.getByText(/8d ago/)).toBeDefined();
     });
 
-    expect((container.firstChild as HTMLElement).className).toContain("bg-orange-500");
+    expect((container.firstChild as HTMLElement).className).toContain(
+      "bg-orange-500",
+    );
   });
 
   it("uses normal color class when cache is fresh (under 7 days)", async () => {
@@ -121,7 +127,9 @@ describe("OfflineIndicator", () => {
       expect(screen.getByText(/1d ago/)).toBeDefined();
     });
 
-    expect((container.firstChild as HTMLElement).className).toContain("bg-yellow-500");
+    expect((container.firstChild as HTMLElement).className).toContain(
+      "bg-yellow-500",
+    );
   });
 
   it("shows 'recently' when cache age is less than 1 hour", async () => {

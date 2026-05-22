@@ -6,18 +6,25 @@ beforeEach(() => {
   resetMetrics();
 });
 
-function makeResponse(status: number, headers: Record<string, string> = {}): Response {
+function makeResponse(
+  status: number,
+  headers: Record<string, string> = {},
+): Response {
   return new Response(null, { status, headers });
 }
 
 describe("httpFetch", () => {
   it("returns immediately on 200 without retrying", async () => {
-    const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(makeResponse(200));
+    const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+      makeResponse(200),
+    );
     try {
       const { httpFetch } = await import("./http");
       const { httpRetryTotal } = await import("../metrics");
 
-      const res = await httpFetch("https://example.com", undefined, { baseDelayMs: 0 });
+      const res = await httpFetch("https://example.com", undefined, {
+        baseDelayMs: 0,
+      });
       expect(res.status).toBe(200);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
@@ -40,7 +47,9 @@ describe("httpFetch", () => {
       const { httpFetch } = await import("./http");
       const { httpRetryTotal } = await import("../metrics");
 
-      const res = await httpFetch("https://example.com", undefined, { baseDelayMs: 0 });
+      const res = await httpFetch("https://example.com", undefined, {
+        baseDelayMs: 0,
+      });
       expect(res.status).toBe(200);
       expect(callCount).toBe(3);
 
@@ -62,7 +71,9 @@ describe("httpFetch", () => {
     try {
       const { httpFetch } = await import("./http");
 
-      const res = await httpFetch("https://example.com", undefined, { baseDelayMs: 0 });
+      const res = await httpFetch("https://example.com", undefined, {
+        baseDelayMs: 0,
+      });
       expect(res.status).toBe(400);
       expect(callCount).toBe(1);
     } finally {
@@ -74,14 +85,17 @@ describe("httpFetch", () => {
     let callCount = 0;
     const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((() => {
       callCount++;
-      if (callCount === 1) return Promise.resolve(makeResponse(429, { "Retry-After": "0" }));
+      if (callCount === 1)
+        return Promise.resolve(makeResponse(429, { "Retry-After": "0" }));
       return Promise.resolve(makeResponse(200));
     }) as any);
     try {
       const { httpFetch } = await import("./http");
       const { httpRetryTotal } = await import("../metrics");
 
-      const res = await httpFetch("https://example.com", undefined, { baseDelayMs: 0 });
+      const res = await httpFetch("https://example.com", undefined, {
+        baseDelayMs: 0,
+      });
       expect(res.status).toBe(200);
       expect(callCount).toBe(2);
 
@@ -103,7 +117,10 @@ describe("httpFetch", () => {
       const { httpRetryTotal } = await import("../metrics");
 
       await expect(
-        httpFetch("https://example.com", undefined, { maxRetries: 3, baseDelayMs: 0 })
+        httpFetch("https://example.com", undefined, {
+          maxRetries: 3,
+          baseDelayMs: 0,
+        }),
       ).rejects.toThrow("ECONNREFUSED");
 
       // Called maxRetries+1 times total (attempts 0,1,2,3)
@@ -119,7 +136,9 @@ describe("httpFetch", () => {
   });
 
   it("returns the last retryable response on final attempt instead of throwing", async () => {
-    const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(makeResponse(503));
+    const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+      makeResponse(503),
+    );
     try {
       const { httpFetch } = await import("./http");
 

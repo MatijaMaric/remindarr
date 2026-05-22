@@ -78,17 +78,24 @@ export function useAppearance(): {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    getAppearanceSettings().then((data) => {
-      if (!cancelled) applyAndSet(data);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    getAppearanceSettings()
+      .then((data) => {
+        if (!cancelled) applyAndSet(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [user, applyAndSet]);
 
-  const update = useCallback(async (patch: Partial<AppearanceSettings>) => {
-    applyAndSet({ ...settings, ...patch });
-    const saved = await updateAppearanceSettings(patch);
-    applyAndSet(saved);
-  }, [settings, applyAndSet]);
+  const update = useCallback(
+    async (patch: Partial<AppearanceSettings>) => {
+      applyAndSet({ ...settings, ...patch });
+      const saved = await updateAppearanceSettings(patch);
+      applyAndSet(saved);
+    },
+    [settings, applyAndSet],
+  );
 
   return { settings, update };
 }

@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,7 +17,9 @@ import "../i18n";
 const { default: InvitePage } = await import("./InvitePage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -25,7 +33,9 @@ function Wrapper({ children }: { children: ReactNode }) {
 function WrapperWithCode({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <MemoryRouter initialEntries={["/invite?code=TESTCODE"]}>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={["/invite?code=TESTCODE"]}>
+        {children}
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -43,21 +53,36 @@ function makeInvitation(overrides: Record<string, unknown> = {}) {
 }
 
 let getInvitationsSpy: ReturnType<typeof spyOn<typeof api, "getInvitations">>;
-let createInvitationSpy: ReturnType<typeof spyOn<typeof api, "createInvitation">>;
-let revokeInvitationSpy: ReturnType<typeof spyOn<typeof api, "revokeInvitation">>;
-let redeemInvitationSpy: ReturnType<typeof spyOn<typeof api, "redeemInvitation">>;
+let createInvitationSpy: ReturnType<
+  typeof spyOn<typeof api, "createInvitation">
+>;
+let revokeInvitationSpy: ReturnType<
+  typeof spyOn<typeof api, "revokeInvitation">
+>;
+let redeemInvitationSpy: ReturnType<
+  typeof spyOn<typeof api, "redeemInvitation">
+>;
 
 beforeEach(() => {
-  getInvitationsSpy = spyOn(api, "getInvitations").mockResolvedValue({ invitations: [] } as any);
+  getInvitationsSpy = spyOn(api, "getInvitations").mockResolvedValue({
+    invitations: [],
+  } as any);
   createInvitationSpy = spyOn(api, "createInvitation").mockResolvedValue({
     id: "inv-new",
     code: "NEWCODE",
     expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
   } as any);
-  revokeInvitationSpy = spyOn(api, "revokeInvitation").mockResolvedValue(undefined as any);
+  revokeInvitationSpy = spyOn(api, "revokeInvitation").mockResolvedValue(
+    undefined as any,
+  );
   redeemInvitationSpy = spyOn(api, "redeemInvitation").mockResolvedValue({
     success: true,
-    inviter: { id: "u2", username: "alice", display_name: "Alice", image: null },
+    inviter: {
+      id: "u2",
+      username: "alice",
+      display_name: "Alice",
+      image: null,
+    },
   } as any);
 });
 
@@ -76,7 +101,7 @@ describe("InvitePage", () => {
       makeInvitation({ id: "inv-2", code: "CODE2" }),
     ];
     getInvitationsSpy.mockImplementation(() =>
-      Promise.resolve({ invitations } as any)
+      Promise.resolve({ invitations } as any),
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -120,7 +145,7 @@ describe("InvitePage", () => {
   it("share button present for pending invitations", async () => {
     const invitations = [makeInvitation()];
     getInvitationsSpy.mockImplementation(() =>
-      Promise.resolve({ invitations } as any)
+      Promise.resolve({ invitations } as any),
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -168,7 +193,7 @@ describe("InvitePage", () => {
       }),
     ];
     getInvitationsSpy.mockImplementation(() =>
-      Promise.resolve({ invitations } as any)
+      Promise.resolve({ invitations } as any),
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -188,11 +213,16 @@ describe("InvitePage", () => {
         id: "inv-used",
         code: "USED1",
         used_at: new Date().toISOString(),
-        used_by: { id: "u3", username: "bob", display_name: "Bob", image: null },
+        used_by: {
+          id: "u3",
+          username: "bob",
+          display_name: "Bob",
+          image: null,
+        },
       }),
     ];
     getInvitationsSpy.mockImplementation(() =>
-      Promise.resolve({ invitations } as any)
+      Promise.resolve({ invitations } as any),
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
@@ -207,7 +237,7 @@ describe("InvitePage", () => {
 
   it("auto-redeem from URL query parameter", async () => {
     getInvitationsSpy.mockImplementation(() =>
-      Promise.resolve({ invitations: [] } as any)
+      Promise.resolve({ invitations: [] } as any),
     );
 
     render(<InvitePage />, { wrapper: WrapperWithCode });
@@ -217,25 +247,31 @@ describe("InvitePage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/You and @Alice are now following each other!/)).toBeDefined();
+      expect(
+        screen.getByText(/You and @Alice are now following each other!/),
+      ).toBeDefined();
     });
   });
 
   it("shows empty state when no invitations", async () => {
     getInvitationsSpy.mockImplementation(() =>
-      Promise.resolve({ invitations: [] } as any)
+      Promise.resolve({ invitations: [] } as any),
     );
 
     render(<InvitePage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("No invitations yet. Create one to invite your friends!")).toBeDefined();
+      expect(
+        screen.getByText(
+          "No invitations yet. Create one to invite your friends!",
+        ),
+      ).toBeDefined();
     });
   });
 
   it("shows error when redeem fails", async () => {
     redeemInvitationSpy.mockImplementation(() =>
-      Promise.reject(new Error("Invitation expired"))
+      Promise.reject(new Error("Invitation expired")),
     );
 
     render(<InvitePage />, { wrapper: WrapperWithCode });

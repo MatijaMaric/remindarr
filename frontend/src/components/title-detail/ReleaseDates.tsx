@@ -15,17 +15,32 @@ export default function ReleaseDates({ releaseDates }: ReleaseDatesProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/[0.06]">
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">Type</th>
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">Date</th>
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">Certification</th>
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">Note</th>
+              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+                Type
+              </th>
+              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+                Date
+              </th>
+              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+                Certification
+              </th>
+              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+                Note
+              </th>
             </tr>
           </thead>
           <tbody>
             {releaseDates.release_dates.map((rd) => (
-              <tr key={`${rd.release_date}-${rd.type}`} className="border-b border-zinc-800/50 last:border-0">
-                <td className="py-2 px-4 text-zinc-300">{RELEASE_TYPE_LABELS[rd.type] || `Type ${rd.type}`}</td>
-                <td className="py-2 px-4 text-zinc-300">{formatDate(rd.release_date)}</td>
+              <tr
+                key={`${rd.release_date}-${rd.type}`}
+                className="border-b border-zinc-800/50 last:border-0"
+              >
+                <td className="py-2 px-4 text-zinc-300">
+                  {RELEASE_TYPE_LABELS[rd.type] || `Type ${rd.type}`}
+                </td>
+                <td className="py-2 px-4 text-zinc-300">
+                  {formatDate(rd.release_date)}
+                </td>
                 <td className="py-2 px-4">
                   {rd.certification && (
                     <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs text-zinc-300">

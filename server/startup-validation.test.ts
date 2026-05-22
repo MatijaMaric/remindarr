@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  spyOn,
+  mock,
+} from "bun:test";
 import { CONFIG } from "./config";
 
 const originalTmdbApiKey = CONFIG.TMDB_API_KEY;

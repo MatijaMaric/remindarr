@@ -1,15 +1,32 @@
-import { describe, it, expect, beforeEach, afterAll, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  afterEach,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import integrationApp from "./integrations";
 import type { AppEnv } from "../types";
 
 // Mock Sentry
 import Sentry from "../sentry";
-const sentryStartSpanSpy = spyOn(Sentry, "startSpan").mockImplementation((_opts: any, fn: any) => fn({}));
-const sentryCaptureExceptionSpy = spyOn(Sentry, "captureException").mockImplementation(() => "");
+const sentryStartSpanSpy = spyOn(Sentry, "startSpan").mockImplementation(
+  (_opts: any, fn: any) => fn({}),
+);
+const sentryCaptureExceptionSpy = spyOn(
+  Sentry,
+  "captureException",
+).mockImplementation(() => "");
 
 // Mock Plex client so no real HTTP calls are made
 import * as plexClient from "../plex/client";
@@ -94,7 +111,7 @@ describe("GET /integrations", () => {
   it("returns empty list for new user", async () => {
     const res = await app.request("/integrations", { headers: headers() });
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.integrations).toEqual([]);
   });
 
@@ -105,7 +122,7 @@ describe("GET /integrations", () => {
       body: JSON.stringify(validPlexIntegration),
     });
     const res = await app.request("/integrations", { headers: headers() });
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.integrations).toHaveLength(1);
     expect(body.integrations[0].provider).toBe("plex");
   });
@@ -117,7 +134,7 @@ describe("GET /integrations", () => {
       body: JSON.stringify(validPlexIntegration),
     });
     const res = await app.request("/integrations", { headers: headers() });
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.integrations[0].config.plexToken).toBeUndefined();
   });
 
@@ -135,7 +152,7 @@ describe("POST /integrations", () => {
       body: JSON.stringify(validPlexIntegration),
     });
     expect(res.status).toBe(201);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.integration.provider).toBe("plex");
     expect(body.integration.name).toBe("My Plex Server");
     expect(body.integration.enabled).toBe(true);
@@ -165,11 +182,14 @@ describe("POST /integrations", () => {
       headers: jsonHeaders(),
       body: JSON.stringify({
         ...validPlexIntegration,
-        config: { ...validPlexIntegration.config, serverUrl: "http://plex:32400/" },
+        config: {
+          ...validPlexIntegration.config,
+          serverUrl: "http://plex:32400/",
+        },
       }),
     });
     expect(res.status).toBe(201);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.integration.config.serverUrl).toBe("http://plex:32400");
   });
 });
@@ -181,7 +201,7 @@ describe("PUT /integrations/:id", () => {
       headers: jsonHeaders(),
       body: JSON.stringify(validPlexIntegration),
     });
-    const { integration } = await createRes.json() as any;
+    const { integration } = (await createRes.json()) as any;
 
     const res = await app.request(`/integrations/${integration.id}`, {
       method: "PUT",
@@ -189,7 +209,7 @@ describe("PUT /integrations/:id", () => {
       body: JSON.stringify({ enabled: false }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.integration.enabled).toBe(false);
   });
 
@@ -210,7 +230,7 @@ describe("DELETE /integrations/:id", () => {
       headers: jsonHeaders(),
       body: JSON.stringify(validPlexIntegration),
     });
-    const { integration } = await createRes.json() as any;
+    const { integration } = (await createRes.json()) as any;
 
     const delRes = await app.request(`/integrations/${integration.id}`, {
       method: "DELETE",
@@ -219,7 +239,7 @@ describe("DELETE /integrations/:id", () => {
     expect(delRes.status).toBe(200);
 
     const listRes = await app.request("/integrations", { headers: headers() });
-    const body = await listRes.json() as any;
+    const body = (await listRes.json()) as any;
     expect(body.integrations).toHaveLength(0);
   });
 
@@ -240,7 +260,7 @@ describe("validation", () => {
       body: JSON.stringify({ provider: "plex" }),
     });
     expect(res.status).toBe(400);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
@@ -252,7 +272,7 @@ describe("validation", () => {
       body: JSON.stringify({ provider: "plex", config: { plexToken: "x" } }),
     });
     expect(res.status).toBe(400);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
@@ -264,7 +284,7 @@ describe("validation", () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
@@ -275,7 +295,7 @@ describe("validation", () => {
       headers: jsonHeaders(),
       body: JSON.stringify(validPlexIntegration),
     });
-    const { integration } = await createRes.json() as any;
+    const { integration } = (await createRes.json()) as any;
 
     const res = await app.request(`/integrations/${integration.id}`, {
       method: "PUT",
@@ -283,7 +303,7 @@ describe("validation", () => {
       body: JSON.stringify({ enabled: "yes" }),
     });
     expect(res.status).toBe(400);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
@@ -304,7 +324,7 @@ describe("POST /integrations/plex/pin", () => {
       headers: headers(),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.pinId).toBe(12345);
     expect(body.authUrl).toContain("ABCD");
   });
@@ -313,7 +333,10 @@ describe("POST /integrations/plex/pin", () => {
 describe("POST /integrations/plex/pin/:pinId", () => {
   it("returns resolved=false when pin not yet authorized", async () => {
     const checkSpy = spyOn(plexClient, "checkPin").mockResolvedValue({
-      id: 1, code: "X", authToken: null, expiresAt: "2099-01-01",
+      id: 1,
+      code: "X",
+      authToken: null,
+      expiresAt: "2099-01-01",
     });
     spies.push(checkSpy);
 
@@ -322,16 +345,25 @@ describe("POST /integrations/plex/pin/:pinId", () => {
       headers: headers(),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.resolved).toBe(false);
   });
 
   it("returns resolved=true with servers when pin is authorized", async () => {
     const checkSpy = spyOn(plexClient, "checkPin").mockResolvedValue({
-      id: 1, code: "X", authToken: "my-token", expiresAt: "2099-01-01",
+      id: 1,
+      code: "X",
+      authToken: "my-token",
+      expiresAt: "2099-01-01",
     });
     const serversSpy = spyOn(plexClient, "getServers").mockResolvedValue([
-      { name: "Home Server", clientIdentifier: "server-id", connections: [{ uri: "http://192.168.1.1:32400", local: true, relay: false }] },
+      {
+        name: "Home Server",
+        clientIdentifier: "server-id",
+        connections: [
+          { uri: "http://192.168.1.1:32400", local: true, relay: false },
+        ],
+      },
     ]);
     spies.push(checkSpy, serversSpy);
 
@@ -340,7 +372,7 @@ describe("POST /integrations/plex/pin/:pinId", () => {
       headers: headers(),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.resolved).toBe(true);
     expect(body.authToken).toBe("my-token");
     expect(body.servers).toHaveLength(1);

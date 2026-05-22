@@ -92,20 +92,21 @@ bun run deploy:cf
 ```
 
 Runtime differences vs the Bun deploy:
+
 - In-memory job worker is replaced by Workers cron triggers (configured in `wrangler.toml`).
 - Cache defaults to KV; set `CACHE_BACKEND=kv` for both Bun and Workers.
 - Session IP detection uses `cf-connecting-ip` in addition to `x-forwarded-for`.
 
 ## Configuration
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `TMDB_API_KEY` | Yes | TMDB API key |
-| `BASE_URL` | Yes | Full URL of the app (e.g. `https://remindarr.example.com`) |
-| `BETTER_AUTH_SECRET` | Yes | Random secret for signing sessions |
-| `TMDB_COUNTRY` | No (default: `HR`) | Country code for streaming availability (`US`, `GB`, etc.) |
-| `TMDB_LANGUAGE` | No (default: `en`) | Language for titles |
-| `DB_PATH` | No (default: `./remindarr.db`) | SQLite database path |
+| Variable             | Required                       | Description                                                |
+| -------------------- | ------------------------------ | ---------------------------------------------------------- |
+| `TMDB_API_KEY`       | Yes                            | TMDB API key                                               |
+| `BASE_URL`           | Yes                            | Full URL of the app (e.g. `https://remindarr.example.com`) |
+| `BETTER_AUTH_SECRET` | Yes                            | Random secret for signing sessions                         |
+| `TMDB_COUNTRY`       | No (default: `HR`)             | Country code for streaming availability (`US`, `GB`, etc.) |
+| `TMDB_LANGUAGE`      | No (default: `en`)             | Language for titles                                        |
+| `DB_PATH`            | No (default: `./remindarr.db`) | SQLite database path                                       |
 
 For OIDC, Web Push, notifications, caching, and all other options see [docs/configuration.md](docs/configuration.md).
 

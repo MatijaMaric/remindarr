@@ -6,7 +6,16 @@ export interface ShowGroup {
   titles: Title[];
 }
 
-const STATUS_ORDER = ["watching", "caught_up", "not_started", "unreleased", "on_hold", "dropped", "plan_to_watch", "completed"] as const;
+const STATUS_ORDER = [
+  "watching",
+  "caught_up",
+  "not_started",
+  "unreleased",
+  "on_hold",
+  "dropped",
+  "plan_to_watch",
+  "completed",
+] as const;
 
 const LABEL_KEYS: Record<string, string> = {
   watching: "tracked.sections.watching",
@@ -19,14 +28,20 @@ const LABEL_KEYS: Record<string, string> = {
   completed: "tracked.sections.completed",
 };
 
-function compareDatesDesc(a: string | null | undefined, b: string | null | undefined): number {
+function compareDatesDesc(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): number {
   if (!a && !b) return 0;
   if (!a) return 1;
   if (!b) return -1;
   return b.localeCompare(a);
 }
 
-function compareDatesAsc(a: string | null | undefined, b: string | null | undefined): number {
+function compareDatesAsc(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): number {
   if (!a && !b) return 0;
   if (!a) return 1;
   if (!b) return -1;
@@ -41,19 +56,25 @@ function sortGroup(key: string, titles: Title[]): Title[] {
   switch (key) {
     case "watching":
       return [...titles].sort((a, b) =>
-        compareDatesDesc(a.latest_released_air_date, b.latest_released_air_date)
+        compareDatesDesc(
+          a.latest_released_air_date,
+          b.latest_released_air_date,
+        ),
       );
     case "caught_up":
       return [...titles].sort((a, b) =>
-        compareDatesAsc(a.next_episode_air_date, b.next_episode_air_date)
+        compareDatesAsc(a.next_episode_air_date, b.next_episode_air_date),
       );
     case "not_started":
       return [...titles].sort((a, b) =>
-        compareDatesDesc(a.latest_released_air_date, b.latest_released_air_date)
+        compareDatesDesc(
+          a.latest_released_air_date,
+          b.latest_released_air_date,
+        ),
       );
     case "unreleased":
       return [...titles].sort((a, b) =>
-        compareDatesAsc(a.release_date, b.release_date)
+        compareDatesAsc(a.release_date, b.release_date),
       );
     case "completed":
     case "on_hold":

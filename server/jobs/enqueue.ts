@@ -11,7 +11,7 @@ import { getDb, jobs } from "../db/schema";
 export async function enqueueJob(
   name: string,
   data?: Record<string, unknown>,
-  options?: { runAt?: Date; maxAttempts?: number }
+  options?: { runAt?: Date; maxAttempts?: number },
 ): Promise<void> {
   const db = getDb();
   await db.insert(jobs).values({
@@ -28,7 +28,12 @@ export async function hasActiveJob(name: string): Promise<boolean> {
   const row = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.name, name), inArray(jobs.status, ["pending", "running", "completed"])))
+    .where(
+      and(
+        eq(jobs.name, name),
+        inArray(jobs.status, ["pending", "running", "completed"]),
+      ),
+    )
     .get();
   return row != null;
 }

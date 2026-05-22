@@ -1,18 +1,38 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import {
-  watchEpisode, unwatchEpisode, watchEpisodesBulk, unwatchEpisodesBulk,
-  getEpisodeAirDate, getReleasedEpisodeIds, getReleasedEpisodesWithAirDate,
-  watchTitle, unwatchTitle, getEpisodeTitleId, getEpisodeTitleIds,
+  watchEpisode,
+  unwatchEpisode,
+  watchEpisodesBulk,
+  unwatchEpisodesBulk,
+  getEpisodeAirDate,
+  getReleasedEpisodeIds,
+  getReleasedEpisodesWithAirDate,
+  watchTitle,
+  unwatchTitle,
+  getEpisodeTitleId,
+  getEpisodeTitleIds,
   backdateWatchedEpisodesToAirDate,
-  setWatchedTitleWatchedAt, setWatchedEpisodeWatchedAt,
+  setWatchedTitleWatchedAt,
+  setWatchedEpisodeWatchedAt,
 } from "../db/repository";
-import { logWatch, getTitlePlayCount, getTitleWatchHistory, getWatchHistoryById, updateWatchHistoryWatchedAt, getLatestWatchHistoryFor } from "../db/repository/watch-history";
+import {
+  logWatch,
+  getTitlePlayCount,
+  getTitleWatchHistory,
+  getWatchHistoryById,
+  updateWatchHistoryWatchedAt,
+  getLatestWatchHistoryFor,
+} from "../db/repository/watch-history";
 import { localDateForTimezone } from "../utils/timezone";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
-import { onWatchedTitle, onWatchedEpisode, onWatchedEpisodesBulk } from "../achievements/triggers";
+import {
+  onWatchedTitle,
+  onWatchedEpisode,
+  onWatchedEpisodesBulk,
+} from "../achievements/triggers";
 import { MemoryRateLimitStore } from "../middleware/rate-limit";
 import { logger } from "../logger";
 
@@ -43,7 +63,9 @@ function airDateToWatchedAt(airDate: string): string {
 }
 
 const bulkWatchedSchema = z.object({
-  episodeIds: z.array(z.number().int()).min(1, "episodeIds must be a non-empty array"),
+  episodeIds: z
+    .array(z.number().int())
+    .min(1, "episodeIds must be a non-empty array"),
   watched: z.boolean(),
   useAirDate: z.boolean().optional(),
 });
@@ -58,9 +80,14 @@ app.post("/bulk", zValidator("json", bulkWatchedSchema), async (c) => {
     let watchedAtByEpisodeId: Map<number, string> | undefined;
 
     if (useAirDate) {
-      const released = await getReleasedEpisodesWithAirDate(episodeIds, timezone);
+      const released = await getReleasedEpisodesWithAirDate(
+        episodeIds,
+        timezone,
+      );
       releasedIds = released.map((r) => r.id);
-      watchedAtByEpisodeId = new Map(released.map((r) => [r.id, airDateToWatchedAt(r.airDate)]));
+      watchedAtByEpisodeId = new Map(
+        released.map((r) => [r.id, airDateToWatchedAt(r.airDate)]),
+      );
     } else {
       releasedIds = await getReleasedEpisodeIds(episodeIds, timezone);
     }
@@ -75,7 +102,12 @@ app.post("/bulk", zValidator("json", bulkWatchedSchema), async (c) => {
     for (const episodeId of releasedIds) {
       const titleId = titleIdMap.get(episodeId);
       if (titleId) {
-        await logWatch(user.id, titleId, episodeId, watchedAtByEpisodeId?.get(episodeId));
+        await logWatch(
+          user.id,
+          titleId,
+          episodeId,
+          watchedAtByEpisodeId?.get(episodeId),
+        );
       }
     }
 
@@ -83,14 +115,14 @@ app.post("/bulk", zValidator("json", bulkWatchedSchema), async (c) => {
     const distinctTitleIds = new Set(
       releasedIds
         .map((id) => titleIdMap.get(id))
-        .filter((id): id is string => id != null)
+        .filter((id): id is string => id != null),
     );
     const watchedAt = watchedAtByEpisodeId?.get(releasedIds[0]);
     await onWatchedEpisodesBulk(
       user.id,
       releasedIds.map(String),
       distinctTitleIds,
-      watchedAt
+      watchedAt,
     );
   } else {
     // Achievements are sticky — deletes do not undo progress or earned badges.
@@ -117,16 +149,25 @@ const historyQuerySchema = z.object({
   episodeId: z.coerce.number().int().positive().optional(),
 });
 
-app.get("/history/:titleId", zValidator("query", historyQuerySchema), async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("titleId");
-  const { limit, before, episodeId } = c.req.valid("query");
-  const [page, playCount] = await Promise.all([
-    getTitleWatchHistory(user.id, titleId, { limit, before, episodeId }),
-    getTitlePlayCount(user.id, titleId),
-  ]);
-  return ok(c, { history: page.history, playCount, has_more: page.has_more, next_cursor: page.next_cursor });
-});
+app.get(
+  "/history/:titleId",
+  zValidator("query", historyQuerySchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const titleId = c.req.param("titleId");
+    const { limit, before, episodeId } = c.req.valid("query");
+    const [page, playCount] = await Promise.all([
+      getTitleWatchHistory(user.id, titleId, { limit, before, episodeId }),
+      getTitlePlayCount(user.id, titleId),
+    ]);
+    return ok(c, {
+      history: page.history,
+      playCount,
+      has_more: page.has_more,
+      next_cursor: page.next_cursor,
+    });
+  },
+);
 
 app.patch("/history/:id", zValidator("json", editHistorySchema), async (c) => {
   const user = c.get("user")!;
@@ -135,7 +176,10 @@ app.patch("/history/:id", zValidator("json", editHistorySchema), async (c) => {
   const timezone = c.req.header("X-Timezone") || "UTC";
 
   const { allowed, retryAfterMs } = await getWatchedEditStore().consume(
-    `watched-edit:${user.id}`, 50, 60 * 60 * 1000, Date.now(),
+    `watched-edit:${user.id}`,
+    50,
+    60 * 60 * 1000,
+    Date.now(),
   );
   if (!allowed) {
     c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
@@ -147,14 +191,25 @@ app.patch("/history/:id", zValidator("json", editHistorySchema), async (c) => {
 
   const todayLocal = localDateForTimezone(timezone);
   if (watched_at.slice(0, 10) > todayLocal) {
-    return c.json({ error: "Validation failed", issues: [{ message: "Cannot set a future watched date" }] }, 400);
+    return c.json(
+      {
+        error: "Validation failed",
+        issues: [{ message: "Cannot set a future watched date" }],
+      },
+      400,
+    );
   }
 
-  const normalised = watched_at.length === 10 ? `${watched_at} 00:00:00` : watched_at;
+  const normalised =
+    watched_at.length === 10 ? `${watched_at} 00:00:00` : watched_at;
 
   await updateWatchHistoryWatchedAt(id, user.id, normalised);
 
-  const latest = await getLatestWatchHistoryFor(user.id, row.titleId, row.episodeId);
+  const latest = await getLatestWatchHistoryFor(
+    user.id,
+    row.titleId,
+    row.episodeId,
+  );
   if (latest === normalised) {
     if (row.episodeId === null) {
       await setWatchedTitleWatchedAt(row.titleId, user.id, normalised);

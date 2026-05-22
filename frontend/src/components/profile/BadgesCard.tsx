@@ -20,7 +20,9 @@ import { Kicker } from "../design/Kicker";
 import { ThinProgress } from "./atoms/ThinProgress";
 import type { UserAchievement } from "../../types";
 
-type IconComponent = ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
+type IconComponent = ForwardRefExoticComponent<
+  Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>
+>;
 
 const ICON_MAP: Record<string, IconComponent> = {
   Film,

@@ -11,7 +11,9 @@ describe("WatchButton", () => {
   };
 
   it("renders compact variant with link", () => {
-    const { container } = render(<WatchButton {...defaultProps} variant="compact" />);
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="compact" />,
+    );
     const link = container.querySelector("a");
     expect(link).toBeTruthy();
     expect(link!.getAttribute("href")).toBe("https://example.com/watch");
@@ -20,7 +22,9 @@ describe("WatchButton", () => {
   });
 
   it("renders full variant with provider icon only (no name text)", () => {
-    const { container } = render(<WatchButton {...defaultProps} variant="full" />);
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" />,
+    );
     const link = container.querySelector("a");
     expect(link).toBeTruthy();
     expect(link!.textContent).not.toContain("Netflix");
@@ -40,7 +44,9 @@ describe("WatchButton", () => {
   });
 
   it("renders provider icon in full variant", () => {
-    const { container } = render(<WatchButton {...defaultProps} variant="full" />);
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" />,
+    );
     const img = container.querySelector("img");
     expect(img).toBeTruthy();
     expect(img!.getAttribute("src")).toBe("https://example.com/netflix.png");
@@ -48,7 +54,11 @@ describe("WatchButton", () => {
 
   it("renders monetization label in full variant when provided", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" monetizationType="FLATRATE" />
+      <WatchButton
+        {...defaultProps}
+        variant="full"
+        monetizationType="FLATRATE"
+      />,
     );
     const link = container.querySelector("a");
     expect(link!.textContent).toContain("Stream");
@@ -57,20 +67,22 @@ describe("WatchButton", () => {
 
   it("renders Rent label for RENT monetization type", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" monetizationType="RENT" />
+      <WatchButton {...defaultProps} variant="full" monetizationType="RENT" />,
     );
     expect(container.querySelector("a")!.textContent).toContain("Rent");
   });
 
   it("renders Buy label for BUY monetization type", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" monetizationType="BUY" />
+      <WatchButton {...defaultProps} variant="full" monetizationType="BUY" />,
     );
     expect(container.querySelector("a")!.textContent).toContain("Buy");
   });
 
   it("omits monetization label in full variant when not provided", () => {
-    const { container } = render(<WatchButton {...defaultProps} variant="full" />);
+    const { container } = render(
+      <WatchButton {...defaultProps} variant="full" />,
+    );
     const text = container.querySelector("a")!.textContent!;
     expect(text).not.toContain("Stream");
     expect(text).not.toContain("Rent");
@@ -79,14 +91,18 @@ describe("WatchButton", () => {
 
   it("does not render monetization label in compact variant", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="compact" monetizationType="FLATRATE" />
+      <WatchButton
+        {...defaultProps}
+        variant="compact"
+        monetizationType="FLATRATE"
+      />,
     );
     expect(container.textContent).not.toContain("Stream");
   });
 
   it("full variant has centered content by default", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" />
+      <WatchButton {...defaultProps} variant="full" />,
     );
     const link = container.querySelector("a");
     expect(link!.className).toContain("justify-center");
@@ -94,7 +110,7 @@ describe("WatchButton", () => {
 
   it("applies custom className to full variant", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" className="custom-class" />
+      <WatchButton {...defaultProps} variant="full" className="custom-class" />,
     );
     const link = container.querySelector("a");
     expect(link!.className).toContain("custom-class");
@@ -102,7 +118,7 @@ describe("WatchButton", () => {
 
   it("uses text-xs by default in full variant", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" />
+      <WatchButton {...defaultProps} variant="full" />,
     );
     const link = container.querySelector("a");
     expect(link!.className).toContain("text-xs");
@@ -110,7 +126,11 @@ describe("WatchButton", () => {
 
   it("omits text-xs when className includes a font-size class", () => {
     const { container } = render(
-      <WatchButton {...defaultProps} variant="full" className="text-base font-semibold" />
+      <WatchButton
+        {...defaultProps}
+        variant="full"
+        className="text-base font-semibold"
+      />,
     );
     const link = container.querySelector("a");
     expect(link!.className).not.toContain("text-xs");

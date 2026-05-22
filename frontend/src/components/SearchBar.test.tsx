@@ -5,7 +5,11 @@ import "../i18n";
 import SearchBar from "./SearchBar";
 
 function renderSearchBar(props: Parameters<typeof SearchBar>[0]) {
-  return render(<MemoryRouter><SearchBar {...props} /></MemoryRouter>);
+  return render(
+    <MemoryRouter>
+      <SearchBar {...props} />
+    </MemoryRouter>,
+  );
 }
 
 afterEach(() => {
@@ -18,7 +22,9 @@ describe("SearchBar", () => {
     const onImdb = mock(() => {});
     renderSearchBar({ onSearch, onImdb });
 
-    expect(screen.getByPlaceholderText("Search titles or paste IMDB link...")).toBeDefined();
+    expect(
+      screen.getByPlaceholderText("Search titles or paste IMDB link..."),
+    ).toBeDefined();
     expect(screen.getByRole("button", { name: "Search" })).toBeDefined();
   });
 
@@ -36,7 +42,9 @@ describe("SearchBar", () => {
     const onImdb = mock(() => {});
     renderSearchBar({ onSearch, onImdb });
 
-    const input = screen.getByPlaceholderText("Search titles or paste IMDB link...");
+    const input = screen.getByPlaceholderText(
+      "Search titles or paste IMDB link...",
+    );
     fireEvent.change(input, { target: { value: "Breaking Bad" } });
 
     const button = screen.getByRole("button", { name: "Search" });
@@ -48,7 +56,9 @@ describe("SearchBar", () => {
     const onImdb = mock(() => {});
     renderSearchBar({ onSearch, onImdb });
 
-    const input = screen.getByPlaceholderText("Search titles or paste IMDB link...");
+    const input = screen.getByPlaceholderText(
+      "Search titles or paste IMDB link...",
+    );
     fireEvent.change(input, { target: { value: "Breaking Bad" } });
     fireEvent.submit(input.closest("form")!);
 
@@ -61,13 +71,17 @@ describe("SearchBar", () => {
     const onImdb = mock(() => {});
     renderSearchBar({ onSearch, onImdb });
 
-    const input = screen.getByPlaceholderText("Search titles or paste IMDB link...");
+    const input = screen.getByPlaceholderText(
+      "Search titles or paste IMDB link...",
+    );
     fireEvent.change(input, {
       target: { value: "https://www.imdb.com/title/tt0903747/" },
     });
     fireEvent.submit(input.closest("form")!);
 
-    expect(onImdb).toHaveBeenCalledWith("https://www.imdb.com/title/tt0903747/");
+    expect(onImdb).toHaveBeenCalledWith(
+      "https://www.imdb.com/title/tt0903747/",
+    );
     expect(onSearch).not.toHaveBeenCalled();
   });
 
@@ -76,7 +90,9 @@ describe("SearchBar", () => {
     const onImdb = mock(() => {});
     renderSearchBar({ onSearch, onImdb });
 
-    const input = screen.getByPlaceholderText("Search titles or paste IMDB link...");
+    const input = screen.getByPlaceholderText(
+      "Search titles or paste IMDB link...",
+    );
     fireEvent.change(input, { target: { value: "tt0903747" } });
     fireEvent.submit(input.closest("form")!);
 
@@ -89,7 +105,9 @@ describe("SearchBar", () => {
     const onImdb = mock(() => {});
     renderSearchBar({ onSearch, onImdb });
 
-    const input = screen.getByPlaceholderText("Search titles or paste IMDB link...");
+    const input = screen.getByPlaceholderText(
+      "Search titles or paste IMDB link...",
+    );
     fireEvent.change(input, { target: { value: "   " } });
     fireEvent.submit(input.closest("form")!);
 
@@ -103,6 +121,8 @@ describe("SearchBar", () => {
     renderSearchBar({ onSearch, onImdb, loading: true });
 
     expect(screen.getByRole("button", { name: "..." })).toBeDefined();
-    expect(screen.getByRole("button", { name: "..." }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "..." }).hasAttribute("disabled"),
+    ).toBe(true);
   });
 });

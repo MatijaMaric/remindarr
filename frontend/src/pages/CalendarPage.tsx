@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueries,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -10,7 +15,15 @@ import {
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCalendarTitles, watchEpisode, unwatchEpisode, watchEpisodesBulk, getCrowdedWeekSettings, watchMovie, unwatchMovie } from "../api";
+import {
+  getCalendarTitles,
+  watchEpisode,
+  unwatchEpisode,
+  watchEpisodesBulk,
+  getCrowdedWeekSettings,
+  watchMovie,
+  unwatchMovie,
+} from "../api";
 import { getISOWeekKey } from "../lib/isoWeek";
 import { useIsMobile } from "../hooks/useIsMobile";
 import TitleCard from "../components/TitleCard";
@@ -35,7 +48,6 @@ import AgendaCalendar, {
   DensityToggle,
 } from "../components/AgendaCalendar";
 import { PageHeader } from "../components/design";
-
 
 type CalendarData = { titles: Title[]; episodes: Episode[]; count: number };
 
@@ -108,7 +120,7 @@ export function SlideOverPanel({
   const today = formatDateKey(new Date());
   const dateLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(
     undefined,
-    { weekday: "long", month: "long", day: "numeric" }
+    { weekday: "long", month: "long", day: "numeric" },
   );
 
   const isEpisodeReleased = (ep: Episode) =>
@@ -176,7 +188,7 @@ export function SlideOverPanel({
                           onClick={() =>
                             onBulkToggle(
                               showEps.map((ep) => ep.id),
-                              !allWatched
+                              !allWatched,
                             )
                           }
                           className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
@@ -225,7 +237,9 @@ export function SlideOverPanel({
                               </Link>
                               <WatchedToggleButton
                                 watched={!!ep.is_watched}
-                                onClick={() => onToggleWatched(ep.id, !!ep.is_watched)}
+                                onClick={() =>
+                                  onToggleWatched(ep.id, !!ep.is_watched)
+                                }
                                 disabled={!released}
                                 size="sm"
                               />
@@ -246,7 +260,10 @@ export function SlideOverPanel({
                             )}
                             {released && (
                               <div className="mt-2">
-                                <WatchButtonGroup offers={ep.offers ?? []} variant="dropdown" />
+                                <WatchButtonGroup
+                                  offers={ep.offers ?? []}
+                                  variant="dropdown"
+                                />
                               </div>
                             )}
                           </div>
@@ -263,22 +280,24 @@ export function SlideOverPanel({
         {/* Titles */}
         {titles.length > 0 && (
           <div className="px-4 pb-6">
-            <h4 className="text-sm font-medium text-blue-400 mb-3">
-              Releases
-            </h4>
+            <h4 className="text-sm font-medium text-blue-400 mb-3">Releases</h4>
             <div className="grid grid-cols-2 gap-3">
               {titles.map((t) => (
                 <div key={t.id} className="relative">
                   <TitleCard title={t} />
-                  {t.object_type === "MOVIE" && t.is_watched !== undefined && onToggleTitleWatched && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <WatchedToggleButton
-                        watched={!!t.is_watched}
-                        onClick={() => onToggleTitleWatched(t.id, !!t.is_watched)}
-                        size="sm"
-                      />
-                    </div>
-                  )}
+                  {t.object_type === "MOVIE" &&
+                    t.is_watched !== undefined &&
+                    onToggleTitleWatched && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <WatchedToggleButton
+                          watched={!!t.is_watched}
+                          onClick={() =>
+                            onToggleTitleWatched(t.id, !!t.is_watched)
+                          }
+                          size="sm"
+                        />
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
@@ -311,13 +330,18 @@ function MiniMonthGrid({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   // Week starts on Monday; getDay() returns 0=Sun
   const startDow = (firstDay.getDay() + 6) % 7;
-  const cells: (number | null)[] = [...Array(startDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const cells: (number | null)[] = [
+    ...Array(startDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
   const weekdays = ["M", "T", "W", "T", "F", "S", "S"];
 
   return (
     <div className="px-5 pb-4">
       <div className="grid grid-cols-7 gap-0.5 mb-1 text-center font-mono text-[9px] text-zinc-500 uppercase tracking-[0.1em]">
-        {weekdays.map((d, i) => <div key={i}>{d}</div>)}
+        {weekdays.map((d, i) => (
+          <div key={i}>{d}</div>
+        ))}
       </div>
       <div className="grid grid-cols-7 gap-0.5">
         {cells.map((day, i) => {
@@ -332,8 +356,8 @@ function MiniMonthGrid({
                 isToday
                   ? "border border-amber-400 bg-amber-400/[0.12] text-amber-400 font-bold"
                   : hasDots
-                  ? "bg-white/[0.03] text-zinc-200 font-medium"
-                  : "text-zinc-600"
+                    ? "bg-white/[0.03] text-zinc-200 font-medium"
+                    : "text-zinc-600"
               }`}
             >
               <span>{day}</span>
@@ -358,19 +382,29 @@ function MobileCalendar({
   setSearchParams: ReturnType<typeof useSearchParams>[1];
 }) {
   const [mobileView, setMobileView] = useState<"agenda" | "month">("agenda");
-  const [monthParam, setMonthParam] = useCalendarParam(searchParams, setSearchParams, "month", formatMonth(new Date()));
+  const [monthParam, setMonthParam] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "month",
+    formatMonth(new Date()),
+  );
 
   const currentMonth = useMemo(() => {
     const [y, m] = monthParam.split("-").map(Number);
     return new Date(y, m - 1, 1);
   }, [monthParam]);
 
-  const { data: mobileCalData, isFetching: loadingMonth } = useQuery<CalendarData>({
-    queryKey: ["calendar", formatMonth(currentMonth), undefined],
-    queryFn: ({ signal }) => getCalendarTitles({ month: formatMonth(currentMonth) }, signal),
-    enabled: mobileView === "month",
-  });
-  const episodes = useMemo(() => mobileCalData?.episodes ?? [], [mobileCalData]);
+  const { data: mobileCalData, isFetching: loadingMonth } =
+    useQuery<CalendarData>({
+      queryKey: ["calendar", formatMonth(currentMonth), undefined],
+      queryFn: ({ signal }) =>
+        getCalendarTitles({ month: formatMonth(currentMonth) }, signal),
+      enabled: mobileView === "month",
+    });
+  const episodes = useMemo(
+    () => mobileCalData?.episodes ?? [],
+    [mobileCalData],
+  );
 
   const dotDates = useMemo(() => {
     const set = new Set<string>();
@@ -380,7 +414,9 @@ function MobileCalendar({
     return set;
   }, [episodes]);
 
-  const monthLabel = currentMonth.toLocaleDateString(undefined, { month: "long" });
+  const monthLabel = currentMonth.toLocaleDateString(undefined, {
+    month: "long",
+  });
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
@@ -403,20 +439,48 @@ function MobileCalendar({
               <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-0.5">
                 {year} · {dotDates.size} airings
               </div>
-              <div className="text-[32px] font-extrabold tracking-[-1.2px]">{monthLabel}</div>
+              <div className="text-[32px] font-extrabold tracking-[-1.2px]">
+                {monthLabel}
+              </div>
             </div>
             <div className="flex gap-2 items-center">
-              <button onClick={prevMonth} aria-label="Previous month" className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">‹</button>
-              <button onClick={nextMonth} aria-label="Next month" className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">›</button>
+              <button
+                onClick={prevMonth}
+                aria-label="Previous month"
+                className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300"
+              >
+                ‹
+              </button>
+              <button
+                onClick={nextMonth}
+                aria-label="Next month"
+                className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300"
+              >
+                ›
+              </button>
             </div>
           </div>
           {/* Month/Agenda toggle */}
           <div className="flex gap-2 px-5 pb-4">
-            <button onClick={() => setMobileView("month")} aria-pressed={true} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Month</button>
-            <button onClick={() => setMobileView("agenda")} aria-pressed={false} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Agenda</button>
+            <button
+              onClick={() => setMobileView("month")}
+              aria-pressed={true}
+              className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setMobileView("agenda")}
+              aria-pressed={false}
+              className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
+            >
+              Agenda
+            </button>
           </div>
           {loadingMonth ? (
-            <div className="text-center py-8 text-zinc-500 font-mono text-xs">Loading...</div>
+            <div className="text-center py-8 text-zinc-500 font-mono text-xs">
+              Loading...
+            </div>
           ) : (
             <MiniMonthGrid year={year} month={month} dotDates={dotDates} />
           )}
@@ -427,8 +491,20 @@ function MobileCalendar({
         <div>
           {/* Month/Agenda toggle */}
           <div className="flex gap-2 px-4 pt-2 pb-2">
-            <button onClick={() => setMobileView("month")} aria-pressed={false} className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono">Month</button>
-            <button onClick={() => setMobileView("agenda")} aria-pressed={true} className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono">Agenda</button>
+            <button
+              onClick={() => setMobileView("month")}
+              aria-pressed={false}
+              className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setMobileView("agenda")}
+              aria-pressed={true}
+              className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
+            >
+              Agenda
+            </button>
           </div>
           <AgendaCalendar
             searchParams={searchParams}
@@ -450,7 +526,7 @@ export default function CalendarPage() {
     searchParams,
     setSearchParams,
     "view",
-    "grid"
+    "grid",
   );
   const viewMode = (
     viewParam === "agenda" ? "agenda" : viewParam === "week" ? "week" : "grid"
@@ -461,7 +537,7 @@ export default function CalendarPage() {
     searchParams,
     setSearchParams,
     "density",
-    "comfortable"
+    "comfortable",
   );
   const density = (
     densityParam === "compact"
@@ -540,17 +616,17 @@ function GridCalendar({
     searchParams,
     setSearchParams,
     "month",
-    formatMonth(new Date())
+    formatMonth(new Date()),
   );
   const [typeFilter, setTypeFilter] = useCalendarParam(
     searchParams,
     setSearchParams,
-    "type"
+    "type",
   );
   const [selectedDate, setSelectedDate] = useCalendarParam(
     searchParams,
     setSearchParams,
-    "date"
+    "date",
   );
   const [hideWatched, setHideWatched] = useState(false);
 
@@ -566,7 +642,11 @@ function GridCalendar({
   const calendarTypeKey = typeFilter || undefined;
   const { data: calendarData, isFetching: loading } = useQuery<CalendarData>({
     queryKey: ["calendar", calendarMonthKey, calendarTypeKey],
-    queryFn: ({ signal }) => getCalendarTitles({ month: calendarMonthKey, type: calendarTypeKey }, signal),
+    queryFn: ({ signal }) =>
+      getCalendarTitles(
+        { month: calendarMonthKey, type: calendarTypeKey },
+        signal,
+      ),
   });
   const titles = useMemo(() => calendarData?.titles ?? [], [calendarData]);
   const episodes = useMemo(() => calendarData?.episodes ?? [], [calendarData]);
@@ -587,7 +667,6 @@ function GridCalendar({
       .catch(() => {});
     return () => controller.abort();
   }, []);
-
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
@@ -669,21 +748,20 @@ function GridCalendar({
     () =>
       selectedItems
         .filter(
-          (i): i is CalendarItem & { type: "title" } => i.type === "title"
+          (i): i is CalendarItem & { type: "title" } => i.type === "title",
         )
         .map((i) => i.data),
-    [selectedItems]
+    [selectedItems],
   );
 
   const selectedEpisodes = useMemo(
     () =>
       selectedItems
         .filter(
-          (i): i is CalendarItem & { type: "episode" } =>
-            i.type === "episode"
+          (i): i is CalendarItem & { type: "episode" } => i.type === "episode",
         )
         .map((i) => i.data),
-    [selectedItems]
+    [selectedItems],
   );
 
   const prevMonth = () =>
@@ -696,14 +774,27 @@ function GridCalendar({
     ep.air_date ? ep.air_date <= today : false;
 
   const episodeToggleMutation = useMutation({
-    mutationFn: ({ episodeId, currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
+    mutationFn: ({
+      episodeId,
+      currentlyWatched,
+    }: {
+      episodeId: number;
+      currentlyWatched: boolean;
+    }) =>
       currentlyWatched ? unwatchEpisode(episodeId) : watchEpisode(episodeId),
     onMutate: async ({ episodeId, currentlyWatched }) => {
       await qc.cancelQueries({ queryKey: ["calendar"] });
-      const snapshots = qc.getQueriesData<CalendarData>({ queryKey: ["calendar"] });
+      const snapshots = qc.getQueriesData<CalendarData>({
+        queryKey: ["calendar"],
+      });
       qc.setQueriesData<CalendarData>({ queryKey: ["calendar"] }, (old) => {
         if (!old) return old;
-        return { ...old, episodes: old.episodes.map((ep) => ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep) };
+        return {
+          ...old,
+          episodes: old.episodes.map((ep) =>
+            ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep,
+          ),
+        };
       });
       return { snapshots };
     },
@@ -721,15 +812,27 @@ function GridCalendar({
   });
 
   const bulkToggleMutation = useMutation({
-    mutationFn: ({ episodeIds, markWatched }: { episodeIds: number[]; markWatched: boolean }) =>
-      watchEpisodesBulk(episodeIds, markWatched),
+    mutationFn: ({
+      episodeIds,
+      markWatched,
+    }: {
+      episodeIds: number[];
+      markWatched: boolean;
+    }) => watchEpisodesBulk(episodeIds, markWatched),
     onMutate: async ({ episodeIds, markWatched }) => {
       await qc.cancelQueries({ queryKey: ["calendar"] });
-      const snapshots = qc.getQueriesData<CalendarData>({ queryKey: ["calendar"] });
+      const snapshots = qc.getQueriesData<CalendarData>({
+        queryKey: ["calendar"],
+      });
       const idSet = new Set(episodeIds);
       qc.setQueriesData<CalendarData>({ queryKey: ["calendar"] }, (old) => {
         if (!old) return old;
-        return { ...old, episodes: old.episodes.map((ep) => idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep) };
+        return {
+          ...old,
+          episodes: old.episodes.map((ep) =>
+            idSet.has(ep.id) ? { ...ep, is_watched: markWatched } : ep,
+          ),
+        };
       });
       return { snapshots };
     },
@@ -747,14 +850,26 @@ function GridCalendar({
   });
 
   const titleToggleMutation = useMutation({
-    mutationFn: ({ titleId, currentlyWatched }: { titleId: string; currentlyWatched: boolean }) =>
-      currentlyWatched ? unwatchMovie(titleId) : watchMovie(titleId),
+    mutationFn: ({
+      titleId,
+      currentlyWatched,
+    }: {
+      titleId: string;
+      currentlyWatched: boolean;
+    }) => (currentlyWatched ? unwatchMovie(titleId) : watchMovie(titleId)),
     onMutate: async ({ titleId, currentlyWatched }) => {
       await qc.cancelQueries({ queryKey: ["calendar"] });
-      const snapshots = qc.getQueriesData<CalendarData>({ queryKey: ["calendar"] });
+      const snapshots = qc.getQueriesData<CalendarData>({
+        queryKey: ["calendar"],
+      });
       qc.setQueriesData<CalendarData>({ queryKey: ["calendar"] }, (old) => {
         if (!old) return old;
-        return { ...old, titles: old.titles.map((t) => t.id === titleId ? { ...t, is_watched: !currentlyWatched } : t) };
+        return {
+          ...old,
+          titles: old.titles.map((t) =>
+            t.id === titleId ? { ...t, is_watched: !currentlyWatched } : t,
+          ),
+        };
       });
       return { snapshots };
     },
@@ -862,7 +977,9 @@ function GridCalendar({
       />
 
       {/* Stats bar */}
-      {!loading && <MonthStatsBar episodes={stats.episodes} titles={stats.titles} />}
+      {!loading && (
+        <MonthStatsBar episodes={stats.episodes} titles={stats.titles} />
+      )}
 
       {/* Calendar grid */}
       {loading ? (
@@ -889,107 +1006,115 @@ function GridCalendar({
             const isCrowded = weekKey !== null && crowdedWeeks.has(weekKey);
             // Count episode airings for this week for the badge number
             const weekEpisodeCount = weekKey
-              ? episodes.filter((ep) => ep.air_date && getISOWeekKey(new Date(ep.air_date)) === weekKey).length
+              ? episodes.filter(
+                  (ep) =>
+                    ep.air_date &&
+                    getISOWeekKey(new Date(ep.air_date)) === weekKey,
+                ).length
               : 0;
             return (
-            <div
-              key={wi}
-              className="relative grid grid-cols-7 gap-px bg-white/[0.06]"
-            >
-              {isCrowded && (
-                <div className="absolute top-1 right-1 z-10 pointer-events-none">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 text-[9px] font-mono font-semibold leading-none">
-                    {weekEpisodeCount} eps
-                  </span>
-                </div>
-              )}
-              {week.map((day, di) => {
-                if (!day) {
-                  return (
-                    <div key={di} className="min-h-28 bg-zinc-950" />
-                  );
-                }
-                const dateKey = formatDateKey(day);
-                const dayItems = itemsByDate.get(dateKey) ?? [];
-                const isToday = dateKey === today;
-                const isSelected = dateKey === selectedDate;
-                const borderColor = getCellBorderColor(dayItems);
-                const minHClass =
-                  density === "compact"
-                    ? "min-h-20"
-                    : density === "spacious"
-                      ? "min-h-52"
-                      : "min-h-36";
-                const itemCap =
-                  density === "compact" ? 2 : density === "spacious" ? dayItems.length : 3;
+              <div
+                key={wi}
+                className="relative grid grid-cols-7 gap-px bg-white/[0.06]"
+              >
+                {isCrowded && (
+                  <div className="absolute top-1 right-1 z-10 pointer-events-none">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 text-[9px] font-mono font-semibold leading-none">
+                      {weekEpisodeCount} eps
+                    </span>
+                  </div>
+                )}
+                {week.map((day, di) => {
+                  if (!day) {
+                    return <div key={di} className="min-h-28 bg-zinc-950" />;
+                  }
+                  const dateKey = formatDateKey(day);
+                  const dayItems = itemsByDate.get(dateKey) ?? [];
+                  const isToday = dateKey === today;
+                  const isSelected = dateKey === selectedDate;
+                  const borderColor = getCellBorderColor(dayItems);
+                  const minHClass =
+                    density === "compact"
+                      ? "min-h-20"
+                      : density === "spacious"
+                        ? "min-h-52"
+                        : "min-h-36";
+                  const itemCap =
+                    density === "compact"
+                      ? 2
+                      : density === "spacious"
+                        ? dayItems.length
+                        : 3;
 
-                return (
-                  <button
-                    key={di}
-                    onClick={() =>
-                      setSelectedDate(isSelected ? "" : dateKey)
-                    }
-                    className={`${minHClass} p-1.5 text-left transition-colors cursor-pointer bg-zinc-950 ${
-                      borderColor ? `border-l-2 ${borderColor}` : ""
-                    } ${
-                      isSelected
-                        ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500"
-                        : dayItems.length > 0
-                          ? "hover:bg-zinc-900/60"
-                          : "hover:bg-zinc-900/30"
-                    } ${isToday ? "outline-2 outline-amber-400 outline-offset-[-2px] relative z-10" : ""}`}
-                  >
-                    <div className="flex items-center mb-1">
-                      {isToday ? (
-                        <>
-                          <span className="font-mono text-[13px] text-amber-400 font-bold">
+                  return (
+                    <button
+                      key={di}
+                      onClick={() => setSelectedDate(isSelected ? "" : dateKey)}
+                      className={`${minHClass} p-1.5 text-left transition-colors cursor-pointer bg-zinc-950 ${
+                        borderColor ? `border-l-2 ${borderColor}` : ""
+                      } ${
+                        isSelected
+                          ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500"
+                          : dayItems.length > 0
+                            ? "hover:bg-zinc-900/60"
+                            : "hover:bg-zinc-900/30"
+                      } ${isToday ? "outline-2 outline-amber-400 outline-offset-[-2px] relative z-10" : ""}`}
+                    >
+                      <div className="flex items-center mb-1">
+                        {isToday ? (
+                          <>
+                            <span className="font-mono text-[13px] text-amber-400 font-bold">
+                              {day.getDate()}
+                            </span>
+                            <span className="font-mono text-[9px] ml-1 tracking-widest text-amber-400 opacity-80">
+                              TODAY
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-mono text-[13px] text-zinc-400 pl-0.5">
                             {day.getDate()}
                           </span>
-                          <span className="font-mono text-[9px] ml-1 tracking-widest text-amber-400 opacity-80">TODAY</span>
-                        </>
-                      ) : (
-                        <span className="font-mono text-[13px] text-zinc-400 pl-0.5">
-                          {day.getDate()}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Episode + title pills */}
-                    {dayItems.length > 0 && (
-                      <div className="space-y-0.5">
-                        {dayItems.slice(0, itemCap).map((item, idx) => {
-                          const isEp = item.type === "episode";
-                          const label = isEp
-                            ? item.data.show_title
-                            : item.type === "title"
-                              ? item.data.title
-                              : "";
-                          const prefix = isEp
-                            ? `S${item.data.season_number}E${item.data.episode_number} `
-                            : item.type === "title"
-                              ? (item.data.object_type === "MOVIE" ? "FILM " : "SHOW ")
-                              : "";
-                          return (
-                            <div
-                              key={idx}
-                              className="bg-amber-400/10 text-amber-400 border-l-2 border-amber-400 px-1.5 py-0.5 rounded-sm text-[10px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap"
-                            >
-                              <span className="font-mono">{prefix}</span>
-                              {label}
-                            </div>
-                          );
-                        })}
-                        {itemCap < dayItems.length && (
-                          <div className="text-[10px] text-zinc-500 pl-1.5">
-                            +{dayItems.length - itemCap} more
-                          </div>
                         )}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+
+                      {/* Episode + title pills */}
+                      {dayItems.length > 0 && (
+                        <div className="space-y-0.5">
+                          {dayItems.slice(0, itemCap).map((item, idx) => {
+                            const isEp = item.type === "episode";
+                            const label = isEp
+                              ? item.data.show_title
+                              : item.type === "title"
+                                ? item.data.title
+                                : "";
+                            const prefix = isEp
+                              ? `S${item.data.season_number}E${item.data.episode_number} `
+                              : item.type === "title"
+                                ? item.data.object_type === "MOVIE"
+                                  ? "FILM "
+                                  : "SHOW "
+                                : "";
+                            return (
+                              <div
+                                key={idx}
+                                className="bg-amber-400/10 text-amber-400 border-l-2 border-amber-400 px-1.5 py-0.5 rounded-sm text-[10px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap"
+                              >
+                                <span className="font-mono">{prefix}</span>
+                                {label}
+                              </div>
+                            );
+                          })}
+                          {itemCap < dayItems.length && (
+                            <div className="text-[10px] text-zinc-500 pl-1.5">
+                              +{dayItems.length - itemCap} more
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
@@ -1063,13 +1188,13 @@ function WeekCalendar({
   const [typeFilter, setTypeFilter] = useCalendarParam(
     searchParams,
     setSearchParams,
-    "type"
+    "type",
   );
   const [weekParam, setWeekParam] = useCalendarParam(
     searchParams,
     setSearchParams,
     "week",
-    formatDateKey(getWeekStart(new Date()))
+    formatDateKey(getWeekStart(new Date())),
   );
   const [hideWatched, setHideWatched] = useState(false);
 
@@ -1094,7 +1219,8 @@ function WeekCalendar({
   // Data loading — fetch the month(s) that overlap the week
   const startMonth = formatMonth(weekStart);
   const endMonth = formatMonth(weekDays[6]);
-  const weekMonths = startMonth === endMonth ? [startMonth] : [startMonth, endMonth];
+  const weekMonths =
+    startMonth === endMonth ? [startMonth] : [startMonth, endMonth];
   const weekTypeKey = typeFilter || undefined;
 
   const weekQueries = useQueries({
@@ -1121,8 +1247,16 @@ function WeekCalendar({
     const seenTitles = new Set<string>();
     const seenEps = new Set<number>();
     return {
-      titles: allTitles.filter((t) => { if (seenTitles.has(t.id)) return false; seenTitles.add(t.id); return true; }),
-      episodes: allEpisodes.filter((e) => { if (seenEps.has(e.id)) return false; seenEps.add(e.id); return true; }),
+      titles: allTitles.filter((t) => {
+        if (seenTitles.has(t.id)) return false;
+        seenTitles.add(t.id);
+        return true;
+      }),
+      episodes: allEpisodes.filter((e) => {
+        if (seenEps.has(e.id)) return false;
+        seenEps.add(e.id);
+        return true;
+      }),
     };
   }, [weekQ0Data, weekQ1Data]);
 
@@ -1158,16 +1292,28 @@ function WeekCalendar({
     d.setDate(d.getDate() + 7);
     setWeekParam(formatDateKey(d));
   };
-  const goToThisWeek = () => setWeekParam(formatDateKey(getWeekStart(new Date())));
+  const goToThisWeek = () =>
+    setWeekParam(formatDateKey(getWeekStart(new Date())));
 
   const weekLabel = (() => {
-    const start = weekDays[0].toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const end = weekDays[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const start = weekDays[0].toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    const end = weekDays[6].toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
     return `${start} – ${end}`;
   })();
 
   const minHClass =
-    density === "compact" ? "min-h-20" : density === "spacious" ? "min-h-96" : "min-h-48";
+    density === "compact"
+      ? "min-h-20"
+      : density === "spacious"
+        ? "min-h-96"
+        : "min-h-48";
 
   const headerRight = (
     <div className="flex flex-wrap items-center gap-2 justify-end">
@@ -1289,7 +1435,9 @@ function WeekCalendar({
                     const prefix = isEp
                       ? `S${item.data.season_number}E${item.data.episode_number} `
                       : item.type === "title"
-                        ? (item.data.object_type === "MOVIE" ? "FILM " : "SHOW ")
+                        ? item.data.object_type === "MOVIE"
+                          ? "FILM "
+                          : "SHOW "
                         : "";
                     return (
                       <Link

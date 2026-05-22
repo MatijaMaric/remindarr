@@ -12,13 +12,55 @@ interface ThemeMeta {
 }
 
 const THEMES: ThemeMeta[] = [
-  { value: "dark",     labelKey: "settings.theme.dark",     bg: "#09090b", fg: "#fbbf24", grid: "#27272a" },
-  { value: "light",    labelKey: "settings.theme.light",    bg: "#fafafa", fg: "#b45309", grid: "#e4e4e7" },
-  { value: "oled",     labelKey: "settings.theme.oled",     bg: "#000000", fg: "#fbbf24", grid: "#111111" },
-  { value: "midnight", labelKey: "settings.theme.midnight", bg: "#0d0f1a", fg: "#818cf8", grid: "#1e2238" },
-  { value: "moss",     labelKey: "settings.theme.moss",     bg: "#0c1209", fg: "#4ade80", grid: "#1d2418" },
-  { value: "plum",     labelKey: "settings.theme.plum",     bg: "#120b18", fg: "#c084fc", grid: "#241630" },
-  { value: "auto",     labelKey: "settings.theme.auto",     bg: "#18181b", fg: "#a1a1aa", grid: "#3f3f46" },
+  {
+    value: "dark",
+    labelKey: "settings.theme.dark",
+    bg: "#09090b",
+    fg: "#fbbf24",
+    grid: "#27272a",
+  },
+  {
+    value: "light",
+    labelKey: "settings.theme.light",
+    bg: "#fafafa",
+    fg: "#b45309",
+    grid: "#e4e4e7",
+  },
+  {
+    value: "oled",
+    labelKey: "settings.theme.oled",
+    bg: "#000000",
+    fg: "#fbbf24",
+    grid: "#111111",
+  },
+  {
+    value: "midnight",
+    labelKey: "settings.theme.midnight",
+    bg: "#0d0f1a",
+    fg: "#818cf8",
+    grid: "#1e2238",
+  },
+  {
+    value: "moss",
+    labelKey: "settings.theme.moss",
+    bg: "#0c1209",
+    fg: "#4ade80",
+    grid: "#1d2418",
+  },
+  {
+    value: "plum",
+    labelKey: "settings.theme.plum",
+    bg: "#120b18",
+    fg: "#c084fc",
+    grid: "#241630",
+  },
+  {
+    value: "auto",
+    labelKey: "settings.theme.auto",
+    bg: "#18181b",
+    fg: "#a1a1aa",
+    grid: "#3f3f46",
+  },
 ];
 
 export default function ThemePicker() {
@@ -35,7 +77,9 @@ export default function ThemePicker() {
             key={meta.value}
             onClick={() => {
               setTheme(meta.value);
-              api.updateAppearanceSettings({ themeVariant: meta.value }).catch(() => {});
+              api
+                .updateAppearanceSettings({ themeVariant: meta.value })
+                .catch(() => {});
             }}
             aria-pressed={isActive}
             aria-label={label}

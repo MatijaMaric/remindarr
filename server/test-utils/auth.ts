@@ -18,7 +18,7 @@ export async function createTestSession(opts?: {
     username,
     opts?.authProvider ?? "local",
     opts?.providerSubject,
-    opts?.isAdmin ?? false
+    opts?.isAdmin ?? false,
   );
   const token = await createSession(userId);
 

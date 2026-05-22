@@ -16,7 +16,10 @@ import { TelegramProvider } from "../../server/notifications/telegram";
 import { GotifyProvider } from "../../server/notifications/gotify";
 import { NtfyProvider } from "../../server/notifications/ntfy";
 import { WebhookProvider } from "../../server/notifications/webhook";
-import type { NotificationContent, NotificationProvider } from "../../server/notifications/types";
+import type {
+  NotificationContent,
+  NotificationProvider,
+} from "../../server/notifications/types";
 
 // ─── Canonical fixtures ──────────────────────────────────────────────────────
 
@@ -34,7 +37,7 @@ const episodeContent: NotificationContent = {
   ],
   movies: [],
   streamingAlerts: [],
-}
+};
 
 const movieContent: NotificationContent = {
   date: "2026-01-15",
@@ -48,7 +51,7 @@ const movieContent: NotificationContent = {
     },
   ],
   streamingAlerts: [],
-}
+};
 
 const contentWithStreamingAlerts: NotificationContent = {
   date: "2026-01-15",
@@ -71,14 +74,14 @@ const contentWithStreamingAlerts: NotificationContent = {
       leavingAt: "2026-02-01",
     },
   ],
-}
+};
 
 const emptyContent: NotificationContent = {
   date: "2026-01-15",
   episodes: [],
   movies: [],
   streamingAlerts: [],
-}
+};
 
 // ─── Provider configs ────────────────────────────────────────────────────────
 
@@ -88,127 +91,134 @@ const configs = {
   gotify: { serverUrl: "https://gotify.example.com", appToken: "token123" },
   ntfy: { serverUrl: "https://ntfy.example.com", topic: "remindarr" },
   webhook: { url: "https://example.com/webhook" },
-}
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-type FetchCapture = { url: string; body: unknown }
+type FetchCapture = { url: string; body: unknown };
 
 function mockFetch(): { calls: FetchCapture[]; spy: ReturnType<typeof spyOn> } {
-  const calls: FetchCapture[] = []
-  const spy = spyOn(globalThis, "fetch").mockImplementation((async (url: string | URL | Request, options?: RequestInit) => {
-    let body: unknown = null
+  const calls: FetchCapture[] = [];
+  const spy = spyOn(globalThis, "fetch").mockImplementation((async (
+    url: string | URL | Request,
+    options?: RequestInit,
+  ) => {
+    let body: unknown = null;
     try {
-      body = options?.body ? JSON.parse(options.body as string) : null
+      body = options?.body ? JSON.parse(options.body as string) : null;
     } catch {
-      body = options?.body
+      body = options?.body;
     }
-    calls.push({ url: String(url), body })
+    calls.push({ url: String(url), body });
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
-    })
-  }) as typeof fetch)
-  return { calls, spy }
+    });
+  }) as typeof fetch);
+  return { calls, spy };
 }
 
 // ─── Invariant: empty content → no HTTP call ─────────────────────────────────
 
 describe("all providers: empty content sends nothing", () => {
-  const providers: Array<[string, NotificationProvider, Record<string, string>]> = [
+  const providers: Array<
+    [string, NotificationProvider, Record<string, string>]
+  > = [
     ["discord", new DiscordProvider(), configs.discord],
     ["telegram", new TelegramProvider(), configs.telegram],
     ["gotify", new GotifyProvider(), configs.gotify],
     ["ntfy", new NtfyProvider(), configs.ntfy],
     ["webhook", new WebhookProvider(), configs.webhook],
-  ]
+  ];
 
   for (const [name, provider, config] of providers) {
     it(`${name} sends no HTTP request when content is empty`, async () => {
-      const { calls, spy } = mockFetch()
+      const { calls, spy } = mockFetch();
       try {
-        await provider.send(config, emptyContent)
-        expect(calls).toHaveLength(0)
+        await provider.send(config, emptyContent);
+        expect(calls).toHaveLength(0);
       } finally {
-        spy.mockRestore()
+        spy.mockRestore();
       }
-    })
+    });
   }
-})
+});
 
 // ─── Invariant: streamingAlerts guard ────────────────────────────────────────
 
 describe("streaming alerts guard: length=0 produces no streaming-alert content", () => {
   it("discord: episode+movie content with streamingAlerts=[] has no streaming-alert embeds", async () => {
-    const { calls, spy } = mockFetch()
+    const { calls, spy } = mockFetch();
     try {
-      const provider = new DiscordProvider()
-      await provider.send(configs.discord, episodeContent)
-      expect(calls).toHaveLength(1)
-      const body = calls[0].body as { embeds?: Array<{ title?: string }> }
-      const embedTitles = (body.embeds ?? []).map((e) => e.title ?? "")
+      const provider = new DiscordProvider();
+      await provider.send(configs.discord, episodeContent);
+      expect(calls).toHaveLength(1);
+      const body = calls[0].body as { embeds?: Array<{ title?: string }> };
+      const embedTitles = (body.embeds ?? []).map((e) => e.title ?? "");
       // No streaming-alert embed titles (which have 🎬 prefix)
-      expect(embedTitles.filter((t) => t.startsWith("🎬"))).toHaveLength(0)
+      expect(embedTitles.filter((t) => t.startsWith("🎬"))).toHaveLength(0);
     } finally {
-      spy.mockRestore()
+      spy.mockRestore();
     }
-  })
+  });
 
   it("discord: content with streamingAlerts has arrival/departure embeds", async () => {
-    const { calls, spy } = mockFetch()
+    const { calls, spy } = mockFetch();
     try {
-      const provider = new DiscordProvider()
-      await provider.send(configs.discord, contentWithStreamingAlerts)
-      expect(calls).toHaveLength(1)
-      const body = calls[0].body as { embeds?: Array<{ title?: string }> }
-      const embedTitles = (body.embeds ?? []).map((e) => e.title ?? "")
-      expect(embedTitles.filter((t) => t.startsWith("🎬"))).toHaveLength(2)
+      const provider = new DiscordProvider();
+      await provider.send(configs.discord, contentWithStreamingAlerts);
+      expect(calls).toHaveLength(1);
+      const body = calls[0].body as { embeds?: Array<{ title?: string }> };
+      const embedTitles = (body.embeds ?? []).map((e) => e.title ?? "");
+      expect(embedTitles.filter((t) => t.startsWith("🎬"))).toHaveLength(2);
     } finally {
-      spy.mockRestore()
+      spy.mockRestore();
     }
-  })
-})
+  });
+});
 
 // ─── Invariant: validateConfig rejects bad config ────────────────────────────
 
 describe("validateConfig: all providers reject missing required fields", () => {
   it("discord rejects empty config", () => {
-    expect(new DiscordProvider().validateConfig({}).valid).toBe(false)
-  })
+    expect(new DiscordProvider().validateConfig({}).valid).toBe(false);
+  });
   it("telegram rejects empty config", () => {
-    expect(new TelegramProvider().validateConfig({}).valid).toBe(false)
-  })
+    expect(new TelegramProvider().validateConfig({}).valid).toBe(false);
+  });
   it("gotify rejects empty config", () => {
-    expect(new GotifyProvider().validateConfig({}).valid).toBe(false)
-  })
+    expect(new GotifyProvider().validateConfig({}).valid).toBe(false);
+  });
   it("ntfy rejects empty config", () => {
-    expect(new NtfyProvider().validateConfig({}).valid).toBe(false)
-  })
+    expect(new NtfyProvider().validateConfig({}).valid).toBe(false);
+  });
   it("webhook rejects empty config", () => {
-    expect(new WebhookProvider().validateConfig({}).valid).toBe(false)
-  })
-})
+    expect(new WebhookProvider().validateConfig({}).valid).toBe(false);
+  });
+});
 
 // ─── Invariant: movie notification reaches all providers ─────────────────────
 
 describe("movie content: all providers send exactly one HTTP call", () => {
-  const providers: Array<[string, NotificationProvider, Record<string, string>]> = [
+  const providers: Array<
+    [string, NotificationProvider, Record<string, string>]
+  > = [
     ["discord", new DiscordProvider(), configs.discord],
     ["telegram", new TelegramProvider(), configs.telegram],
     ["gotify", new GotifyProvider(), configs.gotify],
     ["ntfy", new NtfyProvider(), configs.ntfy],
     ["webhook", new WebhookProvider(), configs.webhook],
-  ]
+  ];
 
   for (const [name, provider, config] of providers) {
     it(`${name} sends one request for movie content`, async () => {
-      const { calls, spy } = mockFetch()
+      const { calls, spy } = mockFetch();
       try {
-        await provider.send(config, movieContent)
-        expect(calls).toHaveLength(1)
+        await provider.send(config, movieContent);
+        expect(calls).toHaveLength(1);
       } finally {
-        spy.mockRestore()
+        spy.mockRestore();
       }
-    })
+    });
   }
-})
+});

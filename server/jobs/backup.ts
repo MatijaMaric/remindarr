@@ -8,7 +8,8 @@ import { registerCron } from "./queue";
 
 const log = logger.child({ module: "backup" });
 
-const BACKUP_FILE_PATTERN = /^remindarr-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.db$/;
+const BACKUP_FILE_PATTERN =
+  /^remindarr-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.db$/;
 
 /**
  * Creates a backup of the SQLite database using VACUUM INTO and prunes old backups.
@@ -24,8 +25,14 @@ export async function runBackup(): Promise<{ path: string; pruned: number }> {
   fs.mkdirSync(backupDir, { recursive: true });
 
   // Build a timestamped filename with only safe characters
-  const timestamp = new Date().toISOString().replace(/:/g, "-").replace(".", "-");
-  const backupPath = path.join(path.resolve(backupDir), `remindarr-${timestamp}.db`);
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/:/g, "-")
+    .replace(".", "-");
+  const backupPath = path.join(
+    path.resolve(backupDir),
+    `remindarr-${timestamp}.db`,
+  );
 
   // VACUUM INTO creates a defragmented, consistent snapshot of the database.
   // The path is constructed from server-controlled values (env var + timestamp),

@@ -19,9 +19,9 @@ export async function getVapidKeys(): Promise<VapidKeys> {
 
   if (!publicKey || !privateKey) {
     // Try settings table
-    publicKey = await getSetting("vapid_public_key") || "";
-    privateKey = await getSetting("vapid_private_key") || "";
-    subject = subject || await getSetting("vapid_subject") || "";
+    publicKey = (await getSetting("vapid_public_key")) || "";
+    privateKey = (await getSetting("vapid_private_key")) || "";
+    subject = subject || (await getSetting("vapid_subject")) || "";
   }
 
   if (!publicKey || !privateKey) {
@@ -36,7 +36,7 @@ export async function getVapidKeys(): Promise<VapidKeys> {
 
   if (!subject) {
     subject = "mailto:noreply@remindarr.local";
-    if (!CONFIG.VAPID_SUBJECT && !await getSetting("vapid_subject")) {
+    if (!CONFIG.VAPID_SUBJECT && !(await getSetting("vapid_subject"))) {
       await setSetting("vapid_subject", subject);
     }
   }

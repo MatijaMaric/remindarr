@@ -87,6 +87,7 @@ To bypass: `git push --no-verify`
 **Stack**: Bun/CF Workers · Hono · TypeScript strict · React 19 + Vite + Tailwind 4 + shadcn/ui · Drizzle ORM (SQLite/D1) · better-auth · Sentry
 
 **Scoped guidance** (Claude Code auto-loads these when working in each directory):
+
 - `server/CLAUDE.md` — server architecture, entry points, logging, jobs, middleware
 - `server/db/CLAUDE.md` — schema, migration safety rules (CF D1), repository pattern
 - `server/routes/CLAUDE.md` — route validation (zod/zValidator), API route catalog

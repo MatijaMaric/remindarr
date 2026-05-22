@@ -49,15 +49,15 @@ describe("migrations FK-cascade regression", () => {
       // These rows must survive every subsequent migration.
       if (!seededAuth && file.startsWith("0000_")) {
         db.exec(
-          `INSERT INTO users (id, username) VALUES ('u-1', 'regress_user')`
+          `INSERT INTO users (id, username) VALUES ('u-1', 'regress_user')`,
         );
         db.exec(
           `INSERT INTO account (id, user_id, account_id, provider_id, password) ` +
-            `VALUES ('acct-1', 'u-1', 'u-1', 'credential', 'pbkdf2:100000:salt:hash')`
+            `VALUES ('acct-1', 'u-1', 'u-1', 'credential', 'pbkdf2:100000:salt:hash')`,
         );
         db.exec(
           `INSERT INTO sessions (id, user_id, token, expires_at) ` +
-            `VALUES ('sess-1', 'u-1', 'tok-xyz', datetime('now', '+30 days'))`
+            `VALUES ('sess-1', 'u-1', 'tok-xyz', datetime('now', '+30 days'))`,
         );
         seededAuth = true;
       }
@@ -67,7 +67,7 @@ describe("migrations FK-cascade regression", () => {
       if (!seededPasskey && file.startsWith("0006_")) {
         db.exec(
           `INSERT INTO passkey (id, public_key, user_id, webauthn_user_id, counter, credential_id) ` +
-            `VALUES ('pk-1', 'pub-key-bytes', 'u-1', 'webauthn-uid', 0, 'cred-1')`
+            `VALUES ('pk-1', 'pub-key-bytes', 'u-1', 'webauthn-uid', 0, 'cred-1')`,
         );
         seededPasskey = true;
       }
@@ -79,7 +79,9 @@ describe("migrations FK-cascade regression", () => {
     const acct = db.prepare("SELECT id FROM account WHERE id = 'acct-1'").get();
     expect(acct).toBeDefined();
 
-    const sess = db.prepare("SELECT id FROM sessions WHERE id = 'sess-1'").get();
+    const sess = db
+      .prepare("SELECT id FROM sessions WHERE id = 'sess-1'")
+      .get();
     expect(sess).toBeDefined();
 
     const pk = db.prepare("SELECT id FROM passkey WHERE id = 'pk-1'").get();
@@ -111,31 +113,58 @@ describe("0043 consolidate duplicate providers", () => {
       for (const stmt of stmts) db.exec(stmt);
 
       if (!seededAuth && file.startsWith("0000_")) {
-        db.exec(`INSERT INTO users (id, username) VALUES ('u-consol', 'consol_user')`);
+        db.exec(
+          `INSERT INTO users (id, username) VALUES ('u-consol', 'consol_user')`,
+        );
         seededAuth = true;
       }
     }
 
     // Seed canonical providers (9, 384) and their legacy duplicates (119, 1899).
-    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('t1', 1, 'Test Movie', 'movie')`);
-    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (9,    'Amazon Prime Video', 'amazon_prime_video', NULL)`);
-    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (119,  'Amazon Prime Video', 'amazon_prime_video', NULL)`);
-    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (384,  'HBO Max', 'hbo_max', NULL)`);
-    db.exec(`INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (1899, 'HBO Max', 'hbo_max', NULL)`);
+    db.exec(
+      `INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('t1', 1, 'Test Movie', 'movie')`,
+    );
+    db.exec(
+      `INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (9,    'Amazon Prime Video', 'amazon_prime_video', NULL)`,
+    );
+    db.exec(
+      `INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (119,  'Amazon Prime Video', 'amazon_prime_video', NULL)`,
+    );
+    db.exec(
+      `INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (384,  'HBO Max', 'hbo_max', NULL)`,
+    );
+    db.exec(
+      `INSERT OR IGNORE INTO providers (id, name, technical_name, icon_url) VALUES (1899, 'HBO Max', 'hbo_max', NULL)`,
+    );
 
     // Seed offers referencing duplicate IDs.
-    db.exec(`INSERT INTO offers (title_id, provider_id, monetization_type, presentation_type, url) VALUES ('t1', 119, 'FLATRATE', '', 'https://example.com')`);
-    db.exec(`INSERT INTO offers (title_id, provider_id, monetization_type, presentation_type, url) VALUES ('t1', 1899, 'FLATRATE', '', 'https://example.com')`);
+    db.exec(
+      `INSERT INTO offers (title_id, provider_id, monetization_type, presentation_type, url) VALUES ('t1', 119, 'FLATRATE', '', 'https://example.com')`,
+    );
+    db.exec(
+      `INSERT INTO offers (title_id, provider_id, monetization_type, presentation_type, url) VALUES ('t1', 1899, 'FLATRATE', '', 'https://example.com')`,
+    );
 
     // Seed user_subscribed_providers: one user with both duplicate + canonical (conflict case),
     // another user with only the duplicate.
-    db.exec(`INSERT INTO users (id, username) VALUES ('u-conflict', 'conflict_user')`);
-    db.exec(`INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-consol', 119)`);
-    db.exec(`INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-conflict', 9)`);
-    db.exec(`INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-conflict', 119)`);
+    db.exec(
+      `INSERT INTO users (id, username) VALUES ('u-conflict', 'conflict_user')`,
+    );
+    db.exec(
+      `INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-consol', 119)`,
+    );
+    db.exec(
+      `INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-conflict', 9)`,
+    );
+    db.exec(
+      `INSERT INTO user_subscribed_providers (user_id, provider_id) VALUES ('u-conflict', 119)`,
+    );
 
     // Run the consolidation migration.
-    const consolidation = fs.readFileSync(path.join(MIGRATIONS_DIR, "0043_consolidate_duplicate_providers.sql"), "utf-8");
+    const consolidation = fs.readFileSync(
+      path.join(MIGRATIONS_DIR, "0043_consolidate_duplicate_providers.sql"),
+      "utf-8",
+    );
     const stmts = consolidation
       .split("--> statement-breakpoint")
       .map((s) => s.trim())
@@ -143,23 +172,41 @@ describe("0043 consolidate duplicate providers", () => {
     for (const stmt of stmts) db.exec(stmt);
 
     // Providers: duplicate rows should be gone.
-    const providerIds = (db.prepare("SELECT id FROM providers").all() as { id: number }[]).map((r) => r.id);
+    const providerIds = (
+      db.prepare("SELECT id FROM providers").all() as { id: number }[]
+    ).map((r) => r.id);
     expect(providerIds).not.toContain(119);
     expect(providerIds).not.toContain(1899);
 
     // Offers: all repointed to canonical IDs.
-    const offerProviders = (db.prepare("SELECT provider_id FROM offers").all() as { provider_id: number }[]).map((r) => r.provider_id);
+    const offerProviders = (
+      db.prepare("SELECT provider_id FROM offers").all() as {
+        provider_id: number;
+      }[]
+    ).map((r) => r.provider_id);
     expect(offerProviders).not.toContain(119);
     expect(offerProviders).not.toContain(1899);
     expect(offerProviders).toContain(9);
     expect(offerProviders).toContain(384);
 
     // user_subscribed_providers: u-consol remapped 119→9; u-conflict deduplicated (no double 9).
-    const uConsolSubs = (db.prepare("SELECT provider_id FROM user_subscribed_providers WHERE user_id = 'u-consol'").all() as { provider_id: number }[]).map((r) => r.provider_id);
+    const uConsolSubs = (
+      db
+        .prepare(
+          "SELECT provider_id FROM user_subscribed_providers WHERE user_id = 'u-consol'",
+        )
+        .all() as { provider_id: number }[]
+    ).map((r) => r.provider_id);
     expect(uConsolSubs).toContain(9);
     expect(uConsolSubs).not.toContain(119);
 
-    const uConflictSubs = (db.prepare("SELECT provider_id FROM user_subscribed_providers WHERE user_id = 'u-conflict'").all() as { provider_id: number }[]).map((r) => r.provider_id);
+    const uConflictSubs = (
+      db
+        .prepare(
+          "SELECT provider_id FROM user_subscribed_providers WHERE user_id = 'u-conflict'",
+        )
+        .all() as { provider_id: number }[]
+    ).map((r) => r.provider_id);
     expect(uConflictSubs.filter((id) => id === 9)).toHaveLength(1);
     expect(uConflictSubs).not.toContain(119);
 
@@ -188,29 +235,54 @@ describe("0044 reconcile movie watched/completed", () => {
       for (const stmt of stmts) db.exec(stmt);
 
       if (!seededAuth && file.startsWith("0000_")) {
-        db.exec(`INSERT INTO users (id, username) VALUES ('u-0044', 'user_0044')`);
+        db.exec(
+          `INSERT INTO users (id, username) VALUES ('u-0044', 'user_0044')`,
+        );
         seededAuth = true;
       }
     }
 
     // Seed titles
-    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-null', 1, 'Watched Movie No Status', 'MOVIE')`);
-    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-drop', 2, 'Dropped Movie', 'MOVIE')`);
-    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-comp', 3, 'Completed No Watch Row', 'MOVIE')`);
-    db.exec(`INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('s-null', 4, 'Show With Watch Row', 'SHOW')`);
+    db.exec(
+      `INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-null', 1, 'Watched Movie No Status', 'MOVIE')`,
+    );
+    db.exec(
+      `INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-drop', 2, 'Dropped Movie', 'MOVIE')`,
+    );
+    db.exec(
+      `INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('m-comp', 3, 'Completed No Watch Row', 'MOVIE')`,
+    );
+    db.exec(
+      `INSERT INTO titles (id, tmdb_id, title, object_type) VALUES ('s-null', 4, 'Show With Watch Row', 'SHOW')`,
+    );
 
     // Track all titles
-    db.exec(`INSERT INTO tracked (title_id, user_id) VALUES ('m-null', 'u-0044')`);
-    db.exec(`INSERT INTO tracked (title_id, user_id, user_status) VALUES ('m-drop', 'u-0044', 'dropped')`);
-    db.exec(`INSERT INTO tracked (title_id, user_id, user_status) VALUES ('m-comp', 'u-0044', 'completed')`);
-    db.exec(`INSERT INTO tracked (title_id, user_id) VALUES ('s-null', 'u-0044')`);
+    db.exec(
+      `INSERT INTO tracked (title_id, user_id) VALUES ('m-null', 'u-0044')`,
+    );
+    db.exec(
+      `INSERT INTO tracked (title_id, user_id, user_status) VALUES ('m-drop', 'u-0044', 'dropped')`,
+    );
+    db.exec(
+      `INSERT INTO tracked (title_id, user_id, user_status) VALUES ('m-comp', 'u-0044', 'completed')`,
+    );
+    db.exec(
+      `INSERT INTO tracked (title_id, user_id) VALUES ('s-null', 'u-0044')`,
+    );
 
     // watched_titles rows for m-null and s-null (m-drop and m-comp don't have one initially)
-    db.exec(`INSERT INTO watched_titles (title_id, user_id) VALUES ('m-null', 'u-0044')`);
-    db.exec(`INSERT INTO watched_titles (title_id, user_id) VALUES ('s-null', 'u-0044')`);
+    db.exec(
+      `INSERT INTO watched_titles (title_id, user_id) VALUES ('m-null', 'u-0044')`,
+    );
+    db.exec(
+      `INSERT INTO watched_titles (title_id, user_id) VALUES ('s-null', 'u-0044')`,
+    );
 
     // Run migration 0044
-    const migration = fs.readFileSync(path.join(MIGRATIONS_DIR, "0044_reconcile_movie_watched_completed.sql"), "utf-8");
+    const migration = fs.readFileSync(
+      path.join(MIGRATIONS_DIR, "0044_reconcile_movie_watched_completed.sql"),
+      "utf-8",
+    );
     const stmts = migration
       .split("--> statement-breakpoint")
       .map((s) => s.trim())
@@ -219,10 +291,20 @@ describe("0044 reconcile movie watched/completed", () => {
 
     type TrackedRow = { user_status: string | null };
     const getStatus = (titleId: string): string | null =>
-      (db.prepare("SELECT user_status FROM tracked WHERE title_id = ? AND user_id = 'u-0044'").get(titleId) as TrackedRow | undefined)?.user_status ?? null;
+      (
+        db
+          .prepare(
+            "SELECT user_status FROM tracked WHERE title_id = ? AND user_id = 'u-0044'",
+          )
+          .get(titleId) as TrackedRow | undefined
+      )?.user_status ?? null;
 
     const hasWatchRow = (titleId: string): boolean =>
-      db.prepare("SELECT 1 FROM watched_titles WHERE title_id = ? AND user_id = 'u-0044'").get(titleId) != null;
+      db
+        .prepare(
+          "SELECT 1 FROM watched_titles WHERE title_id = ? AND user_id = 'u-0044'",
+        )
+        .get(titleId) != null;
 
     // m-null: had watched_titles row + user_status=NULL → should be 'completed' now
     expect(getStatus("m-null")).toBe("completed");

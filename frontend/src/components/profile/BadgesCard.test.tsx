@@ -3,7 +3,9 @@ import { render, screen, cleanup } from "@testing-library/react";
 import BadgesCard from "./BadgesCard";
 import type { UserAchievement } from "../../types";
 
-function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievement {
+function makeAchievement(
+  overrides: Partial<UserAchievement> = {},
+): UserAchievement {
   return {
     key: "movies_10",
     kind: "count_movies",
@@ -43,14 +45,20 @@ describe("BadgesCard", () => {
 
   test("renders locked badges with progress in mode=self", () => {
     render(
-      <BadgesCard achievements={[earnedAchievement, lockedAchievement]} mode="self" />
+      <BadgesCard
+        achievements={[earnedAchievement, lockedAchievement]}
+        mode="self"
+      />,
     );
     expect(screen.getByText("Cinephile II")).toBeDefined();
   });
 
   test("in mode=other, does NOT render locked badges", () => {
     render(
-      <BadgesCard achievements={[earnedAchievement, lockedAchievement]} mode="other" />
+      <BadgesCard
+        achievements={[earnedAchievement, lockedAchievement]}
+        mode="other"
+      />,
     );
     expect(screen.getByText("Cinephile I")).toBeDefined();
     expect(screen.queryByText("Cinephile II")).toBeNull();
@@ -58,7 +66,10 @@ describe("BadgesCard", () => {
 
   test("renders X / Y earned count in header", () => {
     render(
-      <BadgesCard achievements={[earnedAchievement, lockedAchievement]} mode="self" />
+      <BadgesCard
+        achievements={[earnedAchievement, lockedAchievement]}
+        mode="self"
+      />,
     );
     expect(screen.getByText("1 / 2 earned")).toBeDefined();
   });
@@ -72,7 +83,7 @@ describe("BadgesCard", () => {
 
   test("in mode=other with all locked, renders nothing", () => {
     const { container } = render(
-      <BadgesCard achievements={[lockedAchievement]} mode="other" />
+      <BadgesCard achievements={[lockedAchievement]} mode="other" />,
     );
     expect(container.firstChild).toBeNull();
   });

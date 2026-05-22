@@ -22,7 +22,14 @@ afterAll(() => {
 describe("setScheduleCallback", () => {
   it("refreshNotificationSchedule is a no-op when no callback is set", async () => {
     setScheduleCallback(null as any);
-    await createNotifier(userId, "discord", "Test", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await createNotifier(
+      userId,
+      "discord",
+      "Test",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
     // Should not throw
     await refreshNotificationSchedule();
   });
@@ -31,7 +38,14 @@ describe("setScheduleCallback", () => {
     const calls: { name: string; cron: string }[] = [];
     setScheduleCallback((name, cron) => calls.push({ name, cron }));
 
-    await createNotifier(userId, "discord", "Test", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await createNotifier(
+      userId,
+      "discord",
+      "Test",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
     await refreshNotificationSchedule();
 
     expect(calls).toHaveLength(1);

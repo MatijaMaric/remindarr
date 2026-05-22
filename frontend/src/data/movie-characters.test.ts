@@ -1,5 +1,8 @@
 import { describe, expect, test, afterEach, setSystemTime } from "bun:test";
-import { movieCharacterUsernames, getDailyPlaceholder } from "./movie-characters";
+import {
+  movieCharacterUsernames,
+  getDailyPlaceholder,
+} from "./movie-characters";
 
 describe("movieCharacterUsernames", () => {
   test("has exactly 100 entries", () => {

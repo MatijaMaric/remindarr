@@ -25,7 +25,9 @@ const PAGE_SIZE = 50;
 /**
  * Core handler logic — shared between Bun (registerHandler) and CF Workers (processor.ts).
  */
-export async function runBackfillAchievements(_data?: string | null): Promise<void> {
+export async function runBackfillAchievements(
+  _data?: string | null,
+): Promise<void> {
   const db = getDb();
 
   // 1. Read cursor
@@ -69,7 +71,11 @@ export async function runBackfillAchievements(_data?: string | null): Promise<vo
               result = await evaluateStreak(userId, a.threshold);
               break;
             case "genre_count":
-              result = await evaluateGenreCount(userId, a.threshold, a.genre ?? "__any__");
+              result = await evaluateGenreCount(
+                userId,
+                a.threshold,
+                a.genre ?? "__any__",
+              );
               break;
             case "completionist":
               // Without titleId — checks all shows the user has episodes for
@@ -93,7 +99,12 @@ export async function runBackfillAchievements(_data?: string | null): Promise<vo
               let anyEarned = false;
 
               for (const c of candidateRows) {
-                const r = await evaluateSpeedBingeSeason(userId, threshold, windowHours, c.title_id);
+                const r = await evaluateSpeedBingeSeason(
+                  userId,
+                  threshold,
+                  windowHours,
+                  c.title_id,
+                );
                 if (r.earned) {
                   anyEarned = true;
                   maxProgress = Math.max(maxProgress, r.progress);
@@ -116,7 +127,13 @@ export async function runBackfillAchievements(_data?: string | null): Promise<vo
           }
 
           const earnedAt = result.earned ? new Date().toISOString() : null;
-          await upsertUserAchievement(userId, a.key, result.progress, earnedAt, { earnedNotified: 1 });
+          await upsertUserAchievement(
+            userId,
+            a.key,
+            result.progress,
+            earnedAt,
+            { earnedNotified: 1 },
+          );
         } catch (err) {
           log.warn("Backfill: error evaluating achievement for user", {
             userId,
@@ -139,7 +156,11 @@ export async function runBackfillAchievements(_data?: string | null): Promise<vo
 
   // 5. If full page returned, enqueue next batch
   if (rows.length === PAGE_SIZE) {
-    enqueueJob("backfill-achievements", {}, { runAt: new Date(Date.now() + 5000) });
+    enqueueJob(
+      "backfill-achievements",
+      {},
+      { runAt: new Date(Date.now() + 5000) },
+    );
     log.info("Backfill: enqueued next batch", { nextCursor: lastUserId });
   } else {
     // 6. Done

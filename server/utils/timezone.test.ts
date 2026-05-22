@@ -20,7 +20,7 @@ describe("localDateForTimezone", () => {
     const result_utc = localDateForTimezone("UTC");
     // Just verify both return valid date strings
     const result_auckland = localDateForTimezone("Pacific/Auckland"); // UTC+13
-    const result_pago = localDateForTimezone("Pacific/Pago_Pago");   // UTC-11
+    const result_pago = localDateForTimezone("Pacific/Pago_Pago"); // UTC-11
     expect(result_utc).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(result_auckland).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(result_pago).toMatch(/^\d{4}-\d{2}-\d{2}$/);

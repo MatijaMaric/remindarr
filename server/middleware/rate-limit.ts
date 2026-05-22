@@ -119,7 +119,9 @@ export class KvRateLimitStore implements RateLimitStore {
     }
 
     record.count += 1;
-    await this.kv.put(kvKey, JSON.stringify(record), { expirationTtl: ttlSeconds });
+    await this.kv.put(kvKey, JSON.stringify(record), {
+      expirationTtl: ttlSeconds,
+    });
     return { allowed: true, retryAfterMs: 0 };
   }
 }
@@ -136,7 +138,9 @@ interface RateLimitOptions {
   /** Window duration in milliseconds. */
   windowMs: number;
   /** Function to derive a key from the request (defaults to x-forwarded-for or "anonymous"). */
-  keyGenerator?: (c: { req: { header: (name: string) => string | undefined } }) => string;
+  keyGenerator?: (c: {
+    req: { header: (name: string) => string | undefined };
+  }) => string;
 }
 
 export function rateLimiter(options: RateLimitOptions) {
@@ -151,7 +155,12 @@ export function rateLimiter(options: RateLimitOptions) {
     const key = `${scope}:${ip}`;
     const now = Date.now();
 
-    const { allowed, retryAfterMs } = await store.consume(key, limit, windowMs, now);
+    const { allowed, retryAfterMs } = await store.consume(
+      key,
+      limit,
+      windowMs,
+      now,
+    );
 
     if (!allowed) {
       log.info("Rate limit exceeded", { scope, ip, path: c.req.path });

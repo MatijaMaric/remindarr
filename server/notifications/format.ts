@@ -7,7 +7,7 @@ import type { NotificationEpisode } from "./types";
  * for each episode.
  */
 export function groupEpisodesByShow(
-  episodes: NotificationEpisode[]
+  episodes: NotificationEpisode[],
 ): Map<string, NotificationEpisode[]> {
   const showMap = new Map<string, NotificationEpisode[]>();
   for (const ep of episodes) {
@@ -24,7 +24,10 @@ export function groupEpisodesByShow(
  * without producing trailing separators.
  */
 export function formatProviderNames(
-  offers: ReadonlyArray<{ providerName: string; providerIconUrl: string | null }>
+  offers: ReadonlyArray<{
+    providerName: string;
+    providerIconUrl: string | null;
+  }>,
 ): string {
   return [...new Set(offers.map((o) => o.providerName))].join(", ");
 }

@@ -5,9 +5,7 @@
   "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy.",
   "release_date": "1999-10-15",
   "runtime": 139,
-  "genres": [
-    { "id": 18, "name": "Drama" }
-  ],
+  "genres": [{ "id": 18, "name": "Drama" }],
   "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
   "backdrop_path": "/rr7E0NoGKxvbkb89eR1GwfoYjpA.jpg",
   "adult": false,

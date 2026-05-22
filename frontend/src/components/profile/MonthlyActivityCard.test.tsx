@@ -6,7 +6,9 @@ import type { ProfileMonthlyActivity } from "../../types";
 
 afterEach(() => cleanup());
 
-function fixture(overrides: Partial<ProfileMonthlyActivity>[] = []): ProfileMonthlyActivity[] {
+function fixture(
+  overrides: Partial<ProfileMonthlyActivity>[] = [],
+): ProfileMonthlyActivity[] {
   const base: ProfileMonthlyActivity[] = [
     { month: "2025-05", movies_watched: 4, episodes_watched: 28 },
     { month: "2025-06", movies_watched: 6, episodes_watched: 42 },

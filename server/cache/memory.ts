@@ -17,7 +17,10 @@ export class MemoryCache implements Cache {
     private readonly maxEntries: number = 1000,
     cleanupIntervalMs: number = 60_000,
   ) {
-    this.cleanupTimer = setInterval(() => this.evictExpired(), cleanupIntervalMs);
+    this.cleanupTimer = setInterval(
+      () => this.evictExpired(),
+      cleanupIntervalMs,
+    );
     if (typeof this.cleanupTimer === "object" && "unref" in this.cleanupTimer) {
       this.cleanupTimer.unref();
     }

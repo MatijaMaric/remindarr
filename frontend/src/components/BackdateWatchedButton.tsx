@@ -20,7 +20,12 @@ interface Props {
   onComplete?: (updated: number) => void;
 }
 
-export default function BackdateWatchedButton({ titleId, scope, variant = "default", onComplete }: Props) {
+export default function BackdateWatchedButton({
+  titleId,
+  scope,
+  variant = "default",
+  onComplete,
+}: Props) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -35,10 +40,16 @@ export default function BackdateWatchedButton({ titleId, scope, variant = "defau
       const { updated } = await api.backdateWatchedToAirDate(titleId);
       setOpen(false);
       if (updated === 0) {
-        toast(t("episodes.backdateNoChanges", "No watched episodes to backdate"));
+        toast(
+          t("episodes.backdateNoChanges", "No watched episodes to backdate"),
+        );
       } else {
         toast.success(
-          t("episodes.backdateSuccess", "Backdated {{count}} episode to air date", { count: updated }),
+          t(
+            "episodes.backdateSuccess",
+            "Backdated {{count}} episode to air date",
+            { count: updated },
+          ),
         );
       }
       qc.invalidateQueries({ queryKey: ["watch-history"] });
@@ -48,24 +59,32 @@ export default function BackdateWatchedButton({ titleId, scope, variant = "defau
       qc.invalidateQueries({ queryKey: ["home", "auth"] });
       onComplete?.(updated);
     } catch {
-      toast.error(t("episodes.backdateError", "Failed to backdate watched episodes"));
+      toast.error(
+        t("episodes.backdateError", "Failed to backdate watched episodes"),
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  const buttonClass = variant === "ghost"
-    ? "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
-    : "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white cursor-pointer transition-colors";
+  const buttonClass =
+    variant === "ghost"
+      ? "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
+      : "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white cursor-pointer transition-colors";
 
-  const label = scope === "all"
-    ? t("episodes.backdateAllAction", "Backdate to air dates")
-    : t("episodes.backdateAction", "Backdate to air dates");
+  const label =
+    scope === "all"
+      ? t("episodes.backdateAllAction", "Backdate to air dates")
+      : t("episodes.backdateAction", "Backdate to air dates");
 
-  const titleKey = scope === "all" ? "episodes.backdateAllConfirmTitle" : "episodes.backdateConfirmTitle";
-  const descriptionKey = scope === "all"
-    ? "episodes.backdateAllConfirmDescription"
-    : "episodes.backdateConfirmDescription";
+  const titleKey =
+    scope === "all"
+      ? "episodes.backdateAllConfirmTitle"
+      : "episodes.backdateConfirmTitle";
+  const descriptionKey =
+    scope === "all"
+      ? "episodes.backdateAllConfirmDescription"
+      : "episodes.backdateConfirmDescription";
 
   return (
     <>
@@ -83,7 +102,12 @@ export default function BackdateWatchedButton({ titleId, scope, variant = "defau
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogPopup>
           <AlertDialogTitle>
-            {t(titleKey, scope === "all" ? "Backdate all watched episodes?" : "Backdate watched episodes?")}
+            {t(
+              titleKey,
+              scope === "all"
+                ? "Backdate all watched episodes?"
+                : "Backdate watched episodes?",
+            )}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {t(
@@ -94,9 +118,7 @@ export default function BackdateWatchedButton({ titleId, scope, variant = "defau
             )}
           </AlertDialogDescription>
           <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose
-              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors"
-            >
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
               {t("common.cancel")}
             </AlertDialogClose>
             <button

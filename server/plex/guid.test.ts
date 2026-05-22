@@ -29,17 +29,23 @@ describe("parsePlexGuids", () => {
   });
 
   it("parses legacy themoviedb agent format", () => {
-    const result = parsePlexGuids([{ id: "com.plexapp.agents.themoviedb://12345?lang=en" }]);
+    const result = parsePlexGuids([
+      { id: "com.plexapp.agents.themoviedb://12345?lang=en" },
+    ]);
     expect(result.tmdbId).toBe(12345);
   });
 
   it("parses legacy thetvdb agent format", () => {
-    const result = parsePlexGuids([{ id: "com.plexapp.agents.thetvdb://67890?lang=en" }]);
+    const result = parsePlexGuids([
+      { id: "com.plexapp.agents.thetvdb://67890?lang=en" },
+    ]);
     expect(result.tvdbId).toBe(67890);
   });
 
   it("parses legacy imdb agent format", () => {
-    const result = parsePlexGuids([{ id: "com.plexapp.agents.imdb://tt9876543?lang=en" }]);
+    const result = parsePlexGuids([
+      { id: "com.plexapp.agents.imdb://tt9876543?lang=en" },
+    ]);
     expect(result.imdbId).toBe("tt9876543");
   });
 
@@ -52,14 +58,19 @@ describe("parsePlexGuids", () => {
   });
 
   it("ignores unrecognized guid formats", () => {
-    const result = parsePlexGuids([{ id: "unknown://12345" }, { id: "tmdb://99" }]);
+    const result = parsePlexGuids([
+      { id: "unknown://12345" },
+      { id: "tmdb://99" },
+    ]);
     expect(result.tmdbId).toBe(99);
   });
 });
 
 describe("parseLegacyGuid", () => {
   it("parses legacy guid string", () => {
-    const result = parseLegacyGuid("com.plexapp.agents.themoviedb://777?lang=en");
+    const result = parseLegacyGuid(
+      "com.plexapp.agents.themoviedb://777?lang=en",
+    );
     expect(result.tmdbId).toBe(777);
   });
 

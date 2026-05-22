@@ -1,8 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import * as resolver from "../imdb/resolver";
 import type { AppEnv } from "../types";
@@ -131,7 +143,9 @@ describe("POST /imdb", () => {
   });
 
   it("returns 500 when resolver throws", async () => {
-    (resolver.resolveImdbUrl as any).mockRejectedValueOnce(new Error("TMDB down"));
+    (resolver.resolveImdbUrl as any).mockRejectedValueOnce(
+      new Error("TMDB down"),
+    );
 
     const res = await app.request("/imdb", {
       method: "POST",

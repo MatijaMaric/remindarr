@@ -12,7 +12,11 @@ export default function AchievementDetailPage() {
   const { username, key } = useParams<{ username?: string; key: string }>();
   const isOwnProfile = !username;
 
-  const { data, isLoading: loading, isError: error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+  } = useQuery({
     queryKey: ["achievement", username ?? "me", key],
     queryFn: ({ signal }) =>
       isOwnProfile
@@ -36,7 +40,9 @@ export default function AchievementDetailPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 text-zinc-400">
         Achievement not found.
-        <Link to={backHref} className="ml-2 text-amber-400 hover:underline">Back</Link>
+        <Link to={backHref} className="ml-2 text-amber-400 hover:underline">
+          Back
+        </Link>
       </div>
     );
   }
@@ -46,7 +52,10 @@ export default function AchievementDetailPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       {/* Back link */}
-      <Link to={backHref} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200">
+      <Link
+        to={backHref}
+        className="flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+      >
         <ChevronLeft className="w-4 h-4" />
         All achievements
       </Link>
@@ -54,7 +63,12 @@ export default function AchievementDetailPage() {
       {/* Hero */}
       <div className="flex items-start gap-4">
         <div className="shrink-0">
-          <BadgeTile achievement={data} mode={isOwnProfile ? "self" : "other"} compact={false} baseHref={backHref} />
+          <BadgeTile
+            achievement={data}
+            mode={isOwnProfile ? "self" : "other"}
+            compact={false}
+            baseHref={backHref}
+          />
         </div>
         <div className="space-y-1 min-w-0">
           <Kicker>{data.category}</Kicker>
@@ -73,12 +87,16 @@ export default function AchievementDetailPage() {
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-zinc-400">
             <span>Progress</span>
-            <span>{data.progress} / {data.threshold}</span>
+            <span>
+              {data.progress} / {data.threshold}
+            </span>
           </div>
           <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-amber-500 rounded-full"
-              style={{ width: `${Math.min(100, (data.progress / data.threshold) * 100)}%` }}
+              style={{
+                width: `${Math.min(100, (data.progress / data.threshold) * 100)}%`,
+              }}
             />
           </div>
         </div>
@@ -86,14 +104,17 @@ export default function AchievementDetailPage() {
 
       {data.earned && (
         <p className="text-sm text-zinc-400">
-          First earned {data.earnedAt ? new Date(data.earnedAt).toLocaleDateString() : "—"}
+          First earned{" "}
+          {data.earnedAt ? new Date(data.earnedAt).toLocaleDateString() : "—"}
         </p>
       )}
 
       {/* Ladder rung dots */}
       {isLadder && data.ladder && (
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500 uppercase tracking-wide">Ladder progress</p>
+          <p className="text-xs text-zinc-500 uppercase tracking-wide">
+            Ladder progress
+          </p>
           <LadderProgress rungs={data.ladder.rungs} currentKey={data.key} />
         </div>
       )}
@@ -101,7 +122,9 @@ export default function AchievementDetailPage() {
       {/* Earn history for repeatables */}
       {data.repeatable && data.history.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500 uppercase tracking-wide">Earn history</p>
+          <p className="text-xs text-zinc-500 uppercase tracking-wide">
+            Earn history
+          </p>
           <EarnHistoryList history={data.history} />
         </div>
       )}

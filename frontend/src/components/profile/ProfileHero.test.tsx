@@ -58,7 +58,9 @@ describe("ProfileHero", () => {
       />,
       { wrapper: Wrapper },
     );
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Matija");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "Matija",
+    );
     expect(screen.getByText("@matija")).toBeDefined();
   });
 
@@ -119,7 +121,9 @@ describe("ProfileHero", () => {
       />,
       { wrapper: Wrapper },
     );
-    expect(screen.queryByRole("button", { name: /Follow|Following/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Follow|Following/ }),
+    ).toBeNull();
   });
 
   it("renders a filmstrip of up to 5 backdrops", () => {

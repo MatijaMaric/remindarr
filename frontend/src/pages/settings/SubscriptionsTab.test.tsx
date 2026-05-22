@@ -1,5 +1,20 @@
-import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  beforeEach,
+  afterEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+  act,
+} from "@testing-library/react";
 import "../../i18n";
 import * as api from "../../api";
 
@@ -9,7 +24,13 @@ const STABLE_SUBSCRIPTIONS = { providerIds: [] as number[], onlyMine: false };
 
 mock.module("../../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false },
+    user: {
+      id: "u1",
+      username: "testuser",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: null,
     loading: false,
     sessionStatus: "authenticated",
@@ -31,12 +52,24 @@ beforeEach(() => {
   spies = [
     spyOn(api, "getProviders").mockResolvedValue({
       providers: [
-        { id: 8, name: "Netflix", technical_name: "netflix", icon_url: "https://example.com/netflix.png" },
-        { id: 337, name: "Disney+", technical_name: "disneyplus", icon_url: "https://example.com/disney.png" },
+        {
+          id: 8,
+          name: "Netflix",
+          technical_name: "netflix",
+          icon_url: "https://example.com/netflix.png",
+        },
+        {
+          id: 337,
+          name: "Disney+",
+          technical_name: "disneyplus",
+          icon_url: "https://example.com/disney.png",
+        },
       ],
       regionProviderIds: [8, 337],
     } as any),
-    spyOn(api, "updateSubscriptions").mockResolvedValue({ providerIds: [8] } as any),
+    spyOn(api, "updateSubscriptions").mockResolvedValue({
+      providerIds: [8],
+    } as any),
     spyOn(api, "updateOnlyMine").mockResolvedValue({ onlyMine: true } as any),
   ];
 });
@@ -69,7 +102,8 @@ describe("SubscriptionsTab", () => {
 
     await waitFor(() => {
       expect(api.updateSubscriptions).toHaveBeenCalledTimes(1);
-      const call = (api.updateSubscriptions as ReturnType<typeof spyOn>).mock.calls[0];
+      const call = (api.updateSubscriptions as ReturnType<typeof spyOn>).mock
+        .calls[0];
       expect((call[0] as number[]).includes(8)).toBe(true);
     });
   });
@@ -90,7 +124,9 @@ describe("SubscriptionsTab", () => {
   });
 
   it("shows an error message and skips refreshSubscriptions when updateSubscriptions rejects", async () => {
-    (api.updateSubscriptions as ReturnType<typeof spyOn>).mockRejectedValue(new Error("500"));
+    (api.updateSubscriptions as ReturnType<typeof spyOn>).mockRejectedValue(
+      new Error("500"),
+    );
 
     render(<SubscriptionsTab />);
     await waitFor(() => screen.getByText("Netflix"));
@@ -101,7 +137,9 @@ describe("SubscriptionsTab", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Failed to save. Please try again.")).toBeDefined();
+      expect(
+        screen.getByText("Failed to save. Please try again."),
+      ).toBeDefined();
       expect(mockRefreshSubscriptions).not.toHaveBeenCalled();
     });
   });
@@ -119,7 +157,8 @@ describe("SubscriptionsTab", () => {
 
     await waitFor(() => {
       expect(api.updateOnlyMine).toHaveBeenCalledTimes(1);
-      const call = (api.updateOnlyMine as ReturnType<typeof spyOn>).mock.calls[0];
+      const call = (api.updateOnlyMine as ReturnType<typeof spyOn>).mock
+        .calls[0];
       expect(call[0]).toBe(true);
     });
   });

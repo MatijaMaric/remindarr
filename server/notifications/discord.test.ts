@@ -7,8 +7,7 @@ const discord = new DiscordProvider();
 describe("DiscordProvider.validateConfig", () => {
   it("accepts valid Discord webhook URL", () => {
     const result = discord.validateConfig({
-      webhookUrl:
-        "https://discord.com/api/webhooks/123456789/abcdefghijklmnop",
+      webhookUrl: "https://discord.com/api/webhooks/123456789/abcdefghijklmnop",
     });
     expect(result.valid).toBe(true);
   });
@@ -37,8 +36,7 @@ describe("DiscordProvider.validateConfig", () => {
 
   it("rejects non-https URL", () => {
     const result = discord.validateConfig({
-      webhookUrl:
-        "http://discord.com/api/webhooks/123456789/abcdefghijklmnop",
+      webhookUrl: "http://discord.com/api/webhooks/123456789/abcdefghijklmnop",
     });
     expect(result.valid).toBe(false);
   });
@@ -50,7 +48,10 @@ describe("DiscordProvider.send", () => {
 
   beforeEach(() => {
     fetchCalls = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: string | URL | Request, options?: any) => {
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+      url: string | URL | Request,
+      options?: any,
+    ) => {
       fetchCalls.push({ url: url as string, options });
       return new Response("", { status: 204 });
     }) as typeof fetch);
@@ -69,9 +70,7 @@ describe("DiscordProvider.send", () => {
         episodeNumber: 3,
         episodeName: "...And the Bag's in the River",
         posterUrl: "/abc123.jpg",
-        offers: [
-          { providerName: "Netflix", providerIconUrl: null },
-        ],
+        offers: [{ providerName: "Netflix", providerIconUrl: null }],
       },
     ],
     movies: [
@@ -79,9 +78,7 @@ describe("DiscordProvider.send", () => {
         title: "The Matrix",
         releaseYear: 1999,
         posterUrl: "/matrix.jpg",
-        offers: [
-          { providerName: "HBO Max", providerIconUrl: null },
-        ],
+        offers: [{ providerName: "HBO Max", providerIconUrl: null }],
       },
     ],
   };
@@ -89,13 +86,11 @@ describe("DiscordProvider.send", () => {
   it("sends embeds to webhook URL", async () => {
     await discord.send(
       { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
-      sampleContent
+      sampleContent,
     );
 
     expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].url).toBe(
-      "https://discord.com/api/webhooks/123/abc"
-    );
+    expect(fetchCalls[0].url).toBe("https://discord.com/api/webhooks/123/abc");
 
     const body = JSON.parse(fetchCalls[0].options.body);
     expect(body.username).toBe("Remindarr");
@@ -106,23 +101,19 @@ describe("DiscordProvider.send", () => {
     expect(body.embeds[0].title).toContain("2026-03-12");
 
     // Episode embed
-    const epEmbed = body.embeds.find((e: any) =>
-      e.title === "Breaking Bad"
-    );
+    const epEmbed = body.embeds.find((e: any) => e.title === "Breaking Bad");
     expect(epEmbed).toBeDefined();
     expect(epEmbed.description).toContain("S01E03");
 
     // Movie embed
-    const movieEmbed = body.embeds.find((e: any) =>
-      e.title === "The Matrix"
-    );
+    const movieEmbed = body.embeds.find((e: any) => e.title === "The Matrix");
     expect(movieEmbed).toBeDefined();
   });
 
   it("skips sending when content is empty", async () => {
     await discord.send(
       { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
-      { date: "2026-03-12", episodes: [], movies: [] }
+      { date: "2026-03-12", episodes: [], movies: [] },
     );
 
     expect(fetchCalls).toHaveLength(0);
@@ -136,8 +127,8 @@ describe("DiscordProvider.send", () => {
     await expect(
       discord.send(
         { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
-        sampleContent
-      )
+        sampleContent,
+      ),
     ).rejects.toThrow("Discord webhook failed");
   });
 
@@ -145,18 +136,27 @@ describe("DiscordProvider.send", () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,
       achievementsEarned: [
-        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+        {
+          key: "movies_10",
+          title: "Cinephile I",
+          description: "Watch 10 movies",
+          icon: "Film",
+          points: 10,
+          earnedAt: "2026-01-01T00:00:00.000Z",
+        },
       ],
     };
 
     await discord.send(
       { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
-      contentWithAchievements
+      contentWithAchievements,
     );
 
     expect(fetchCalls).toHaveLength(1);
     const body = JSON.parse(fetchCalls[0].options.body);
-    const achievementEmbed = body.embeds.find((e: any) => e.title?.includes("New badges"));
+    const achievementEmbed = body.embeds.find((e: any) =>
+      e.title?.includes("New badges"),
+    );
     expect(achievementEmbed).toBeDefined();
     expect(achievementEmbed.fields).toBeArray();
     expect(achievementEmbed.fields[0].name).toContain("Cinephile I");
@@ -171,12 +171,14 @@ describe("DiscordProvider.send", () => {
 
     await discord.send(
       { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
-      contentNoAchievements
+      contentNoAchievements,
     );
 
     expect(fetchCalls).toHaveLength(1);
     const body = JSON.parse(fetchCalls[0].options.body);
-    const achievementEmbed = body.embeds.find((e: any) => e.title?.includes("New badges"));
+    const achievementEmbed = body.embeds.find((e: any) =>
+      e.title?.includes("New badges"),
+    );
     expect(achievementEmbed).toBeUndefined();
   });
 });

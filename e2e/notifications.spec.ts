@@ -13,7 +13,7 @@ function loadWebhookUrl(): string {
 async function waitForWebhookRequest(
   webhookUrl: string,
   sinceTs: number,
-  timeoutMs = 15_000
+  timeoutMs = 15_000,
 ): Promise<MockWebhookRequest> {
   const ctx = await requestContext.newContext();
   try {
@@ -22,12 +22,16 @@ async function waitForWebhookRequest(
       const res = await ctx.get(`${webhookUrl}/__requests`);
       if (res.ok()) {
         const reqs = (await res.json()) as MockWebhookRequest[];
-        const match = reqs.find((r) => r.method === "POST" && r.receivedAt > sinceTs);
+        const match = reqs.find(
+          (r) => r.method === "POST" && r.receivedAt > sinceTs,
+        );
         if (match) return match;
       }
       await new Promise((r) => setTimeout(r, 200));
     }
-    throw new Error(`Timed out after ${timeoutMs}ms waiting for webhook request`);
+    throw new Error(
+      `Timed out after ${timeoutMs}ms waiting for webhook request`,
+    );
   } finally {
     await ctx.dispose();
   }
@@ -36,10 +40,12 @@ async function waitForWebhookRequest(
 test.describe("Webhook notifications", () => {
   test.skip(
     ({ browserName }) => browserName !== "chromium",
-    "HTTP-only flow; running once is sufficient"
+    "HTTP-only flow; running once is sufficient",
   );
 
-  test("webhook notifier delivers test payload to mock listener", async ({ request }) => {
+  test("webhook notifier delivers test payload to mock listener", async ({
+    request,
+  }) => {
     const webhookUrl = loadWebhookUrl();
     const user = await registerUser(request);
 
@@ -57,10 +63,17 @@ test.describe("Webhook notifications", () => {
     expect(created.notifier.provider).toBe("webhook");
 
     const beforeTs = Date.now();
-    const testRes = await request.post(`/api/notifiers/${created.notifier.id}/test`);
+    const testRes = await request.post(
+      `/api/notifiers/${created.notifier.id}/test`,
+    );
     expect(testRes.ok()).toBeTruthy();
-    const testBody = (await testRes.json()) as { success: boolean; message?: string };
-    expect(testBody.success, `test endpoint failed: ${testBody.message}`).toBe(true);
+    const testBody = (await testRes.json()) as {
+      success: boolean;
+      message?: string;
+    };
+    expect(testBody.success, `test endpoint failed: ${testBody.message}`).toBe(
+      true,
+    );
 
     const received = await waitForWebhookRequest(webhookUrl, beforeTs);
     expect(received.method).toBe("POST");

@@ -133,7 +133,12 @@ export function detectCsvFormat(headers: string[]): CsvFormat {
     return "imdb";
   }
   // Trakt: imdb_id, tmdb_id, title, type
-  if (set.has("imdb_id") && set.has("tmdb_id") && set.has("title") && set.has("type")) {
+  if (
+    set.has("imdb_id") &&
+    set.has("tmdb_id") &&
+    set.has("title") &&
+    set.has("type")
+  ) {
     return "trakt";
   }
   return "unknown";
@@ -143,7 +148,10 @@ export function detectCsvFormat(headers: string[]): CsvFormat {
  * Extract an IMDB ID from a CSV row depending on the detected format.
  * Returns null if the row doesn't have a valid IMDB ID.
  */
-export function extractImdbIdFromRow(row: Record<string, string>, format: CsvFormat): string | null {
+export function extractImdbIdFromRow(
+  row: Record<string, string>,
+  format: CsvFormat,
+): string | null {
   switch (format) {
     case "letterboxd": {
       // Letterboxd URI looks like https://letterboxd.com/film/...
@@ -151,7 +159,8 @@ export function extractImdbIdFromRow(row: Record<string, string>, format: CsvFor
       // an "IMDB URI" or "IMDb" column. Otherwise we use the Letterboxd URI
       // column as identifier — but we can only resolve via IMDB ID.
       // Letterboxd does export an "IMDB URI" column in watchlist/ratings CSVs.
-      const imdbUri = row["IMDB URI"] ?? row["IMDb URI"] ?? row["Imdb URI"] ?? "";
+      const imdbUri =
+        row["IMDB URI"] ?? row["IMDb URI"] ?? row["Imdb URI"] ?? "";
       if (imdbUri) {
         const match = imdbUri.match(/tt\d+/);
         if (match) return match[0];
@@ -218,10 +227,17 @@ app.post("/csv", async (c) => {
   const headers = Object.keys(rows[0]);
   const format = detectCsvFormat(headers);
   if (format === "unknown") {
-    return err(c, "Unrecognized CSV format. Supported formats: Letterboxd, IMDB, Trakt");
+    return err(
+      c,
+      "Unrecognized CSV format. Supported formats: Letterboxd, IMDB, Trakt",
+    );
   }
 
-  log.info("CSV import started", { format, totalRows: rows.length, userId: user.id });
+  log.info("CSV import started", {
+    format,
+    totalRows: rows.length,
+    userId: user.id,
+  });
 
   const limitedRows = rows.slice(0, MAX_ROWS);
   let imported = 0;
@@ -229,7 +245,11 @@ app.post("/csv", async (c) => {
   let skipped = 0;
   const errors: string[] = [];
 
-  for (let batchStart = 0; batchStart < limitedRows.length; batchStart += BATCH_SIZE) {
+  for (
+    let batchStart = 0;
+    batchStart < limitedRows.length;
+    batchStart += BATCH_SIZE
+  ) {
     if (batchStart > 0) {
       await sleep(BATCH_DELAY_MS);
     }
@@ -254,7 +274,11 @@ app.post("/csv", async (c) => {
         await upsertTitles([title]);
         await trackTitle(title.id, user.id);
         imported++;
-        log.info("Imported title from CSV", { imdbId, titleId: title.id, title: title.title });
+        log.info("Imported title from CSV", {
+          imdbId,
+          titleId: title.id,
+          title: title.title,
+        });
       } catch (e: unknown) {
         failed++;
         const msg = e instanceof Error ? e.message : String(e);
@@ -267,7 +291,13 @@ app.post("/csv", async (c) => {
   const totalSkippedRows = rows.length > MAX_ROWS ? rows.length - MAX_ROWS : 0;
   skipped += totalSkippedRows;
 
-  log.info("CSV import complete", { format, imported, failed, skipped, userId: user.id });
+  log.info("CSV import complete", {
+    format,
+    imported,
+    failed,
+    skipped,
+    userId: user.id,
+  });
 
   return ok(c, { imported, failed, skipped, errors });
 });

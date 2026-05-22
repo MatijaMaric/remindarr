@@ -130,22 +130,29 @@ describe("recomputeStreakFromHistory", () => {
     const db = getDb();
 
     // Insert a title directly
-    await db.insert(titles).values({
-      id: "title-streak-hist",
-      objectType: "MOVIE",
-      title: "Streak Movie",
-      offersChecked: 0,
-    }).onConflictDoNothing().run();
+    await db
+      .insert(titles)
+      .values({
+        id: "title-streak-hist",
+        objectType: "MOVIE",
+        title: "Streak Movie",
+        offersChecked: 0,
+      })
+      .onConflictDoNothing()
+      .run();
 
     // Insert watch history for 3 consecutive days
     const dates = ["2024-03-01", "2024-03-02", "2024-03-03"];
     for (const date of dates) {
-      await db.insert(watchHistory).values({
-        id: randomUUID(),
-        userId,
-        titleId: "title-streak-hist",
-        watchedAt: `${date}T12:00:00.000Z`,
-      }).run();
+      await db
+        .insert(watchHistory)
+        .values({
+          id: randomUUID(),
+          userId,
+          titleId: "title-streak-hist",
+          watchedAt: `${date}T12:00:00.000Z`,
+        })
+        .run();
     }
 
     // recomputeStreakFromHistory uses today's date to decide if streak is active.
@@ -160,25 +167,36 @@ describe("recomputeStreakFromHistory", () => {
     const { randomUUID } = await import("node:crypto");
 
     const db = getDb();
-    await db.insert(titles).values({
-      id: "title-streak-hist2",
-      objectType: "MOVIE",
-      title: "Streak Movie 2",
-      offersChecked: 0,
-    }).onConflictDoNothing().run();
+    await db
+      .insert(titles)
+      .values({
+        id: "title-streak-hist2",
+        objectType: "MOVIE",
+        title: "Streak Movie 2",
+        offersChecked: 0,
+      })
+      .onConflictDoNothing()
+      .run();
 
     // 2-day run, then gap, then 4-day run
     const dates = [
-      "2024-03-01", "2024-03-02",          // run of 2
-      "2024-03-10", "2024-03-11", "2024-03-12", "2024-03-13", // run of 4
+      "2024-03-01",
+      "2024-03-02", // run of 2
+      "2024-03-10",
+      "2024-03-11",
+      "2024-03-12",
+      "2024-03-13", // run of 4
     ];
     for (const date of dates) {
-      await db.insert(watchHistory).values({
-        id: randomUUID(),
-        userId,
-        titleId: "title-streak-hist2",
-        watchedAt: `${date}T12:00:00.000Z`,
-      }).run();
+      await db
+        .insert(watchHistory)
+        .values({
+          id: randomUUID(),
+          userId,
+          titleId: "title-streak-hist2",
+          watchedAt: `${date}T12:00:00.000Z`,
+        })
+        .run();
     }
 
     const result = await recomputeStreakFromHistory(userId);

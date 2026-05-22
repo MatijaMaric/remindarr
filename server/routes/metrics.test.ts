@@ -43,12 +43,22 @@ describe("GET /metrics", () => {
   });
 
   it("reflects incremented counters", async () => {
-    httpRequestsTotal.inc({ method: "GET", route: "/api/titles", status: "200" });
-    httpRequestsTotal.inc({ method: "GET", route: "/api/titles", status: "200" });
+    httpRequestsTotal.inc({
+      method: "GET",
+      route: "/api/titles",
+      status: "200",
+    });
+    httpRequestsTotal.inc({
+      method: "GET",
+      route: "/api/titles",
+      status: "200",
+    });
 
     const res = await app.request("/metrics");
     const body = await res.text();
-    expect(body).toContain('http_requests_total{method="GET",route="/api/titles",status="200"} 2');
+    expect(body).toContain(
+      'http_requests_total{method="GET",route="/api/titles",status="200"} 2',
+    );
   });
 
   it("reflects job counters", async () => {
@@ -56,7 +66,9 @@ describe("GET /metrics", () => {
 
     const res = await app.request("/metrics");
     const body = await res.text();
-    expect(body).toContain('jobs_total{name="sync-titles",status="completed"} 1');
+    expect(body).toContain(
+      'jobs_total{name="sync-titles",status="completed"} 1',
+    );
   });
 
   it("includes active sessions gauge from DB", async () => {

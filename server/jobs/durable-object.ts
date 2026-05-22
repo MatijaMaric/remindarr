@@ -24,7 +24,10 @@ declare global {
   interface DurableObjectNamespace {
     idFromName(name: string): DurableObjectId;
     idFromString(hex: string): DurableObjectId;
-    get(id: DurableObjectId, options?: { locationHint?: string }): DurableObjectStub;
+    get(
+      id: DurableObjectId,
+      options?: { locationHint?: string },
+    ): DurableObjectStub;
   }
   interface DurableObjectId {
     toString(): string;
@@ -50,7 +53,10 @@ declare global {
     sql: SqlStorage;
   }
   interface SqlStorage {
-    exec(query: string, ...bindings: (string | number | boolean | null | ArrayBuffer)[]): SqlStorageCursor;
+    exec(
+      query: string,
+      ...bindings: (string | number | boolean | null | ArrayBuffer)[]
+    ): SqlStorageCursor;
   }
   interface SqlStorageCursor extends Iterable<Record<string, unknown>> {
     toArray(): Record<string, unknown>[];
@@ -143,35 +149,44 @@ export class JobQueueDO {
         return Response.json(this.getStats());
       }
       if (request.method === "GET" && path === "/recent-jobs") {
-        const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "20", 10), 100);
+        const limit = Math.min(
+          parseInt(url.searchParams.get("limit") ?? "20", 10),
+          100,
+        );
         return Response.json(this.getRecentJobs(limit));
       }
       if (request.method === "GET" && path === "/cron-info") {
         return Response.json(await this.getCronInfo());
       }
       if (request.method === "POST" && path === "/arm") {
-        const body = await request.json() as { name: string; cron: string };
+        const body = (await request.json()) as { name: string; cron: string };
         await this.armCron(body.name, body.cron);
         return Response.json({ ok: true });
       }
       if (request.method === "POST" && path === "/enqueue") {
-        const body = await request.json() as {
+        const body = (await request.json()) as {
           name: string;
           data?: string | null;
           runAt?: string;
           maxAttempts?: number;
           idempotent?: boolean;
         };
-        const id = await this.enqueue(body.name, body.data ?? null, body.runAt, body.maxAttempts, body.idempotent);
+        const id = await this.enqueue(
+          body.name,
+          body.data ?? null,
+          body.runAt,
+          body.maxAttempts,
+          body.idempotent,
+        );
         return Response.json({ id });
       }
       if (request.method === "POST" && path === "/recover") {
-        const body = await request.json() as { staleMinutes?: number };
+        const body = (await request.json()) as { staleMinutes?: number };
         const count = this.recover(body.staleMinutes ?? 15);
         return Response.json({ count });
       }
       if (request.method === "POST" && path === "/cleanup") {
-        const body = await request.json() as { retentionDays?: number };
+        const body = (await request.json()) as { retentionDays?: number };
         const count = this.cleanup(body.retentionDays ?? 30);
         return Response.json({ count });
       }
@@ -205,15 +220,19 @@ export class JobQueueDO {
         "SELECT id, name, data, attempts, max_attempts, run_at FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
         now,
       )
-      .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts" | "run_at">[];
+      .toArray() as Pick<
+      DOJobRow,
+      "id" | "name" | "data" | "attempts" | "max_attempts" | "run_at"
+    >[];
 
     if (rows.length === 0) {
       if (cron) {
         // Cron singleton: alarm fires at each scheduled tick. Auto-create the job for
         // this tick if no pending rows exist (including future-scheduled ones).
-        const anyPending = this.ctx.storage.sql
-          .exec("SELECT 1 FROM jobs WHERE status = 'pending' LIMIT 1")
-          .toArray().length > 0;
+        const anyPending =
+          this.ctx.storage.sql
+            .exec("SELECT 1 FROM jobs WHERE status = 'pending' LIMIT 1")
+            .toArray().length > 0;
         if (!anyPending) {
           this.ctx.storage.sql.exec(
             "INSERT INTO jobs (name, run_at, max_attempts) VALUES (?, ?, 3)",
@@ -225,7 +244,10 @@ export class JobQueueDO {
               "SELECT id, name, data, attempts, max_attempts, run_at FROM jobs WHERE status = 'pending' AND run_at <= ? ORDER BY run_at ASC LIMIT 1",
               now,
             )
-            .toArray() as Pick<DOJobRow, "id" | "name" | "data" | "attempts" | "max_attempts" | "run_at">[];
+            .toArray() as Pick<
+            DOJobRow,
+            "id" | "name" | "data" | "attempts" | "max_attempts" | "run_at"
+          >[];
         }
       }
       if (rows.length === 0) {
@@ -245,7 +267,9 @@ export class JobQueueDO {
     );
 
     // Set up ALS context (getDb() and getCache() work inside handlers)
-    const db = drizzle(this.env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
+    const db = drizzle(this.env.DB, {
+      schema: schemaExports,
+    }) as unknown as DrizzleDb;
     const cache = this.env.CACHE_KV
       ? new CloudflareKvCache(this.env.CACHE_KV)
       : new MemoryCache();
@@ -256,7 +280,10 @@ export class JobQueueDO {
       } else {
         const handler = handlers[job.name];
         if (!handler) {
-          log.warn("Unknown job type, marking failed", { name: job.name, jobId: job.id });
+          log.warn("Unknown job type, marking failed", {
+            name: job.name,
+            jobId: job.id,
+          });
           this.ctx.storage.sql.exec(
             "UPDATE jobs SET status = 'failed', error = ?, completed_at = ? WHERE id = ?",
             `Unknown job type: ${job.name}`,
@@ -291,7 +318,9 @@ export class JobQueueDO {
             "INSERT INTO jobs (name, run_at, max_attempts) VALUES ('migrate-offers', ?, 1)",
             new Date().toISOString(),
           );
-          log.info("migrate-offers batch done, re-queued in DO", { remaining: remaining.count });
+          log.info("migrate-offers batch done, re-queued in DO", {
+            remaining: remaining.count,
+          });
         } else {
           log.info("migrate-offers migration complete");
         }
@@ -334,12 +363,22 @@ export class JobQueueDO {
           category: "jobs",
           message: "Job retry scheduled",
           level: "warning",
-          data: { name: job.name, jobId: String(job.id), attempt: String(newAttempts), maxAttempts: String(job.max_attempts), error: message },
+          data: {
+            name: job.name,
+            jobId: String(job.id),
+            attempt: String(newAttempts),
+            maxAttempts: String(job.max_attempts),
+            error: message,
+          },
         });
         log.warn("Job failed, will retry", {
-          name: job.name, jobId: job.id, attempt: newAttempts,
-          maxAttempts: job.max_attempts, retryAt,
-          error: message, stack: err instanceof Error ? err.stack : undefined,
+          name: job.name,
+          jobId: job.id,
+          attempt: newAttempts,
+          maxAttempts: job.max_attempts,
+          retryAt,
+          error: message,
+          stack: err instanceof Error ? err.stack : undefined,
         });
       } else {
         this.ctx.storage.sql.exec(
@@ -351,19 +390,28 @@ export class JobQueueDO {
         Sentry.captureException(err, {
           level: "error",
           tags: { jobName: job.name, jobId: String(job.id) },
-          extra: { attempts: newAttempts, maxAttempts: job.max_attempts, lastError: message, data: job.data, runAt: job.run_at },
+          extra: {
+            attempts: newAttempts,
+            maxAttempts: job.max_attempts,
+            lastError: message,
+            data: job.data,
+            runAt: job.run_at,
+          },
           fingerprint: ["job-permanent-failure", job.name],
         });
-        log.error(`Job ${job.name} failed permanently (id=${job.id}, attempts=${newAttempts}/${job.max_attempts})`, {
-          name: job.name,
-          jobId: job.id,
-          attempts: newAttempts,
-          maxAttempts: job.max_attempts,
-          error: message,
-          stack: err instanceof Error ? err.stack : undefined,
-          data: job.data,
-          runAt: job.run_at,
-        });
+        log.error(
+          `Job ${job.name} failed permanently (id=${job.id}, attempts=${newAttempts}/${job.max_attempts})`,
+          {
+            name: job.name,
+            jobId: job.id,
+            attempts: newAttempts,
+            maxAttempts: job.max_attempts,
+            error: message,
+            stack: err instanceof Error ? err.stack : undefined,
+            data: job.data,
+            runAt: job.run_at,
+          },
+        );
       }
     }
 
@@ -408,7 +456,10 @@ export class JobQueueDO {
 
     if (idempotent) {
       const existing = this.ctx.storage.sql
-        .exec("SELECT id FROM jobs WHERE name = ? AND status = 'pending' LIMIT 1", name)
+        .exec(
+          "SELECT id FROM jobs WHERE name = ? AND status = 'pending' LIMIT 1",
+          name,
+        )
         .toArray() as Array<{ id: number }>;
       if (existing.length > 0) return existing[0].id;
     }
@@ -434,7 +485,9 @@ export class JobQueueDO {
   /** Reset running jobs older than staleMinutes back to pending. */
   recover(staleMinutes = 15): number {
     this.initSchema();
-    const cutoff = new Date(Date.now() - staleMinutes * 60 * 1000).toISOString();
+    const cutoff = new Date(
+      Date.now() - staleMinutes * 60 * 1000,
+    ).toISOString();
     const countRows = this.ctx.storage.sql
       .exec(
         "SELECT COUNT(*) as count FROM jobs WHERE status = 'running' AND started_at < ?",
@@ -455,7 +508,9 @@ export class JobQueueDO {
   /** Delete old completed/failed rows. */
   cleanup(retentionDays = 30): number {
     this.initSchema();
-    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+    const cutoff = new Date(
+      Date.now() - retentionDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const countRows = this.ctx.storage.sql
       .exec(
         "SELECT COUNT(*) as count FROM jobs WHERE status IN ('completed', 'failed') AND completed_at <= ?",
@@ -472,7 +527,12 @@ export class JobQueueDO {
     return count;
   }
 
-  getStats(): { pending: number; running: number; completed: number; failed: number } {
+  getStats(): {
+    pending: number;
+    running: number;
+    completed: number;
+    failed: number;
+  } {
     this.initSchema();
     const rows = this.ctx.storage.sql
       .exec("SELECT status, COUNT(*) as count FROM jobs GROUP BY status")
@@ -492,7 +552,11 @@ export class JobQueueDO {
       .toArray() as unknown as DOJobRow[];
   }
 
-  async getCronInfo(): Promise<{ cron: string | null; nextRun: string | null; lastRun: string | null }> {
+  async getCronInfo(): Promise<{
+    cron: string | null;
+    nextRun: string | null;
+    lastRun: string | null;
+  }> {
     this.initSchema();
     const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
     // nextRun is read from the Alarms table (authoritative next execution time)

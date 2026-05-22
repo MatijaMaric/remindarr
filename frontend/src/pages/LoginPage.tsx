@@ -6,8 +6,7 @@ import { authClient } from "../lib/auth-client";
 import { getDailyPlaceholder } from "../data/movie-characters";
 
 function isWebAuthnSupported(): boolean {
-  return typeof window !== "undefined" &&
-    !!window.PublicKeyCredential;
+  return typeof window !== "undefined" && !!window.PublicKeyCredential;
 }
 
 export default function LoginPage() {
@@ -46,8 +45,10 @@ export default function LoginPage() {
     let cancelled = false;
     (async () => {
       try {
-        const available = typeof PublicKeyCredential.isConditionalMediationAvailable === "function"
-          && await PublicKeyCredential.isConditionalMediationAvailable();
+        const available =
+          typeof PublicKeyCredential.isConditionalMediationAvailable ===
+            "function" &&
+          (await PublicKeyCredential.isConditionalMediationAvailable());
         if (!available || cancelled) return;
         const result = await authClient.signIn.passkey({ autoFill: true });
         if (cancelled) return;
@@ -61,7 +62,9 @@ export default function LoginPage() {
         // Autofill silently fails if user doesn't select a passkey
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [passkeyAvailable, showLocalLogin, navigate, refresh]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -95,7 +98,9 @@ export default function LoginPage() {
         // conditional-UI conflict) to AUTH_CANCELLED — treat it as a silent
         // dismissal and show other errors normally.
         const code = (result.error as { code?: string }).code;
-        const message = result.error.message ? String(result.error.message) : "";
+        const message = result.error.message
+          ? String(result.error.message)
+          : "";
         if (code === "AUTH_CANCELLED" || message === "AUTH_CANCELLED") return;
         setError(message || t("login.passkeyFailed"));
         return;
@@ -120,7 +125,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-white text-center mb-8">{t("login.title")}</h2>
+        <h2 className="text-2xl font-bold text-white text-center mb-8">
+          {t("login.title")}
+        </h2>
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm select-text">
@@ -135,7 +142,9 @@ export default function LoginPage() {
             disabled={passkeyLoading}
             className="block w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors text-center cursor-pointer disabled:opacity-50 mb-3"
           >
-            {passkeyLoading ? t("login.signingIn") : t("login.signInWithPasskey")}
+            {passkeyLoading
+              ? t("login.signingIn")
+              : t("login.signInWithPasskey")}
           </button>
         )}
 
@@ -159,19 +168,24 @@ export default function LoginPage() {
           </button>
         )}
 
-        {(!oidcConfigured && !passkeyAvailable || showLocalLogin) && (
+        {((!oidcConfigured && !passkeyAvailable) || showLocalLogin) && (
           <>
             {(oidcConfigured || passkeyAvailable) && (
               <div className="my-6 flex items-center gap-3">
                 <div className="flex-1 h-px bg-zinc-700" />
-                <span className="text-xs text-zinc-500 uppercase">{t("login.or")}</span>
+                <span className="text-xs text-zinc-500 uppercase">
+                  {t("login.or")}
+                </span>
                 <div className="flex-1 h-px bg-zinc-700" />
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-zinc-300 mb-1">
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-zinc-300 mb-1"
+                >
                   {t("login.username")}
                 </label>
                 <input
@@ -187,7 +201,10 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-zinc-300 mb-1"
+                >
                   {t("login.password")}
                 </label>
                 <input
@@ -209,13 +226,15 @@ export default function LoginPage() {
                 {loading ? t("login.signingIn") : t("login.signIn")}
               </button>
             </form>
-
           </>
         )}
 
         <p className="mt-6 text-center text-sm text-zinc-500">
           {t("login.noAccount")}{" "}
-          <Link to="/signup" className="text-amber-400 hover:text-amber-300 transition-colors">
+          <Link
+            to="/signup"
+            className="text-amber-400 hover:text-amber-300 transition-colors"
+          >
             {t("login.signUp")}
           </Link>
         </p>

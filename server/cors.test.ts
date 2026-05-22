@@ -55,9 +55,7 @@ describe("CORS configuration", () => {
   });
 
   it("supports comma-separated multiple origins", async () => {
-    const app = createApp(
-      "https://app1.example.com, https://app2.example.com",
-    );
+    const app = createApp("https://app1.example.com, https://app2.example.com");
 
     const res1 = await app.request("/api/test", {
       headers: { Origin: "https://app1.example.com" },

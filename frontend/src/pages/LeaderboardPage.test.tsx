@@ -1,4 +1,12 @@
-import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
@@ -9,7 +17,13 @@ import type { LeaderboardEntry } from "../types";
 // Returns a full shape so cross-file leaks don't corrupt other tests.
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "current-user", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
+    user: {
+      id: "current-user",
+      username: "me",
+      display_name: "Me",
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: { local: true, oidc: null },
     loading: false,
     sessionStatus: "authenticated",
@@ -31,7 +45,9 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
 }
 
-function makeEntry(overrides: Partial<LeaderboardEntry> = {}): LeaderboardEntry {
+function makeEntry(
+  overrides: Partial<LeaderboardEntry> = {},
+): LeaderboardEntry {
   return {
     userId: "u1",
     username: "alice",
@@ -79,7 +95,9 @@ describe("LeaderboardPage", () => {
     render(<LeaderboardPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getAllByText("Leaderboard").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Leaderboard").length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     expect(screen.getByText("#1")).toBeDefined();
@@ -89,28 +107,50 @@ describe("LeaderboardPage", () => {
 
   test("empty state when only self in results (length 1)", async () => {
     getLeaderboardSpy.mockImplementation(() =>
-      Promise.resolve([makeEntry({ userId: "u1", username: "solo", rank: 1 })])
+      Promise.resolve([makeEntry({ userId: "u1", username: "solo", rank: 1 })]),
     );
 
     render(<LeaderboardPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText(/Follow people to see them on the leaderboard/)).toBeDefined();
+      expect(
+        screen.getByText(/Follow people to see them on the leaderboard/),
+      ).toBeDefined();
     });
   });
 
   test("highlights current user row", async () => {
     const entries = [
-      makeEntry({ userId: "u1", username: "alice", name: "Alice", rank: 1, xp: 300 }),
-      makeEntry({ userId: "current-user", username: "me", name: "Me", rank: 2, xp: 200 }),
-      makeEntry({ userId: "u3", username: "charlie", name: "Charlie", rank: 3, xp: 100 }),
+      makeEntry({
+        userId: "u1",
+        username: "alice",
+        name: "Alice",
+        rank: 1,
+        xp: 300,
+      }),
+      makeEntry({
+        userId: "current-user",
+        username: "me",
+        name: "Me",
+        rank: 2,
+        xp: 200,
+      }),
+      makeEntry({
+        userId: "u3",
+        username: "charlie",
+        name: "Charlie",
+        rank: 3,
+        xp: 100,
+      }),
     ];
     getLeaderboardSpy.mockImplementation(() => Promise.resolve(entries));
 
     render(<LeaderboardPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getAllByText("Leaderboard").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Leaderboard").length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     // The current user entries should have highlighted styling — verify render
@@ -119,7 +159,7 @@ describe("LeaderboardPage", () => {
 
   test("error state shows error message", async () => {
     getLeaderboardSpy.mockImplementation(() =>
-      Promise.reject(new Error("Network error"))
+      Promise.reject(new Error("Network error")),
     );
 
     render(<LeaderboardPage />, { wrapper: Wrapper });
@@ -135,7 +175,9 @@ describe("LeaderboardPage", () => {
     render(<LeaderboardPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText(/Follow people to see them on the leaderboard/)).toBeDefined();
+      expect(
+        screen.getByText(/Follow people to see them on the leaderboard/),
+      ).toBeDefined();
     });
   });
 });

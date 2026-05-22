@@ -58,11 +58,11 @@ describe("HeroBanner", () => {
     const { container } = render(
       <Wrapper>
         <HeroBanner episodes={[makeEpisode()]} />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const img = container.querySelector(
-      'img[src="https://image.tmdb.org/t/p/w780/abc.jpg"]'
+      'img[src="https://image.tmdb.org/t/p/w780/abc.jpg"]',
     );
     expect(img).not.toBeNull();
     expect(img?.getAttribute("crossorigin")).toBe("anonymous");
@@ -78,12 +78,10 @@ describe("HeroBanner", () => {
     const { container } = render(
       <Wrapper>
         <HeroBanner episodes={episodes} />
-      </Wrapper>
+      </Wrapper>,
     );
 
-    const dots = container.querySelectorAll(
-      'button[aria-label^="Slide"]'
-    );
+    const dots = container.querySelectorAll('button[aria-label^="Slide"]');
     expect(dots.length).toBe(3);
     expect(dots[0].getAttribute("aria-label")).toBe("Slide 1 of 3");
     expect(dots[1].getAttribute("aria-label")).toBe("Slide 2 of 3");
@@ -99,7 +97,7 @@ describe("HeroBanner", () => {
     const { container } = render(
       <Wrapper>
         <HeroBanner episodes={[makeEpisode()]} />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const dots = container.querySelectorAll('button[aria-label^="Slide"]');

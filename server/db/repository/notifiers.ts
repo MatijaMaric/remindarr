@@ -22,12 +22,13 @@ export async function createNotifier(
     quietHoursDays?: string;
     leavingSoonAlertsEnabled?: boolean;
     friendActivityAlertsEnabled?: boolean;
-  }
+  },
 ): Promise<string> {
   return traceDbQuery("createNotifier", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
-    await db.insert(notifiers)
+    await db
+      .insert(notifiers)
       .values({
         id,
         userId,
@@ -42,8 +43,10 @@ export async function createNotifier(
         quietHoursStart: opts?.quietHoursStart ?? null,
         quietHoursEnd: opts?.quietHoursEnd ?? null,
         quietHoursDays: opts?.quietHoursDays ?? "",
-        leavingSoonAlertsEnabled: (opts?.leavingSoonAlertsEnabled ?? true) ? 1 : 0,
-        friendActivityAlertsEnabled: (opts?.friendActivityAlertsEnabled ?? false) ? 1 : 0,
+        leavingSoonAlertsEnabled:
+          (opts?.leavingSoonAlertsEnabled ?? true) ? 1 : 0,
+        friendActivityAlertsEnabled:
+          (opts?.friendActivityAlertsEnabled ?? false) ? 1 : 0,
       })
       .run();
     return id;
@@ -67,26 +70,36 @@ export async function updateNotifier(
     quietHoursDays?: string;
     leavingSoonAlertsEnabled?: boolean;
     friendActivityAlertsEnabled?: boolean;
-  }
+  },
 ) {
   return traceDbQuery("updateNotifier", async () => {
     const db = getDb();
     const set: Record<string, unknown> = { updatedAt: sql`datetime('now')` };
     if (updates.name !== undefined) set.name = updates.name;
-    if (updates.config !== undefined) set.config = JSON.stringify(updates.config);
+    if (updates.config !== undefined)
+      set.config = JSON.stringify(updates.config);
     if (updates.notifyTime !== undefined) set.notifyTime = updates.notifyTime;
     if (updates.timezone !== undefined) set.timezone = updates.timezone;
     if (updates.enabled !== undefined) set.enabled = updates.enabled ? 1 : 0;
     if ("digestMode" in updates) set.digestMode = updates.digestMode ?? null;
     if ("digestDay" in updates) set.digestDay = updates.digestDay ?? null;
-    if (updates.streamingAlertsEnabled !== undefined) set.streamingAlertsEnabled = updates.streamingAlertsEnabled ? 1 : 0;
-    if ("quietHoursStart" in updates) set.quietHoursStart = updates.quietHoursStart ?? null;
-    if ("quietHoursEnd" in updates) set.quietHoursEnd = updates.quietHoursEnd ?? null;
-    if (updates.quietHoursDays !== undefined) set.quietHoursDays = updates.quietHoursDays;
-    if (updates.leavingSoonAlertsEnabled !== undefined) set.leavingSoonAlertsEnabled = updates.leavingSoonAlertsEnabled ? 1 : 0;
-    if (updates.friendActivityAlertsEnabled !== undefined) set.friendActivityAlertsEnabled = updates.friendActivityAlertsEnabled ? 1 : 0;
+    if (updates.streamingAlertsEnabled !== undefined)
+      set.streamingAlertsEnabled = updates.streamingAlertsEnabled ? 1 : 0;
+    if ("quietHoursStart" in updates)
+      set.quietHoursStart = updates.quietHoursStart ?? null;
+    if ("quietHoursEnd" in updates)
+      set.quietHoursEnd = updates.quietHoursEnd ?? null;
+    if (updates.quietHoursDays !== undefined)
+      set.quietHoursDays = updates.quietHoursDays;
+    if (updates.leavingSoonAlertsEnabled !== undefined)
+      set.leavingSoonAlertsEnabled = updates.leavingSoonAlertsEnabled ? 1 : 0;
+    if (updates.friendActivityAlertsEnabled !== undefined)
+      set.friendActivityAlertsEnabled = updates.friendActivityAlertsEnabled
+        ? 1
+        : 0;
 
-    await db.update(notifiers)
+    await db
+      .update(notifiers)
       .set(set)
       .where(and(eq(notifiers.id, id), eq(notifiers.userId, userId)))
       .run();
@@ -96,7 +109,8 @@ export async function updateNotifier(
 export async function deleteNotifier(id: string, userId: string) {
   return traceDbQuery("deleteNotifier", async () => {
     const db = getDb();
-    await db.delete(notifiers)
+    await db
+      .delete(notifiers)
       .where(and(eq(notifiers.id, id), eq(notifiers.userId, userId)))
       .run();
   });
@@ -146,7 +160,9 @@ export async function getNotifiersByUser(userId: string) {
         enabled: Boolean(row.enabled),
         streaming_alerts_enabled: Boolean(row.streaming_alerts_enabled),
         leaving_soon_alerts_enabled: Boolean(row.leaving_soon_alerts_enabled),
-        friend_activity_alerts_enabled: Boolean(row.friend_activity_alerts_enabled),
+        friend_activity_alerts_enabled: Boolean(
+          row.friend_activity_alerts_enabled,
+        ),
       };
     });
   });
@@ -195,13 +211,19 @@ export async function getNotifierById(id: string, userId: string) {
       enabled: Boolean(row.enabled),
       streaming_alerts_enabled: Boolean(row.streaming_alerts_enabled),
       leaving_soon_alerts_enabled: Boolean(row.leaving_soon_alerts_enabled),
-      friend_activity_alerts_enabled: Boolean(row.friend_activity_alerts_enabled),
+      friend_activity_alerts_enabled: Boolean(
+        row.friend_activity_alerts_enabled,
+      ),
     };
   });
 }
 
 /** Returns true if the current time (HH:MM) falls within the quiet window. */
-function isInQuietWindow(currentTime: string, start: string, end: string): boolean {
+function isInQuietWindow(
+  currentTime: string,
+  start: string,
+  end: string,
+): boolean {
   if (start === end) return false;
   if (start < end) {
     return currentTime >= start && currentTime < end;
@@ -213,12 +235,18 @@ function isInQuietWindow(currentTime: string, start: string, end: string): boole
 /** Parses a CSV day string ("0,1,6") into a Set of day numbers. Empty string → all days. */
 function parseQuietDays(csv: string): Set<number> | null {
   if (!csv) return null;
-  const nums = csv.split(",").map(Number).filter((n) => n >= 0 && n <= 6);
+  const nums = csv
+    .split(",")
+    .map(Number)
+    .filter((n) => n >= 0 && n <= 6);
   return nums.length > 0 ? new Set(nums) : null;
 }
 
 export async function getDueNotifiers(
-  timesByTimezone: Map<string, { time: string; date: string; dayOfWeek: number }>
+  timesByTimezone: Map<
+    string,
+    { time: string; date: string; dayOfWeek: number }
+  >,
 ) {
   return traceDbQuery("getDueNotifiers", async () => {
     const db = getDb();
@@ -261,7 +289,10 @@ export async function getDueNotifiers(
         if (n.quiet_hours_start && n.quiet_hours_end) {
           const days = parseQuietDays(n.quiet_hours_days ?? "");
           const dayMatches = days === null || days.has(tzInfo.dayOfWeek);
-          if (dayMatches && isInQuietWindow(tzInfo.time, n.quiet_hours_start, n.quiet_hours_end)) {
+          if (
+            dayMatches &&
+            isInQuietWindow(tzInfo.time, n.quiet_hours_start, n.quiet_hours_end)
+          ) {
             return false;
           }
         }
@@ -282,7 +313,9 @@ export async function getDueNotifiers(
           todayDate: timesByTimezone.get(n.timezone)!.date,
           streaming_alerts_enabled: Boolean(n.streaming_alerts_enabled),
           leaving_soon_alerts_enabled: Boolean(n.leaving_soon_alerts_enabled),
-          friend_activity_alerts_enabled: Boolean(n.friend_activity_alerts_enabled),
+          friend_activity_alerts_enabled: Boolean(
+            n.friend_activity_alerts_enabled,
+          ),
           achievementsEnabled: Boolean(n.achievements_enabled),
         };
       });
@@ -292,7 +325,8 @@ export async function getDueNotifiers(
 export async function disableNotifier(id: string) {
   return traceDbQuery("disableNotifier", async () => {
     const db = getDb();
-    await db.update(notifiers)
+    await db
+      .update(notifiers)
       .set({ enabled: 0, updatedAt: sql`datetime('now')` })
       .where(eq(notifiers.id, id))
       .run();
@@ -302,7 +336,8 @@ export async function disableNotifier(id: string) {
 export async function markNotifierSent(id: string, date: string) {
   return traceDbQuery("markNotifierSent", async () => {
     const db = getDb();
-    await db.update(notifiers)
+    await db
+      .update(notifiers)
       .set({ lastSentDate: date, updatedAt: sql`datetime('now')` })
       .where(eq(notifiers.id, id))
       .run();
@@ -321,7 +356,9 @@ export async function getDistinctNotifierTimezones(): Promise<string[]> {
   });
 }
 
-export async function getEnabledNotifierSchedules(): Promise<{ notify_time: string; timezone: string }[]> {
+export async function getEnabledNotifierSchedules(): Promise<
+  { notify_time: string; timezone: string }[]
+> {
   return traceDbQuery("getEnabledNotifierSchedules", async () => {
     const db = getDb();
     const rows = await db
@@ -351,7 +388,13 @@ export async function getStreamingAlertNotifiersForUser(userId: string) {
         config: notifiers.config,
       })
       .from(notifiers)
-      .where(and(eq(notifiers.userId, userId), eq(notifiers.enabled, 1), eq(notifiers.streamingAlertsEnabled, 1)))
+      .where(
+        and(
+          eq(notifiers.userId, userId),
+          eq(notifiers.enabled, 1),
+          eq(notifiers.streamingAlertsEnabled, 1),
+        ),
+      )
       .all();
     return rows.map((row) => {
       let config: Record<string, string>;

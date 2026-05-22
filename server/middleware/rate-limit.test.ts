@@ -1,6 +1,10 @@
 import { describe, it, expect, spyOn } from "bun:test";
 import { Hono } from "hono";
-import { rateLimiter, MemoryRateLimitStore, KvRateLimitStore } from "./rate-limit";
+import {
+  rateLimiter,
+  MemoryRateLimitStore,
+  KvRateLimitStore,
+} from "./rate-limit";
 import type { AppEnv } from "../types";
 
 // ─── MemoryRateLimitStore tests ─────────────────────────────────────────────
@@ -79,12 +83,13 @@ describe("MemoryRateLimitStore", () => {
   it("sets up a periodic cleanup interval on initialization", () => {
     let capturedCallback: (() => void) | null = null;
     const originalSetInterval = globalThis.setInterval;
-    const spy = spyOn(globalThis, "setInterval").mockImplementation(
-      ((fn: TimerHandler, ms?: number) => {
-        if (typeof fn === "function") capturedCallback = fn as () => void;
-        return originalSetInterval(fn, ms);
-      }) as typeof setInterval
-    );
+    const spy = spyOn(globalThis, "setInterval").mockImplementation(((
+      fn: TimerHandler,
+      ms?: number,
+    ) => {
+      if (typeof fn === "function") capturedCallback = fn as () => void;
+      return originalSetInterval(fn, ms);
+    }) as typeof setInterval);
 
     new MemoryRateLimitStore(60_000);
 
@@ -97,12 +102,13 @@ describe("MemoryRateLimitStore", () => {
   it("periodic cleanup removes stale buckets", async () => {
     let capturedCallback: (() => void) | null = null;
     const originalSetInterval = globalThis.setInterval;
-    const spy = spyOn(globalThis, "setInterval").mockImplementation(
-      ((fn: TimerHandler, ms?: number) => {
-        if (typeof fn === "function") capturedCallback = fn as () => void;
-        return originalSetInterval(fn, ms);
-      }) as typeof setInterval
-    );
+    const spy = spyOn(globalThis, "setInterval").mockImplementation(((
+      fn: TimerHandler,
+      ms?: number,
+    ) => {
+      if (typeof fn === "function") capturedCallback = fn as () => void;
+      return originalSetInterval(fn, ms);
+    }) as typeof setInterval);
 
     const store = new MemoryRateLimitStore(50);
     const app = new Hono<AppEnv>();
@@ -112,8 +118,12 @@ describe("MemoryRateLimitStore", () => {
     spy.mockRestore();
 
     // Consume all tokens for a specific IP
-    await app.request("/test/hello", { headers: { "x-forwarded-for": "5.5.5.5" } });
-    const limited = await app.request("/test/hello", { headers: { "x-forwarded-for": "5.5.5.5" } });
+    await app.request("/test/hello", {
+      headers: { "x-forwarded-for": "5.5.5.5" },
+    });
+    const limited = await app.request("/test/hello", {
+      headers: { "x-forwarded-for": "5.5.5.5" },
+    });
     expect(limited.status).toBe(429);
 
     // Simulate time passing beyond the stale threshold (5 min from the store cleanup)
@@ -128,7 +138,9 @@ describe("MemoryRateLimitStore", () => {
     capturedCallback!();
 
     // After cleanup, the IP should get a fresh bucket and be allowed again
-    const res = await app.request("/test/hello", { headers: { "x-forwarded-for": "5.5.5.5" } });
+    const res = await app.request("/test/hello", {
+      headers: { "x-forwarded-for": "5.5.5.5" },
+    });
     expect(res.status).toBe(200);
   });
 
@@ -142,7 +154,7 @@ describe("MemoryRateLimitStore", () => {
         limit: 1,
         windowMs: 60_000,
         keyGenerator: () => "same-key",
-      })
+      }),
     );
     app.get("/test/hello", (c) => c.json({ ok: true }));
 
@@ -164,7 +176,12 @@ describe("MemoryRateLimitStore", () => {
 describe("rateLimiter — cross-route enforcement", () => {
   it("enforces shared budget across routes with same scope", async () => {
     const store = new MemoryRateLimitStore();
-    const limiter = rateLimiter({ store, scope: "global", limit: 3, windowMs: 60_000 });
+    const limiter = rateLimiter({
+      store,
+      scope: "global",
+      limit: 3,
+      windowMs: 60_000,
+    });
     const app = new Hono<AppEnv>();
     app.use("/api/*", limiter);
     app.get("/api/foo", (c) => c.json({ ok: true }));
@@ -186,8 +203,18 @@ describe("rateLimiter — cross-route enforcement", () => {
 
   it("isolates budgets across different scopes for the same store", async () => {
     const store = new MemoryRateLimitStore();
-    const searchLimiter = rateLimiter({ store, scope: "search", limit: 2, windowMs: 60_000 });
-    const browseLimiter = rateLimiter({ store, scope: "browse", limit: 2, windowMs: 60_000 });
+    const searchLimiter = rateLimiter({
+      store,
+      scope: "search",
+      limit: 2,
+      windowMs: 60_000,
+    });
+    const browseLimiter = rateLimiter({
+      store,
+      scope: "browse",
+      limit: 2,
+      windowMs: 60_000,
+    });
     const app = new Hono<AppEnv>();
     app.use("/api/search", searchLimiter);
     app.use("/api/browse", browseLimiter);
@@ -207,8 +234,18 @@ describe("rateLimiter — cross-route enforcement", () => {
 
   it("layers global cap on top of per-route cap", async () => {
     const store = new MemoryRateLimitStore();
-    const globalLimiter = rateLimiter({ store, scope: "global", limit: 10, windowMs: 60_000 });
-    const searchLimiter = rateLimiter({ store, scope: "search", limit: 3, windowMs: 60_000 });
+    const globalLimiter = rateLimiter({
+      store,
+      scope: "global",
+      limit: 10,
+      windowMs: 60_000,
+    });
+    const searchLimiter = rateLimiter({
+      store,
+      scope: "search",
+      limit: 3,
+      windowMs: 60_000,
+    });
     const app = new Hono<AppEnv>();
     app.use("/api/*", globalLimiter);
     app.use("/api/search", searchLimiter);
@@ -232,7 +269,10 @@ describe("rateLimiter — cross-route enforcement", () => {
 
 /** Minimal in-memory KVNamespace mock for testing. */
 class MockKvNamespace {
-  private readonly store = new Map<string, { value: string; expires: number }>();
+  private readonly store = new Map<
+    string,
+    { value: string; expires: number }
+  >();
   readonly putCalls: Array<{ key: string; ttl: number }> = [];
 
   async get(key: string, _type: "text"): Promise<string | null> {
@@ -245,7 +285,11 @@ class MockKvNamespace {
     return entry.value;
   }
 
-  async put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void> {
+  async put(
+    key: string,
+    value: string,
+    options?: { expirationTtl?: number },
+  ): Promise<void> {
     const ttl = options?.expirationTtl ?? 60;
     this.putCalls.push({ key, ttl });
     this.store.set(key, { value, expires: Date.now() + ttl * 1000 });
@@ -293,7 +337,12 @@ describe("KvRateLimitStore", () => {
 
     // Next window — key is different because windowStart changes
     const nextWindow = now + windowMs;
-    const result = await store.consume("search:1.2.3.4", 1, windowMs, nextWindow);
+    const result = await store.consume(
+      "search:1.2.3.4",
+      1,
+      windowMs,
+      nextWindow,
+    );
     expect(result.allowed).toBe(true);
   });
 

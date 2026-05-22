@@ -7,7 +7,7 @@ export function isPushSupported(): boolean {
 }
 
 export async function subscribeToPush(
-  vapidPublicKey: string
+  vapidPublicKey: string,
 ): Promise<{ endpoint: string; p256dh: string; auth: string }> {
   const registration = await navigator.serviceWorker.ready;
 
@@ -42,9 +42,11 @@ export async function subscribeToPush(
 
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
-  const getSubscription = navigator.serviceWorker.ready.then(
-    (registration) => registration.pushManager.getSubscription()
+  const timeout = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), 5000),
+  );
+  const getSubscription = navigator.serviceWorker.ready.then((registration) =>
+    registration.pushManager.getSubscription(),
   );
   return Promise.race([getSubscription, timeout]);
 }

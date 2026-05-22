@@ -1,5 +1,12 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, fireEvent, cleanup, act, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter, useSearchParams } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -12,8 +19,15 @@ function newTestClient() {
 }
 
 // Mutable so individual tests can override auth state without re-mocking
-let mockSubscriptions: { providerIds: number[]; onlyMine: boolean } | null = null;
-let mockUser: { id: string; username: string; display_name: null; auth_provider: string; is_admin: boolean } | null = null;
+let mockSubscriptions: { providerIds: number[]; onlyMine: boolean } | null =
+  null;
+let mockUser: {
+  id: string;
+  username: string;
+  display_name: null;
+  auth_provider: string;
+  is_admin: boolean;
+} | null = null;
 let mockAuthLoading = false;
 
 mock.module("../context/AuthContext", () => ({
@@ -29,12 +43,16 @@ mock.module("../context/AuthContext", () => ({
     logout: mock(() => Promise.resolve()),
     refresh: mock(() => Promise.resolve()),
   }),
-  AuthContext: { Provider: ({ children }: { children: ReactNode }) => children },
+  AuthContext: {
+    Provider: ({ children }: { children: ReactNode }) => children,
+  },
   AuthProvider: ({ children }: { children: ReactNode }) => children,
 }));
 
 mock.module("../hooks/useIsMobile", () => ({ useIsMobile: () => false }));
-mock.module("../hooks/useGridNavigation", () => ({ useGridNavigation: () => undefined }));
+mock.module("../hooks/useGridNavigation", () => ({
+  useGridNavigation: () => undefined,
+}));
 
 mock.module("../components/loadFilters", () => ({
   loadFilters: () =>
@@ -49,7 +67,10 @@ mock.module("../components/loadFilters", () => ({
 
 mock.module("../components/SearchBar", () => ({
   default: ({ onSearch }: any) => (
-    <input data-testid="search-bar" onChange={(e) => onSearch(e.target.value)} />
+    <input
+      data-testid="search-bar"
+      onChange={(e) => onSearch(e.target.value)}
+    />
   ),
 }));
 mock.module("../components/NewReleases", () => ({ default: () => null }));
@@ -101,16 +122,22 @@ describe("BrowsePage active filter chips", () => {
   });
 
   it("renders year range filter chip as a <button>", () => {
-    render(<BrowsePage />, { wrapper: makeWrapper("/browse?yearMin=2020&yearMax=2024") });
+    render(<BrowsePage />, {
+      wrapper: makeWrapper("/browse?yearMin=2020&yearMax=2024"),
+    });
 
-    const chip = screen.getByRole("button", { name: /remove year range filter/i });
+    const chip = screen.getByRole("button", {
+      name: /remove year range filter/i,
+    });
     expect(chip.tagName).toBe("BUTTON");
   });
 
   it("renders minimum rating filter chip as a <button>", () => {
     render(<BrowsePage />, { wrapper: makeWrapper("/browse?minRating=7") });
 
-    const chip = screen.getByRole("button", { name: /remove minimum rating filter/i });
+    const chip = screen.getByRole("button", {
+      name: /remove minimum rating filter/i,
+    });
     expect(chip.tagName).toBe("BUTTON");
   });
 
@@ -127,25 +154,41 @@ describe("BrowsePage active filter chips", () => {
   });
 
   it("clicking a type chip removes the Movies filter from the page", () => {
-    render(<BrowsePage />, { wrapper: makeWrapper("/browse?type=MOVIE&genre=Action") });
+    render(<BrowsePage />, {
+      wrapper: makeWrapper("/browse?type=MOVIE&genre=Action"),
+    });
 
-    const moviesChip = screen.getByRole("button", { name: /remove movies filter/i });
+    const moviesChip = screen.getByRole("button", {
+      name: /remove movies filter/i,
+    });
     expect(moviesChip).toBeDefined();
 
-    act(() => { fireEvent.click(moviesChip); });
+    act(() => {
+      fireEvent.click(moviesChip);
+    });
 
     // After removing the Movies filter, the Movies chip should be gone
-    expect(screen.queryByRole("button", { name: /remove movies filter/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /remove movies filter/i }),
+    ).toBeNull();
     // Genre chip for Action should still be present
-    expect(screen.getByRole("button", { name: /remove action filter/i })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /remove action filter/i }),
+    ).toBeDefined();
   });
 });
 
 describe("BrowsePage subscription preselect", () => {
   // Helper that captures the current URLSearchParams from inside the router tree
-  function SearchParamsSpy({ onCapture }: { onCapture: (p: URLSearchParams) => void }) {
+  function SearchParamsSpy({
+    onCapture,
+  }: {
+    onCapture: (p: URLSearchParams) => void;
+  }) {
     const [sp] = useSearchParams();
-    useEffect(() => { onCapture(sp); }, [sp, onCapture]);
+    useEffect(() => {
+      onCapture(sp);
+    }, [sp, onCapture]);
     return null;
   }
 
@@ -159,9 +202,13 @@ describe("BrowsePage subscription preselect", () => {
         <QueryClientProvider client={newTestClient()}>
           <MemoryRouter initialEntries={["/browse"]}>
             <BrowsePage />
-            <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+            <SearchParamsSpy
+              onCapture={(sp) => {
+                captured = sp;
+              }}
+            />
           </MemoryRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
     });
 
@@ -178,9 +225,13 @@ describe("BrowsePage subscription preselect", () => {
         <QueryClientProvider client={newTestClient()}>
           <MemoryRouter initialEntries={["/browse?provider=15"]}>
             <BrowsePage />
-            <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+            <SearchParamsSpy
+              onCapture={(sp) => {
+                captured = sp;
+              }}
+            />
           </MemoryRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
     });
 
@@ -198,9 +249,13 @@ describe("BrowsePage subscription preselect", () => {
         <QueryClientProvider client={newTestClient()}>
           <MemoryRouter initialEntries={["/browse"]}>
             <BrowsePage />
-            <SearchParamsSpy onCapture={(sp) => { captured = sp; }} />
+            <SearchParamsSpy
+              onCapture={(sp) => {
+                captured = sp;
+              }}
+            />
           </MemoryRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
     });
 
@@ -227,7 +282,13 @@ describe("BrowsePage CategoryBrowse mount gate", () => {
   });
 
   it("does not render CategoryBrowse while authenticated user subscriptions are still loading", async () => {
-    mockUser = { id: "u1", username: "alice", display_name: null, auth_provider: "local", is_admin: false };
+    mockUser = {
+      id: "u1",
+      username: "alice",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    };
     mockSubscriptions = null; // not yet loaded
     mockAuthLoading = false;
 
@@ -242,7 +303,13 @@ describe("BrowsePage CategoryBrowse mount gate", () => {
   });
 
   it("renders CategoryBrowse once subscriptions settle for authenticated user", async () => {
-    mockUser = { id: "u1", username: "alice", display_name: null, auth_provider: "local", is_admin: false };
+    mockUser = {
+      id: "u1",
+      username: "alice",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    };
     mockSubscriptions = { providerIds: [8], onlyMine: false };
     mockAuthLoading = false;
 

@@ -1,11 +1,23 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import { createContext, useContext } from "react";
 
 import "../i18n";
 
-type AuthUser = { id: string; username: string; display_name: string | null; auth_provider: string; is_admin: boolean };
+type AuthUser = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  auth_provider: string;
+  is_admin: boolean;
+};
 type SessionStatus = "authenticated" | "unauthenticated" | "unknown";
 
 let mockUser: AuthUser | null;
@@ -62,10 +74,13 @@ function renderProtected() {
               </RequireAuth>
             }
           />
-          <Route path="/login" element={<div data-testid="login-page">Login</div>} />
+          <Route
+            path="/login"
+            element={<div data-testid="login-page">Login</div>}
+          />
         </Routes>
       </MockAuthContext>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -112,7 +127,13 @@ describe("RequireAuth", () => {
   it("renders children when session is authenticated", () => {
     mockLoading = false;
     mockSessionStatus = "authenticated";
-    mockUser = { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false };
+    mockUser = {
+      id: "u1",
+      username: "testuser",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    };
     renderProtected();
     expect(screen.getByTestId("protected-content")).toBeDefined();
     expect(screen.queryByTestId("login-page")).toBeNull();

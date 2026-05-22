@@ -29,7 +29,7 @@ export function setScheduleCallback(cb: ScheduleCallback) {
 export function convertToLocalTime(
   time: string,
   fromTz: string,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): { hour: number; minute: number } {
   const [h, m] = time.split(":").map(Number);
 

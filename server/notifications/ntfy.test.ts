@@ -11,7 +11,9 @@ describe("NtfyProvider.validateConfig", () => {
   });
 
   it("accepts self-hosted URL with topic", () => {
-    const result = ntfy.validateConfig({ url: "https://ntfy.example.com/alerts" });
+    const result = ntfy.validateConfig({
+      url: "https://ntfy.example.com/alerts",
+    });
     expect(result.valid).toBe(true);
   });
 
@@ -46,7 +48,10 @@ describe("NtfyProvider.validateConfig", () => {
   });
 
   it("accepts token when provided", () => {
-    const result = ntfy.validateConfig({ url: "https://ntfy.sh/secure", token: "tk_abc123" });
+    const result = ntfy.validateConfig({
+      url: "https://ntfy.sh/secure",
+      token: "tk_abc123",
+    });
     expect(result.valid).toBe(true);
   });
 });
@@ -57,7 +62,10 @@ describe("NtfyProvider.send", () => {
 
   beforeEach(() => {
     fetchCalls = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: string | URL | Request, options?: RequestInit) => {
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+      url: string | URL | Request,
+      options?: RequestInit,
+    ) => {
       fetchCalls.push({ url: url as string, options: options ?? {} });
       return new Response("", { status: 200 });
     }) as typeof fetch);
@@ -103,7 +111,10 @@ describe("NtfyProvider.send", () => {
   });
 
   it("includes Authorization header when token is provided", async () => {
-    await ntfy.send({ url: "https://ntfy.sh/my-topic", token: "tk_secret" }, sampleContent);
+    await ntfy.send(
+      { url: "https://ntfy.sh/my-topic", token: "tk_secret" },
+      sampleContent,
+    );
     const headers = fetchCalls[0].options.headers as Record<string, string>;
     expect(headers["Authorization"]).toBe("Bearer tk_secret");
   });
@@ -123,7 +134,10 @@ describe("NtfyProvider.send", () => {
   });
 
   it("skips sending when content is empty", async () => {
-    await ntfy.send({ url: "https://ntfy.sh/my-topic" }, { date: "2026-03-12", episodes: [], movies: [] });
+    await ntfy.send(
+      { url: "https://ntfy.sh/my-topic" },
+      { date: "2026-03-12", episodes: [], movies: [] },
+    );
     expect(fetchCalls).toHaveLength(0);
   });
 
@@ -132,7 +146,15 @@ describe("NtfyProvider.send", () => {
       date: "2026-04-05",
       episodes: [],
       movies: [],
-      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix", kind: "arrival" as const }],
+      streamingAlerts: [
+        {
+          titleId: "tt123",
+          title: "Inception",
+          posterUrl: null,
+          providerName: "Netflix",
+          kind: "arrival" as const,
+        },
+      ],
     };
     await ntfy.send({ url: "https://ntfy.sh/my-topic" }, alertContent);
     expect(fetchCalls).toHaveLength(1);
@@ -143,18 +165,32 @@ describe("NtfyProvider.send", () => {
   });
 
   it("throws on non-2xx response", async () => {
-    fetchSpy.mockImplementation(async () => new Response("Forbidden", { status: 403 }));
-    await expect(ntfy.send({ url: "https://ntfy.sh/my-topic" }, sampleContent)).rejects.toThrow("403");
+    fetchSpy.mockImplementation(
+      async () => new Response("Forbidden", { status: 403 }),
+    );
+    await expect(
+      ntfy.send({ url: "https://ntfy.sh/my-topic" }, sampleContent),
+    ).rejects.toThrow("403");
   });
 
   it("includes achievement section when achievementsEarned is populated", async () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,
       achievementsEarned: [
-        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+        {
+          key: "movies_10",
+          title: "Cinephile I",
+          description: "Watch 10 movies",
+          icon: "Film",
+          points: 10,
+          earnedAt: "2026-01-01T00:00:00.000Z",
+        },
       ],
     };
-    await ntfy.send({ url: "https://ntfy.sh/my-topic" }, contentWithAchievements);
+    await ntfy.send(
+      { url: "https://ntfy.sh/my-topic" },
+      contentWithAchievements,
+    );
     expect(fetchCalls).toHaveLength(1);
     const body = fetchCalls[0].options.body as string;
     expect(body).toContain("Cinephile I");

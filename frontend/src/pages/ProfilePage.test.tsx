@@ -1,5 +1,11 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,27 +13,43 @@ import "../i18n";
 
 // Mock browser Notification API
 Object.defineProperty(globalThis, "Notification", {
-  value: { permission: "granted", requestPermission: () => Promise.resolve("granted" as NotificationPermission) },
+  value: {
+    permission: "granted",
+    requestPermission: () =>
+      Promise.resolve("granted" as NotificationPermission),
+  },
   writable: true,
   configurable: true,
 });
 
 // Track calls to push helpers
 const mockUnsubscribeFromPush = mock(() => Promise.resolve());
-const mockGetExistingSubscription = mock(() => Promise.resolve(null as PushSubscription | null));
+const mockGetExistingSubscription = mock(() =>
+  Promise.resolve(null as PushSubscription | null),
+);
 let mockIsPushSupported = true;
 
 mock.module("../lib/push", () => ({
   isPushSupported: () => mockIsPushSupported,
-  subscribeToPush: mock(() => Promise.resolve({ endpoint: "https://fcm.example.com/new", p256dh: "key", auth: "auth" })),
+  subscribeToPush: mock(() =>
+    Promise.resolve({
+      endpoint: "https://fcm.example.com/new",
+      p256dh: "key",
+      auth: "auth",
+    }),
+  ),
   unsubscribeFromPush: mockUnsubscribeFromPush,
   getExistingSubscription: mockGetExistingSubscription,
 }));
 
 // Mock API
-const mockGetNotifiers = mock(() => Promise.resolve({ notifiers: [] as any[] }));
+const mockGetNotifiers = mock(() =>
+  Promise.resolve({ notifiers: [] as any[] }),
+);
 const mockDeleteNotifier = mock(() => Promise.resolve());
-const mockTestNotifier = mock(() => Promise.resolve({ success: true, message: "Test notification sent" }));
+const mockTestNotifier = mock(() =>
+  Promise.resolve({ success: true, message: "Test notification sent" }),
+);
 
 mock.module("../api", () => ({
   getNotifiers: mockGetNotifiers,
@@ -37,21 +59,41 @@ mock.module("../api", () => ({
   updateNotifier: mock(() => Promise.resolve({ notifier: {} })),
   deleteNotifier: mockDeleteNotifier,
   testNotifier: mockTestNotifier,
-  getJobs: mock(() => Promise.resolve({ crons: [], stats: {}, recentJobs: [] })),
-  getAdminSettings: mock(() => Promise.resolve({ oidc_configured: false, oidc: { issuer_url: { value: "", source: "unset" }, client_id: { value: "", source: "unset" }, client_secret: { value: "", source: "unset" }, redirect_uri: { value: "", source: "unset" } } })),
+  getJobs: mock(() =>
+    Promise.resolve({ crons: [], stats: {}, recentJobs: [] }),
+  ),
+  getAdminSettings: mock(() =>
+    Promise.resolve({
+      oidc_configured: false,
+      oidc: {
+        issuer_url: { value: "", source: "unset" },
+        client_id: { value: "", source: "unset" },
+        client_secret: { value: "", source: "unset" },
+        redirect_uri: { value: "", source: "unset" },
+      },
+    }),
+  ),
   changePassword: mock(() => Promise.resolve()),
-  getTrackedTitles: mock(() => Promise.resolve({ titles: [], count: 0, profile_public: false })),
+  getTrackedTitles: mock(() =>
+    Promise.resolve({ titles: [], count: 0, profile_public: false }),
+  ),
   updateProfileVisibility: mock(() => Promise.resolve()),
   updateTitleVisibility: mock(() => Promise.resolve()),
   updateAllTitleVisibility: mock(() => Promise.resolve()),
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
-  getUpcomingEpisodes: mock(() => Promise.resolve({ today: [], upcoming: [], unwatched: [] })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
+  getUpcomingEpisodes: mock(() =>
+    Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
+  ),
   watchEpisode: mock(() => Promise.resolve()),
   unwatchEpisode: mock(() => Promise.resolve()),
   watchEpisodesBulk: mock(() => Promise.resolve()),
   browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
-  getRecommendations: mock(() => Promise.resolve({ recommendations: [], suggestions: [], hasMore: false })),
+  getRecommendations: mock(() =>
+    Promise.resolve({ recommendations: [], suggestions: [], hasMore: false }),
+  ),
   fetchFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
   watchMovie: mock(() => Promise.resolve()),
   unwatchMovie: mock(() => Promise.resolve()),
@@ -63,7 +105,13 @@ mock.module("../api", () => ({
 // Mock AuthContext
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "u1", username: "testuser", display_name: "Test User", auth_provider: "local", is_admin: false },
+    user: {
+      id: "u1",
+      username: "testuser",
+      display_name: "Test User",
+      auth_provider: "local",
+      is_admin: false,
+    },
     loading: false,
     sessionStatus: "authenticated",
   }),
@@ -73,13 +121,17 @@ mock.module("../context/AuthContext", () => ({
 const { default: SettingsPage } = await import("./SettingsPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <MemoryRouter initialEntries={["/settings?tab=notifications"]}>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
+        {children}
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -100,10 +152,14 @@ beforeEach(() => {
   mockDeleteNotifier.mockImplementation(() => Promise.resolve());
   mockUnsubscribeFromPush.mockImplementation(() => Promise.resolve());
   mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
-  mockTestNotifier.mockImplementation(() => Promise.resolve({ success: true, message: "Test notification sent" }));
+  mockTestNotifier.mockImplementation(() =>
+    Promise.resolve({ success: true, message: "Test notification sent" }),
+  );
 });
 
-const FAKE_SUBSCRIPTION = { endpoint: "https://fcm.example.com/send/abc" } as PushSubscription;
+const FAKE_SUBSCRIPTION = {
+  endpoint: "https://fcm.example.com/send/abc",
+} as PushSubscription;
 
 function makeWebpushNotifier(overrides: Record<string, any> = {}) {
   return {
@@ -111,7 +167,11 @@ function makeWebpushNotifier(overrides: Record<string, any> = {}) {
     user_id: "u1",
     provider: "webpush",
     name: "Webpush",
-    config: { endpoint: "https://fcm.example.com/send/abc", p256dh: "key", auth: "auth" },
+    config: {
+      endpoint: "https://fcm.example.com/send/abc",
+      p256dh: "key",
+      auth: "auth",
+    },
     notify_time: "09:00",
     timezone: "UTC",
     enabled: true,
@@ -126,9 +186,11 @@ describe("PushNotificationsSection", () => {
   it("auto-cleans up disabled webpush notifier on page load", async () => {
     // Notifier exists but is disabled (background job disabled it)
     mockGetNotifiers.mockImplementation(() =>
-      Promise.resolve({ notifiers: [makeWebpushNotifier({ enabled: false })] })
+      Promise.resolve({ notifiers: [makeWebpushNotifier({ enabled: false })] }),
     );
-    mockGetExistingSubscription.mockImplementation(() => Promise.resolve(FAKE_SUBSCRIPTION));
+    mockGetExistingSubscription.mockImplementation(() =>
+      Promise.resolve(FAKE_SUBSCRIPTION),
+    );
 
     render(<SettingsPage />, { wrapper: Wrapper });
 
@@ -147,7 +209,7 @@ describe("PushNotificationsSection", () => {
   it("auto-cleans up stale DB notifier when browser has no subscription", async () => {
     // Notifier exists in DB but no browser subscription
     mockGetNotifiers.mockImplementation(() =>
-      Promise.resolve({ notifiers: [makeWebpushNotifier({ enabled: true })] })
+      Promise.resolve({ notifiers: [makeWebpushNotifier({ enabled: true })] }),
     );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
 
@@ -164,13 +226,18 @@ describe("PushNotificationsSection", () => {
   it("auto-recovers when test reveals expired subscription", async () => {
     // Push is enabled and active
     mockGetNotifiers.mockImplementation(() =>
-      Promise.resolve({ notifiers: [makeWebpushNotifier()] })
+      Promise.resolve({ notifiers: [makeWebpushNotifier()] }),
     );
-    mockGetExistingSubscription.mockImplementation(() => Promise.resolve(FAKE_SUBSCRIPTION));
+    mockGetExistingSubscription.mockImplementation(() =>
+      Promise.resolve(FAKE_SUBSCRIPTION),
+    );
 
     // Test will return expired
     mockTestNotifier.mockImplementation(() =>
-      Promise.resolve({ success: false, message: "Push subscription expired: https://fcm.example.com/send/abc" })
+      Promise.resolve({
+        success: false,
+        message: "Push subscription expired: https://fcm.example.com/send/abc",
+      }),
     );
 
     render(<SettingsPage />, { wrapper: Wrapper });
@@ -197,11 +264,16 @@ describe("PushNotificationsSection", () => {
 
   it("shows normal error for non-expired test failures", async () => {
     mockGetNotifiers.mockImplementation(() =>
-      Promise.resolve({ notifiers: [makeWebpushNotifier()] })
+      Promise.resolve({ notifiers: [makeWebpushNotifier()] }),
     );
-    mockGetExistingSubscription.mockImplementation(() => Promise.resolve(FAKE_SUBSCRIPTION));
+    mockGetExistingSubscription.mockImplementation(() =>
+      Promise.resolve(FAKE_SUBSCRIPTION),
+    );
     mockTestNotifier.mockImplementation(() =>
-      Promise.resolve({ success: false, message: "Web push failed (500): Internal error" })
+      Promise.resolve({
+        success: false,
+        message: "Web push failed (500): Internal error",
+      }),
     );
 
     render(<SettingsPage />, { wrapper: Wrapper });
@@ -222,12 +294,17 @@ describe("PushNotificationsSection", () => {
 
   it("cleans up when fresh subscription fails verification after enable", async () => {
     // Start with no notifiers (user sees Enable button)
-    mockGetNotifiers.mockImplementation(() => Promise.resolve({ notifiers: [] }));
+    mockGetNotifiers.mockImplementation(() =>
+      Promise.resolve({ notifiers: [] }),
+    );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
 
     // Test notification will report expired subscription
     mockTestNotifier.mockImplementation(() =>
-      Promise.resolve({ success: false, message: "Push subscription expired: https://fcm.example.com/send/new" })
+      Promise.resolve({
+        success: false,
+        message: "Push subscription expired: https://fcm.example.com/send/new",
+      }),
     );
 
     render(<SettingsPage />, { wrapper: Wrapper });
@@ -249,9 +326,11 @@ describe("PushNotificationsSection", () => {
 
   it("renders normally when push is enabled and healthy", async () => {
     mockGetNotifiers.mockImplementation(() =>
-      Promise.resolve({ notifiers: [makeWebpushNotifier()] })
+      Promise.resolve({ notifiers: [makeWebpushNotifier()] }),
     );
-    mockGetExistingSubscription.mockImplementation(() => Promise.resolve(FAKE_SUBSCRIPTION));
+    mockGetExistingSubscription.mockImplementation(() =>
+      Promise.resolve(FAKE_SUBSCRIPTION),
+    );
 
     render(<SettingsPage />, { wrapper: Wrapper });
 

@@ -43,7 +43,11 @@ function makeTestApp() {
 
     const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
 
-    (Sentry.addBreadcrumb as ((opts: { message: string; data: Record<string, string> }) => void) | undefined)?.({
+    (
+      Sentry.addBreadcrumb as
+        | ((opts: { message: string; data: Record<string, string> }) => void)
+        | undefined
+    )?.({
       message: "Unhandled error",
       data: { category, requestId, path: c.req.path, method: c.req.method },
     });
@@ -90,7 +94,9 @@ describe("CF worker onError handler", () => {
   let consoleSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
-    captureSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
+    captureSpy = spyOn(Sentry, "captureException").mockReturnValue(
+      "test-event-id" as any,
+    );
     consoleSpy = spyOn(console, "error").mockImplementation(() => {});
     errorsByCategory.reset();
   });
@@ -105,7 +111,7 @@ describe("CF worker onError handler", () => {
     const res = await app.request("/boom");
 
     expect(res.status).toBe(500);
-    const body = await res.json() as Record<string, string>;
+    const body = (await res.json()) as Record<string, string>;
     expect(body.error).toBe("Internal server error");
     expect(res.headers.get("X-Request-Id")).toBeTypeOf("string");
     expect(res.headers.get("X-Request-Id")!.length).toBeGreaterThan(0);
@@ -142,8 +148,17 @@ describe("CF worker onError handler", () => {
     await app.request("/boom");
 
     const logLines = consoleSpy.mock.calls
-      .map((args: unknown[]) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
-      .filter((obj: Record<string, unknown> | null): obj is Record<string, unknown> => obj !== null && obj.msg === "Unhandled error");
+      .map((args: unknown[]) => {
+        try {
+          return JSON.parse(args[0] as string) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (obj: Record<string, unknown> | null): obj is Record<string, unknown> =>
+          obj !== null && obj.msg === "Unhandled error",
+      );
 
     expect(logLines.length).toBe(1);
     const log = logLines[0];
@@ -170,7 +185,12 @@ describe("maybeDeferRegistrySync (#799 deferral contract)", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function makeCtx(): { ctx: any; captured: Promise<unknown>[] } {
     const captured: Promise<unknown>[] = [];
-    const ctx = { waitUntil: (p: Promise<unknown>) => { captured.push(p); }, passThroughOnException: () => {} };
+    const ctx = {
+      waitUntil: (p: Promise<unknown>) => {
+        captured.push(p);
+      },
+      passThroughOnException: () => {},
+    };
     return { ctx, captured };
   }
 
@@ -191,10 +211,11 @@ describe("maybeDeferRegistrySync (#799 deferral contract)", () => {
     const { ctx, captured } = makeCtx();
     let runStarted = false;
     let resolveRun!: () => void;
-    const run = () => new Promise<void>((resolve) => {
-      runStarted = true;
-      resolveRun = resolve;
-    });
+    const run = () =>
+      new Promise<void>((resolve) => {
+        runStarted = true;
+        resolveRun = resolve;
+      });
 
     maybeDeferRegistrySync(ctx, run);
 

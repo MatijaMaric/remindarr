@@ -21,7 +21,9 @@ function makeEpisode(overrides: Partial<Episode> = {}): Episode {
 describe("getBackgroundImageUrl", () => {
   it("returns TMDB still URL when still_path is present", () => {
     const ep = makeEpisode({ still_path: "/abc123.jpg" });
-    expect(getBackgroundImageUrl(ep)).toBe("https://image.tmdb.org/t/p/w780/abc123.jpg");
+    expect(getBackgroundImageUrl(ep)).toBe(
+      "https://image.tmdb.org/t/p/w780/abc123.jpg",
+    );
   });
 
   it("returns poster_url when still_path is null", () => {
@@ -35,7 +37,12 @@ describe("getBackgroundImageUrl", () => {
   });
 
   it("prefers still_path over poster_url", () => {
-    const ep = makeEpisode({ still_path: "/still.jpg", poster_url: "https://example.com/poster.jpg" });
-    expect(getBackgroundImageUrl(ep)).toBe("https://image.tmdb.org/t/p/w780/still.jpg");
+    const ep = makeEpisode({
+      still_path: "/still.jpg",
+      poster_url: "https://example.com/poster.jpg",
+    });
+    expect(getBackgroundImageUrl(ep)).toBe(
+      "https://image.tmdb.org/t/p/w780/still.jpg",
+    );
   });
 });

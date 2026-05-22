@@ -6,18 +6,16 @@ export const SUPPORTED_LANGUAGES: { code: string; label: string }[] = [
   { code: "en", label: "English" },
 ];
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      en: { translation: en },
-    },
-    lng: "en",
-    fallbackLng: "en",
-    interpolation: {
-      escapeValue: false,
-    },
-  });
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: en },
+  },
+  lng: "en",
+  fallbackLng: "en",
+  interpolation: {
+    escapeValue: false,
+  },
+});
 
 export function setLanguage(code: string) {
   i18n.changeLanguage(code);

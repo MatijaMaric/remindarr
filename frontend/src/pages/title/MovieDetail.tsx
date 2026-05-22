@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import * as api from "../../api";
@@ -69,7 +73,9 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
     toggleMutation.mutate(watched);
   }
 
-  const loadMore = () => { void fetchNextPage(); };
+  const loadMore = () => {
+    void fetchNextPage();
+  };
 
   const overview = tmdb?.overview || title.short_description;
 
@@ -83,12 +89,17 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const releaseDates = countryReleaseDates || usReleaseDates;
 
   // Watch providers for the user's country
-  const watchProviders = tmdb?.["watch/providers"]?.results?.[country] as WatchProviderCountry | undefined;
+  const watchProviders = tmdb?.["watch/providers"]?.results?.[country] as
+    | WatchProviderCountry
+    | undefined;
 
   // Key crew
-  const directors = tmdb?.credits?.crew?.filter((c: CrewMember) => c.job === "Director") || [];
+  const directors =
+    tmdb?.credits?.crew?.filter((c: CrewMember) => c.job === "Director") || [];
   const writers =
-    tmdb?.credits?.crew?.filter((c: CrewMember) => c.department === "Writing").slice(0, 5) || [];
+    tmdb?.credits?.crew
+      ?.filter((c: CrewMember) => c.department === "Writing")
+      .slice(0, 5) || [];
   const cast = tmdb?.credits?.cast?.slice(0, 20) || [];
 
   const watchedActions = (
@@ -119,7 +130,12 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
   const watchHistoryPanel =
     historyOpen && watchHistory.length > 0 ? (
-      <Card tone="translucent" radius="lg" padding="none" className="mt-3 overflow-hidden">
+      <Card
+        tone="translucent"
+        radius="lg"
+        padding="none"
+        className="mt-3 overflow-hidden"
+      >
         <div className="px-3 py-2 text-xs font-medium text-zinc-400 border-b border-white/[0.06]">
           Watch History
         </div>
@@ -135,13 +151,17 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                 onClick={() => setEditEntry(entry.id)}
                 className="text-zinc-500 shrink-0 hover:text-zinc-300 cursor-pointer transition-colors underline-offset-2 hover:underline"
               >
-                {new Date(entry.watchedAt.replace(" ", "T") + "Z").toLocaleDateString("en-US", {
+                {new Date(
+                  entry.watchedAt.replace(" ", "T") + "Z",
+                ).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",
                 })}
               </button>
-              {entry.note && <span className="text-zinc-400 italic">{entry.note}</span>}
+              {entry.note && (
+                <span className="text-zinc-400 italic">{entry.note}</span>
+              )}
             </li>
           ))}
         </ul>
@@ -153,7 +173,9 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               disabled={loadingMore}
               className="text-sm font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-50 transition-colors"
             >
-              {loadingMore ? t("titleDetail.watchHistory.loading") : t("titleDetail.watchHistory.loadMore")}
+              {loadingMore
+                ? t("titleDetail.watchHistory.loading")
+                : t("titleDetail.watchHistory.loadMore")}
             </button>
           </div>
         )}
@@ -163,16 +185,27 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   return (
     <div className="space-y-8 pb-12">
       {/* Hero */}
-      <MovieHero title={title} tmdb={tmdb} watchedActions={watchedActions} watchHistoryPanel={watchHistoryPanel} />
+      <MovieHero
+        title={title}
+        tmdb={tmdb}
+        watchedActions={watchedActions}
+        watchHistoryPanel={watchHistoryPanel}
+      />
 
       {/* Metadata strip */}
       <div className="dark-section -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-white/[0.06]">
         {[
           { label: "TYPE", value: "Movie" },
-          title.runtime_minutes ? { label: "RUNTIME", value: `${title.runtime_minutes} min` } : null,
+          title.runtime_minutes
+            ? { label: "RUNTIME", value: `${title.runtime_minutes} min` }
+            : null,
           tmdb?.status ? { label: "STATUS", value: tmdb.status } : null,
-          title.offers[0]?.provider_name ? { label: "NETWORK", value: title.offers[0].provider_name } : null,
-          title.imdb_score ? { label: "IMDB", value: `★ ${title.imdb_score.toFixed(1)}` } : null,
+          title.offers[0]?.provider_name
+            ? { label: "NETWORK", value: title.offers[0].provider_name }
+            : null,
+          title.imdb_score
+            ? { label: "IMDB", value: `★ ${title.imdb_score.toFixed(1)}` }
+            : null,
         ]
           .filter(Boolean)
           .map((cell) => (
@@ -180,7 +213,9 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">
                 {cell!.label}
               </div>
-              <div className="font-mono text-[13px] font-semibold text-zinc-100">{cell!.value}</div>
+              <div className="font-mono text-[13px] font-semibold text-zinc-100">
+                {cell!.value}
+              </div>
             </div>
           ))}
       </div>
@@ -188,13 +223,18 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {/* Overview */}
       {overview && (
         <Section title="Overview">
-          <p className="text-zinc-300 leading-relaxed select-text">{overview}</p>
+          <p className="text-zinc-300 leading-relaxed select-text">
+            {overview}
+          </p>
         </Section>
       )}
 
       {/* Rating & Social */}
       <SectionErrorBoundary label="ratings">
-        <RatingsSection titleId={title.id} shareTitle={tmdb?.title || title.title} />
+        <RatingsSection
+          titleId={title.id}
+          shareTitle={tmdb?.title || title.title}
+        />
       </SectionErrorBoundary>
 
       {/* Cast & Crew */}
@@ -212,7 +252,11 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
       {/* Streaming Availability */}
       <SectionErrorBoundary label="streaming providers">
-        <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
+        <ProvidersSection
+          offers={title.offers}
+          watchProviders={watchProviders}
+          watchLink={watchProviders?.link}
+        />
       </SectionErrorBoundary>
 
       {/* Collection */}
@@ -245,7 +289,9 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             {tmdb.original_language && (
               <div>
                 <span className="text-zinc-400 block">Original Language</span>
-                <span className="text-zinc-300">{tmdb.original_language.toUpperCase()}</span>
+                <span className="text-zinc-300">
+                  {tmdb.original_language.toUpperCase()}
+                </span>
               </div>
             )}
             {tmdb.production_countries?.length > 0 && (
@@ -267,13 +313,17 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
             {tmdb.budget > 0 && (
               <div>
                 <span className="text-zinc-400 block">Budget</span>
-                <span className="text-zinc-300">{formatCurrency(tmdb.budget)}</span>
+                <span className="text-zinc-300">
+                  {formatCurrency(tmdb.budget)}
+                </span>
               </div>
             )}
             {tmdb.revenue > 0 && (
               <div>
                 <span className="text-zinc-400 block">Revenue</span>
-                <span className="text-zinc-300">{formatCurrency(tmdb.revenue)}</span>
+                <span className="text-zinc-300">
+                  {formatCurrency(tmdb.revenue)}
+                </span>
               </div>
             )}
             {tmdb.production_companies?.length > 0 && (
@@ -293,10 +343,14 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           open={true}
           onClose={() => setEditEntry(null)}
           entryId={editEntry}
-          currentWatchedAt={watchHistory.find(e => e.id === editEntry)?.watchedAt ?? ""}
+          currentWatchedAt={
+            watchHistory.find((e) => e.id === editEntry)?.watchedAt ?? ""
+          }
           anchorDate={title.release_date}
           onUpdated={() => {
-            void qc.invalidateQueries({ queryKey: ["watch-history", title.id] });
+            void qc.invalidateQueries({
+              queryKey: ["watch-history", title.id],
+            });
             setEditEntry(null);
           }}
         />

@@ -20,7 +20,7 @@ describe("useDominantColor", () => {
 
   it("returns default color initially for a URL (before image loads)", () => {
     const { result } = renderHook(() =>
-      useDominantColor("https://example.com/img.jpg")
+      useDominantColor("https://example.com/img.jpg"),
     );
     // Before the image loads, should still have the default
     expect(result.current.isDark).toBe(true);

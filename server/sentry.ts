@@ -16,8 +16,15 @@ interface SentryBreadcrumb {
 interface SentryLike {
   captureException(err: unknown, context?: Record<string, unknown>): string;
   addBreadcrumb(breadcrumb: SentryBreadcrumb): void;
-  startSpan<T>(opts: { name: string; op?: string; attributes?: Record<string, string> }, fn: () => T): T;
-  withMonitor<T>(monitorSlug: string, fn: () => Promise<T>, config?: unknown): Promise<T>;
+  startSpan<T>(
+    opts: { name: string; op?: string; attributes?: Record<string, string> },
+    fn: () => T,
+  ): T;
+  withMonitor<T>(
+    monitorSlug: string,
+    fn: () => Promise<T>,
+    config?: unknown,
+  ): Promise<T>;
   flush(timeoutMs?: number): Promise<boolean>;
   init(opts: Record<string, unknown>): void;
   honoIntegration(): Record<string, unknown>;

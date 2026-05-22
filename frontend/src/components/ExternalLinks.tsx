@@ -57,7 +57,11 @@ function buildLinks(
   return links;
 }
 
-export default function ExternalLinks({ externalIds, tmdbId, type }: ExternalLinksProps) {
+export default function ExternalLinks({
+  externalIds,
+  tmdbId,
+  type,
+}: ExternalLinksProps) {
   const links = buildLinks(externalIds, tmdbId, type);
 
   return (

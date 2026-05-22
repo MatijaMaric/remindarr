@@ -100,7 +100,7 @@ function tvId(tmdbId: number): string {
 function parseWatchProviders(
   wpResponse: { results: Record<string, TmdbWatchProviderCountry> } | undefined,
   titleId: string,
-  tmdbLink: string
+  tmdbLink: string,
 ): ParsedOffer[] {
   if (!wpResponse) return [];
   const countries = [CONFIG.COUNTRY, ...CONFIG.FALLBACK_COUNTRIES];
@@ -132,7 +132,9 @@ function parseWatchProviders(
         titleId,
         providerId,
         providerName: entry.provider_name,
-        providerTechnicalName: entry.provider_name.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+        providerTechnicalName: entry.provider_name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "_"),
         providerIconUrl: providerIconUrl(entry.logo_path),
         monetizationType,
         presentationType: "",
@@ -182,7 +184,8 @@ export function parseMovieDetails(movie: TmdbMovieDetails): ParsedTitle {
 export function parseTvDetails(tv: TmdbTvDetails): ParsedTitle {
   const id = tvId(tv.id);
   const tmdbUrl = `https://www.themoviedb.org/tv/${tv.id}`;
-  const runtime = tv.episode_run_time?.length > 0 ? tv.episode_run_time[0] : null;
+  const runtime =
+    tv.episode_run_time?.length > 0 ? tv.episode_run_time[0] : null;
 
   return {
     id,
@@ -214,7 +217,7 @@ export function parseTvDetails(tv: TmdbTvDetails): ParsedTitle {
 
 export function parseDiscoverMovie(
   movie: TmdbDiscoverMovieResult,
-  genreMap: Map<number, string>
+  genreMap: Map<number, string>,
 ): ParsedTitle {
   const id = movieId(movie.id);
   return {
@@ -226,7 +229,9 @@ export function parseDiscoverMovie(
     releaseDate: movie.release_date || null,
     runtimeMinutes: null,
     shortDescription: truncateDesc(movie.overview),
-    genres: (movie.genre_ids ?? []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
+    genres: (movie.genre_ids ?? [])
+      .map((gid) => genreMap.get(gid) || "")
+      .filter(Boolean),
     originalLanguage: movie.original_language || null,
     imdbId: null,
     tmdbId: String(movie.id),
@@ -245,7 +250,7 @@ export function parseDiscoverMovie(
 
 export function parseDiscoverTv(
   tv: TmdbDiscoverTvResult,
-  genreMap: Map<number, string>
+  genreMap: Map<number, string>,
 ): ParsedTitle {
   const id = tvId(tv.id);
   return {
@@ -257,7 +262,9 @@ export function parseDiscoverTv(
     releaseDate: tv.first_air_date || null,
     runtimeMinutes: null,
     shortDescription: truncateDesc(tv.overview),
-    genres: (tv.genre_ids ?? []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
+    genres: (tv.genre_ids ?? [])
+      .map((gid) => genreMap.get(gid) || "")
+      .filter(Boolean),
     originalLanguage: tv.original_language || null,
     imdbId: null,
     tmdbId: String(tv.id),
@@ -276,7 +283,7 @@ export function parseDiscoverTv(
 
 export function parseSearchResult(
   result: TmdbSearchMultiResult,
-  genreMap: Map<number, string>
+  genreMap: Map<number, string>,
 ): ParsedTitle | null {
   if (result.media_type === "person") return null;
 
@@ -291,7 +298,9 @@ export function parseSearchResult(
       releaseDate: result.release_date || null,
       runtimeMinutes: null,
       shortDescription: result.overview || null,
-      genres: (result.genre_ids || []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
+      genres: (result.genre_ids || [])
+        .map((gid) => genreMap.get(gid) || "")
+        .filter(Boolean),
       originalLanguage: null,
       imdbId: null,
       tmdbId: String(result.id),
@@ -319,7 +328,9 @@ export function parseSearchResult(
     releaseDate: result.first_air_date || null,
     runtimeMinutes: null,
     shortDescription: result.overview || null,
-    genres: (result.genre_ids || []).map((gid) => genreMap.get(gid) || "").filter(Boolean),
+    genres: (result.genre_ids || [])
+      .map((gid) => genreMap.get(gid) || "")
+      .filter(Boolean),
     originalLanguage: null,
     imdbId: null,
     tmdbId: String(result.id),

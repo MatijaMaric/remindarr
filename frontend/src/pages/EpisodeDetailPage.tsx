@@ -21,7 +21,11 @@ function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function isReleased(airDate: string | null | undefined): boolean {
@@ -31,20 +35,33 @@ function isReleased(airDate: string | null | undefined): boolean {
 }
 
 export default function EpisodeDetailPage() {
-  const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>();
+  const { id, season, episode } = useParams<{
+    id: string;
+    season: string;
+    episode: string;
+  }>();
   const { user } = useAuth();
   const { t } = useTranslation();
 
-  const { data, isLoading: loading, isError: error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+  } = useQuery({
     queryKey: ["episode-detail", id, season, episode],
-    queryFn: ({ signal }) => api.getEpisodeDetails(id!, Number(season), Number(episode), signal),
+    queryFn: ({ signal }) =>
+      api.getEpisodeDetails(id!, Number(season), Number(episode), signal),
     enabled: !!id && !!season && !!episode,
   });
 
   const [editHistoryEntry, setEditHistoryEntry] = useState<string | null>(null);
   const qc = useQueryClient();
 
-  type SeasonStatusEntry = { episode_number: number; id: number; is_watched: boolean };
+  type SeasonStatusEntry = {
+    episode_number: number;
+    id: number;
+    is_watched: boolean;
+  };
   type SeasonStatusData = { episodes: SeasonStatusEntry[] };
 
   const { data: statusData } = useQuery({
@@ -57,13 +74,16 @@ export default function EpisodeDetailPage() {
   });
 
   const episodeStatus = useMemo(() => {
-    const match = statusData?.episodes.find((ep) => ep.episode_number === Number(episode));
+    const match = statusData?.episodes.find(
+      (ep) => ep.episode_number === Number(episode),
+    );
     return match ? { id: match.id, is_watched: match.is_watched } : null;
   }, [statusData, episode]);
 
   const { data: historyData } = useQuery({
     queryKey: ["watch-history", id, episodeStatus?.id],
-    queryFn: ({ signal }) => api.getWatchHistory(id!, { episodeId: episodeStatus!.id }, signal),
+    queryFn: ({ signal }) =>
+      api.getWatchHistory(id!, { episodeId: episodeStatus!.id }, signal),
     enabled: !!id && !!episodeStatus?.id && !!episodeStatus?.is_watched,
   });
   const watchHistoryEntries = useMemo(
@@ -73,26 +93,39 @@ export default function EpisodeDetailPage() {
 
   const toggleMutation = useMutation({
     mutationFn: (status: { id: number; is_watched: boolean }) =>
-      status.is_watched ? api.unwatchEpisode(status.id) : api.watchEpisode(status.id),
+      status.is_watched
+        ? api.unwatchEpisode(status.id)
+        : api.watchEpisode(status.id),
     onMutate: async (status) => {
       await qc.cancelQueries({ queryKey: ["season-status", id, season] });
-      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
-      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          episodes: old.episodes.map((ep) =>
-            ep.id === status.id ? { ...ep, is_watched: !status.is_watched } : ep
-          ),
-        };
-      });
+      const snapshot = qc.getQueryData<SeasonStatusData>([
+        "season-status",
+        id,
+        season,
+      ]);
+      qc.setQueryData<SeasonStatusData>(
+        ["season-status", id, season],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            episodes: old.episodes.map((ep) =>
+              ep.id === status.id
+                ? { ...ep, is_watched: !status.is_watched }
+                : ep,
+            ),
+          };
+        },
+      );
       return { snapshot };
     },
     onError: (_err, _vars, context) => {
       if (context?.snapshot !== undefined) {
         qc.setQueryData(["season-status", id, season], context.snapshot);
       }
-      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+      toast.error(
+        t("episodes.watchedError", "Failed to update watched status"),
+      );
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
@@ -125,7 +158,10 @@ export default function EpisodeDetailPage() {
   // Merge guest_stars and credits.cast, deduplicating by id
   const allCast: CastMember[] = [];
   const seenIds = new Set<number>();
-  for (const c of [...(tmdb?.guest_stars || []), ...(tmdb?.credits?.cast || [])]) {
+  for (const c of [
+    ...(tmdb?.guest_stars || []),
+    ...(tmdb?.credits?.cast || []),
+  ]) {
     if (!seenIds.has(c.id)) {
       seenIds.add(c.id);
       allCast.push(c);
@@ -133,16 +169,26 @@ export default function EpisodeDetailPage() {
   }
 
   // Key crew from the episode
-  const directors = tmdb?.crew?.filter((c: CrewMember) => c.job === "Director") || [];
-  const writers = tmdb?.crew?.filter((c: CrewMember) => c.department === "Writing") || [];
+  const directors =
+    tmdb?.crew?.filter((c: CrewMember) => c.job === "Director") || [];
+  const writers =
+    tmdb?.crew?.filter((c: CrewMember) => c.department === "Writing") || [];
 
   return (
     <div className="space-y-8 pb-12">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap">
-        <Link to={`/title/${title.id}`} className="hover:text-white transition-colors">{title.title}</Link>
+        <Link
+          to={`/title/${title.id}`}
+          className="hover:text-white transition-colors"
+        >
+          {title.title}
+        </Link>
         <span className="text-zinc-600">/</span>
-        <Link to={`/title/${title.id}/season/${seasonNumber}`} className="hover:text-white transition-colors">
+        <Link
+          to={`/title/${title.id}/season/${seasonNumber}`}
+          className="hover:text-white transition-colors"
+        >
           Season {seasonNumber}
         </Link>
         <span className="text-zinc-600">/</span>
@@ -167,8 +213,10 @@ export default function EpisodeDetailPage() {
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-white select-text">
-            <span className="text-zinc-500">S{String(seasonNumber).padStart(2, "0")}E{String(episodeNumber).padStart(2, "0")}</span>
-            {" "}
+            <span className="text-zinc-500">
+              S{String(seasonNumber).padStart(2, "0")}E
+              {String(episodeNumber).padStart(2, "0")}
+            </span>{" "}
             {tmdb?.name || `Episode ${episodeNumber}`}
           </h1>
           {episodeStatus && (
@@ -179,7 +227,9 @@ export default function EpisodeDetailPage() {
               size="md"
             />
           )}
-          <ShareButton title={`${title.title} — ${tmdb?.name || `Episode ${episodeNumber}`}`} />
+          <ShareButton
+            title={`${title.title} — ${tmdb?.name || `Episode ${episodeNumber}`}`}
+          />
         </div>
 
         <div className="flex items-center gap-3 text-sm text-zinc-400">
@@ -193,9 +243,13 @@ export default function EpisodeDetailPage() {
           {tmdb?.vote_average ? (
             <>
               <span className="text-zinc-600">·</span>
-              <span className="text-yellow-500 font-medium">{tmdb.vote_average.toFixed(1)}</span>
+              <span className="text-yellow-500 font-medium">
+                {tmdb.vote_average.toFixed(1)}
+              </span>
               {tmdb.vote_count > 0 && (
-                <span className="text-zinc-600 text-xs">({tmdb.vote_count} votes)</span>
+                <span className="text-zinc-600 text-xs">
+                  ({tmdb.vote_count} votes)
+                </span>
               )}
             </>
           ) : null}
@@ -206,7 +260,14 @@ export default function EpisodeDetailPage() {
             onClick={() => setEditHistoryEntry(watchHistoryEntries[0].id)}
             className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors underline-offset-2 hover:underline cursor-pointer"
           >
-            Watched {new Date(watchHistoryEntries[0].watchedAt.replace(" ", "T") + "Z").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+            Watched{" "}
+            {new Date(
+              watchHistoryEntries[0].watchedAt.replace(" ", "T") + "Z",
+            ).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
           </button>
         )}
       </div>
@@ -215,7 +276,9 @@ export default function EpisodeDetailPage() {
       {released && episodeStatus && (
         <SectionErrorBoundary label="ratings">
           <section className="space-y-2">
-            <h2 className="text-lg font-semibold text-white">Rate this episode</h2>
+            <h2 className="text-lg font-semibold text-white">
+              Rate this episode
+            </h2>
             <EpisodeRatingButtons episodeId={episodeStatus.id} />
           </section>
         </SectionErrorBoundary>
@@ -225,7 +288,9 @@ export default function EpisodeDetailPage() {
       {tmdb?.overview && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-white">Overview</h2>
-          <p className="text-zinc-300 leading-relaxed select-text">{tmdb.overview}</p>
+          <p className="text-zinc-300 leading-relaxed select-text">
+            {tmdb.overview}
+          </p>
         </section>
       )}
 
@@ -238,13 +303,17 @@ export default function EpisodeDetailPage() {
               {directors.length > 0 && (
                 <div>
                   <span className="text-zinc-400">Directed by: </span>
-                  <span className="text-white">{directors.map(d => d.name).join(", ")}</span>
+                  <span className="text-white">
+                    {directors.map((d) => d.name).join(", ")}
+                  </span>
                 </div>
               )}
               {writers.length > 0 && (
                 <div>
                   <span className="text-zinc-400">Written by: </span>
-                  <span className="text-white">{writers.map(w => w.name).join(", ")}</span>
+                  <span className="text-white">
+                    {writers.map((w) => w.name).join(", ")}
+                  </span>
                 </div>
               )}
             </div>
@@ -259,7 +328,13 @@ export default function EpisodeDetailPage() {
             <h2 className="text-lg font-semibold text-white">Cast</h2>
             <ScrollableRow className="gap-4 pb-2">
               {allCast.slice(0, 20).map((c) => (
-                <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
+                <PersonCard
+                  key={c.id}
+                  id={c.id}
+                  name={c.name}
+                  role={c.character}
+                  profilePath={c.profile_path}
+                />
               ))}
             </ScrollableRow>
           </section>
@@ -271,7 +346,10 @@ export default function EpisodeDetailPage() {
           open={true}
           onClose={() => setEditHistoryEntry(null)}
           entryId={editHistoryEntry}
-          currentWatchedAt={watchHistoryEntries.find(e => e.id === editHistoryEntry)?.watchedAt ?? ""}
+          currentWatchedAt={
+            watchHistoryEntries.find((e) => e.id === editHistoryEntry)
+              ?.watchedAt ?? ""
+          }
           anchorDate={data?.tmdb?.air_date ?? null}
           onUpdated={() => {
             void qc.invalidateQueries({ queryKey: ["watch-history", id] });

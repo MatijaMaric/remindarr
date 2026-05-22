@@ -1,6 +1,30 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { trackTitle, untrackTitle, getTrackedTitles, upsertTitles, getWatchedEpisodesForExport, getEpisodeIdsBySE, watchEpisodesBulk, getWatchedTitleIds, watchTitle, updateTrackedVisibility, updateAllTrackedVisibility, updateProfilePublic, getUserById, updateTrackedStatus, updateNotificationMode, updateTrackedNotes, setTags, getTagsForTitle, getTagsForTitles, addTagToTitlesBulk, setSnooze, setRemindOnRelease, getTitleById } from "../db/repository";
+import {
+  trackTitle,
+  untrackTitle,
+  getTrackedTitles,
+  upsertTitles,
+  getWatchedEpisodesForExport,
+  getEpisodeIdsBySE,
+  watchEpisodesBulk,
+  getWatchedTitleIds,
+  watchTitle,
+  updateTrackedVisibility,
+  updateAllTrackedVisibility,
+  updateProfilePublic,
+  getUserById,
+  updateTrackedStatus,
+  updateNotificationMode,
+  updateTrackedNotes,
+  setTags,
+  getTagsForTitle,
+  getTagsForTitles,
+  addTagToTitlesBulk,
+  setSnooze,
+  setRemindOnRelease,
+  getTitleById,
+} from "../db/repository";
 import { getDb, jobs } from "../db/schema";
 import { and, eq, sql as dsql } from "drizzle-orm";
 import { getUserPace, computeEta } from "../db/repository/stats";
@@ -33,11 +57,19 @@ app.get("/", async (c) => {
     titles: titlesWithEta,
     count: titlesWithEta.length,
     profile_public: Boolean(fullUser?.profile_public),
-    profile_visibility: fullUser?.profile_visibility ?? (fullUser?.profile_public ? "public" : "private"),
+    profile_visibility:
+      fullUser?.profile_visibility ??
+      (fullUser?.profile_public ? "public" : "private"),
   });
 });
 
-const VALID_USER_STATUSES = ["plan_to_watch", "watching", "on_hold", "dropped", "completed"] as const;
+const VALID_USER_STATUSES = [
+  "plan_to_watch",
+  "watching",
+  "on_hold",
+  "dropped",
+  "completed",
+] as const;
 const VALID_NOTIFICATION_MODES = ["all", "premieres_only", "none"] as const;
 
 const frontendOfferSchema = z.object({
@@ -110,7 +142,11 @@ const notesSchema = z.object({
 
 const tagsSchema = z.object({
   tags: z
-    .array(z.string().refine((t) => t.trim().length <= 30, { message: "Each tag must be 30 characters or fewer" }))
+    .array(
+      z.string().refine((t) => t.trim().length <= 30, {
+        message: "Each tag must be 30 characters or fewer",
+      }),
+    )
     .max(10, "Maximum 10 tags allowed"),
 });
 
@@ -129,11 +165,13 @@ const remindOnReleaseSchema = z.object({
 const bulkActionSchema = z.object({
   titleIds: z.array(z.string()).min(1).max(200),
   action: z.enum(["untrack", "set_status", "add_tag", "set_notification_mode"]),
-  payload: z.object({
-    status: z.string().optional(),
-    tag: z.string().optional(),
-    mode: z.string().optional(),
-  }).optional(),
+  payload: z
+    .object({
+      status: z.string().optional(),
+      tag: z.string().optional(),
+      mode: z.string().optional(),
+    })
+    .optional(),
 });
 
 // Convert frontend Title (snake_case) to ParsedTitle (camelCase) for upsert
@@ -208,7 +246,10 @@ app.get("/export", async (c) => {
     })),
   };
 
-  c.header("Content-Disposition", `attachment; filename="watchlist-${new Date().toISOString().slice(0, 10)}.json"`);
+  c.header(
+    "Content-Disposition",
+    `attachment; filename="watchlist-${new Date().toISOString().slice(0, 10)}.json"`,
+  );
   return c.json(exportData);
 });
 
@@ -249,26 +290,28 @@ app.post("/import", zValidator("json", importBodySchema), async (c) => {
     }
 
     try {
-      await upsertTitles([{
-        id: item.id,
-        objectType: item.object_type,
-        title: item.title,
-        originalTitle: item.original_title ?? null,
-        releaseYear: item.release_year ?? null,
-        releaseDate: item.release_date ?? null,
-        runtimeMinutes: item.runtime_minutes ?? null,
-        shortDescription: item.short_description ?? null,
-        genres: Array.isArray(item.genres) ? item.genres : [],
-        originalLanguage: item.original_language ?? null,
-        imdbId: item.imdb_id ?? null,
-        tmdbId: item.tmdb_id ?? null,
-        posterUrl: item.poster_url ?? null,
-        backdropUrl: null,
-        ageCertification: item.age_certification ?? null,
-        tmdbUrl: item.tmdb_url ?? null,
-        offers: [],
-        scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
-      }]);
+      await upsertTitles([
+        {
+          id: item.id,
+          objectType: item.object_type,
+          title: item.title,
+          originalTitle: item.original_title ?? null,
+          releaseYear: item.release_year ?? null,
+          releaseDate: item.release_date ?? null,
+          runtimeMinutes: item.runtime_minutes ?? null,
+          shortDescription: item.short_description ?? null,
+          genres: Array.isArray(item.genres) ? item.genres : [],
+          originalLanguage: item.original_language ?? null,
+          imdbId: item.imdb_id ?? null,
+          tmdbId: item.tmdb_id ?? null,
+          posterUrl: item.poster_url ?? null,
+          backdropUrl: null,
+          ageCertification: item.age_certification ?? null,
+          tmdbUrl: item.tmdb_url ?? null,
+          offers: [],
+          scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
+        },
+      ]);
 
       await trackTitle(item.id, user.id, item.notes ?? undefined);
 
@@ -285,8 +328,11 @@ app.post("/import", zValidator("json", importBodySchema), async (c) => {
         });
       }
 
-      const hasWatched = Array.isArray(item.watched_episodes) && item.watched_episodes.length > 0;
-      const canSyncEpisodes = item.object_type === "SHOW" && item.tmdb_id && CONFIG.TMDB_API_KEY;
+      const hasWatched =
+        Array.isArray(item.watched_episodes) &&
+        item.watched_episodes.length > 0;
+      const canSyncEpisodes =
+        item.object_type === "SHOW" && item.tmdb_id && CONFIG.TMDB_API_KEY;
 
       if (canSyncEpisodes) {
         const jobData: Record<string, unknown> = {
@@ -300,7 +346,10 @@ app.post("/import", zValidator("json", importBodySchema), async (c) => {
         }
         await enqueueAdhoc("sync-show-episodes", jobData);
       } else if (hasWatched && item.watched_episodes) {
-        const episodeIds = await getEpisodeIdsBySE(item.id, item.watched_episodes);
+        const episodeIds = await getEpisodeIdsBySE(
+          item.id,
+          item.watched_episodes,
+        );
         if (episodeIds.length > 0) {
           await watchEpisodesBulk(episodeIds, user.id);
         }
@@ -329,8 +378,19 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
     }
   } else if (action === "set_status") {
     const status = (payload?.status ?? null) as UserStatus | null;
-    if (status !== null && !VALID_USER_STATUSES.includes(status as (typeof VALID_USER_STATUSES)[number])) {
-      return c.json({ error: "Validation failed", issues: [{ message: "Invalid status value" }] }, 400);
+    if (
+      status !== null &&
+      !VALID_USER_STATUSES.includes(
+        status as (typeof VALID_USER_STATUSES)[number],
+      )
+    ) {
+      return c.json(
+        {
+          error: "Validation failed",
+          issues: [{ message: "Invalid status value" }],
+        },
+        400,
+      );
     }
     for (const titleId of titleIds) {
       await updateTrackedStatus(titleId, user.id, status);
@@ -339,7 +399,13 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
   } else if (action === "add_tag") {
     const tag = payload?.tag;
     if (!tag || tag.trim().length === 0 || tag.trim().length > 30) {
-      return c.json({ error: "Validation failed", issues: [{ message: "Tag must be between 1 and 30 characters" }] }, 400);
+      return c.json(
+        {
+          error: "Validation failed",
+          issues: [{ message: "Tag must be between 1 and 30 characters" }],
+        },
+        400,
+      );
     }
     const normalizedTag = tag.trim().toLowerCase();
 
@@ -356,8 +422,19 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
     updated = titleIds.length;
   } else if (action === "set_notification_mode") {
     const mode = (payload?.mode ?? null) as NotificationMode | null;
-    if (mode !== null && !VALID_NOTIFICATION_MODES.includes(mode as (typeof VALID_NOTIFICATION_MODES)[number])) {
-      return c.json({ error: "Validation failed", issues: [{ message: "Invalid notification mode" }] }, 400);
+    if (
+      mode !== null &&
+      !VALID_NOTIFICATION_MODES.includes(
+        mode as (typeof VALID_NOTIFICATION_MODES)[number],
+      )
+    ) {
+      return c.json(
+        {
+          error: "Validation failed",
+          issues: [{ message: "Invalid notification mode" }],
+        },
+        400,
+      );
     }
     for (const titleId of titleIds) {
       await updateNotificationMode(titleId, user.id, mode);
@@ -365,7 +442,11 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
     }
   }
 
-  log.info("Bulk track action applied", { action, count: updated, userId: user.id });
+  log.info("Bulk track action applied", {
+    action,
+    count: updated,
+    userId: user.id,
+  });
   return ok(c, { updated });
 });
 
@@ -396,7 +477,11 @@ app.post("/:id", async (c) => {
   if (CONFIG.TMDB_API_KEY) {
     const titleData = body.titleData;
     if (titleData?.object_type === "SHOW" && titleData?.tmdb_id) {
-      await enqueueAdhoc("sync-show-episodes", { titleId, tmdbId: titleData.tmdb_id, title: titleData.title });
+      await enqueueAdhoc("sync-show-episodes", {
+        titleId,
+        tmdbId: titleData.tmdb_id,
+        title: titleData.title,
+      });
       log.info("Queued episode sync", { title: titleData.title, titleId });
     }
   }
@@ -459,7 +544,11 @@ app.patch("/:id/tags", zValidator("json", tagsSchema), async (c) => {
   const titleId = c.req.param("id");
   const { tags } = c.req.valid("json");
   // Normalize: trim, lowercase, deduplicate
-  const normalized = [...new Set(tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0))];
+  const normalized = [
+    ...new Set(
+      tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0),
+    ),
+  ];
   await setTags(user.id, titleId, normalized);
   return ok(c, { message: "Tags updated" });
 });
@@ -478,23 +567,23 @@ app.patch(
     const user = c.get("user")!;
     const titleId = c.req.param("id");
     const { mode } = c.req.valid("json");
-    await updateNotificationMode(titleId, user.id, mode as NotificationMode | null);
+    await updateNotificationMode(
+      titleId,
+      user.id,
+      mode as NotificationMode | null,
+    );
     return ok(c, { message: "Notification mode updated" });
   },
 );
 
-app.patch(
-  "/:id/snooze",
-  zValidator("json", snoozeSchema),
-  async (c) => {
-    const user = c.get("user")!;
-    const titleId = c.req.param("id");
-    const { until } = c.req.valid("json");
-    await setSnooze(titleId, user.id, until);
-    log.info("Snooze updated", { titleId, userId: user.id, until });
-    return ok(c, { success: true });
-  },
-);
+app.patch("/:id/snooze", zValidator("json", snoozeSchema), async (c) => {
+  const user = c.get("user")!;
+  const titleId = c.req.param("id");
+  const { until } = c.req.valid("json");
+  await setSnooze(titleId, user.id, until);
+  log.info("Snooze updated", { titleId, userId: user.id, until });
+  return ok(c, { success: true });
+});
 
 app.patch(
   "/:id/remind-on-release",
@@ -522,19 +611,25 @@ app.patch(
             maxAttempts: 1,
           });
           scheduledFor = releaseDateTime.toISOString();
-          log.info("Scheduled release reminder", { titleId, userId: user.id, scheduledFor });
+          log.info("Scheduled release reminder", {
+            titleId,
+            userId: user.id,
+            scheduledFor,
+          });
         }
       }
     } else {
       const db = getDb();
-      await db.delete(jobs).where(
-        and(
-          eq(jobs.name, "release-reminder"),
-          eq(jobs.status, "pending"),
-          dsql`json_extract(${jobs.data}, '$.userId') = ${user.id}`,
-          dsql`json_extract(${jobs.data}, '$.titleId') = ${titleId}`,
-        ),
-      );
+      await db
+        .delete(jobs)
+        .where(
+          and(
+            eq(jobs.name, "release-reminder"),
+            eq(jobs.status, "pending"),
+            dsql`json_extract(${jobs.data}, '$.userId') = ${user.id}`,
+            dsql`json_extract(${jobs.data}, '$.titleId') = ${titleId}`,
+          ),
+        );
       log.info("Cancelled release reminder", { titleId, userId: user.id });
     }
 

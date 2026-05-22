@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import shareApp from "./share";
 import type { AppEnv } from "../types";
@@ -71,7 +75,10 @@ describe("GET /share/token (auth)", () => {
   });
 
   it("returns token after generation", async () => {
-    await app.request("/share/token", { method: "POST", headers: authHeaders() });
+    await app.request("/share/token", {
+      method: "POST",
+      headers: authHeaders(),
+    });
     const res = await app.request("/share/token", { headers: authHeaders() });
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
@@ -132,8 +139,14 @@ describe("DELETE /share/token (auth)", () => {
   });
 
   it("subsequent GET token returns null after revoke", async () => {
-    await app.request("/share/token", { method: "POST", headers: authHeaders() });
-    await app.request("/share/token", { method: "DELETE", headers: authHeaders() });
+    await app.request("/share/token", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    await app.request("/share/token", {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
     const res = await app.request("/share/token", { headers: authHeaders() });
     const body = (await res.json()) as any;
     expect(body.token).toBeNull();
@@ -146,7 +159,10 @@ describe("DELETE /share/token (auth)", () => {
     });
     const { token } = (await genRes.json()) as { token: string };
 
-    await app.request("/share/token", { method: "DELETE", headers: authHeaders() });
+    await app.request("/share/token", {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
 
     const watchlistRes = await app.request(`/share/watchlist/${token}`);
     expect(watchlistRes.status).toBe(404);

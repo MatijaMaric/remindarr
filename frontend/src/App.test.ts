@@ -29,7 +29,9 @@ describe("navLinkClass", () => {
   it("returns mobile inactive classes", () => {
     const result = navLinkClass(false, true);
     expect(result).toContain("block w-full px-3 py-2.5");
-    expect(result).toContain("text-zinc-400 hover:text-white hover:bg-zinc-800");
+    expect(result).toContain(
+      "text-zinc-400 hover:text-white hover:bg-zinc-800",
+    );
     expect(result).not.toContain("bg-amber-500");
   });
 
@@ -53,7 +55,8 @@ describe("nav search button a11y (WCAG 2.5.3)", () => {
     const commentMarker = "{/* ⌘K search trigger */}";
     const commentPos = src.indexOf(commentMarker);
     const buttonStart = src.indexOf("<button", commentPos);
-    const buttonEnd = src.indexOf("</button>", buttonStart) + "</button>".length;
+    const buttonEnd =
+      src.indexOf("</button>", buttonStart) + "</button>".length;
     const buttonSrc = src.slice(buttonStart, buttonEnd);
     expect(buttonSrc).not.toContain("aria-label");
   });
@@ -62,7 +65,8 @@ describe("nav search button a11y (WCAG 2.5.3)", () => {
     const commentMarker = "{/* ⌘K search trigger */}";
     const commentPos = src.indexOf(commentMarker);
     const buttonStart = src.indexOf("<button", commentPos);
-    const buttonEnd = src.indexOf("</button>", buttonStart) + "</button>".length;
+    const buttonEnd =
+      src.indexOf("</button>", buttonStart) + "</button>".length;
     const buttonSrc = src.slice(buttonStart, buttonEnd);
     // The aria-hidden span must appear before the ⌘K glyph
     const ariaHiddenIdx = buttonSrc.indexOf('aria-hidden="true"');

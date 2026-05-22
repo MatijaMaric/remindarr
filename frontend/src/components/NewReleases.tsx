@@ -64,19 +64,33 @@ export default function NewReleases({
   const regionProviderIds = filters?.regionProviderIds ?? [];
   const priorityLanguageCodes = filters?.priorityLanguageCodes ?? [];
 
-  const fetchTitles = useCallback(() => run(async () => {
-    const res = await api.getTitles({
+  const fetchTitles = useCallback(
+    () =>
+      run(async () => {
+        const res = await api.getTitles({
+          daysBack,
+          type: type.length ? type.join(",") : undefined,
+          genre: genre.length ? genre.join(",") : undefined,
+          provider: provider.length ? provider.join(",") : undefined,
+          language: language.length ? language.join(",") : undefined,
+          excludeTracked: hideTracked || undefined,
+          onlyMine: onlyMine || undefined,
+        });
+        setTitles(res.titles);
+        onResultsCount?.(res.titles.length);
+      }),
+    [
+      run,
       daysBack,
-      type: type.length ? type.join(",") : undefined,
-      genre: genre.length ? genre.join(",") : undefined,
-      provider: provider.length ? provider.join(",") : undefined,
-      language: language.length ? language.join(",") : undefined,
-      excludeTracked: hideTracked || undefined,
-      onlyMine: onlyMine || undefined,
-    });
-    setTitles(res.titles);
-    onResultsCount?.(res.titles.length);
-  }), [run, daysBack, type, genre, provider, language, hideTracked, onlyMine, onResultsCount]);
+      type,
+      genre,
+      provider,
+      language,
+      hideTracked,
+      onlyMine,
+      onResultsCount,
+    ],
+  );
 
   useEffect(() => {
     fetchTitles();
@@ -114,7 +128,9 @@ export default function NewReleases({
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-zinc-500">{t("releases.loading")}</div>
+        <div className="text-center py-12 text-zinc-500">
+          {t("releases.loading")}
+        </div>
       ) : (
         <TitleList
           titles={titles}

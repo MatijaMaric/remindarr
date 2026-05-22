@@ -2,7 +2,14 @@ import { describe, it, expect } from "bun:test";
 import { buildUnwatchedCards } from "./HomePage";
 import type { Episode } from "../types";
 
-function makeEpisode(overrides: Partial<Episode> & { id: number; title_id: string; season_number: number; episode_number: number }): Episode {
+function makeEpisode(
+  overrides: Partial<Episode> & {
+    id: number;
+    title_id: string;
+    season_number: number;
+    episode_number: number;
+  },
+): Episode {
   return {
     name: `Episode ${overrides.episode_number}`,
     overview: null,
@@ -17,10 +24,30 @@ function makeEpisode(overrides: Partial<Episode> & { id: number; title_id: strin
 describe("buildUnwatchedCards", () => {
   it("produces one card per show", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2 }),
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 2, episode_number: 1 }),
-      makeEpisode({ id: 4, title_id: "show-2", season_number: 1, episode_number: 1 }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+      }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 4,
+        title_id: "show-2",
+        season_number: 1,
+        episode_number: 1,
+      }),
     ];
     const cards = buildUnwatchedCards(episodes);
 
@@ -30,9 +57,24 @@ describe("buildUnwatchedCards", () => {
 
   it("uses the first episode (lowest season/episode) as the representative", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 2, episode_number: 1 }),
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2 }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+      }),
     ];
     const cards = buildUnwatchedCards(episodes);
 
@@ -44,9 +86,24 @@ describe("buildUnwatchedCards", () => {
 
   it("sets correct totalEpisodeCount across all seasons", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2 }),
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 2, episode_number: 1 }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+      }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+      }),
     ];
     const cards = buildUnwatchedCards(episodes);
 
@@ -55,9 +112,24 @@ describe("buildUnwatchedCards", () => {
 
   it("sets correct allEpisodeIds sorted by season/episode", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 30, title_id: "show-1", season_number: 2, episode_number: 1 }),
-      makeEpisode({ id: 10, title_id: "show-1", season_number: 1, episode_number: 1 }),
-      makeEpisode({ id: 20, title_id: "show-1", season_number: 1, episode_number: 2 }),
+      makeEpisode({
+        id: 30,
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 10,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+      }),
+      makeEpisode({
+        id: 20,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+      }),
     ];
     const cards = buildUnwatchedCards(episodes);
 
@@ -66,14 +138,46 @@ describe("buildUnwatchedCards", () => {
 
   it("preserves the order of first occurrence in the input (backend-provided sort)", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-mid", season_number: 1, episode_number: 1, air_date: "2025-03-10", show_title: "Mid Show" }),
-      makeEpisode({ id: 2, title_id: "show-new", season_number: 1, episode_number: 1, air_date: "2025-06-15", show_title: "New Show" }),
-      makeEpisode({ id: 3, title_id: "show-mid", season_number: 1, episode_number: 2, air_date: "2025-03-17", show_title: "Mid Show" }),
-      makeEpisode({ id: 4, title_id: "show-old", season_number: 1, episode_number: 1, air_date: "2025-01-01", show_title: "Old Show" }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-mid",
+        season_number: 1,
+        episode_number: 1,
+        air_date: "2025-03-10",
+        show_title: "Mid Show",
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-new",
+        season_number: 1,
+        episode_number: 1,
+        air_date: "2025-06-15",
+        show_title: "New Show",
+      }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-mid",
+        season_number: 1,
+        episode_number: 2,
+        air_date: "2025-03-17",
+        show_title: "Mid Show",
+      }),
+      makeEpisode({
+        id: 4,
+        title_id: "show-old",
+        season_number: 1,
+        episode_number: 1,
+        air_date: "2025-01-01",
+        show_title: "Old Show",
+      }),
     ];
     const cards = buildUnwatchedCards(episodes);
 
-    expect(cards.map((c) => c.titleId)).toEqual(["show-mid", "show-new", "show-old"]);
+    expect(cards.map((c) => c.titleId)).toEqual([
+      "show-mid",
+      "show-new",
+      "show-old",
+    ]);
   });
 
   it("returns empty array for empty input", () => {
@@ -83,7 +187,12 @@ describe("buildUnwatchedCards", () => {
 
   it("handles single episode", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 3, episode_number: 5 }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 3,
+        episode_number: 5,
+      }),
     ];
     const cards = buildUnwatchedCards(episodes);
 
@@ -96,15 +205,35 @@ describe("buildUnwatchedCards", () => {
 describe("episode toggle updater functions", () => {
   it("updateAll toggles is_watched for the target episode only", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1, is_watched: false }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2, is_watched: false }),
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 1, episode_number: 3, is_watched: true }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        is_watched: false,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        is_watched: false,
+      }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 3,
+        is_watched: true,
+      }),
     ];
 
     const episodeId = 2;
     const currentlyWatched = false;
     const updateAll = (eps: Episode[]) =>
-      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
+      eps.map((ep) =>
+        ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep,
+      );
 
     const result = updateAll(episodes);
 
@@ -117,15 +246,35 @@ describe("episode toggle updater functions", () => {
 
   it("revertAll restores is_watched for the target episode only", () => {
     const episodes: Episode[] = [
-      makeEpisode({ id: 1, title_id: "show-1", season_number: 1, episode_number: 1, is_watched: false }),
-      makeEpisode({ id: 2, title_id: "show-1", season_number: 1, episode_number: 2, is_watched: true }),
-      makeEpisode({ id: 3, title_id: "show-1", season_number: 1, episode_number: 3, is_watched: true }),
+      makeEpisode({
+        id: 1,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        is_watched: false,
+      }),
+      makeEpisode({
+        id: 2,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        is_watched: true,
+      }),
+      makeEpisode({
+        id: 3,
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 3,
+        is_watched: true,
+      }),
     ];
 
     const episodeId = 2;
     const currentlyWatched = false;
     const revertAll = (eps: Episode[]) =>
-      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep));
+      eps.map((ep) =>
+        ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep,
+      );
 
     const result = revertAll(episodes);
 
@@ -136,14 +285,28 @@ describe("episode toggle updater functions", () => {
 
   it("updater works correctly as a React functional updater (called with prev state)", () => {
     const prevState: Episode[] = [
-      makeEpisode({ id: 10, title_id: "show-x", season_number: 1, episode_number: 1, is_watched: false }),
-      makeEpisode({ id: 20, title_id: "show-x", season_number: 1, episode_number: 2, is_watched: true }),
+      makeEpisode({
+        id: 10,
+        title_id: "show-x",
+        season_number: 1,
+        episode_number: 1,
+        is_watched: false,
+      }),
+      makeEpisode({
+        id: 20,
+        title_id: "show-x",
+        season_number: 1,
+        episode_number: 2,
+        is_watched: true,
+      }),
     ];
 
     const episodeId = 10;
     const currentlyWatched = false;
     const updateAll = (eps: Episode[]) =>
-      eps.map((ep) => (ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep));
+      eps.map((ep) =>
+        ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep,
+      );
 
     const newState = updateAll(prevState);
 

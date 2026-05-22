@@ -17,15 +17,25 @@ function delay(ms: number): Promise<void> {
  * One-time migration: fetches backdrop_path from TMDB for all existing
  * titles that don't have backdrop_url set yet.
  */
-export async function migrateBackdrops(): Promise<{ updated: number; skipped: number; failed: number }> {
+export async function migrateBackdrops(): Promise<{
+  updated: number;
+  skipped: number;
+  failed: number;
+}> {
   if (!CONFIG.TMDB_API_KEY) {
-    log.info("Skipping backdrop migration", { reason: "TMDB_API_KEY not configured" });
+    log.info("Skipping backdrop migration", {
+      reason: "TMDB_API_KEY not configured",
+    });
     return { updated: 0, skipped: 0, failed: 0 };
   }
 
   const db = getDb();
   const rows = await db
-    .select({ id: titles.id, objectType: titles.objectType, tmdbId: titles.tmdbId })
+    .select({
+      id: titles.id,
+      objectType: titles.objectType,
+      tmdbId: titles.tmdbId,
+    })
     .from(titles)
     .where(and(isNull(titles.backdropUrl), isNotNull(titles.tmdbId)))
     .all();
@@ -55,7 +65,11 @@ export async function migrateBackdrops(): Promise<{ updated: number; skipped: nu
 
       if (backdropPath) {
         const backdropUrl = `${CONFIG.TMDB_IMAGE_BASE_URL}/w1280${backdropPath}`;
-        await db.update(titles).set({ backdropUrl }).where(eq(titles.id, row.id)).run();
+        await db
+          .update(titles)
+          .set({ backdropUrl })
+          .where(eq(titles.id, row.id))
+          .run();
         updated++;
       } else {
         skipped++;

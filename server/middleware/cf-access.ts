@@ -25,7 +25,9 @@ export const cfAccessAuth = createMiddleware<AppEnv>(async (c, next) => {
       return c.json({ error: "Invalid token format" }, 401);
     }
 
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
 
     if (!payload.email) {
       return c.json({ error: "Token missing email claim" }, 401);

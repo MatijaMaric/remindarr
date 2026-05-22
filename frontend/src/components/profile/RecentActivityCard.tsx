@@ -22,7 +22,10 @@ interface RecentActivityCardProps {
   fetcher?: ActivityFetcher;
 }
 
-const ICON_BY_TYPE: Record<ActivityEvent["type"], "rating" | "watched" | "review" | "track"> = {
+const ICON_BY_TYPE: Record<
+  ActivityEvent["type"],
+  "rating" | "watched" | "review" | "track"
+> = {
   rating_title: "rating",
   rating_episode: "rating",
   watched_title: "watched",
@@ -87,7 +90,10 @@ function ActivityIcon({ type }: { type: ActivityEvent["type"] }) {
 function StarRow({ rating }: { rating: NonNullable<ActivityEvent["rating"]> }) {
   const filled = RATING_TO_STARS[rating];
   return (
-    <div className="flex items-center gap-0.5 mt-1" aria-label={`${filled} of 5 stars`}>
+    <div
+      className="flex items-center gap-0.5 mt-1"
+      aria-label={`${filled} of 5 stars`}
+    >
       {Array.from({ length: 5 }, (_, i) => (
         <Star
           key={i}
@@ -113,15 +119,20 @@ function useRelativeTime(iso: string): string {
     const seconds = Math.max(0, (now - new Date(normalized).getTime()) / 1000);
     if (seconds < 60) return t("userProfile.dossier.activity.time.now");
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return t("userProfile.dossier.activity.time.minutes", { count: minutes });
+    if (minutes < 60)
+      return t("userProfile.dossier.activity.time.minutes", { count: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return t("userProfile.dossier.activity.time.hours", { count: hours });
+    if (hours < 24)
+      return t("userProfile.dossier.activity.time.hours", { count: hours });
     const days = Math.floor(hours / 24);
-    if (days < 7) return t("userProfile.dossier.activity.time.days", { count: days });
+    if (days < 7)
+      return t("userProfile.dossier.activity.time.days", { count: days });
     const weeks = Math.floor(days / 7);
-    if (weeks < 5) return t("userProfile.dossier.activity.time.weeks", { count: weeks });
+    if (weeks < 5)
+      return t("userProfile.dossier.activity.time.weeks", { count: weeks });
     const months = Math.floor(days / 30);
-    if (months < 12) return t("userProfile.dossier.activity.time.months", { count: months });
+    if (months < 12)
+      return t("userProfile.dossier.activity.time.months", { count: months });
     const years = Math.floor(days / 365);
     return t("userProfile.dossier.activity.time.years", { count: years });
   }, [iso, now, t]);
@@ -152,7 +163,9 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
   switch (event.type) {
     case "rating_title": {
       badgeKey = "rating";
-      summary = t("userProfile.dossier.activity.summary.ratedTitle", { title: event.title.title });
+      summary = t("userProfile.dossier.activity.summary.ratedTitle", {
+        title: event.title.title,
+      });
       if (event.rating) detail = <StarRow rating={event.rating} />;
       break;
     }
@@ -169,7 +182,9 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
         detail = (
           <>
             {detail}
-            <p className="mt-1 text-sm italic text-zinc-300">&ldquo;{event.review}&rdquo;</p>
+            <p className="mt-1 text-sm italic text-zinc-300">
+              &ldquo;{event.review}&rdquo;
+            </p>
           </>
         );
         badgeKey = "review";
@@ -179,7 +194,9 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
     case "watched_title": {
       badgeKey = "watched";
       const runtime = event.title.runtime_minutes
-        ? t("userProfile.dossier.activity.runtimeMinutes", { minutes: event.title.runtime_minutes })
+        ? t("userProfile.dossier.activity.runtimeMinutes", {
+            minutes: event.title.runtime_minutes,
+          })
         : "";
       summary = t("userProfile.dossier.activity.summary.watchedTitle", {
         title: event.title.title,
@@ -191,7 +208,9 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
       badgeKey = "watched";
       const epName = event.episode?.name ? ` · ${event.episode.name}` : "";
       const runtime = event.title.runtime_minutes
-        ? t("userProfile.dossier.activity.runtimeMinutes", { minutes: event.title.runtime_minutes })
+        ? t("userProfile.dossier.activity.runtimeMinutes", {
+            minutes: event.title.runtime_minutes,
+          })
         : "";
       summary = t("userProfile.dossier.activity.summary.watchedEpisode", {
         season: event.episode?.season_number ?? 0,
@@ -205,7 +224,9 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
       badgeKey = "track";
       if (event.status) {
         const statusLabel = t(STATUS_LABEL_KEY[event.status]).toLowerCase();
-        summary = t("userProfile.dossier.activity.summary.trackedStatus", { status: statusLabel });
+        summary = t("userProfile.dossier.activity.summary.trackedStatus", {
+          status: statusLabel,
+        });
       } else {
         summary = t("userProfile.dossier.activity.summary.trackedDefault");
       }
@@ -215,9 +236,16 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
       badgeKey = "review";
       if (event.message) {
         summary = "";
-        detail = <p className="mt-0.5 text-sm italic text-zinc-300">&ldquo;{event.message}&rdquo;</p>;
+        detail = (
+          <p className="mt-0.5 text-sm italic text-zinc-300">
+            &ldquo;{event.message}&rdquo;
+          </p>
+        );
       } else {
-        summary = t("userProfile.dossier.activity.summary.recommendationDefault", { title: event.title.title });
+        summary = t(
+          "userProfile.dossier.activity.summary.recommendationDefault",
+          { title: event.title.title },
+        );
       }
       break;
     }
@@ -238,7 +266,9 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
             {t(BADGE_LABEL_KEY[badgeKey])}
           </span>
         </div>
-        {summary && <p className="text-[13px] text-zinc-400 mt-0.5 truncate">{summary}</p>}
+        {summary && (
+          <p className="text-[13px] text-zinc-400 mt-0.5 truncate">{summary}</p>
+        )}
         {detail}
       </div>
       <div className="flex items-center gap-2 shrink-0 pt-1">
@@ -258,7 +288,12 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
   );
 }
 
-export default function RecentActivityCard({ username, isOwnProfile, pageSize = 10, fetcher }: RecentActivityCardProps) {
+export default function RecentActivityCard({
+  username,
+  isOwnProfile,
+  pageSize = 10,
+  fetcher,
+}: RecentActivityCardProps) {
   // Reset internal state when the username changes by remounting via key —
   // avoids the "setState in effect body" lint rule and makes cancellation
   // trivially correct.
@@ -280,7 +315,12 @@ interface ActivityFeedProps {
   fetcher: ActivityFetcher;
 }
 
-function ActivityFeed({ username, isOwnProfile, pageSize, fetcher }: ActivityFeedProps) {
+function ActivityFeed({
+  username,
+  isOwnProfile,
+  pageSize,
+  fetcher,
+}: ActivityFeedProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
 
@@ -293,29 +333,43 @@ function ActivityFeed({ username, isOwnProfile, pageSize, fetcher }: ActivityFee
     fetchNextPage,
   } = useInfiniteQuery({
     queryKey: ["activity", username, pageSize],
-    queryFn: ({ pageParam }) => fetcher(username, { limit: pageSize, before: pageParam }),
+    queryFn: ({ pageParam }) =>
+      fetcher(username, { limit: pageSize, before: pageParam }),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (last) => (last.has_more && last.next_cursor) ? last.next_cursor : undefined,
+    getNextPageParam: (last) =>
+      last.has_more && last.next_cursor ? last.next_cursor : undefined,
   });
 
   const events = data?.pages.flatMap((p) => p.activities) ?? [];
 
-  const handleHide = useCallback((eventToHide: ActivityEvent) => {
-    const snapshot = qc.getQueryData<InfiniteData<ActivityFeedResponse>>(["activity", username, pageSize]);
-    qc.setQueryData<InfiniteData<ActivityFeedResponse>>(["activity", username, pageSize], (prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        pages: prev.pages.map((page) => ({
-          ...page,
-          activities: page.activities.filter((e) => e.id !== eventToHide.id),
-        })),
-      };
-    });
-    api.hideActivityEvent(eventToHide.type, eventToHide.id).catch(() => {
-      qc.setQueryData(["activity", username, pageSize], snapshot);
-    });
-  }, [qc, username, pageSize]);
+  const handleHide = useCallback(
+    (eventToHide: ActivityEvent) => {
+      const snapshot = qc.getQueryData<InfiniteData<ActivityFeedResponse>>([
+        "activity",
+        username,
+        pageSize,
+      ]);
+      qc.setQueryData<InfiniteData<ActivityFeedResponse>>(
+        ["activity", username, pageSize],
+        (prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            pages: prev.pages.map((page) => ({
+              ...page,
+              activities: page.activities.filter(
+                (e) => e.id !== eventToHide.id,
+              ),
+            })),
+          };
+        },
+      );
+      api.hideActivityEvent(eventToHide.type, eventToHide.id).catch(() => {
+        qc.setQueryData(["activity", username, pageSize], snapshot);
+      });
+    },
+    [qc, username, pageSize],
+  );
 
   const loadMore = useCallback(() => {
     fetchNextPage();

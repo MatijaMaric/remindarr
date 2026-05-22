@@ -3,6 +3,7 @@
 See also: `server/db/CLAUDE.md` (migration safety), `server/routes/CLAUDE.md` (route validation + API catalog), `server/notifications/CLAUDE.md` (provider pattern).
 
 ## Stack
+
 - **Runtime**: Bun (primary) or Cloudflare Workers — same codebase, different entry points
 - **Framework**: Hono + TypeScript strict mode
 - **Database**: SQLite via Drizzle ORM (WAL mode under Bun; Cloudflare D1 on Workers)
@@ -12,11 +13,11 @@ See also: `server/db/CLAUDE.md` (migration safety), `server/routes/CLAUDE.md` (r
 
 ## Entry points
 
-| File | Purpose |
-|------|---------|
-| `server/index.ts` | Bun entry — Hono app setup, serves static frontend in prod |
+| File               | Purpose                                                                           |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `server/index.ts`  | Bun entry — Hono app setup, serves static frontend in prod                        |
 | `server/worker.ts` | CF Workers entry — patches CONFIG from env bindings; excludes Bun-only job worker |
-| `server/config.ts` | All configuration from env vars with defaults; `patchConfig()` for CF runtime |
+| `server/config.ts` | All configuration from env vars with defaults; `patchConfig()` for CF runtime     |
 
 **Critical invariant**: every route registered in `server/index.ts` must also be registered in `server/worker.ts`. They must stay in sync — the CF worker must expose every API that the Bun server does.
 
@@ -46,12 +47,12 @@ server/
 **All server-side code MUST use the structured logger from `server/logger.ts`. Never use `console.log/warn/error` directly.**
 
 ```ts
-import { logger } from "server/logger.ts"
-const log = logger.child({ module: "my-module" })
+import { logger } from "server/logger.ts";
+const log = logger.child({ module: "my-module" });
 
-log.info("message", { key: value })   // structured, second arg is context
-log.debug("sync started", { titleId })
-log.error("request failed", { error: err.message })
+log.info("message", { key: value }); // structured, second arg is context
+log.debug("sync started", { titleId });
+log.error("request failed", { error: err.message });
 ```
 
 - Log level: `LOG_LEVEL` env var (debug, info, warn, error), defaults to `"info"`
@@ -70,6 +71,7 @@ Notification jobs dynamically reschedule based on user timezone preferences.
 ## Platform abstraction
 
 `server/platform/types.ts` defines the platform interface. Implementations:
+
 - `server/platform/bun.ts` — password hashing via Bun, DB handle
 - `server/platform/cloudflare.ts` — CF-specific impl
 

@@ -19,7 +19,9 @@ const log = logger.child({ module: "check-streaming-departures" });
  * has lost flatrate/free streaming offers for users who had arrival alerts.
  * If so, send an immediate departure notification.
  */
-export async function checkStreamingDepartures(titleIds: string[]): Promise<void> {
+export async function checkStreamingDepartures(
+  titleIds: string[],
+): Promise<void> {
   if (titleIds.length === 0) return;
 
   // 1. Get all current offers for these titles
@@ -33,9 +35,13 @@ export async function checkStreamingDepartures(titleIds: string[]): Promise<void
     // Current set of FLATRATE/FREE provider IDs
     const currentStreamingProviderIds = new Set(
       titleOffers
-        .filter((o) => o.monetization_type === "FLATRATE" || o.monetization_type === "FREE")
+        .filter(
+          (o) =>
+            o.monetization_type === "FLATRATE" ||
+            o.monetization_type === "FREE",
+        )
         .map((o) => o.provider_id)
-        .filter((id): id is number => id != null)
+        .filter((id): id is number => id != null),
     );
 
     // 2. Get all (user, provider) pairs that have arrival alerts for this title
@@ -44,15 +50,21 @@ export async function checkStreamingDepartures(titleIds: string[]): Promise<void
 
     // 3. Find providers that are no longer in current offers (departed)
     const departedAlerts = arrivalAlerts.filter(
-      (a) => !currentStreamingProviderIds.has(a.providerId)
+      (a) => !currentStreamingProviderIds.has(a.providerId),
     );
     if (departedAlerts.length === 0) continue;
 
     // Group departed alerts by userId
-    const byUser = new Map<string, Array<{ providerId: number; providerName: string }>>();
+    const byUser = new Map<
+      string,
+      Array<{ providerId: number; providerName: string }>
+    >();
     for (const alert of departedAlerts) {
       const list = byUser.get(alert.userId) ?? [];
-      list.push({ providerId: alert.providerId, providerName: alert.providerName });
+      list.push({
+        providerId: alert.providerId,
+        providerName: alert.providerName,
+      });
       byUser.set(alert.userId, list);
     }
 
@@ -66,12 +78,18 @@ export async function checkStreamingDepartures(titleIds: string[]): Promise<void
 
       // 5. Check user's departure settings
       const userSettings = await getUserDepartureSettings(userId);
-      if (!userSettings || userSettings.streamingDeparturesEnabled === 0) continue;
+      if (!userSettings || userSettings.streamingDeparturesEnabled === 0)
+        continue;
 
       const providerIds = departedProviders.map((p) => p.providerId);
 
       // 6. Find providers not yet alerted for departure for this (user, title)
-      const newProviderIds = await getUnalertedProviders(userId, titleId, providerIds, "departure");
+      const newProviderIds = await getUnalertedProviders(
+        userId,
+        titleId,
+        providerIds,
+        "departure",
+      );
       if (newProviderIds.length === 0) continue;
 
       // 7. Get enabled streaming-alert notifiers for this user
@@ -87,9 +105,7 @@ export async function checkStreamingDepartures(titleIds: string[]): Promise<void
 
         // Check if offer has an available_to date — used for lead-time filtering
         // (The offers table uses available_to for expiry dates)
-        const offer = titleOffers.find(
-          (o) => o.provider_id === pid
-        );
+        const offer = titleOffers.find((o) => o.provider_id === pid);
         const leavingAt = offer?.available_to ?? null;
 
         // If there's a departure date in the future, check lead-time window
@@ -97,7 +113,9 @@ export async function checkStreamingDepartures(titleIds: string[]): Promise<void
           const leaveDate = new Date(leavingAt);
           const now = new Date();
           const leadDays = userSettings.departureAlertLeadDays;
-          const windowStart = new Date(leaveDate.getTime() - leadDays * 24 * 3600 * 1000);
+          const windowStart = new Date(
+            leaveDate.getTime() - leadDays * 24 * 3600 * 1000,
+          );
           if (now < windowStart) {
             // Not yet within the lead-time window — skip for now
             continue;
@@ -160,7 +178,13 @@ export async function checkStreamingDepartures(titleIds: string[]): Promise<void
         }
 
         // Mark departure as alerted (dedup for this user+title+provider combo)
-        await markAlerted(userId, titleId, pid, provider.providerName, "departure");
+        await markAlerted(
+          userId,
+          titleId,
+          pid,
+          provider.providerName,
+          "departure",
+        );
       }
     }
   }

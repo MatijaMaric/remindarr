@@ -4,7 +4,9 @@ import { MemoryRouter } from "react-router";
 import ProfileBadgesSummary from "./ProfileBadgesSummary";
 import type { UserAchievement } from "../../types";
 
-function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievement {
+function makeAchievement(
+  overrides: Partial<UserAchievement> = {},
+): UserAchievement {
   return {
     key: "movies_10",
     kind: "count_movies",
@@ -32,7 +34,7 @@ function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievem
 function renderSummary(
   achievements: UserAchievement[],
   mode: "self" | "other" = "self",
-  viewAllHref = "/achievements"
+  viewAllHref = "/achievements",
 ) {
   return render(
     <MemoryRouter>
@@ -41,7 +43,7 @@ function renderSummary(
         mode={mode}
         viewAllHref={viewAllHref}
       />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -111,7 +113,9 @@ describe("ProfileBadgesSummary", () => {
     const tiles = screen.getAllByRole("link");
     // The 3 badge tiles + the view all link
     // Filter out the view all link (it has text content)
-    const badgeTiles = tiles.filter((el) => !el.textContent?.includes("View all"));
+    const badgeTiles = tiles.filter(
+      (el) => !el.textContent?.includes("View all"),
+    );
     expect(badgeTiles).toHaveLength(3);
     // First tile should be the most recently earned (earned3 — Cinephile III)
     expect(screen.getByText("Cinephile III")).toBeDefined();
@@ -129,7 +133,9 @@ describe("ProfileBadgesSummary", () => {
   test("shows View all link with other user href", () => {
     renderSummary([earned1], "other", "/u/alice/achievements");
     const link = screen.getByText("View all achievements →");
-    expect(link.closest("a")?.getAttribute("href")).toBe("/u/alice/achievements");
+    expect(link.closest("a")?.getAttribute("href")).toBe(
+      "/u/alice/achievements",
+    );
   });
 
   test("returns null when achievements array is empty", () => {

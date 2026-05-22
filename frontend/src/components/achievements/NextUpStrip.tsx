@@ -8,7 +8,11 @@ export interface NextUpStripProps {
   baseHref?: string;
 }
 
-export function NextUpStrip({ achievements, mode, baseHref }: NextUpStripProps) {
+export function NextUpStrip({
+  achievements,
+  mode,
+  baseHref,
+}: NextUpStripProps) {
   const inProgress = achievements
     .filter((a) => !a.earned && a.progress > 0)
     .sort((a, b) => b.progress / b.threshold - a.progress / a.threshold)

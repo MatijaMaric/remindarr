@@ -32,7 +32,8 @@ app.post("/", zValidator("json", imdbBodySchema), async (c) => {
 
     return ok(c, { title });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "An unexpected error occurred";
+    const message =
+      e instanceof Error ? e.message : "An unexpected error occurred";
     return err(c, message, 500);
   }
 });

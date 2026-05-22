@@ -12,7 +12,8 @@ export async function logWatch(
 ): Promise<void> {
   return traceDbQuery("logWatch", async () => {
     const db = getDb();
-    await db.insert(watchHistory)
+    await db
+      .insert(watchHistory)
       .values({
         id: randomUUID(),
         userId,
@@ -24,13 +25,18 @@ export async function logWatch(
   });
 }
 
-export async function getTitlePlayCount(userId: string, titleId: string): Promise<number> {
+export async function getTitlePlayCount(
+  userId: string,
+  titleId: string,
+): Promise<number> {
   return traceDbQuery("getTitlePlayCount", async () => {
     const db = getDb();
     const row = await db
       .select({ cnt: count() })
       .from(watchHistory)
-      .where(and(eq(watchHistory.userId, userId), eq(watchHistory.titleId, titleId)))
+      .where(
+        and(eq(watchHistory.userId, userId), eq(watchHistory.titleId, titleId)),
+      )
       .get();
     return row?.cnt ?? 0;
   });
@@ -39,7 +45,13 @@ export async function getTitlePlayCount(userId: string, titleId: string): Promis
 export async function getWatchHistoryById(
   id: string,
   userId: string,
-): Promise<{ id: string; userId: string; titleId: string; episodeId: number | null; watchedAt: string } | null> {
+): Promise<{
+  id: string;
+  userId: string;
+  titleId: string;
+  episodeId: number | null;
+  watchedAt: string;
+} | null> {
   return traceDbQuery("getWatchHistoryById", async () => {
     const db = getDb();
     const row = await db
@@ -82,7 +94,9 @@ export async function getLatestWatchHistoryFor(
     const conditions = [
       eq(watchHistory.userId, userId),
       eq(watchHistory.titleId, titleId),
-      episodeId === null ? isNull(watchHistory.episodeId) : eq(watchHistory.episodeId, episodeId),
+      episodeId === null
+        ? isNull(watchHistory.episodeId)
+        : eq(watchHistory.episodeId, episodeId),
     ];
     const row = await db
       .select({ watchedAt: watchHistory.watchedAt })
@@ -98,9 +112,18 @@ export async function getLatestWatchHistoryFor(
 export async function getTitleWatchHistory(
   userId: string,
   titleId: string,
-  options: { limit?: number; before?: string | null; episodeId?: number | null } = {},
+  options: {
+    limit?: number;
+    before?: string | null;
+    episodeId?: number | null;
+  } = {},
 ): Promise<{
-  history: { id: string; watchedAt: string; episodeId: number | null; note: string | null }[];
+  history: {
+    id: string;
+    watchedAt: string;
+    episodeId: number | null;
+    note: string | null;
+  }[];
   has_more: boolean;
   next_cursor: string | null;
 }> {
@@ -149,7 +172,8 @@ export async function getTitleWatchHistory(
     const has_more = rows.length > limit;
     const page = rows.slice(0, limit);
     const last = page[page.length - 1];
-    const next_cursor = has_more && last ? `${last.watchedAt}|${last.id}` : null;
+    const next_cursor =
+      has_more && last ? `${last.watchedAt}|${last.id}` : null;
     return { history: page, has_more, next_cursor };
   });
 }

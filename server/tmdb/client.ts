@@ -25,7 +25,10 @@ import type {
   TmdbCollectionDetails,
 } from "./types";
 
-async function tmdbRequest<T>(path: string, params?: Record<string, string>): Promise<T> {
+async function tmdbRequest<T>(
+  path: string,
+  params?: Record<string, string>,
+): Promise<T> {
   const url = new URL(`${CONFIG.TMDB_BASE_URL}${path}`);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -34,7 +37,10 @@ async function tmdbRequest<T>(path: string, params?: Record<string, string>): Pr
   }
   return traceHttp("GET", url.toString(), async () => {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CONFIG.TMDB_API_TIMEOUT_MS);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      CONFIG.TMDB_API_TIMEOUT_MS,
+    );
     const startMs = Date.now();
     try {
       const res = await httpFetch(url.toString(), {
@@ -75,17 +81,26 @@ export function tmdbLanguage(): string {
 
 // ─── Episode endpoints (existing) ───────────────────────────────────────────
 
-export async function fetchShowDetails(tmdbId: string): Promise<TmdbShowDetails> {
+export async function fetchShowDetails(
+  tmdbId: string,
+): Promise<TmdbShowDetails> {
   return tmdbRequest<TmdbShowDetails>(`/tv/${tmdbId}`);
 }
 
-export async function fetchSeasonEpisodes(tmdbId: string, seasonNumber: number): Promise<TmdbSeasonResponse> {
-  return tmdbRequest<TmdbSeasonResponse>(`/tv/${tmdbId}/season/${seasonNumber}`);
+export async function fetchSeasonEpisodes(
+  tmdbId: string,
+  seasonNumber: number,
+): Promise<TmdbSeasonResponse> {
+  return tmdbRequest<TmdbSeasonResponse>(
+    `/tv/${tmdbId}/season/${seasonNumber}`,
+  );
 }
 
 // ─── Detail endpoints (with watch providers + external IDs) ─────────────────
 
-export async function fetchMovieDetails(tmdbId: number): Promise<TmdbMovieDetails> {
+export async function fetchMovieDetails(
+  tmdbId: number,
+): Promise<TmdbMovieDetails> {
   return tmdbRequest<TmdbMovieDetails>(`/movie/${tmdbId}`, {
     language: tmdbLanguage(),
     append_to_response: "watch/providers,external_ids",
@@ -101,41 +116,58 @@ export async function fetchTvDetails(tmdbId: number): Promise<TmdbTvDetails> {
 
 // ─── Full detail endpoints (for detail pages with credits, release dates) ───
 
-export async function fetchMovieFullDetails(tmdbId: string): Promise<TmdbMovieFullDetails> {
+export async function fetchMovieFullDetails(
+  tmdbId: string,
+): Promise<TmdbMovieFullDetails> {
   return tmdbRequest<TmdbMovieFullDetails>(`/movie/${tmdbId}`, {
     language: tmdbLanguage(),
-    append_to_response: "credits,release_dates,watch/providers,external_ids,videos",
+    append_to_response:
+      "credits,release_dates,watch/providers,external_ids,videos",
   });
 }
 
-export async function fetchShowFullDetails(tmdbId: string): Promise<TmdbShowFullDetails> {
+export async function fetchShowFullDetails(
+  tmdbId: string,
+): Promise<TmdbShowFullDetails> {
   return tmdbRequest<TmdbShowFullDetails>(`/tv/${tmdbId}`, {
     language: tmdbLanguage(),
-    append_to_response: "credits,content_ratings,watch/providers,external_ids,videos",
+    append_to_response:
+      "credits,content_ratings,watch/providers,external_ids,videos",
   });
 }
 
-export async function fetchSeasonDetails(tmdbId: string, seasonNumber: number): Promise<TmdbSeasonDetails> {
-  return tmdbRequest<TmdbSeasonDetails>(`/tv/${tmdbId}/season/${seasonNumber}`, {
-    language: tmdbLanguage(),
-    append_to_response: "credits",
-  });
+export async function fetchSeasonDetails(
+  tmdbId: string,
+  seasonNumber: number,
+): Promise<TmdbSeasonDetails> {
+  return tmdbRequest<TmdbSeasonDetails>(
+    `/tv/${tmdbId}/season/${seasonNumber}`,
+    {
+      language: tmdbLanguage(),
+      append_to_response: "credits",
+    },
+  );
 }
 
 export async function fetchEpisodeDetails(
   tmdbId: string,
   seasonNumber: number,
-  episodeNumber: number
+  episodeNumber: number,
 ): Promise<TmdbEpisodeDetails> {
-  return tmdbRequest<TmdbEpisodeDetails>(`/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`, {
-    language: tmdbLanguage(),
-    append_to_response: "credits",
-  });
+  return tmdbRequest<TmdbEpisodeDetails>(
+    `/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`,
+    {
+      language: tmdbLanguage(),
+      append_to_response: "credits",
+    },
+  );
 }
 
 // ─── Person endpoints ────────────────────────────────────────────────────────
 
-export async function fetchPersonDetails(personId: number): Promise<TmdbPersonDetails> {
+export async function fetchPersonDetails(
+  personId: number,
+): Promise<TmdbPersonDetails> {
   return tmdbRequest<TmdbPersonDetails>(`/person/${personId}`, {
     language: tmdbLanguage(),
     append_to_response: "combined_credits,external_ids",
@@ -145,12 +177,12 @@ export async function fetchPersonDetails(personId: number): Promise<TmdbPersonDe
 // ─── Discover endpoints ─────────────────────────────────────────────────────
 
 export interface DiscoverFilters {
-  withGenres?: string;       // comma-separated TMDB genre IDs
-  withProviders?: string;    // comma-separated TMDB provider IDs
+  withGenres?: string; // comma-separated TMDB genre IDs
+  withProviders?: string; // comma-separated TMDB provider IDs
   withOriginalLanguage?: string; // ISO 639-1 language code
-  yearMin?: number;          // earliest release/first-air year (inclusive)
-  yearMax?: number;          // latest release/first-air year (inclusive)
-  voteAverageGte?: number;   // minimum TMDB vote average
+  yearMin?: number; // earliest release/first-air year (inclusive)
+  yearMax?: number; // latest release/first-air year (inclusive)
+  voteAverageGte?: number; // minimum TMDB vote average
 }
 
 export async function discoverMovies(options: {
@@ -184,11 +216,18 @@ export async function discoverMovies(options: {
   }
   if (dateGte) params["release_date.gte"] = dateGte;
   if (dateLte) params["release_date.lte"] = dateLte;
-  if (options.filters?.withGenres) params["with_genres"] = options.filters.withGenres;
-  if (options.filters?.withProviders) params["with_watch_providers"] = options.filters.withProviders;
-  if (options.filters?.withOriginalLanguage) params["with_original_language"] = options.filters.withOriginalLanguage;
-  if (options.filters?.voteAverageGte != null) params["vote_average.gte"] = String(options.filters.voteAverageGte);
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/discover/movie", params);
+  if (options.filters?.withGenres)
+    params["with_genres"] = options.filters.withGenres;
+  if (options.filters?.withProviders)
+    params["with_watch_providers"] = options.filters.withProviders;
+  if (options.filters?.withOriginalLanguage)
+    params["with_original_language"] = options.filters.withOriginalLanguage;
+  if (options.filters?.voteAverageGte != null)
+    params["vote_average.gte"] = String(options.filters.voteAverageGte);
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>(
+    "/discover/movie",
+    params,
+  );
 }
 
 export async function discoverTv(options: {
@@ -219,72 +258,112 @@ export async function discoverTv(options: {
   }
   if (dateGte) params["first_air_date.gte"] = dateGte;
   if (dateLte) params["first_air_date.lte"] = dateLte;
-  if (options.filters?.withGenres) params["with_genres"] = options.filters.withGenres;
-  if (options.filters?.withProviders) params["with_watch_providers"] = options.filters.withProviders;
-  if (options.filters?.withOriginalLanguage) params["with_original_language"] = options.filters.withOriginalLanguage;
-  if (options.filters?.voteAverageGte != null) params["vote_average.gte"] = String(options.filters.voteAverageGte);
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/discover/tv", params);
+  if (options.filters?.withGenres)
+    params["with_genres"] = options.filters.withGenres;
+  if (options.filters?.withProviders)
+    params["with_watch_providers"] = options.filters.withProviders;
+  if (options.filters?.withOriginalLanguage)
+    params["with_original_language"] = options.filters.withOriginalLanguage;
+  if (options.filters?.voteAverageGte != null)
+    params["vote_average.gte"] = String(options.filters.voteAverageGte);
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>(
+    "/discover/tv",
+    params,
+  );
 }
 
 // ─── Category endpoints (popular, upcoming, top rated) ─────────────────────
 
-export async function fetchPopularMovies(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/movie/popular", {
-    language: tmdbLanguage(),
-    region: CONFIG.COUNTRY,
-    page: String(page),
-  });
+export async function fetchPopularMovies(
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>(
+    "/movie/popular",
+    {
+      language: tmdbLanguage(),
+      region: CONFIG.COUNTRY,
+      page: String(page),
+    },
+  );
 }
 
-export async function fetchPopularTv(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/tv/popular", {
-    language: tmdbLanguage(),
-    page: String(page),
-  });
+export async function fetchPopularTv(
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>(
+    "/tv/popular",
+    {
+      language: tmdbLanguage(),
+      page: String(page),
+    },
+  );
 }
 
-export async function fetchUpcomingMovies(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/movie/upcoming", {
-    language: tmdbLanguage(),
-    region: CONFIG.COUNTRY,
-    page: String(page),
-  });
+export async function fetchUpcomingMovies(
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>(
+    "/movie/upcoming",
+    {
+      language: tmdbLanguage(),
+      region: CONFIG.COUNTRY,
+      page: String(page),
+    },
+  );
 }
 
-export async function fetchOnTheAirTv(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/tv/on_the_air", {
-    language: tmdbLanguage(),
-    page: String(page),
-  });
+export async function fetchOnTheAirTv(
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>(
+    "/tv/on_the_air",
+    {
+      language: tmdbLanguage(),
+      page: String(page),
+    },
+  );
 }
 
-export async function fetchTopRatedMovies(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>("/movie/top_rated", {
-    language: tmdbLanguage(),
-    region: CONFIG.COUNTRY,
-    page: String(page),
-  });
+export async function fetchTopRatedMovies(
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverMovieResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverMovieResult>>(
+    "/movie/top_rated",
+    {
+      language: tmdbLanguage(),
+      region: CONFIG.COUNTRY,
+      page: String(page),
+    },
+  );
 }
 
-export async function fetchTopRatedTv(page = 1): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
-  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>("/tv/top_rated", {
-    language: tmdbLanguage(),
-    page: String(page),
-  });
+export async function fetchTopRatedTv(
+  page = 1,
+): Promise<TmdbDiscoverResponse<TmdbDiscoverTvResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbDiscoverTvResult>>(
+    "/tv/top_rated",
+    {
+      language: tmdbLanguage(),
+      page: String(page),
+    },
+  );
 }
 
 // ─── Search ─────────────────────────────────────────────────────────────────
 
 export async function searchMulti(
   query: string,
-  page = 1
+  page = 1,
 ): Promise<TmdbDiscoverResponse<TmdbSearchMultiResult>> {
-  return tmdbRequest<TmdbDiscoverResponse<TmdbSearchMultiResult>>("/search/multi", {
-    query,
-    language: tmdbLanguage(),
-    region: CONFIG.COUNTRY,
-    page: String(page),
-  });
+  return tmdbRequest<TmdbDiscoverResponse<TmdbSearchMultiResult>>(
+    "/search/multi",
+    {
+      query,
+      language: tmdbLanguage(),
+      region: CONFIG.COUNTRY,
+      page: String(page),
+    },
+  );
 }
 
 // ─── Find by external ID ────────────────────────────────────────────────────
@@ -325,21 +404,34 @@ async function cachedTmdbRequest<T>(
 
 // ─── Cached detail endpoints (for browse fan-out) ───────────────────────────
 
-export async function cachedFetchMovieDetails(tmdbId: number): Promise<TmdbMovieDetails> {
+export async function cachedFetchMovieDetails(
+  tmdbId: number,
+): Promise<TmdbMovieDetails> {
   const key = `tmdb:details:movie:${tmdbId}:${tmdbLanguage()}`;
-  return cachedTmdbRequest(key, CONFIG.CACHE_TTL_DETAILS, () => fetchMovieDetails(tmdbId));
+  return cachedTmdbRequest(key, CONFIG.CACHE_TTL_DETAILS, () =>
+    fetchMovieDetails(tmdbId),
+  );
 }
 
-export async function cachedFetchTvDetails(tmdbId: number): Promise<TmdbTvDetails> {
+export async function cachedFetchTvDetails(
+  tmdbId: number,
+): Promise<TmdbTvDetails> {
   const key = `tmdb:details:tv:${tmdbId}:${tmdbLanguage()}`;
-  return cachedTmdbRequest(key, CONFIG.CACHE_TTL_DETAILS, () => fetchTvDetails(tmdbId));
+  return cachedTmdbRequest(key, CONFIG.CACHE_TTL_DETAILS, () =>
+    fetchTvDetails(tmdbId),
+  );
 }
 
-export async function fetchCollection(collectionId: number): Promise<TmdbCollectionDetails> {
+export async function fetchCollection(
+  collectionId: number,
+): Promise<TmdbCollectionDetails> {
   return cachedTmdbRequest(
     `tmdb:collection:${collectionId}:${tmdbLanguage()}`,
     CONFIG.CACHE_TTL_DETAILS,
-    () => tmdbRequest<TmdbCollectionDetails>(`/collection/${collectionId}`, { language: tmdbLanguage() }),
+    () =>
+      tmdbRequest<TmdbCollectionDetails>(`/collection/${collectionId}`, {
+        language: tmdbLanguage(),
+      }),
   );
 }
 
@@ -382,9 +474,12 @@ export async function getMovieGenres(): Promise<Map<number, string>> {
     `tmdb:genres:movie:${tmdbLanguage()}`,
     CONFIG.CACHE_TTL_GENRES,
     async () => {
-      const data = await tmdbRequest<TmdbGenreListResponse>("/genre/movie/list", {
-        language: tmdbLanguage(),
-      });
+      const data = await tmdbRequest<TmdbGenreListResponse>(
+        "/genre/movie/list",
+        {
+          language: tmdbLanguage(),
+        },
+      );
       return data.genres.map((g) => [g.id, g.name]);
     },
   );
@@ -407,15 +502,20 @@ export async function getTvGenres(): Promise<Map<number, string>> {
 
 // ─── Watch provider lists (for filter dropdowns) ────────────────────────────
 
-export async function getMovieWatchProviders(): Promise<{ id: number; name: string; iconUrl: string }[]> {
+export async function getMovieWatchProviders(): Promise<
+  { id: number; name: string; iconUrl: string }[]
+> {
   return cachedTmdbRequest(
     `tmdb:providers:movie:${CONFIG.COUNTRY}:${tmdbLanguage()}`,
     CONFIG.CACHE_TTL_PROVIDERS,
     async () => {
-      const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/movie", {
-        watch_region: CONFIG.COUNTRY,
-        language: tmdbLanguage(),
-      });
+      const data = await tmdbRequest<TmdbWatchProviderListResponse>(
+        "/watch/providers/movie",
+        {
+          watch_region: CONFIG.COUNTRY,
+          language: tmdbLanguage(),
+        },
+      );
       return data.results.map((p) => ({
         id: p.provider_id,
         name: p.provider_name,
@@ -425,15 +525,20 @@ export async function getMovieWatchProviders(): Promise<{ id: number; name: stri
   );
 }
 
-export async function getTvWatchProviders(): Promise<{ id: number; name: string; iconUrl: string }[]> {
+export async function getTvWatchProviders(): Promise<
+  { id: number; name: string; iconUrl: string }[]
+> {
   return cachedTmdbRequest(
     `tmdb:providers:tv:${CONFIG.COUNTRY}:${tmdbLanguage()}`,
     CONFIG.CACHE_TTL_PROVIDERS,
     async () => {
-      const data = await tmdbRequest<TmdbWatchProviderListResponse>("/watch/providers/tv", {
-        watch_region: CONFIG.COUNTRY,
-        language: tmdbLanguage(),
-      });
+      const data = await tmdbRequest<TmdbWatchProviderListResponse>(
+        "/watch/providers/tv",
+        {
+          watch_region: CONFIG.COUNTRY,
+          language: tmdbLanguage(),
+        },
+      );
       return data.results.map((p) => ({
         id: p.provider_id,
         name: p.provider_name,
@@ -445,12 +550,16 @@ export async function getTvWatchProviders(): Promise<{ id: number; name: string;
 
 // ─── Language list ──────────────────────────────────────────────────────────
 
-export async function getLanguages(): Promise<{ code: string; name: string }[]> {
+export async function getLanguages(): Promise<
+  { code: string; name: string }[]
+> {
   return cachedTmdbRequest(
     "tmdb:languages",
     CONFIG.CACHE_TTL_LANGUAGES,
     async () => {
-      const data = await tmdbRequest<TmdbLanguage[]>("/configuration/languages");
+      const data = await tmdbRequest<TmdbLanguage[]>(
+        "/configuration/languages",
+      );
       return data
         .map((l) => ({ code: l.iso_639_1, name: l.english_name }))
         .filter((l) => l.name && l.name !== "No Language")

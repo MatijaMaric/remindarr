@@ -6,7 +6,9 @@ import type { ReactNode } from "react";
 import type { StatsResponse } from "../types";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 const baseStats: StatsResponse = {
@@ -39,7 +41,9 @@ const mockGetStats = mock(() => Promise.resolve(baseStats));
 mock.module("../api", () => ({
   getStats: mockGetStats,
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
   getMovieDetails: mock(() => Promise.resolve({})),
   getShowDetails: mock(() => Promise.resolve({})),
 }));
@@ -74,7 +78,7 @@ describe("StatsPage", () => {
       Promise.resolve({
         ...baseStats,
         pace: { minutesPerDay: null, watchlistEtaDays: null },
-      })
+      }),
     );
     render(<StatsPage />, { wrapper: Wrapper });
     await waitFor(() => {
@@ -88,7 +92,7 @@ describe("StatsPage", () => {
       Promise.resolve({
         ...baseStats,
         pace: { minutesPerDay: 60, watchlistEtaDays: 5 },
-      })
+      }),
     );
     render(<StatsPage />, { wrapper: Wrapper });
     await waitFor(() => {

@@ -6,7 +6,10 @@ import type { NotificationContent, NotificationProvider } from "./types";
 export class WebhookProvider implements NotificationProvider {
   readonly name = "webhook";
 
-  validateConfig(config: Record<string, string>): { valid: boolean; error?: string } {
+  validateConfig(config: Record<string, string>): {
+    valid: boolean;
+    error?: string;
+  } {
     if (!config.url) {
       return { valid: false, error: "Webhook URL is required" };
     }
@@ -21,9 +24,23 @@ export class WebhookProvider implements NotificationProvider {
     return { valid: true };
   }
 
-  async send(config: Record<string, string>, content: NotificationContent): Promise<void> {
-    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return;
+  async send(
+    config: Record<string, string>,
+    content: NotificationContent,
+  ): Promise<void> {
+    const {
+      episodes,
+      movies,
+      streamingAlerts = [],
+      achievementsEarned = [],
+    } = content;
+    if (
+      episodes.length === 0 &&
+      movies.length === 0 &&
+      streamingAlerts.length === 0 &&
+      achievementsEarned.length === 0
+    )
+      return;
 
     const payload = this.buildPayload(content);
     const body = JSON.stringify(payload);
@@ -52,18 +69,29 @@ export class WebhookProvider implements NotificationProvider {
   }
 
   private buildPayload(content: NotificationContent) {
-    const { episodes, movies, date, streamingAlerts = [], achievementsEarned = [] } = content;
+    const {
+      episodes,
+      movies,
+      date,
+      streamingAlerts = [],
+      achievementsEarned = [],
+    } = content;
 
     const summaryLines: string[] = [];
     const showMap = groupEpisodesByShow(episodes);
     for (const [showTitle, eps] of showMap) {
       const codes = eps.map(
-        (ep) => `S${String(ep.seasonNumber).padStart(2, "0")}E${String(ep.episodeNumber).padStart(2, "0")}`
+        (ep) =>
+          `S${String(ep.seasonNumber).padStart(2, "0")}E${String(ep.episodeNumber).padStart(2, "0")}`,
       );
       summaryLines.push(`${showTitle} ${codes.join(", ")}`);
     }
     for (const movie of movies) {
-      summaryLines.push(movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title);
+      summaryLines.push(
+        movie.releaseYear
+          ? `${movie.title} (${movie.releaseYear})`
+          : movie.title,
+      );
     }
 
     const total = episodes.length + movies.length + streamingAlerts.length;
@@ -110,9 +138,18 @@ export class WebhookProvider implements NotificationProvider {
       encoder.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
-    const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-    return "sha256=" + Array.from(new Uint8Array(signature)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const signature = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(body),
+    );
+    return (
+      "sha256=" +
+      Array.from(new Uint8Array(signature))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+    );
   }
 }

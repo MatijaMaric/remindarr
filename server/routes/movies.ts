@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
-import { getReleasedUnwatchedTrackedMovies, getUpcomingTrackedMoviesOpen } from "../db/repository";
+import {
+  getReleasedUnwatchedTrackedMovies,
+  getUpcomingTrackedMoviesOpen,
+} from "../db/repository";
 
 const app = new Hono<AppEnv>();
 

@@ -9,7 +9,9 @@ describe("ExternalLinks", () => {
     render(<ExternalLinks tmdbId={123} type="movie" />);
     const link = screen.getByTestId("external-link-tmdb");
     expect(link).toBeTruthy();
-    expect(link.getAttribute("href")).toBe("https://www.themoviedb.org/movie/123");
+    expect(link.getAttribute("href")).toBe(
+      "https://www.themoviedb.org/movie/123",
+    );
   });
 
   it("renders all links when all IDs are present", () => {
@@ -19,7 +21,9 @@ describe("ExternalLinks", () => {
       instagram_id: "testmovie",
       twitter_id: "testmovie",
     };
-    render(<ExternalLinks externalIds={externalIds} tmdbId={456} type="movie" />);
+    render(
+      <ExternalLinks externalIds={externalIds} tmdbId={456} type="movie" />,
+    );
 
     expect(screen.getByTestId("external-link-tmdb").getAttribute("href")).toBe(
       "https://www.themoviedb.org/movie/456",
@@ -27,15 +31,15 @@ describe("ExternalLinks", () => {
     expect(screen.getByTestId("external-link-imdb").getAttribute("href")).toBe(
       "https://www.imdb.com/title/tt1234567",
     );
-    expect(screen.getByTestId("external-link-instagram").getAttribute("href")).toBe(
-      "https://www.instagram.com/testmovie",
-    );
+    expect(
+      screen.getByTestId("external-link-instagram").getAttribute("href"),
+    ).toBe("https://www.instagram.com/testmovie");
     expect(screen.getByTestId("external-link-x").getAttribute("href")).toBe(
       "https://x.com/testmovie",
     );
-    expect(screen.getByTestId("external-link-facebook").getAttribute("href")).toBe(
-      "https://www.facebook.com/TestMovie",
-    );
+    expect(
+      screen.getByTestId("external-link-facebook").getAttribute("href"),
+    ).toBe("https://www.facebook.com/TestMovie");
   });
 
   it("hides links with null IDs", () => {
@@ -56,7 +60,9 @@ describe("ExternalLinks", () => {
 
   it("uses /name/ path for person IMDB links", () => {
     const externalIds = { imdb_id: "nm1234567" };
-    render(<ExternalLinks externalIds={externalIds} tmdbId={42} type="person" />);
+    render(
+      <ExternalLinks externalIds={externalIds} tmdbId={42} type="person" />,
+    );
 
     expect(screen.getByTestId("external-link-imdb").getAttribute("href")).toBe(
       "https://www.imdb.com/name/nm1234567",
@@ -68,7 +74,9 @@ describe("ExternalLinks", () => {
 
   it("uses /title/ path for movie IMDB links", () => {
     const externalIds = { imdb_id: "tt9999999" };
-    render(<ExternalLinks externalIds={externalIds} tmdbId={100} type="movie" />);
+    render(
+      <ExternalLinks externalIds={externalIds} tmdbId={100} type="movie" />,
+    );
 
     expect(screen.getByTestId("external-link-imdb").getAttribute("href")).toBe(
       "https://www.imdb.com/title/tt9999999",
@@ -99,6 +107,8 @@ describe("ExternalLinks", () => {
     // Should only show TMDB link
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(1);
-    expect(links[0].getAttribute("href")).toBe("https://www.themoviedb.org/movie/999");
+    expect(links[0].getAttribute("href")).toBe(
+      "https://www.themoviedb.org/movie/999",
+    );
   });
 });

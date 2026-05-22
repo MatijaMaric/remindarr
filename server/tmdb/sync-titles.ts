@@ -30,7 +30,11 @@ export async function fetchNewReleases(options: {
   objectType?: "MOVIE" | "SHOW";
   maxPages?: number;
 }): Promise<ParsedTitle[]> {
-  const { daysBack = CONFIG.DEFAULT_DAYS_BACK, objectType, maxPages = 5 } = options;
+  const {
+    daysBack = CONFIG.DEFAULT_DAYS_BACK,
+    objectType,
+    maxPages = 5,
+  } = options;
 
   const dateGte = dateString(daysBack);
   const dateLte = new Date().toISOString().slice(0, 10);
@@ -54,10 +58,14 @@ export async function fetchNewReleases(options: {
         delayMs: CONFIG.PAGE_DELAY_MS,
         label: "sync-titles:movie",
         log,
-        onItem: async (movie) => parseMovieDetails(await fetchMovieDetails(movie.id)),
+        onItem: async (movie) =>
+          parseMovieDetails(await fetchMovieDetails(movie.id)),
         onError: (err, movie) => {
           // Fallback to discover data without watch providers
-          log.error("Failed to fetch movie details", { movieId: movie.id, err });
+          log.error("Failed to fetch movie details", {
+            movieId: movie.id,
+            err,
+          });
           return { result: parseDiscoverMovie(movie, movieGenres) };
         },
       });

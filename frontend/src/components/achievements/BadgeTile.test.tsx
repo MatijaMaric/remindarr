@@ -4,7 +4,9 @@ import { MemoryRouter } from "react-router";
 import { BadgeTile } from "./BadgeTile";
 import type { UserAchievement } from "../../types";
 
-function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievement {
+function makeAchievement(
+  overrides: Partial<UserAchievement> = {},
+): UserAchievement {
   return {
     key: "movies_10",
     kind: "count_movies",
@@ -29,11 +31,14 @@ function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievem
   };
 }
 
-function renderTile(achievement: UserAchievement, mode: "self" | "other" = "self") {
+function renderTile(
+  achievement: UserAchievement,
+  mode: "self" | "other" = "self",
+) {
   return render(
     <MemoryRouter>
       <BadgeTile achievement={achievement} mode={mode} />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -44,7 +49,12 @@ describe("BadgeTile", () => {
 
   test("earned tile renders tier ring class for bronze (rungIndex=0)", () => {
     const { container } = renderTile(
-      makeAchievement({ earned: true, earnedAt: "2024-01-01T00:00:00Z", earnedCount: 1, progress: 10 })
+      makeAchievement({
+        earned: true,
+        earnedAt: "2024-01-01T00:00:00Z",
+        earnedCount: 1,
+        progress: 10,
+      }),
     );
     // rungIndex=0 → bronze → ring-2 ring-amber-700/40
     const link = container.querySelector("a");
@@ -56,7 +66,7 @@ describe("BadgeTile", () => {
   test("locked tile in mode=self renders at 60% opacity", () => {
     const { container } = renderTile(
       makeAchievement({ earned: false, progress: 5 }),
-      "self"
+      "self",
     );
     const link = container.querySelector("a");
     expect(link).toBeDefined();
@@ -66,7 +76,7 @@ describe("BadgeTile", () => {
   test("locked tile in mode=other renders nothing", () => {
     const { container } = renderTile(
       makeAchievement({ earned: false, progress: 0 }),
-      "other"
+      "other",
     );
     expect(container.firstChild).toBeNull();
   });
@@ -78,7 +88,7 @@ describe("BadgeTile", () => {
         earnedAt: "2024-01-01T00:00:00Z",
         earnedCount: 2,
         progress: 10,
-      })
+      }),
     );
     expect(screen.getByText("×2")).toBeDefined();
   });

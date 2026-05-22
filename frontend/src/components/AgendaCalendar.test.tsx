@@ -1,4 +1,12 @@
-import { describe, test, expect, afterEach, mock, beforeEach, spyOn } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  afterEach,
+  mock,
+  beforeEach,
+  spyOn,
+} from "bun:test";
 import { render, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
@@ -12,7 +20,9 @@ import "../i18n";
 const { default: AgendaCalendar } = await import("./AgendaCalendar");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -28,7 +38,13 @@ let apiSpies: ReturnType<typeof spyOn>[];
 
 beforeEach(() => {
   useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
-    user: { id: "u1", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
+    user: {
+      id: "u1",
+      username: "me",
+      display_name: "Me",
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: null,
     loading: false,
     sessionStatus: "authenticated",
@@ -40,20 +56,28 @@ beforeEach(() => {
     refresh: mock(() => Promise.resolve()),
   });
   apiSpies = [
-    spyOn(api, "getCalendarTitles").mockResolvedValue({ titles: [], episodes: [] } as any),
-    spyOn(api, "getCrowdedWeekSettings").mockResolvedValue({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 } as any),
+    spyOn(api, "getCalendarTitles").mockResolvedValue({
+      titles: [],
+      episodes: [],
+    } as any),
+    spyOn(api, "getCrowdedWeekSettings").mockResolvedValue({
+      crowdedWeekThreshold: 5,
+      crowdedWeekBadgeEnabled: 1,
+    } as any),
     spyOn(api, "watchEpisode").mockResolvedValue(undefined as any),
     spyOn(api, "unwatchEpisode").mockResolvedValue(undefined as any),
     spyOn(api, "watchEpisodesBulk").mockResolvedValue(undefined as any),
     spyOn(api, "watchMovie").mockResolvedValue(undefined as any),
     spyOn(api, "unwatchMovie").mockResolvedValue(undefined as any),
-    spyOn(api, "getSubscriptions").mockResolvedValue({ providerIds: [] } as any),
+    spyOn(api, "getSubscriptions").mockResolvedValue({
+      providerIds: [],
+    } as any),
   ];
 });
 
 afterEach(() => {
   useAuthSpy.mockRestore();
-  apiSpies.forEach(s => s.mockRestore());
+  apiSpies.forEach((s) => s.mockRestore());
   cleanup();
 });
 
@@ -67,7 +91,7 @@ describe("AgendaCalendar", () => {
         searchParams={searchParams}
         setSearchParams={setSearchParams as any}
       />,
-      { wrapper: Wrapper }
+      { wrapper: Wrapper },
     );
 
     // Component renders something (even if just a loading state)

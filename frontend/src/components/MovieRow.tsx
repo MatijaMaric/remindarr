@@ -24,7 +24,11 @@ interface MovieRowProps {
 function formatReleaseDate(date: string | null, year: number | null): string {
   if (date) {
     const d = new Date(date + "T00:00:00");
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   }
   return year ? String(year) : "";
 }
@@ -47,7 +51,10 @@ function relativeRelease(date: string | null): string {
   return formatReleaseDate(date, null);
 }
 
-function releaseMeta(variant: "to_watch" | "upcoming", movie: MovieTrackItem): string {
+function releaseMeta(
+  variant: "to_watch" | "upcoming",
+  movie: MovieTrackItem,
+): string {
   if (variant === "to_watch") {
     return movie.release_date
       ? `Released ${relativeRelease(movie.release_date)}`
@@ -91,7 +98,11 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
   return (
     <FullBleedCarousel>
       {visible.map((movie) => (
-        <div key={movie.id} className="w-52 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+        <div
+          key={movie.id}
+          className="w-52 flex-shrink-0"
+          style={{ scrollSnapAlign: "start" }}
+        >
           <MediaCard
             aspect="poster"
             to={`/title/${movie.id}`}

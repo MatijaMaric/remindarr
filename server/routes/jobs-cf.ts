@@ -29,7 +29,7 @@ app.get("/", async (c) => {
 // POST /api/jobs/:name — manually trigger a job
 app.post("/:name", zValidator("param", jobNameParamSchema), async (c) => {
   const { name } = c.req.valid("param");
-  if (!VALID_JOB_NAMES.has(name as typeof CRON_JOBS[number]["name"])) {
+  if (!VALID_JOB_NAMES.has(name as (typeof CRON_JOBS)[number]["name"])) {
     return err(c, `Unknown job: ${name}`, 400);
   }
   const result = await triggerCron(c.env as unknown as CFEnv, name);

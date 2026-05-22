@@ -16,7 +16,9 @@ export default function TitleDetailPage() {
     enabled: !!id,
     queryFn: ({ signal }) => {
       const isShow = id!.startsWith("tv-");
-      return isShow ? api.getShowDetails(id!, signal) : api.getMovieDetails(id!, signal);
+      return isShow
+        ? api.getShowDetails(id!, signal)
+        : api.getMovieDetails(id!, signal);
     },
   });
 

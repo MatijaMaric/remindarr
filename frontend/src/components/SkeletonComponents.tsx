@@ -122,7 +122,10 @@ export function CalendarSkeleton() {
           <Skeleton className="h-8 w-full rounded-none mb-1" />
           <div className="space-y-1 px-2 py-1">
             {Array.from({ length: 3 }).map((_, j) => (
-              <div key={j} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900/60">
+              <div
+                key={j}
+                className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900/60"
+              >
                 <Skeleton className="w-5 h-5 rounded-full shrink-0" />
                 <Skeleton className="w-12 h-8 rounded shrink-0" />
                 <div className="flex-1 space-y-1">
@@ -145,15 +148,24 @@ export function GridCalendarSkeleton() {
     <div className="border border-white/[0.06] rounded-xl overflow-hidden">
       <div className="grid grid-cols-7 bg-zinc-900 border-b border-white/[0.06]">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase">
+          <div
+            key={d}
+            className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase"
+          >
             {d}
           </div>
         ))}
       </div>
       {Array.from({ length: 5 }).map((_, wi) => (
-        <div key={wi} className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0">
+        <div
+          key={wi}
+          className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0"
+        >
           {Array.from({ length: 7 }).map((_, di) => (
-            <div key={di} className="min-h-28 p-1.5 border-r border-white/[0.06] last:border-r-0">
+            <div
+              key={di}
+              className="min-h-28 p-1.5 border-r border-white/[0.06] last:border-r-0"
+            >
               <Skeleton className="h-4 w-4 rounded-full mb-1.5" />
               {di % 3 === 0 && (
                 <div className="flex gap-0.5">

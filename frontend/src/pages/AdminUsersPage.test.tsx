@@ -1,5 +1,19 @@
-import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -13,7 +27,9 @@ import "../i18n";
 const { default: AdminUsersPage } = await import("./AdminUsersPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -78,14 +94,22 @@ const mockBannedUsersResponse: AdminUsersResponse = {
 
 let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
 let getAdminUsersSpy: ReturnType<typeof spyOn<typeof api, "getAdminUsers">>;
-let setAdminUserRoleSpy: ReturnType<typeof spyOn<typeof api, "setAdminUserRole">>;
+let setAdminUserRoleSpy: ReturnType<
+  typeof spyOn<typeof api, "setAdminUserRole">
+>;
 let banAdminUserSpy: ReturnType<typeof spyOn<typeof api, "banAdminUser">>;
 let unbanAdminUserSpy: ReturnType<typeof spyOn<typeof api, "unbanAdminUser">>;
 let deleteAdminUserSpy: ReturnType<typeof spyOn<typeof api, "deleteAdminUser">>;
 
 beforeEach(() => {
   useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
-    user: { id: "admin-1", username: "admin", display_name: "Admin", auth_provider: "local", is_admin: true },
+    user: {
+      id: "admin-1",
+      username: "admin",
+      display_name: "Admin",
+      auth_provider: "local",
+      is_admin: true,
+    },
     providers: { local: true, oidc: null },
     loading: false,
     sessionStatus: "authenticated",
@@ -207,7 +231,9 @@ describe("AdminUsersPage", () => {
     });
 
     // Click the confirm button in the modal (the <button> with text "Ban User")
-    const confirmButton = screen.getAllByRole("button", { name: "Ban User" })[0];
+    const confirmButton = screen.getAllByRole("button", {
+      name: "Ban User",
+    })[0];
     fireEvent.click(confirmButton);
 
     await waitFor(() => {

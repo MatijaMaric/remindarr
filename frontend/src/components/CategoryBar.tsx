@@ -1,6 +1,10 @@
 import { Pill } from "../components/design";
 
-export type BrowseCategory = "new_releases" | "popular" | "upcoming" | "top_rated";
+export type BrowseCategory =
+  | "new_releases"
+  | "popular"
+  | "upcoming"
+  | "top_rated";
 
 const CATEGORIES: { value: BrowseCategory; label: string }[] = [
   { value: "popular", label: "Popular" },

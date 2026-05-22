@@ -2,11 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="Remindarr tracks upcoming movies and TV releases on your streaming services and reminds you when new episodes air." />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Remindarr tracks upcoming movies and TV releases on your streaming services and reminds you when new episodes air."
+    />
     <meta name="theme-color" content="#0f1628" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <title>Remindarr</title>
@@ -14,13 +23,23 @@
   <body>
     <script>
       (function () {
-        var theme = localStorage.getItem('remindarr-theme');
-        var valid = ['dark', 'light', 'oled', 'midnight', 'moss', 'plum', 'auto'];
-        if (!theme || valid.indexOf(theme) === -1) theme = 'dark';
-        if (theme === 'auto') {
-          theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        var theme = localStorage.getItem("remindarr-theme");
+        var valid = [
+          "dark",
+          "light",
+          "oled",
+          "midnight",
+          "moss",
+          "plum",
+          "auto",
+        ];
+        if (!theme || valid.indexOf(theme) === -1) theme = "dark";
+        if (theme === "auto") {
+          theme = window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
         }
-        document.documentElement.classList.add('theme-' + theme);
+        document.documentElement.classList.add("theme-" + theme);
       })();
     </script>
     <div id="root"></div>

@@ -1,8 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
-import { upsertTitles, trackTitle, createUser, setSubscribedProviderIds } from "../db/repository";
+import {
+  upsertTitles,
+  trackTitle,
+  createUser,
+  setSubscribedProviderIds,
+} from "../db/repository";
 import titlesApp from "./titles";
 import type { AppEnv } from "../types";
 import * as tmdbClient from "../tmdb/client";
@@ -17,10 +30,18 @@ beforeEach(() => {
 
   spies = [
     spyOn(tmdbClient, "getMovieWatchProviders").mockResolvedValue([
-      { id: 8, name: "Netflix", iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg" },
+      {
+        id: 8,
+        name: "Netflix",
+        iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg",
+      },
     ]),
     spyOn(tmdbClient, "getTvWatchProviders").mockResolvedValue([
-      { id: 8, name: "Netflix", iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg" },
+      {
+        id: 8,
+        name: "Netflix",
+        iconUrl: "https://image.tmdb.org/t/p/w92/nf.jpg",
+      },
     ]),
   ];
 });
@@ -52,8 +73,17 @@ describe("GET /titles", () => {
   it("filters by type", async () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: today }),
-      makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: today }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "tv-1",
+        objectType: "SHOW",
+        title: "Show",
+        releaseDate: today,
+      }),
     ]);
 
     const res = await app.request("/titles?daysBack=365&type=SHOW");
@@ -72,8 +102,17 @@ describe("GET /titles", () => {
   it("filters by genre", async () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", genres: ["Action"], releaseDate: today }),
-      makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: today }),
+      makeParsedTitle({
+        id: "movie-1",
+        genres: ["Action"],
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Comedy Film",
+        genres: ["Comedy"],
+        releaseDate: today,
+      }),
     ]);
 
     const res = await app.request("/titles?daysBack=365&genre=Comedy");
@@ -85,8 +124,17 @@ describe("GET /titles", () => {
   it("filters by language", async () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: today }),
-      makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: today }),
+      makeParsedTitle({
+        id: "movie-1",
+        originalLanguage: "en",
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Japanese Movie",
+        originalLanguage: "ja",
+        releaseDate: today,
+      }),
     ]);
 
     const res = await app.request("/titles?daysBack=365&language=ja");
@@ -98,8 +146,17 @@ describe("GET /titles", () => {
   it("filters by multiple types (comma-separated)", async () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: today }),
-      makeParsedTitle({ id: "tv-1", objectType: "SHOW", title: "Show", releaseDate: today }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "tv-1",
+        objectType: "SHOW",
+        title: "Show",
+        releaseDate: today,
+      }),
     ]);
 
     const res = await app.request("/titles?daysBack=365&type=MOVIE,SHOW");
@@ -110,9 +167,23 @@ describe("GET /titles", () => {
   it("filters by multiple genres (comma-separated)", async () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", genres: ["Action"], releaseDate: today }),
-      makeParsedTitle({ id: "movie-2", title: "Comedy Film", genres: ["Comedy"], releaseDate: today }),
-      makeParsedTitle({ id: "movie-3", title: "Drama Film", genres: ["Drama"], releaseDate: today }),
+      makeParsedTitle({
+        id: "movie-1",
+        genres: ["Action"],
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Comedy Film",
+        genres: ["Comedy"],
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "movie-3",
+        title: "Drama Film",
+        genres: ["Drama"],
+        releaseDate: today,
+      }),
     ]);
 
     const res = await app.request("/titles?daysBack=365&genre=Action,Comedy");
@@ -125,9 +196,23 @@ describe("GET /titles", () => {
   it("filters by multiple languages (comma-separated)", async () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", originalLanguage: "en", releaseDate: today }),
-      makeParsedTitle({ id: "movie-2", title: "Japanese Movie", originalLanguage: "ja", releaseDate: today }),
-      makeParsedTitle({ id: "movie-3", title: "French Movie", originalLanguage: "fr", releaseDate: today }),
+      makeParsedTitle({
+        id: "movie-1",
+        originalLanguage: "en",
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Japanese Movie",
+        originalLanguage: "ja",
+        releaseDate: today,
+      }),
+      makeParsedTitle({
+        id: "movie-3",
+        title: "French Movie",
+        originalLanguage: "fr",
+        releaseDate: today,
+      }),
     ]);
 
     const res = await app.request("/titles?daysBack=365&language=en,ja");
@@ -180,7 +265,11 @@ describe("GET /titles", () => {
     const oldStr = oldDate.toISOString().slice(0, 10);
 
     await upsertTitles([
-      makeParsedTitle({ id: "recent-1", title: "Recent Movie", releaseDate: recentStr }),
+      makeParsedTitle({
+        id: "recent-1",
+        title: "Recent Movie",
+        releaseDate: recentStr,
+      }),
       makeParsedTitle({ id: "old-1", title: "Old Movie", releaseDate: oldStr }),
     ]);
 
@@ -194,7 +283,11 @@ describe("GET /titles", () => {
     const today = new Date().toISOString().slice(0, 10);
     await upsertTitles([
       makeParsedTitle({ id: "movie-1", title: "Tracked", releaseDate: today }),
-      makeParsedTitle({ id: "movie-2", title: "Untracked", releaseDate: today }),
+      makeParsedTitle({
+        id: "movie-2",
+        title: "Untracked",
+        releaseDate: today,
+      }),
     ]);
     const userId = await createUser("testuser", "hash");
     await trackTitle("movie-1", userId);
@@ -202,12 +295,20 @@ describe("GET /titles", () => {
     // Create app with user middleware
     const authedApp = new Hono<AppEnv>();
     authedApp.use("*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     authedApp.route("/titles", titlesApp);
 
-    const res = await authedApp.request("/titles?daysBack=365&excludeTracked=1");
+    const res = await authedApp.request(
+      "/titles?daysBack=365&excludeTracked=1",
+    );
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].title).toBe("Untracked");
@@ -216,9 +317,7 @@ describe("GET /titles", () => {
 
 describe("GET /titles/genres", () => {
   it("returns available genres with canonical grouping", async () => {
-    await upsertTitles([
-      makeParsedTitle({ genres: ["Action", "Drama"] }),
-    ]);
+    await upsertTitles([makeParsedTitle({ genres: ["Action", "Drama"] })]);
 
     const res = await app.request("/titles/genres");
     expect(res.status).toBe(200);
@@ -239,9 +338,7 @@ describe("GET /titles/genres", () => {
 
 describe("GET /titles/languages", () => {
   it("returns available languages", async () => {
-    await upsertTitles([
-      makeParsedTitle({ originalLanguage: "en" }),
-    ]);
+    await upsertTitles([makeParsedTitle({ originalLanguage: "en" })]);
 
     const res = await app.request("/titles/languages");
     expect(res.status).toBe(200);
@@ -286,7 +383,13 @@ describe("GET /titles?onlyMine", () => {
   function makeAuthedApp(userId: string) {
     const a = new Hono<AppEnv>();
     a.use("*", async (c, next) => {
-      c.set("user", { id: userId, username: "u", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "u",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     a.route("/titles", titlesApp);
@@ -300,13 +403,27 @@ describe("GET /titles?onlyMine", () => {
         id: "netflix-title",
         title: "Netflix Movie",
         releaseDate: today,
-        offers: [makeParsedOffer({ titleId: "netflix-title", providerId: 8, providerName: "Netflix", providerTechnicalName: "netflix" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "netflix-title",
+            providerId: 8,
+            providerName: "Netflix",
+            providerTechnicalName: "netflix",
+          }),
+        ],
       }),
       makeParsedTitle({
         id: "disney-title",
         title: "Disney Movie",
         releaseDate: today,
-        offers: [makeParsedOffer({ titleId: "disney-title", providerId: 337, providerName: "Disney+", providerTechnicalName: "disneyplus" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "disney-title",
+            providerId: 337,
+            providerName: "Disney+",
+            providerTechnicalName: "disneyplus",
+          }),
+        ],
       }),
     ]);
     const userId = await createUser("onlymineuser", "hash");
@@ -348,13 +465,27 @@ describe("GET /titles?onlyMine", () => {
         id: "netflix-title2",
         title: "Netflix Movie",
         releaseDate: today,
-        offers: [makeParsedOffer({ titleId: "netflix-title2", providerId: 8, providerName: "Netflix", providerTechnicalName: "netflix" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "netflix-title2",
+            providerId: 8,
+            providerName: "Netflix",
+            providerTechnicalName: "netflix",
+          }),
+        ],
       }),
       makeParsedTitle({
         id: "disney-title2",
         title: "Disney Movie",
         releaseDate: today,
-        offers: [makeParsedOffer({ titleId: "disney-title2", providerId: 337, providerName: "Disney+", providerTechnicalName: "disneyplus" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "disney-title2",
+            providerId: 337,
+            providerName: "Disney+",
+            providerTechnicalName: "disneyplus",
+          }),
+        ],
       }),
     ]);
     const userId = await createUser("onlymineint", "hash");
@@ -362,7 +493,9 @@ describe("GET /titles?onlyMine", () => {
 
     // Explicit provider=8 + onlyMine=true (subscribed to both) → intersection = [8]
     const authedApp = makeAuthedApp(userId);
-    const res = await authedApp.request("/titles?daysBack=365&onlyMine=true&provider=8");
+    const res = await authedApp.request(
+      "/titles?daysBack=365&onlyMine=true&provider=8",
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
@@ -473,7 +606,9 @@ describe("GET /titles — validation", () => {
   });
 
   it("happy-path: excludeTracked=1 and onlyMine=true with CSV type filter", async () => {
-    const res = await app.request("/titles?excludeTracked=1&onlyMine=true&type=MOVIE,SHOW");
+    const res = await app.request(
+      "/titles?excludeTracked=1&onlyMine=true&type=MOVIE,SHOW",
+    );
     expect(res.status).toBe(200);
   });
 });

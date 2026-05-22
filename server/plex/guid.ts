@@ -9,7 +9,9 @@ export type ParsedGuids = {
  * Handles both new format (`tmdb://12345`) and legacy format
  * (`com.plexapp.agents.themoviedb://12345?lang=en`).
  */
-export function parsePlexGuids(guids: Array<{ id: string }> | undefined): ParsedGuids {
+export function parsePlexGuids(
+  guids: Array<{ id: string }> | undefined,
+): ParsedGuids {
   if (!guids || guids.length === 0) return {};
 
   const result: ParsedGuids = {};
@@ -28,7 +30,9 @@ export function parsePlexGuids(guids: Array<{ id: string }> | undefined): Parsed
     }
 
     // Legacy format: com.plexapp.agents.themoviedb://12345?lang=en
-    const legacyMovieDb = id.match(/com\.plexapp\.agents\.themoviedb:\/\/(\d+)/);
+    const legacyMovieDb = id.match(
+      /com\.plexapp\.agents\.themoviedb:\/\/(\d+)/,
+    );
     if (legacyMovieDb) {
       result.tmdbId = parseInt(legacyMovieDb[1], 10);
       continue;
@@ -64,6 +68,9 @@ export function parseLegacyGuid(guid: string | undefined): ParsedGuids {
 /**
  * Converts a TMDB ID + media type to Remindarr's title ID format.
  */
-export function toRemindarrTitleId(type: "movie" | "show", tmdbId: number): string {
+export function toRemindarrTitleId(
+  type: "movie" | "show",
+  tmdbId: number,
+): string {
   return type === "movie" ? `movie-${tmdbId}` : `tv-${tmdbId}`;
 }

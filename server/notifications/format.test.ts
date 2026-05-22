@@ -6,7 +6,7 @@ function makeEpisode(
   showTitle: string,
   seasonNumber: number,
   episodeNumber: number,
-  offers: Array<{ providerName: string; providerIconUrl: string | null }> = []
+  offers: Array<{ providerName: string; providerIconUrl: string | null }> = [],
 ): NotificationEpisode {
   return {
     showTitle,
@@ -66,7 +66,7 @@ describe("formatProviderNames", () => {
       formatProviderNames([
         { providerName: "Netflix", providerIconUrl: null },
         { providerName: "Hulu", providerIconUrl: null },
-      ])
+      ]),
     ).toBe("Netflix, Hulu");
   });
 
@@ -78,13 +78,15 @@ describe("formatProviderNames", () => {
         { providerName: "Netflix", providerIconUrl: "/icon.png" },
         { providerName: "Disney+", providerIconUrl: null },
         { providerName: "Hulu", providerIconUrl: null },
-      ])
+      ]),
     ).toBe("Netflix, Hulu, Disney+");
   });
 
   it("returns a single name when only one provider is present", () => {
     expect(
-      formatProviderNames([{ providerName: "Apple TV+", providerIconUrl: null }])
+      formatProviderNames([
+        { providerName: "Apple TV+", providerIconUrl: null },
+      ]),
     ).toBe("Apple TV+");
   });
 });

@@ -38,7 +38,9 @@ function EpisodeCard({
         )}
         {/* Kind badge */}
         <span className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-[10px] font-bold font-mono px-2 py-0.5 rounded-full text-amber-400">
-          {item.kind === "in_progress" ? t("home.upNext.inProgress") : t("home.upNext.newEpisodes")}
+          {item.kind === "in_progress"
+            ? t("home.upNext.inProgress")
+            : t("home.upNext.newEpisodes")}
         </span>
         {/* Unwatched count badge */}
         {item.unwatchedCount != null && item.unwatchedCount > 1 && (
@@ -50,13 +52,19 @@ function EpisodeCard({
 
       {/* Content */}
       <div className="p-3 flex flex-col flex-1">
-        <Link to={`/title/${item.titleId}`} className="hover:text-amber-400 transition-colors">
-          <h3 className="font-semibold text-white text-sm truncate">{item.title}</h3>
+        <Link
+          to={`/title/${item.titleId}`}
+          className="hover:text-amber-400 transition-colors"
+        >
+          <h3 className="font-semibold text-white text-sm truncate">
+            {item.title}
+          </h3>
         </Link>
         {hasEpisode && (
           <p className="text-xs mt-0.5">
             <span className="text-amber-400 font-medium">
-              S{String(item.nextEpisodeSeason).padStart(2, "0")}·E{String(item.nextEpisodeNumber).padStart(2, "0")}
+              S{String(item.nextEpisodeSeason).padStart(2, "0")}·E
+              {String(item.nextEpisodeNumber).padStart(2, "0")}
             </span>
             {item.nextEpisodeTitle && (
               <span className="text-zinc-400"> · {item.nextEpisodeTitle}</span>
@@ -85,10 +93,7 @@ function RecommendationCard({ item }: { item: UpNextItem }) {
   const posterSrc = buildPosterUrl(item.posterUrl, "w185");
 
   return (
-    <Link
-      to={`/title/${item.titleId}`}
-      className="flex flex-col group"
-    >
+    <Link to={`/title/${item.titleId}`} className="flex flex-col group">
       <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-800 ring-2 ring-amber-500/60 border border-white/[0.06]">
         {posterSrc ? (
           <img
@@ -113,7 +118,9 @@ function RecommendationCard({ item }: { item: UpNextItem }) {
         {item.title}
       </p>
       {item.recommendedBy && (
-        <p className="text-xs text-zinc-400 truncate">from @{item.recommendedBy}</p>
+        <p className="text-xs text-zinc-400 truncate">
+          from @{item.recommendedBy}
+        </p>
       )}
     </Link>
   );
@@ -126,13 +133,14 @@ interface UpNextRowProps {
   onMarkWatched: (episodeId: number) => void;
 }
 
-export const UpNextRow = memo(function UpNextRow({ items, onMarkWatched }: UpNextRowProps) {
+export const UpNextRow = memo(function UpNextRow({
+  items,
+  onMarkWatched,
+}: UpNextRowProps) {
   const { t } = useTranslation();
 
   if (items.length === 0) {
-    return (
-      <p className="text-zinc-500 text-sm">{t("home.upNext.empty")}</p>
-    );
+    return <p className="text-zinc-500 text-sm">{t("home.upNext.empty")}</p>;
   }
 
   return (
@@ -141,13 +149,21 @@ export const UpNextRow = memo(function UpNextRow({ items, onMarkWatched }: UpNex
         const key = `${item.kind}-${item.titleId}-${idx}`;
         if (item.kind === "recommendation") {
           return (
-            <div key={key} className="w-32 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+            <div
+              key={key}
+              className="w-32 flex-shrink-0"
+              style={{ scrollSnapAlign: "start" }}
+            >
               <RecommendationCard item={item} />
             </div>
           );
         }
         return (
-          <div key={key} className="w-52 flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+          <div
+            key={key}
+            className="w-52 flex-shrink-0"
+            style={{ scrollSnapAlign: "start" }}
+          >
             <EpisodeCard item={item} onMarkWatched={onMarkWatched} />
           </div>
         );

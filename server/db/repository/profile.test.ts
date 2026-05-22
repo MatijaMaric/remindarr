@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser, trackTitle, updateProfilePublic, watchTitle, upsertEpisodes, watchEpisode, follow } from "../repository";
+import {
+  upsertTitles,
+  createUser,
+  trackTitle,
+  updateProfilePublic,
+  watchTitle,
+  upsertEpisodes,
+  watchEpisode,
+  follow,
+} from "../repository";
 import { getDb, watchedTitles } from "../schema";
 import { getUserPublicProfile } from "./profile";
 import { sql } from "drizzle-orm";
@@ -32,16 +41,31 @@ describe("getUserPublicProfile movie sort order", () => {
     // Watch movies at different times using direct DB insert for controlled timestamps
     const db = getDb();
     await db.insert(watchedTitles).values({ titleId: "movie-a", userId }).run();
-    await db.update(watchedTitles).set({ watchedAt: "2024-01-01 10:00:00" })
-      .where(sql`${watchedTitles.titleId} = ${"movie-a"} AND ${watchedTitles.userId} = ${userId}`).run();
+    await db
+      .update(watchedTitles)
+      .set({ watchedAt: "2024-01-01 10:00:00" })
+      .where(
+        sql`${watchedTitles.titleId} = ${"movie-a"} AND ${watchedTitles.userId} = ${userId}`,
+      )
+      .run();
 
     await db.insert(watchedTitles).values({ titleId: "movie-c", userId }).run();
-    await db.update(watchedTitles).set({ watchedAt: "2024-03-15 10:00:00" })
-      .where(sql`${watchedTitles.titleId} = ${"movie-c"} AND ${watchedTitles.userId} = ${userId}`).run();
+    await db
+      .update(watchedTitles)
+      .set({ watchedAt: "2024-03-15 10:00:00" })
+      .where(
+        sql`${watchedTitles.titleId} = ${"movie-c"} AND ${watchedTitles.userId} = ${userId}`,
+      )
+      .run();
 
     await db.insert(watchedTitles).values({ titleId: "movie-b", userId }).run();
-    await db.update(watchedTitles).set({ watchedAt: "2024-02-10 10:00:00" })
-      .where(sql`${watchedTitles.titleId} = ${"movie-b"} AND ${watchedTitles.userId} = ${userId}`).run();
+    await db
+      .update(watchedTitles)
+      .set({ watchedAt: "2024-02-10 10:00:00" })
+      .where(
+        sql`${watchedTitles.titleId} = ${"movie-b"} AND ${watchedTitles.userId} = ${userId}`,
+      )
+      .run();
 
     const result = await getUserPublicProfile("testuser");
     expect(result).not.toBeNull();
@@ -55,8 +79,16 @@ describe("getUserPublicProfile movie sort order", () => {
 
   it("puts unwatched movies after watched movies", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-watched", objectType: "MOVIE", title: "Watched Movie" }),
-      makeParsedTitle({ id: "movie-unwatched", objectType: "MOVIE", title: "Unwatched Movie" }),
+      makeParsedTitle({
+        id: "movie-watched",
+        objectType: "MOVIE",
+        title: "Watched Movie",
+      }),
+      makeParsedTitle({
+        id: "movie-unwatched",
+        objectType: "MOVIE",
+        title: "Unwatched Movie",
+      }),
     ]);
     await trackTitle("movie-watched", userId);
     await trackTitle("movie-unwatched", userId);
@@ -102,7 +134,11 @@ describe("getUserPublicProfile movie sort order", () => {
     const TOTAL = 200;
     const WATCHED = 50;
     const movies = Array.from({ length: TOTAL }, (_, i) =>
-      makeParsedTitle({ id: `bulk-movie-${i}`, objectType: "MOVIE", title: `Bulk Movie ${i}` })
+      makeParsedTitle({
+        id: `bulk-movie-${i}`,
+        objectType: "MOVIE",
+        title: `Bulk Movie ${i}`,
+      }),
     );
     await upsertTitles(movies);
     for (const m of movies) {
@@ -112,10 +148,18 @@ describe("getUserPublicProfile movie sort order", () => {
     const db = getDb();
     // Watch the first WATCHED movies at distinct timestamps
     for (let i = 0; i < WATCHED; i++) {
-      await db.insert(watchedTitles).values({ titleId: `bulk-movie-${i}`, userId }).run();
+      await db
+        .insert(watchedTitles)
+        .values({ titleId: `bulk-movie-${i}`, userId })
+        .run();
       const ts = `2024-01-${String(i + 1).padStart(2, "0")} 10:00:00`;
-      await db.update(watchedTitles).set({ watchedAt: ts })
-        .where(sql`${watchedTitles.titleId} = ${"bulk-movie-" + i} AND ${watchedTitles.userId} = ${userId}`).run();
+      await db
+        .update(watchedTitles)
+        .set({ watchedAt: ts })
+        .where(
+          sql`${watchedTitles.titleId} = ${"bulk-movie-" + i} AND ${watchedTitles.userId} = ${userId}`,
+        )
+        .run();
     }
 
     const result = await getUserPublicProfile("testuser");
@@ -125,7 +169,9 @@ describe("getUserPublicProfile movie sort order", () => {
     // The 50 watched movies must all sort before the 150 unwatched ones
     const watchedInResult = result!.movies.slice(0, WATCHED);
     const unwatchedInResult = result!.movies.slice(WATCHED);
-    expect(watchedInResult.every(m => m.id.startsWith("bulk-movie-"))).toBe(true);
+    expect(watchedInResult.every((m) => m.id.startsWith("bulk-movie-"))).toBe(
+      true,
+    );
     expect(unwatchedInResult).toHaveLength(TOTAL - WATCHED);
     // Most recently watched first: bulk-movie-49 (Jan 49) > bulk-movie-48 > ... > bulk-movie-0
     expect(watchedInResult[0].id).toBe(`bulk-movie-${WATCHED - 1}`);
@@ -160,16 +206,38 @@ describe("getUserPublicProfile progress metrics", () => {
 
   it("counts shows_completed when all episodes watched and released", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-done", objectType: "SHOW", title: "Completed Show" }),
+      makeParsedTitle({
+        id: "show-done",
+        objectType: "SHOW",
+        title: "Completed Show",
+      }),
     ]);
     await trackTitle("show-done", userId);
     await upsertEpisodes([
-      { title_id: "show-done", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "show-done", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+      {
+        title_id: "show-done",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-done",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
     ]);
 
     const db = getDb();
-    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-done") });
+    const eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-done"),
+    });
     for (const ep of eps) {
       await watchEpisode(ep.id, userId);
     }
@@ -182,16 +250,38 @@ describe("getUserPublicProfile progress metrics", () => {
 
   it("does not count show as completed when not all episodes are watched", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-partial", objectType: "SHOW", title: "Partial Show" }),
+      makeParsedTitle({
+        id: "show-partial",
+        objectType: "SHOW",
+        title: "Partial Show",
+      }),
     ]);
     await trackTitle("show-partial", userId);
     await upsertEpisodes([
-      { title_id: "show-partial", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "show-partial", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
+      {
+        title_id: "show-partial",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-partial",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
     ]);
 
     const db = getDb();
-    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-partial") });
+    const eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-partial"),
+    });
     await watchEpisode(eps[0].id, userId);
 
     const result = await getUserPublicProfile("testuser", true);
@@ -209,13 +299,39 @@ describe("getUserPublicProfile progress metrics", () => {
     await trackTitle("show-x", userId);
     await trackTitle("show-y", userId);
     await upsertEpisodes([
-      { title_id: "show-x", season_number: 1, episode_number: 1, name: "X Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "show-x", season_number: 1, episode_number: 2, name: "X Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
-      { title_id: "show-y", season_number: 1, episode_number: 1, name: "Y Ep 1", overview: null, air_date: "2024-02-01", still_path: null },
+      {
+        title_id: "show-x",
+        season_number: 1,
+        episode_number: 1,
+        name: "X Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-x",
+        season_number: 1,
+        episode_number: 2,
+        name: "X Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
+      {
+        title_id: "show-y",
+        season_number: 1,
+        episode_number: 1,
+        name: "Y Ep 1",
+        overview: null,
+        air_date: "2024-02-01",
+        still_path: null,
+      },
     ]);
 
     const db = getDb();
-    const xEps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-x") });
+    const xEps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-x"),
+    });
     await watchEpisode(xEps[0].id, userId);
 
     const result = await getUserPublicProfile("testuser", true);
@@ -226,18 +342,40 @@ describe("getUserPublicProfile progress metrics", () => {
 
   it("does not count show as completed when unreleased episodes exist", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-future", objectType: "SHOW", title: "Future Show" }),
+      makeParsedTitle({
+        id: "show-future",
+        objectType: "SHOW",
+        title: "Future Show",
+      }),
     ]);
     await trackTitle("show-future", userId);
     await upsertEpisodes([
-      { title_id: "show-future", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "show-future", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2099-12-31", still_path: null },
+      {
+        title_id: "show-future",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-future",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2099-12-31",
+        still_path: null,
+      },
     ]);
 
     const db = getDb();
-    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-future") });
+    const eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-future"),
+    });
     // Watch the one released episode
-    const releasedEp = eps.find(e => e.airDate === "2024-01-01")!;
+    const releasedEp = eps.find((e) => e.airDate === "2024-01-01")!;
     await watchEpisode(releasedEp.id, userId);
 
     const result = await getUserPublicProfile("testuser", true);
@@ -250,7 +388,9 @@ describe("getUserPublicProfile progress metrics", () => {
 describe("profile visibility access control", () => {
   it("public visibility shows watchlist to everyone", async () => {
     await updateProfilePublic(userId, "public");
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Public Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Public Movie" }),
+    ]);
     await trackTitle("movie-1", userId);
 
     const result = await getUserPublicProfile("testuser", false);
@@ -262,7 +402,9 @@ describe("profile visibility access control", () => {
 
   it("private visibility hides watchlist from everyone", async () => {
     await updateProfilePublic(userId, "private");
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Private Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Private Movie" }),
+    ]);
     await trackTitle("movie-1", userId);
 
     const viewerId = await createUser("viewer", "hash");
@@ -275,7 +417,9 @@ describe("profile visibility access control", () => {
 
   it("friends_only shows watchlist to mutual followers", async () => {
     await updateProfilePublic(userId, "friends_only");
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Friends Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Friends Movie" }),
+    ]);
     await trackTitle("movie-1", userId);
 
     const friendId = await createUser("friend", "hash");
@@ -292,7 +436,9 @@ describe("profile visibility access control", () => {
 
   it("friends_only hides watchlist from non-mutual followers", async () => {
     await updateProfilePublic(userId, "friends_only");
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Friends Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Friends Movie" }),
+    ]);
     await trackTitle("movie-1", userId);
 
     const strangerId = await createUser("stranger", "hash");
@@ -307,7 +453,9 @@ describe("profile visibility access control", () => {
 
   it("friends_only hides watchlist from anonymous viewers", async () => {
     await updateProfilePublic(userId, "friends_only");
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Friends Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Friends Movie" }),
+    ]);
     await trackTitle("movie-1", userId);
 
     const result = await getUserPublicProfile("testuser", false);
@@ -318,7 +466,9 @@ describe("profile visibility access control", () => {
 
   it("own profile always shows watchlist regardless of visibility", async () => {
     await updateProfilePublic(userId, "private");
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Own Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Own Movie" }),
+    ]);
     await trackTitle("movie-1", userId);
 
     const result = await getUserPublicProfile("testuser", true, userId);
@@ -330,9 +480,11 @@ describe("profile visibility access control", () => {
   it("updateProfilePublic sets both legacy and new fields", async () => {
     await updateProfilePublic(userId, "friends_only");
     const db = getDb();
-    const row = await db.select().from(
-      (await import("../schema")).users
-    ).where(sql`id = ${userId}`).get();
+    const row = await db
+      .select()
+      .from((await import("../schema")).users)
+      .where(sql`id = ${userId}`)
+      .get();
     expect(row).not.toBeNull();
     expect(row!.profileVisibility).toBe("friends_only");
     // friends_only should set legacy profilePublic to 0
@@ -342,9 +494,11 @@ describe("profile visibility access control", () => {
   it("updateProfilePublic with boolean backward compat", async () => {
     await updateProfilePublic(userId, true);
     const db = getDb();
-    const row = await db.select().from(
-      (await import("../schema")).users
-    ).where(sql`id = ${userId}`).get();
+    const row = await db
+      .select()
+      .from((await import("../schema")).users)
+      .where(sql`id = ${userId}`)
+      .get();
     expect(row).not.toBeNull();
     expect(row!.profileVisibility).toBe("public");
     expect(row!.profilePublic).toBe(1);

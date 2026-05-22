@@ -99,7 +99,14 @@ const FilterBar = memo(function FilterBar({
   const providerSections = useMemo((): Section[] | undefined => {
     if (!providers || providers.length === 0) return undefined;
     if (!regionProviderIds || regionProviderIds.length === 0) {
-      return [{ options: providers.map((p) => ({ value: String(p.id), label: p.name })) }];
+      return [
+        {
+          options: providers.map((p) => ({
+            value: String(p.id),
+            label: p.name,
+          })),
+        },
+      ];
     }
     const regionSet = new Set(regionProviderIds);
     const regionOpts = providers
@@ -110,7 +117,8 @@ const FilterBar = memo(function FilterBar({
       .map((p) => ({ value: String(p.id), label: p.name }));
     const sections: Section[] = [];
     if (regionOpts.length > 0) sections.push({ options: regionOpts });
-    if (otherOpts.length > 0) sections.push({ label: "Other", options: otherOpts });
+    if (otherOpts.length > 0)
+      sections.push({ label: "Other", options: otherOpts });
     return sections;
   }, [providers, regionProviderIds]);
 
@@ -130,13 +138,18 @@ const FilterBar = memo(function FilterBar({
     const otherOpts = allOpts.filter((o) => !prioritySet.has(o.value));
     const sections: Section[] = [];
     if (priorityOpts.length > 0) sections.push({ options: priorityOpts });
-    if (otherOpts.length > 0) sections.push({ label: "Other", options: otherOpts });
+    if (otherOpts.length > 0)
+      sections.push({ label: "Other", options: otherOpts });
     return sections;
   }, [languages, priorityLanguageCodes]);
 
   return (
     <div className="flex flex-wrap gap-4 items-center">
-      <div role="group" aria-label="Content type" className="flex gap-1 bg-zinc-800/50 rounded-lg p-1">
+      <div
+        role="group"
+        aria-label="Content type"
+        className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
+      >
         <button
           aria-pressed={type.length === 0}
           onClick={() => onTypeChange([])}
@@ -164,7 +177,11 @@ const FilterBar = memo(function FilterBar({
         ))}
       </div>
       {showDaysFilter && onDaysBackChange && (
-        <div role="group" aria-label="Time period" className="flex gap-1 bg-zinc-800/50 rounded-lg p-1">
+        <div
+          role="group"
+          aria-label="Time period"
+          className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
+        >
           {DAYS.map((d) => (
             <button
               key={d.value}

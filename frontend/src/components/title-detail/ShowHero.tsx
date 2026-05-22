@@ -9,7 +9,10 @@ import EpisodeCountdown from "../EpisodeCountdown";
 import { Chip, Kicker } from "../design";
 import { NetworkList } from "./NetworkList";
 import { RatingBadge } from "./RatingBadge";
-import { backdropUrl as mkBackdropUrl, posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
+import {
+  backdropUrl as mkBackdropUrl,
+  posterUrl as mkPosterUrl,
+} from "../../lib/tmdb-images";
 import { getCertification } from "./utils";
 import { formatEta } from "../../pages/StatsPage";
 import TrailerEmbed, { hasTrailer } from "./TrailerEmbed";
@@ -27,7 +30,8 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
   const trailerAvailable = hasTrailer(videos);
   const genres = tmdb?.genres?.map((g) => g.name) || title.genres;
   const certification =
-    getCertification(tmdb?.content_ratings?.results, country) || title.age_certification;
+    getCertification(tmdb?.content_ratings?.results, country) ||
+    title.age_certification;
   const backdropUrl = mkBackdropUrl(tmdb?.backdrop_path, "w1280") ?? null;
   const posterUrl = mkPosterUrl(tmdb?.poster_path, "w500") ?? title.poster_url;
   const firstOfferUrl = title.offers[0]?.url ?? null;
@@ -38,9 +42,16 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
     return (
       <>
         {/* Mobile: 460px full-bleed hero with bottom-anchored poster+title */}
-        <div className="relative -mx-4 -mt-6 overflow-hidden" style={{ height: 460 }}>
+        <div
+          className="relative -mx-4 -mt-6 overflow-hidden"
+          style={{ height: 460 }}
+        >
           {backdropUrl ? (
-            <img src={backdropUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+            <img
+              src={backdropUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-top"
+            />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950" />
           )}
@@ -69,10 +80,15 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             </div>
             <div className="flex-1 min-w-0 pb-1">
               <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-amber-400 font-semibold mb-1">
-                SHOW · {title.release_year ?? tmdb?.first_air_date?.slice(0, 4) ?? ""}
-                {title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
+                SHOW ·{" "}
+                {title.release_year ?? tmdb?.first_air_date?.slice(0, 4) ?? ""}
+                {title.offers[0]?.provider_name
+                  ? ` · ${title.offers[0].provider_name}`
+                  : ""}
               </div>
-              <h1 className="text-[26px] leading-[1.05] font-bold text-white line-clamp-3">{displayTitle}</h1>
+              <h1 className="text-[26px] leading-[1.05] font-bold text-white line-clamp-3">
+                {displayTitle}
+              </h1>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {genres.slice(0, 3).map((g) => (
                   <span
@@ -107,7 +123,11 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               ▶ No stream
             </div>
           )}
-          <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+          <TrackButton
+            titleId={title.id}
+            isTracked={title.is_tracked}
+            titleData={title}
+          />
           <PinButton titleId={title.id} />
         </div>
         {title.is_tracked && title.eta_days != null && (
@@ -163,24 +183,37 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
 
         <div className="flex-1 space-y-3 max-w-[820px]">
           <div>
-            {tmdb?.tagline && <p className="text-sm text-amber-400 italic mb-1 select-text">{tmdb.tagline}</p>}
+            {tmdb?.tagline && (
+              <p className="text-sm text-amber-400 italic mb-1 select-text">
+                {tmdb.tagline}
+              </p>
+            )}
             <Kicker className="mb-2">
               TV Show{title.release_year ? ` · ${title.release_year}` : ""}
-              {title.offers[0]?.provider_name ? ` · ${title.offers[0].provider_name}` : ""}
+              {title.offers[0]?.provider_name
+                ? ` · ${title.offers[0].provider_name}`
+                : ""}
             </Kicker>
             <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white select-text">
               {displayTitle}
             </h1>
             {originalTitle && originalTitle !== displayTitle && (
-              <p className="text-sm text-zinc-400 mt-1 select-text">{originalTitle}</p>
+              <p className="text-sm text-zinc-400 mt-1 select-text">
+                {originalTitle}
+              </p>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
-            <span className="bg-amber-500 text-black text-xs font-bold px-1.5 py-0.5 rounded">TV</span>
-            {tmdb?.first_air_date && <span>{tmdb.first_air_date.slice(0, 4)}</span>}
+            <span className="bg-amber-500 text-black text-xs font-bold px-1.5 py-0.5 rounded">
+              TV
+            </span>
+            {tmdb?.first_air_date && (
+              <span>{tmdb.first_air_date.slice(0, 4)}</span>
+            )}
             {tmdb?.last_air_date &&
-              tmdb.first_air_date?.slice(0, 4) !== tmdb.last_air_date.slice(0, 4) && (
+              tmdb.first_air_date?.slice(0, 4) !==
+                tmdb.last_air_date.slice(0, 4) && (
                 <span>– {tmdb.last_air_date.slice(0, 4)}</span>
               )}
             {tmdb?.episode_run_time?.[0] && (
@@ -192,7 +225,9 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             {certification && (
               <>
                 <span className="text-zinc-600">·</span>
-                <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">{certification}</span>
+                <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">
+                  {certification}
+                </span>
               </>
             )}
             {tmdb?.status && (
@@ -205,7 +240,8 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               <>
                 <span className="text-zinc-600">·</span>
                 <span>
-                  {tmdb.number_of_seasons} season{tmdb.number_of_seasons !== 1 ? "s" : ""}
+                  {tmdb.number_of_seasons} season
+                  {tmdb.number_of_seasons !== 1 ? "s" : ""}
                 </span>
                 <span className="text-zinc-600">·</span>
                 <span>{tmdb.number_of_episodes} episodes</span>
@@ -220,34 +256,54 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
                   {g}
                 </Chip>
               ))}
-              {title.imdb_score && <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>}
+              {title.imdb_score && (
+                <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>
+              )}
             </div>
           )}
 
           {/* Networks */}
-          {tmdb?.networks && tmdb.networks.length > 0 && <NetworkList networks={tmdb.networks} />}
+          {tmdb?.networks && tmdb.networks.length > 0 && (
+            <NetworkList networks={tmdb.networks} />
+          )}
 
           <div className="flex items-center gap-6 pt-2">
             <RatingBadge label="IMDb" score={title.imdb_score} />
-            <RatingBadge label="TMDB" score={tmdb?.vote_average ?? title.tmdb_score} />
+            <RatingBadge
+              label="TMDB"
+              score={tmdb?.vote_average ?? title.tmdb_score}
+            />
           </div>
 
           <div className="pt-2 flex flex-wrap items-center gap-2">
-            <TrackButton titleId={title.id} isTracked={title.is_tracked} titleData={title} />
+            <TrackButton
+              titleId={title.id}
+              isTracked={title.is_tracked}
+              titleData={title}
+            />
             <PinButton titleId={title.id} />
             <VisibilityButton
               titleId={title.id}
               isPublic={title.is_public ?? true}
               isTracked={title.is_tracked}
             />
-            <WatchButtonGroup offers={title.offers} variant="inline" maxVisible={3} />
+            <WatchButtonGroup
+              offers={title.offers}
+              variant="inline"
+              maxVisible={3}
+            />
             {trailerAvailable && (
               <button
                 type="button"
                 onClick={() => setShowTrailer((prev) => !prev)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
               >
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h7A1.5 1.5 0 0 1 13 3.5v9A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-9ZM6 5.5v5l4.5-2.5L6 5.5Z" />
                 </svg>
                 {showTrailer ? "Hide Trailer" : "Watch Trailer"}

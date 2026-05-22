@@ -10,7 +10,15 @@
  * idempotency, re-arm after processing) call alarm() and manipulate the
  * _actor_alarms table directly.
  */
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Database } from "bun:sqlite";
 import { JobQueueDO } from "./durable-object";
 import * as processorModule from "./processor";
@@ -52,7 +60,10 @@ class FakeSqlStorage {
     this.db = db;
   }
 
-  exec(sql: string, ...params: (string | number | boolean | null)[]): FakeSqlCursor {
+  exec(
+    sql: string,
+    ...params: (string | number | boolean | null)[]
+  ): FakeSqlCursor {
     const stmt = this.db.prepare(sql);
     const rows = stmt.all(...params) as Record<string, unknown>[];
     return new FakeSqlCursor(rows);
@@ -104,7 +115,10 @@ class FakeDurableObjectState {
   constructor(name: string) {
     this.db = new Database(":memory:");
     this.storage = new FakeDurableObjectStorage(this.db);
-    this.id = { toString: () => name, equals: (o: unknown) => String(o) === name };
+    this.id = {
+      toString: () => name,
+      equals: (o: unknown) => String(o) === name,
+    };
   }
 
   close() {
@@ -124,7 +138,7 @@ class FakeDurableObjectState {
 // ─── Minimal fake env ─────────────────────────────────────────────────────────
 
 const fakeEnv = {
-  DB: {} as D1Database,   // handlers are mocked so real DB never accessed via DO env
+  DB: {} as D1Database, // handlers are mocked so real DB never accessed via DO env
   CACHE_KV: undefined,
   JOB_QUEUE_DO: undefined,
 };
@@ -132,14 +146,22 @@ const fakeEnv = {
 // ─── Spy setup ────────────────────────────────────────────────────────────────
 
 const mockSyncTitles = spyOn(processorModule.handlers, "sync-titles" as any);
-const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
-const addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(() => {});
+const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue(
+  "test-event-id" as any,
+);
+const addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(
+  () => {},
+);
 
 // Snapshot original handlers so afterEach can restore them (prevents mutation leaking to processor.test.ts)
-const originalHandlers: Record<string, (data: string | null) => Promise<void>> = { ...processorModule.handlers };
+const originalHandlers: Record<string, (data: string | null) => Promise<void>> =
+  { ...processorModule.handlers };
 
 // Helpers
-function makeDO(name: string): { do_: JobQueueDO; state: FakeDurableObjectState } {
+function makeDO(name: string): {
+  do_: JobQueueDO;
+  state: FakeDurableObjectState;
+} {
   const state = new FakeDurableObjectState(name);
   const do_ = new JobQueueDO(state as any, fakeEnv as any);
   return { do_, state };
@@ -217,7 +239,9 @@ describe("JobQueueDO", () => {
 
   it("runJob processes a pending job and marks it completed", async () => {
     let called = false;
-    processorModule.handlers["sync-titles"] = async () => { called = true; };
+    processorModule.handlers["sync-titles"] = async () => {
+      called = true;
+    };
     await do_.enqueue("sync-titles", null);
     await do_.runJob(null);
 
@@ -229,7 +253,9 @@ describe("JobQueueDO", () => {
 
   it("runJob auto-creates and runs a job for cron DOs when no pending rows exist", async () => {
     let called = false;
-    processorModule.handlers["sync-titles"] = async () => { called = true; };
+    processorModule.handlers["sync-titles"] = async () => {
+      called = true;
+    };
     await do_.armCron("sync-titles", "0 3 * * *");
     await do_.runJob(null); // no rows pre-inserted — auto-create kicks in
 
@@ -241,9 +267,15 @@ describe("JobQueueDO", () => {
 
   it("runJob skips jobs not yet ready (future run_at)", async () => {
     let called = false;
-    processorModule.handlers["sync-show-episodes"] = async () => { called = true; };
+    processorModule.handlers["sync-show-episodes"] = async () => {
+      called = true;
+    };
     // Ad-hoc DO (no armCron) — no auto-create when nothing is pending
-    await do_.enqueue("sync-show-episodes", null, new Date(Date.now() + 60_000).toISOString());
+    await do_.enqueue(
+      "sync-show-episodes",
+      null,
+      new Date(Date.now() + 60_000).toISOString(),
+    );
     await do_.runJob(null);
     expect(called).toBe(false);
   });
@@ -252,7 +284,9 @@ describe("JobQueueDO", () => {
 
   it("two concurrent runJob() calls process a job at most once (single-writer guarantee)", async () => {
     let callCount = 0;
-    processorModule.handlers["sync-titles"] = async () => { callCount++; };
+    processorModule.handlers["sync-titles"] = async () => {
+      callCount++;
+    };
     // No armCron — bare enqueue so cron is null and auto-create doesn't kick in.
     // enqueue() sets the "name" key so runJob() still identifies the DO.
     await do_.enqueue("sync-titles", null);
@@ -299,7 +333,9 @@ describe("JobQueueDO", () => {
 
   it("captures permanent failures to Sentry with stable fingerprint and tags", async () => {
     const fatalError = new Error("fatal error");
-    processorModule.handlers["sync-titles"] = async () => { throw fatalError; };
+    processorModule.handlers["sync-titles"] = async () => {
+      throw fatalError;
+    };
     await do_.enqueue("sync-titles", null, undefined, 1);
     await do_.runJob(null);
 
@@ -316,25 +352,46 @@ describe("JobQueueDO", () => {
   });
 
   it("surfaces job payload and runAt in permanent failure Sentry extra and log", async () => {
-    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(
+      () => {},
+    );
     consoleErrorSpy.mockClear(); // discard calls leaked from prior test files (Bun cross-file spy leak on Linux CI)
     processorModule.handlers["sync-titles"] = async () => {
       throw new Error("payload test failure");
     };
     // enqueue with a payload and maxAttempts=1 so first failure is permanent
-    await do_.enqueue("sync-titles", JSON.stringify({ marker: "p801" }), undefined, 1);
+    await do_.enqueue(
+      "sync-titles",
+      JSON.stringify({ marker: "p801" }),
+      undefined,
+      1,
+    );
     await do_.runJob(null);
 
     expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
-    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1] as { extra?: Record<string, unknown> };
+    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1] as {
+      extra?: Record<string, unknown>;
+    };
     expect(capturedCtx?.extra?.data).toBe('{"marker":"p801"}');
     expect(typeof capturedCtx?.extra?.runAt).toBe("string");
 
     // JSON log line
     const errorCalls = consoleErrorSpy.mock.calls
-      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
-      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
-    const permanentLog = errorCalls.find((obj) => typeof obj.msg === "string" && obj.msg.includes("failed permanently"));
+      .map((args) => {
+        try {
+          return JSON.parse(args[0] as string) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (obj): obj is Record<string, unknown> =>
+          obj !== null && obj.level === "error",
+      );
+    const permanentLog = errorCalls.find(
+      (obj) =>
+        typeof obj.msg === "string" && obj.msg.includes("failed permanently"),
+    );
     expect(permanentLog).toBeDefined();
     expect(permanentLog!.data).toBe('{"marker":"p801"}');
     expect(typeof permanentLog!.runAt).toBe("string");
@@ -394,7 +451,9 @@ describe("JobQueueDO", () => {
     processorModule.handlers["sync-titles"] = async () => {};
     await do_.armCron("sync-titles", "0 3 * * *");
     // Force the cron schedule to be due (past time) so alarm() actually dispatches it
-    state.rawDb.prepare("UPDATE _actor_alarms SET time = 0 WHERE callback = 'runJob'").run();
+    state.rawDb
+      .prepare("UPDATE _actor_alarms SET time = 0 WHERE callback = 'runJob'")
+      .run();
 
     const beforeAlarmCount = state.storage.alarmHistory.length;
     await do_.alarm();
@@ -409,13 +468,18 @@ describe("JobQueueDO", () => {
     const { do_: adHocDo, state: adHocState } = makeDO("sync-show-episodes:99");
     // Enqueue then manually mark it completed, so the DO has a "name" but no pending rows
     await adHocDo.enqueue("sync-show-episodes", null);
-    adHocState.rawDb.prepare("UPDATE jobs SET status='completed', completed_at=? WHERE status='pending'")
+    adHocState.rawDb
+      .prepare(
+        "UPDATE jobs SET status='completed', completed_at=? WHERE status='pending'",
+      )
       .run(new Date().toISOString());
 
     const alarmsBefore = adHocState.storage.alarmHistory.length;
     await adHocDo.runJob(null);
     // No auto-create for ad-hoc DOs — runJob exits without creating a new job row
-    expect(adHocDo.getRecentJobs().filter((r) => r.status === "pending")).toHaveLength(0);
+    expect(
+      adHocDo.getRecentJobs().filter((r) => r.status === "pending"),
+    ).toHaveLength(0);
     // rearmIfPending finds no pending work → no new alarm scheduled
     expect(adHocState.storage.alarmHistory.length).toBe(alarmsBefore);
     adHocState.close();
@@ -431,9 +495,9 @@ describe("JobQueueDO", () => {
     await do_.runJob(null); // processes one
 
     // Two rows still pending → rearmIfPending must schedule a delayed alarm
-    const hasDelayedSchedule = do_.alarms.getSchedules({ type: "delayed" }).some(
-      (s) => s.callback === "runJob",
-    );
+    const hasDelayedSchedule = do_.alarms
+      .getSchedules({ type: "delayed" })
+      .some((s) => s.callback === "runJob");
     expect(hasDelayedSchedule).toBe(true);
   });
 
@@ -447,9 +511,9 @@ describe("JobQueueDO", () => {
 
     await adHocDo.runJob(null); // processes first
     // Second job still pending → re-arm check: a delayed schedule should exist
-    const hasDelayedSchedule = adHocDo.alarms.getSchedules({ type: "delayed" }).some(
-      (s) => s.callback === "runJob",
-    );
+    const hasDelayedSchedule = adHocDo.alarms
+      .getSchedules({ type: "delayed" })
+      .some((s) => s.callback === "runJob");
     expect(hasDelayedSchedule).toBe(true);
 
     await adHocDo.runJob(null); // processes second
@@ -494,9 +558,11 @@ describe("JobQueueDO", () => {
   it("recover resets stale running jobs to pending", async () => {
     await do_.enqueue("sync-titles", null);
     // Manually force job to "running" with old started_at
-    state.rawDb.prepare(
-      "UPDATE jobs SET status = 'running', started_at = ? WHERE status = 'pending'",
-    ).run(new Date(Date.now() - 30 * 60 * 1000).toISOString());
+    state.rawDb
+      .prepare(
+        "UPDATE jobs SET status = 'running', started_at = ? WHERE status = 'pending'",
+      )
+      .run(new Date(Date.now() - 30 * 60 * 1000).toISOString());
 
     const count = do_.recover(15);
     expect(count).toBe(1);
@@ -507,9 +573,11 @@ describe("JobQueueDO", () => {
 
   it("recover does not reset recently started jobs", async () => {
     await do_.enqueue("sync-titles", null);
-    state.rawDb.prepare(
-      "UPDATE jobs SET status = 'running', started_at = ? WHERE status = 'pending'",
-    ).run(new Date().toISOString());
+    state.rawDb
+      .prepare(
+        "UPDATE jobs SET status = 'running', started_at = ? WHERE status = 'pending'",
+      )
+      .run(new Date().toISOString());
 
     const count = do_.recover(15);
     expect(count).toBe(0);
@@ -521,9 +589,11 @@ describe("JobQueueDO", () => {
   it("cleanup removes old completed/failed jobs", async () => {
     await do_.enqueue("sync-titles", null);
     // Force completed with old completed_at
-    state.rawDb.prepare(
-      "UPDATE jobs SET status = 'completed', completed_at = ? WHERE status = 'pending'",
-    ).run(new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString());
+    state.rawDb
+      .prepare(
+        "UPDATE jobs SET status = 'completed', completed_at = ? WHERE status = 'pending'",
+      )
+      .run(new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString());
 
     const count = do_.cleanup(30);
     expect(count).toBe(1);
@@ -532,9 +602,11 @@ describe("JobQueueDO", () => {
 
   it("cleanup keeps recent completed jobs", async () => {
     await do_.enqueue("sync-titles", null);
-    state.rawDb.prepare(
-      "UPDATE jobs SET status = 'completed', completed_at = ? WHERE status = 'pending'",
-    ).run(new Date().toISOString());
+    state.rawDb
+      .prepare(
+        "UPDATE jobs SET status = 'completed', completed_at = ? WHERE status = 'pending'",
+      )
+      .run(new Date().toISOString());
 
     const count = do_.cleanup(30);
     expect(count).toBe(0);
@@ -546,7 +618,11 @@ describe("JobQueueDO", () => {
   it("getStats returns counts by status", async () => {
     await do_.enqueue("sync-titles", null);
     await do_.enqueue("sync-titles", null);
-    state.rawDb.prepare("UPDATE jobs SET status = 'completed', completed_at = ? WHERE id = 2").run(new Date().toISOString());
+    state.rawDb
+      .prepare(
+        "UPDATE jobs SET status = 'completed', completed_at = ? WHERE id = 2",
+      )
+      .run(new Date().toISOString());
 
     const stats = do_.getStats();
     expect(stats.pending).toBe(1);
@@ -561,7 +637,7 @@ describe("JobQueueDO", () => {
     await do_.enqueue("sync-titles", null);
     const resp = await do_.fetch(new Request("https://do/stats"));
     expect(resp.status).toBe(200);
-    const body = await resp.json() as { pending: number };
+    const body = (await resp.json()) as { pending: number };
     expect(body.pending).toBe(1);
   });
 
@@ -574,7 +650,7 @@ describe("JobQueueDO", () => {
       }),
     );
     expect(resp.status).toBe(200);
-    const body = await resp.json() as { ok: boolean };
+    const body = (await resp.json()) as { ok: boolean };
     expect(body.ok).toBe(true);
     const alarm = await state.storage.getAlarm();
     expect(alarm).not.toBeNull();
@@ -589,18 +665,24 @@ describe("JobQueueDO", () => {
       }),
     );
     expect(resp.status).toBe(200);
-    const body = await resp.json() as { id: number };
+    const body = (await resp.json()) as { id: number };
     expect(body.id).toBeGreaterThan(0);
   });
 
   it("GET /cron-info returns cron expression and times", async () => {
     await do_.armCron("sync-titles", "0 3 * * *");
     await do_.enqueue("sync-titles", null);
-    state.rawDb.prepare(
-      "UPDATE jobs SET status = 'completed', completed_at = ? WHERE status = 'pending'",
-    ).run(new Date().toISOString());
+    state.rawDb
+      .prepare(
+        "UPDATE jobs SET status = 'completed', completed_at = ? WHERE status = 'pending'",
+      )
+      .run(new Date().toISOString());
     const resp = await do_.fetch(new Request("https://do/cron-info"));
-    const body = await resp.json() as { cron: string; nextRun: string | null; lastRun: string | null };
+    const body = (await resp.json()) as {
+      cron: string;
+      nextRun: string | null;
+      lastRun: string | null;
+    };
     expect(body.cron).toBe("0 3 * * *");
     expect(body.nextRun).not.toBeNull();
     expect(body.lastRun).not.toBeNull();
@@ -608,9 +690,11 @@ describe("JobQueueDO", () => {
 
   it("POST /recover returns recovered count", async () => {
     await do_.enqueue("sync-titles", null);
-    state.rawDb.prepare(
-      "UPDATE jobs SET status = 'running', started_at = ? WHERE status = 'pending'",
-    ).run(new Date(Date.now() - 30 * 60 * 1000).toISOString());
+    state.rawDb
+      .prepare(
+        "UPDATE jobs SET status = 'running', started_at = ? WHERE status = 'pending'",
+      )
+      .run(new Date(Date.now() - 30 * 60 * 1000).toISOString());
     const resp = await do_.fetch(
       new Request("https://do/recover", {
         method: "POST",
@@ -618,7 +702,7 @@ describe("JobQueueDO", () => {
         headers: { "content-type": "application/json" },
       }),
     );
-    const body = await resp.json() as { count: number };
+    const body = (await resp.json()) as { count: number };
     expect(body.count).toBe(1);
   });
 
@@ -634,18 +718,31 @@ describe("JobQueueDO", () => {
     await do_.armCron("sync-titles", "0 3 * * *");
 
     // Simulate eviction: clear the _actor_alarms table so no cron schedule exists
-    state.rawDb.prepare("DELETE FROM _actor_alarms WHERE callback = 'runJob' AND type = 'cron'").run();
-    expect(do_.alarms.getSchedules({ type: "cron" }).some((s) => s.callback === "runJob")).toBe(false);
+    state.rawDb
+      .prepare(
+        "DELETE FROM _actor_alarms WHERE callback = 'runJob' AND type = 'cron'",
+      )
+      .run();
+    expect(
+      do_.alarms
+        .getSchedules({ type: "cron" })
+        .some((s) => s.callback === "runJob"),
+    ).toBe(false);
 
     addBreadcrumbSpy.mockClear();
     await do_.enqueue("sync-titles", null);
     await do_.runJob(null);
 
     // armCron call inside runJob should have re-registered the cron schedule
-    expect(do_.alarms.getSchedules({ type: "cron" }).some((s) => s.callback === "runJob")).toBe(true);
+    expect(
+      do_.alarms
+        .getSchedules({ type: "cron" })
+        .some((s) => s.callback === "runJob"),
+    ).toBe(true);
     // And emitted the Re-armed breadcrumb
     const rearmBreadcrumb = addBreadcrumbSpy.mock.calls.find(
-      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
+      (args) =>
+        (args[0] as { message?: string }).message === "Re-armed cron schedule",
     );
     expect(rearmBreadcrumb).toBeDefined();
   });
@@ -660,7 +757,8 @@ describe("JobQueueDO", () => {
 
     // No "Re-armed cron schedule" breadcrumb for ad-hoc DOs
     const rearmBreadcrumb = addBreadcrumbSpy.mock.calls.find(
-      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
+      (args) =>
+        (args[0] as { message?: string }).message === "Re-armed cron schedule",
     );
     expect(rearmBreadcrumb).toBeUndefined();
     adHocState.close();
@@ -671,23 +769,32 @@ describe("JobQueueDO", () => {
     await do_.armCron("sync-titles", "0 3 * * *");
 
     const rearmCalls = addBreadcrumbSpy.mock.calls.filter(
-      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
+      (args) =>
+        (args[0] as { message?: string }).message === "Re-armed cron schedule",
     );
     expect(rearmCalls).toHaveLength(1);
-    expect((rearmCalls[0]![0] as { data?: { name?: string } }).data?.name).toBe("sync-titles");
+    expect((rearmCalls[0]![0] as { data?: { name?: string } }).data?.name).toBe(
+      "sync-titles",
+    );
 
     // Second arm — schedule already exists, no additional breadcrumb
     await do_.armCron("sync-titles", "0 3 * * *");
-    expect(addBreadcrumbSpy.mock.calls.filter(
-      (args) => (args[0] as { message?: string }).message === "Re-armed cron schedule",
-    )).toHaveLength(1);
+    expect(
+      addBreadcrumbSpy.mock.calls.filter(
+        (args) =>
+          (args[0] as { message?: string }).message ===
+          "Re-armed cron schedule",
+      ),
+    ).toHaveLength(1);
   });
 
   // ── retry log parity + breadcrumb (#797) ─────────────────────────────────
 
   it("retry warn-log includes maxAttempts and stack fields (parity with processor.ts)", async () => {
     const retryError = new Error("transient error for parity test");
-    processorModule.handlers["sync-titles"] = async () => { throw retryError; };
+    processorModule.handlers["sync-titles"] = async () => {
+      throw retryError;
+    };
     // Use a spy on log.warn to inspect the structured fields
     const warnSpy = spyOn(console, "error").mockImplementation(() => {}); // logger outputs via console.error in test env
     await do_.enqueue("sync-titles", null, undefined, 3);
@@ -711,10 +818,13 @@ describe("JobQueueDO", () => {
 
     expect(captureExceptionSpy).not.toHaveBeenCalled();
     const retryBreadcrumb = addBreadcrumbSpy.mock.calls.find(
-      (args) => (args[0] as { message?: string }).message === "Job retry scheduled",
+      (args) =>
+        (args[0] as { message?: string }).message === "Job retry scheduled",
     );
     expect(retryBreadcrumb).toBeDefined();
-    const bc = retryBreadcrumb![0] as { data?: { name?: string; attempt?: string; maxAttempts?: string } };
+    const bc = retryBreadcrumb![0] as {
+      data?: { name?: string; attempt?: string; maxAttempts?: string };
+    };
     expect(bc.data?.name).toBe("sync-titles");
     expect(bc.data?.attempt).toBe("1");
     expect(bc.data?.maxAttempts).toBe("3");
@@ -723,7 +833,10 @@ describe("JobQueueDO", () => {
   // ── runCleanup (cleanup DO alarm) ─────────────────────────────────────────
 
   it("runCleanup() only prunes the DO's own jobs table — no D1 call or peer-DO fan-out", async () => {
-    const deleteExpiredSessionsSpy = spyOn(repository, "deleteExpiredSessions").mockResolvedValue(undefined);
+    const deleteExpiredSessionsSpy = spyOn(
+      repository,
+      "deleteExpiredSessions",
+    ).mockResolvedValue(undefined);
     const peerFetchCalls: { path: string }[] = [];
     const fakeNs = {
       idFromName: (_name: string) => ({ toString: () => _name }),
@@ -753,7 +866,9 @@ describe("JobQueueDO", () => {
     // No D1 deleteExpiredSessions call
     expect(deleteExpiredSessionsSpy).not.toHaveBeenCalled();
     // Own jobs table has a completed row
-    const rows = cleanupState.rawDb.prepare("SELECT status FROM jobs ORDER BY id DESC LIMIT 1").all() as Array<{ status: string }>;
+    const rows = cleanupState.rawDb
+      .prepare("SELECT status FROM jobs ORDER BY id DESC LIMIT 1")
+      .all() as Array<{ status: string }>;
     expect(rows[0]?.status).toBe("completed");
 
     deleteExpiredSessionsSpy.mockRestore();

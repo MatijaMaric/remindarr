@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser, isFollowing } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+  isFollowing,
+} from "../db/repository";
 import { getRawDb } from "../db/bun-db";
 import { requireAuth } from "../middleware/auth";
 import invitationsApp from "./invitations";
@@ -215,7 +220,9 @@ describe("POST /invitations/redeem/:code", () => {
 
     // Manually expire the invitation in the DB
     const db = getRawDb();
-    db.prepare("UPDATE invitations SET expires_at = '2020-01-01T00:00:00.000Z' WHERE code = ?").run(code);
+    db.prepare(
+      "UPDATE invitations SET expires_at = '2020-01-01T00:00:00.000Z' WHERE code = ?",
+    ).run(code);
 
     const res = await app.request(`/invitations/redeem/${code}`, {
       method: "POST",

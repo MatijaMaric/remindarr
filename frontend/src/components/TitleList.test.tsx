@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,7 +17,9 @@ import type { Title } from "../types";
 import type { ReactNode } from "react";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 const mockAuthValue = {
@@ -74,7 +84,9 @@ afterEach(() => {
 
 describe("TitleList", () => {
   it("renders all titles when no maxRows", () => {
-    const titles = Array.from({ length: 10 }, (_, i) => makeTitle(`movie-${i}`));
+    const titles = Array.from({ length: 10 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
     render(<TitleList titles={titles} />, { wrapper: Wrapper });
 
     for (let i = 0; i < 10; i++) {
@@ -83,12 +95,16 @@ describe("TitleList", () => {
   });
 
   it("renders empty message when no titles", () => {
-    render(<TitleList titles={[]} emptyMessage="Nothing here" />, { wrapper: Wrapper });
+    render(<TitleList titles={[]} emptyMessage="Nothing here" />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByText("Nothing here")).toBeDefined();
   });
 
   it("limits to maxRows * 7 items when maxRows is set", () => {
-    const titles = Array.from({ length: 10 }, (_, i) => makeTitle(`movie-${i}`));
+    const titles = Array.from({ length: 10 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
     render(<TitleList titles={titles} maxRows={1} />, { wrapper: Wrapper });
 
     // maxRows=1 means 7 items (xl breakpoint = 7 columns)
@@ -111,14 +127,20 @@ describe("TitleList", () => {
 
   it("does not show View all link when not truncated", () => {
     const titles = Array.from({ length: 4 }, (_, i) => makeTitle(`movie-${i}`));
-    render(<TitleList titles={titles} maxRows={1} viewAllHref="/all" />, { wrapper: Wrapper });
+    render(<TitleList titles={titles} maxRows={1} viewAllHref="/all" />, {
+      wrapper: Wrapper,
+    });
 
     expect(screen.queryByText("View all")).toBeNull();
   });
 
   it("shows View all link when truncated and viewAllHref is provided", () => {
-    const titles = Array.from({ length: 10 }, (_, i) => makeTitle(`movie-${i}`));
-    render(<TitleList titles={titles} maxRows={1} viewAllHref="/all" />, { wrapper: Wrapper });
+    const titles = Array.from({ length: 10 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
+    render(<TitleList titles={titles} maxRows={1} viewAllHref="/all" />, {
+      wrapper: Wrapper,
+    });
 
     const link = screen.getByText("View all");
     expect(link).toBeDefined();
@@ -126,21 +148,35 @@ describe("TitleList", () => {
   });
 
   it("uses custom viewAllLabel when provided", () => {
-    const titles = Array.from({ length: 10 }, (_, i) => makeTitle(`movie-${i}`));
-    render(<TitleList titles={titles} maxRows={1} viewAllHref="/all" viewAllLabel="Show more" />, { wrapper: Wrapper });
+    const titles = Array.from({ length: 10 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
+    render(
+      <TitleList
+        titles={titles}
+        maxRows={1}
+        viewAllHref="/all"
+        viewAllLabel="Show more"
+      />,
+      { wrapper: Wrapper },
+    );
 
     expect(screen.getByText("Show more")).toBeDefined();
   });
 
   it("does not show View all link when truncated but no viewAllHref", () => {
-    const titles = Array.from({ length: 10 }, (_, i) => makeTitle(`movie-${i}`));
+    const titles = Array.from({ length: 10 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
     render(<TitleList titles={titles} maxRows={1} />, { wrapper: Wrapper });
 
     expect(screen.queryByText("View all")).toBeNull();
   });
 
   it("limits to maxRows * 7 items with maxRows=2", () => {
-    const titles = Array.from({ length: 16 }, (_, i) => makeTitle(`movie-${i}`));
+    const titles = Array.from({ length: 16 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
     render(<TitleList titles={titles} maxRows={2} />, { wrapper: Wrapper });
 
     // maxRows=2 means 14 items (xl breakpoint = 7 columns)
@@ -151,7 +187,9 @@ describe("TitleList", () => {
   });
 
   it("renders normal grid for lists at or below the virtual threshold (24 items)", () => {
-    const titles = Array.from({ length: 24 }, (_, i) => makeTitle(`movie-${i}`));
+    const titles = Array.from({ length: 24 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
     render(<TitleList titles={titles} />, { wrapper: Wrapper });
 
     expect(screen.getByTestId("title-grid")).toBeDefined();
@@ -163,7 +201,9 @@ describe("TitleList", () => {
   });
 
   it("renders virtual list container for lists above the virtual threshold (>24 items)", () => {
-    const titles = Array.from({ length: 30 }, (_, i) => makeTitle(`movie-${i}`));
+    const titles = Array.from({ length: 30 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
     render(<TitleList titles={titles} />, { wrapper: Wrapper });
 
     expect(screen.getByTestId("virtual-list")).toBeDefined();
@@ -171,7 +211,9 @@ describe("TitleList", () => {
   });
 
   it("does not virtualize when maxRows is set even if count exceeds threshold", () => {
-    const titles = Array.from({ length: 30 }, (_, i) => makeTitle(`movie-${i}`));
+    const titles = Array.from({ length: 30 }, (_, i) =>
+      makeTitle(`movie-${i}`),
+    );
     render(<TitleList titles={titles} maxRows={1} />, { wrapper: Wrapper });
 
     // maxRows forces normal grid path (and also truncates to 6)

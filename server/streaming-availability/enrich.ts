@@ -73,7 +73,10 @@ export async function enrichTitleDeepLinks(
   let updated = 0;
 
   for (const saOption of saOptions) {
-    const providerId = await resolveProviderId(saOption.service.id, providerCache);
+    const providerId = await resolveProviderId(
+      saOption.service.id,
+      providerCache,
+    );
     if (providerId === null) {
       log.debug("Unmapped SA provider", {
         serviceId: saOption.service.id,
@@ -86,7 +89,8 @@ export async function enrichTitleDeepLinks(
     const monetizationType = mapSAMonetizationType(saOption.type);
 
     const matchingOffer = existingOffers.find(
-      (o) => o.providerId === providerId && o.monetizationType === monetizationType,
+      (o) =>
+        o.providerId === providerId && o.monetizationType === monetizationType,
     );
 
     if (matchingOffer) {
@@ -96,7 +100,9 @@ export async function enrichTitleDeepLinks(
     }
 
     // Try matching by provider only (ignore monetization type mismatch)
-    const providerMatch = existingOffers.find((o) => o.providerId === providerId);
+    const providerMatch = existingOffers.find(
+      (o) => o.providerId === providerId,
+    );
     if (providerMatch) {
       await updateOfferDeepLink(providerMatch.id, saOption.link);
       updated++;
@@ -110,16 +116,25 @@ export async function enrichTitleDeepLinks(
   }
 
   await markSaFetched(titleId);
-  log.debug("Enriched title deep links", { titleId, updated, saOptions: saOptions.length });
+  log.debug("Enriched title deep links", {
+    titleId,
+    updated,
+    saOptions: saOptions.length,
+  });
   return updated;
 }
 
-async function ensureProvider(providerId: number, service: SAService): Promise<void> {
+async function ensureProvider(
+  providerId: number,
+  service: SAService,
+): Promise<void> {
   return traceDbQuery("ensureProvider", async () => {
     const db = getDb();
     const technicalName = service.id.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    const iconUrl = service.imageSet?.whiteImage || service.imageSet?.lightThemeImage || null;
-    await db.insert(providers)
+    const iconUrl =
+      service.imageSet?.whiteImage || service.imageSet?.lightThemeImage || null;
+    await db
+      .insert(providers)
       .values({ id: providerId, name: service.name, technicalName, iconUrl })
       .onConflictDoNothing()
       .run();
@@ -134,7 +149,8 @@ async function createOfferFromSA(
 ): Promise<void> {
   return traceDbQuery("createOfferFromSA", async () => {
     const db = getDb();
-    await db.insert(offers)
+    await db
+      .insert(offers)
       .values({
         titleId,
         providerId,
@@ -152,7 +168,10 @@ async function createOfferFromSA(
   });
 }
 
-async function updateOfferDeepLink(offerId: number, deepLink: string): Promise<void> {
+async function updateOfferDeepLink(
+  offerId: number,
+  deepLink: string,
+): Promise<void> {
   return traceDbQuery("updateOfferDeepLink", async () => {
     const db = getDb();
     await db

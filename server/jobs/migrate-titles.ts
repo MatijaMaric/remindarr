@@ -15,7 +15,10 @@ function delay(ms: number): Promise<void> {
  * One-time migration: fetches English titles and original titles from TMDB
  * for all existing titles that don't have original_title set yet.
  */
-export async function migrateTitles(): Promise<{ updated: number; failed: number }> {
+export async function migrateTitles(): Promise<{
+  updated: number;
+  failed: number;
+}> {
   if (!CONFIG.TMDB_API_KEY) {
     log.info("Skipping migration", { reason: "TMDB_API_KEY not configured" });
     return { updated: 0, failed: 0 };
@@ -24,7 +27,7 @@ export async function migrateTitles(): Promise<{ updated: number; failed: number
   const db = getRawDb();
   const rows = db
     .prepare(
-      "SELECT id, object_type, tmdb_id FROM titles WHERE original_title IS NULL AND tmdb_id IS NOT NULL"
+      "SELECT id, object_type, tmdb_id FROM titles WHERE original_title IS NULL AND tmdb_id IS NOT NULL",
     )
     .all() as { id: string; object_type: string; tmdb_id: string }[];
 
@@ -54,7 +57,7 @@ export async function migrateTitles(): Promise<{ updated: number; failed: number
       }
 
       db.prepare(
-        "UPDATE titles SET title = ?, original_title = ? WHERE id = ?"
+        "UPDATE titles SET title = ?, original_title = ? WHERE id = ?",
       ).run(englishTitle, originalTitle, row.id);
       updated++;
     } catch (err) {

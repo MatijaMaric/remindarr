@@ -21,7 +21,17 @@ import {
   getActivityKindVisibilityMap,
 } from "../db/repository";
 import { optionalAuth } from "../middleware/auth";
-import { getDb, episodes, ratings, episodeRatings, watchedTitles, watchedEpisodes, tracked, recommendations, users } from "../db/schema";
+import {
+  getDb,
+  episodes,
+  ratings,
+  episodeRatings,
+  watchedTitles,
+  watchedEpisodes,
+  tracked,
+  recommendations,
+  users,
+} from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import profileApp from "./profile";
 import type { AppEnv } from "../types";
@@ -80,7 +90,17 @@ function authHeaders(token = userToken) {
 }
 
 /** Force a specific timestamp on the most recent row for a given table. */
-async function backdate(table: "ratings" | "episode_ratings" | "watched_titles" | "watched_episodes" | "tracked" | "recommendations", filter: any, ts: string) {
+async function backdate(
+  table:
+    | "ratings"
+    | "episode_ratings"
+    | "watched_titles"
+    | "watched_episodes"
+    | "tracked"
+    | "recommendations",
+  filter: any,
+  ts: string,
+) {
   const db = getDb();
   if (table === "ratings") {
     await db.update(ratings).set({ createdAt: ts }).where(filter).run();
@@ -113,7 +133,9 @@ describe("GET /user/:username/activity", () => {
   });
 
   it("includes title rating events", async () => {
-    await upsertTitles([makeParsedTitle({ id: "movie-1", title: "Halcyon Drift" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", title: "Halcyon Drift" }),
+    ]);
     await rateTitle(userId, "movie-1", "LOVE");
 
     const res = await app.request("/user/activeuser/activity");
@@ -126,12 +148,30 @@ describe("GET /user/:username/activity", () => {
   });
 
   it("includes episode rating events with review", async () => {
-    await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Lanternside" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        title: "Lanternside",
+      }),
+    ]);
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 2, episode_number: 3, name: "The Lantern Ghost", overview: null, air_date: "2026-01-01", still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 3,
+        name: "The Lantern Ghost",
+        overview: null,
+        air_date: "2026-01-01",
+        still_path: null,
+      },
     ]);
     const db = getDb();
-    const ep = await db.select().from(episodes).where(eq(episodes.titleId, "show-1")).get();
+    const ep = await db
+      .select()
+      .from(episodes)
+      .where(eq(episodes.titleId, "show-1"))
+      .get();
     await rateEpisode(userId, ep!.id, "LOVE", "Best episode of the season.");
 
     const res = await app.request("/user/activeuser/activity");
@@ -148,14 +188,30 @@ describe("GET /user/:username/activity", () => {
   it("includes watched title and watched episode events", async () => {
     await upsertTitles([
       makeParsedTitle({ id: "movie-1", title: "Tidewater" }),
-      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Small Clocks" }),
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        title: "Small Clocks",
+      }),
     ]);
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 5, name: "Brittle", overview: null, air_date: "2026-02-01", still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 5,
+        name: "Brittle",
+        overview: null,
+        air_date: "2026-02-01",
+        still_path: null,
+      },
     ]);
     await watchTitle("movie-1", userId);
     const db = getDb();
-    const ep = await db.select().from(episodes).where(eq(episodes.titleId, "show-1")).get();
+    const ep = await db
+      .select()
+      .from(episodes)
+      .where(eq(episodes.titleId, "show-1"))
+      .get();
     await watchEpisode(ep!.id, userId);
 
     const res = await app.request("/user/activeuser/activity");
@@ -172,24 +228,46 @@ describe("GET /user/:username/activity", () => {
     await trackTitle("movie-public", userId);
     await trackTitle("movie-private", userId);
     const db = getDb();
-    await db.update(tracked).set({ public: 0 }).where(and(eq(tracked.titleId, "movie-private"), eq(tracked.userId, userId))).run();
+    await db
+      .update(tracked)
+      .set({ public: 0 })
+      .where(
+        and(eq(tracked.titleId, "movie-private"), eq(tracked.userId, userId)),
+      )
+      .run();
 
     const res = await app.request("/user/activeuser/activity");
     const body = await res.json();
-    const trackEvents = body.activities.filter((a: any) => a.type === "tracked");
+    const trackEvents = body.activities.filter(
+      (a: any) => a.type === "tracked",
+    );
     expect(trackEvents).toHaveLength(1);
     expect(trackEvents[0].title.id).toBe("movie-public");
   });
 
   it("includes recommendation events with message", async () => {
-    await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "North Water" })]);
-    await createRecommendation(userId, "show-1", "The Lighthouse arc is the strongest thing on TV right now.");
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        title: "North Water",
+      }),
+    ]);
+    await createRecommendation(
+      userId,
+      "show-1",
+      "The Lighthouse arc is the strongest thing on TV right now.",
+    );
 
     const res = await app.request("/user/activeuser/activity");
     const body = await res.json();
-    const recs = body.activities.filter((a: any) => a.type === "recommendation");
+    const recs = body.activities.filter(
+      (a: any) => a.type === "recommendation",
+    );
     expect(recs).toHaveLength(1);
-    expect(recs[0].message).toBe("The Lighthouse arc is the strongest thing on TV right now.");
+    expect(recs[0].message).toBe(
+      "The Lighthouse arc is the strongest thing on TV right now.",
+    );
     expect(recs[0].title.id).toBe("show-1");
   });
 
@@ -200,17 +278,33 @@ describe("GET /user/:username/activity", () => {
       makeParsedTitle({ id: "m3", title: "Newest" }),
     ]);
     await rateTitle(userId, "m1", "LIKE");
-    await backdate("ratings", and(eq(ratings.userId, userId), eq(ratings.titleId, "m1")), "2024-01-01 00:00:00");
+    await backdate(
+      "ratings",
+      and(eq(ratings.userId, userId), eq(ratings.titleId, "m1")),
+      "2024-01-01 00:00:00",
+    );
 
     await watchTitle("m2", userId);
-    await backdate("watched_titles", and(eq(watchedTitles.userId, userId), eq(watchedTitles.titleId, "m2")), "2025-06-01 00:00:00");
+    await backdate(
+      "watched_titles",
+      and(eq(watchedTitles.userId, userId), eq(watchedTitles.titleId, "m2")),
+      "2025-06-01 00:00:00",
+    );
 
     await trackTitle("m3", userId);
-    await backdate("tracked", and(eq(tracked.userId, userId), eq(tracked.titleId, "m3")), "2026-04-01 00:00:00");
+    await backdate(
+      "tracked",
+      and(eq(tracked.userId, userId), eq(tracked.titleId, "m3")),
+      "2026-04-01 00:00:00",
+    );
 
     const res = await app.request("/user/activeuser/activity");
     const body = await res.json();
-    expect(body.activities.map((a: any) => a.title.id)).toEqual(["m3", "m2", "m1"]);
+    expect(body.activities.map((a: any) => a.title.id)).toEqual([
+      "m3",
+      "m2",
+      "m1",
+    ]);
   });
 
   it("paginates with cursor", async () => {
@@ -220,11 +314,23 @@ describe("GET /user/:username/activity", () => {
       makeParsedTitle({ id: "m3", title: "Three" }),
     ]);
     await rateTitle(userId, "m1", "LIKE");
-    await backdate("ratings", and(eq(ratings.userId, userId), eq(ratings.titleId, "m1")), "2024-01-01 00:00:00");
+    await backdate(
+      "ratings",
+      and(eq(ratings.userId, userId), eq(ratings.titleId, "m1")),
+      "2024-01-01 00:00:00",
+    );
     await rateTitle(userId, "m2", "LIKE");
-    await backdate("ratings", and(eq(ratings.userId, userId), eq(ratings.titleId, "m2")), "2025-01-01 00:00:00");
+    await backdate(
+      "ratings",
+      and(eq(ratings.userId, userId), eq(ratings.titleId, "m2")),
+      "2025-01-01 00:00:00",
+    );
     await rateTitle(userId, "m3", "LIKE");
-    await backdate("ratings", and(eq(ratings.userId, userId), eq(ratings.titleId, "m3")), "2026-01-01 00:00:00");
+    await backdate(
+      "ratings",
+      and(eq(ratings.userId, userId), eq(ratings.titleId, "m3")),
+      "2026-01-01 00:00:00",
+    );
 
     const firstRes = await app.request("/user/activeuser/activity?limit=2");
     const first = await firstRes.json();
@@ -233,7 +339,9 @@ describe("GET /user/:username/activity", () => {
     expect(first.has_more).toBe(true);
     expect(first.next_cursor).toBeTruthy();
 
-    const secondRes = await app.request(`/user/activeuser/activity?limit=2&before=${encodeURIComponent(first.next_cursor)}`);
+    const secondRes = await app.request(
+      `/user/activeuser/activity?limit=2&before=${encodeURIComponent(first.next_cursor)}`,
+    );
     const second = await secondRes.json();
     expect(second.activities).toHaveLength(1);
     expect(second.activities[0].title.id).toBe("m1");
@@ -258,7 +366,9 @@ describe("GET /user/:username/activity", () => {
     await upsertTitles([makeParsedTitle({ id: "m1", title: "Hidden" })]);
     await rateTitle(userId, "m1", "LOVE");
 
-    const res = await app.request("/user/activeuser/activity", { headers: authHeaders() });
+    const res = await app.request("/user/activeuser/activity", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.activities).toHaveLength(1);
@@ -271,7 +381,9 @@ describe("GET /user/:username/activity", () => {
 
     const strangerId = await createUser("stranger", "hash");
     const strangerToken = await createSession(strangerId);
-    const strangerRes = await app.request("/user/activeuser/activity", { headers: authHeaders(strangerToken) });
+    const strangerRes = await app.request("/user/activeuser/activity", {
+      headers: authHeaders(strangerToken),
+    });
     expect((await strangerRes.json()).activities).toEqual([]);
 
     const friendId = await createUser("friend", "hash");
@@ -279,7 +391,9 @@ describe("GET /user/:username/activity", () => {
     await follow(userId, friendId);
     await follow(friendId, userId);
 
-    const friendRes = await app.request("/user/activeuser/activity", { headers: authHeaders(friendToken) });
+    const friendRes = await app.request("/user/activeuser/activity", {
+      headers: authHeaders(friendToken),
+    });
     expect((await friendRes.json()).activities).toHaveLength(1);
   });
 
@@ -313,19 +427,26 @@ describe("GET /user/:username/activity", () => {
     await upsertTitles([makeParsedTitle({ id: "m1", title: "Mine Only" })]);
     await rateTitle(userId, "m1", "LOVE");
 
-    const res = await app.request("/user/activeuser/activity", { headers: authHeaders() });
+    const res = await app.request("/user/activeuser/activity", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.activities).toHaveLength(1);
   });
 
   it("per-kind visibility: private kind excluded from public viewer", async () => {
-    await setActivitySettings(userId, { kindVisibility: { rating_title: "private" } });
+    await setActivitySettings(userId, {
+      kindVisibility: { rating_title: "private" },
+    });
     await upsertTitles([makeParsedTitle({ id: "m1", title: "Rating Hidden" })]);
     await rateTitle(userId, "m1", "LIKE");
     await trackTitle("m1", userId);
-    await getDb().update(tracked).set({ public: 1 })
-      .where(and(eq(tracked.userId, userId), eq(tracked.titleId, "m1"))).run();
+    await getDb()
+      .update(tracked)
+      .set({ public: 1 })
+      .where(and(eq(tracked.userId, userId), eq(tracked.titleId, "m1")))
+      .run();
 
     const res = await app.request("/user/activeuser/activity");
     const body = await res.json();
@@ -336,7 +457,9 @@ describe("GET /user/:username/activity", () => {
 
   it("per-kind visibility: friends_only kind excluded from public viewer but visible to friend", async () => {
     await updateProfilePublic(userId, "public");
-    await setActivitySettings(userId, { kindVisibility: { rating_title: "friends_only" } });
+    await setActivitySettings(userId, {
+      kindVisibility: { rating_title: "friends_only" },
+    });
     await upsertTitles([makeParsedTitle({ id: "m1", title: "Friend Rating" })]);
     await rateTitle(userId, "m1", "LOVE");
 
@@ -348,7 +471,9 @@ describe("GET /user/:username/activity", () => {
     await follow(userId, friendId);
     await follow(friendId, userId);
 
-    const friendRes = await app.request("/user/activeuser/activity", { headers: authHeaders(friendToken) });
+    const friendRes = await app.request("/user/activeuser/activity", {
+      headers: authHeaders(friendToken),
+    });
     expect((await friendRes.json()).activities).toHaveLength(1);
   });
 
@@ -358,7 +483,9 @@ describe("GET /user/:username/activity", () => {
 
     await hideActivityEvent(userId, "rating_title", "rt:m1");
 
-    const res = await app.request("/user/activeuser/activity", { headers: authHeaders() });
+    const res = await app.request("/user/activeuser/activity", {
+      headers: authHeaders(),
+    });
     const body = await res.json();
     expect(body.activities).toEqual([]);
   });
@@ -373,7 +500,9 @@ describe("GET /user/:username/activity", () => {
 
     await hideActivityEvent(userId, "rating_title", "rt:m1");
 
-    const res = await app.request("/user/activeuser/activity", { headers: authHeaders() });
+    const res = await app.request("/user/activeuser/activity", {
+      headers: authHeaders(),
+    });
     const body = await res.json();
     expect(body.activities).toHaveLength(1);
     expect(body.activities[0].title.id).toBe("m2");

@@ -53,14 +53,22 @@ async function insertEpisodes(
     .prepare(
       `SELECT id, season_number, episode_number FROM episodes WHERE title_id = ? ORDER BY season_number, episode_number`,
     )
-    .all(titleId) as { id: number; season_number: number; episode_number: number }[];
+    .all(titleId) as {
+    id: number;
+    season_number: number;
+    episode_number: number;
+  }[];
   return rows.map((r) => r.id);
 }
 
 describe("getTrackedTitles show_status", () => {
   it("returns 'completed' when all episodes released and watched", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Completed Show" }),
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        title: "Completed Show",
+      }),
     ]);
     await trackTitle("show-1", userId);
 
@@ -85,7 +93,11 @@ describe("getTrackedTitles show_status", () => {
 
   it("returns 'caught_up' when all released episodes watched but more coming", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-2", objectType: "SHOW", title: "Caught Up Show" }),
+      makeParsedTitle({
+        id: "show-2",
+        objectType: "SHOW",
+        title: "Caught Up Show",
+      }),
     ]);
     await trackTitle("show-2", userId);
 
@@ -111,7 +123,11 @@ describe("getTrackedTitles show_status", () => {
 
   it("returns 'watching' when released episodes exist but not all watched", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-3", objectType: "SHOW", title: "Watching Show" }),
+      makeParsedTitle({
+        id: "show-3",
+        objectType: "SHOW",
+        title: "Watching Show",
+      }),
     ]);
     await trackTitle("show-3", userId);
 
@@ -134,7 +150,11 @@ describe("getTrackedTitles show_status", () => {
 
   it("returns 'not_started' when episodes released but none watched", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-4", objectType: "SHOW", title: "Not Started Show" }),
+      makeParsedTitle({
+        id: "show-4",
+        objectType: "SHOW",
+        title: "Not Started Show",
+      }),
     ]);
     await trackTitle("show-4", userId);
 
@@ -153,7 +173,11 @@ describe("getTrackedTitles show_status", () => {
 
   it("returns 'unreleased' when no episodes have been released yet", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-5", objectType: "SHOW", title: "Unreleased Show" }),
+      makeParsedTitle({
+        id: "show-5",
+        objectType: "SHOW",
+        title: "Unreleased Show",
+      }),
     ]);
     await trackTitle("show-5", userId);
 
@@ -173,7 +197,11 @@ describe("getTrackedTitles show_status", () => {
 
   it("returns null show_status for movies", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", title: "Test Movie" }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        title: "Test Movie",
+      }),
     ]);
     await trackTitle("movie-1", userId);
 
@@ -186,7 +214,11 @@ describe("getTrackedTitles show_status", () => {
 
   it("returns 'unreleased' for show with no episodes at all", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-6", objectType: "SHOW", title: "Empty Show" }),
+      makeParsedTitle({
+        id: "show-6",
+        objectType: "SHOW",
+        title: "Empty Show",
+      }),
     ]);
     await trackTitle("show-6", userId);
 
@@ -241,7 +273,14 @@ describe("updateTrackedStatus — watched_titles sync for movies", () => {
 
 describe("getReleasedUnwatchedTrackedMovies", () => {
   it("returns a released tracked unwatched movie", async () => {
-    await upsertTitles([makeParsedTitle({ id: "ruw-1", objectType: "MOVIE", title: "Released Unwatched", releaseDate: "2020-01-01" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "ruw-1",
+        objectType: "MOVIE",
+        title: "Released Unwatched",
+        releaseDate: "2020-01-01",
+      }),
+    ]);
     await trackTitle("ruw-1", userId);
 
     const results = await getReleasedUnwatchedTrackedMovies(userId);
@@ -249,7 +288,14 @@ describe("getReleasedUnwatchedTrackedMovies", () => {
   });
 
   it("excludes a movie that has been marked watched", async () => {
-    await upsertTitles([makeParsedTitle({ id: "ruw-2", objectType: "MOVIE", title: "Watched Movie", releaseDate: "2020-01-01" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "ruw-2",
+        objectType: "MOVIE",
+        title: "Watched Movie",
+        releaseDate: "2020-01-01",
+      }),
+    ]);
     await trackTitle("ruw-2", userId);
     await watchTitle("ruw-2", userId);
 
@@ -258,7 +304,14 @@ describe("getReleasedUnwatchedTrackedMovies", () => {
   });
 
   it("excludes an upcoming movie (release_date in the future)", async () => {
-    await upsertTitles([makeParsedTitle({ id: "ruw-3", objectType: "MOVIE", title: "Upcoming Movie", releaseDate: "2099-12-31" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "ruw-3",
+        objectType: "MOVIE",
+        title: "Upcoming Movie",
+        releaseDate: "2099-12-31",
+      }),
+    ]);
     await trackTitle("ruw-3", userId);
 
     const results = await getReleasedUnwatchedTrackedMovies(userId);
@@ -266,7 +319,14 @@ describe("getReleasedUnwatchedTrackedMovies", () => {
   });
 
   it("excludes a movie with null release_date", async () => {
-    await upsertTitles([makeParsedTitle({ id: "ruw-4", objectType: "MOVIE", title: "No Date Movie", releaseDate: null })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "ruw-4",
+        objectType: "MOVIE",
+        title: "No Date Movie",
+        releaseDate: null,
+      }),
+    ]);
     await trackTitle("ruw-4", userId);
 
     const results = await getReleasedUnwatchedTrackedMovies(userId);
@@ -274,7 +334,14 @@ describe("getReleasedUnwatchedTrackedMovies", () => {
   });
 
   it("excludes tracked shows", async () => {
-    await upsertTitles([makeParsedTitle({ id: "ruw-5", objectType: "SHOW", title: "A Show", releaseDate: "2020-01-01" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "ruw-5",
+        objectType: "SHOW",
+        title: "A Show",
+        releaseDate: "2020-01-01",
+      }),
+    ]);
     await trackTitle("ruw-5", userId);
 
     const results = await getReleasedUnwatchedTrackedMovies(userId);
@@ -283,21 +350,40 @@ describe("getReleasedUnwatchedTrackedMovies", () => {
 
   it("returns results sorted by release_date descending", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "ruw-6a", objectType: "MOVIE", title: "Older", releaseDate: "2021-01-01" }),
-      makeParsedTitle({ id: "ruw-6b", objectType: "MOVIE", title: "Newer", releaseDate: "2022-06-01" }),
+      makeParsedTitle({
+        id: "ruw-6a",
+        objectType: "MOVIE",
+        title: "Older",
+        releaseDate: "2021-01-01",
+      }),
+      makeParsedTitle({
+        id: "ruw-6b",
+        objectType: "MOVIE",
+        title: "Newer",
+        releaseDate: "2022-06-01",
+      }),
     ]);
     await trackTitle("ruw-6a", userId);
     await trackTitle("ruw-6b", userId);
 
     const results = await getReleasedUnwatchedTrackedMovies(userId);
-    const ids = results.filter((r) => r.id === "ruw-6a" || r.id === "ruw-6b").map((r) => r.id);
+    const ids = results
+      .filter((r) => r.id === "ruw-6a" || r.id === "ruw-6b")
+      .map((r) => r.id);
     expect(ids[0]).toBe("ruw-6b");
     expect(ids[1]).toBe("ruw-6a");
   });
 
   it("excludes movies tracked by a different user", async () => {
     const otherId = await createUser("other-user-ruw", "hash");
-    await upsertTitles([makeParsedTitle({ id: "ruw-7", objectType: "MOVIE", title: "Other User Movie", releaseDate: "2020-01-01" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "ruw-7",
+        objectType: "MOVIE",
+        title: "Other User Movie",
+        releaseDate: "2020-01-01",
+      }),
+    ]);
     await trackTitle("ruw-7", otherId);
 
     const results = await getReleasedUnwatchedTrackedMovies(userId);
@@ -307,7 +393,14 @@ describe("getReleasedUnwatchedTrackedMovies", () => {
 
 describe("getUpcomingTrackedMoviesOpen", () => {
   it("returns a tracked movie with a future release date", async () => {
-    await upsertTitles([makeParsedTitle({ id: "upc-1", objectType: "MOVIE", title: "Future Movie", releaseDate: "2099-06-01" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "upc-1",
+        objectType: "MOVIE",
+        title: "Future Movie",
+        releaseDate: "2099-06-01",
+      }),
+    ]);
     await trackTitle("upc-1", userId);
 
     const results = await getUpcomingTrackedMoviesOpen(userId);
@@ -315,7 +408,14 @@ describe("getUpcomingTrackedMoviesOpen", () => {
   });
 
   it("excludes movies with a past release date", async () => {
-    await upsertTitles([makeParsedTitle({ id: "upc-2", objectType: "MOVIE", title: "Past Movie", releaseDate: "2020-01-01" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "upc-2",
+        objectType: "MOVIE",
+        title: "Past Movie",
+        releaseDate: "2020-01-01",
+      }),
+    ]);
     await trackTitle("upc-2", userId);
 
     const results = await getUpcomingTrackedMoviesOpen(userId);
@@ -323,7 +423,14 @@ describe("getUpcomingTrackedMoviesOpen", () => {
   });
 
   it("excludes movies with null release_date", async () => {
-    await upsertTitles([makeParsedTitle({ id: "upc-3", objectType: "MOVIE", title: "No Date", releaseDate: null })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "upc-3",
+        objectType: "MOVIE",
+        title: "No Date",
+        releaseDate: null,
+      }),
+    ]);
     await trackTitle("upc-3", userId);
 
     const results = await getUpcomingTrackedMoviesOpen(userId);
@@ -331,7 +438,14 @@ describe("getUpcomingTrackedMoviesOpen", () => {
   });
 
   it("excludes tracked shows", async () => {
-    await upsertTitles([makeParsedTitle({ id: "upc-4", objectType: "SHOW", title: "Future Show", releaseDate: "2099-01-01" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "upc-4",
+        objectType: "SHOW",
+        title: "Future Show",
+        releaseDate: "2099-01-01",
+      }),
+    ]);
     await trackTitle("upc-4", userId);
 
     const results = await getUpcomingTrackedMoviesOpen(userId);
@@ -340,14 +454,26 @@ describe("getUpcomingTrackedMoviesOpen", () => {
 
   it("returns results sorted by release_date ascending", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "upc-5a", objectType: "MOVIE", title: "Later", releaseDate: "2099-12-01" }),
-      makeParsedTitle({ id: "upc-5b", objectType: "MOVIE", title: "Sooner", releaseDate: "2099-06-01" }),
+      makeParsedTitle({
+        id: "upc-5a",
+        objectType: "MOVIE",
+        title: "Later",
+        releaseDate: "2099-12-01",
+      }),
+      makeParsedTitle({
+        id: "upc-5b",
+        objectType: "MOVIE",
+        title: "Sooner",
+        releaseDate: "2099-06-01",
+      }),
     ]);
     await trackTitle("upc-5a", userId);
     await trackTitle("upc-5b", userId);
 
     const results = await getUpcomingTrackedMoviesOpen(userId);
-    const ids = results.filter((r) => r.id === "upc-5a" || r.id === "upc-5b").map((r) => r.id);
+    const ids = results
+      .filter((r) => r.id === "upc-5a" || r.id === "upc-5b")
+      .map((r) => r.id);
     expect(ids[0]).toBe("upc-5b");
     expect(ids[1]).toBe("upc-5a");
   });

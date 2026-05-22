@@ -1,18 +1,22 @@
-import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
-import type { ComponentProps } from "react"
+import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
+import type { ComponentProps } from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function AlertDialog(props: ComponentProps<typeof AlertDialogPrimitive.Root>) {
-  return <AlertDialogPrimitive.Root {...props} />
+  return <AlertDialogPrimitive.Root {...props} />;
 }
 
-function AlertDialogTrigger(props: ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
-  return <AlertDialogPrimitive.Trigger {...props} />
+function AlertDialogTrigger(
+  props: ComponentProps<typeof AlertDialogPrimitive.Trigger>,
+) {
+  return <AlertDialogPrimitive.Trigger {...props} />;
 }
 
-function AlertDialogPortal(props: ComponentProps<typeof AlertDialogPrimitive.Portal>) {
-  return <AlertDialogPrimitive.Portal {...props} />
+function AlertDialogPortal(
+  props: ComponentProps<typeof AlertDialogPrimitive.Portal>,
+) {
+  return <AlertDialogPrimitive.Portal {...props} />;
 }
 
 function AlertDialogBackdrop({
@@ -28,7 +32,7 @@ function AlertDialogBackdrop({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDialogPopup({
@@ -51,7 +55,7 @@ function AlertDialogPopup({
         {children}
       </AlertDialogPrimitive.Popup>
     </AlertDialogPortal>
-  )
+  );
 }
 
 function AlertDialogTitle({
@@ -63,7 +67,7 @@ function AlertDialogTitle({
       className={cn("text-lg font-semibold text-zinc-100", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDialogDescription({
@@ -75,11 +79,13 @@ function AlertDialogDescription({
       className={cn("mt-2 text-sm text-zinc-400", className)}
       {...props}
     />
-  )
+  );
 }
 
-function AlertDialogClose(props: ComponentProps<typeof AlertDialogPrimitive.Close>) {
-  return <AlertDialogPrimitive.Close {...props} />
+function AlertDialogClose(
+  props: ComponentProps<typeof AlertDialogPrimitive.Close>,
+) {
+  return <AlertDialogPrimitive.Close {...props} />;
 }
 
 export {
@@ -91,4 +97,4 @@ export {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogClose,
-}
+};

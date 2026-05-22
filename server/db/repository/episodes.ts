@@ -15,13 +15,14 @@ export async function upsertEpisodes(
     overview: string | null;
     air_date: string | null;
     still_path: string | null;
-  }[]
+  }[],
 ) {
   return traceDbQuery("upsertEpisodes", async () => {
     const db = getDb();
 
     for (const ep of episodeList) {
-      await db.insert(episodes)
+      await db
+        .insert(episodes)
         .values({
           titleId: ep.title_id,
           seasonNumber: ep.season_number,
@@ -33,7 +34,11 @@ export async function upsertEpisodes(
           updatedAt: sql`datetime('now')`,
         })
         .onConflictDoUpdate({
-          target: [episodes.titleId, episodes.seasonNumber, episodes.episodeNumber],
+          target: [
+            episodes.titleId,
+            episodes.seasonNumber,
+            episodes.episodeNumber,
+          ],
           set: {
             name: sql`excluded.name`,
             overview: sql`excluded.overview`,
@@ -49,7 +54,10 @@ export async function upsertEpisodes(
   });
 }
 
-export async function getEpisodesByMonth(filters: MonthFilters, userId?: string) {
+export async function getEpisodesByMonth(
+  filters: MonthFilters,
+  userId?: string,
+) {
   return traceDbQuery("getEpisodesByMonth", async () => {
     const db = getDb();
     const { month, objectType } = filters;
@@ -88,13 +96,18 @@ export async function getEpisodesByMonth(filters: MonthFilters, userId?: string)
       .innerJoin(titles, eq(titles.id, episodes.titleId))
       .innerJoin(
         tracked,
-        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
+        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
       )
-      .where(and(gte(episodes.airDate, startDate), lt(episodes.airDate, nextMonth)))
+      .where(
+        and(gte(episodes.airDate, startDate), lt(episodes.airDate, nextMonth)),
+      )
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
-    const offersByTitle = await getOffersWithPlex([...new Set(rows.map((r) => r.title_id))], userId);
+    const offersByTitle = await getOffersWithPlex(
+      [...new Set(rows.map((r) => r.title_id))],
+      userId,
+    );
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
@@ -103,7 +116,11 @@ export async function getEpisodesByMonth(filters: MonthFilters, userId?: string)
   });
 }
 
-export async function getEpisodesByDateRange(startDate: string, endDate: string, userId?: string) {
+export async function getEpisodesByDateRange(
+  startDate: string,
+  endDate: string,
+  userId?: string,
+) {
   return traceDbQuery("getEpisodesByDateRange", async () => {
     const db = getDb();
     if (!userId) return [];
@@ -134,13 +151,18 @@ export async function getEpisodesByDateRange(startDate: string, endDate: string,
       .innerJoin(titles, eq(titles.id, episodes.titleId))
       .innerJoin(
         tracked,
-        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
+        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
       )
-      .where(and(gte(episodes.airDate, startDate), lt(episodes.airDate, endDate)))
+      .where(
+        and(gte(episodes.airDate, startDate), lt(episodes.airDate, endDate)),
+      )
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
-    const offersByTitle = await getOffersWithPlex([...new Set(rows.map((r) => r.title_id))], userId);
+    const offersByTitle = await getOffersWithPlex(
+      [...new Set(rows.map((r) => r.title_id))],
+      userId,
+    );
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
@@ -160,7 +182,10 @@ export async function deleteEpisodesForTitle(titleId: string) {
  * Core implementation: fetches unwatched episodes and returns them alongside
  * the lastWatchedByTitle map so callers can reuse it without a second query.
  */
-export async function getUnwatchedEpisodesWithMeta(userId: string, timezone = "UTC") {
+export async function getUnwatchedEpisodesWithMeta(
+  userId: string,
+  timezone = "UTC",
+) {
   return traceDbQuery("getUnwatchedEpisodesWithMeta", async () => {
     const db = getDb();
     const today = localDateForTimezone(timezone);
@@ -195,7 +220,7 @@ export async function getUnwatchedEpisodesWithMeta(userId: string, timezone = "U
       .innerJoin(titles, eq(titles.id, episodes.titleId))
       .innerJoin(
         tracked,
-        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId))
+        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
       )
       .where(
         and(
@@ -203,10 +228,14 @@ export async function getUnwatchedEpisodesWithMeta(userId: string, timezone = "U
           sql`NOT EXISTS(
             SELECT 1 FROM watched_episodes we
             WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
-          )`
-        )
+          )`,
+        ),
       )
-      .orderBy(asc(titles.title), asc(episodes.seasonNumber), asc(episodes.episodeNumber))
+      .orderBy(
+        asc(titles.title),
+        asc(episodes.seasonNumber),
+        asc(episodes.episodeNumber),
+      )
       .all();
 
     const lastWatchedByTitle = await getLastWatchedAtPerShow(userId);
@@ -229,11 +258,15 @@ export async function getUnwatchedEpisodesWithMeta(userId: string, timezone = "U
       const aIdx = titleOrder.get(a.title_id)!;
       const bIdx = titleOrder.get(b.title_id)!;
       if (aIdx !== bIdx) return aIdx - bIdx;
-      if (a.season_number !== b.season_number) return a.season_number - b.season_number;
+      if (a.season_number !== b.season_number)
+        return a.season_number - b.season_number;
       return a.episode_number - b.episode_number;
     });
 
-    const offersByTitle = await getOffersWithPlex([...new Set(sortedRows.map((r) => r.title_id))], userId);
+    const offersByTitle = await getOffersWithPlex(
+      [...new Set(sortedRows.map((r) => r.title_id))],
+      userId,
+    );
     const episodeRows = sortedRows.map((row) => ({
       ...row,
       is_watched: false,
@@ -246,7 +279,10 @@ export async function getUnwatchedEpisodesWithMeta(userId: string, timezone = "U
 
 /** Convenience wrapper that preserves the original public signature. */
 export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
-  const { episodes: episodeRows } = await getUnwatchedEpisodesWithMeta(userId, timezone);
+  const { episodes: episodeRows } = await getUnwatchedEpisodesWithMeta(
+    userId,
+    timezone,
+  );
   return episodeRows;
 }
 
@@ -255,7 +291,11 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
  * for a given show and user. Used by the Up Next queue to surface the specific
  * next episode to watch.
  */
-export async function getNextUnwatchedEpisode(userId: string, titleId: string, timezone = "UTC") {
+export async function getNextUnwatchedEpisode(
+  userId: string,
+  titleId: string,
+  timezone = "UTC",
+) {
   return traceDbQuery("getNextUnwatchedEpisode", async () => {
     const db = getDb();
     const today = localDateForTimezone(timezone);
@@ -272,7 +312,7 @@ export async function getNextUnwatchedEpisode(userId: string, titleId: string, t
       .from(episodes)
       .innerJoin(
         tracked,
-        and(eq(tracked.titleId, episodes.titleId), eq(tracked.userId, userId))
+        and(eq(tracked.titleId, episodes.titleId), eq(tracked.userId, userId)),
       )
       .where(
         and(
@@ -281,8 +321,8 @@ export async function getNextUnwatchedEpisode(userId: string, titleId: string, t
           sql`NOT EXISTS(
             SELECT 1 FROM watched_episodes we
             WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
-          )`
-        )
+          )`,
+        ),
       )
       .orderBy(asc(episodes.seasonNumber), asc(episodes.episodeNumber))
       .limit(1)
@@ -364,7 +404,9 @@ export async function getNextUnwatchedEpisodesForTitles(
  * show for the given user. Used by Up Next to sort in-progress shows by
  * recency (most recently watched first).
  */
-export async function getLastWatchedAtPerShow(userId: string): Promise<Map<string, Date>> {
+export async function getLastWatchedAtPerShow(
+  userId: string,
+): Promise<Map<string, Date>> {
   return traceDbQuery("getLastWatchedAtPerShow", async () => {
     const db = getDb();
 
@@ -391,7 +433,9 @@ export async function getLastWatchedAtPerShow(userId: string): Promise<Map<strin
 
 // ─── Watched Episodes ─────────────────────────────────────────────────────────
 
-export async function getEpisodeAirDate(episodeId: number): Promise<string | null> {
+export async function getEpisodeAirDate(
+  episodeId: number,
+): Promise<string | null> {
   return traceDbQuery("getEpisodeAirDate", async () => {
     const db = getDb();
     const row = await db
@@ -403,7 +447,9 @@ export async function getEpisodeAirDate(episodeId: number): Promise<string | nul
   });
 }
 
-export async function getEpisodeTitleId(episodeId: number): Promise<string | null> {
+export async function getEpisodeTitleId(
+  episodeId: number,
+): Promise<string | null> {
   return traceDbQuery("getEpisodeTitleId", async () => {
     const db = getDb();
     const row = await db
@@ -415,7 +461,9 @@ export async function getEpisodeTitleId(episodeId: number): Promise<string | nul
   });
 }
 
-export async function getEpisodeTitleIds(episodeIds: number[]): Promise<Map<number, string>> {
+export async function getEpisodeTitleIds(
+  episodeIds: number[],
+): Promise<Map<number, string>> {
   return traceDbQuery("getEpisodeTitleIds", async () => {
     if (episodeIds.length === 0) return new Map();
     const db = getDb();
@@ -428,7 +476,10 @@ export async function getEpisodeTitleIds(episodeIds: number[]): Promise<Map<numb
   });
 }
 
-export async function getReleasedEpisodeIds(episodeIds: number[], timezone = "UTC"): Promise<number[]> {
+export async function getReleasedEpisodeIds(
+  episodeIds: number[],
+  timezone = "UTC",
+): Promise<number[]> {
   return traceDbQuery("getReleasedEpisodeIds", async () => {
     const today = localDateForTimezone(timezone);
     const db = getDb();
@@ -437,10 +488,13 @@ export async function getReleasedEpisodeIds(episodeIds: number[], timezone = "UT
       .from(episodes)
       .where(
         and(
-          sql`${episodes.id} IN (${sql.join(episodeIds.map((id) => sql`${id}`), sql`, `)})`,
+          sql`${episodes.id} IN (${sql.join(
+            episodeIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`,
           sql`${episodes.airDate} IS NOT NULL`,
-          sql`${episodes.airDate} <= ${today}`
-        )
+          sql`${episodes.airDate} <= ${today}`,
+        ),
       )
       .all();
     return rows.map((r) => r.id);
@@ -449,7 +503,7 @@ export async function getReleasedEpisodeIds(episodeIds: number[], timezone = "UT
 
 export async function getReleasedEpisodesWithAirDate(
   episodeIds: number[],
-  timezone = "UTC"
+  timezone = "UTC",
 ): Promise<Array<{ id: number; airDate: string }>> {
   return traceDbQuery("getReleasedEpisodesWithAirDate", async () => {
     if (episodeIds.length === 0) return [];
@@ -462,19 +516,21 @@ export async function getReleasedEpisodesWithAirDate(
         and(
           inArray(episodes.id, episodeIds),
           sql`${episodes.airDate} IS NOT NULL`,
-          sql`${episodes.airDate} <= ${today}`
-        )
+          sql`${episodes.airDate} <= ${today}`,
+        ),
       )
       .all();
-    return rows
-      .filter((r): r is { id: number; airDate: string } => r.airDate !== null);
+    return rows.filter(
+      (r): r is { id: number; airDate: string } => r.airDate !== null,
+    );
   });
 }
 
 export async function watchEpisode(episodeId: number, userId: string) {
   return traceDbQuery("watchEpisode", async () => {
     const db = getDb();
-    await db.insert(watchedEpisodes)
+    await db
+      .insert(watchedEpisodes)
       .values({ episodeId, userId })
       .onConflictDoNothing()
       .run();
@@ -491,7 +547,12 @@ export async function setWatchedEpisodeWatchedAt(
     await db
       .update(watchedEpisodes)
       .set({ watchedAt })
-      .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+      .where(
+        and(
+          eq(watchedEpisodes.episodeId, episodeId),
+          eq(watchedEpisodes.userId, userId),
+        ),
+      )
       .run();
   });
 }
@@ -499,8 +560,14 @@ export async function setWatchedEpisodeWatchedAt(
 export async function unwatchEpisode(episodeId: number, userId: string) {
   return traceDbQuery("unwatchEpisode", async () => {
     const db = getDb();
-    await db.delete(watchedEpisodes)
-      .where(and(eq(watchedEpisodes.episodeId, episodeId), eq(watchedEpisodes.userId, userId)))
+    await db
+      .delete(watchedEpisodes)
+      .where(
+        and(
+          eq(watchedEpisodes.episodeId, episodeId),
+          eq(watchedEpisodes.userId, userId),
+        ),
+      )
       .run();
   });
 }
@@ -513,19 +580,22 @@ const BULK_WATCHED_CHUNK_SIZE = 30;
 export async function watchEpisodesBulk(
   episodeIds: number[],
   userId: string,
-  watchedAtByEpisodeId?: Map<number, string>
+  watchedAtByEpisodeId?: Map<number, string>,
 ) {
   return traceDbQuery("watchEpisodesBulk", async () => {
     if (episodeIds.length === 0) return;
     const db = getDb();
     for (let i = 0; i < episodeIds.length; i += BULK_WATCHED_CHUNK_SIZE) {
       const chunk = episodeIds.slice(i, i + BULK_WATCHED_CHUNK_SIZE);
-      await db.insert(watchedEpisodes)
+      await db
+        .insert(watchedEpisodes)
         .values(
           chunk.map((episodeId) => {
             const watchedAt = watchedAtByEpisodeId?.get(episodeId);
-            return watchedAt ? { episodeId, userId, watchedAt } : { episodeId, userId };
-          })
+            return watchedAt
+              ? { episodeId, userId, watchedAt }
+              : { episodeId, userId };
+          }),
         )
         .onConflictDoNothing()
         .run();
@@ -533,14 +603,23 @@ export async function watchEpisodesBulk(
   });
 }
 
-export async function unwatchEpisodesBulk(episodeIds: number[], userId: string) {
+export async function unwatchEpisodesBulk(
+  episodeIds: number[],
+  userId: string,
+) {
   return traceDbQuery("unwatchEpisodesBulk", async () => {
     if (episodeIds.length === 0) return;
     const db = getDb();
     for (let i = 0; i < episodeIds.length; i += BULK_WATCHED_CHUNK_SIZE) {
       const chunk = episodeIds.slice(i, i + BULK_WATCHED_CHUNK_SIZE);
-      await db.delete(watchedEpisodes)
-        .where(and(eq(watchedEpisodes.userId, userId), inArray(watchedEpisodes.episodeId, chunk)))
+      await db
+        .delete(watchedEpisodes)
+        .where(
+          and(
+            eq(watchedEpisodes.userId, userId),
+            inArray(watchedEpisodes.episodeId, chunk),
+          ),
+        )
         .run();
     }
   });
@@ -556,7 +635,9 @@ export async function backdateWatchedEpisodesToAirDate(
 ): Promise<number> {
   return traceDbQuery("backdateWatchedEpisodesToAirDate", async () => {
     const db = getDb();
-    const titleFilter = titleId ? sql`AND ${episodes.titleId} = ${titleId}` : sql``;
+    const titleFilter = titleId
+      ? sql`AND ${episodes.titleId} = ${titleId}`
+      : sql``;
     const result = await db.run(sql`
       UPDATE watched_episodes
       SET watched_at = (
@@ -581,7 +662,7 @@ export async function backdateWatchedEpisodesToAirDate(
 export async function getSeasonEpisodeStatus(
   titleId: string,
   seasonNumber: number,
-  userId: string
+  userId: string,
 ): Promise<Array<{ episode_number: number; id: number; is_watched: boolean }>> {
   return traceDbQuery("getSeasonEpisodeStatus", async () => {
     const db = getDb();
@@ -595,7 +676,12 @@ export async function getSeasonEpisodeStatus(
         )`,
       })
       .from(episodes)
-      .where(and(eq(episodes.titleId, titleId), eq(episodes.seasonNumber, seasonNumber)))
+      .where(
+        and(
+          eq(episodes.titleId, titleId),
+          eq(episodes.seasonNumber, seasonNumber),
+        ),
+      )
       .orderBy(asc(episodes.episodeNumber))
       .all();
 
@@ -606,7 +692,9 @@ export async function getSeasonEpisodeStatus(
   });
 }
 
-export async function getWatchedEpisodesForExport(userId: string): Promise<Map<string, Array<{ season: number; episode: number }>>> {
+export async function getWatchedEpisodesForExport(
+  userId: string,
+): Promise<Map<string, Array<{ season: number; episode: number }>>> {
   return traceDbQuery("getWatchedEpisodesForExport", async () => {
     const db = getDb();
     const rows = await db
@@ -631,18 +719,24 @@ export async function getWatchedEpisodesForExport(userId: string): Promise<Map<s
 
 export async function getEpisodeIdsBySE(
   titleId: string,
-  sePairs: Array<{ season: number; episode: number }>
+  sePairs: Array<{ season: number; episode: number }>,
 ): Promise<number[]> {
   return traceDbQuery("getEpisodeIdsBySE", async () => {
     if (sePairs.length === 0) return [];
     const db = getDb();
     const rows = await db
-      .select({ id: episodes.id, season: episodes.seasonNumber, episode: episodes.episodeNumber })
+      .select({
+        id: episodes.id,
+        season: episodes.seasonNumber,
+        episode: episodes.episodeNumber,
+      })
       .from(episodes)
       .where(eq(episodes.titleId, titleId))
       .all();
 
     const wanted = new Set(sePairs.map((p) => `${p.season}:${p.episode}`));
-    return rows.filter((r) => wanted.has(`${r.season}:${r.episode}`)).map((r) => r.id);
+    return rows
+      .filter((r) => wanted.has(`${r.season}:${r.episode}`))
+      .map((r) => r.id);
   });
 }

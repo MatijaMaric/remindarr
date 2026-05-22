@@ -52,7 +52,11 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
         <LabeledProgress
           label={t("userProfile.episodesWatched")}
           value={overview.total_watched_episodes}
-          max={Math.max(overview.total_released_episodes, overview.total_watched_episodes, 1)}
+          max={Math.max(
+            overview.total_released_episodes,
+            overview.total_watched_episodes,
+            1,
+          )}
         />
         <div className="grid grid-cols-2 gap-3.5 pt-2.5 border-t border-white/[0.04]">
           <StatBlock
@@ -60,7 +64,10 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
             label={t("userProfile.dossier.watchTime")}
             sub={t("userProfile.dossier.watchTimeSub")}
           />
-          <StatBlock value={overview.tracked_count} label={t("userProfile.trackedTitles")} />
+          <StatBlock
+            value={overview.tracked_count}
+            label={t("userProfile.trackedTitles")}
+          />
           <StatBlock
             value={formatWatchTime(overview.watch_time_minutes_shows)}
             label={t("userProfile.dossier.watchTimeShows")}

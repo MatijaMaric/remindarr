@@ -23,7 +23,11 @@ const TABS: { key: WatchlistTab; labelKey: string }[] = [
   { key: "movies", labelKey: "userProfile.dossier.tabMovies" },
 ];
 
-export default function WatchlistTabs({ active, onChange, counts }: WatchlistTabsProps) {
+export default function WatchlistTabs({
+  active,
+  onChange,
+  counts,
+}: WatchlistTabsProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -50,7 +54,9 @@ export default function WatchlistTabs({ active, onChange, counts }: WatchlistTab
             {t(tab.labelKey)}
             <span
               className={`font-mono text-[10px] px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center ${
-                isActive ? "bg-amber-400 text-black" : "bg-white/[0.08] text-zinc-400"
+                isActive
+                  ? "bg-amber-400 text-black"
+                  : "bg-white/[0.08] text-zinc-400"
               }`}
             >
               {counts[tab.key]}

@@ -20,7 +20,9 @@ describe("Card", () => {
   it("applies overlay tone", () => {
     const { container } = render(<Card tone="overlay" />);
     expect(container.firstElementChild?.className).toContain("bg-zinc-900/95");
-    expect(container.firstElementChild?.className).toContain("backdrop-blur-sm");
+    expect(container.firstElementChild?.className).toContain(
+      "backdrop-blur-sm",
+    );
   });
 
   it("applies radius variants", () => {
@@ -53,7 +55,9 @@ describe("Card", () => {
   });
 
   it("forwards HTML attributes", () => {
-    const { getByTestId } = render(<Card data-testid="test-card" role="region" />);
+    const { getByTestId } = render(
+      <Card data-testid="test-card" role="region" />,
+    );
     const el = getByTestId("test-card");
     expect(el.getAttribute("role")).toBe("region");
   });

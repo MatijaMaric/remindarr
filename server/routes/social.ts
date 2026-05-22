@@ -1,6 +1,13 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { follow, unfollow, getFollowers, getFollowing, getUserById, getFriendsLovedThisWeek } from "../db/repository";
+import {
+  follow,
+  unfollow,
+  getFollowers,
+  getFollowing,
+  getUserById,
+  getFriendsLovedThisWeek,
+} from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
@@ -31,7 +38,10 @@ app.post("/follow/:userId", async (c) => {
   }
 
   await follow(currentUser.id, targetUserId);
-  log.info("User followed", { followerId: currentUser.id, followingId: targetUserId });
+  log.info("User followed", {
+    followerId: currentUser.id,
+    followingId: targetUserId,
+  });
   await onFollow(currentUser.id);
   return ok(c, { success: true });
 });
@@ -42,7 +52,10 @@ app.delete("/follow/:userId", async (c) => {
   const targetUserId = c.req.param("userId");
 
   await unfollow(currentUser.id, targetUserId);
-  log.info("User unfollowed", { followerId: currentUser.id, followingId: targetUserId });
+  log.info("User unfollowed", {
+    followerId: currentUser.id,
+    followingId: targetUserId,
+  });
   return ok(c, { success: true });
 });
 
@@ -109,21 +122,29 @@ app.get("/following/:userId", async (c) => {
 });
 
 // GET /friends-loved — Top-rated titles from followed users in the last 7 days
-app.get("/friends-loved", zValidator("query", friendsLovedQuerySchema), async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
+app.get(
+  "/friends-loved",
+  zValidator("query", friendsLovedQuerySchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
 
-  const { limit } = c.req.valid("query");
-  try {
-    const items = await getFriendsLovedThisWeek(user.id, limit);
-    return ok(c, { items });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    const stack = e instanceof Error ? e.stack : undefined;
-    Sentry.captureException(e);
-    log.error("friends-loved query failed", { userId: user.id, error: message, stack });
-    return err(c, "Failed to load friends-loved", 500);
-  }
-});
+    const { limit } = c.req.valid("query");
+    try {
+      const items = await getFriendsLovedThisWeek(user.id, limit);
+      return ok(c, { items });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      const stack = e instanceof Error ? e.stack : undefined;
+      Sentry.captureException(e);
+      log.error("friends-loved query failed", {
+        userId: user.id,
+        error: message,
+        stack,
+      });
+      return err(c, "Failed to load friends-loved", 500);
+    }
+  },
+);
 
 export default app;

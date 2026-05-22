@@ -16,7 +16,9 @@ export default function FriendsLovedRow({ items }: FriendsLovedRowProps) {
       <div className="flex items-baseline justify-between mb-4">
         <div>
           <Kicker>From friends</Kicker>
-          <h2 className="text-xl font-bold tracking-[-0.01em]">Friends Loved This Week</h2>
+          <h2 className="text-xl font-bold tracking-[-0.01em]">
+            Friends Loved This Week
+          </h2>
         </div>
       </div>
       <FullBleedCarousel>

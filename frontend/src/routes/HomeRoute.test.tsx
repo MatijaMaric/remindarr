@@ -14,16 +14,30 @@ mock.module("../hooks/useIsMobile", () => ({
 // even when an earlier test file has leaked a broken mock.module for AuthContext.
 const MockAuthContext = createContext<any>(null);
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => useContext(MockAuthContext) ?? { user: null, providers: null, loading: false, sessionStatus: "authenticated" },
+  useAuth: () =>
+    useContext(MockAuthContext) ?? {
+      user: null,
+      providers: null,
+      loading: false,
+      sessionStatus: "authenticated",
+    },
   AuthContext: MockAuthContext,
 }));
 
 const { default: HomeRoute } = await import("./HomeRoute");
 const { AuthContext } = await import("../context/AuthContext");
 
-const authedUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const authedUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
-function makeAuth(overrides: Partial<{ user: unknown; loading: boolean }> = {}) {
+function makeAuth(
+  overrides: Partial<{ user: unknown; loading: boolean }> = {},
+) {
   return {
     user: overrides.user ?? null,
     providers: null,
@@ -48,7 +62,10 @@ function Harness({ authValue }: { authValue: ReturnType<typeof makeAuth> }) {
         <LocationProbe />
         <Routes>
           <Route path="/" element={<HomeRoute />} />
-          <Route path="/reels" element={<div data-testid="reels-page">Reels</div>} />
+          <Route
+            path="/reels"
+            element={<div data-testid="reels-page">Reels</div>}
+          />
         </Routes>
       </AuthContext>
     </MemoryRouter>
@@ -63,7 +80,9 @@ afterEach(() => {
 describe("HomeRoute", () => {
   it("redirects authenticated mobile users to /reels", async () => {
     mockIsMobile = true;
-    const { getByTestId } = render(<Harness authValue={makeAuth({ user: authedUser })} />);
+    const { getByTestId } = render(
+      <Harness authValue={makeAuth({ user: authedUser })} />,
+    );
 
     await waitFor(() => {
       expect(getByTestId("pathname").textContent).toBe("/reels");
@@ -72,7 +91,9 @@ describe("HomeRoute", () => {
 
   it("stays on / for authenticated desktop users", async () => {
     mockIsMobile = false;
-    const { getByTestId } = render(<Harness authValue={makeAuth({ user: authedUser })} />);
+    const { getByTestId } = render(
+      <Harness authValue={makeAuth({ user: authedUser })} />,
+    );
 
     // Give React a tick to process any pending effects; pathname should remain "/".
     await new Promise((r) => setTimeout(r, 10));
@@ -81,7 +102,9 @@ describe("HomeRoute", () => {
 
   it("stays on / for unauthenticated mobile users", async () => {
     mockIsMobile = true;
-    const { getByTestId } = render(<Harness authValue={makeAuth({ user: null })} />);
+    const { getByTestId } = render(
+      <Harness authValue={makeAuth({ user: null })} />,
+    );
 
     await new Promise((r) => setTimeout(r, 10));
     expect(getByTestId("pathname").textContent).toBe("/");

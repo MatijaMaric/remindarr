@@ -1,13 +1,16 @@
-import { Tabs as TabsPrimitive } from "@base-ui/react"
-import type { ComponentProps } from "react"
+import { Tabs as TabsPrimitive } from "@base-ui/react";
+import type { ComponentProps } from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function Tabs(props: ComponentProps<typeof TabsPrimitive.Root>) {
-  return <TabsPrimitive.Root {...props} />
+  return <TabsPrimitive.Root {...props} />;
 }
 
-function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.List>) {
+function TabsList({
+  className,
+  ...props
+}: ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
       className={cn(
@@ -17,10 +20,13 @@ function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.L
       )}
       {...props}
     />
-  )
+  );
 }
 
-function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitive.Tab>) {
+function TabsTrigger({
+  className,
+  ...props
+}: ComponentProps<typeof TabsPrimitive.Tab>) {
   return (
     <TabsPrimitive.Tab
       className={cn(
@@ -34,16 +40,19 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
       )}
       {...props}
     />
-  )
+  );
 }
 
-function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitive.Panel>) {
+function TabsContent({
+  className,
+  ...props
+}: ComponentProps<typeof TabsPrimitive.Panel>) {
   return (
     <TabsPrimitive.Panel
       className={cn("mt-6 space-y-8 focus-visible:outline-none", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent };

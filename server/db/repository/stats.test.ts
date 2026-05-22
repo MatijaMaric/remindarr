@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser, upsertEpisodes, watchEpisode } from "../repository";
+import {
+  upsertTitles,
+  createUser,
+  upsertEpisodes,
+  watchEpisode,
+} from "../repository";
 import { logWatch } from "./watch-history";
 import { getUserPace, computeEta } from "./stats";
 import { getRawDb } from "../bun-db";
@@ -19,7 +24,12 @@ afterAll(() => {
 
 async function insertShow(id: string, runtimeMinutes: number | null = 45) {
   await upsertTitles([
-    makeParsedTitle({ id, objectType: "SHOW", title: `Show ${id}`, runtimeMinutes }),
+    makeParsedTitle({
+      id,
+      objectType: "SHOW",
+      title: `Show ${id}`,
+      runtimeMinutes,
+    }),
   ]);
 }
 

@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
@@ -8,7 +22,13 @@ import * as api from "../api";
 import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 
-const mockUser = { id: "user-1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "user-1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -20,13 +40,23 @@ const mockAuthValue = {
 };
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+function Wrapper({
+  children,
+  authValue,
+}: {
+  children: ReactNode;
+  authValue?: typeof mockAuthValue;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>
+        {children}
+      </AuthContext>
     </QueryClientProvider>
   );
 }
@@ -36,7 +66,10 @@ let spies: ReturnType<typeof spyOn>[] = [];
 beforeEach(() => {
   spies = [
     spyOn(api, "sendRecommendation").mockResolvedValue({ id: "rec-1" }),
-    spyOn(api, "checkRecommendation").mockResolvedValue({ recommended: false, id: null }),
+    spyOn(api, "checkRecommendation").mockResolvedValue({
+      recommended: false,
+      id: null,
+    }),
     spyOn(api, "deleteRecommendation").mockResolvedValue(undefined as any),
     spyOn(sonner.toast, "success").mockImplementation(() => "1" as any),
     spyOn(sonner.toast, "error").mockImplementation(() => "1" as any),
@@ -67,13 +100,16 @@ describe("RecommendButton", () => {
         <AuthContext value={noUserAuth as any}>
           <RecommendButton titleId="movie-123" />
         </AuthContext>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     expect(container.innerHTML).toBe("");
   });
 
   it("shows Recommended state when already recommended", async () => {
-    (api.checkRecommendation as any).mockResolvedValueOnce({ recommended: true, id: "rec-1" });
+    (api.checkRecommendation as any).mockResolvedValueOnce({
+      recommended: true,
+      id: "rec-1",
+    });
 
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
 
@@ -132,7 +168,11 @@ describe("RecommendButton", () => {
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", "You should watch this!", undefined);
+      expect(api.sendRecommendation).toHaveBeenCalledWith(
+        "movie-123",
+        "You should watch this!",
+        undefined,
+      );
     });
   });
 
@@ -152,12 +192,16 @@ describe("RecommendButton", () => {
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(sonner.toast.success).toHaveBeenCalledWith("Recommendation sent to all followers!");
+      expect(sonner.toast.success).toHaveBeenCalledWith(
+        "Recommendation sent to all followers!",
+      );
     });
   });
 
   it("shows error toast on send failure", async () => {
-    (api.sendRecommendation as any).mockRejectedValueOnce(new Error("Failed to send"));
+    (api.sendRecommendation as any).mockRejectedValueOnce(
+      new Error("Failed to send"),
+    );
 
     render(<RecommendButton titleId="movie-123" />, { wrapper: Wrapper });
 
@@ -194,7 +238,11 @@ describe("RecommendButton", () => {
     fireEvent.click(screen.getByTestId("recommend-send"));
 
     await waitFor(() => {
-      expect(api.sendRecommendation).toHaveBeenCalledWith("movie-123", undefined, undefined);
+      expect(api.sendRecommendation).toHaveBeenCalledWith(
+        "movie-123",
+        undefined,
+        undefined,
+      );
     });
   });
 

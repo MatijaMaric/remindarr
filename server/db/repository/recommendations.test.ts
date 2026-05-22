@@ -34,7 +34,11 @@ afterAll(() => {
 
 describe("createRecommendation", () => {
   it("creates a recommendation and returns an id", async () => {
-    const id = await createRecommendation(userA, "movie-1", "You should watch this!");
+    const id = await createRecommendation(
+      userA,
+      "movie-1",
+      "You should watch this!",
+    );
     expect(id).toBeDefined();
     expect(typeof id).toBe("string");
   });

@@ -12,7 +12,9 @@ export interface ShutdownDeps {
   closeCache?: () => Promise<void>;
 }
 
-export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => Promise<void> {
+export function createShutdownHandler(
+  deps: ShutdownDeps,
+): (signal: string) => Promise<void> {
   return async function shutdown(signal: string): Promise<void> {
     log.info("Shutting down", { signal });
 

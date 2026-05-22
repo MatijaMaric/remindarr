@@ -1,7 +1,19 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute, cleanupOutdatedCaches, matchPrecache } from "workbox-precaching";
-import { registerRoute, NavigationRoute, setCatchHandler } from "workbox-routing";
-import { StaleWhileRevalidate, NetworkFirst, NetworkOnly } from "workbox-strategies";
+import {
+  precacheAndRoute,
+  cleanupOutdatedCaches,
+  matchPrecache,
+} from "workbox-precaching";
+import {
+  registerRoute,
+  NavigationRoute,
+  setCatchHandler,
+} from "workbox-routing";
+import {
+  StaleWhileRevalidate,
+  NetworkFirst,
+  NetworkOnly,
+} from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { BackgroundSyncPlugin } from "workbox-background-sync";
 declare let self: ServiceWorkerGlobalScope;
@@ -67,7 +79,7 @@ registerRoute(
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 7 * 24 * 60 * 60, maxEntries: 10 }),
     ],
-  })
+  }),
 );
 
 // Cache title listings — show cached immediately, update in background
@@ -83,7 +95,7 @@ registerRoute(
         },
       },
     ],
-  })
+  }),
 );
 
 // Tracked titles — prefer network, fall back to cache for offline browsing
@@ -95,7 +107,7 @@ registerRoute(
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 20 }),
     ],
-  })
+  }),
 );
 
 // Upcoming episodes — prefer fresh data, serve cached when offline
@@ -107,7 +119,7 @@ registerRoute(
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 10 }),
     ],
-  })
+  }),
 );
 
 // Detail pages — show cached immediately, update in background (long TTL; content rarely changes)
@@ -116,9 +128,12 @@ registerRoute(
   new StaleWhileRevalidate({
     cacheName: `api-details-v${__APP_VERSION__}`,
     plugins: [
-      new ExpirationPlugin({ maxAgeSeconds: 7 * 24 * 60 * 60, maxEntries: 200 }),
+      new ExpirationPlugin({
+        maxAgeSeconds: 7 * 24 * 60 * 60,
+        maxEntries: 200,
+      }),
     ],
-  })
+  }),
 );
 
 // Calendar data — prefer network, fall back to cached months when offline
@@ -130,7 +145,7 @@ registerRoute(
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 12 }),
     ],
-  })
+  }),
 );
 
 // Current user — prefer network for up-to-date auth state, cache as fallback
@@ -139,10 +154,8 @@ registerRoute(
   new NetworkFirst({
     cacheName: `api-auth-v${__APP_VERSION__}`,
     networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({ maxAgeSeconds: 60 * 60, maxEntries: 5 }),
-    ],
-  })
+    plugins: [new ExpirationPlugin({ maxAgeSeconds: 60 * 60, maxEntries: 5 })],
+  }),
 );
 
 // Background sync for watchlist mutations made while offline
@@ -153,13 +166,13 @@ const trackSyncPlugin = new BackgroundSyncPlugin("track-queue", {
 registerRoute(
   ({ url }) => url.pathname.startsWith("/api/track/"),
   new NetworkOnly({ plugins: [trackSyncPlugin] }),
-  "POST"
+  "POST",
 );
 
 registerRoute(
   ({ url }) => url.pathname.startsWith("/api/track/"),
   new NetworkOnly({ plugins: [trackSyncPlugin] }),
-  "DELETE"
+  "DELETE",
 );
 
 // Background sync for watched/unwatched mutations made while offline
@@ -170,13 +183,13 @@ const watchedSyncPlugin = new BackgroundSyncPlugin("watched-queue", {
 registerRoute(
   ({ url }) => url.pathname.startsWith("/api/watched/"),
   new NetworkOnly({ plugins: [watchedSyncPlugin] }),
-  "POST"
+  "POST",
 );
 
 registerRoute(
   ({ url }) => url.pathname.startsWith("/api/watched/"),
   new NetworkOnly({ plugins: [watchedSyncPlugin] }),
-  "DELETE"
+  "DELETE",
 );
 
 // Message handler: SW lifecycle control + cache queries + on-demand precaching
@@ -199,29 +212,38 @@ self.addEventListener("message", (event) => {
   }
 
   if (event.data?.type !== "PRECACHE_TITLE") return;
-  const { titleId, objectType } = event.data as { titleId: string; objectType: "MOVIE" | "SHOW" };
+  const { titleId, objectType } = event.data as {
+    titleId: string;
+    objectType: "MOVIE" | "SHOW";
+  };
   const path =
     objectType === "MOVIE"
       ? `/api/details/movie/${encodeURIComponent(titleId)}`
       : `/api/details/show/${encodeURIComponent(titleId)}`;
   event.waitUntil(
-    caches.open(`api-details-v${__APP_VERSION__}`).then((c) => c.add(path)).catch(() => {})
+    caches
+      .open(`api-details-v${__APP_VERSION__}`)
+      .then((c) => c.add(path))
+      .catch(() => {}),
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter(
-            (k) =>
-              CACHE_PREFIXES.some((p) => k.startsWith(p)) &&
-              !CURRENT_CACHES.has(k)
-          )
-          .map((k) => caches.delete(k))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter(
+              (k) =>
+                CACHE_PREFIXES.some((p) => k.startsWith(p)) &&
+                !CURRENT_CACHES.has(k),
+            )
+            .map((k) => caches.delete(k)),
+        ),
       )
-    ).then(() => (self as ServiceWorkerGlobalScope).clients.claim())
+      .then(() => (self as ServiceWorkerGlobalScope).clients.claim()),
   );
 });
 
@@ -249,7 +271,7 @@ self.addEventListener("push", (event) => {
       icon: payload.icon || "/pwa-192x192.png",
       badge: payload.badge || "/pwa-192x192.png",
       data: payload.data,
-    })
+    }),
   );
 });
 
@@ -275,7 +297,7 @@ self.addEventListener("pushsubscriptionchange", (event) => {
           auth: json.keys.auth,
         }),
       });
-    })().catch(() => {}) // best-effort
+    })().catch(() => {}), // best-effort
   );
 });
 
@@ -286,16 +308,18 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url || "/";
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      // Focus existing window if available
-      for (const client of clients) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          client.navigate(url);
-          return client.focus();
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        // Focus existing window if available
+        for (const client of clients) {
+          if (client.url.includes(self.location.origin) && "focus" in client) {
+            client.navigate(url);
+            return client.focus();
+          }
         }
-      }
-      // Open new window
-      return self.clients.openWindow(url);
-    })
+        // Open new window
+        return self.clients.openWindow(url);
+      }),
   );
 });

@@ -39,7 +39,9 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
   // Check what needs fixing. We look at concrete schema details rather than
   // __drizzle_migrations (Drizzle creates that table before running any SQL,
   // so after a failed attempt it exists but is empty/stale).
-  const sessionsInfo = db.prepare("PRAGMA table_info(sessions)").all() as Array<{
+  const sessionsInfo = db
+    .prepare("PRAGMA table_info(sessions)")
+    .all() as Array<{
     name: string;
   }>;
   const usersInfo = db.prepare("PRAGMA table_info(users)").all() as Array<{
@@ -49,7 +51,8 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
 
   const needsSessionsFix =
     sessionsInfo.length > 0 && !sessionsInfo.some((c) => c.name === "token");
-  const needsUsersFix = existingCols.size > 0 && !existingCols.has("updated_at");
+  const needsUsersFix =
+    existingCols.size > 0 && !existingCols.has("updated_at");
 
   if (!needsSessionsFix && !needsUsersFix) return; // nothing to do
 
@@ -82,7 +85,7 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
 
   if (existingCols.has("display_name") && !existingCols.has("name")) {
     db.exec(
-      "UPDATE users SET name = display_name WHERE display_name IS NOT NULL"
+      "UPDATE users SET name = display_name WHERE display_name IS NOT NULL",
     );
   }
 
@@ -101,10 +104,10 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
     )
   `);
   db.exec(
-    "CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_unique ON sessions(token)"
+    "CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_unique ON sessions(token)",
   );
   db.exec(
-    "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)"
+    "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
   );
 
   db.exec(`
@@ -125,9 +128,7 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
-  db.exec(
-    "CREATE INDEX IF NOT EXISTS idx_account_user_id ON account(user_id)"
-  );
+  db.exec("CREATE INDEX IF NOT EXISTS idx_account_user_id ON account(user_id)");
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS verification (
@@ -144,12 +145,12 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
 
   // Seed __drizzle_migrations so migration 0000 is marked as already applied
   const journal = JSON.parse(
-    fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf-8")
+    fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf-8"),
   );
   const firstEntry = journal.entries[0];
   const sqlContent = fs.readFileSync(
     path.join(migrationsFolder, `${firstEntry.tag}.sql`),
-    "utf-8"
+    "utf-8",
   );
   const hash = crypto.createHash("sha256").update(sqlContent).digest("hex");
 
@@ -162,13 +163,11 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
   `);
   // Only insert if not already seeded (e.g. from a previous partial run)
   const existing = db
-    .prepare(
-      `SELECT id FROM "__drizzle_migrations" WHERE created_at = ?`
-    )
+    .prepare(`SELECT id FROM "__drizzle_migrations" WHERE created_at = ?`)
     .get(firstEntry.when);
   if (!existing) {
     db.prepare(
-      `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`
+      `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`,
     ).run(hash, firstEntry.when);
   }
 
@@ -188,12 +187,16 @@ function migrateLegacyDb(db: Database, migrationsFolder: string): void {
  */
 function fixSkippedMigrations(db: Database, migrationsFolder: string): void {
   const migrationsTable = db
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'")
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'",
+    )
     .get() as { name: string } | null;
   if (!migrationsTable) return;
 
   const titleGenresTable = db
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='title_genres'")
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='title_genres'",
+    )
     .get() as { name: string } | null;
   if (titleGenresTable) return; // already migrated, nothing to fix
 
@@ -202,34 +205,47 @@ function fixSkippedMigrations(db: Database, migrationsFolder: string): void {
     .get() as { cnt: number };
   if (count.cnt === 0) return;
 
-  log.info("Detected skipped migrations (title_genres missing) — applying manually");
+  log.info(
+    "Detected skipped migrations (title_genres missing) — applying manually",
+  );
 
   const journal = JSON.parse(
-    fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf-8")
+    fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf-8"),
   );
 
   // Apply migration 0002 (indexes) — use IF NOT EXISTS to be safe
-  db.exec("CREATE INDEX IF NOT EXISTS `idx_providers_technical_name` ON `providers` (`technical_name`)");
-  db.exec("CREATE INDEX IF NOT EXISTS `idx_watched_episodes_user_id` ON `watched_episodes` (`user_id`)");
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS `idx_providers_technical_name` ON `providers` (`technical_name`)",
+  );
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS `idx_watched_episodes_user_id` ON `watched_episodes` (`user_id`)",
+  );
   const m0002 = journal.entries[2];
-  const hash0002 = crypto.createHash("sha256").update(
-    fs.readFileSync(path.join(migrationsFolder, `${m0002.tag}.sql`), "utf-8")
-  ).digest("hex");
+  const hash0002 = crypto
+    .createHash("sha256")
+    .update(
+      fs.readFileSync(path.join(migrationsFolder, `${m0002.tag}.sql`), "utf-8"),
+    )
+    .digest("hex");
   db.prepare(
-    `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`
+    `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`,
   ).run(hash0002, m0002.when);
 
   // Apply migration 0003 (title_genres)
   const m0003sql = fs.readFileSync(
-    path.join(migrationsFolder, `${journal.entries[3].tag}.sql`), "utf-8"
+    path.join(migrationsFolder, `${journal.entries[3].tag}.sql`),
+    "utf-8",
   );
-  const statements = m0003sql.split("--> statement-breakpoint").map(s => s.trim()).filter(Boolean);
+  const statements = m0003sql
+    .split("--> statement-breakpoint")
+    .map((s) => s.trim())
+    .filter(Boolean);
   for (const stmt of statements) {
     db.exec(stmt);
   }
   const hash0003 = crypto.createHash("sha256").update(m0003sql).digest("hex");
   db.prepare(
-    `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`
+    `INSERT INTO "__drizzle_migrations" ("hash", "created_at") VALUES (?, ?)`,
   ).run(hash0003, journal.entries[3].when);
 
   log.info("Skipped migrations applied successfully");
@@ -298,14 +314,16 @@ export function snapshotDb(): Uint8Array {
 /** Migrate old tracked data to the admin user. Called from index.ts after admin creation. */
 export function migrateTrackedData(adminUserId: string) {
   const d = getRawDb();
-  const oldTable = d.prepare(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='tracked_old'"
-  ).get();
+  const oldTable = d
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='tracked_old'",
+    )
+    .get();
 
   if (oldTable) {
     d.prepare(
       `INSERT OR IGNORE INTO tracked (title_id, user_id, tracked_at, notes)
-       SELECT title_id, ?, tracked_at, notes FROM tracked_old`
+       SELECT title_id, ?, tracked_at, notes FROM tracked_old`,
     ).run(adminUserId);
     d.run("DROP TABLE tracked_old");
     log.info("Migrated existing tracked titles to admin user");

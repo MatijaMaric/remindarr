@@ -1,7 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import * as sync from "../tmdb/sync";
-import { getEpisodesByDateRange, getUnwatchedEpisodes, getSeasonEpisodeStatus } from "../db/repository";
+import {
+  getEpisodesByDateRange,
+  getUnwatchedEpisodes,
+  getSeasonEpisodeStatus,
+} from "../db/repository";
 import { localDateForTimezone, addDays } from "../utils/timezone";
 import { CONFIG } from "../config";
 import { requireAuth } from "../middleware/auth";
@@ -27,23 +31,43 @@ app.get("/upcoming", async (c) => {
   const tomorrowStr = addDays(today, 1);
   const nextWeekStr = addDays(today, 8);
 
-  const todayEpisodes = await getEpisodesByDateRange(today, tomorrowStr, user.id);
-  const upcomingEpisodes = await getEpisodesByDateRange(tomorrowStr, nextWeekStr, user.id);
+  const todayEpisodes = await getEpisodesByDateRange(
+    today,
+    tomorrowStr,
+    user.id,
+  );
+  const upcomingEpisodes = await getEpisodesByDateRange(
+    tomorrowStr,
+    nextWeekStr,
+    user.id,
+  );
 
   const unwatchedEpisodes = await getUnwatchedEpisodes(user.id, timezone);
 
-  return ok(c, { today: todayEpisodes, upcoming: upcomingEpisodes, unwatched: unwatchedEpisodes });
+  return ok(c, {
+    today: todayEpisodes,
+    upcoming: upcomingEpisodes,
+    unwatched: unwatchedEpisodes,
+  });
 });
 
-app.get("/status/:titleId/:season", zValidator("param", statusParamSchema), async (c) => {
-  const user = c.get("user");
-  if (!user) return ok(c, { episodes: [] });
+app.get(
+  "/status/:titleId/:season",
+  zValidator("param", statusParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return ok(c, { episodes: [] });
 
-  const { titleId, season: seasonNumber } = c.req.valid("param");
+    const { titleId, season: seasonNumber } = c.req.valid("param");
 
-  const episodes = await getSeasonEpisodeStatus(titleId, seasonNumber, user.id);
-  return ok(c, { episodes });
-});
+    const episodes = await getSeasonEpisodeStatus(
+      titleId,
+      seasonNumber,
+      user.id,
+    );
+    return ok(c, { episodes });
+  },
+);
 
 app.post("/sync", requireAuth, async (c) => {
   if (!CONFIG.TMDB_API_KEY) {

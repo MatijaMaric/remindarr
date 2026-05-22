@@ -24,7 +24,11 @@ export interface RecentlyEarnedStripProps {
   baseHref?: string;
 }
 
-export function RecentlyEarnedStrip({ achievements, mode, baseHref }: RecentlyEarnedStripProps) {
+export function RecentlyEarnedStrip({
+  achievements,
+  mode,
+  baseHref,
+}: RecentlyEarnedStripProps) {
   const recent = achievements
     .filter((a) => a.earned)
     .sort((a, b) => {

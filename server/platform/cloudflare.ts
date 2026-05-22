@@ -36,14 +36,19 @@ export class CloudflarePlatform implements Platform {
     }
   }
 
-  private async verifyPbkdf2(password: string, stored: string): Promise<boolean> {
+  private async verifyPbkdf2(
+    password: string,
+    stored: string,
+  ): Promise<boolean> {
     const [, iterStr, saltB64, hashB64] = stored.split(":");
     const iterations = parseInt(iterStr, 10);
     const salt = Uint8Array.from(atob(saltB64), (c) => c.charCodeAt(0));
     const expectedHash = Uint8Array.from(atob(hashB64), (c) => c.charCodeAt(0));
 
     const key = await this.deriveKey(password, salt, iterations);
-    const derivedHash = new Uint8Array(await crypto.subtle.exportKey("raw", key));
+    const derivedHash = new Uint8Array(
+      await crypto.subtle.exportKey("raw", key),
+    );
 
     // Constant-time comparison
     if (derivedHash.length !== expectedHash.length) return false;
@@ -57,7 +62,7 @@ export class CloudflarePlatform implements Platform {
   private async deriveKey(
     password: string,
     salt: BufferSource,
-    iterations = PBKDF2_ITERATIONS
+    iterations = PBKDF2_ITERATIONS,
   ): Promise<CryptoKey> {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
@@ -65,7 +70,7 @@ export class CloudflarePlatform implements Platform {
       encoder.encode(password),
       "PBKDF2",
       false,
-      ["deriveBits", "deriveKey"]
+      ["deriveBits", "deriveKey"],
     );
 
     return crypto.subtle.deriveKey(
@@ -78,7 +83,7 @@ export class CloudflarePlatform implements Platform {
       keyMaterial,
       { name: "AES-GCM", length: KEY_LENGTH * 8 },
       true,
-      ["encrypt"]
+      ["encrypt"],
     );
   }
 }

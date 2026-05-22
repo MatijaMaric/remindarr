@@ -46,7 +46,7 @@ export async function recordDelivery(params: {
  */
 export async function getRecentForNotifier(
   notifierId: string,
-  n = 5
+  n = 5,
 ): Promise<NotificationLogRow[]> {
   return traceDbQuery("getRecentForNotifier", async () => {
     const db = getDb();
@@ -67,7 +67,7 @@ export async function getRecentForNotifier(
  */
 export async function getSuccessRateForNotifier(
   notifierId: string,
-  days = 7
+  days = 7,
 ): Promise<number> {
   return traceDbQuery("getSuccessRateForNotifier", async () => {
     const db = getDb();
@@ -79,14 +79,14 @@ export async function getSuccessRateForNotifier(
       .where(
         and(
           eq(notificationLog.notifierId, notifierId),
-          gte(notificationLog.attemptedAt, cutoff)
-        )
+          gte(notificationLog.attemptedAt, cutoff),
+        ),
       )
       .all();
 
     // Filter out "skipped" from the rate calculation
     const relevant = rows.filter(
-      (r) => r.status === "success" || r.status === "failure"
+      (r) => r.status === "success" || r.status === "failure",
     );
 
     if (relevant.length === 0) return 100; // no data → assume healthy
@@ -133,8 +133,8 @@ export async function pruneOldRows(): Promise<void> {
         .where(
           and(
             eq(notificationLog.notifierId, notifierId),
-            sql`${notificationLog.id} < ${cutoffRow.id}`
-          )
+            sql`${notificationLog.id} < ${cutoffRow.id}`,
+          ),
         )
         .run();
     }

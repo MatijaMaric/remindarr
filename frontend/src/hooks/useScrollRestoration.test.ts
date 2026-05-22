@@ -20,7 +20,10 @@ describe("useScrollRestoration", () => {
   it("restores saved scroll position when ready is true", () => {
     sessionStorage.setItem(STORAGE_KEY, "500");
     renderHook(() => useScrollRestoration(KEY, true));
-    expect(scrollToMock).toHaveBeenCalledWith({ top: 500, behavior: "instant" });
+    expect(scrollToMock).toHaveBeenCalledWith({
+      top: 500,
+      behavior: "instant",
+    });
   });
 
   it("does not restore when ready is false", () => {
@@ -37,7 +40,10 @@ describe("useScrollRestoration", () => {
 
     ready = true;
     rerender();
-    expect(scrollToMock).toHaveBeenCalledWith({ top: 250, behavior: "instant" });
+    expect(scrollToMock).toHaveBeenCalledWith({
+      top: 250,
+      behavior: "instant",
+    });
   });
 
   it("restores only once even on multiple re-renders", () => {
@@ -54,7 +60,10 @@ describe("useScrollRestoration", () => {
   });
 
   it("saves current scroll position to sessionStorage on unmount", () => {
-    Object.defineProperty(window, "scrollY", { configurable: true, get: () => 750 });
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      get: () => 750,
+    });
     const { unmount } = renderHook(() => useScrollRestoration(KEY, true));
     unmount();
     expect(sessionStorage.getItem(STORAGE_KEY)).toBe("750");

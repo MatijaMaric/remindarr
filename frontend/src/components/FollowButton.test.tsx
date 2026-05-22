@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,10 +23,18 @@ import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-const mockUser = { id: "user-1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "user-1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -23,10 +45,18 @@ const mockAuthValue = {
   refresh: mock(() => Promise.resolve()),
 };
 
-function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+function Wrapper({
+  children,
+  authValue,
+}: {
+  children: ReactNode;
+  authValue?: typeof mockAuthValue;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>
+        {children}
+      </AuthContext>
     </QueryClientProvider>
   );
 }
@@ -50,12 +80,16 @@ afterEach(() => {
 
 describe("FollowButton", () => {
   it("renders 'Follow' when not following", () => {
-    render(<FollowButton userId="user-2" initialIsFollowing={false} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={false} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByRole("button", { name: "Follow" })).toBeDefined();
   });
 
   it("renders 'Following' when following", () => {
-    render(<FollowButton userId="user-2" initialIsFollowing={true} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={true} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByRole("button", { name: "Following" })).toBeDefined();
   });
 
@@ -66,7 +100,7 @@ describe("FollowButton", () => {
         <AuthContext value={noUserAuth as any}>
           <FollowButton userId="user-2" initialIsFollowing={false} />
         </AuthContext>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     expect(container.innerHTML).toBe("");
   });
@@ -81,7 +115,14 @@ describe("FollowButton", () => {
 
   it("calls followUser and updates to 'Following' on click", async () => {
     const onToggle = mock(() => {});
-    render(<FollowButton userId="user-2" initialIsFollowing={false} onToggle={onToggle} />, { wrapper: Wrapper });
+    render(
+      <FollowButton
+        userId="user-2"
+        initialIsFollowing={false}
+        onToggle={onToggle}
+      />,
+      { wrapper: Wrapper },
+    );
 
     const button = screen.getByRole("button", { name: "Follow" });
     fireEvent.click(button);
@@ -96,7 +137,14 @@ describe("FollowButton", () => {
 
   it("calls unfollowUser and updates to 'Follow' on click", async () => {
     const onToggle = mock(() => {});
-    render(<FollowButton userId="user-2" initialIsFollowing={true} onToggle={onToggle} />, { wrapper: Wrapper });
+    render(
+      <FollowButton
+        userId="user-2"
+        initialIsFollowing={true}
+        onToggle={onToggle}
+      />,
+      { wrapper: Wrapper },
+    );
 
     const button = screen.getByRole("button", { name: "Following" });
     fireEvent.click(button);
@@ -110,7 +158,9 @@ describe("FollowButton", () => {
   });
 
   it("shows 'Unfollow' on hover when following", () => {
-    render(<FollowButton userId="user-2" initialIsFollowing={true} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={true} />, {
+      wrapper: Wrapper,
+    });
 
     const button = screen.getByRole("button", { name: "Following" });
     fireEvent.mouseEnter(button);
@@ -119,7 +169,9 @@ describe("FollowButton", () => {
   });
 
   it("reverts to 'Following' on mouse leave", () => {
-    render(<FollowButton userId="user-2" initialIsFollowing={true} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={true} />, {
+      wrapper: Wrapper,
+    });
 
     const button = screen.getByRole("button", { name: "Following" });
     fireEvent.mouseEnter(button);
@@ -132,10 +184,15 @@ describe("FollowButton", () => {
   it("shows loading indicator during API call", async () => {
     let resolveFollow: () => void;
     (api.followUser as any).mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveFollow = resolve; })
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFollow = resolve;
+        }),
     );
 
-    render(<FollowButton userId="user-2" initialIsFollowing={false} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={false} />, {
+      wrapper: Wrapper,
+    });
 
     const button = screen.getByRole("button", { name: "Follow" });
     fireEvent.click(button);
@@ -144,7 +201,9 @@ describe("FollowButton", () => {
       expect(screen.getByRole("button", { name: "..." })).toBeDefined();
     });
 
-    expect(screen.getByRole("button", { name: "..." }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "..." }).hasAttribute("disabled"),
+    ).toBe(true);
 
     resolveFollow!();
 
@@ -154,7 +213,9 @@ describe("FollowButton", () => {
   });
 
   it("shows success toast when following", async () => {
-    render(<FollowButton userId="user-2" initialIsFollowing={false} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Follow" }));
 
@@ -164,7 +225,9 @@ describe("FollowButton", () => {
   });
 
   it("shows success toast when unfollowing", async () => {
-    render(<FollowButton userId="user-2" initialIsFollowing={true} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={true} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Following" }));
 
@@ -176,24 +239,32 @@ describe("FollowButton", () => {
   it("shows error toast when follow fails", async () => {
     (api.followUser as any).mockRejectedValueOnce(new Error("Network error"));
 
-    render(<FollowButton userId="user-2" initialIsFollowing={false} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Follow" }));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update follow status");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Failed to update follow status",
+      );
     });
   });
 
   it("shows error toast when unfollow fails", async () => {
     (api.unfollowUser as any).mockRejectedValueOnce(new Error("Network error"));
 
-    render(<FollowButton userId="user-2" initialIsFollowing={true} />, { wrapper: Wrapper });
+    render(<FollowButton userId="user-2" initialIsFollowing={true} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Following" }));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update follow status");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Failed to update follow status",
+      );
     });
   });
 });

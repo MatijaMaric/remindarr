@@ -73,12 +73,17 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
       footer={
         <div className="space-y-1.5">
           {isEpisodeReleased(episode) && (
-            <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" />
+            <WatchButtonGroup
+              offers={episode.offers ?? []}
+              variant="dropdown"
+            />
           )}
           {showActions && onToggleWatched && (
             <div className="space-y-1.5">
               <button
-                onClick={() => onToggleWatched(episode.id, !!episode.is_watched)}
+                onClick={() =>
+                  onToggleWatched(episode.id, !!episode.is_watched)
+                }
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 <CheckCircle size={14} />
@@ -109,7 +114,13 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
 });
 
 /** Deck-of-cards visual wrapper */
-export function DeckCardWrapper({ episodeCount, children }: { episodeCount: number; children: React.ReactNode }) {
+export function DeckCardWrapper({
+  episodeCount,
+  children,
+}: {
+  episodeCount: number;
+  children: React.ReactNode;
+}) {
   return (
     <div className="relative pb-2">
       {/* Second offset layer (deepest) */}
@@ -120,7 +131,9 @@ export function DeckCardWrapper({ episodeCount, children }: { episodeCount: numb
       {episodeCount > 1 && (
         <div className="absolute inset-0 translate-y-1.5 scale-[0.98] opacity-60 bg-zinc-800 border border-white/[0.06] rounded-xl pointer-events-none" />
       )}
-      <div className="relative border border-white/[0.06] rounded-xl overflow-hidden">{children}</div>
+      <div className="relative border border-white/[0.06] rounded-xl overflow-hidden">
+        {children}
+      </div>
     </div>
   );
 }
