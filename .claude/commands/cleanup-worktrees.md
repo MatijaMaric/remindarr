@@ -3,6 +3,7 @@ Remove stale Claude Code agent worktrees from `.claude/worktrees/`.
 **Default**: remove `agent-*` directories older than 7 days. Accept an optional age argument: `/cleanup-worktrees 14` for 14 days.
 
 **Steps:**
+
 1. List all directories matching `.claude/worktrees/agent-*` with their last-modified time
 2. For each directory older than the threshold:
    a. Check for uncommitted changes: `git -C <path> status --porcelain`

@@ -1,6 +1,7 @@
 Triage the most recent unresolved Sentry issue for remindarr.
 
 **Steps:**
+
 1. Use `mcp__plugin_sentry_sentry__search_issues` with query `is:unresolved` sorted by `date` (most recent first). Take the top result.
 2. Print the issue title, Sentry ID, first-seen date, and event count.
 3. Delegate full triage to the `sentry-triager` subagent, passing the issue ID.
