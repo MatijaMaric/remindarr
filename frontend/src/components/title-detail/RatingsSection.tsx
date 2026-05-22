@@ -8,7 +8,10 @@ export interface RatingsSectionProps {
   shareTitle: string;
 }
 
-export default function RatingsSection({ titleId, shareTitle }: RatingsSectionProps) {
+export default function RatingsSection({
+  titleId,
+  shareTitle,
+}: RatingsSectionProps) {
   return (
     <div className="flex flex-wrap items-start gap-6">
       <div className="space-y-2">

@@ -1,4 +1,12 @@
-import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import type { ReactNode } from "react";
@@ -9,7 +17,13 @@ import type { AchievementDetail } from "../api";
 // Mock AuthContext so we don't need a real auth provider.
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "current-user", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
+    user: {
+      id: "current-user",
+      username: "me",
+      display_name: "Me",
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: { local: true, oidc: null },
     loading: false,
     sessionStatus: "authenticated",
@@ -25,10 +39,13 @@ mock.module("../context/AuthContext", () => ({
   },
 }));
 
-const { default: AchievementDetailPage } = await import("./AchievementDetailPage");
+const { default: AchievementDetailPage } =
+  await import("./AchievementDetailPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function OwnWrapper({ children }: { children: ReactNode }) {
@@ -48,14 +65,19 @@ function OtherWrapper({ children }: { children: ReactNode }) {
     <QueryClientProvider client={newTestClient()}>
       <MemoryRouter initialEntries={["/u/alice/achievements/movies_10"]}>
         <Routes>
-          <Route path="/u/:username/achievements/:key" element={<>{children}</>} />
+          <Route
+            path="/u/:username/achievements/:key"
+            element={<>{children}</>}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
 }
 
-function makeDetail(overrides: Partial<AchievementDetail> = {}): AchievementDetail {
+function makeDetail(
+  overrides: Partial<AchievementDetail> = {},
+): AchievementDetail {
   return {
     key: "movies_10",
     kind: "count_movies",
@@ -78,8 +100,24 @@ function makeDetail(overrides: Partial<AchievementDetail> = {}): AchievementDeta
     rarity: null,
     ladder: {
       rungs: [
-        { key: "movies_10", title: "Movie Buff", threshold: 10, rungIndex: 0, points: 50, earned: true, earnedAt: "2025-01-01T00:00:00.000Z" },
-        { key: "movies_50", title: "Movie Fan", threshold: 50, rungIndex: 1, points: 100, earned: false, earnedAt: null },
+        {
+          key: "movies_10",
+          title: "Movie Buff",
+          threshold: 10,
+          rungIndex: 0,
+          points: 50,
+          earned: true,
+          earnedAt: "2025-01-01T00:00:00.000Z",
+        },
+        {
+          key: "movies_50",
+          title: "Movie Fan",
+          threshold: 50,
+          rungIndex: 1,
+          points: 100,
+          earned: false,
+          earnedAt: null,
+        },
       ],
     },
     history: [],
@@ -87,8 +125,12 @@ function makeDetail(overrides: Partial<AchievementDetail> = {}): AchievementDeta
   };
 }
 
-let getMyDetailSpy: ReturnType<typeof spyOn<typeof api, "getMyAchievementDetail">>;
-let getUserDetailSpy: ReturnType<typeof spyOn<typeof api, "getUserAchievementDetail">>;
+let getMyDetailSpy: ReturnType<
+  typeof spyOn<typeof api, "getMyAchievementDetail">
+>;
+let getUserDetailSpy: ReturnType<
+  typeof spyOn<typeof api, "getUserAchievementDetail">
+>;
 
 beforeEach(() => {
   getMyDetailSpy = spyOn(api, "getMyAchievementDetail");
@@ -134,7 +176,14 @@ describe("AchievementDetailPage — own profile", () => {
 
   test("does not show ladder progress section for one-shot badge", async () => {
     getMyDetailSpy.mockImplementation(() =>
-      Promise.resolve(makeDetail({ tier: "one-shot", family: null, rungIndex: null, ladder: null }))
+      Promise.resolve(
+        makeDetail({
+          tier: "one-shot",
+          family: null,
+          rungIndex: null,
+          ladder: null,
+        }),
+      ),
     );
 
     render(<AchievementDetailPage />, { wrapper: OwnWrapper });
@@ -153,11 +202,14 @@ describe("AchievementDetailPage — own profile", () => {
           repeatable: true,
           history: [
             { earnedAt: "2025-01-01T00:00:00.000Z", context: null },
-            { earnedAt: "2025-02-01T00:00:00.000Z", context: { month: "Feb 2025" } },
+            {
+              earnedAt: "2025-02-01T00:00:00.000Z",
+              context: { month: "Feb 2025" },
+            },
           ],
           ladder: null,
-        })
-      )
+        }),
+      ),
     );
 
     render(<AchievementDetailPage />, { wrapper: OwnWrapper });
@@ -169,7 +221,9 @@ describe("AchievementDetailPage — own profile", () => {
 
   test("does not show earn history section when history is empty", async () => {
     getMyDetailSpy.mockImplementation(() =>
-      Promise.resolve(makeDetail({ repeatable: true, history: [], ladder: null }))
+      Promise.resolve(
+        makeDetail({ repeatable: true, history: [], ladder: null }),
+      ),
     );
 
     render(<AchievementDetailPage />, { wrapper: OwnWrapper });
@@ -193,7 +247,14 @@ describe("AchievementDetailPage — own profile", () => {
 
   test("shows progress bar when not yet earned", async () => {
     getMyDetailSpy.mockImplementation(() =>
-      Promise.resolve(makeDetail({ earned: false, earnedAt: null, progress: 5, threshold: 10 }))
+      Promise.resolve(
+        makeDetail({
+          earned: false,
+          earnedAt: null,
+          progress: 5,
+          threshold: 10,
+        }),
+      ),
     );
 
     render(<AchievementDetailPage />, { wrapper: OwnWrapper });
@@ -206,7 +267,9 @@ describe("AchievementDetailPage — own profile", () => {
 
 describe("AchievementDetailPage — other user profile", () => {
   test("shows achievement title for another user's profile", async () => {
-    getUserDetailSpy.mockImplementation(() => Promise.resolve(makeDetail({ ladder: null, history: [] })));
+    getUserDetailSpy.mockImplementation(() =>
+      Promise.resolve(makeDetail({ ladder: null, history: [] })),
+    );
 
     render(<AchievementDetailPage />, { wrapper: OtherWrapper });
 
@@ -216,7 +279,9 @@ describe("AchievementDetailPage — other user profile", () => {
   });
 
   test("shows 'Achievement not found' on API error", async () => {
-    getUserDetailSpy.mockImplementation(() => Promise.reject(new Error("Not found")));
+    getUserDetailSpy.mockImplementation(() =>
+      Promise.reject(new Error("Not found")),
+    );
 
     render(<AchievementDetailPage />, { wrapper: OtherWrapper });
 

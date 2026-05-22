@@ -27,19 +27,25 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
   const titlesWithStreamingOffers = titleIds.filter((id) => {
     const titleOffers = offersByTitle.get(id) ?? [];
     return titleOffers.some(
-      (o) => o.monetization_type === "FLATRATE" || o.monetization_type === "FREE"
+      (o) =>
+        o.monetization_type === "FLATRATE" || o.monetization_type === "FREE",
     );
   });
   if (titlesWithStreamingOffers.length === 0) return;
 
   // 3. Find users tracking these titles
-  const trackersByTitle = await getUsersTrackingTitles(titlesWithStreamingOffers);
+  const trackersByTitle = await getUsersTrackingTitles(
+    titlesWithStreamingOffers,
+  );
   if (trackersByTitle.size === 0) return;
 
   for (const [titleId, userIds] of trackersByTitle) {
     const titleOffers = offersByTitle.get(titleId) ?? [];
     const streamingProviders = titleOffers
-      .filter((o) => o.monetization_type === "FLATRATE" || o.monetization_type === "FREE")
+      .filter(
+        (o) =>
+          o.monetization_type === "FLATRATE" || o.monetization_type === "FREE",
+      )
       .map((o) => ({ id: o.provider_id!, name: o.provider_name }))
       .filter((p) => p.id != null);
 
@@ -49,7 +55,12 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
 
     for (const userId of userIds) {
       // 4. Find providers not yet alerted for this (user, title)
-      const newProviderIds = await getUnalertedProviders(userId, titleId, providerIds, "arrival");
+      const newProviderIds = await getUnalertedProviders(
+        userId,
+        titleId,
+        providerIds,
+        "arrival",
+      );
       if (newProviderIds.length === 0) continue;
 
       // 5. Get enabled streaming-alert notifiers for this user
@@ -87,7 +98,12 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
             const alertStart = Date.now();
             try {
               await notifierProvider.send(notifier.config, content);
-              await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - alertStart, eventKind: "streaming_arrival" });
+              await recordDelivery({
+                notifierId: notifier.id,
+                status: "success",
+                latencyMs: Date.now() - alertStart,
+                eventKind: "streaming_arrival",
+              });
               log.info("Sent streaming alert", {
                 userId,
                 titleId,
@@ -96,7 +112,13 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
               });
             } catch (err) {
               const message = err instanceof Error ? err.message : String(err);
-              await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - alertStart, errorMessage: message, eventKind: "streaming_arrival" });
+              await recordDelivery({
+                notifierId: notifier.id,
+                status: "failure",
+                latencyMs: Date.now() - alertStart,
+                errorMessage: message,
+                eventKind: "streaming_arrival",
+              });
               log.error("Failed to send streaming alert", {
                 notifierId: notifier.id,
                 userId,

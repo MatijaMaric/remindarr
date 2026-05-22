@@ -58,7 +58,10 @@ export async function pinTitle(
       .get();
 
     if ((existing?.count ?? 0) >= MAX_PINNED) {
-      return { ok: false, error: `Maximum of ${MAX_PINNED} pinned titles reached` };
+      return {
+        ok: false,
+        error: `Maximum of ${MAX_PINNED} pinned titles reached`,
+      };
     }
 
     // Get next position
@@ -83,13 +86,18 @@ export async function pinTitle(
 /**
  * Unpins a title for a user and renumbers remaining positions 0, 1, 2, …
  */
-export async function unpinTitle(userId: string, titleId: string): Promise<void> {
+export async function unpinTitle(
+  userId: string,
+  titleId: string,
+): Promise<void> {
   return traceDbQuery("unpinTitle", async () => {
     const db = getDb();
 
     await db
       .delete(pinnedTitles)
-      .where(and(eq(pinnedTitles.userId, userId), eq(pinnedTitles.titleId, titleId)))
+      .where(
+        and(eq(pinnedTitles.userId, userId), eq(pinnedTitles.titleId, titleId)),
+      )
       .run();
 
     // Renumber remaining rows
@@ -104,7 +112,12 @@ export async function unpinTitle(userId: string, titleId: string): Promise<void>
       await db
         .update(pinnedTitles)
         .set({ position: i })
-        .where(and(eq(pinnedTitles.userId, userId), eq(pinnedTitles.titleId, remaining[i].titleId)))
+        .where(
+          and(
+            eq(pinnedTitles.userId, userId),
+            eq(pinnedTitles.titleId, remaining[i].titleId),
+          ),
+        )
         .run();
     }
   });
@@ -115,7 +128,10 @@ export async function unpinTitle(userId: string, titleId: string): Promise<void>
  * Accepts an ordered array of titleIds; updates position for each.
  * Titles not present in the array are removed from pinned.
  */
-export async function reorderPinnedTitles(userId: string, titleIds: string[]): Promise<void> {
+export async function reorderPinnedTitles(
+  userId: string,
+  titleIds: string[],
+): Promise<void> {
   return traceDbQuery("reorderPinnedTitles", async () => {
     const db = getDb();
 
@@ -134,7 +150,12 @@ export async function reorderPinnedTitles(userId: string, titleIds: string[]): P
       if (!orderedSet.has(row.titleId)) {
         await db
           .delete(pinnedTitles)
-          .where(and(eq(pinnedTitles.userId, userId), eq(pinnedTitles.titleId, row.titleId)))
+          .where(
+            and(
+              eq(pinnedTitles.userId, userId),
+              eq(pinnedTitles.titleId, row.titleId),
+            ),
+          )
           .run();
       }
     }
@@ -156,13 +177,18 @@ export async function reorderPinnedTitles(userId: string, titleIds: string[]): P
 /**
  * Returns whether a specific title is pinned by the user.
  */
-export async function isPinnedTitle(userId: string, titleId: string): Promise<boolean> {
+export async function isPinnedTitle(
+  userId: string,
+  titleId: string,
+): Promise<boolean> {
   return traceDbQuery("isPinnedTitle", async () => {
     const db = getDb();
     const row = await db
       .select({ titleId: pinnedTitles.titleId })
       .from(pinnedTitles)
-      .where(and(eq(pinnedTitles.userId, userId), eq(pinnedTitles.titleId, titleId)))
+      .where(
+        and(eq(pinnedTitles.userId, userId), eq(pinnedTitles.titleId, titleId)),
+      )
       .get();
     return row !== undefined;
   });

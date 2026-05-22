@@ -5,10 +5,12 @@ test.describe("OIDC login flow", () => {
   // consistently on chromium. We only need the coverage once.
   test.skip(
     ({ browserName }) => browserName !== "chromium",
-    "OIDC roundtrip runs once under chromium"
+    "OIDC roundtrip runs once under chromium",
   );
 
-  test("advertises OIDC provider on /api/auth/custom/providers", async ({ request }) => {
+  test("advertises OIDC provider on /api/auth/custom/providers", async ({
+    request,
+  }) => {
     const res = await request.get("/api/auth/custom/providers");
     expect(res.ok()).toBeTruthy();
     const json = (await res.json()) as {
@@ -26,7 +28,9 @@ test.describe("OIDC login flow", () => {
     // reports an `oidc` provider. The default providerId label is
     // "OpenID Connect" — match it specifically to avoid clashing with the
     // passkey / username-toggle buttons.
-    const oidcButton = page.getByRole("button", { name: /sign in with openid connect/i });
+    const oidcButton = page.getByRole("button", {
+      name: /sign in with openid connect/i,
+    });
     await expect(oidcButton).toBeVisible({ timeout: 15_000 });
 
     // Clicking triggers better-auth's social sign-in, which 302s through the
@@ -43,7 +47,10 @@ test.describe("OIDC login flow", () => {
     const session = await page.request.get("/api/auth/get-session");
     expect(session.ok()).toBeTruthy();
     const body = await session.json().catch(() => null);
-    expect(body, "expected get-session to return a non-null session body").not.toBeNull();
+    expect(
+      body,
+      "expected get-session to return a non-null session body",
+    ).not.toBeNull();
     expect(body?.user?.id).toBeTruthy();
   });
 });

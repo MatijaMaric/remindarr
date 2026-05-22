@@ -11,7 +11,7 @@ export async function getUnalertedProviders(
   userId: string,
   titleId: string,
   providerIds: number[],
-  kind: "arrival" | "departure" = "arrival"
+  kind: "arrival" | "departure" = "arrival",
 ): Promise<number[]> {
   return traceDbQuery("getUnalertedProviders", async () => {
     if (providerIds.length === 0) return [];
@@ -24,8 +24,8 @@ export async function getUnalertedProviders(
           eq(streamingAlerts.userId, userId),
           eq(streamingAlerts.titleId, titleId),
           eq(streamingAlerts.kind, kind),
-          inArray(streamingAlerts.providerId, providerIds)
-        )
+          inArray(streamingAlerts.providerId, providerIds),
+        ),
       )
       .all();
     const alerted = new Set(alreadyAlerted.map((r) => r.providerId));
@@ -42,7 +42,7 @@ export async function markAlerted(
   titleId: string,
   providerId: number,
   providerName: string,
-  kind: "arrival" | "departure" = "arrival"
+  kind: "arrival" | "departure" = "arrival",
 ): Promise<void> {
   return traceDbQuery("markAlerted", async () => {
     const db = getDb();
@@ -67,8 +67,10 @@ export async function markAlerted(
  * were historically available.
  */
 export async function getArrivalAlertedProviders(
-  titleId: string
-): Promise<Array<{ userId: string; providerId: number; providerName: string }>> {
+  titleId: string,
+): Promise<
+  Array<{ userId: string; providerId: number; providerName: string }>
+> {
   return traceDbQuery("getArrivalAlertedProviders", async () => {
     const db = getDb();
     return await db
@@ -81,8 +83,8 @@ export async function getArrivalAlertedProviders(
       .where(
         and(
           eq(streamingAlerts.titleId, titleId),
-          eq(streamingAlerts.kind, "arrival")
-        )
+          eq(streamingAlerts.kind, "arrival"),
+        ),
       )
       .all();
   });

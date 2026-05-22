@@ -11,7 +11,7 @@ describe("traceDbQuery", () => {
 
   it("calls Sentry.startSpan with db.query op and returns result", () => {
     startSpanSpy = spyOn(Sentry, "startSpan").mockImplementation(
-      (_opts: any, fn: any) => fn({})
+      (_opts: any, fn: any) => fn({}),
     );
     const result = traceDbQuery("getProviders", () => [{ id: 1 }]);
     expect(result).toEqual([{ id: 1 }]);
@@ -24,12 +24,12 @@ describe("traceDbQuery", () => {
 
   it("propagates errors from the callback", () => {
     startSpanSpy = spyOn(Sentry, "startSpan").mockImplementation(
-      (_opts: any, fn: any) => fn({})
+      (_opts: any, fn: any) => fn({}),
     );
     expect(() =>
       traceDbQuery("failing", () => {
         throw new Error("db error");
-      })
+      }),
     ).toThrow("db error");
   });
 });
@@ -43,12 +43,12 @@ describe("traceHttp", () => {
 
   it("calls Sentry.startSpan with http.client op and returns result", async () => {
     startSpanSpy = spyOn(Sentry, "startSpan").mockImplementation(
-      (_opts: any, fn: any) => fn({})
+      (_opts: any, fn: any) => fn({}),
     );
     const result = await traceHttp(
       "GET",
       "https://api.example.com/data?q=1",
-      async () => ({ ok: true })
+      async () => ({ ok: true }),
     );
     expect(result).toEqual({ ok: true });
     expect(startSpanSpy).toHaveBeenCalledTimes(1);
@@ -61,12 +61,12 @@ describe("traceHttp", () => {
 
   it("propagates errors from the async callback", async () => {
     startSpanSpy = spyOn(Sentry, "startSpan").mockImplementation(
-      (_opts: any, fn: any) => fn({})
+      (_opts: any, fn: any) => fn({}),
     );
     await expect(
       traceHttp("POST", "https://example.com/fail", async () => {
         throw new Error("timeout");
-      })
+      }),
     ).rejects.toThrow("timeout");
   });
 });

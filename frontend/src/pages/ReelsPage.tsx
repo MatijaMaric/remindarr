@@ -1,9 +1,20 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { Link, useSearchParams } from "react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import * as api from "../api";
 import { normalizeSearchTitle } from "../types";
-import type { Episode, RatingValue, SearchTitle, Recommendation } from "../types";
+import type {
+  Episode,
+  RatingValue,
+  SearchTitle,
+  Recommendation,
+} from "../types";
 import ReelsCard from "../components/ReelsCard";
 import type { UndoInfo } from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
@@ -11,17 +22,28 @@ import { ReelsSkeleton } from "../components/SkeletonComponents";
 
 // ─── Source types ──────────────────────────────────────────────────────────────
 
-export type ReelsSource = "coming-soon" | "popular" | "from-your-genres" | "friends-loved" | "movies";
+export type ReelsSource =
+  | "coming-soon"
+  | "popular"
+  | "from-your-genres"
+  | "friends-loved"
+  | "movies";
 
 const SOURCE_LABELS: Record<ReelsSource, string> = {
   "coming-soon": "Coming Soon",
-  "popular": "Popular",
+  popular: "Popular",
   "from-your-genres": "From My Genres",
   "friends-loved": "Friends Loved",
-  "movies": "Movies",
+  movies: "Movies",
 };
 
-const ALL_SOURCES: ReelsSource[] = ["coming-soon", "popular", "from-your-genres", "friends-loved", "movies"];
+const ALL_SOURCES: ReelsSource[] = [
+  "coming-soon",
+  "popular",
+  "from-your-genres",
+  "friends-loved",
+  "movies",
+];
 
 // ─── Normalizer ───────────────────────────────────────────────────────────────
 
@@ -53,7 +75,9 @@ export function normalizeMovieToReelItem(movie: {
  * Convert a Title (from browse/recommendations) into a synthetic Episode shape
  * that ReelsCard can render. This lets non-episode sources plug into the same UI.
  */
-export function normalizeToReelItem(input: SearchTitle | Recommendation): Episode {
+export function normalizeToReelItem(
+  input: SearchTitle | Recommendation,
+): Episode {
   if ("from_user" in input) {
     // Recommendation shape
     const rec = input as Recommendation;
@@ -126,7 +150,8 @@ export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
   const cards: ShowCard[] = [];
   for (const [titleId, eps] of grouped) {
     const sorted = [...eps].sort((a, b) => {
-      if (a.season_number !== b.season_number) return a.season_number - b.season_number;
+      if (a.season_number !== b.season_number)
+        return a.season_number - b.season_number;
       return a.episode_number - b.episode_number;
     });
     cards.push({
@@ -163,7 +188,10 @@ async function fetchCardsForSource(
   switch (source) {
     case "coming-soon": {
       const data = await api.getUpcomingEpisodes(signal);
-      return { cards: getFirstUnwatchedPerShow(data.unwatched), friendsLovedEmpty: false };
+      return {
+        cards: getFirstUnwatchedPerShow(data.unwatched),
+        friendsLovedEmpty: false,
+      };
     }
     case "popular": {
       const data = await api.browseTitles({ category: "popular" }, signal);
@@ -178,8 +206,13 @@ async function fetchCardsForSource(
     case "friends-loved": {
       try {
         const data = await api.fetchFriendsLoved(signal);
-        const episodes = (data.titles ?? []).map((t: SearchTitle) => normalizeToReelItem(t));
-        return { cards: episodesToCards(episodes), friendsLovedEmpty: episodes.length === 0 };
+        const episodes = (data.titles ?? []).map((t: SearchTitle) =>
+          normalizeToReelItem(t),
+        );
+        return {
+          cards: episodesToCards(episodes),
+          friendsLovedEmpty: episodes.length === 0,
+        };
       } catch {
         // Endpoint not yet shipped — treat as empty
         return { cards: [], friendsLovedEmpty: true };
@@ -188,7 +221,10 @@ async function fetchCardsForSource(
     case "movies": {
       const data = await api.getMovieTracking(signal);
       const episodes = data.to_watch.map((m) => normalizeMovieToReelItem(m));
-      const cards = episodesToCards(episodes).map((c) => ({ ...c, isMovie: true as const }));
+      const cards = episodesToCards(episodes).map((c) => ({
+        ...c,
+        isMovie: true as const,
+      }));
       return { cards, friendsLovedEmpty: false };
     }
   }
@@ -210,17 +246,24 @@ export default function ReelsPage() {
   // Callbacks read from this ref to access the latest value without
   // needing to be recreated whenever `cards` changes.
   const cardsRef = useRef(cards);
-  useLayoutEffect(() => { cardsRef.current = cards; });
+  useLayoutEffect(() => {
+    cardsRef.current = cards;
+  });
   const [friendsLovedEmpty, setFriendsLovedEmpty] = useState(false);
   const [actionError, setActionError] = useState("");
-  const actionErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const actionErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Undo state
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Season panel state
-  const [seasonPanel, setSeasonPanel] = useState<{ card: ShowCard; seasonNumber: number } | null>(null);
+  const [seasonPanel, setSeasonPanel] = useState<{
+    card: ShowCard;
+    seasonNumber: number;
+  } | null>(null);
 
   // Ephemeral episode rating (shown alongside undo)
   const [reelsRating, setReelsRating] = useState<RatingValue | null>(null);
@@ -231,7 +274,12 @@ export default function ReelsPage() {
   // Track visible card index for swipe context
   const visibleCardIndexRef = useRef(0);
 
-  const { data: reelsData, isLoading, isError, error: loadError } = useQuery({
+  const {
+    data: reelsData,
+    isLoading,
+    isError,
+    error: loadError,
+  } = useQuery({
     queryKey: ["reels", source],
     queryFn: ({ signal }) => fetchCardsForSource(source, signal),
     staleTime: 0, // always refetch on mount since user may have watched things elsewhere
@@ -321,7 +369,10 @@ export default function ReelsPage() {
 
   // Swipe detection for season panel
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
   }, []);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
@@ -357,21 +408,39 @@ export default function ReelsPage() {
   }
 
   const watchMutation = useMutation({
-    mutationFn: ({ titleId, episodeId, isMovie }: { titleId: string; episodeId: number; isMovie?: boolean }) =>
-      isMovie ? api.watchMovie(titleId) : api.watchEpisode(episodeId),
+    mutationFn: ({
+      titleId,
+      episodeId,
+      isMovie,
+    }: {
+      titleId: string;
+      episodeId: number;
+      isMovie?: boolean;
+    }) => (isMovie ? api.watchMovie(titleId) : api.watchEpisode(episodeId)),
     onError: (err: unknown, { titleId }) => {
       setCards((prev) =>
         prev.map((c) => {
           if (c.titleId !== titleId) return c;
           const restoredEpisodes = adjustWatchedCount(c.episodes, -1);
           if (c.caughtUp) {
-            return { ...c, episodes: restoredEpisodes, caughtUp: false, currentIndex: c.episodes.length - 1 };
+            return {
+              ...c,
+              episodes: restoredEpisodes,
+              caughtUp: false,
+              currentIndex: c.episodes.length - 1,
+            };
           }
-          return { ...c, episodes: restoredEpisodes, currentIndex: Math.max(0, c.currentIndex - 1) };
-        })
+          return {
+            ...c,
+            episodes: restoredEpisodes,
+            currentIndex: Math.max(0, c.currentIndex - 1),
+          };
+        }),
       );
       setUndoAction(null);
-      showActionError(err instanceof Error ? err.message : "Failed to mark as watched");
+      showActionError(
+        err instanceof Error ? err.message : "Failed to mark as watched",
+      );
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["reels", source] });
@@ -382,8 +451,15 @@ export default function ReelsPage() {
   });
 
   const undoMutation = useMutation({
-    mutationFn: ({ titleId, episodeId, isMovie }: { titleId: string; episodeId: number; isMovie?: boolean }) =>
-      isMovie ? api.unwatchMovie(titleId) : api.unwatchEpisode(episodeId),
+    mutationFn: ({
+      titleId,
+      episodeId,
+      isMovie,
+    }: {
+      titleId: string;
+      episodeId: number;
+      isMovie?: boolean;
+    }) => (isMovie ? api.unwatchMovie(titleId) : api.unwatchEpisode(episodeId)),
     onError: () => {
       showActionError("Failed to undo");
     },
@@ -391,7 +467,8 @@ export default function ReelsPage() {
   });
 
   const bulkWatchMutation = useMutation({
-    mutationFn: (episodeIds: number[]) => api.watchEpisodesBulk(episodeIds, true),
+    mutationFn: (episodeIds: number[]) =>
+      api.watchEpisodesBulk(episodeIds, true),
     onSuccess: () => {
       setSeasonPanel(null);
     },
@@ -404,10 +481,25 @@ export default function ReelsPage() {
   });
 
   const seasonToggleMutation = useMutation({
-    mutationFn: ({ episodeId, currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
-      currentlyWatched ? api.unwatchEpisode(episodeId) : api.watchEpisode(episodeId),
-    onError: (_err: unknown, { currentlyWatched }: { episodeId: number; currentlyWatched: boolean }) =>
-      showActionError(currentlyWatched ? "Failed to unwatch episode" : "Failed to watch episode"),
+    mutationFn: ({
+      episodeId,
+      currentlyWatched,
+    }: {
+      episodeId: number;
+      currentlyWatched: boolean;
+    }) =>
+      currentlyWatched
+        ? api.unwatchEpisode(episodeId)
+        : api.watchEpisode(episodeId),
+    onError: (
+      _err: unknown,
+      { currentlyWatched }: { episodeId: number; currentlyWatched: boolean },
+    ) =>
+      showActionError(
+        currentlyWatched
+          ? "Failed to unwatch episode"
+          : "Failed to watch episode",
+      ),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["reels", source] });
       void qc.invalidateQueries({ queryKey: ["stats"] });
@@ -416,61 +508,87 @@ export default function ReelsPage() {
   });
 
   const rateReelsMutation = useMutation({
-    mutationFn: ({ episodeId, value, isActive }: { episodeId: number; value: RatingValue; isActive: boolean }) =>
-      isActive ? api.unrateEpisode(episodeId) : api.rateEpisode(episodeId, value),
+    mutationFn: ({
+      episodeId,
+      value,
+      isActive,
+    }: {
+      episodeId: number;
+      value: RatingValue;
+      isActive: boolean;
+    }) =>
+      isActive
+        ? api.unrateEpisode(episodeId)
+        : api.rateEpisode(episodeId, value),
     onMutate: ({ value, isActive }) => setReelsRating(isActive ? null : value),
     onError: () => setReelsRating(null),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["reels", source] }),
   });
 
-  const markWatched = useCallback((titleId: string) => {
-    const card = cardsRef.current.find((c) => c.titleId === titleId);
-    if (!card || card.caughtUp) return;
-    const episode = card.episodes[card.currentIndex];
-    if (!episode) return;
+  const markWatched = useCallback(
+    (titleId: string) => {
+      const card = cardsRef.current.find((c) => c.titleId === titleId);
+      if (!card || card.caughtUp) return;
+      const episode = card.episodes[card.currentIndex];
+      if (!episode) return;
 
-    // Store undo action
-    const action: UndoAction = {
-      titleId,
-      previousIndex: card.currentIndex,
-      episodeId: episode.id,
-      wasCaughtUp: false,
-      isMovie: card.isMovie,
-    };
+      // Store undo action
+      const action: UndoAction = {
+        titleId,
+        previousIndex: card.currentIndex,
+        episodeId: episode.id,
+        wasCaughtUp: false,
+        isMovie: card.isMovie,
+      };
 
-    // Optimistic update
-    setCards((prev) => {
-      return prev.map((c) => {
-        if (c.titleId !== titleId || c.caughtUp) return c;
-        const ep = c.episodes[c.currentIndex];
-        if (!ep) return c;
+      // Optimistic update
+      setCards((prev) => {
+        return prev.map((c) => {
+          if (c.titleId !== titleId || c.caughtUp) return c;
+          const ep = c.episodes[c.currentIndex];
+          if (!ep) return c;
 
-        const bumpedEpisodes = adjustWatchedCount(c.episodes, 1);
-        const nextIndex = c.currentIndex + 1;
-        if (nextIndex >= c.episodes.length) {
-          return { ...c, episodes: bumpedEpisodes, caughtUp: true };
-        }
-        return { ...c, episodes: bumpedEpisodes, currentIndex: nextIndex };
+          const bumpedEpisodes = adjustWatchedCount(c.episodes, 1);
+          const nextIndex = c.currentIndex + 1;
+          if (nextIndex >= c.episodes.length) {
+            return { ...c, episodes: bumpedEpisodes, caughtUp: true };
+          }
+          return { ...c, episodes: bumpedEpisodes, currentIndex: nextIndex };
+        });
       });
-    });
 
-    // Show undo toast + rating prompt
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    setUndoAction(action);
-    setReelsRating(null);
-    undoTimerRef.current = setTimeout(() => {
-      setUndoAction(null);
-      setCards((prev) => prev.filter((c) => !(c.titleId === titleId && c.caughtUp)));
-    }, 5000);
+      // Show undo toast + rating prompt
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      setUndoAction(action);
+      setReelsRating(null);
+      undoTimerRef.current = setTimeout(() => {
+        setUndoAction(null);
+        setCards((prev) =>
+          prev.filter((c) => !(c.titleId === titleId && c.caughtUp)),
+        );
+      }, 5000);
 
-    watchMutation.mutate({ titleId, episodeId: episode.id, isMovie: card.isMovie });
-  }, [watchMutation]);
+      watchMutation.mutate({
+        titleId,
+        episodeId: episode.id,
+        isMovie: card.isMovie,
+      });
+    },
+    [watchMutation],
+  );
 
-  const handleReelsRate = useCallback((value: RatingValue) => {
-    if (!undoAction) return;
-    const isActive = reelsRating === value;
-    rateReelsMutation.mutate({ episodeId: undoAction.episodeId, value, isActive });
-  }, [undoAction, reelsRating, rateReelsMutation]);
+  const handleReelsRate = useCallback(
+    (value: RatingValue) => {
+      if (!undoAction) return;
+      const isActive = reelsRating === value;
+      rateReelsMutation.mutate({
+        episodeId: undoAction.episodeId,
+        value,
+        isActive,
+      });
+    },
+    [undoAction, reelsRating, rateReelsMutation],
+  );
 
   const handleUndo = useCallback(() => {
     if (!undoAction) return;
@@ -487,21 +605,31 @@ export default function ReelsPage() {
           currentIndex: undoAction.previousIndex,
           caughtUp: false,
         };
-      })
+      }),
     );
 
-    undoMutation.mutate({ titleId: undoAction.titleId, episodeId: undoAction.episodeId, isMovie: undoAction.isMovie });
+    undoMutation.mutate({
+      titleId: undoAction.titleId,
+      episodeId: undoAction.episodeId,
+      isMovie: undoAction.isMovie,
+    });
   }, [undoAction, undoMutation]);
 
   // Season panel: bulk mark watched
-  const handleBulkWatch = useCallback((episodeIds: number[]) => {
-    bulkWatchMutation.mutate(episodeIds);
-  }, [bulkWatchMutation]);
+  const handleBulkWatch = useCallback(
+    (episodeIds: number[]) => {
+      bulkWatchMutation.mutate(episodeIds);
+    },
+    [bulkWatchMutation],
+  );
 
   // Season panel: toggle individual episode watched
-  const handleSeasonToggleWatched = useCallback((episodeId: number, currentlyWatched: boolean) => {
-    seasonToggleMutation.mutate({ episodeId, currentlyWatched });
-  }, [seasonToggleMutation]);
+  const handleSeasonToggleWatched = useCallback(
+    (episodeId: number, currentlyWatched: boolean) => {
+      seasonToggleMutation.mutate({ episodeId, currentlyWatched });
+    },
+    [seasonToggleMutation],
+  );
 
   const getUndoInfo = (titleId: string): UndoInfo | undefined => {
     if (!undoAction || undoAction.titleId !== titleId) return undefined;
@@ -533,9 +661,13 @@ export default function ReelsPage() {
   }
 
   if (isError) {
-    const errorMessage = loadError instanceof Error ? loadError.message : String(loadError);
+    const errorMessage =
+      loadError instanceof Error ? loadError.message : String(loadError);
     return (
-      <div className="flex items-center justify-center p-6 safe-top" style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}>
+      <div
+        className="flex items-center justify-center p-6 safe-top"
+        style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}
+      >
         <div className="text-center">
           <p className="text-red-400 mb-4">{errorMessage}</p>
           <Link to="/" className="text-amber-400 hover:text-amber-300">
@@ -554,10 +686,24 @@ export default function ReelsPage() {
     return (
       <>
         {/* Source picker overlay — always visible */}
-        <div className="fixed z-40" style={{ top: "calc(8px + env(safe-area-inset-top, 0px))", left: 20, right: 20 }}>
+        <div
+          className="fixed z-40"
+          style={{
+            top: "calc(8px + env(safe-area-inset-top, 0px))",
+            left: 20,
+            right: 20,
+          }}
+        >
           <div className="flex items-center gap-2 mb-2">
-            <Link to="/" className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent">Feed</Link>
-            <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">Reels</span>
+            <Link
+              to="/"
+              className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent"
+            >
+              Feed
+            </Link>
+            <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">
+              Reels
+            </span>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {ALL_SOURCES.map((s) => (
@@ -576,11 +722,20 @@ export default function ReelsPage() {
             ))}
           </div>
         </div>
-        <div className="flex items-center justify-center p-6" style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))", paddingTop: "calc(96px + env(safe-area-inset-top, 0px))" }}>
+        <div
+          className="flex items-center justify-center p-6"
+          style={{
+            minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))",
+            paddingTop: "calc(96px + env(safe-area-inset-top, 0px))",
+          }}
+        >
           <div className="text-center">
             <p className="text-zinc-400 text-lg mb-2">No unwatched episodes</p>
             <p className="text-zinc-600 text-sm mb-6">You're all caught up!</p>
-            <Link to="/upcoming" className="text-amber-400 hover:text-amber-300">
+            <Link
+              to="/upcoming"
+              className="text-amber-400 hover:text-amber-300"
+            >
               View Upcoming
             </Link>
           </div>
@@ -594,7 +749,11 @@ export default function ReelsPage() {
       {/* Feed / Reels mode switcher + source picker — fixed overlay, edge-to-edge with scrim */}
       <div
         className="fixed z-40 left-0 right-0 bg-gradient-to-b from-black/55 to-transparent"
-        style={{ top: 0, paddingTop: "calc(8px + env(safe-area-inset-top, 0px))", paddingBottom: 12 }}
+        style={{
+          top: 0,
+          paddingTop: "calc(8px + env(safe-area-inset-top, 0px))",
+          paddingBottom: 12,
+        }}
       >
         {/* Single horizontally-scrolling row: Feed/Reels toggle + source chips */}
         <div
@@ -610,7 +769,10 @@ export default function ReelsPage() {
           <span className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[11px] font-bold text-white">
             Reels
           </span>
-          <span className="flex-shrink-0 w-px h-4 bg-white/15 mx-1" aria-hidden="true" />
+          <span
+            className="flex-shrink-0 w-px h-4 bg-white/15 mx-1"
+            aria-hidden="true"
+          />
           {ALL_SOURCES.map((s) => (
             <button
               key={s}
@@ -632,10 +794,15 @@ export default function ReelsPage() {
         /* Friends-loved empty state — Reels chrome stays visible */
         <div
           className="flex items-center justify-center p-6"
-          style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))", paddingTop: "calc(96px + env(safe-area-inset-top, 0px))" }}
+          style={{
+            minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))",
+            paddingTop: "calc(96px + env(safe-area-inset-top, 0px))",
+          }}
         >
           <div className="text-center max-w-xs">
-            <p className="text-zinc-300 text-lg font-semibold mb-2">Nothing here yet</p>
+            <p className="text-zinc-300 text-lg font-semibold mb-2">
+              Nothing here yet
+            </p>
             <p className="text-zinc-500 text-sm mb-6">
               Follow some friends to see what they love this week
             </p>
@@ -651,7 +818,10 @@ export default function ReelsPage() {
         <div
           ref={scrollRef}
           className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))", marginTop: "env(safe-area-inset-top, 0px)" }}
+          style={{
+            height: "calc(100dvh - env(safe-area-inset-top, 0px))",
+            marginTop: "env(safe-area-inset-top, 0px)",
+          }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -659,7 +829,11 @@ export default function ReelsPage() {
           {cards.map((card, i) => (
             <ReelsCard
               key={card.titleId}
-              episode={card.episodes[card.caughtUp ? card.episodes.length - 1 : card.currentIndex]}
+              episode={
+                card.episodes[
+                  card.caughtUp ? card.episodes.length - 1 : card.currentIndex
+                ]
+              }
               caughtUp={card.caughtUp}
               onMarkWatched={() => markWatched(card.titleId)}
               index={i}
@@ -673,7 +847,13 @@ export default function ReelsPage() {
           {cards.length > 1 && (
             <ReelsCard
               key="clone-first"
-              episode={cards[0].episodes[cards[0].caughtUp ? cards[0].episodes.length - 1 : cards[0].currentIndex]}
+              episode={
+                cards[0].episodes[
+                  cards[0].caughtUp
+                    ? cards[0].episodes.length - 1
+                    : cards[0].currentIndex
+                ]
+              }
               caughtUp={cards[0].caughtUp}
               onMarkWatched={() => markWatched(cards[0].titleId)}
               index={0}
@@ -687,7 +867,10 @@ export default function ReelsPage() {
 
       {/* Action error banner */}
       {actionError && (
-        <div className="fixed left-1/2 -translate-x-1/2 z-[70] max-w-sm w-full px-4" style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}>
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-[70] max-w-sm w-full px-4"
+          style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}
+        >
           <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm text-center">
             {actionError}
           </div>
@@ -698,7 +881,9 @@ export default function ReelsPage() {
       {seasonPanel && (
         <ReelsSeasonPanel
           showTitle={seasonPanel.card.showTitle}
-          episodes={seasonPanel.card.episodes.filter((ep) => ep.season_number === seasonPanel.seasonNumber)}
+          episodes={seasonPanel.card.episodes.filter(
+            (ep) => ep.season_number === seasonPanel.seasonNumber,
+          )}
           seasonNumber={seasonPanel.seasonNumber}
           onClose={() => setSeasonPanel(null)}
           onBulkWatch={handleBulkWatch}

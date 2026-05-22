@@ -1,5 +1,13 @@
-import { findByImdbId, fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
-import { parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
+import {
+  findByImdbId,
+  fetchMovieDetails,
+  fetchTvDetails,
+} from "../tmdb/client";
+import {
+  parseMovieDetails,
+  parseTvDetails,
+  type ParsedTitle,
+} from "../tmdb/parser";
 
 const IMDB_URL_REGEX = /(?:https?:\/\/)?(?:www\.)?imdb\.com\/title\/(tt\d+)/i;
 const IMDB_ID_REGEX = /^tt\d+$/;

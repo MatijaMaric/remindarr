@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
 import InstallPrompt from "./InstallPrompt";
@@ -24,9 +32,7 @@ const mockAuthValue = {
 };
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return (
-    <AuthContext value={mockAuthValue as any}>{children}</AuthContext>
-  );
+  return <AuthContext value={mockAuthValue as any}>{children}</AuthContext>;
 }
 
 function NoUserWrapper({ children }: { children: ReactNode }) {

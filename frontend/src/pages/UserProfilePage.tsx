@@ -29,7 +29,11 @@ export default function UserProfilePage() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const qc = useQueryClient();
-  const { data, isLoading: loading, isError: error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+  } = useQuery({
     queryKey: ["user-profile", username],
     queryFn: ({ signal }) => api.getUserProfile(username!, signal),
     enabled: !!username,
@@ -53,7 +57,9 @@ export default function UserProfilePage() {
 
   const [followerAdjust, setFollowerAdjust] = useState(0);
   const [activeTab, setActiveTab] = useState<WatchlistTab>("watching");
-  const [localBio, setLocalBio] = useState<string | null | undefined>(undefined);
+  const [localBio, setLocalBio] = useState<string | null | undefined>(
+    undefined,
+  );
   const [localPinned, setLocalPinned] = useState<PinnedTitle[] | null>(null);
 
   const handleFollowToggle = useCallback((isNowFollowing: boolean) => {
@@ -141,7 +147,9 @@ export default function UserProfilePage() {
               isOwnProfile={is_own_profile}
               onBioUpdated={(next) => {
                 setLocalBio(next);
-                void qc.invalidateQueries({ queryKey: ["user-profile", username] });
+                void qc.invalidateQueries({
+                  queryKey: ["user-profile", username],
+                });
               }}
             />
             {(pinnedDisplay.length > 0 || is_own_profile) && (
@@ -155,17 +163,22 @@ export default function UserProfilePage() {
               <StreakCounter streak={streakData} variant="sidebar" />
             )}
             {show_watchlist && <ProgressCard overview={overview} />}
-            {show_watchlist && achievementsData && achievementsData.length > 0 && (
-              <ProfileBadgesSummary
-                achievements={achievementsData}
-                mode={is_own_profile ? "self" : "other"}
-                viewAllHref={is_own_profile
-                  ? "/achievements"
-                  : `/u/${user.username}/achievements`
-                }
-              />
+            {show_watchlist &&
+              achievementsData &&
+              achievementsData.length > 0 && (
+                <ProfileBadgesSummary
+                  achievements={achievementsData}
+                  mode={is_own_profile ? "self" : "other"}
+                  viewAllHref={
+                    is_own_profile
+                      ? "/achievements"
+                      : `/u/${user.username}/achievements`
+                  }
+                />
+              )}
+            {show_watchlist && genres.length > 0 && (
+              <TopGenresCard genres={genres} limit={6} />
             )}
-            {show_watchlist && genres.length > 0 && <TopGenresCard genres={genres} limit={6} />}
             {show_watchlist && friends.length > 0 && (
               <FriendsCard
                 friends={friends}
@@ -179,10 +192,15 @@ export default function UserProfilePage() {
           <main className="flex flex-col gap-4 min-w-0">
             {show_watchlist ? (
               <>
-                {monthly.length > 0 && <MonthlyActivityCard monthly={monthly} />}
+                {monthly.length > 0 && (
+                  <MonthlyActivityCard monthly={monthly} />
+                )}
                 <StatusBreakdown byStatus={shows_by_status} />
                 {(is_own_profile || activity_stream_enabled) && (
-                  <RecentActivityCard username={user.username} isOwnProfile={is_own_profile} />
+                  <RecentActivityCard
+                    username={user.username}
+                    isOwnProfile={is_own_profile}
+                  />
                 )}
                 <WatchlistTabs
                   active={activeTab}

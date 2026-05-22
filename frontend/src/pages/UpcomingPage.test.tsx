@@ -1,5 +1,12 @@
 import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,7 +14,7 @@ import "../i18n";
 import * as sonner from "sonner";
 
 const mockGetUpcomingEpisodes = mock(() =>
-  Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+  Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
 );
 const mockWatchEpisode = mock(() => Promise.resolve());
 const mockUnwatchEpisode = mock(() => Promise.resolve());
@@ -18,15 +25,32 @@ mock.module("../api", () => ({
   unwatchEpisode: mockUnwatchEpisode,
   getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
   hideActivityEvent: mock(() => Promise.resolve()),
   getCollection: mock(() => Promise.resolve({ collection: null, parts: [] })),
   getTitleSuggestions: mock(() => Promise.resolve({ suggestions: [] })),
-  getMyProfile: mock(() => Promise.resolve({ display_name: null, bio: null, country_code: null, locale: null })),
-  getTrackedTitles: mock(() => Promise.resolve({ titles: [], count: 0, profile_public: false })),
-  getActivitySettings: mock(() => Promise.resolve({ enabled: true, kind_visibility: {} })),
-  getJobs: mock(() => Promise.resolve({ crons: [], stats: {}, recentJobs: [] })),
-  getAdminSettings: mock(() => Promise.resolve({ oidc_configured: false, oidc: {} })),
+  getMyProfile: mock(() =>
+    Promise.resolve({
+      display_name: null,
+      bio: null,
+      country_code: null,
+      locale: null,
+    }),
+  ),
+  getTrackedTitles: mock(() =>
+    Promise.resolve({ titles: [], count: 0, profile_public: false }),
+  ),
+  getActivitySettings: mock(() =>
+    Promise.resolve({ enabled: true, kind_visibility: {} }),
+  ),
+  getJobs: mock(() =>
+    Promise.resolve({ crons: [], stats: {}, recentJobs: [] }),
+  ),
+  getAdminSettings: mock(() =>
+    Promise.resolve({ oidc_configured: false, oidc: {} }),
+  ),
   getAdminConfig: mock(() => Promise.resolve({ safe: [], secrets: [] })),
   getAdminLogs: mock(() => Promise.resolve({ entries: [], count: 0 })),
   getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
@@ -36,7 +60,9 @@ mock.module("../api", () => ({
   getNotifiers: mock(() => Promise.resolve({ notifiers: [] })),
   getNotifierProviders: mock(() => Promise.resolve({ providers: [] })),
   getDepartureAlertSettings: mock(() => Promise.resolve({})),
-  getProviders: mock(() => Promise.resolve({ providers: [], regionProviderIds: [] })),
+  getProviders: mock(() =>
+    Promise.resolve({ providers: [], regionProviderIds: [] }),
+  ),
   updateSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
   updateOnlyMine: mock(() => Promise.resolve({ onlyMine: false })),
 }));
@@ -48,7 +74,9 @@ mock.module("../hooks/useIsMobile", () => ({
 const { default: UpcomingPage } = await import("./UpcomingPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -76,22 +104,26 @@ describe("UpcomingPage", () => {
 
   it("shows error UI when initial fetch fails", async () => {
     mockGetUpcomingEpisodes.mockImplementation(() =>
-      Promise.reject(new Error("Network error"))
+      Promise.reject(new Error("Network error")),
     );
     render(<UpcomingPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(screen.getByText("Failed to load episodes")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Failed to load episodes")).toBeDefined(),
+    );
   });
 
   it("renders today and upcoming sections on success", async () => {
     mockGetUpcomingEpisodes.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
     );
     render(<UpcomingPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText("Today")).toBeDefined());
   });
 
   it("shows toast error when toggleWatched fails", async () => {
-    const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(() => "1" as any);
+    const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(
+      () => "1" as any,
+    );
 
     const episode = {
       id: 1,
@@ -108,10 +140,10 @@ describe("UpcomingPage", () => {
       offers: [],
     };
     mockGetUpcomingEpisodes.mockImplementation(() =>
-      Promise.resolve({ today: [episode], upcoming: [], unwatched: [] })
+      Promise.resolve({ today: [episode], upcoming: [], unwatched: [] }),
     );
     mockWatchEpisode.mockImplementation(() =>
-      Promise.reject(new Error("Failed to update"))
+      Promise.reject(new Error("Failed to update")),
     );
 
     render(<UpcomingPage />, { wrapper: Wrapper });
@@ -120,8 +152,10 @@ describe("UpcomingPage", () => {
 
     // Click the watched icon to trigger toggleWatched
     const watchedButtons = screen.getAllByRole("button");
-    const watchedIcon = watchedButtons.find((btn) =>
-      btn.className.includes("text-gray") || btn.className.includes("cursor-pointer")
+    const watchedIcon = watchedButtons.find(
+      (btn) =>
+        btn.className.includes("text-gray") ||
+        btn.className.includes("cursor-pointer"),
     );
 
     if (watchedIcon) {
@@ -129,7 +163,9 @@ describe("UpcomingPage", () => {
         fireEvent.click(watchedIcon);
       });
       await waitFor(() => {
-        expect(toastErrorSpy).toHaveBeenCalledWith("Failed to update watched status — please try again");
+        expect(toastErrorSpy).toHaveBeenCalledWith(
+          "Failed to update watched status — please try again",
+        );
       });
     }
 

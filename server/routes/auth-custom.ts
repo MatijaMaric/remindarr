@@ -13,7 +13,9 @@ app.get("/providers", async (c) => {
     const oidcConfigured = await isOidcConfigured();
     return c.json({
       local: true,
-      oidc: oidcConfigured ? { name: "OpenID Connect", providerId: "pocketid" } : null,
+      oidc: oidcConfigured
+        ? { name: "OpenID Connect", providerId: "pocketid" }
+        : null,
       passkey: true,
     });
   } catch (err: unknown) {

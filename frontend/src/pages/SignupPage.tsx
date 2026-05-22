@@ -36,7 +36,9 @@ export default function SignupPage() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-white text-center mb-8">{t("signup.title")}</h2>
+        <h2 className="text-2xl font-bold text-white text-center mb-8">
+          {t("signup.title")}
+        </h2>
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
@@ -46,7 +48,10 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-zinc-300 mb-1">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-zinc-300 mb-1"
+            >
               {t("signup.username")}
             </label>
             <input
@@ -61,7 +66,10 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-zinc-300 mb-1"
+            >
               {t("signup.email")}
             </label>
             <input
@@ -76,7 +84,10 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-zinc-300 mb-1">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-zinc-300 mb-1"
+            >
               {t("signup.displayName")}
             </label>
             <input
@@ -90,7 +101,10 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-zinc-300 mb-1"
+            >
               {t("signup.password")}
             </label>
             <input
@@ -115,7 +129,10 @@ export default function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-zinc-500">
           {t("signup.alreadyHaveAccount")}{" "}
-          <Link to="/login" className="text-amber-400 hover:text-amber-300 transition-colors">
+          <Link
+            to="/login"
+            className="text-amber-400 hover:text-amber-300 transition-colors"
+          >
             {t("signup.signIn")}
           </Link>
         </p>

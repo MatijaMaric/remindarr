@@ -35,7 +35,9 @@ export default class ErrorBoundary extends Component<Props, State> {
     import("@sentry/react")
       .then((Sentry) => {
         Sentry.captureException(error, {
-          tags: { errorType: isChunkLoadError(error) ? "chunk-load" : "render" },
+          tags: {
+            errorType: isChunkLoadError(error) ? "chunk-load" : "render",
+          },
           contexts: { react: { componentStack: info.componentStack } },
         });
       })
@@ -47,7 +49,11 @@ export default class ErrorBoundary extends Component<Props, State> {
   };
 
   handleReload = (): Promise<void> => {
-    return caches.delete("pages").then(() => {}).catch(() => {}).finally(() => reloadPage());
+    return caches
+      .delete("pages")
+      .then(() => {})
+      .catch(() => {})
+      .finally(() => reloadPage());
   };
 
   render() {

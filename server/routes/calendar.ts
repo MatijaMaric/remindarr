@@ -18,8 +18,14 @@ app.get("/", zValidator("query", calendarQuerySchema), async (c) => {
   const user = c.get("user");
   const { month, type: objectType, provider } = c.req.valid("query");
 
-  const titles = await getTitlesByMonth({ month, objectType, provider }, user?.id);
-  const episodes = await getEpisodesByMonth({ month, objectType, provider }, user?.id);
+  const titles = await getTitlesByMonth(
+    { month, objectType, provider },
+    user?.id,
+  );
+  const episodes = await getEpisodesByMonth(
+    { month, objectType, provider },
+    user?.id,
+  );
   setPublicCacheIfAnon(c, 1800);
   return ok(c, { titles, episodes, count: titles.length });
 });

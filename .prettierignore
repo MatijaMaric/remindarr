@@ -1,0 +1,10 @@
+node_modules
+dist
+frontend/dist
+.wrangler
+coverage
+bun.lock
+bun.lockb
+*.min.js
+.claude/worktrees
+server/db/migrations

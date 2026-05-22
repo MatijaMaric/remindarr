@@ -44,9 +44,10 @@ export interface NotificationProvider {
   readonly name: string;
   send(
     config: Record<string, string>,
-    content: NotificationContent
+    content: NotificationContent,
   ): Promise<void>;
-  validateConfig(
-    config: Record<string, string>
-  ): { valid: boolean; error?: string };
+  validateConfig(config: Record<string, string>): {
+    valid: boolean;
+    error?: string;
+  };
 }

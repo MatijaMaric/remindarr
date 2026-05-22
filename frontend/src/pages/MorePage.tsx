@@ -1,9 +1,22 @@
 import { Link, useNavigate } from "react-router";
 import { Card } from "../components/ui/card";
-import { ChevronRight, Sparkles, BarChart2, User, Settings, LogOut } from "lucide-react";
+import {
+  ChevronRight,
+  Sparkles,
+  BarChart2,
+  User,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
-function MoreGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function MoreGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="mb-4">
       <div className="px-5 pb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-semibold">
@@ -34,21 +47,25 @@ function MoreRow({
   isLast?: boolean;
 }) {
   const inner = (
-    <div className={`flex items-center gap-3 px-4 py-3.5 ${!isLast ? "border-b border-white/[0.04]" : ""}`}>
+    <div
+      className={`flex items-center gap-3 px-4 py-3.5 ${!isLast ? "border-b border-white/[0.04]" : ""}`}
+    >
       <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 text-zinc-400">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className={`text-sm font-medium ${danger ? "text-red-400" : "text-zinc-100"}`}>
+        <div
+          className={`text-sm font-medium ${danger ? "text-red-400" : "text-zinc-100"}`}
+        >
           {label}
         </div>
         {sub && (
-          <div className="font-mono text-[11px] text-zinc-500 mt-0.5">{sub}</div>
+          <div className="font-mono text-[11px] text-zinc-500 mt-0.5">
+            {sub}
+          </div>
         )}
       </div>
-      {!danger && (
-        <ChevronRight size={16} className="text-zinc-600 shrink-0" />
-      )}
+      {!danger && <ChevronRight size={16} className="text-zinc-600 shrink-0" />}
     </div>
   );
 
@@ -56,7 +73,11 @@ function MoreRow({
     return <Link to={to}>{inner}</Link>;
   }
   return (
-    <button type="button" onClick={onClick} className="w-full text-left cursor-pointer">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left cursor-pointer"
+    >
       {inner}
     </button>
   );

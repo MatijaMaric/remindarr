@@ -16,19 +16,25 @@ import { createUser } from "../db/repository";
 
 function insertTitle(id: string, objectType: string, tmdbId: string) {
   getRawDb()
-    .prepare(`INSERT INTO titles (id, object_type, tmdb_id, title, release_date) VALUES (?, ?, ?, ?, '2024-01-01')`)
+    .prepare(
+      `INSERT INTO titles (id, object_type, tmdb_id, title, release_date) VALUES (?, ?, ?, ?, '2024-01-01')`,
+    )
     .run(id, objectType, tmdbId, `Title ${id}`);
 }
 
 function getLibraryItem(userId: string, titleId: string) {
   return getRawDb()
-    .prepare(`SELECT rating_key, media_type FROM plex_library_items WHERE user_id = ? AND title_id = ?`)
+    .prepare(
+      `SELECT rating_key, media_type FROM plex_library_items WHERE user_id = ? AND title_id = ?`,
+    )
     .get(userId, titleId) as { rating_key: string; media_type: string } | null;
 }
 
 function countLibraryItems(integrationId: string) {
   const row = getRawDb()
-    .prepare(`SELECT COUNT(*) as cnt FROM plex_library_items WHERE integration_id = ?`)
+    .prepare(
+      `SELECT COUNT(*) as cnt FROM plex_library_items WHERE integration_id = ?`,
+    )
     .get(integrationId) as { cnt: number };
   return row.cnt;
 }
@@ -51,7 +57,9 @@ beforeEach(async () => {
   userId = await createUser("plexuser", "hash");
 
   getRawDb()
-    .prepare(`INSERT INTO integrations (id, user_id, provider, name, config, enabled) VALUES (?, ?, 'plex', 'My Plex', ?, 1)`)
+    .prepare(
+      `INSERT INTO integrations (id, user_id, provider, name, config, enabled) VALUES (?, ?, 'plex', 'My Plex', ?, 1)`,
+    )
     .run("int-1", userId, JSON.stringify(baseConfig));
   integrationId = "int-1";
 
@@ -73,9 +81,16 @@ const integration = (overrides = {}) => ({
 describe("syncPlexLibrary — movies", () => {
   it("stores a movie from the Plex library", async () => {
     insertTitle("movie-100", "MOVIE", "100");
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetAllMovies.mockResolvedValue([
-      { ratingKey: "rk-1", title: "Movie A", viewCount: 0, Guid: [{ id: "tmdb://100" }] },
+      {
+        ratingKey: "rk-1",
+        title: "Movie A",
+        viewCount: 0,
+        Guid: [{ id: "tmdb://100" }],
+      },
     ]);
     mockGetShows.mockResolvedValue([]);
 
@@ -89,9 +104,16 @@ describe("syncPlexLibrary — movies", () => {
 
   it("skips movies without a TMDB GUID", async () => {
     insertTitle("movie-200", "MOVIE", "200");
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetAllMovies.mockResolvedValue([
-      { ratingKey: "rk-2", title: "No TMDB", viewCount: 0, Guid: [{ id: "imdb://tt9999" }] },
+      {
+        ratingKey: "rk-2",
+        title: "No TMDB",
+        viewCount: 0,
+        Guid: [{ id: "imdb://tt9999" }],
+      },
     ]);
     mockGetShows.mockResolvedValue([]);
 
@@ -102,9 +124,16 @@ describe("syncPlexLibrary — movies", () => {
 
   it("stores unwatched movies (viewCount=0)", async () => {
     insertTitle("movie-300", "MOVIE", "300");
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetAllMovies.mockResolvedValue([
-      { ratingKey: "rk-3", title: "Unwatched", viewCount: 0, Guid: [{ id: "tmdb://300" }] },
+      {
+        ratingKey: "rk-3",
+        title: "Unwatched",
+        viewCount: 0,
+        Guid: [{ id: "tmdb://300" }],
+      },
     ]);
     mockGetShows.mockResolvedValue([]);
 
@@ -117,7 +146,9 @@ describe("syncPlexLibrary — movies", () => {
 describe("syncPlexLibrary — shows", () => {
   it("stores a show from the Plex library", async () => {
     insertTitle("tv-50", "SHOW", "50");
-    mockGetLibrarySections.mockResolvedValue([{ key: "2", type: "show", title: "TV" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "2", type: "show", title: "TV" },
+    ]);
     mockGetAllMovies.mockResolvedValue([]);
     mockGetShows.mockResolvedValue([
       { ratingKey: "show-rk-1", title: "Show A", Guid: [{ id: "tmdb://50" }] },
@@ -138,10 +169,22 @@ describe("syncPlexLibrary — stale cleanup", () => {
     insertTitle("movie-200", "MOVIE", "200");
 
     // First sync: both movies present
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetAllMovies.mockResolvedValue([
-      { ratingKey: "rk-1", title: "Movie A", viewCount: 0, Guid: [{ id: "tmdb://100" }] },
-      { ratingKey: "rk-2", title: "Movie B", viewCount: 0, Guid: [{ id: "tmdb://200" }] },
+      {
+        ratingKey: "rk-1",
+        title: "Movie A",
+        viewCount: 0,
+        Guid: [{ id: "tmdb://100" }],
+      },
+      {
+        ratingKey: "rk-2",
+        title: "Movie B",
+        viewCount: 0,
+        Guid: [{ id: "tmdb://200" }],
+      },
     ]);
     mockGetShows.mockResolvedValue([]);
     await syncPlexLibrary(integration());
@@ -149,7 +192,12 @@ describe("syncPlexLibrary — stale cleanup", () => {
 
     // Second sync: movie-200 removed from Plex
     mockGetAllMovies.mockResolvedValue([
-      { ratingKey: "rk-1", title: "Movie A", viewCount: 0, Guid: [{ id: "tmdb://100" }] },
+      {
+        ratingKey: "rk-1",
+        title: "Movie A",
+        viewCount: 0,
+        Guid: [{ id: "tmdb://100" }],
+      },
     ]);
     const result = await syncPlexLibrary(integration());
     expect(result.itemsRemoved).toBe(1);
@@ -161,10 +209,14 @@ describe("syncPlexLibrary — stale cleanup", () => {
   it("clears all items when library is empty", async () => {
     insertTitle("movie-100", "MOVIE", "100");
     getRawDb()
-      .prepare(`INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type) VALUES (?, ?, ?, ?, ?)`)
+      .prepare(
+        `INSERT INTO plex_library_items (integration_id, user_id, title_id, rating_key, media_type) VALUES (?, ?, ?, ?, ?)`,
+      )
       .run(integrationId, userId, "movie-100", "rk-1", "movie");
 
-    mockGetLibrarySections.mockResolvedValue([{ key: "1", type: "movie", title: "Movies" }]);
+    mockGetLibrarySections.mockResolvedValue([
+      { key: "1", type: "movie", title: "Movies" },
+    ]);
     mockGetAllMovies.mockResolvedValue([]);
     mockGetShows.mockResolvedValue([]);
 
@@ -176,9 +228,13 @@ describe("syncPlexLibrary — stale cleanup", () => {
 
 describe("syncPlexLibrary — error handling", () => {
   it("disables integration on PlexAuthError", async () => {
-    mockGetLibrarySections.mockRejectedValue(new plexClient.PlexAuthError("Token revoked"));
+    mockGetLibrarySections.mockRejectedValue(
+      new plexClient.PlexAuthError("Token revoked"),
+    );
 
-    await expect(syncPlexLibrary(integration())).rejects.toThrow("Token revoked");
+    await expect(syncPlexLibrary(integration())).rejects.toThrow(
+      "Token revoked",
+    );
 
     const row = getRawDb()
       .prepare(`SELECT enabled FROM integrations WHERE id = ?`)
@@ -189,7 +245,9 @@ describe("syncPlexLibrary — error handling", () => {
   it("does not disable integration on non-auth errors", async () => {
     mockGetLibrarySections.mockRejectedValue(new Error("Network error"));
 
-    await expect(syncPlexLibrary(integration())).rejects.toThrow("Network error");
+    await expect(syncPlexLibrary(integration())).rejects.toThrow(
+      "Network error",
+    );
 
     const row = getRawDb()
       .prepare(`SELECT enabled FROM integrations WHERE id = ?`)

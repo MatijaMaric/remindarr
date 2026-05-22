@@ -33,7 +33,7 @@ interface EpisodeRow {
 export async function syncEpisodesForShow(
   titleId: string,
   tmdbId: string,
-  title: string
+  title: string,
 ): Promise<number> {
   const db = getDb();
 
@@ -80,15 +80,22 @@ export async function syncEpisodesForShow(
     await upsertEpisodes(allEpisodes);
   }
 
-  log.info("Synced episodes", { episodes: allEpisodes.length, seasons: details.number_of_seasons, title });
+  log.info("Synced episodes", {
+    episodes: allEpisodes.length,
+    seasons: details.number_of_seasons,
+    title,
+  });
   return allEpisodes.length;
 }
 
-export async function syncEpisodes(): Promise<{ synced: number; shows: number }> {
+export async function syncEpisodes(): Promise<{
+  synced: number;
+  shows: number;
+}> {
   const db = getDb();
 
   // Get all tracked shows with tmdb_id
-  const trackedShows = await db
+  const trackedShows = (await db
     .select({
       id: titles.id,
       tmdb_id: titles.tmdbId,
@@ -97,7 +104,7 @@ export async function syncEpisodes(): Promise<{ synced: number; shows: number }>
     .from(tracked)
     .innerJoin(titles, eq(titles.id, tracked.titleId))
     .where(and(eq(titles.objectType, "SHOW"), isNotNull(titles.tmdbId)))
-    .all() as { id: string; tmdb_id: string; title: string }[];
+    .all()) as { id: string; tmdb_id: string; title: string }[];
 
   if (trackedShows.length === 0) {
     return { synced: 0, shows: 0 };
@@ -111,14 +118,22 @@ export async function syncEpisodes(): Promise<{ synced: number; shows: number }>
     label: "sync-episodes",
     log,
     onItem: async (show) => {
-      const synced = await syncEpisodesForShow(show.id, show.tmdb_id, show.title);
+      const synced = await syncEpisodesForShow(
+        show.id,
+        show.tmdb_id,
+        show.title,
+      );
       if (synced >= 0) {
         totalSynced += synced;
         showsProcessed++;
       }
     },
     onError: (err, show) => {
-      log.error("Failed to sync show", { title: show.title, tmdbId: show.tmdb_id, err });
+      log.error("Failed to sync show", {
+        title: show.title,
+        tmdbId: show.tmdb_id,
+        err,
+      });
     },
   });
 

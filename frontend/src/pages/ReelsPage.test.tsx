@@ -1,15 +1,36 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, waitFor, cleanup, act, fireEvent } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  act,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import * as AuthContextModule from "../context/AuthContext";
 
-const { default: ReelsPage, getFirstUnwatchedPerShow, normalizeMovieToReelItem } = await import("./ReelsPage");
+const {
+  default: ReelsPage,
+  getFirstUnwatchedPerShow,
+  normalizeMovieToReelItem,
+} = await import("./ReelsPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -24,7 +45,9 @@ function WrapperWithSearch(initialSearch: string) {
   return function W({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={newTestClient()}>
-        <MemoryRouter initialEntries={[`/reels${initialSearch}`]}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={[`/reels${initialSearch}`]}>
+          {children}
+        </MemoryRouter>
       </QueryClientProvider>
     );
   };
@@ -32,20 +55,36 @@ function WrapperWithSearch(initialSearch: string) {
 
 let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
 let spies: ReturnType<typeof spyOn>[];
-let getUpcomingEpisodesSpy: ReturnType<typeof spyOn<typeof api, "getUpcomingEpisodes">>;
+let getUpcomingEpisodesSpy: ReturnType<
+  typeof spyOn<typeof api, "getUpcomingEpisodes">
+>;
 let watchEpisodeSpy: ReturnType<typeof spyOn<typeof api, "watchEpisode">>;
 let unwatchEpisodeSpy: ReturnType<typeof spyOn<typeof api, "unwatchEpisode">>;
-let watchEpisodesBulkSpy: ReturnType<typeof spyOn<typeof api, "watchEpisodesBulk">>;
+let watchEpisodesBulkSpy: ReturnType<
+  typeof spyOn<typeof api, "watchEpisodesBulk">
+>;
 let browseTitlesSpy: ReturnType<typeof spyOn<typeof api, "browseTitles">>;
-let getRecommendationsSpy: ReturnType<typeof spyOn<typeof api, "getRecommendations">>;
-let fetchFriendsLovedSpy: ReturnType<typeof spyOn<typeof api, "fetchFriendsLoved">>;
+let getRecommendationsSpy: ReturnType<
+  typeof spyOn<typeof api, "getRecommendations">
+>;
+let fetchFriendsLovedSpy: ReturnType<
+  typeof spyOn<typeof api, "fetchFriendsLoved">
+>;
 let watchMovieSpy: ReturnType<typeof spyOn<typeof api, "watchMovie">>;
 let unwatchMovieSpy: ReturnType<typeof spyOn<typeof api, "unwatchMovie">>;
-let getMovieTrackingSpy: ReturnType<typeof spyOn<typeof api, "getMovieTracking">>;
+let getMovieTrackingSpy: ReturnType<
+  typeof spyOn<typeof api, "getMovieTracking">
+>;
 
 beforeEach(() => {
   useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
-    user: { id: "u1", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
+    user: {
+      id: "u1",
+      username: "me",
+      display_name: "Me",
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: { local: true, oidc: null },
     loading: false,
     sessionStatus: "authenticated",
@@ -56,10 +95,20 @@ beforeEach(() => {
     logout: mock(() => Promise.resolve()),
     refresh: mock(() => Promise.resolve()),
   });
-  getUpcomingEpisodesSpy = spyOn(api, "getUpcomingEpisodes").mockResolvedValue({ today: [], upcoming: [], unwatched: [] } as any);
-  watchEpisodeSpy = spyOn(api, "watchEpisode").mockResolvedValue(undefined as any);
-  unwatchEpisodeSpy = spyOn(api, "unwatchEpisode").mockResolvedValue(undefined as any);
-  watchEpisodesBulkSpy = spyOn(api, "watchEpisodesBulk").mockResolvedValue(undefined as any);
+  getUpcomingEpisodesSpy = spyOn(api, "getUpcomingEpisodes").mockResolvedValue({
+    today: [],
+    upcoming: [],
+    unwatched: [],
+  } as any);
+  watchEpisodeSpy = spyOn(api, "watchEpisode").mockResolvedValue(
+    undefined as any,
+  );
+  unwatchEpisodeSpy = spyOn(api, "unwatchEpisode").mockResolvedValue(
+    undefined as any,
+  );
+  watchEpisodesBulkSpy = spyOn(api, "watchEpisodesBulk").mockResolvedValue(
+    undefined as any,
+  );
   browseTitlesSpy = spyOn(api, "browseTitles").mockResolvedValue({
     titles: [],
     page: 1,
@@ -71,10 +120,17 @@ beforeEach(() => {
     regionProviderIds: [],
     priorityLanguageCodes: [],
   } as any);
-  getRecommendationsSpy = spyOn(api, "getRecommendations").mockResolvedValue({ recommendations: [], count: 0 } as any);
-  fetchFriendsLovedSpy = spyOn(api, "fetchFriendsLoved").mockResolvedValue({ titles: [] } as any);
+  getRecommendationsSpy = spyOn(api, "getRecommendations").mockResolvedValue({
+    recommendations: [],
+    count: 0,
+  } as any);
+  fetchFriendsLovedSpy = spyOn(api, "fetchFriendsLoved").mockResolvedValue({
+    titles: [],
+  } as any);
   watchMovieSpy = spyOn(api, "watchMovie").mockResolvedValue(undefined as any);
-  unwatchMovieSpy = spyOn(api, "unwatchMovie").mockResolvedValue(undefined as any);
+  unwatchMovieSpy = spyOn(api, "unwatchMovie").mockResolvedValue(
+    undefined as any,
+  );
   getMovieTrackingSpy = spyOn(api, "getMovieTracking").mockResolvedValue({
     to_watch: [
       {
@@ -91,7 +147,9 @@ beforeEach(() => {
   spies = [
     spyOn(api, "rateEpisode").mockResolvedValue(undefined as any),
     spyOn(api, "unrateEpisode").mockResolvedValue(undefined as any),
-    spyOn(api, "getSubscriptions").mockResolvedValue({ providerIds: [] } as any),
+    spyOn(api, "getSubscriptions").mockResolvedValue({
+      providerIds: [],
+    } as any),
   ];
 });
 
@@ -107,7 +165,7 @@ afterEach(() => {
   watchMovieSpy.mockRestore();
   unwatchMovieSpy.mockRestore();
   getMovieTrackingSpy.mockRestore();
-  spies.forEach(s => s.mockRestore());
+  spies.forEach((s) => s.mockRestore());
   cleanup();
 });
 
@@ -136,7 +194,7 @@ describe("ReelsPage", () => {
 
   it("shows error UI when initial fetch fails", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.reject(new Error("API error"))
+      Promise.reject(new Error("API error")),
     );
     render(<ReelsPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText("API error")).toBeDefined());
@@ -144,20 +202,20 @@ describe("ReelsPage", () => {
 
   it("shows empty state when no unwatched episodes", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
     );
     render(<ReelsPage />, { wrapper: Wrapper });
     await waitFor(() =>
-      expect(screen.getByText("No unwatched episodes")).toBeDefined()
+      expect(screen.getByText("No unwatched episodes")).toBeDefined(),
     );
   });
 
   it("shows action error banner when markWatched fails", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [sampleEpisode] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [sampleEpisode] }),
     );
     watchEpisodeSpy.mockImplementation(() =>
-      Promise.reject(new Error("Watch failed"))
+      Promise.reject(new Error("Watch failed")),
     );
 
     render(<ReelsPage />, { wrapper: Wrapper });
@@ -170,7 +228,9 @@ describe("ReelsPage", () => {
       await act(async () => {
         markWatchedBtn.click();
       });
-      await waitFor(() => expect(screen.getByText("Watch failed")).toBeDefined());
+      await waitFor(() =>
+        expect(screen.getByText("Watch failed")).toBeDefined(),
+      );
     }
   });
 });
@@ -180,7 +240,7 @@ describe("ReelsPage", () => {
 describe("ReelsPage source picker", () => {
   it("default (no ?source param) calls getUpcomingEpisodes", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
     );
     render(<ReelsPage />, { wrapper: Wrapper });
     await waitFor(() => expect(getUpcomingEpisodesSpy).toHaveBeenCalled());
@@ -190,9 +250,11 @@ describe("ReelsPage source picker", () => {
 
   it("?source=coming-soon calls getUpcomingEpisodes not browseTitles", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
     );
-    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=coming-soon") });
+    render(<ReelsPage />, {
+      wrapper: WrapperWithSearch("?source=coming-soon"),
+    });
     await waitFor(() => expect(getUpcomingEpisodesSpy).toHaveBeenCalled());
     expect(browseTitlesSpy).not.toHaveBeenCalled();
   });
@@ -230,11 +292,15 @@ describe("ReelsPage source picker", () => {
         availableLanguages: [],
         regionProviderIds: [],
         priorityLanguageCodes: [],
-      } as any)
+      } as any),
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=popular") });
     await waitFor(() => expect(browseTitlesSpy).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getAllByText("Popular Movie").length).toBeGreaterThanOrEqual(1));
+    await waitFor(() =>
+      expect(
+        screen.getAllByText("Popular Movie").length,
+      ).toBeGreaterThanOrEqual(1),
+    );
     expect(getUpcomingEpisodesSpy).not.toHaveBeenCalled();
   });
 
@@ -244,46 +310,68 @@ describe("ReelsPage source picker", () => {
         recommendations: [
           {
             id: "rec1",
-            from_user: { id: "u1", username: "alice", display_name: null, image: null },
-            title: { id: "tt200", title: "Rec Movie", object_type: "MOVIE", poster_url: null },
+            from_user: {
+              id: "u1",
+              username: "alice",
+              display_name: null,
+              image: null,
+            },
+            title: {
+              id: "tt200",
+              title: "Rec Movie",
+              object_type: "MOVIE",
+              poster_url: null,
+            },
             message: "You'll love this",
             created_at: "2024-01-01T00:00:00Z",
             read_at: null,
           },
         ],
         count: 1,
-      } as any)
+      } as any),
     );
-    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=from-your-genres") });
+    render(<ReelsPage />, {
+      wrapper: WrapperWithSearch("?source=from-your-genres"),
+    });
     await waitFor(() => expect(getRecommendationsSpy).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getAllByText("Rec Movie").length).toBeGreaterThanOrEqual(1));
+    await waitFor(() =>
+      expect(screen.getAllByText("Rec Movie").length).toBeGreaterThanOrEqual(1),
+    );
     expect(getUpcomingEpisodesSpy).not.toHaveBeenCalled();
   });
 
   it("?source=friends-loved with empty API response renders empty state", async () => {
     fetchFriendsLovedSpy.mockImplementation(() =>
-      Promise.resolve({ titles: [] } as any)
+      Promise.resolve({ titles: [] } as any),
     );
-    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=friends-loved") });
+    render(<ReelsPage />, {
+      wrapper: WrapperWithSearch("?source=friends-loved"),
+    });
     await waitFor(() =>
-      expect(screen.getByText("Follow some friends to see what they love this week")).toBeDefined()
+      expect(
+        screen.getByText("Follow some friends to see what they love this week"),
+      ).toBeDefined(),
     );
     expect(getUpcomingEpisodesSpy).not.toHaveBeenCalled();
   });
 
   it("?source=friends-loved when endpoint 404s renders empty state", async () => {
     fetchFriendsLovedSpy.mockImplementation(() =>
-      Promise.reject(new Error("Not found"))
+      Promise.reject(new Error("Not found")),
     );
-    render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=friends-loved") });
+    render(<ReelsPage />, {
+      wrapper: WrapperWithSearch("?source=friends-loved"),
+    });
     await waitFor(() =>
-      expect(screen.getByText("Follow some friends to see what they love this week")).toBeDefined()
+      expect(
+        screen.getByText("Follow some friends to see what they love this week"),
+      ).toBeDefined(),
     );
   });
 
   it("renders source picker chips including Movies", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
     );
     render(<ReelsPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText("Coming Soon")).toBeDefined());
@@ -295,7 +383,7 @@ describe("ReelsPage source picker", () => {
 
   it("?source=movies calls getMovieTracking not getUpcomingEpisodes", async () => {
     getMovieTrackingSpy.mockImplementation(() =>
-      Promise.resolve({ to_watch: [], upcoming: [] } as any)
+      Promise.resolve({ to_watch: [], upcoming: [] } as any),
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
     await waitFor(() => expect(getMovieTrackingSpy).toHaveBeenCalled());
@@ -337,19 +425,31 @@ describe("ReelsPage swipe to open season panel", () => {
         today: [],
         upcoming: [],
         unwatched: [show1Episode, show2Episode],
-      })
+      }),
     );
     const result = render(<ReelsPage />, { wrapper: Wrapper });
     // Wait for cards to render ("First Show" appears twice: card + clone)
-    await waitFor(() => expect(screen.getAllByText("First Show").length).toBeGreaterThanOrEqual(1));
-    const scrollContainer = result.container.querySelector(".overflow-y-scroll") as HTMLElement;
+    await waitFor(() =>
+      expect(screen.getAllByText("First Show").length).toBeGreaterThanOrEqual(
+        1,
+      ),
+    );
+    const scrollContainer = result.container.querySelector(
+      ".overflow-y-scroll",
+    ) as HTMLElement;
     return { ...result, scrollContainer };
   }
 
   it("swipe left opens season panel for the visible card", async () => {
     const { scrollContainer } = await renderWithShows();
-    Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
-    Object.defineProperty(scrollContainer, "scrollTop", { value: 0, configurable: true });
+    Object.defineProperty(scrollContainer, "clientHeight", {
+      value: 800,
+      configurable: true,
+    });
+    Object.defineProperty(scrollContainer, "scrollTop", {
+      value: 0,
+      configurable: true,
+    });
 
     await act(async () => {
       simulateSwipeLeft(scrollContainer);
@@ -357,36 +457,48 @@ describe("ReelsPage swipe to open season panel", () => {
 
     // Season panel has aria-label identifying the show
     await waitFor(() =>
-      expect(screen.getByLabelText("First Show — Season 1")).toBeDefined()
+      expect(screen.getByLabelText("First Show — Season 1")).toBeDefined(),
     );
   });
 
   it("swipe left on second card opens correct season panel", async () => {
     const { scrollContainer } = await renderWithShows();
-    Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
-    Object.defineProperty(scrollContainer, "scrollTop", { value: 800, configurable: true });
+    Object.defineProperty(scrollContainer, "clientHeight", {
+      value: 800,
+      configurable: true,
+    });
+    Object.defineProperty(scrollContainer, "scrollTop", {
+      value: 800,
+      configurable: true,
+    });
 
     await act(async () => {
       simulateSwipeLeft(scrollContainer);
     });
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Second Show — Season 1")).toBeDefined()
+      expect(screen.getByLabelText("Second Show — Season 1")).toBeDefined(),
     );
   });
 
   it("swipe left on clone card maps to first card", async () => {
     const { scrollContainer } = await renderWithShows();
-    Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
+    Object.defineProperty(scrollContainer, "clientHeight", {
+      value: 800,
+      configurable: true,
+    });
     // Clone card is at index 2 (with 2 real cards)
-    Object.defineProperty(scrollContainer, "scrollTop", { value: 1600, configurable: true });
+    Object.defineProperty(scrollContainer, "scrollTop", {
+      value: 1600,
+      configurable: true,
+    });
 
     await act(async () => {
       simulateSwipeLeft(scrollContainer);
     });
 
     await waitFor(() =>
-      expect(screen.getByLabelText("First Show — Season 1")).toBeDefined()
+      expect(screen.getByLabelText("First Show — Season 1")).toBeDefined(),
     );
   });
 
@@ -396,7 +508,7 @@ describe("ReelsPage swipe to open season panel", () => {
         today: [],
         upcoming: [],
         unwatched: [show1Episode],
-      })
+      }),
     );
     const { container } = render(<ReelsPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText("First Show")).toBeDefined());
@@ -411,8 +523,14 @@ describe("ReelsPage swipe to open season panel", () => {
 
     const scrollContainer = container.querySelector(".overflow-y-scroll");
     if (scrollContainer) {
-      Object.defineProperty(scrollContainer, "clientHeight", { value: 800, configurable: true });
-      Object.defineProperty(scrollContainer, "scrollTop", { value: 0, configurable: true });
+      Object.defineProperty(scrollContainer, "clientHeight", {
+        value: 800,
+        configurable: true,
+      });
+      Object.defineProperty(scrollContainer, "scrollTop", {
+        value: 0,
+        configurable: true,
+      });
 
       await act(async () => {
         simulateSwipeLeft(scrollContainer as HTMLElement);
@@ -437,13 +555,15 @@ describe("ReelsPage progress bar updates after marking watched", () => {
 
   it("advances progress bar when episode is marked watched", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] }),
     );
     watchEpisodeSpy.mockImplementation(() => Promise.resolve());
 
     render(<ReelsPage />, { wrapper: Wrapper });
 
-    await waitFor(() => expect(screen.getByText("Progress Show")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Progress Show")).toBeDefined(),
+    );
     expect(screen.getByText("50% CAUGHT UP")).toBeDefined();
     expect(screen.getByText("5 OF 10")).toBeDefined();
 
@@ -451,51 +571,63 @@ describe("ReelsPage progress bar updates after marking watched", () => {
       screen.getByText("Mark as Watched").click();
     });
 
-    await waitFor(() => expect(screen.getByText("60% CAUGHT UP")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("60% CAUGHT UP")).toBeDefined(),
+    );
     expect(screen.getByText("6 OF 10")).toBeDefined();
   });
 
   it("rewinds progress bar when undo is clicked", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] }),
     );
     watchEpisodeSpy.mockImplementation(() => Promise.resolve());
     unwatchEpisodeSpy.mockImplementation(() => Promise.resolve());
 
     render(<ReelsPage />, { wrapper: Wrapper });
 
-    await waitFor(() => expect(screen.getByText("Progress Show")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Progress Show")).toBeDefined(),
+    );
 
     await act(async () => {
       screen.getByText("Mark as Watched").click();
     });
-    await waitFor(() => expect(screen.getByText("60% CAUGHT UP")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("60% CAUGHT UP")).toBeDefined(),
+    );
 
     await act(async () => {
       screen.getByLabelText("Undo").click();
     });
 
-    await waitFor(() => expect(screen.getByText("50% CAUGHT UP")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("50% CAUGHT UP")).toBeDefined(),
+    );
     expect(screen.getByText("5 OF 10")).toBeDefined();
   });
 
   it("rewinds progress bar when watchEpisode API fails", async () => {
     getUpcomingEpisodesSpy.mockImplementation(() =>
-      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] })
+      Promise.resolve({ today: [], upcoming: [], unwatched: [ep1, ep2] }),
     );
     watchEpisodeSpy.mockImplementation(() =>
-      Promise.reject(new Error("Network error"))
+      Promise.reject(new Error("Network error")),
     );
 
     render(<ReelsPage />, { wrapper: Wrapper });
 
-    await waitFor(() => expect(screen.getByText("Progress Show")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Progress Show")).toBeDefined(),
+    );
 
     await act(async () => {
       screen.getByText("Mark as Watched").click();
     });
 
-    await waitFor(() => expect(screen.getByText("Network error")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("Network error")).toBeDefined(),
+    );
     expect(screen.getByText("50% CAUGHT UP")).toBeDefined();
     expect(screen.getByText("5 OF 10")).toBeDefined();
   });
@@ -504,9 +636,28 @@ describe("ReelsPage progress bar updates after marking watched", () => {
 describe("getFirstUnwatchedPerShow", () => {
   it("groups episodes by show and returns first unwatched per show", () => {
     const episodes = [
-      { ...sampleEpisode, id: 1, title_id: "tt1", season_number: 1, episode_number: 1 },
-      { ...sampleEpisode, id: 2, title_id: "tt1", season_number: 1, episode_number: 2 },
-      { ...sampleEpisode, id: 3, title_id: "tt2", show_title: "Show 2", season_number: 1, episode_number: 1 },
+      {
+        ...sampleEpisode,
+        id: 1,
+        title_id: "tt1",
+        season_number: 1,
+        episode_number: 1,
+      },
+      {
+        ...sampleEpisode,
+        id: 2,
+        title_id: "tt1",
+        season_number: 1,
+        episode_number: 2,
+      },
+      {
+        ...sampleEpisode,
+        id: 3,
+        title_id: "tt2",
+        show_title: "Show 2",
+        season_number: 1,
+        episode_number: 1,
+      },
     ];
     const result = getFirstUnwatchedPerShow(episodes);
     expect(result).toHaveLength(2);
@@ -553,20 +704,40 @@ describe("ReelsPage — movies source", () => {
   it("renders the movie title for movies source", async () => {
     getMovieTrackingSpy.mockImplementation(() =>
       Promise.resolve({
-        to_watch: [{ id: "m-1", title: "Inception", release_date: "2024-01-01", release_year: 2024, poster_url: null, offers: [] }],
+        to_watch: [
+          {
+            id: "m-1",
+            title: "Inception",
+            release_date: "2024-01-01",
+            release_year: 2024,
+            poster_url: null,
+            offers: [],
+          },
+        ],
         upcoming: [],
-      } as any)
+      } as any),
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
-    await waitFor(() => expect(screen.getAllByText("Inception").length).toBeGreaterThanOrEqual(1));
+    await waitFor(() =>
+      expect(screen.getAllByText("Inception").length).toBeGreaterThanOrEqual(1),
+    );
   });
 
   it("calls api.watchMovie (not watchEpisode) when marking a movie as watched", async () => {
     getMovieTrackingSpy.mockImplementation(() =>
       Promise.resolve({
-        to_watch: [{ id: "m-1", title: "Inception", release_date: "2024-01-01", release_year: 2024, poster_url: null, offers: [] }],
+        to_watch: [
+          {
+            id: "m-1",
+            title: "Inception",
+            release_date: "2024-01-01",
+            release_year: 2024,
+            poster_url: null,
+            offers: [],
+          },
+        ],
         upcoming: [],
-      } as any)
+      } as any),
     );
     render(<ReelsPage />, { wrapper: WrapperWithSearch("?source=movies") });
     const btn = await screen.findByRole("button", { name: /mark as watched/i });

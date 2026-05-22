@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import kioskApp from "./kiosk";
 import type { AppEnv } from "../types";
@@ -240,7 +244,10 @@ describe("DELETE /api/kiosk/token (auth)", () => {
     });
     const { token } = (await regenRes.json()) as { token: string };
 
-    await app.request("/kiosk/token", { method: "DELETE", headers: authHeaders() });
+    await app.request("/kiosk/token", {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
 
     const dashRes = await app.request(`/kiosk/${token}`);
     expect(dashRes.status).toBe(401);

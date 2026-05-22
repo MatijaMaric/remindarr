@@ -33,15 +33,24 @@ export function getHandler(name: string): JobHandler | undefined {
   return handlers.get(name);
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, jobName: string): Promise<T> {
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  jobName: string,
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
         timer = setTimeout(
-          () => reject(new Error(`Job "${jobName}" exceeded handler timeout of ${timeoutMs}ms`)),
-          timeoutMs
+          () =>
+            reject(
+              new Error(
+                `Job "${jobName}" exceeded handler timeout of ${timeoutMs}ms`,
+              ),
+            ),
+          timeoutMs,
         );
       }),
     ]);
@@ -65,7 +74,8 @@ export async function processJobs() {
 
     const jobStart = performance.now();
     try {
-      const exec = () => withTimeout(handler(job), CONFIG.JOB_HANDLER_TIMEOUT_MS, name);
+      const exec = () =>
+        withTimeout(handler(job), CONFIG.JOB_HANDLER_TIMEOUT_MS, name);
       if (cronExpr) {
         await Sentry.withMonitor(name, exec, monitorConfig);
       } else {
@@ -83,7 +93,13 @@ export async function processJobs() {
       const duration = (performance.now() - jobStart) / 1000;
       jobsTotal.inc({ name, status: "failed" });
       jobDurationSeconds.observe({ name }, duration);
-      log.error("Failed job", { name, jobId: job.id, attempt: job.attempts, maxAttempts: job.max_attempts, err });
+      log.error("Failed job", {
+        name,
+        jobId: job.id,
+        attempt: job.attempts,
+        maxAttempts: job.max_attempts,
+        err,
+      });
     }
   }
 }

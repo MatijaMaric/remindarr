@@ -19,20 +19,40 @@ interface Props {
 
 type NotificationMode = "all" | "premieres_only" | "none";
 
-const MODES: { value: NotificationMode; icon: typeof Bell; labelKey: string }[] = [
+const MODES: {
+  value: NotificationMode;
+  icon: typeof Bell;
+  labelKey: string;
+}[] = [
   { value: "all", icon: Bell, labelKey: "notifications.all" },
-  { value: "premieres_only", icon: BellRing, labelKey: "notifications.premieres_only" },
+  {
+    value: "premieres_only",
+    icon: BellRing,
+    labelKey: "notifications.premieres_only",
+  },
   { value: "none", icon: BellOff, labelKey: "notifications.none" },
 ];
 
-export default function NotificationModePicker({ titleId, currentMode, onModeChange, snoozeUntil, remindOnRelease, releaseDate, onSnoozed, onRemindOnReleaseChange }: Props) {
+export default function NotificationModePicker({
+  titleId,
+  currentMode,
+  onModeChange,
+  snoozeUntil,
+  remindOnRelease,
+  releaseDate,
+  onSnoozed,
+  onRemindOnReleaseChange,
+}: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [mode, setMode] = useState<NotificationMode | null>(currentMode ?? null);
+  const [mode, setMode] = useState<NotificationMode | null>(
+    currentMode ?? null,
+  );
   const [remind, setRemind] = useState<boolean>(remindOnRelease ?? false);
 
   const modeMutation = useMutation({
-    mutationFn: ({ value }: { value: NotificationMode | null }) => api.setNotificationMode(titleId, value),
+    mutationFn: ({ value }: { value: NotificationMode | null }) =>
+      api.setNotificationMode(titleId, value),
     onMutate: ({ value }) => {
       const prev = mode;
       setMode(value);
@@ -47,7 +67,8 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
   });
 
   const remindMutation = useMutation({
-    mutationFn: ({ newValue }: { newValue: boolean }) => api.setRemindOnRelease(titleId, newValue),
+    mutationFn: ({ newValue }: { newValue: boolean }) =>
+      api.setRemindOnRelease(titleId, newValue),
     onMutate: ({ newValue }) => setRemind(newValue),
     onSuccess: (_data, { newValue }) => onRemindOnReleaseChange?.(newValue),
     onError: (_err, { newValue }) => {
@@ -62,7 +83,9 @@ export default function NotificationModePicker({ titleId, currentMode, onModeCha
   return (
     <div className="flex gap-1" aria-label={t("notifications.label")}>
       {MODES.map(({ value, icon: Icon, labelKey }) => {
-        const isActive = activeMode === value && mode !== null || (value === "all" && mode === null);
+        const isActive =
+          (activeMode === value && mode !== null) ||
+          (value === "all" && mode === null);
         return (
           <button
             key={value}

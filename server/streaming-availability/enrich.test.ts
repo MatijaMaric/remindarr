@@ -29,7 +29,12 @@ function insertProvider(id: number, name: string, technicalName: string) {
   ).run(id, name, technicalName);
 }
 
-function insertOffer(titleId: string, providerId: number, monetizationType: string, url: string) {
+function insertOffer(
+  titleId: string,
+  providerId: number,
+  monetizationType: string,
+  url: string,
+) {
   const db = getRawDb();
   db.prepare(
     `INSERT INTO offers (title_id, provider_id, monetization_type, url) VALUES (?, ?, ?, ?)`,
@@ -39,7 +44,9 @@ function insertOffer(titleId: string, providerId: number, monetizationType: stri
 function getOfferDeepLink(titleId: string, providerId: number): string | null {
   const db = getRawDb();
   const row = db
-    .prepare("SELECT deep_link FROM offers WHERE title_id = ? AND provider_id = ?")
+    .prepare(
+      "SELECT deep_link FROM offers WHERE title_id = ? AND provider_id = ?",
+    )
     .get(titleId, providerId) as { deep_link: string | null } | null;
   return row?.deep_link ?? null;
 }
@@ -47,15 +54,34 @@ function getOfferDeepLink(titleId: string, providerId: number): string | null {
 function getOffers(titleId: string) {
   const db = getRawDb();
   return db
-    .prepare("SELECT title_id, provider_id, monetization_type, url, deep_link, presentation_type, price_value, price_currency, available_to FROM offers WHERE title_id = ?")
-    .all(titleId) as { title_id: string; provider_id: number; monetization_type: string; url: string; deep_link: string | null; presentation_type: string | null; price_value: number | null; price_currency: string | null; available_to: string | null }[];
+    .prepare(
+      "SELECT title_id, provider_id, monetization_type, url, deep_link, presentation_type, price_value, price_currency, available_to FROM offers WHERE title_id = ?",
+    )
+    .all(titleId) as {
+    title_id: string;
+    provider_id: number;
+    monetization_type: string;
+    url: string;
+    deep_link: string | null;
+    presentation_type: string | null;
+    price_value: number | null;
+    price_currency: string | null;
+    available_to: string | null;
+  }[];
 }
 
 function getProvider(id: number) {
   const db = getRawDb();
   return db
-    .prepare("SELECT id, name, technical_name, icon_url FROM providers WHERE id = ?")
-    .get(id) as { id: number; name: string; technical_name: string; icon_url: string | null } | null;
+    .prepare(
+      "SELECT id, name, technical_name, icon_url FROM providers WHERE id = ?",
+    )
+    .get(id) as {
+    id: number;
+    name: string;
+    technical_name: string;
+    icon_url: string | null;
+  } | null;
 }
 
 function getSaFetchedAt(titleId: string): string | null {
@@ -82,11 +108,22 @@ describe("enrichTitleDeepLinks", () => {
   it("updates deep_link for matching offers", async () => {
     insertTitle("movie-550", "MOVIE", "550");
     insertProvider(8, "Netflix", "netflix");
-    insertOffer("movie-550", 8, "FLATRATE", "https://www.themoviedb.org/movie/550");
+    insertOffer(
+      "movie-550",
+      8,
+      "FLATRATE",
+      "https://www.themoviedb.org/movie/550",
+    );
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: {} },
+        service: {
+          id: "netflix",
+          name: "Netflix",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {},
+        },
         type: "subscription",
         link: "https://www.netflix.com/watch/12345",
       },
@@ -95,7 +132,9 @@ describe("enrichTitleDeepLinks", () => {
     const count = await enrichTitleDeepLinks("movie-550", 550, "MOVIE");
 
     expect(count).toBe(1);
-    expect(getOfferDeepLink("movie-550", 8)).toBe("https://www.netflix.com/watch/12345");
+    expect(getOfferDeepLink("movie-550", 8)).toBe(
+      "https://www.netflix.com/watch/12345",
+    );
   });
 
   it("marks sa_fetched_at even when no offers match", async () => {
@@ -114,7 +153,17 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: { whiteImage: "https://img.sa/netflix.png", lightThemeImage: "", darkThemeImage: "" } },
+        service: {
+          id: "netflix",
+          name: "Netflix",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {
+            whiteImage: "https://img.sa/netflix.png",
+            lightThemeImage: "",
+            darkThemeImage: "",
+          },
+        },
         type: "subscription",
         link: "https://www.netflix.com/watch/999",
         quality: "hd",
@@ -146,7 +195,13 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: {} },
+        service: {
+          id: "netflix",
+          name: "Netflix",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {},
+        },
         type: "addon",
         link: "https://www.netflix.com/watch/addon/300",
       },
@@ -155,7 +210,9 @@ describe("enrichTitleDeepLinks", () => {
     const count = await enrichTitleDeepLinks("movie-300", 300, "MOVIE");
 
     expect(count).toBe(1);
-    expect(getOfferDeepLink("movie-300", 8)).toBe("https://www.netflix.com/watch/addon/300");
+    expect(getOfferDeepLink("movie-300", 8)).toBe(
+      "https://www.netflix.com/watch/addon/300",
+    );
   });
 
   it("handles multiple providers", async () => {
@@ -167,12 +224,24 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: {} },
+        service: {
+          id: "netflix",
+          name: "Netflix",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {},
+        },
         type: "subscription",
         link: "https://www.netflix.com/watch/400",
       },
       {
-        service: { id: "disney", name: "Disney+", homePage: "", themeColorCode: "", imageSet: {} },
+        service: {
+          id: "disney",
+          name: "Disney+",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {},
+        },
         type: "subscription",
         link: "https://www.disneyplus.com/movies/400",
       },
@@ -181,8 +250,12 @@ describe("enrichTitleDeepLinks", () => {
     const count = await enrichTitleDeepLinks("movie-400", 400, "MOVIE");
 
     expect(count).toBe(2);
-    expect(getOfferDeepLink("movie-400", 8)).toBe("https://www.netflix.com/watch/400");
-    expect(getOfferDeepLink("movie-400", 337)).toBe("https://www.disneyplus.com/movies/400");
+    expect(getOfferDeepLink("movie-400", 8)).toBe(
+      "https://www.netflix.com/watch/400",
+    );
+    expect(getOfferDeepLink("movie-400", 337)).toBe(
+      "https://www.disneyplus.com/movies/400",
+    );
   });
 
   it("skips unmapped providers gracefully", async () => {
@@ -192,7 +265,13 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "unknown_service_xyz", name: "Unknown Service", homePage: "", themeColorCode: "", imageSet: {} },
+        service: {
+          id: "unknown_service_xyz",
+          name: "Unknown Service",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {},
+        },
         type: "subscription",
         link: "https://unknown.com/watch/500",
       },
@@ -211,7 +290,13 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "custom_service", name: "Custom Service", homePage: "", themeColorCode: "", imageSet: {} },
+        service: {
+          id: "custom_service",
+          name: "Custom Service",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {},
+        },
         type: "subscription",
         link: "https://custom-service.com/watch/600",
       },
@@ -220,7 +305,9 @@ describe("enrichTitleDeepLinks", () => {
     const count = await enrichTitleDeepLinks("movie-600", 600, "MOVIE");
 
     expect(count).toBe(1);
-    expect(getOfferDeepLink("movie-600", 999)).toBe("https://custom-service.com/watch/600");
+    expect(getOfferDeepLink("movie-600", 999)).toBe(
+      "https://custom-service.com/watch/600",
+    );
   });
 
   it("creates offers for new providers alongside enriching existing ones", async () => {
@@ -230,12 +317,28 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: { whiteImage: "", lightThemeImage: "", darkThemeImage: "" } },
+        service: {
+          id: "netflix",
+          name: "Netflix",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: { whiteImage: "", lightThemeImage: "", darkThemeImage: "" },
+        },
         type: "subscription",
         link: "https://www.netflix.com/watch/63926",
       },
       {
-        service: { id: "crunchyroll", name: "Crunchyroll", homePage: "", themeColorCode: "", imageSet: { whiteImage: "https://img.sa/crunchyroll.png", lightThemeImage: "", darkThemeImage: "" } },
+        service: {
+          id: "crunchyroll",
+          name: "Crunchyroll",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {
+            whiteImage: "https://img.sa/crunchyroll.png",
+            lightThemeImage: "",
+            darkThemeImage: "",
+          },
+        },
         type: "subscription",
         link: "https://www.crunchyroll.com/watch/63926",
       },
@@ -245,14 +348,18 @@ describe("enrichTitleDeepLinks", () => {
 
     expect(count).toBe(2);
     // Netflix: existing offer enriched with deep link
-    expect(getOfferDeepLink("tv-63926", 8)).toBe("https://www.netflix.com/watch/63926");
+    expect(getOfferDeepLink("tv-63926", 8)).toBe(
+      "https://www.netflix.com/watch/63926",
+    );
     // Crunchyroll: new offer created
     const allOffers = getOffers("tv-63926");
     expect(allOffers).toHaveLength(2);
-    const crunchyOffer = allOffers.find(o => o.provider_id === 283);
+    const crunchyOffer = allOffers.find((o) => o.provider_id === 283);
     expect(crunchyOffer).toBeDefined();
     expect(crunchyOffer!.url).toBe("https://www.crunchyroll.com/watch/63926");
-    expect(crunchyOffer!.deep_link).toBe("https://www.crunchyroll.com/watch/63926");
+    expect(crunchyOffer!.deep_link).toBe(
+      "https://www.crunchyroll.com/watch/63926",
+    );
     expect(crunchyOffer!.monetization_type).toBe("FLATRATE");
 
     const provider = getProvider(283);
@@ -266,7 +373,13 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "apple", name: "Apple TV", homePage: "", themeColorCode: "", imageSet: { whiteImage: "", lightThemeImage: "", darkThemeImage: "" } },
+        service: {
+          id: "apple",
+          name: "Apple TV",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: { whiteImage: "", lightThemeImage: "", darkThemeImage: "" },
+        },
         type: "rent",
         link: "https://tv.apple.com/movie/700",
         quality: "uhd",
@@ -294,7 +407,17 @@ describe("enrichTitleDeepLinks", () => {
 
     mockFetchStreamingOptions.mockResolvedValue([
       {
-        service: { id: "netflix", name: "Netflix Updated", homePage: "", themeColorCode: "", imageSet: { whiteImage: "https://new-icon.png", lightThemeImage: "", darkThemeImage: "" } },
+        service: {
+          id: "netflix",
+          name: "Netflix Updated",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: {
+            whiteImage: "https://new-icon.png",
+            lightThemeImage: "",
+            darkThemeImage: "",
+          },
+        },
         type: "subscription",
         link: "https://www.netflix.com/watch/800",
       },

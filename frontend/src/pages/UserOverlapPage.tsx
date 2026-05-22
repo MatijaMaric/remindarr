@@ -30,11 +30,19 @@ function ProviderIcon({ provider }: { provider: Provider }) {
 }
 
 export default function UserOverlapPage() {
-  const { username, friendUsername } = useParams<{ username: string; friendUsername: string }>();
+  const { username, friendUsername } = useParams<{
+    username: string;
+    friendUsername: string;
+  }>();
   const { user: currentUser } = useAuth();
   const { t } = useTranslation();
 
-  const { data, isLoading: loading, isError, error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["user-overlap", friendUsername],
     queryFn: ({ signal }) => api.getOverlap(friendUsername!, signal),
     enabled: !!friendUsername,
@@ -67,20 +75,28 @@ export default function UserOverlapPage() {
       titles = titles.filter((t) => t.object_type === "MOVIE");
     } else if (filterMode === "watchable") {
       titles = titles.filter((t) =>
-        t.offers.some((o) => o.monetization_type === "flatrate" && sharedProviderIds.has(o.provider_id))
+        t.offers.some(
+          (o) =>
+            o.monetization_type === "flatrate" &&
+            sharedProviderIds.has(o.provider_id),
+        ),
       );
     }
     if (selectedGenres.length > 0) {
-      titles = titles.filter((t) => selectedGenres.some((g) => t.genres.includes(g)));
+      titles = titles.filter((t) =>
+        selectedGenres.some((g) => t.genres.includes(g)),
+      );
     }
     return titles;
   }, [data, filterMode, selectedGenres, sharedProviderIds]);
 
   // 403 private watchlist state
   if (isError) {
-    const errorMessage = error instanceof Error ? error.message : String(error ?? "");
+    const errorMessage =
+      error instanceof Error ? error.message : String(error ?? "");
     const isPrivate =
-      errorMessage.includes("private") || errorMessage.includes("mutual followers");
+      errorMessage.includes("private") ||
+      errorMessage.includes("mutual followers");
     return (
       <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
         <p className="text-zinc-400 text-lg">
@@ -105,7 +121,10 @@ export default function UserOverlapPage() {
         <div className="h-10 bg-zinc-900 animate-pulse rounded-xl" />
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="aspect-[2/3] bg-zinc-900 animate-pulse rounded-xl" />
+            <div
+              key={i}
+              className="aspect-[2/3] bg-zinc-900 animate-pulse rounded-xl"
+            />
           ))}
         </div>
       </div>
@@ -113,7 +132,8 @@ export default function UserOverlapPage() {
   }
 
   const { counts, sharedProviders, friendUser } = data;
-  const viewerName = currentUser?.display_name ?? currentUser?.username ?? username ?? "You";
+  const viewerName =
+    currentUser?.display_name ?? currentUser?.username ?? username ?? "You";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -127,7 +147,9 @@ export default function UserOverlapPage() {
           >
             {viewerName.charAt(0).toUpperCase()}
           </div>
-          <span className="text-sm text-zinc-300 font-medium">@{currentUser?.username ?? username}</span>
+          <span className="text-sm text-zinc-300 font-medium">
+            @{currentUser?.username ?? username}
+          </span>
         </div>
 
         {/* VS divider */}
@@ -148,7 +170,9 @@ export default function UserOverlapPage() {
               className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-black"
               style={{ background: "oklch(0.6 0.12 40)" }}
             >
-              {(friendUser.displayName ?? friendUser.username).charAt(0).toUpperCase()}
+              {(friendUser.displayName ?? friendUser.username)
+                .charAt(0)
+                .toUpperCase()}
             </div>
           )}
           <Link
@@ -165,7 +189,9 @@ export default function UserOverlapPage() {
             {t("overlap.heading", "What to watch together")}
           </h1>
           <p className="text-zinc-400 text-sm mt-0.5">
-            {t("overlap.withFriend", "with @{{friend}}", { friend: friendUser.username })}
+            {t("overlap.withFriend", "with @{{friend}}", {
+              friend: friendUser.username,
+            })}
           </p>
         </div>
       </div>
@@ -179,12 +205,13 @@ export default function UserOverlapPage() {
           </span>
         </span>
         <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-400">
-          {counts.viewerOnly}{" "}
-          {t("overlap.yourOnly", "yours only")}
+          {counts.viewerOnly} {t("overlap.yourOnly", "yours only")}
         </span>
         <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-400">
           {counts.friendOnly}{" "}
-          {t("overlap.friendOnly", "{{friend}}'s only", { friend: friendUser.username })}
+          {t("overlap.friendOnly", "{{friend}}'s only", {
+            friend: friendUser.username,
+          })}
         </span>
         {sharedProviders.length > 0 && (
           <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-400">
@@ -222,7 +249,8 @@ export default function UserOverlapPage() {
           >
             {mode === "all" && t("overlap.filterAll", "All")}
             {mode === "movies" && t("overlap.filterMovies", "Movies only")}
-            {mode === "watchable" && t("overlap.filterWatchable", "Watchable now")}
+            {mode === "watchable" &&
+              t("overlap.filterWatchable", "Watchable now")}
           </button>
         ))}
         {allGenres.length > 0 && (
@@ -243,27 +271,28 @@ export default function UserOverlapPage() {
               ? t(
                   "overlap.noCommon",
                   "You and @{{friend}} don't have any titles in common yet. Try recommending something!",
-                  { friend: friendUser.username }
+                  { friend: friendUser.username },
                 )
-              : t("overlap.noMatchingFilter", "No titles match the current filter.")}
+              : t(
+                  "overlap.noMatchingFilter",
+                  "No titles match the current filter.",
+                )}
           </p>
           {counts.intersection === 0 && (
             <Link
               to={`/user/${friendUser.username}`}
               className="inline-block text-amber-400 hover:text-amber-300 text-sm transition-colors"
             >
-              {t("overlap.viewProfile", "View @{{friend}}'s profile", { friend: friendUser.username })}
+              {t("overlap.viewProfile", "View @{{friend}}'s profile", {
+                friend: friendUser.username,
+              })}
             </Link>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {filteredTitles.map((title) => (
-            <TitleCard
-              key={title.id}
-              title={title}
-              showProviderBadge
-            />
+            <TitleCard key={title.id} title={title} showProviderBadge />
           ))}
         </div>
       )}

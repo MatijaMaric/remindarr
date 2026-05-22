@@ -1,4 +1,7 @@
-import { ACHIEVEMENTS, type AchievementKind } from "../achievements/definitions";
+import {
+  ACHIEVEMENTS,
+  type AchievementKind,
+} from "../achievements/definitions";
 import {
   evaluateCountMovies,
   evaluateCountEpisodes,
@@ -16,7 +19,10 @@ import {
   evaluateMiniseriesCompleted,
   evaluateDeepShowCompleted,
 } from "../achievements/evaluate";
-import { upsertUserAchievement, appendUserAchievementEarns } from "../db/repository/achievements";
+import {
+  upsertUserAchievement,
+  appendUserAchievementEarns,
+} from "../db/repository/achievements";
 import { logger } from "../logger";
 import { registerHandler } from "./worker";
 
@@ -25,7 +31,9 @@ const log = logger.child({ module: "evaluate-achievements" });
 /**
  * Core handler logic — shared between Bun (registerHandler) and CF Workers (processor.ts).
  */
-export async function runEvaluateAchievements(data: string | null): Promise<void> {
+export async function runEvaluateAchievements(
+  data: string | null,
+): Promise<void> {
   const raw = typeof data === "string" ? JSON.parse(data) : data;
   const { userId, kinds, titleId } = (raw ?? {}) as {
     userId: string;
@@ -44,18 +52,35 @@ export async function runEvaluateAchievements(data: string | null): Promise<void
     for (const a of matchingAchievements) {
       try {
         // Handle repeatable kinds separately — they use append logic
-        if (kind === "monthly_count_repeatable" || kind === "weekend_warrior_repeatable") {
-          const repeatResult = kind === "monthly_count_repeatable"
-            ? await evaluateMonthlyCountRepeatable(userId, a.threshold, a.key)
-            : await evaluateWeekendWarriorRepeatable(userId, a.threshold, a.key);
+        if (
+          kind === "monthly_count_repeatable" ||
+          kind === "weekend_warrior_repeatable"
+        ) {
+          const repeatResult =
+            kind === "monthly_count_repeatable"
+              ? await evaluateMonthlyCountRepeatable(userId, a.threshold, a.key)
+              : await evaluateWeekendWarriorRepeatable(
+                  userId,
+                  a.threshold,
+                  a.key,
+                );
 
           if (repeatResult.newEarns.length > 0) {
             const firstEarnedAt = repeatResult.newEarns.reduce(
               (min, e) => (e.earnedAt < min ? e.earnedAt : min),
-              repeatResult.newEarns[0].earnedAt
+              repeatResult.newEarns[0].earnedAt,
             );
-            await upsertUserAchievement(userId, a.key, repeatResult.progress, firstEarnedAt);
-            await appendUserAchievementEarns(userId, a.key, repeatResult.newEarns);
+            await upsertUserAchievement(
+              userId,
+              a.key,
+              repeatResult.progress,
+              firstEarnedAt,
+            );
+            await appendUserAchievementEarns(
+              userId,
+              a.key,
+              repeatResult.newEarns,
+            );
             log.info("Repeatable achievement newly earned (deferred)", {
               userId,
               key: a.key,
@@ -79,7 +104,11 @@ export async function runEvaluateAchievements(data: string | null): Promise<void
             result = await evaluateStreak(userId, a.threshold);
             break;
           case "genre_count":
-            result = await evaluateGenreCount(userId, a.threshold, a.genre ?? "__any__");
+            result = await evaluateGenreCount(
+              userId,
+              a.threshold,
+              a.genre ?? "__any__",
+            );
             break;
           case "completionist":
             result = await evaluateCompletionist(userId, a.threshold, titleId);
@@ -89,7 +118,12 @@ export async function runEvaluateAchievements(data: string | null): Promise<void
               // speed_binge_season requires a titleId — skip without titleId
               continue;
             }
-            result = await evaluateSpeedBingeSeason(userId, a.threshold, a.windowHours ?? 24, titleId);
+            result = await evaluateSpeedBingeSeason(
+              userId,
+              a.threshold,
+              a.windowHours ?? 24,
+              titleId,
+            );
             break;
           case "social_first_follow":
             result = await evaluateSocialFirstFollow(userId);
@@ -114,14 +148,26 @@ export async function runEvaluateAchievements(data: string | null): Promise<void
             break;
           default:
             // Unknown kind — skip gracefully
-            log.warn("evaluate-achievements: unknown kind, skipping", { kind, userId });
+            log.warn("evaluate-achievements: unknown kind, skipping", {
+              kind,
+              userId,
+            });
             continue;
         }
 
         const earnedAt = result.earned ? new Date().toISOString() : null;
-        const { newlyEarned } = await upsertUserAchievement(userId, a.key, result.progress, earnedAt);
+        const { newlyEarned } = await upsertUserAchievement(
+          userId,
+          a.key,
+          result.progress,
+          earnedAt,
+        );
         if (newlyEarned) {
-          log.info("Achievement newly earned (deferred)", { userId, key: a.key, kind });
+          log.info("Achievement newly earned (deferred)", {
+            userId,
+            key: a.key,
+            kind,
+          });
         }
       } catch (err) {
         log.error("evaluate-achievements: error evaluating achievement", {
@@ -136,4 +182,6 @@ export async function runEvaluateAchievements(data: string | null): Promise<void
   }
 }
 
-registerHandler("evaluate-achievements", (job) => runEvaluateAchievements(job.data));
+registerHandler("evaluate-achievements", (job) =>
+  runEvaluateAchievements(job.data),
+);

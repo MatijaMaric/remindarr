@@ -27,19 +27,25 @@ export default function ReelsSeasonPanel({
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
   }, []);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
-    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
-    touchStartRef.current = null;
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+      touchStartRef.current = null;
 
-    if (dx > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      onClose();
-    }
-  }, [onClose]);
+      if (dx > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   // Close on Escape
   useEffect(() => {
@@ -50,7 +56,9 @@ export default function ReelsSeasonPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const sorted = [...episodes].sort((a, b) => a.episode_number - b.episode_number);
+  const sorted = [...episodes].sort(
+    (a, b) => a.episode_number - b.episode_number,
+  );
   const unwatchedIds = sorted.filter((ep) => !ep.is_watched).map((ep) => ep.id);
   const allWatched = unwatchedIds.length === 0;
 
@@ -76,7 +84,9 @@ export default function ReelsSeasonPanel({
         {/* Header */}
         <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-sm border-b border-white/[0.06] p-4 z-10">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-white truncate pr-2">{showTitle}</h3>
+            <h3 className="text-lg font-bold text-white truncate pr-2">
+              {showTitle}
+            </h3>
             <button
               onClick={onClose}
               aria-label="Close season panel"

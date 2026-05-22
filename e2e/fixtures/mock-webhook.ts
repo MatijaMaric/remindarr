@@ -34,7 +34,7 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 }
 
 export async function startMockWebhookServer(
-  port = 4322
+  port = 4322,
 ): Promise<MockWebhookServer> {
   const requests: MockWebhookRequest[] = [];
 
@@ -102,7 +102,11 @@ export async function startMockWebhookServer(
         }
         if (Date.now() - startedAt > timeoutMs) {
           clearInterval(interval);
-          reject(new Error(`Timed out after ${timeoutMs}ms waiting for webhook request`));
+          reject(
+            new Error(
+              `Timed out after ${timeoutMs}ms waiting for webhook request`,
+            ),
+          );
         }
       }, 100);
     });

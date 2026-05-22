@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import type { ReactNode } from "react";
 import { authClient } from "../lib/auth-client";
 import { queryClient } from "../lib/queryClient";
@@ -30,7 +36,12 @@ interface AuthContextType {
   subscriptions: UserSubscriptions | null;
   refreshSubscriptions: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string, name: string) => Promise<void>;
+  signup: (
+    username: string,
+    email: string,
+    password: string,
+    name: string,
+  ) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -67,7 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("unknown");
-  const [subscriptions, setSubscriptions] = useState<UserSubscriptions | null>(null);
+  const [subscriptions, setSubscriptions] = useState<UserSubscriptions | null>(
+    null,
+  );
 
   const refreshSubscriptions = useCallback(async () => {
     try {
@@ -79,7 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    const { verdict, data } = await resolveSession(() => authClient.getSession());
+    const { verdict, data } = await resolveSession(() =>
+      authClient.getSession(),
+    );
     if (verdict === "authenticated") {
       setUser(mapSessionToUser(data as BetterAuthSessionData | null));
       setSessionStatus("authenticated");
@@ -103,11 +118,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sessionOutcome.status === "fulfilled") {
           const { verdict, data } = sessionOutcome.value;
           if (verdict === "authenticated") {
-            const resolved = mapSessionToUser(data as BetterAuthSessionData | null);
+            const resolved = mapSessionToUser(
+              data as BetterAuthSessionData | null,
+            );
             setUser(resolved);
             setSessionStatus("authenticated");
             if (resolved) {
-              getSubscriptions().then(setSubscriptions).catch(() => {});
+              getSubscriptions()
+                .then(setSubscriptions)
+                .catch(() => {});
             }
           } else if (verdict === "unauthenticated") {
             setUser(null);
@@ -125,7 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     init();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Listen for 401 events from api.ts
@@ -150,7 +171,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await authClient.getSession();
     setUser(mapSessionToUser(session.data));
     setSessionStatus("authenticated");
-    getSubscriptions().then(setSubscriptions).catch(() => {});
+    getSubscriptions()
+      .then(setSubscriptions)
+      .catch(() => {});
 
     fetch("/api/auth/custom/providers")
       .then((r) => r.json())
@@ -158,7 +181,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
   };
 
-  const signup = async (username: string, email: string, password: string, name: string) => {
+  const signup = async (
+    username: string,
+    email: string,
+    password: string,
+    name: string,
+  ) => {
     const result = await authClient.signUp.email({
       username,
       email,
@@ -171,7 +199,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await authClient.getSession();
     setUser(mapSessionToUser(session.data));
     setSessionStatus("authenticated");
-    getSubscriptions().then(setSubscriptions).catch(() => {});
+    getSubscriptions()
+      .then(setSubscriptions)
+      .catch(() => {});
   };
 
   const logout = async () => {
@@ -182,7 +212,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext value={{ user, providers, loading, sessionStatus, subscriptions, refreshSubscriptions, login, signup, logout, refresh }}>
+    <AuthContext
+      value={{
+        user,
+        providers,
+        loading,
+        sessionStatus,
+        subscriptions,
+        refreshSubscriptions,
+        login,
+        signup,
+        logout,
+        refresh,
+      }}
+    >
       {children}
     </AuthContext>
   );

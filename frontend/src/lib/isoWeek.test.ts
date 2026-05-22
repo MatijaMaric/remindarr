@@ -29,7 +29,7 @@ describe("getISOWeekKey", () => {
   it("consecutive days within the same week share the same key", () => {
     // 2024-W10: Mon Mar 4 – Sun Mar 10 2024
     const keys = [4, 5, 6, 7, 8, 9, 10].map((d) =>
-      getISOWeekKey(new Date(2024, 2, d))
+      getISOWeekKey(new Date(2024, 2, d)),
     );
     expect(new Set(keys).size).toBe(1);
     expect(keys[0]).toBe("2024-W10");

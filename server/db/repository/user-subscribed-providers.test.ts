@@ -20,8 +20,18 @@ beforeEach(async () => {
     makeParsedTitle({
       id: "movie-sub-1",
       offers: [
-        makeParsedOffer({ titleId: "movie-sub-1", providerId: 8, providerName: "Netflix", providerTechnicalName: "netflix" }),
-        makeParsedOffer({ titleId: "movie-sub-1", providerId: 337, providerName: "Disney+", providerTechnicalName: "disneyplus" }),
+        makeParsedOffer({
+          titleId: "movie-sub-1",
+          providerId: 8,
+          providerName: "Netflix",
+          providerTechnicalName: "netflix",
+        }),
+        makeParsedOffer({
+          titleId: "movie-sub-1",
+          providerId: 337,
+          providerName: "Disney+",
+          providerTechnicalName: "disneyplus",
+        }),
       ],
     }),
   ]);
@@ -42,7 +52,14 @@ describe("getSubscribedProviderIds / setSubscribedProviderIds", () => {
     await upsertTitles([
       makeParsedTitle({
         id: "movie-sub-canonical",
-        offers: [makeParsedOffer({ titleId: "movie-sub-canonical", providerId: 9, providerName: "Amazon Prime Video", providerTechnicalName: "amazon_prime_video" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-sub-canonical",
+            providerId: 9,
+            providerName: "Amazon Prime Video",
+            providerTechnicalName: "amazon_prime_video",
+          }),
+        ],
       }),
     ]);
     await setSubscribedProviderIds(userId, [119]);

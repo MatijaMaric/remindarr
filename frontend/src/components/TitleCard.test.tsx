@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import "../i18n";
@@ -10,10 +18,18 @@ import type { Title } from "../types";
 import type { ReactNode } from "react";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -38,7 +54,9 @@ function NoUserWrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={newTestClient()}>
       <MemoryRouter>
-        <AuthContext value={{ ...mockAuthValue, user: null } as any}>{children}</AuthContext>
+        <AuthContext value={{ ...mockAuthValue, user: null } as any}>
+          {children}
+        </AuthContext>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -197,19 +215,31 @@ describe("TitleCard", () => {
     const title = makeTitle({
       offers: [
         {
-          id: 1, title_id: "movie-1", provider_id: 8,
-          monetization_type: "FLATRATE", presentation_type: "HD",
-          price_value: null, price_currency: null,
-          url: "https://netflix.com/hd", available_to: null,
-          provider_name: "Netflix", provider_technical_name: "netflix",
+          id: 1,
+          title_id: "movie-1",
+          provider_id: 8,
+          monetization_type: "FLATRATE",
+          presentation_type: "HD",
+          price_value: null,
+          price_currency: null,
+          url: "https://netflix.com/hd",
+          available_to: null,
+          provider_name: "Netflix",
+          provider_technical_name: "netflix",
           provider_icon_url: "https://example.com/netflix.png",
         },
         {
-          id: 2, title_id: "movie-1", provider_id: 8,
-          monetization_type: "FLATRATE", presentation_type: "4K",
-          price_value: null, price_currency: null,
-          url: "https://netflix.com/4k", available_to: null,
-          provider_name: "Netflix", provider_technical_name: "netflix",
+          id: 2,
+          title_id: "movie-1",
+          provider_id: 8,
+          monetization_type: "FLATRATE",
+          presentation_type: "4K",
+          price_value: null,
+          price_currency: null,
+          url: "https://netflix.com/4k",
+          available_to: null,
+          provider_name: "Netflix",
+          provider_technical_name: "netflix",
           provider_icon_url: "https://example.com/netflix.png",
         },
       ],
@@ -217,9 +247,9 @@ describe("TitleCard", () => {
     render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     // Only one provider button should be rendered (deduped + only first shown)
-    const links = screen.getAllByRole("link").filter(
-      (link) => link.getAttribute("href") === "https://netflix.com/hd"
-    );
+    const links = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href") === "https://netflix.com/hd");
     expect(links.length).toBe(1);
   });
 
@@ -229,14 +259,16 @@ describe("TitleCard", () => {
 
     const links = screen.getAllByRole("link");
     const detailLinks = links.filter(
-      (link) => link.getAttribute("href") === "/title/movie-42"
+      (link) => link.getAttribute("href") === "/title/movie-42",
     );
     expect(detailLinks.length).toBeGreaterThan(0);
   });
 
   it("hides TV badge when hideTypeBadge is true", () => {
     const title = makeTitle({ object_type: "SHOW" });
-    render(<TitleCard title={title} hideTypeBadge />, { wrapper: NoUserWrapper });
+    render(<TitleCard title={title} hideTypeBadge />, {
+      wrapper: NoUserWrapper,
+    });
 
     expect(screen.queryByText("TV")).toBeNull();
   });
@@ -251,7 +283,9 @@ describe("TitleCard", () => {
       watched_episodes_count: 24,
       released_episodes_count: 24,
     });
-    const { container } = render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+    const { container } = render(<TitleCard title={title} />, {
+      wrapper: NoUserWrapper,
+    });
 
     // Green overlay
     const overlay = screen.getByTestId("completed-overlay");
@@ -274,7 +308,9 @@ describe("TitleCard", () => {
       watched_episodes_count: 15,
       released_episodes_count: 15,
     });
-    const { container } = render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+    const { container } = render(<TitleCard title={title} />, {
+      wrapper: NoUserWrapper,
+    });
 
     const badge = screen.getByText("Caught Up");
     expect(badge).toBeDefined();
@@ -307,11 +343,15 @@ describe("TitleCard", () => {
       watched_episodes_count: 6,
       released_episodes_count: 12,
     });
-    const { container } = render(<TitleCard title={title} showProgressBar />, { wrapper: NoUserWrapper });
+    const { container } = render(<TitleCard title={title} showProgressBar />, {
+      wrapper: NoUserWrapper,
+    });
 
     const progressTrack = container.querySelector(".bg-zinc-700");
     expect(progressTrack).not.toBeNull();
-    const progressFill = progressTrack!.querySelector(".bg-amber-500") as HTMLElement;
+    const progressFill = progressTrack!.querySelector(
+      ".bg-amber-500",
+    ) as HTMLElement;
     expect(progressFill).not.toBeNull();
     // 6/12 = 50%
     expect(progressFill.style.width).toBe("50%");
@@ -371,7 +411,9 @@ describe("TitleCard", () => {
       is_watched: false,
       show_status: undefined,
     });
-    const { container } = render(<TitleCard title={title} showProgressBar />, { wrapper: NoUserWrapper });
+    const { container } = render(<TitleCard title={title} showProgressBar />, {
+      wrapper: NoUserWrapper,
+    });
 
     const progressTrack = container.querySelector(".bg-zinc-700");
     expect(progressTrack).not.toBeNull();
@@ -411,7 +453,9 @@ describe("TitleCard", () => {
       object_type: "MOVIE",
       is_watched: false,
     });
-    const { container } = render(<TitleCard title={title} showProgressBar />, { wrapper: NoUserWrapper });
+    const { container } = render(<TitleCard title={title} showProgressBar />, {
+      wrapper: NoUserWrapper,
+    });
 
     const progressBar = container.querySelector(".bg-amber-500");
     expect(progressBar).toBeNull();

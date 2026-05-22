@@ -35,18 +35,18 @@ export type Category =
   | "long-haul";
 
 export interface Achievement {
-  key: string;           // immutable PK — NEVER reused (orphan rows in user_achievements if renamed)
+  key: string; // immutable PK — NEVER reused (orphan rows in user_achievements if renamed)
   kind: AchievementKind;
-  threshold: number;     // movies/episodes/days/genre-count/episodes-per-season
-  points: number;        // XP awarded on earn
+  threshold: number; // movies/episodes/days/genre-count/episodes-per-season
+  points: number; // XP awarded on earn
   title: string;
   description: string;
-  icon: string;          // lucide-react icon name
-  genre?: string;        // required for kind === "genre_count"
-  seasons?: number;      // completionist scope (optional)
-  windowHours?: number;  // required for kind === "speed_binge_season"
-  repeatable?: boolean;          // true for repeatable badges
-  repeatPeriod?: "monthly" | "weekly" | null;  // period for auto-reset
+  icon: string; // lucide-react icon name
+  genre?: string; // required for kind === "genre_count"
+  seasons?: number; // completionist scope (optional)
+  windowHours?: number; // required for kind === "speed_binge_season"
+  repeatable?: boolean; // true for repeatable badges
+  repeatPeriod?: "monthly" | "weekly" | null; // period for auto-reset
 }
 
 export const ACHIEVEMENTS: readonly Achievement[] = [
@@ -147,7 +147,8 @@ export function computeAchievementMeta(
   const result = new Map<string, AchievementMeta>();
   for (const a of achievements) {
     const family = deriveFamily(a);
-    const rungIndex = family !== null ? (rungIndexByKey.get(a.key) ?? null) : null;
+    const rungIndex =
+      family !== null ? (rungIndexByKey.get(a.key) ?? null) : null;
     result.set(a.key, {
       category: deriveCategory(a.kind),
       family,
@@ -160,4 +161,5 @@ export function computeAchievementMeta(
 }
 
 /** Pre-computed meta map — computed once at module load. */
-export const ACHIEVEMENT_META: Map<string, AchievementMeta> = computeAchievementMeta(ACHIEVEMENTS);
+export const ACHIEVEMENT_META: Map<string, AchievementMeta> =
+  computeAchievementMeta(ACHIEVEMENTS);

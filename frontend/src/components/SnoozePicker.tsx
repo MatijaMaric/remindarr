@@ -20,7 +20,10 @@ interface SnoozeOption {
   show?: boolean;
 }
 
-function computeUntil(type: SnoozeType, releaseDate?: string | null): string | null {
+function computeUntil(
+  type: SnoozeType,
+  releaseDate?: string | null,
+): string | null {
   if (type === "1d") return new Date(Date.now() + 86400000).toISOString();
   if (type === "1w") return new Date(Date.now() + 7 * 86400000).toISOString();
   if (type === "release" && releaseDate)
@@ -28,7 +31,12 @@ function computeUntil(type: SnoozeType, releaseDate?: string | null): string | n
   return null;
 }
 
-export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoozed }: Props) {
+export default function SnoozePicker({
+  titleId,
+  snoozeUntil,
+  releaseDate,
+  onSnoozed,
+}: Props) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -36,7 +44,8 @@ export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoo
   const isSnoozed = snoozeUntil != null && new Date(snoozeUntil) > new Date();
 
   const snoozeMutation = useMutation({
-    mutationFn: ({ until }: { until: string | null }) => api.setTitleSnooze(titleId, until),
+    mutationFn: ({ until }: { until: string | null }) =>
+      api.setTitleSnooze(titleId, until),
     onMutate: () => setOpen(false),
     onSuccess: () => onSnoozed?.(),
     onError: () => toast.error("Failed to snooze title"),
@@ -49,7 +58,9 @@ export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoo
   const options: SnoozeOption[] = [
     { labelKey: "snooze.oneDay", type: "1d" },
     { labelKey: "snooze.oneWeek", type: "1w" },
-    ...(releaseDate ? [{ labelKey: "snooze.untilRelease", type: "release" as SnoozeType }] : []),
+    ...(releaseDate
+      ? [{ labelKey: "snooze.untilRelease", type: "release" as SnoozeType }]
+      : []),
     { labelKey: "snooze.clear", type: "clear", show: isSnoozed },
   ];
 
@@ -73,7 +84,11 @@ export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoo
             : "text-zinc-500 hover:text-zinc-300 border-transparent hover:border-zinc-700"
         }`}
       >
-        {isSnoozed ? <BellOff className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+        {isSnoozed ? (
+          <BellOff className="w-3.5 h-3.5" />
+        ) : (
+          <Bell className="w-3.5 h-3.5" />
+        )}
       </button>
 
       {open && (
@@ -94,7 +109,9 @@ export default function SnoozePicker({ titleId, snoozeUntil, releaseDate, onSnoo
                   aria-selected={false}
                   onClick={(e) => {
                     e.preventDefault();
-                    snoozeMutation.mutate({ until: computeUntil(opt.type, releaseDate) });
+                    snoozeMutation.mutate({
+                      until: computeUntil(opt.type, releaseDate),
+                    });
                   }}
                   className="w-full text-left text-xs px-3 py-2 hover:bg-zinc-700 transition-colors text-zinc-300"
                 >

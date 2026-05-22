@@ -2,7 +2,9 @@
   "name": "remindarr",
   "version": "1.0.0",
   "packageManager": "bun@1.3.9",
-  "workspaces": ["frontend"],
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev": "concurrently \"bun run dev:server\" \"bun run dev:frontend\"",
     "dev:server": "bun run --watch server/index.ts",
@@ -10,9 +12,11 @@
     "build": "cd frontend && bun run build",
     "start": "bun run server/index.ts",
     "sync": "bun run server/cli/sync.ts",
-    "check": "bunx tsc --noEmit && bunx tsc --noEmit -p e2e/tsconfig.json && cd frontend && bunx tsc -b --noEmit && bun run lint && cd .. && bun run test:server && bun run test:frontend && bun run build && bunx wrangler deploy --dry-run --outdir .wrangler/dry-run && bun run check:bundle",
+    "check": "bun run format:check && bunx tsc --noEmit && bunx tsc --noEmit -p e2e/tsconfig.json && cd frontend && bunx tsc -b --noEmit && bun run lint && cd .. && bun run test:server && bun run test:frontend && bun run build && bunx wrangler deploy --dry-run --outdir .wrangler/dry-run && bun run check:bundle",
     "check:bundle": "bun run scripts/check-bundle-size.ts",
-    "check:fast": "bunx tsc --noEmit && bunx tsc --noEmit -p e2e/tsconfig.json && cd frontend && bunx tsc -b --noEmit && bun run lint",
+    "check:fast": "bun run format:check && bunx tsc --noEmit && bunx tsc --noEmit -p e2e/tsconfig.json && cd frontend && bunx tsc -b --noEmit && bun run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test:changed": "bun run server/cli/changed-tests.ts",
     "lint": "cd frontend && bun run lint",
     "test": "bun run test:server && bun run test:frontend",
@@ -69,6 +73,7 @@
     "happy-dom": "^20.8.4",
     "jose": "^6.2.2",
     "lefthook": "^2.1.6",
+    "prettier": "^3.8.3",
     "sharp": "^0.34.5",
     "wrangler": "^4.90.0"
   }

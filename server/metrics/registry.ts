@@ -1,7 +1,10 @@
 type Labels = Record<string, string>;
 
 function escapeLabel(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n");
 }
 
 function labelsKey(labels: Labels): string {
@@ -77,10 +80,14 @@ export class Gauge {
 }
 
 // Default buckets for HTTP latency (seconds)
-export const DEFAULT_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
+export const DEFAULT_BUCKETS = [
+  0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10,
+];
 
 // Tighter buckets for DB queries (seconds)
-export const DB_BUCKETS = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1];
+export const DB_BUCKETS = [
+  0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1,
+];
 
 interface HistogramEntry {
   counts: number[];
@@ -130,7 +137,9 @@ export class Histogram {
       const prefix = labelKey ? `${labelKey},` : "";
       const suffix = labelKey ? `{${labelKey}}` : "";
       for (let i = 0; i < this.buckets.length; i++) {
-        lines.push(`${this.name}_bucket{${prefix}le="${this.buckets[i]}"} ${entry.counts[i]}`);
+        lines.push(
+          `${this.name}_bucket{${prefix}le="${this.buckets[i]}"} ${entry.counts[i]}`,
+        );
       }
       lines.push(`${this.name}_bucket{${prefix}le="+Inf"} ${entry.count}`);
       lines.push(`${this.name}_sum${suffix} ${entry.sum}`);

@@ -2,7 +2,10 @@ import { describe, it, expect, spyOn, beforeEach, afterEach } from "bun:test";
 import Sentry from "../sentry";
 import { CONFIG } from "../config";
 import { RateLimitError } from "./types";
-import { BreakerOpenError, _resetBreakersForTest } from "../lib/circuit-breaker";
+import {
+  BreakerOpenError,
+  _resetBreakersForTest,
+} from "../lib/circuit-breaker";
 import { MemoryCache } from "../cache/memory";
 import * as cacheModule from "../cache";
 
@@ -16,7 +19,9 @@ const originalApiKey = CONFIG.STREAMING_AVAILABILITY_API_KEY;
 
 beforeEach(() => {
   _resetBreakersForTest();
-  sentrySpy = spyOn(Sentry, "startSpan").mockImplementation((_opts: any, fn: any) => fn({}));
+  sentrySpy = spyOn(Sentry, "startSpan").mockImplementation(
+    (_opts: any, fn: any) => fn({}),
+  );
   fetchSpy = spyOn(globalThis, "fetch");
   testCache = new MemoryCache();
   getCacheSpy = spyOn(cacheModule, "getCache").mockReturnValue(testCache);
@@ -45,7 +50,13 @@ describe("fetchStreamingOptions", () => {
       streamingOptions: {
         us: [
           {
-            service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: {} },
+            service: {
+              id: "netflix",
+              name: "Netflix",
+              homePage: "",
+              themeColorCode: "",
+              imageSet: {},
+            },
             type: "subscription",
             link: "https://www.netflix.com/watch/12345",
             quality: "hd",
@@ -71,7 +82,13 @@ describe("fetchStreamingOptions", () => {
       streamingOptions: {
         us: [
           {
-            service: { id: "disney", name: "Disney+", homePage: "", themeColorCode: "", imageSet: {} },
+            service: {
+              id: "disney",
+              name: "Disney+",
+              homePage: "",
+              themeColorCode: "",
+              imageSet: {},
+            },
             type: "subscription",
             link: "https://www.disneyplus.com/series/123",
           },
@@ -95,21 +112,38 @@ describe("fetchStreamingOptions", () => {
   });
 
   it("throws RateLimitError on 429", async () => {
-    fetchSpy.mockResolvedValue(new Response("Too Many Requests", { status: 429 }));
+    fetchSpy.mockResolvedValue(
+      new Response("Too Many Requests", { status: 429 }),
+    );
 
-    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toBeInstanceOf(RateLimitError);
+    await expect(
+      fetchStreamingOptions(550, "MOVIE", "US"),
+    ).rejects.toBeInstanceOf(RateLimitError);
   });
 
   it("throws on other HTTP errors", async () => {
-    fetchSpy.mockResolvedValue(new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
+    fetchSpy.mockResolvedValue(
+      new Response("Server Error", {
+        status: 500,
+        statusText: "Internal Server Error",
+      }),
+    );
 
-    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toThrow("SA API error: 500");
+    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toThrow(
+      "SA API error: 500",
+    );
   });
 
   it("returns empty array when country has no options", async () => {
     const mockResponse = {
       streamingOptions: {
-        gb: [{ service: { id: "netflix" }, type: "subscription", link: "https://netflix.com/1" }],
+        gb: [
+          {
+            service: { id: "netflix" },
+            type: "subscription",
+            link: "https://netflix.com/1",
+          },
+        ],
       },
     };
     fetchSpy.mockResolvedValue(jsonResponse(mockResponse));
@@ -125,12 +159,24 @@ describe("fetchStreamingOptions", () => {
 
     const headers = fetchSpy.mock.calls[0][1].headers;
     expect(headers["X-RapidAPI-Key"]).toBe("test-api-key");
-    expect(headers["X-RapidAPI-Host"]).toBe("streaming-availability.p.rapidapi.com");
+    expect(headers["X-RapidAPI-Host"]).toBe(
+      "streaming-availability.p.rapidapi.com",
+    );
   });
 
   it("returns cached result without fetching", async () => {
     const cachedOptions = [
-      { service: { id: "netflix", name: "Netflix", homePage: "", themeColorCode: "", imageSet: { lightThemeImage: "", darkThemeImage: "", whiteImage: "" } }, type: "subscription", link: "https://netflix.com/cached" },
+      {
+        service: {
+          id: "netflix",
+          name: "Netflix",
+          homePage: "",
+          themeColorCode: "",
+          imageSet: { lightThemeImage: "", darkThemeImage: "", whiteImage: "" },
+        },
+        type: "subscription",
+        link: "https://netflix.com/cached",
+      },
     ] as any;
     await testCache.set("sa:streaming:movie/550:us", cachedOptions, 3600);
 
@@ -143,7 +189,23 @@ describe("fetchStreamingOptions", () => {
   it("stores result in cache after successful fetch", async () => {
     const mockResponse = {
       streamingOptions: {
-        us: [{ service: { id: "hulu", name: "Hulu", homePage: "", themeColorCode: "", imageSet: { lightThemeImage: "", darkThemeImage: "", whiteImage: "" } }, type: "subscription", link: "https://hulu.com/watch/550" }],
+        us: [
+          {
+            service: {
+              id: "hulu",
+              name: "Hulu",
+              homePage: "",
+              themeColorCode: "",
+              imageSet: {
+                lightThemeImage: "",
+                darkThemeImage: "",
+                whiteImage: "",
+              },
+            },
+            type: "subscription",
+            link: "https://hulu.com/watch/550",
+          },
+        ],
       },
     };
     fetchSpy.mockResolvedValue(jsonResponse(mockResponse));
@@ -166,18 +228,29 @@ describe("fetchStreamingOptions", () => {
   });
 
   it("does not cache on rate limit error", async () => {
-    fetchSpy.mockResolvedValue(new Response("Too Many Requests", { status: 429 }));
+    fetchSpy.mockResolvedValue(
+      new Response("Too Many Requests", { status: 429 }),
+    );
 
-    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toBeInstanceOf(RateLimitError);
+    await expect(
+      fetchStreamingOptions(550, "MOVIE", "US"),
+    ).rejects.toBeInstanceOf(RateLimitError);
 
     const cached = await testCache.get("sa:streaming:movie/550:us");
     expect(cached).toBeNull();
   });
 
   it("does not cache on other HTTP errors", async () => {
-    fetchSpy.mockResolvedValue(new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
+    fetchSpy.mockResolvedValue(
+      new Response("Server Error", {
+        status: 500,
+        statusText: "Internal Server Error",
+      }),
+    );
 
-    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toThrow("SA API error: 500");
+    await expect(fetchStreamingOptions(550, "MOVIE", "US")).rejects.toThrow(
+      "SA API error: 500",
+    );
 
     const cached = await testCache.get("sa:streaming:movie/550:us");
     expect(cached).toBeNull();
@@ -186,26 +259,41 @@ describe("fetchStreamingOptions", () => {
 
 describe("fetchStreamingOptions — circuit breaker", () => {
   it("opens the breaker after 5 consecutive 500 errors and blocks subsequent calls", async () => {
-    fetchSpy.mockResolvedValue(new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
+    fetchSpy.mockResolvedValue(
+      new Response("Server Error", {
+        status: 500,
+        statusText: "Internal Server Error",
+      }),
+    );
 
     for (let i = 0; i < 5; i++) {
-      await expect(fetchStreamingOptions(i + 1, "MOVIE", "US")).rejects.toThrow("SA API error: 500");
+      await expect(fetchStreamingOptions(i + 1, "MOVIE", "US")).rejects.toThrow(
+        "SA API error: 500",
+      );
     }
 
     // 6th call: breaker should be open — no fetch should be issued
-    await expect(fetchStreamingOptions(6, "MOVIE", "US")).rejects.toBeInstanceOf(BreakerOpenError);
+    await expect(
+      fetchStreamingOptions(6, "MOVIE", "US"),
+    ).rejects.toBeInstanceOf(BreakerOpenError);
     expect(fetchSpy.mock.calls.length).toBe(5);
   });
 
   it("opens the breaker for 24h after 5 consecutive 429 errors", async () => {
-    fetchSpy.mockResolvedValue(new Response("Too Many Requests", { status: 429 }));
+    fetchSpy.mockResolvedValue(
+      new Response("Too Many Requests", { status: 429 }),
+    );
 
     for (let i = 0; i < 5; i++) {
-      await expect(fetchStreamingOptions(i + 1, "MOVIE", "US")).rejects.toBeInstanceOf(RateLimitError);
+      await expect(
+        fetchStreamingOptions(i + 1, "MOVIE", "US"),
+      ).rejects.toBeInstanceOf(RateLimitError);
     }
 
     // Breaker is open; 6th call should throw BreakerOpenError without calling fetch
-    await expect(fetchStreamingOptions(6, "MOVIE", "US")).rejects.toBeInstanceOf(BreakerOpenError);
+    await expect(
+      fetchStreamingOptions(6, "MOVIE", "US"),
+    ).rejects.toBeInstanceOf(BreakerOpenError);
 
     // Confirm the error carries the 24h window — openUntil should be ~24h from now
     let caughtErr: BreakerOpenError | undefined;
@@ -234,7 +322,9 @@ describe("fetchStreamingOptions — circuit breaker", () => {
 
     // Breaker should remain closed — next call goes through normally
     fetchSpy.mockResolvedValue(
-      new Response(JSON.stringify({ streamingOptions: { us: [] } }), { status: 200 })
+      new Response(JSON.stringify({ streamingOptions: { us: [] } }), {
+        status: 200,
+      }),
     );
     await expect(fetchStreamingOptions(6, "MOVIE", "US")).resolves.toEqual([]);
     expect(fetchSpy.mock.calls.length).toBe(6);
@@ -242,15 +332,26 @@ describe("fetchStreamingOptions — circuit breaker", () => {
 
   it("cache hit bypasses the breaker even when it is open", async () => {
     // Open the breaker by sending 5 failures for different tmdbIds
-    fetchSpy.mockResolvedValue(new Response("Server Error", { status: 500, statusText: "Internal Server Error" }));
+    fetchSpy.mockResolvedValue(
+      new Response("Server Error", {
+        status: 500,
+        statusText: "Internal Server Error",
+      }),
+    );
     for (let i = 1; i <= 5; i++) {
-      await expect(fetchStreamingOptions(i, "MOVIE", "US")).rejects.toThrow("SA API error: 500");
+      await expect(fetchStreamingOptions(i, "MOVIE", "US")).rejects.toThrow(
+        "SA API error: 500",
+      );
     }
     // Breaker is now open
-    await expect(fetchStreamingOptions(6, "MOVIE", "US")).rejects.toBeInstanceOf(BreakerOpenError);
+    await expect(
+      fetchStreamingOptions(6, "MOVIE", "US"),
+    ).rejects.toBeInstanceOf(BreakerOpenError);
 
     // Pre-warm cache for tmdbId 999
-    const cachedOptions = [{ service: { id: "netflix" }, link: "https://netflix.com/999" }] as any;
+    const cachedOptions = [
+      { service: { id: "netflix" }, link: "https://netflix.com/999" },
+    ] as any;
     await testCache.set("sa:streaming:movie/999:us", cachedOptions, 3600);
 
     // Cache hit should succeed without touching the breaker

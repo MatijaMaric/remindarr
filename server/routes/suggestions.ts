@@ -9,10 +9,17 @@ import {
 } from "../tmdb/client";
 import { parseDiscoverMovie, parseDiscoverTv } from "../tmdb/parser";
 import type { ParsedTitle } from "../tmdb/parser";
-import { getSuggestionSeedTitles, type SuggestionSourceTitle } from "../db/repository/tracked";
+import {
+  getSuggestionSeedTitles,
+  type SuggestionSourceTitle,
+} from "../db/repository/tracked";
 import { getTrackedTitleIds } from "../db/repository/tracked";
 import { getWatchedTitleIds } from "../db/repository/watched-titles";
-import { dismissTitle, undismissTitle, getDismissedTitleIds } from "../db/repository/dismissed";
+import {
+  dismissTitle,
+  undismissTitle,
+  getDismissedTitleIds,
+} from "../db/repository/dismissed";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
@@ -28,10 +35,14 @@ const REASON_WEIGHT: Record<SuggestionSourceTitle["reason"], number> = {
   tracked: 0.55,
 };
 
-function computeMatchScore(tmdbScore: number | null, maxReasonWeight: number, seedCount: number): number {
+function computeMatchScore(
+  tmdbScore: number | null,
+  maxReasonWeight: number,
+  seedCount: number,
+): number {
   const quality = (tmdbScore ?? 6.0) / 10;
   const affinity = maxReasonWeight;
-  const coBonus = Math.min(0.10, (seedCount - 1) * 0.05);
+  const coBonus = Math.min(0.1, (seedCount - 1) * 0.05);
   const raw = 0.55 * quality + 0.45 * affinity + coBonus;
   return Math.round(Math.min(1, Math.max(0, raw)) * 100);
 }
@@ -40,21 +51,29 @@ const app = new Hono<AppEnv>();
 
 const dismissParamSchema = z.object({ titleId: z.string().min(1) });
 
-app.post("/dismiss/:titleId", zValidator("param", dismissParamSchema), async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
-  const { titleId } = c.req.valid("param");
-  await dismissTitle(user.id, titleId);
-  return ok(c, { ok: true });
-});
+app.post(
+  "/dismiss/:titleId",
+  zValidator("param", dismissParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
+    const { titleId } = c.req.valid("param");
+    await dismissTitle(user.id, titleId);
+    return ok(c, { ok: true });
+  },
+);
 
-app.delete("/dismiss/:titleId", zValidator("param", dismissParamSchema), async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
-  const { titleId } = c.req.valid("param");
-  await undismissTitle(user.id, titleId);
-  return ok(c, { ok: true });
-});
+app.delete(
+  "/dismiss/:titleId",
+  zValidator("param", dismissParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
+    const { titleId } = c.req.valid("param");
+    await undismissTitle(user.id, titleId);
+    return ok(c, { ok: true });
+  },
+);
 
 app.get("/", async (c) => {
   const user = c.get("user");
@@ -65,12 +84,13 @@ app.get("/", async (c) => {
   const limit = isNaN(rawLimit) || rawLimit < 1 ? 40 : Math.min(rawLimit, 100);
 
   try {
-    const [sourceTitles, trackedIds, watchedIds, dismissedIds] = await Promise.all([
-      getSuggestionSeedTitles(user.id, 5),
-      getTrackedTitleIds(user.id),
-      getWatchedTitleIds(user.id),
-      getDismissedTitleIds(user.id),
-    ]);
+    const [sourceTitles, trackedIds, watchedIds, dismissedIds] =
+      await Promise.all([
+        getSuggestionSeedTitles(user.id, 5),
+        getTrackedTitleIds(user.id),
+        getWatchedTitleIds(user.id),
+        getDismissedTitleIds(user.id),
+      ]);
 
     if (sourceTitles.length === 0) {
       return ok(c, { flat: [], groups: [] });
@@ -81,7 +101,10 @@ app.get("/", async (c) => {
       getTvGenres(),
     ]);
 
-    type GroupResult = { source: SuggestionSourceTitle; suggestions: ParsedTitle[] };
+    type GroupResult = {
+      source: SuggestionSourceTitle;
+      suggestions: ParsedTitle[];
+    };
     const limiter = pLimit(5);
     const groupResults: GroupResult[] = await Promise.all(
       sourceTitles.map((source) =>
@@ -91,18 +114,23 @@ app.get("/", async (c) => {
             let results: ParsedTitle[];
             if (source.objectType === "MOVIE") {
               const data = await fetchMovieSuggestions(tmdbId, 1);
-              results = data.results.map((r) => parseDiscoverMovie(r, movieGenres));
+              results = data.results.map((r) =>
+                parseDiscoverMovie(r, movieGenres),
+              );
             } else {
               const data = await fetchTvSuggestions(tmdbId, 1);
               results = data.results.map((r) => parseDiscoverTv(r, tvGenres));
             }
             return { source, suggestions: results };
           } catch (e) {
-            log.warn("TMDB suggestions fetch failed for source", { sourceId: source.id, err: e });
+            log.warn("TMDB suggestions fetch failed for source", {
+              sourceId: source.id,
+              err: e,
+            });
             return { source, suggestions: [] as ParsedTitle[] };
           }
-        })
-      )
+        }),
+      ),
     );
 
     // Dedupe by id, filter out tracked, watched, and dismissed titles
@@ -114,11 +142,19 @@ app.get("/", async (c) => {
       .map(({ source, suggestions }) => {
         const unfiltered = suggestions.length;
         const filtered = suggestions.filter(
-          (t) => !trackedIds.has(t.id) && !watchedIds.has(t.id) && !dismissedIds.has(t.id),
+          (t) =>
+            !trackedIds.has(t.id) &&
+            !watchedIds.has(t.id) &&
+            !dismissedIds.has(t.id),
         );
         const capped = filtered.slice(0, GROUP_CAP);
         return {
-          source: { id: source.id, title: source.title, posterUrl: source.posterUrl, reason: source.reason },
+          source: {
+            id: source.id,
+            title: source.title,
+            posterUrl: source.posterUrl,
+            reason: source.reason,
+          },
           suggestions: capped,
           hiddenCount: unfiltered - capped.length,
         };
@@ -142,7 +178,11 @@ app.get("/", async (c) => {
     for (const group of groups) {
       for (const title of group.suggestions) {
         const agg = aggById.get(title.id)!;
-        title.matchScore = computeMatchScore(title.scores.tmdbScore, agg.maxWeight, agg.seedCount);
+        title.matchScore = computeMatchScore(
+          title.scores.tmdbScore,
+          agg.maxWeight,
+          agg.seedCount,
+        );
       }
     }
 

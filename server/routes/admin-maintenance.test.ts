@@ -1,7 +1,20 @@
-import { describe, it, expect, beforeEach, afterAll, mock, spyOn, afterEach } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  mock,
+  spyOn,
+  afterEach,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import maintenanceApp from "./admin-maintenance";
 import type { AppEnv } from "../types";
@@ -36,7 +49,14 @@ let adminCookie: string;
 beforeEach(async () => {
   setupTestDb();
   const hash = await Bun.password.hash("admin123");
-  const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
+  const adminId = await createUser(
+    "admin",
+    hash,
+    "Admin",
+    "local",
+    undefined,
+    true,
+  );
   const token = await createSession(adminId);
   adminCookie = `better-auth.session_token=${token}`;
 
@@ -65,7 +85,9 @@ describe("POST /maintenance/flush-cache", () => {
   });
 
   it("returns 401 without auth", async () => {
-    const res = await app.request("/maintenance/flush-cache", { method: "POST" });
+    const res = await app.request("/maintenance/flush-cache", {
+      method: "POST",
+    });
     expect(res.status).toBe(401);
   });
 

@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  beforeEach,
+  afterEach,
+  spyOn,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -6,12 +14,16 @@ import "../../i18n";
 import * as api from "../../api";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function wrapper(client: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
   };
 }
 
@@ -32,13 +44,17 @@ mock.module("../../components/ThemePicker", () => ({
 
 mock.module("../../components/AccentPicker", () => ({
   default: ({ onChange }: any) => (
-    <div data-testid="accent-picker" onClick={() => onChange("amber")}>AccentPicker</div>
+    <div data-testid="accent-picker" onClick={() => onChange("amber")}>
+      AccentPicker
+    </div>
   ),
 }));
 
 mock.module("../../components/DensityPicker", () => ({
   default: ({ onChange }: any) => (
-    <div data-testid="density-picker" onClick={() => onChange("comfortable")}>DensityPicker</div>
+    <div data-testid="density-picker" onClick={() => onChange("comfortable")}>
+      DensityPicker
+    </div>
   ),
 }));
 
@@ -102,7 +118,9 @@ describe("AppearanceTab", () => {
 
     await waitFor(() => {
       // crowded week toggle renders an aria-pressed button
-      expect(screen.getAllByRole("button", { pressed: true }).length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByRole("button", { pressed: true }).length,
+      ).toBeGreaterThan(0);
     });
   });
 });

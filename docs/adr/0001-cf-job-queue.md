@@ -48,6 +48,7 @@ CF Worker receives a request and forwards job execution to a Bun instance via an
 **Durable Objects (Option 2)**, feature-flagged behind `JOB_QUEUE_BACKEND` (`"d1"` default, `"durable-object"` opt-in).
 
 The decisive factors:
+
 - A job queue is canonically a "single-writer over shared state" problem, the exact use case DOs were designed for.
 - DO Alarms provide the cron scheduling layer: `armCron(name, expr)` stores the cron expression and sets the first alarm; `alarm()` re-arms itself. The `wrangler.toml` cron triggers remain as a durable keep-alive (`arm()` is idempotent).
 - The existing `handlers` dispatch map (`server/jobs/processor.ts`) is reused unchanged by the DO's `alarm()` handler, keeping a single source of truth for job logic.
@@ -56,12 +57,13 @@ The decisive factors:
 
 ### DO Identity
 
-| Job type | DO name |
-|---|---|
-| Cron singleton | `idFromName("sync-titles")` |
+| Job type           | DO name                               |
+| ------------------ | ------------------------------------- |
+| Cron singleton     | `idFromName("sync-titles")`           |
 | Partitioned ad-hoc | `idFromName("sync-show-episodes:42")` |
 
 Partition key per job name:
+
 - `sync-show-episodes` → `data.titleId`
 - `backfill-title-offers` → `data.tmdbId`
 - All others → singleton (no partition)
@@ -86,14 +88,14 @@ CREATE TABLE IF NOT EXISTS jobs (
 
 ### Fairness / Reliability Comparison
 
-| Property | D1 optimistic (Option 1) | DO (Option 2, selected) |
-|---|---|---|
-| At-most-once execution | Best-effort CAS retry | Guaranteed (single writer) |
-| FIFO within job name | No | Yes (per-partition) |
-| Cross-name isolation | No (shared table) | Yes (one DO per name) |
-| Cron dedup | App-level SELECT-then-INSERT (non-atomic window) | Implicit (one DO instance) |
-| Stale recovery | Global `UPDATE ... WHERE started_at <` | Per-DO alarm on next tick |
-| Cost per claim | 2 D1 reads + 1 D1 write | 1 DO fetch RPC |
+| Property               | D1 optimistic (Option 1)                         | DO (Option 2, selected)    |
+| ---------------------- | ------------------------------------------------ | -------------------------- |
+| At-most-once execution | Best-effort CAS retry                            | Guaranteed (single writer) |
+| FIFO within job name   | No                                               | Yes (per-partition)        |
+| Cross-name isolation   | No (shared table)                                | Yes (one DO per name)      |
+| Cron dedup             | App-level SELECT-then-INSERT (non-atomic window) | Implicit (one DO instance) |
+| Stale recovery         | Global `UPDATE ... WHERE started_at <`           | Per-DO alarm on next tick  |
+| Cost per claim         | 2 D1 reads + 1 D1 write                          | 1 DO fetch RPC             |
 
 ### Backend Dispatcher
 

@@ -47,8 +47,12 @@ describe("ReelsUndoBar", () => {
 
   it("marks the active rating button with aria-pressed", () => {
     render(<ReelsUndoBar {...defaultProps} currentRating="LOVE" />);
-    expect(screen.getByRole("button", { name: "Love" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Hate" }).getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "Love" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Hate" }).getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 
   it("applies active styling to the selected rating", () => {

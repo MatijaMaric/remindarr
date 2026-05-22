@@ -15,7 +15,7 @@ describe("SectionErrorBoundary", () => {
     render(
       <SectionErrorBoundary label="Cast">
         <Bomb shouldThrow={false} />
-      </SectionErrorBoundary>
+      </SectionErrorBoundary>,
     );
     expect(screen.getByText("content")).toBeDefined();
   });
@@ -28,7 +28,7 @@ describe("SectionErrorBoundary", () => {
     render(
       <SectionErrorBoundary label="Cast">
         <Bomb shouldThrow={true} />
-      </SectionErrorBoundary>
+      </SectionErrorBoundary>,
     );
     expect(screen.getByText(/Couldn't load Cast/)).toBeDefined();
     expect(screen.getByRole("button", { name: /retry/i })).toBeDefined();
@@ -45,7 +45,7 @@ describe("SectionErrorBoundary", () => {
     render(
       <SectionErrorBoundary label="Ratings" onRetry={onRetry}>
         <Bomb shouldThrow={true} />
-      </SectionErrorBoundary>
+      </SectionErrorBoundary>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /retry/i }));

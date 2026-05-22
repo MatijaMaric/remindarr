@@ -91,7 +91,7 @@ describe("normalizeSearchTitle", () => {
         shortDescription: null,
         imdbId: null,
         scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
-      })
+      }),
     );
     expect(result.release_year).toBeNull();
     expect(result.runtime_minutes).toBeNull();

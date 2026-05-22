@@ -1,9 +1,19 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { SearchTitle, SuggestionsAggregateResponse, SuggestionSeedReason } from "../types";
+import type {
+  SearchTitle,
+  SuggestionsAggregateResponse,
+  SuggestionSeedReason,
+} from "../types";
 
 // Initialize i18n before anything else
 import "../i18n";
@@ -11,7 +21,13 @@ import "../i18n";
 // Mock auth context
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false },
+    user: {
+      id: "u1",
+      username: "testuser",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: { local: true, oidc: null },
     loading: false,
     sessionStatus: "authenticated",
@@ -42,17 +58,15 @@ Object.defineProperty(globalThis, "IntersectionObserver", {
 });
 
 const mockGetRecommendations = mock(() =>
-  Promise.resolve({ recommendations: [], count: 0 })
+  Promise.resolve({ recommendations: [], count: 0 }),
 );
-const mockGetUnreadCount = mock(() =>
-  Promise.resolve({ count: 0 })
-);
+const mockGetUnreadCount = mock(() => Promise.resolve({ count: 0 }));
 const mockTrackTitle = mock(() => Promise.resolve());
 const mockMarkRecommendationRead = mock(() => Promise.resolve());
 const mockDeleteRecommendation = mock(() => Promise.resolve());
-const mockGetSuggestionsAggregate = mock<() => Promise<SuggestionsAggregateResponse>>(() =>
-  Promise.resolve({ flat: [], groups: [] })
-);
+const mockGetSuggestionsAggregate = mock<
+  () => Promise<SuggestionsAggregateResponse>
+>(() => Promise.resolve({ flat: [], groups: [] }));
 const mockDismissSuggestion = mock(() => Promise.resolve());
 const mockUndismissSuggestion = mock(() => Promise.resolve());
 
@@ -80,13 +94,17 @@ mock.module("../api", () => ({
   getFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
   getMovieTracking: mock(() => Promise.resolve(null)),
   getMyStreak: mock(() => Promise.resolve(null)),
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
 }));
 
 const { default: DiscoveryPage } = await import("./DiscoveryPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -97,7 +115,10 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-function makeRecommendation(id: string, overrides: Record<string, unknown> = {}) {
+function makeRecommendation(
+  id: string,
+  overrides: Record<string, unknown> = {},
+) {
   return {
     id,
     from_user: {
@@ -120,7 +141,10 @@ function makeRecommendation(id: string, overrides: Record<string, unknown> = {})
   };
 }
 
-function makeSearchTitle(id: string, overrides: Partial<SearchTitle> = {}): SearchTitle {
+function makeSearchTitle(
+  id: string,
+  overrides: Partial<SearchTitle> = {},
+): SearchTitle {
   return {
     id,
     objectType: "MOVIE",
@@ -143,7 +167,9 @@ function makeSearchTitle(id: string, overrides: Partial<SearchTitle> = {}): Sear
   };
 }
 
-function makeAggregate(overrides?: Partial<SuggestionsAggregateResponse>): SuggestionsAggregateResponse {
+function makeAggregate(
+  overrides?: Partial<SuggestionsAggregateResponse>,
+): SuggestionsAggregateResponse {
   return { flat: [], groups: [], ...overrides };
 }
 
@@ -160,13 +186,11 @@ afterEach(() => {
 
   // Reset defaults
   mockGetRecommendations.mockImplementation(() =>
-    Promise.resolve({ recommendations: [], count: 0 })
+    Promise.resolve({ recommendations: [], count: 0 }),
   );
-  mockGetUnreadCount.mockImplementation(() =>
-    Promise.resolve({ count: 0 })
-  );
+  mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
   mockGetSuggestionsAggregate.mockImplementation(() =>
-    Promise.resolve({ flat: [], groups: [] })
+    Promise.resolve({ flat: [], groups: [] }),
   );
   mockDismissSuggestion.mockImplementation(() => Promise.resolve());
   mockUndismissSuggestion.mockImplementation(() => Promise.resolve());
@@ -175,16 +199,14 @@ afterEach(() => {
 describe("DiscoveryPage", () => {
   it("shows empty state when no recommendations", async () => {
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [], count: 0 })
+      Promise.resolve({ recommendations: [], count: 0 }),
     );
-    mockGetUnreadCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 })
-    );
+    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
     await waitFor(() =>
-      expect(screen.getByText(/No recommendations yet/)).toBeDefined()
+      expect(screen.getByText(/No recommendations yet/)).toBeDefined(),
     );
   });
 
@@ -192,17 +214,26 @@ describe("DiscoveryPage", () => {
     const recs = [
       makeRecommendation("r1"),
       makeRecommendation("r2", {
-        from_user: { id: "sender2", username: "bob", name: "Bob", display_name: "Bob", image: null },
-        title: { id: "title-r2", title: "Show R2", object_type: "SHOW", poster_url: null },
+        from_user: {
+          id: "sender2",
+          username: "bob",
+          name: "Bob",
+          display_name: "Bob",
+          image: null,
+        },
+        title: {
+          id: "title-r2",
+          title: "Show R2",
+          object_type: "SHOW",
+          poster_url: null,
+        },
         message: "You should watch this!",
       }),
     ];
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: recs, count: 2 })
+      Promise.resolve({ recommendations: recs, count: 2 }),
     );
-    mockGetUnreadCount.mockImplementation(() =>
-      Promise.resolve({ count: 2 })
-    );
+    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 2 }));
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -221,11 +252,9 @@ describe("DiscoveryPage", () => {
 
   it("shows unread count badge", async () => {
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [], count: 0 })
+      Promise.resolve({ recommendations: [], count: 0 }),
     );
-    mockGetUnreadCount.mockImplementation(() =>
-      Promise.resolve({ count: 5 })
-    );
+    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 5 }));
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -237,11 +266,9 @@ describe("DiscoveryPage", () => {
   it("track button on Activity tab calls trackTitle and removes the card", async () => {
     const rec = makeRecommendation("r1");
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 })
+      Promise.resolve({ recommendations: [rec], count: 1 }),
     );
-    mockGetUnreadCount.mockImplementation(() =>
-      Promise.resolve({ count: 1 })
-    );
+    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 1 }));
     mockTrackTitle.mockImplementation(() => Promise.resolve());
     mockMarkRecommendationRead.mockImplementation(() => Promise.resolve());
 
@@ -272,11 +299,9 @@ describe("DiscoveryPage", () => {
   it("dismiss button calls deleteRecommendation and removes the card", async () => {
     const rec = makeRecommendation("r1");
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 })
+      Promise.resolve({ recommendations: [rec], count: 1 }),
     );
-    mockGetUnreadCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 })
-    );
+    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
     mockDeleteRecommendation.mockImplementation(() => Promise.resolve());
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
@@ -305,15 +330,19 @@ describe("DiscoveryPage", () => {
 
   it("shows sender name and optional message on Activity tab", async () => {
     const rec = makeRecommendation("r1", {
-      from_user: { id: "s1", username: "charlie", name: "Charlie D", display_name: "Charlie D", image: null },
+      from_user: {
+        id: "s1",
+        username: "charlie",
+        name: "Charlie D",
+        display_name: "Charlie D",
+        image: null,
+      },
       message: "Great film!",
     });
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 })
+      Promise.resolve({ recommendations: [rec], count: 1 }),
     );
-    mockGetUnreadCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 })
-    );
+    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -332,18 +361,26 @@ describe("DiscoveryPage", () => {
   it("distinguishes movie and TV type labels", async () => {
     const recs = [
       makeRecommendation("r1", {
-        title: { id: "t1", title: "A Movie", object_type: "MOVIE", poster_url: null },
+        title: {
+          id: "t1",
+          title: "A Movie",
+          object_type: "MOVIE",
+          poster_url: null,
+        },
       }),
       makeRecommendation("r2", {
-        title: { id: "t2", title: "A Show", object_type: "SHOW", poster_url: null },
+        title: {
+          id: "t2",
+          title: "A Show",
+          object_type: "SHOW",
+          poster_url: null,
+        },
       }),
     ];
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: recs, count: 2 })
+      Promise.resolve({ recommendations: recs, count: 2 }),
     );
-    mockGetUnreadCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 })
-    );
+    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -370,7 +407,7 @@ describe("For you tab — suggestions", () => {
   it("hero renders the top untracked/undismissed suggestion from aggregate", async () => {
     const title1 = makeSearchTitle("movie-1");
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title1], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title1], groups: [] })),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
@@ -384,29 +421,42 @@ describe("For you tab — suggestions", () => {
   it("hero shows 'None of your friends have recommended this yet' when no recs match the hero", async () => {
     const title1 = makeSearchTitle("movie-1");
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title1], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title1], groups: [] })),
     );
     // default: no recommendations
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText(/None of your friends have recommended this yet/)).toBeDefined();
+      expect(
+        screen.getByText(/None of your friends have recommended this yet/),
+      ).toBeDefined();
     });
   });
 
   it("hero shows friend recommendation signal when a rec matches the hero title", async () => {
     const heroTitle = makeSearchTitle("movie-1");
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [heroTitle], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [heroTitle], groups: [] })),
     );
     const rec = makeRecommendation("r1", {
-      title: { id: "movie-1", title: "Title movie-1", object_type: "MOVIE", poster_url: null },
-      from_user: { id: "u2", username: "bob", name: "Bob", display_name: "Bob", image: null },
+      title: {
+        id: "movie-1",
+        title: "Title movie-1",
+        object_type: "MOVIE",
+        poster_url: null,
+      },
+      from_user: {
+        id: "u2",
+        username: "bob",
+        name: "Bob",
+        display_name: "Bob",
+        image: null,
+      },
       message: "You should watch this",
     });
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 })
+      Promise.resolve({ recommendations: [rec], count: 1 }),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
@@ -422,7 +472,7 @@ describe("For you tab — suggestions", () => {
   it("session counter reflects tracked and dismissed counts after actions", async () => {
     const title1 = makeSearchTitle("movie-1");
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title1], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title1], groups: [] })),
     );
     mockTrackTitle.mockImplementation(() => Promise.resolve());
 
@@ -445,7 +495,7 @@ describe("For you tab — suggestions", () => {
     const title1 = makeSearchTitle("movie-1");
     const title2 = makeSearchTitle("movie-2");
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] })),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
@@ -469,7 +519,7 @@ describe("For you tab — suggestions", () => {
   it("clicking Undo on a dismissed friend rec calls undismissSuggestion", async () => {
     const rec = makeRecommendation("r1");
     mockGetRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 })
+      Promise.resolve({ recommendations: [rec], count: 1 }),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
@@ -512,21 +562,25 @@ describe("For you tab — suggestions", () => {
       Promise.resolve({
         flat: [suggestion],
         groups: [group],
-      })
+      }),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText(/2 hidden — already tracked or dismissed/)).toBeDefined();
+      expect(
+        screen.getByText(/2 hidden — already tracked or dismissed/),
+      ).toBeDefined();
     });
   });
 
   it("More for you rail renders MediaCard-styled cards (poster image links to title detail)", async () => {
     const title1 = makeSearchTitle("movie-1");
-    const title2 = makeSearchTitle("movie-2", { posterUrl: "https://image.tmdb.org/t/p/w342/p2.jpg" });
+    const title2 = makeSearchTitle("movie-2", {
+      posterUrl: "https://image.tmdb.org/t/p/w342/p2.jpg",
+    });
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] })),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
@@ -550,7 +604,7 @@ describe("For you tab — suggestions", () => {
     const title1 = makeSearchTitle("movie-1");
     const title2 = makeSearchTitle("movie-2");
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] })),
     );
     mockTrackTitle.mockImplementation(() => Promise.resolve());
 
@@ -577,7 +631,7 @@ describe("For you tab — suggestions", () => {
   it("hero renders an amber match-score chip when matchScore is present", async () => {
     const title = makeSearchTitle("movie-1", { matchScore: 94 });
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title], groups: [] })),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
@@ -592,7 +646,7 @@ describe("For you tab — suggestions", () => {
   it("hero omits the match-score chip when matchScore is absent", async () => {
     const title = makeSearchTitle("movie-1");
     mockGetSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve(makeAggregate({ flat: [title], groups: [] }))
+      Promise.resolve(makeAggregate({ flat: [title], groups: [] })),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });

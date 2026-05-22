@@ -33,9 +33,13 @@ function makeSearchTitle(id: string): SearchTitle {
 let mockGetSuggestionsAggregate: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-  mockGetSuggestionsAggregate = spyOn(api, "getSuggestionsAggregate").mockResolvedValue(
-    { flat: [], groups: [] } as unknown as SuggestionsAggregateResponse,
-  );
+  mockGetSuggestionsAggregate = spyOn(
+    api,
+    "getSuggestionsAggregate",
+  ).mockResolvedValue({
+    flat: [],
+    groups: [],
+  } as unknown as SuggestionsAggregateResponse);
 });
 
 afterEach(() => {
@@ -57,9 +61,10 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 describe("SuggestedForYouRow", () => {
   it("calls getSuggestionsAggregate exactly once on mount", async () => {
-    mockGetSuggestionsAggregate.mockResolvedValue(
-      { flat: [makeSearchTitle("s1"), makeSearchTitle("s2")], groups: [] } as unknown as SuggestionsAggregateResponse,
-    );
+    mockGetSuggestionsAggregate.mockResolvedValue({
+      flat: [makeSearchTitle("s1"), makeSearchTitle("s2")],
+      groups: [],
+    } as unknown as SuggestionsAggregateResponse);
 
     render(<SuggestedForYouRow />, { wrapper: Wrapper });
 
@@ -71,9 +76,10 @@ describe("SuggestedForYouRow", () => {
   });
 
   it("does not re-call getSuggestionsAggregate on parent re-render", async () => {
-    mockGetSuggestionsAggregate.mockResolvedValue(
-      { flat: [makeSearchTitle("s1")], groups: [] } as unknown as SuggestionsAggregateResponse,
-    );
+    mockGetSuggestionsAggregate.mockResolvedValue({
+      flat: [makeSearchTitle("s1")],
+      groups: [],
+    } as unknown as SuggestionsAggregateResponse);
 
     function Parent() {
       return <SuggestedForYouRow />;
@@ -89,7 +95,9 @@ describe("SuggestedForYouRow", () => {
     rerender(<Parent />);
 
     await waitFor(() => {
-      expect(mockGetSuggestionsAggregate.mock.calls.length).toBe(callsAfterMount);
+      expect(mockGetSuggestionsAggregate.mock.calls.length).toBe(
+        callsAfterMount,
+      );
     });
   });
 

@@ -33,16 +33,19 @@ describe("syncAchievementRegistry", () => {
   it("does NOT delete an orphan row (key not in registry)", async () => {
     // Insert a row with a key that doesn't exist in ACHIEVEMENTS
     const db = getDb();
-    await db.insert(achievements).values({
-      key: "orphan_achievement",
-      kind: "count_movies",
-      threshold: 1,
-      points: 1,
-      title: "Orphan",
-      description: "Old achievement",
-      icon: "Star",
-      metadata: null,
-    }).run();
+    await db
+      .insert(achievements)
+      .values({
+        key: "orphan_achievement",
+        kind: "count_movies",
+        threshold: 1,
+        points: 1,
+        title: "Orphan",
+        description: "Old achievement",
+        icon: "Star",
+        metadata: null,
+      })
+      .run();
 
     await syncAchievementRegistry();
 
@@ -63,7 +66,9 @@ describe("syncAchievementRegistry", () => {
 
   it("does not enqueue backfill when achievements_backfill_done_v2 is set", async () => {
     const db = getDb();
-    await db.insert(settings).values({ key: "achievements_backfill_done_v2", value: "1" });
+    await db
+      .insert(settings)
+      .values({ key: "achievements_backfill_done_v2", value: "1" });
     const spy = spyOn(backend, "enqueueOnce").mockResolvedValue(undefined);
     await syncAchievementRegistry();
     expect(spy).not.toHaveBeenCalled();
@@ -76,7 +81,8 @@ describe("syncAchievementRegistry", () => {
     // Manually mutate one row to simulate stale data
     const db = getDb();
     const firstKey = ACHIEVEMENTS[0].key;
-    await db.update(achievements)
+    await db
+      .update(achievements)
       .set({ title: "Stale Title" })
       .where(eq(achievements.key, firstKey))
       .run();

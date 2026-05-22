@@ -15,7 +15,12 @@ import {
 import { Popover } from "@base-ui/react/popover";
 import { Calendar } from "../components/ui/calendar";
 import { toast } from "sonner";
-import { getCalendarTitles, watchEpisode, unwatchEpisode, getCrowdedWeekSettings } from "../api";
+import {
+  getCalendarTitles,
+  watchEpisode,
+  unwatchEpisode,
+  getCrowdedWeekSettings,
+} from "../api";
 import { getISOWeekKey } from "../lib/isoWeek";
 import TitleCard from "../components/TitleCard";
 import { DeckCardWrapper } from "../components/EpisodeShowCard";
@@ -28,7 +33,6 @@ import {
 } from "../components/EpisodeComponents";
 import WatchedToggleButton from "../components/WatchedToggleButton";
 import WatchButtonGroup from "../components/WatchButtonGroup";
-
 
 // ─── Types & Helpers ───────────────────────────────────────────────────────
 
@@ -72,7 +76,7 @@ export function pickFeaturedItem(items: CalendarItem[]): CalendarItem | null {
   if (items.length === 0) return null;
   // Prefer unwatched episode with an image
   const unwatchedEps = items.filter(
-    (i) => i.type === "episode" && !i.data.is_watched && getItemHeroUrl(i)
+    (i) => i.type === "episode" && !i.data.is_watched && getItemHeroUrl(i),
   );
   if (unwatchedEps.length > 0) return unwatchedEps[0];
   // Then any item with an image
@@ -91,10 +95,10 @@ export function getItemPosterUrl(item: CalendarItem): string | null {
 export function getCellBorderColor(items: CalendarItem[]): string {
   const hasEpisodes = items.some((i) => i.type === "episode");
   const hasMovies = items.some(
-    (i) => i.type === "title" && i.data.object_type === "MOVIE"
+    (i) => i.type === "title" && i.data.object_type === "MOVIE",
   );
   const hasShows = items.some(
-    (i) => i.type === "title" && i.data.object_type === "SHOW"
+    (i) => i.type === "title" && i.data.object_type === "SHOW",
   );
   if (hasEpisodes && (hasMovies || hasShows)) return "border-l-amber-500";
   if (hasEpisodes) return "border-l-emerald-500";
@@ -109,7 +113,7 @@ export function useCalendarParam(
   searchParams: URLSearchParams,
   setSearchParams: ReturnType<typeof useSearchParams>[1],
   key: string,
-  defaultValue = ""
+  defaultValue = "",
 ): [string, (value: string) => void] {
   const value = searchParams.get(key) || defaultValue;
   const setValue = useCallback(
@@ -124,10 +128,10 @@ export function useCalendarParam(
           }
           return next;
         },
-        { replace: true }
+        { replace: true },
       );
     },
-    [setSearchParams, key, defaultValue]
+    [setSearchParams, key, defaultValue],
   );
   return [value, setValue];
 }
@@ -203,7 +207,10 @@ export function DensityToggle({
     { value: "spacious", label: t("calendar.densitySpacious") },
   ];
   return (
-    <div className="flex items-center bg-zinc-800 rounded-lg p-0.5 gap-0.5" title="Density">
+    <div
+      className="flex items-center bg-zinc-800 rounded-lg p-0.5 gap-0.5"
+      title="Density"
+    >
       <AlignJustifyIcon className="size-3.5 text-zinc-500 mx-1 flex-shrink-0" />
       {options.map((opt) => (
         <button
@@ -262,7 +269,9 @@ const DayHeader = memo(function DayHeader({
             Today
           </span>
         )}
-        <h3 className={`text-sm font-semibold ${isToday ? "text-white" : "text-zinc-200"}`}>
+        <h3
+          className={`text-sm font-semibold ${isToday ? "text-white" : "text-zinc-200"}`}
+        >
           {dateLabel}
         </h3>
       </div>
@@ -302,7 +311,7 @@ function AgendaCalendarImpl({
   const [typeFilter, setTypeFilter] = useCalendarParam(
     searchParams,
     setSearchParams,
-    "type"
+    "type",
   );
   const [hideWatched, setHideWatched] = useState(true);
   const [months, setMonths] = useState<AgendaMonth[]>([]);
@@ -312,7 +321,9 @@ function AgendaCalendarImpl({
     queryFn: ({ signal }) => getCrowdedWeekSettings(signal),
   });
   const crowdedWeekThreshold = crowdedWeekData?.crowdedWeekThreshold ?? 5;
-  const crowdedWeekBadgeEnabled = crowdedWeekData ? crowdedWeekData.crowdedWeekBadgeEnabled !== 0 : true;
+  const crowdedWeekBadgeEnabled = crowdedWeekData
+    ? crowdedWeekData.crowdedWeekBadgeEnabled !== 0
+    : true;
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [activeDate, setActiveDate] = useState(() => new Date());
@@ -359,7 +370,7 @@ function AgendaCalendarImpl({
         return null;
       }
     },
-    [typeFilter]
+    [typeFilter],
   );
 
   // Initial load
@@ -397,7 +408,8 @@ function AgendaCalendarImpl({
     // Double rAF to ensure DOM is fully settled after React commit
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        let target = dayRefs.current.get(scrollTargetRef.current) ?? todayRef.current;
+        let target =
+          dayRefs.current.get(scrollTargetRef.current) ?? todayRef.current;
         // If exact date not found, scroll to nearest date (closest before, then after)
         if (!target && dayRefs.current.size > 0) {
           const targetKey = scrollTargetRef.current;
@@ -405,7 +417,8 @@ function AgendaCalendarImpl({
           // Find the last date on or before target, or first date after
           const before = keys.filter((k) => k <= targetKey);
           const after = keys.filter((k) => k > targetKey);
-          const bestKey = before.length > 0 ? before[before.length - 1] : after[0];
+          const bestKey =
+            before.length > 0 ? before[before.length - 1] : after[0];
           if (bestKey) target = dayRefs.current.get(bestKey) ?? null;
         }
         target?.scrollIntoView({ block: "start" });
@@ -421,7 +434,7 @@ function AgendaCalendarImpl({
     const next = new Date(
       latestMonth.getFullYear(),
       latestMonth.getMonth() + 1,
-      1
+      1,
     );
     const result = await loadMonth(formatMonth(next));
     if (result) {
@@ -438,7 +451,7 @@ function AgendaCalendarImpl({
     const prev = new Date(
       earliestMonth.getFullYear(),
       earliestMonth.getMonth() - 1,
-      1
+      1,
     );
     const result = await loadMonth(formatMonth(prev));
     if (result) {
@@ -453,9 +466,10 @@ function AgendaCalendarImpl({
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && initialScrollDoneRef.current) loadNextMonth();
+        if (entries[0].isIntersecting && initialScrollDoneRef.current)
+          loadNextMonth();
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -466,9 +480,10 @@ function AgendaCalendarImpl({
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && initialScrollDoneRef.current) loadPrevMonth();
+        if (entries[0].isIntersecting && initialScrollDoneRef.current)
+          loadPrevMonth();
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -493,7 +508,7 @@ function AgendaCalendarImpl({
           setActiveDateKey(first);
           if (first) setActiveDate(new Date(first + "T00:00:00"));
         },
-        { threshold: 0.3 }
+        { threshold: 0.3 },
       );
       observer.observe(el);
       observers.push(observer);
@@ -529,7 +544,7 @@ function AgendaCalendarImpl({
       setMonths(loaded);
       setInitialLoading(false);
     },
-    [loadMonth]
+    [loadMonth],
   );
 
   // Build agenda items
@@ -553,20 +568,17 @@ function AgendaCalendarImpl({
     }
 
     return new Map(
-      [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b))
+      [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)),
     );
   }, [months, hideWatched]);
 
   // All date keys with content (for sidebar)
-  const contentDates = useMemo(
-    () => [...agendaItems.keys()],
-    [agendaItems]
-  );
+  const contentDates = useMemo(() => [...agendaItems.keys()], [agendaItems]);
 
   // Date objects for calendar content highlights
   const contentDateObjects = useMemo(
     () => contentDates.map((d) => new Date(d + "T00:00:00")),
-    [contentDates]
+    [contentDates],
   );
 
   // Compute crowded ISO week keys from all loaded episodes
@@ -591,17 +603,15 @@ function AgendaCalendarImpl({
   // Toggle watched
   const toggleWatched = async (
     episodeId: number,
-    currentlyWatched: boolean
+    currentlyWatched: boolean,
   ) => {
     setMonths((prev) =>
       prev.map((m) => ({
         ...m,
         episodes: m.episodes.map((ep) =>
-          ep.id === episodeId
-            ? { ...ep, is_watched: !currentlyWatched }
-            : ep
+          ep.id === episodeId ? { ...ep, is_watched: !currentlyWatched } : ep,
         ),
-      }))
+      })),
     );
     try {
       if (currentlyWatched) {
@@ -614,11 +624,9 @@ function AgendaCalendarImpl({
         prev.map((m) => ({
           ...m,
           episodes: m.episodes.map((ep) =>
-            ep.id === episodeId
-              ? { ...ep, is_watched: currentlyWatched }
-              : ep
+            ep.id === episodeId ? { ...ep, is_watched: currentlyWatched } : ep,
           ),
-        }))
+        })),
       );
       toast.error("Failed to update watched status — please try again");
     }
@@ -650,16 +658,16 @@ function AgendaCalendarImpl({
       const [dateKey, items] = entries[i];
       const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString(
         undefined,
-        { weekday: "short", month: "short", day: "numeric" }
+        { weekday: "short", month: "short", day: "numeric" },
       );
       const dayEpisodes = items
         .filter(
-          (i): i is CalendarItem & { type: "episode" } => i.type === "episode"
+          (i): i is CalendarItem & { type: "episode" } => i.type === "episode",
         )
         .map((i) => i.data);
       const dayTitles = items
         .filter(
-          (i): i is CalendarItem & { type: "title" } => i.type === "title"
+          (i): i is CalendarItem & { type: "title" } => i.type === "title",
         )
         .map((i) => i.data);
       const episodesByShow = groupByShow(dayEpisodes);
@@ -679,14 +687,14 @@ function AgendaCalendarImpl({
         const currentD = new Date(dateKey + "T00:00:00");
         const nextD = new Date(nextDate + "T00:00:00");
         const diffDays = Math.round(
-          (nextD.getTime() - currentD.getTime()) / (1000 * 60 * 60 * 24)
+          (nextD.getTime() - currentD.getTime()) / (1000 * 60 * 60 * 24),
         );
         if (diffDays > 3) {
           const fromLabel = new Date(
-            currentD.getTime() + 86400000
+            currentD.getTime() + 86400000,
           ).toLocaleDateString(undefined, { month: "short", day: "numeric" });
           const toLabel = new Date(
-            nextD.getTime() - 86400000
+            nextD.getTime() - 86400000,
           ).toLocaleDateString(undefined, { month: "short", day: "numeric" });
           result.push({
             type: "gap",
@@ -756,7 +764,12 @@ function AgendaCalendarImpl({
                 </span>
               </Popover.Trigger>
               <Popover.Portal>
-                <Popover.Positioner side="bottom" align="start" sideOffset={4} className="z-50">
+                <Popover.Positioner
+                  side="bottom"
+                  align="start"
+                  sideOffset={4}
+                  className="z-50"
+                >
                   <Popover.Popup className="rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl p-2">
                     <Calendar
                       mode="single"
@@ -777,7 +790,9 @@ function AgendaCalendarImpl({
                         }
                       }}
                       modifiers={{ hasContent: contentDateObjects }}
-                      modifiersClassNames={{ hasContent: "!text-amber-400 font-semibold" }}
+                      modifiersClassNames={{
+                        hasContent: "!text-amber-400 font-semibold",
+                      }}
                     />
                     <div className="border-t border-white/[0.08] pt-2 mt-1">
                       <button
@@ -857,148 +872,179 @@ function AgendaCalendarImpl({
                 {(() => {
                   let lastRenderedWeekKey: string | null = null;
                   return condensedEntries.map((entry) => {
-                  if (entry.type === "gap") {
+                    if (entry.type === "gap") {
+                      return (
+                        <div
+                          key={`gap-${entry.from}-${entry.to}`}
+                          className="flex items-center gap-3 py-2"
+                        >
+                          <div className="flex-1 h-px bg-zinc-800" />
+                          <span className="text-xs text-zinc-600">
+                            {entry.from} – {entry.to}: No releases
+                          </span>
+                          <div className="flex-1 h-px bg-zinc-800" />
+                        </div>
+                      );
+                    }
+
+                    const {
+                      dateKey,
+                      items,
+                      dateLabel,
+                      dayEpisodes,
+                      dayTitles,
+                      episodesByShow,
+                    } = entry;
+                    const isDateToday = dateKey === today;
+                    const entryWeekKey = getISOWeekKey(
+                      new Date(dateKey + "T00:00:00"),
+                    );
+                    const showCrowdedBanner =
+                      crowdedWeeks.has(entryWeekKey) &&
+                      entryWeekKey !== lastRenderedWeekKey;
+                    if (showCrowdedBanner) lastRenderedWeekKey = entryWeekKey;
+
                     return (
-                      <div
-                        key={`gap-${entry.from}-${entry.to}`}
-                        className="flex items-center gap-3 py-2"
-                      >
-                        <div className="flex-1 h-px bg-zinc-800" />
-                        <span className="text-xs text-zinc-600">
-                          {entry.from} – {entry.to}: No releases
-                        </span>
-                        <div className="flex-1 h-px bg-zinc-800" />
+                      <div key={dateKey}>
+                        {showCrowdedBanner && (
+                          <div className="flex items-center gap-2 mb-2 px-1">
+                            <div className="flex-1 h-px bg-orange-500/30" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-mono font-semibold">
+                              Crowded week
+                            </span>
+                            <div className="flex-1 h-px bg-orange-500/30" />
+                          </div>
+                        )}
+                        <div
+                          ref={(el) => {
+                            if (el) {
+                              dayRefs.current.set(dateKey, el);
+                            }
+                            if (isDateToday && el) {
+                              (
+                                todayRef as React.MutableRefObject<HTMLDivElement | null>
+                              ).current = el;
+                            }
+                          }}
+                          className="space-y-3 scroll-mt-36"
+                        >
+                          {/* Compact day header */}
+                          <DayHeader
+                            items={items}
+                            dateLabel={dateLabel}
+                            isToday={isDateToday}
+                          />
+
+                          {/* All episode cards in a single row */}
+                          {dayEpisodes.length > 0 && (
+                            <ScrollableRow className="flex-wrap lg:flex-nowrap gap-3">
+                              {dayEpisodes.map((ep) => {
+                                const showEps = episodesByShow.get(
+                                  ep.title_id,
+                                ) ?? [ep];
+                                const imgUrl = getEpisodeCardImageUrl(ep);
+                                return (
+                                  <div
+                                    key={ep.id}
+                                    className="w-full sm:w-72 lg:w-80 flex-shrink-0"
+                                  >
+                                    <DeckCardWrapper
+                                      episodeCount={
+                                        showEps.length > 1 ? showEps.length : 1
+                                      }
+                                    >
+                                      <div className="bg-zinc-900 rounded-xl overflow-hidden">
+                                        <Link
+                                          to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                                          className="block relative"
+                                        >
+                                          {imgUrl ? (
+                                            <img
+                                              src={imgUrl}
+                                              alt={
+                                                ep.name || formatEpisodeCode(ep)
+                                              }
+                                              className="w-full aspect-video object-cover"
+                                              loading="lazy"
+                                            />
+                                          ) : (
+                                            <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
+                                          )}
+                                        </Link>
+                                        <div
+                                          className={
+                                            density === "compact"
+                                              ? "p-1.5"
+                                              : density === "spacious"
+                                                ? "p-4"
+                                                : "p-3"
+                                          }
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <Link
+                                              to={`/title/${ep.title_id}`}
+                                              className="hover:text-amber-400 transition-colors min-w-0"
+                                            >
+                                              <h3 className="font-semibold text-white text-sm truncate">
+                                                {ep.show_title}
+                                              </h3>
+                                            </Link>
+                                            <WatchedToggleButton
+                                              watched={!!ep.is_watched}
+                                              onClick={() =>
+                                                toggleWatched(
+                                                  ep.id,
+                                                  !!ep.is_watched,
+                                                )
+                                              }
+                                              disabled={!isEpisodeReleased(ep)}
+                                              size="sm"
+                                            />
+                                          </div>
+                                          <Link
+                                            to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                                            className="hover:text-amber-400 transition-colors"
+                                          >
+                                            <p className="text-xs mt-0.5">
+                                              <span className="text-amber-400 font-medium">
+                                                {formatEpisodeCode(ep)}
+                                              </span>
+                                              {ep.name && (
+                                                <span className="text-zinc-400">
+                                                  {" "}
+                                                  · {ep.name}
+                                                </span>
+                                              )}
+                                            </p>
+                                          </Link>
+                                          {isEpisodeReleased(ep) && (
+                                            <div className="mt-2">
+                                              <WatchButtonGroup
+                                                offers={ep.offers ?? []}
+                                                variant="dropdown"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </DeckCardWrapper>
+                                  </div>
+                                );
+                              })}
+                            </ScrollableRow>
+                          )}
+
+                          {/* Title cards */}
+                          {dayTitles.length > 0 && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                              {dayTitles.map((t) => (
+                                <TitleCard key={t.id} title={t} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
-                  }
-
-                  const {
-                    dateKey,
-                    items,
-                    dateLabel,
-                    dayEpisodes,
-                    dayTitles,
-                    episodesByShow,
-                  } = entry;
-                  const isDateToday = dateKey === today;
-                  const entryWeekKey = getISOWeekKey(new Date(dateKey + "T00:00:00"));
-                  const showCrowdedBanner = crowdedWeeks.has(entryWeekKey) && entryWeekKey !== lastRenderedWeekKey;
-                  if (showCrowdedBanner) lastRenderedWeekKey = entryWeekKey;
-
-                  return (
-                    <div key={dateKey}>
-                      {showCrowdedBanner && (
-                        <div className="flex items-center gap-2 mb-2 px-1">
-                          <div className="flex-1 h-px bg-orange-500/30" />
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-mono font-semibold">
-                            Crowded week
-                          </span>
-                          <div className="flex-1 h-px bg-orange-500/30" />
-                        </div>
-                      )}
-                      <div
-                        ref={(el) => {
-                          if (el) {
-                            dayRefs.current.set(dateKey, el);
-                          }
-                          if (isDateToday && el) {
-                            (todayRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-                          }
-                        }}
-                        className="space-y-3 scroll-mt-36"
-                      >
-                      {/* Compact day header */}
-                      <DayHeader
-                        items={items}
-                        dateLabel={dateLabel}
-                        isToday={isDateToday}
-                      />
-
-                      {/* All episode cards in a single row */}
-                      {dayEpisodes.length > 0 && (
-                        <ScrollableRow className="flex-wrap lg:flex-nowrap gap-3">
-                          {dayEpisodes.map((ep) => {
-                            const showEps = episodesByShow.get(ep.title_id) ?? [ep];
-                            const imgUrl = getEpisodeCardImageUrl(ep);
-                            return (
-                              <div
-                                key={ep.id}
-                                className="w-full sm:w-72 lg:w-80 flex-shrink-0"
-                              >
-                                <DeckCardWrapper
-                                  episodeCount={showEps.length > 1 ? showEps.length : 1}
-                                >
-                                  <div className="bg-zinc-900 rounded-xl overflow-hidden">
-                                    <Link
-                                      to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                      className="block relative"
-                                    >
-                                      {imgUrl ? (
-                                        <img
-                                          src={imgUrl}
-                                          alt={ep.name || formatEpisodeCode(ep)}
-                                          className="w-full aspect-video object-cover"
-                                          loading="lazy"
-                                        />
-                                      ) : (
-                                        <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
-                                      )}
-                                    </Link>
-                                    <div className={density === "compact" ? "p-1.5" : density === "spacious" ? "p-4" : "p-3"}>
-                                      <div className="flex items-center justify-between gap-2">
-                                        <Link
-                                          to={`/title/${ep.title_id}`}
-                                          className="hover:text-amber-400 transition-colors min-w-0"
-                                        >
-                                          <h3 className="font-semibold text-white text-sm truncate">
-                                            {ep.show_title}
-                                          </h3>
-                                        </Link>
-                                        <WatchedToggleButton
-                                          watched={!!ep.is_watched}
-                                          onClick={() => toggleWatched(ep.id, !!ep.is_watched)}
-                                          disabled={!isEpisodeReleased(ep)}
-                                          size="sm"
-                                        />
-                                      </div>
-                                      <Link
-                                        to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                        className="hover:text-amber-400 transition-colors"
-                                      >
-                                        <p className="text-xs mt-0.5">
-                                          <span className="text-amber-400 font-medium">
-                                            {formatEpisodeCode(ep)}
-                                          </span>
-                                          {ep.name && (
-                                            <span className="text-zinc-400"> · {ep.name}</span>
-                                          )}
-                                        </p>
-                                      </Link>
-                                      {isEpisodeReleased(ep) && (
-                                        <div className="mt-2">
-                                          <WatchButtonGroup offers={ep.offers ?? []} variant="dropdown" />
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </DeckCardWrapper>
-                              </div>
-                            );
-                          })}
-                        </ScrollableRow>
-                      )}
-
-                      {/* Title cards */}
-                      {dayTitles.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                          {dayTitles.map((t) => (
-                            <TitleCard key={t.id} title={t} />
-                          ))}
-                        </div>
-                      )}
-                      </div>
-                    </div>
-                  );
                   });
                 })()}
               </div>

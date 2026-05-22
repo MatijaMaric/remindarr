@@ -22,12 +22,13 @@ export async function createIntegration(
   userId: string,
   provider: string,
   name: string,
-  config: IntegrationConfig
+  config: IntegrationConfig,
 ): Promise<string> {
   return traceDbQuery("createIntegration", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
-    await db.insert(integrations)
+    await db
+      .insert(integrations)
       .values({
         id,
         userId,
@@ -47,16 +48,18 @@ export async function updateIntegration(
     name?: string;
     config?: IntegrationConfig;
     enabled?: boolean;
-  }
+  },
 ) {
   return traceDbQuery("updateIntegration", async () => {
     const db = getDb();
     const set: Record<string, unknown> = { updatedAt: sql`datetime('now')` };
     if (updates.name !== undefined) set.name = updates.name;
-    if (updates.config !== undefined) set.config = JSON.stringify(updates.config);
+    if (updates.config !== undefined)
+      set.config = JSON.stringify(updates.config);
     if (updates.enabled !== undefined) set.enabled = updates.enabled ? 1 : 0;
 
-    await db.update(integrations)
+    await db
+      .update(integrations)
       .set(set)
       .where(and(eq(integrations.id, id), eq(integrations.userId, userId)))
       .run();
@@ -66,7 +69,8 @@ export async function updateIntegration(
 export async function deleteIntegration(id: string, userId: string) {
   return traceDbQuery("deleteIntegration", async () => {
     const db = getDb();
-    await db.delete(integrations)
+    await db
+      .delete(integrations)
       .where(and(eq(integrations.id, id), eq(integrations.userId, userId)))
       .run();
   });
@@ -153,7 +157,9 @@ export async function getEnabledIntegrationsByProvider(provider: string) {
         last_sync_error: integrations.lastSyncError,
       })
       .from(integrations)
-      .where(and(eq(integrations.provider, provider), eq(integrations.enabled, 1)))
+      .where(
+        and(eq(integrations.provider, provider), eq(integrations.enabled, 1)),
+      )
       .all();
 
     return rows.map((row) => ({
@@ -167,11 +173,12 @@ export async function getEnabledIntegrationsByProvider(provider: string) {
 export async function updateIntegrationSyncStatus(
   id: string,
   lastSyncAt: string | null,
-  lastSyncError: string | null
+  lastSyncError: string | null,
 ) {
   return traceDbQuery("updateIntegrationSyncStatus", async () => {
     const db = getDb();
-    await db.update(integrations)
+    await db
+      .update(integrations)
       .set({
         lastSyncAt,
         lastSyncError,
@@ -185,7 +192,8 @@ export async function updateIntegrationSyncStatus(
 export async function disableIntegration(id: string) {
   return traceDbQuery("disableIntegration", async () => {
     const db = getDb();
-    await db.update(integrations)
+    await db
+      .update(integrations)
       .set({ enabled: 0, updatedAt: sql`datetime('now')` })
       .where(eq(integrations.id, id))
       .run();

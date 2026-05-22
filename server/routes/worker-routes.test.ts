@@ -11,9 +11,9 @@ import { join } from "path";
 
 // Routes intentionally excluded from CF Workers (with reason)
 const EXCLUDED_ROUTES = [
-  "jobsRoutes",              // Uses Bun-only in-memory job queue
-  "metricsRoutes",           // Prometheus metrics not applicable to CF Workers
-  "adminMaintenanceRoutes",  // Bun-only: cache flush + job queue (CF uses DO alarms)
+  "jobsRoutes", // Uses Bun-only in-memory job queue
+  "metricsRoutes", // Prometheus metrics not applicable to CF Workers
+  "adminMaintenanceRoutes", // Bun-only: cache flush + job queue (CF uses DO alarms)
 ];
 
 function extractRouteImports(source: string): string[] {
@@ -36,7 +36,8 @@ describe("worker.ts route parity", () => {
 
   test("all routes from index.ts are present in worker.ts or explicitly excluded", () => {
     const missingRoutes = indexRoutes.filter(
-      (route) => !workerRoutes.includes(route) && !EXCLUDED_ROUTES.includes(route),
+      (route) =>
+        !workerRoutes.includes(route) && !EXCLUDED_ROUTES.includes(route),
     );
 
     expect(missingRoutes).toEqual([]);

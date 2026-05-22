@@ -16,7 +16,12 @@ import {
   getTvGenres,
   fetchCollection,
 } from "../tmdb/client";
-import { parseMovieDetails, parseTvDetails, parseDiscoverMovie, parseDiscoverTv } from "../tmdb/parser";
+import {
+  parseMovieDetails,
+  parseTvDetails,
+  parseDiscoverMovie,
+  parseDiscoverTv,
+} from "../tmdb/parser";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
@@ -51,7 +56,9 @@ const app = new Hono<AppEnv>();
 
 const country = CONFIG.COUNTRY;
 
-function parseTitleId(titleId: string): { type: "MOVIE" | "SHOW"; tmdbId: number } | null {
+function parseTitleId(
+  titleId: string,
+): { type: "MOVIE" | "SHOW"; tmdbId: number } | null {
   const movieMatch = titleId.match(/^movie-(\d+)$/);
   if (movieMatch) return { type: "MOVIE", tmdbId: parseInt(movieMatch[1], 10) };
 
@@ -148,64 +155,103 @@ app.get("/show/:id", zValidator("param", titleIdParam), async (c) => {
   return ok(c, { title: { ...title, eta_days: etaDays }, tmdb, country });
 });
 
-app.get("/show/:id/season/:season", zValidator("param", seasonParam), async (c) => {
-  const user = c.get("user");
-  const title = await getOrFetchTitle(c.req.param("id"), user?.id);
-  if (!title) return err(c, "Title not found", 404);
+app.get(
+  "/show/:id/season/:season",
+  zValidator("param", seasonParam),
+  async (c) => {
+    const user = c.get("user");
+    const title = await getOrFetchTitle(c.req.param("id"), user?.id);
+    if (!title) return err(c, "Title not found", 404);
 
-  const seasonNumber = c.req.valid("param").season;
+    const seasonNumber = c.req.valid("param").season;
 
-  let tmdb = null;
-  let seasons: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null }[] = [];
+    let tmdb = null;
+    let seasons: {
+      season_number: number;
+      name: string;
+      episode_count: number;
+      air_date: string | null;
+      poster_path: string | null;
+    }[] = [];
 
-  if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
-    const [seasonResult, showResult] = await Promise.allSettled([
-      fetchSeasonDetails(title.tmdb_id, seasonNumber),
-      fetchShowFullDetails(title.tmdb_id),
-    ]);
+    if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
+      const [seasonResult, showResult] = await Promise.allSettled([
+        fetchSeasonDetails(title.tmdb_id, seasonNumber),
+        fetchShowFullDetails(title.tmdb_id),
+      ]);
 
-    if (seasonResult.status === "fulfilled") {
-      tmdb = seasonResult.value;
-    } else {
-      log.error("TMDB season fetch failed", { tmdbId: title.tmdb_id, season: seasonNumber, err: seasonResult.reason });
+      if (seasonResult.status === "fulfilled") {
+        tmdb = seasonResult.value;
+      } else {
+        log.error("TMDB season fetch failed", {
+          tmdbId: title.tmdb_id,
+          season: seasonNumber,
+          err: seasonResult.reason,
+        });
+      }
+
+      if (showResult.status === "fulfilled" && showResult.value?.seasons) {
+        seasons = showResult.value.seasons
+          .filter((s: { season_number: number }) => s.season_number > 0)
+          .sort(
+            (a: { season_number: number }, b: { season_number: number }) =>
+              a.season_number - b.season_number,
+          )
+          .map(
+            (s: {
+              season_number: number;
+              name: string;
+              episode_count: number;
+              air_date: string | null;
+              poster_path: string | null;
+            }) => ({
+              season_number: s.season_number,
+              name: s.name,
+              episode_count: s.episode_count,
+              air_date: s.air_date,
+              poster_path: s.poster_path,
+            }),
+          );
+      }
     }
 
-    if (showResult.status === "fulfilled" && showResult.value?.seasons) {
-      seasons = showResult.value.seasons
-        .filter((s: { season_number: number }) => s.season_number > 0)
-        .sort((a: { season_number: number }, b: { season_number: number }) => a.season_number - b.season_number)
-        .map((s: { season_number: number; name: string; episode_count: number; air_date: string | null; poster_path: string | null }) => ({
-          season_number: s.season_number,
-          name: s.name,
-          episode_count: s.episode_count,
-          air_date: s.air_date,
-          poster_path: s.poster_path,
-        }));
+    setPublicCacheIfAnon(c, 3600);
+    return ok(c, { title, tmdb, seasonNumber, country, seasons });
+  },
+);
+
+app.get(
+  "/show/:id/season/:season/episode/:episode",
+  zValidator("param", episodeParam),
+  async (c) => {
+    const user = c.get("user");
+    const title = await getOrFetchTitle(c.req.param("id"), user?.id);
+    if (!title) return err(c, "Title not found", 404);
+
+    const { season: seasonNumber, episode: episodeNumber } =
+      c.req.valid("param");
+
+    let tmdb = null;
+    if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
+      try {
+        tmdb = await fetchEpisodeDetails(
+          title.tmdb_id,
+          seasonNumber,
+          episodeNumber,
+        );
+      } catch (e) {
+        log.error("TMDB episode fetch failed", {
+          tmdbId: title.tmdb_id,
+          season: seasonNumber,
+          episode: episodeNumber,
+          err: e,
+        });
+      }
     }
-  }
 
-  setPublicCacheIfAnon(c, 3600);
-  return ok(c, { title, tmdb, seasonNumber, country, seasons });
-});
-
-app.get("/show/:id/season/:season/episode/:episode", zValidator("param", episodeParam), async (c) => {
-  const user = c.get("user");
-  const title = await getOrFetchTitle(c.req.param("id"), user?.id);
-  if (!title) return err(c, "Title not found", 404);
-
-  const { season: seasonNumber, episode: episodeNumber } = c.req.valid("param");
-
-  let tmdb = null;
-  if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
-    try {
-      tmdb = await fetchEpisodeDetails(title.tmdb_id, seasonNumber, episodeNumber);
-    } catch (e) {
-      log.error("TMDB episode fetch failed", { tmdbId: title.tmdb_id, season: seasonNumber, episode: episodeNumber, err: e });
-    }
-  }
-
-  return ok(c, { title, tmdb, seasonNumber, episodeNumber, country });
-});
+    return ok(c, { title, tmdb, seasonNumber, episodeNumber, country });
+  },
+);
 
 app.get("/person/:personId", zValidator("param", personIdParam), async (c) => {
   const personId = c.req.valid("param").personId;
@@ -223,59 +269,91 @@ app.get("/person/:personId", zValidator("param", personIdParam), async (c) => {
   }
 });
 
-app.get("/movie/:id/suggestions", zValidator("param", titleIdParam), zValidator("query", suggestionsQuery), async (c) => {
-  const parsed = parseTitleId(c.req.param("id"));
-  if (!parsed || parsed.type !== "MOVIE") return err(c, "Invalid title ID", 400);
-  if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
+app.get(
+  "/movie/:id/suggestions",
+  zValidator("param", titleIdParam),
+  zValidator("query", suggestionsQuery),
+  async (c) => {
+    const parsed = parseTitleId(c.req.param("id"));
+    if (!parsed || parsed.type !== "MOVIE")
+      return err(c, "Invalid title ID", 400);
+    if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
 
-  const page = c.req.valid("query").page;
+    const page = c.req.valid("query").page;
 
-  try {
-    const [data, genreMap] = await Promise.all([
-      fetchMovieSuggestions(parsed.tmdbId, page),
-      getMovieGenres(),
-    ]);
-    const titles = data.results.map((r) => parseDiscoverMovie(r, genreMap));
-    setPublicCacheIfAnon(c, 1800);
-    return ok(c, { titles, page: data.page, totalPages: data.total_pages, totalResults: data.total_results });
-  } catch (e) {
-    log.error("TMDB movie suggestions fetch failed", { tmdbId: parsed.tmdbId, err: e });
-    return err(c, "Failed to fetch suggestions", 503);
-  }
-});
+    try {
+      const [data, genreMap] = await Promise.all([
+        fetchMovieSuggestions(parsed.tmdbId, page),
+        getMovieGenres(),
+      ]);
+      const titles = data.results.map((r) => parseDiscoverMovie(r, genreMap));
+      setPublicCacheIfAnon(c, 1800);
+      return ok(c, {
+        titles,
+        page: data.page,
+        totalPages: data.total_pages,
+        totalResults: data.total_results,
+      });
+    } catch (e) {
+      log.error("TMDB movie suggestions fetch failed", {
+        tmdbId: parsed.tmdbId,
+        err: e,
+      });
+      return err(c, "Failed to fetch suggestions", 503);
+    }
+  },
+);
 
-app.get("/show/:id/suggestions", zValidator("param", titleIdParam), zValidator("query", suggestionsQuery), async (c) => {
-  const parsed = parseTitleId(c.req.param("id"));
-  if (!parsed || parsed.type !== "SHOW") return err(c, "Invalid title ID", 400);
-  if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
+app.get(
+  "/show/:id/suggestions",
+  zValidator("param", titleIdParam),
+  zValidator("query", suggestionsQuery),
+  async (c) => {
+    const parsed = parseTitleId(c.req.param("id"));
+    if (!parsed || parsed.type !== "SHOW")
+      return err(c, "Invalid title ID", 400);
+    if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
 
-  const page = c.req.valid("query").page;
+    const page = c.req.valid("query").page;
 
-  try {
-    const [data, genreMap] = await Promise.all([
-      fetchTvSuggestions(parsed.tmdbId, page),
-      getTvGenres(),
-    ]);
-    const titles = data.results.map((r) => parseDiscoverTv(r, genreMap));
-    setPublicCacheIfAnon(c, 1800);
-    return ok(c, { titles, page: data.page, totalPages: data.total_pages, totalResults: data.total_results });
-  } catch (e) {
-    log.error("TMDB show suggestions fetch failed", { tmdbId: parsed.tmdbId, err: e });
-    return err(c, "Failed to fetch suggestions", 503);
-  }
-});
+    try {
+      const [data, genreMap] = await Promise.all([
+        fetchTvSuggestions(parsed.tmdbId, page),
+        getTvGenres(),
+      ]);
+      const titles = data.results.map((r) => parseDiscoverTv(r, genreMap));
+      setPublicCacheIfAnon(c, 1800);
+      return ok(c, {
+        titles,
+        page: data.page,
+        totalPages: data.total_pages,
+        totalResults: data.total_results,
+      });
+    } catch (e) {
+      log.error("TMDB show suggestions fetch failed", {
+        tmdbId: parsed.tmdbId,
+        err: e,
+      });
+      return err(c, "Failed to fetch suggestions", 503);
+    }
+  },
+);
 
-app.get("/collection/:id", zValidator("param", collectionIdParam), async (c) => {
-  if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
-  const { id } = c.req.valid("param");
-  try {
-    const collection = await fetchCollection(id);
-    setPublicCacheIfAnon(c, 3600);
-    return c.json(collection);
-  } catch (e) {
-    log.error("TMDB collection fetch failed", { collectionId: id, err: e });
-    return err(c, "Collection not found", 404);
-  }
-});
+app.get(
+  "/collection/:id",
+  zValidator("param", collectionIdParam),
+  async (c) => {
+    if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
+    const { id } = c.req.valid("param");
+    try {
+      const collection = await fetchCollection(id);
+      setPublicCacheIfAnon(c, 3600);
+      return c.json(collection);
+    } catch (e) {
+      log.error("TMDB collection fetch failed", { collectionId: id, err: e });
+      return err(c, "Collection not found", 404);
+    }
+  },
+);
 
 export default app;

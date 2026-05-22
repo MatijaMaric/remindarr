@@ -8,7 +8,12 @@ import {
   getIntegrationsByUser,
   getIntegrationById,
 } from "../db/repository";
-import { createPin, checkPin, buildPlexAuthUrl, getServers } from "../plex/client";
+import {
+  createPin,
+  checkPin,
+  buildPlexAuthUrl,
+  getServers,
+} from "../plex/client";
 import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
 import { enqueueAdhoc } from "../jobs/backend";
@@ -145,7 +150,12 @@ app.post("/", zValidator("json", createIntegrationSchema), async (c) => {
     syncEpisodes: config.syncEpisodes !== false,
   };
 
-  const id = await createIntegration(user.id, provider, integrationName, integrationConfig);
+  const id = await createIntegration(
+    user.id,
+    provider,
+    integrationName,
+    integrationConfig,
+  );
   const integration = await getIntegrationById(id, user.id);
 
   // Trigger an immediate library scan so Plex content shows up right away
@@ -170,7 +180,10 @@ app.put("/:id", zValidator("json", updateIntegrationSchema), async (c) => {
     const merged = {
       ...existing.config,
       ...body.config,
-      serverUrl: (body.config.serverUrl ?? existing.config.serverUrl).replace(/\/$/, ""),
+      serverUrl: (body.config.serverUrl ?? existing.config.serverUrl).replace(
+        /\/$/,
+        "",
+      ),
     };
     updates.config = merged;
   }
@@ -199,20 +212,36 @@ app.post("/:id/sync", async (c) => {
 
   const integration = await getIntegrationById(id, user.id);
   if (!integration) return err(c, "Integration not found", 404);
-  if (integration.provider !== "plex") return err(c, "Only Plex integrations support manual sync");
+  if (integration.provider !== "plex")
+    return err(c, "Only Plex integrations support manual sync");
 
   try {
     const [watchedResult, libraryResult] = await Promise.allSettled([
-      syncPlexWatched({ id, user_id: user.id, config: integration.config as any }),
-      syncPlexLibrary({ id, user_id: user.id, config: integration.config as any }),
+      syncPlexWatched({
+        id,
+        user_id: user.id,
+        config: integration.config as any,
+      }),
+      syncPlexLibrary({
+        id,
+        user_id: user.id,
+        config: integration.config as any,
+      }),
     ]);
-    const watchedData = watchedResult.status === "fulfilled" ? watchedResult.value : null;
-    const libraryData = libraryResult.status === "fulfilled" ? libraryResult.value : null;
-    const error = watchedResult.status === "rejected"
-      ? (watchedResult.reason instanceof Error ? watchedResult.reason.message : "Sync failed")
-      : (libraryResult.status === "rejected"
-        ? (libraryResult.reason instanceof Error ? libraryResult.reason.message : "Library sync failed")
-        : undefined);
+    const watchedData =
+      watchedResult.status === "fulfilled" ? watchedResult.value : null;
+    const libraryData =
+      libraryResult.status === "fulfilled" ? libraryResult.value : null;
+    const error =
+      watchedResult.status === "rejected"
+        ? watchedResult.reason instanceof Error
+          ? watchedResult.reason.message
+          : "Sync failed"
+        : libraryResult.status === "rejected"
+          ? libraryResult.reason instanceof Error
+            ? libraryResult.reason.message
+            : "Library sync failed"
+          : undefined;
     return ok(c, {
       success: !error,
       ...(watchedData ?? {}),

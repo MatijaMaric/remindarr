@@ -1,5 +1,11 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, fireEvent, cleanup, renderHook } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  renderHook,
+} from "@testing-library/react";
 import "../../i18n";
 import WatchlistTabs, {
   useWatchlistFilters,
@@ -15,7 +21,11 @@ const emptyTitle: Partial<Title> = {
   is_tracked: true,
 };
 
-function show(id: string, user_status: Title["user_status"], show_status?: Title["show_status"]): Title {
+function show(
+  id: string,
+  user_status: Title["user_status"],
+  show_status?: Title["show_status"],
+): Title {
   return {
     ...emptyTitle,
     id,
@@ -39,7 +49,9 @@ describe("WatchlistTabs", () => {
       on_hold: 4,
       movies: 7,
     };
-    render(<WatchlistTabs active="watching" onChange={() => {}} counts={counts} />);
+    render(
+      <WatchlistTabs active="watching" onChange={() => {}} counts={counts} />,
+    );
     expect(screen.getByTestId("tab-watching").textContent).toContain("3");
     expect(screen.getByTestId("tab-completed").textContent).toContain("2");
     expect(screen.getByTestId("tab-plan_to_watch").textContent).toContain("1");
@@ -50,20 +62,36 @@ describe("WatchlistTabs", () => {
   it("calls onChange when a tab is clicked", () => {
     const onChange = mock<(t: WatchlistTab) => void>(() => {});
     const counts: Record<WatchlistTab, number> = {
-      watching: 1, completed: 1, plan_to_watch: 1, on_hold: 1, movies: 1,
+      watching: 1,
+      completed: 1,
+      plan_to_watch: 1,
+      on_hold: 1,
+      movies: 1,
     };
-    render(<WatchlistTabs active="watching" onChange={onChange} counts={counts} />);
+    render(
+      <WatchlistTabs active="watching" onChange={onChange} counts={counts} />,
+    );
     fireEvent.click(screen.getByTestId("tab-completed"));
     expect(onChange).toHaveBeenCalledWith("completed");
   });
 
   it("marks the active tab aria-selected=true", () => {
     const counts: Record<WatchlistTab, number> = {
-      watching: 1, completed: 1, plan_to_watch: 1, on_hold: 1, movies: 1,
+      watching: 1,
+      completed: 1,
+      plan_to_watch: 1,
+      on_hold: 1,
+      movies: 1,
     };
-    render(<WatchlistTabs active="completed" onChange={() => {}} counts={counts} />);
-    expect(screen.getByTestId("tab-completed").getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByTestId("tab-watching").getAttribute("aria-selected")).toBe("false");
+    render(
+      <WatchlistTabs active="completed" onChange={() => {}} counts={counts} />,
+    );
+    expect(
+      screen.getByTestId("tab-completed").getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(
+      screen.getByTestId("tab-watching").getAttribute("aria-selected"),
+    ).toBe("false");
   });
 });
 
@@ -83,6 +111,9 @@ describe("useWatchlistFilters", () => {
     expect(result.current.counts.plan_to_watch).toBe(1);
     expect(result.current.counts.on_hold).toBe(1);
     expect(result.current.counts.movies).toBe(2);
-    expect(result.current.lists.watching.map((s: Title) => s.id)).toEqual(["a", "b"]);
+    expect(result.current.lists.watching.map((s: Title) => s.id)).toEqual([
+      "a",
+      "b",
+    ]);
   });
 });

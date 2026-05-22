@@ -83,7 +83,9 @@ export const MOCK_SHOW = {
 };
 
 const today = new Date().toISOString().split("T")[0];
-const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  .toISOString()
+  .split("T")[0];
 
 export const MOCK_EPISODE = {
   id: 101,
@@ -144,7 +146,10 @@ export const MOCK_MOVIE_DETAILS = {
     overview: "A test movie description",
     release_date: "2024-01-15",
     runtime: 120,
-    genres: [{ id: 28, name: "Action" }, { id: 18, name: "Drama" }],
+    genres: [
+      { id: 28, name: "Action" },
+      { id: 18, name: "Drama" },
+    ],
     vote_average: 7.8,
     vote_count: 5000,
     poster_path: null,
@@ -203,13 +208,13 @@ export const MOCK_SHOW_DETAILS = {
  */
 export async function mockLoggedOut(page: Page) {
   await page.route("**/api/auth/get-session", (route) =>
-    route.fulfill({ json: null })
+    route.fulfill({ json: null }),
   );
   await page.route("**/api/auth/custom/providers", (route) =>
-    route.fulfill({ json: MOCK_PROVIDERS })
+    route.fulfill({ json: MOCK_PROVIDERS }),
   );
   await page.route("**/api/auth/csrf", (route) =>
-    route.fulfill({ json: { csrfToken: "mock-csrf-token" } })
+    route.fulfill({ json: { csrfToken: "mock-csrf-token" } }),
   );
 }
 
@@ -218,10 +223,10 @@ export async function mockLoggedOut(page: Page) {
  */
 export async function mockLoggedIn(page: Page) {
   await page.route("**/api/auth/get-session", (route) =>
-    route.fulfill({ json: MOCK_SESSION })
+    route.fulfill({ json: MOCK_SESSION }),
   );
   await page.route("**/api/auth/custom/providers", (route) =>
-    route.fulfill({ json: MOCK_PROVIDERS })
+    route.fulfill({ json: MOCK_PROVIDERS }),
   );
 }
 
@@ -232,23 +237,20 @@ export async function mockLoggedIn(page: Page) {
  * Note: more specific routes are registered last so they take precedence
  * (Playwright applies routes in reverse registration order).
  */
-export async function mockTitleEndpoints(
-  page: Page,
-  titles = [MOCK_TITLE]
-) {
+export async function mockTitleEndpoints(page: Page, titles = [MOCK_TITLE]) {
   // General titles route registered first (lower precedence)
   await page.route("**/api/titles**", (route) =>
-    route.fulfill({ json: { titles, count: titles.length } })
+    route.fulfill({ json: { titles, count: titles.length } }),
   );
   // Specific sub-routes registered last (higher precedence)
   await page.route("**/api/titles/providers", (route) =>
-    route.fulfill({ json: { providers: [] } })
+    route.fulfill({ json: { providers: [] } }),
   );
   await page.route("**/api/titles/genres", (route) =>
-    route.fulfill({ json: { genres: ["Action", "Drama", "Comedy"] } })
+    route.fulfill({ json: { genres: ["Action", "Drama", "Comedy"] } }),
   );
   await page.route("**/api/titles/languages", (route) =>
-    route.fulfill({ json: { languages: ["en", "es", "fr"] } })
+    route.fulfill({ json: { languages: ["en", "es", "fr"] } }),
   );
 }
 
@@ -267,6 +269,6 @@ export async function mockBrowseEndpoints(page: Page) {
         availableProviders: [],
         availableLanguages: [],
       },
-    })
+    }),
   );
 }

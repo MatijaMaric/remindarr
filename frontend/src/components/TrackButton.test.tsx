@@ -1,5 +1,20 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+  act,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 // Initialize i18n before anything else
 import "../i18n";
@@ -10,10 +25,18 @@ import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -24,10 +47,18 @@ const mockAuthValue = {
   refresh: mock(() => Promise.resolve()),
 };
 
-function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+function Wrapper({
+  children,
+  authValue,
+}: {
+  children: ReactNode;
+  authValue?: typeof mockAuthValue;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>
+        {children}
+      </AuthContext>
     </QueryClientProvider>
   );
 }
@@ -51,12 +82,16 @@ afterEach(() => {
 
 describe("TrackButton", () => {
   it("renders 'Track' when not tracked", () => {
-    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
+    render(<TrackButton titleId="123" isTracked={false} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
   });
 
   it("renders 'Tracked' when tracked", () => {
-    render(<TrackButton titleId="123" isTracked={true} />, { wrapper: Wrapper });
+    render(<TrackButton titleId="123" isTracked={true} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
   });
 
@@ -67,14 +102,17 @@ describe("TrackButton", () => {
         <AuthContext value={noUserAuth as any}>
           <TrackButton titleId="123" isTracked={false} />
         </AuthContext>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     expect(container.innerHTML).toBe("");
   });
 
   it("calls trackTitle and updates to 'Tracked' on click", async () => {
     const onToggle = mock(() => {});
-    render(<TrackButton titleId="123" isTracked={false} onToggle={onToggle} />, { wrapper: Wrapper });
+    render(
+      <TrackButton titleId="123" isTracked={false} onToggle={onToggle} />,
+      { wrapper: Wrapper },
+    );
 
     const button = screen.getByRole("button", { name: "Track" });
     fireEvent.click(button);
@@ -88,17 +126,31 @@ describe("TrackButton", () => {
   });
 
   it("has aria-pressed=false when not tracked", () => {
-    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
-    expect(screen.getByRole("button", { name: "Track" }).getAttribute("aria-pressed")).toBe("false");
+    render(<TrackButton titleId="123" isTracked={false} />, {
+      wrapper: Wrapper,
+    });
+    expect(
+      screen
+        .getByRole("button", { name: "Track" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 
   it("has aria-pressed=true when tracked", () => {
-    render(<TrackButton titleId="123" isTracked={true} />, { wrapper: Wrapper });
-    expect(screen.getByRole("button", { name: "Tracked" }).getAttribute("aria-pressed")).toBe("true");
+    render(<TrackButton titleId="123" isTracked={true} />, {
+      wrapper: Wrapper,
+    });
+    expect(
+      screen
+        .getByRole("button", { name: "Tracked" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("shows success toast when tracking a title", async () => {
-    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
+    render(<TrackButton titleId="123" isTracked={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Track" }));
 
@@ -110,12 +162,16 @@ describe("TrackButton", () => {
   it("shows error toast when tracking fails", async () => {
     (api.trackTitle as any).mockRejectedValueOnce(new Error("Network error"));
 
-    render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
+    render(<TrackButton titleId="123" isTracked={false} />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Track" }));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to track — please try again");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Failed to track — please try again",
+      );
     });
   });
 
@@ -123,10 +179,15 @@ describe("TrackButton", () => {
     // Make trackTitle hang to observe loading state
     let resolveTrack: () => void;
     (api.trackTitle as any).mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveTrack = resolve; })
+      () =>
+        new Promise<void>((resolve) => {
+          resolveTrack = resolve;
+        }),
     );
 
-    render(<TrackButton titleId="789" isTracked={false} />, { wrapper: Wrapper });
+    render(<TrackButton titleId="789" isTracked={false} />, {
+      wrapper: Wrapper,
+    });
 
     const button = screen.getByRole("button", { name: "Track" });
     fireEvent.click(button);
@@ -136,7 +197,9 @@ describe("TrackButton", () => {
     });
 
     // Button should be disabled while loading
-    expect(screen.getByRole("button", { name: "..." }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "..." }).hasAttribute("disabled"),
+    ).toBe(true);
 
     resolveTrack!();
 
@@ -243,12 +306,16 @@ describe("TrackButton", () => {
       fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
       await waitFor(() => {
-        expect(sonner.toast.success).toHaveBeenCalledWith("Removed from tracked");
+        expect(sonner.toast.success).toHaveBeenCalledWith(
+          "Removed from tracked",
+        );
       });
     });
 
     it("shows error toast when untrack fails after confirmation", async () => {
-      (api.untrackTitle as any).mockRejectedValueOnce(new Error("Network error"));
+      (api.untrackTitle as any).mockRejectedValueOnce(
+        new Error("Network error"),
+      );
 
       render(
         <TrackButton
@@ -268,15 +335,16 @@ describe("TrackButton", () => {
       fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
       await waitFor(() => {
-        expect(sonner.toast.error).toHaveBeenCalledWith("Failed to untrack — please try again");
+        expect(sonner.toast.error).toHaveBeenCalledWith(
+          "Failed to untrack — please try again",
+        );
       });
     });
 
     it("uses fallback title in dialog when titleData is not provided", async () => {
-      render(
-        <TrackButton titleId="456" isTracked={true} />,
-        { wrapper: Wrapper },
-      );
+      render(<TrackButton titleId="456" isTracked={true} />, {
+        wrapper: Wrapper,
+      });
 
       fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
 
@@ -286,7 +354,9 @@ describe("TrackButton", () => {
     });
 
     it("does not show confirmation dialog when tracking", () => {
-      render(<TrackButton titleId="123" isTracked={false} />, { wrapper: Wrapper });
+      render(<TrackButton titleId="123" isTracked={false} />, {
+        wrapper: Wrapper,
+      });
 
       fireEvent.click(screen.getByRole("button", { name: "Track" }));
 

@@ -8,16 +8,26 @@ import {
   recordDelivery,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
-import { buildNotificationContent, buildWeeklyDigestContent } from "../notifications/content";
+import {
+  buildNotificationContent,
+  buildWeeklyDigestContent,
+} from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { refreshNotificationSchedule } from "./schedule";
 import { getCurrentTimeInTimezone } from "./time-utils";
 import { notificationsSentTotal } from "../metrics";
-import { listEarnedSince, markAchievementsNotified } from "../db/repository/achievements";
+import {
+  listEarnedSince,
+  markAchievementsNotified,
+} from "../db/repository/achievements";
 import { ACHIEVEMENTS } from "../achievements/definitions";
 
 // Re-export portable scheduling functions for backward compatibility (tests import from here)
-export { convertToLocalTime, computeNotificationCron, refreshNotificationSchedule } from "./schedule";
+export {
+  convertToLocalTime,
+  computeNotificationCron,
+  refreshNotificationSchedule,
+} from "./schedule";
 
 const log = logger.child({ module: "notifications" });
 
@@ -30,7 +40,10 @@ export async function registerNotificationJobs() {
       if (timezones.length === 0) return;
 
       // Compute current time for each timezone
-      const timesByTimezone = new Map<string, { time: string; date: string; dayOfWeek: number }>();
+      const timesByTimezone = new Map<
+        string,
+        { time: string; date: string; dayOfWeek: number }
+      >();
       for (const tz of timezones) {
         timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
       }
@@ -42,8 +55,14 @@ export async function registerNotificationJobs() {
 
       // Per-invocation caches keyed by "userId|date" — local to this job run, not global.
       // For N notifiers sharing the same user+date, DB queries drop from 2N to 2.
-      const dailyContentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
-      const weeklyContentCache = new Map<string, Awaited<ReturnType<typeof buildWeeklyDigestContent>>>();
+      const dailyContentCache = new Map<
+        string,
+        Awaited<ReturnType<typeof buildNotificationContent>>
+      >();
+      const weeklyContentCache = new Map<
+        string,
+        Awaited<ReturnType<typeof buildWeeklyDigestContent>>
+      >();
 
       async function getDailyContentCached(userId: string, date: string) {
         const key = `${userId}|${date}`;
@@ -56,13 +75,25 @@ export async function registerNotificationJobs() {
         return result;
       }
 
-      async function getWeeklyContentCached(userId: string, startDate: string, endDate: string) {
+      async function getWeeklyContentCached(
+        userId: string,
+        startDate: string,
+        endDate: string,
+      ) {
         const key = `${userId}|${startDate}|${endDate}`;
         if (weeklyContentCache.has(key)) {
-          log.debug("Weekly digest content cache hit", { userId, startDate, endDate });
+          log.debug("Weekly digest content cache hit", {
+            userId,
+            startDate,
+            endDate,
+          });
           return weeklyContentCache.get(key)!;
         }
-        const result = await buildWeeklyDigestContent(userId, startDate, endDate);
+        const result = await buildWeeklyDigestContent(
+          userId,
+          startDate,
+          endDate,
+        );
         weeklyContentCache.set(key, result);
         return result;
       }
@@ -71,7 +102,10 @@ export async function registerNotificationJobs() {
         try {
           const provider = getProvider(notifier.provider);
           if (!provider) {
-            log.warn("Unknown provider", { provider: notifier.provider, notifierId: notifier.id });
+            log.warn("Unknown provider", {
+              provider: notifier.provider,
+              notifierId: notifier.id,
+            });
             continue;
           }
 
@@ -88,7 +122,11 @@ export async function registerNotificationJobs() {
               endDate.setUTCDate(endDate.getUTCDate() + 7);
               endDateStr = endDate.toISOString().slice(0, 10);
             } catch (err) {
-              log.warn("Failed to parse timezone date, skipping notifier", { tz: notifier.timezone, notifierId: notifier.id, err });
+              log.warn("Failed to parse timezone date, skipping notifier", {
+                tz: notifier.timezone,
+                notifierId: notifier.id,
+                err,
+              });
               continue;
             }
 
@@ -100,7 +138,7 @@ export async function registerNotificationJobs() {
             const content = await getWeeklyContentCached(
               notifier.user_id,
               tzInfo.date,
-              endDateStr
+              endDateStr,
             );
 
             if (content.episodes.length === 0 && content.movies.length === 0) {
@@ -111,15 +149,38 @@ export async function registerNotificationJobs() {
             const weeklyStart = Date.now();
             try {
               await provider.send(notifier.config, content);
-              await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - weeklyStart, eventKind: "digest" });
-              notificationsSentTotal.inc({ provider: notifier.provider, kind: "digest", outcome: "success" });
+              await recordDelivery({
+                notifierId: notifier.id,
+                status: "success",
+                latencyMs: Date.now() - weeklyStart,
+                eventKind: "digest",
+              });
+              notificationsSentTotal.inc({
+                provider: notifier.provider,
+                kind: "digest",
+                outcome: "success",
+              });
             } catch (sendErr) {
-              await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - weeklyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "digest" });
-              notificationsSentTotal.inc({ provider: notifier.provider, kind: "digest", outcome: "failure" });
+              await recordDelivery({
+                notifierId: notifier.id,
+                status: "failure",
+                latencyMs: Date.now() - weeklyStart,
+                errorMessage:
+                  sendErr instanceof Error ? sendErr.message : String(sendErr),
+                eventKind: "digest",
+              });
+              notificationsSentTotal.inc({
+                provider: notifier.provider,
+                kind: "digest",
+                outcome: "failure",
+              });
               throw sendErr;
             }
             await markNotifierSent(notifier.id, notifier.todayDate);
-            log.info("Sent weekly digest notification", { provider: notifier.provider, userId: notifier.user_id });
+            log.info("Sent weekly digest notification", {
+              provider: notifier.provider,
+              userId: notifier.user_id,
+            });
             continue;
           }
 
@@ -132,18 +193,26 @@ export async function registerNotificationJobs() {
           // Default daily behavior
           const content = await getDailyContentCached(
             notifier.user_id,
-            notifier.todayDate
+            notifier.todayDate,
           );
 
           // Inject achievements if enabled for this notifier
           let achievementKeys: string[] = [];
           if (notifier.achievementsEnabled) {
-            const lastSentDate = notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
-            const earnedSince = await listEarnedSince(notifier.user_id, lastSentDate);
-            const unnotified = earnedSince.filter((ua) => !ua.earnedNotified && ua.earnedAt != null);
+            const lastSentDate =
+              notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
+            const earnedSince = await listEarnedSince(
+              notifier.user_id,
+              lastSentDate,
+            );
+            const unnotified = earnedSince.filter(
+              (ua) => !ua.earnedNotified && ua.earnedAt != null,
+            );
             if (unnotified.length > 0) {
               content.achievementsEarned = unnotified.map((ua) => {
-                const def = ACHIEVEMENTS.find((a) => a.key === ua.achievementKey);
+                const def = ACHIEVEMENTS.find(
+                  (a) => a.key === ua.achievementKey,
+                );
                 return {
                   key: ua.achievementKey,
                   title: def?.title ?? ua.achievementKey,
@@ -158,7 +227,11 @@ export async function registerNotificationJobs() {
           }
 
           // Skip if nothing to notify about
-          if (content.episodes.length === 0 && content.movies.length === 0 && !(content.achievementsEarned?.length)) {
+          if (
+            content.episodes.length === 0 &&
+            content.movies.length === 0 &&
+            !content.achievementsEarned?.length
+          ) {
             await markNotifierSent(notifier.id, notifier.todayDate);
             continue;
           }
@@ -166,11 +239,31 @@ export async function registerNotificationJobs() {
           const dailyStart = Date.now();
           try {
             await provider.send(notifier.config, content);
-            await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - dailyStart, eventKind: "episode_air" });
-            notificationsSentTotal.inc({ provider: notifier.provider, kind: "daily", outcome: "success" });
+            await recordDelivery({
+              notifierId: notifier.id,
+              status: "success",
+              latencyMs: Date.now() - dailyStart,
+              eventKind: "episode_air",
+            });
+            notificationsSentTotal.inc({
+              provider: notifier.provider,
+              kind: "daily",
+              outcome: "success",
+            });
           } catch (sendErr) {
-            await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - dailyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "episode_air" });
-            notificationsSentTotal.inc({ provider: notifier.provider, kind: "daily", outcome: "failure" });
+            await recordDelivery({
+              notifierId: notifier.id,
+              status: "failure",
+              latencyMs: Date.now() - dailyStart,
+              errorMessage:
+                sendErr instanceof Error ? sendErr.message : String(sendErr),
+              eventKind: "episode_air",
+            });
+            notificationsSentTotal.inc({
+              provider: notifier.provider,
+              kind: "daily",
+              outcome: "failure",
+            });
             throw sendErr;
           }
           // Mark achievements as notified after successful send
@@ -178,14 +271,24 @@ export async function registerNotificationJobs() {
             await markAchievementsNotified(notifier.user_id, achievementKeys);
           }
           await markNotifierSent(notifier.id, notifier.todayDate);
-          log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
+          log.info("Sent notification", {
+            provider: notifier.provider,
+            userId: notifier.user_id,
+          });
         } catch (err) {
           if (err instanceof SubscriptionExpiredError) {
-            log.warn("Push subscription expired, disabling notifier", { notifierId: notifier.id });
+            log.warn("Push subscription expired, disabling notifier", {
+              notifierId: notifier.id,
+            });
             await disableNotifier(notifier.id);
             continue;
           }
-          log.error("Failed to send notification", { provider: notifier.provider, notifierId: notifier.id, userId: notifier.user_id, err });
+          log.error("Failed to send notification", {
+            provider: notifier.provider,
+            notifierId: notifier.id,
+            userId: notifier.user_id,
+            err,
+          });
         }
       }
     });

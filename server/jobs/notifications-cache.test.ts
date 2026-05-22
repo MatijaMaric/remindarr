@@ -12,7 +12,15 @@
  * a live ESM binding from the same namespace object, spyOn intercepts calls
  * from within processor.ts as well.
  */
-import { describe, it, expect, beforeEach, afterAll, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  afterEach,
+  spyOn,
+} from "bun:test";
 
 import * as contentModule from "../notifications/content";
 import * as registryModule from "../notifications/registry";
@@ -44,7 +52,11 @@ function nowUtc(): { time: string; date: string; dayOfWeek: number } {
   const yyyy = n.getUTCFullYear();
   const mo = (n.getUTCMonth() + 1).toString().padStart(2, "0");
   const dd = n.getUTCDate().toString().padStart(2, "0");
-  return { time: `${hh}:${mm}`, date: `${yyyy}-${mo}-${dd}`, dayOfWeek: n.getUTCDay() };
+  return {
+    time: `${hh}:${mm}`,
+    date: `${yyyy}-${mo}-${dd}`,
+    dayOfWeek: n.getUTCDay(),
+  };
 }
 
 async function insertSendNotificationsJob() {
@@ -109,12 +121,38 @@ describe("notification content caching (N+1 fix)", () => {
 
     // 3 notifiers for the same user at the same time — all due simultaneously.
     // Without the cache they would each trigger 2 DB queries (6 total).
-    await createNotifier(userId, "discord", "N1", { webhookUrl: "https://discord.com/a" }, testTime, "UTC");
-    await createNotifier(userId, "discord", "N2", { webhookUrl: "https://discord.com/b" }, testTime, "UTC");
-    await createNotifier(userId, "discord", "N3", { webhookUrl: "https://discord.com/c" }, testTime, "UTC");
+    await createNotifier(
+      userId,
+      "discord",
+      "N1",
+      { webhookUrl: "https://discord.com/a" },
+      testTime,
+      "UTC",
+    );
+    await createNotifier(
+      userId,
+      "discord",
+      "N2",
+      { webhookUrl: "https://discord.com/b" },
+      testTime,
+      "UTC",
+    );
+    await createNotifier(
+      userId,
+      "discord",
+      "N3",
+      { webhookUrl: "https://discord.com/c" },
+      testTime,
+      "UTC",
+    );
 
     // Sanity check: confirm all 3 are picked up as due
-    const timesByTimezone = new Map([["UTC", { time: testTime, date: testDate, dayOfWeek: new Date().getUTCDay() }]]);
+    const timesByTimezone = new Map([
+      [
+        "UTC",
+        { time: testTime, date: testDate, dayOfWeek: new Date().getUTCDay() },
+      ],
+    ]);
     const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(3);
 
@@ -147,12 +185,38 @@ describe("notification content caching (N+1 fix)", () => {
     const userId2 = await createUser("testuser2", "hash2");
 
     // User 1 has 2 notifiers, user 2 has 1 — 3 total, all due at the same time
-    await createNotifier(userId, "discord", "U1-N1", { webhookUrl: "https://discord.com/a" }, testTime, "UTC");
-    await createNotifier(userId, "discord", "U1-N2", { webhookUrl: "https://discord.com/b" }, testTime, "UTC");
-    await createNotifier(userId2, "discord", "U2-N1", { webhookUrl: "https://discord.com/c" }, testTime, "UTC");
+    await createNotifier(
+      userId,
+      "discord",
+      "U1-N1",
+      { webhookUrl: "https://discord.com/a" },
+      testTime,
+      "UTC",
+    );
+    await createNotifier(
+      userId,
+      "discord",
+      "U1-N2",
+      { webhookUrl: "https://discord.com/b" },
+      testTime,
+      "UTC",
+    );
+    await createNotifier(
+      userId2,
+      "discord",
+      "U2-N1",
+      { webhookUrl: "https://discord.com/c" },
+      testTime,
+      "UTC",
+    );
 
     // Sanity check: all 3 are due
-    const timesByTimezone = new Map([["UTC", { time: testTime, date: testDate, dayOfWeek: new Date().getUTCDay() }]]);
+    const timesByTimezone = new Map([
+      [
+        "UTC",
+        { time: testTime, date: testDate, dayOfWeek: new Date().getUTCDay() },
+      ],
+    ]);
     const due = await getDueNotifiers(timesByTimezone);
     expect(due).toHaveLength(3);
 

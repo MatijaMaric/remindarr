@@ -1,8 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import { CONFIG } from "../config";
 import * as sync from "../tmdb/sync";
@@ -127,7 +139,13 @@ describe("GET /episodes/status/:titleId/:season", () => {
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/episodes/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     const episodesApp = (await import("./episodes")).default;
@@ -140,20 +158,53 @@ describe("GET /episodes/status/:titleId/:season", () => {
   });
 
   it("returns episode status with is_watched false for unwatched episodes", async () => {
-    const { createUser, upsertTitles, upsertEpisodes } = await import("../db/repository");
+    const { createUser, upsertTitles, upsertEpisodes } =
+      await import("../db/repository");
     const userId = await createUser("testuser", "hash");
 
-    await upsertTitles([makeParsedTitle({ id: "tv-100", objectType: "SHOW", title: "Test Show" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "tv-100", objectType: "SHOW", title: "Test Show" }),
+    ]);
 
     await upsertEpisodes([
-      { title_id: "tv-100", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "tv-100", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
-      { title_id: "tv-100", season_number: 2, episode_number: 1, name: "S2 Ep 1", overview: null, air_date: "2024-06-01", still_path: null },
+      {
+        title_id: "tv-100",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "tv-100",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
+      {
+        title_id: "tv-100",
+        season_number: 2,
+        episode_number: 1,
+        name: "S2 Ep 1",
+        overview: null,
+        air_date: "2024-06-01",
+        still_path: null,
+      },
     ]);
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/episodes/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     const episodesApp = (await import("./episodes")).default;
@@ -170,18 +221,39 @@ describe("GET /episodes/status/:titleId/:season", () => {
   });
 
   it("returns is_watched true after marking episode as watched", async () => {
-    const { createUser, upsertTitles, upsertEpisodes, watchEpisode } = await import("../db/repository");
+    const { createUser, upsertTitles, upsertEpisodes, watchEpisode } =
+      await import("../db/repository");
     const userId = await createUser("testuser2", "hash");
 
-    await upsertTitles([makeParsedTitle({ id: "tv-101", objectType: "SHOW", title: "Test Show 2" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "tv-101",
+        objectType: "SHOW",
+        title: "Test Show 2",
+      }),
+    ]);
 
     await upsertEpisodes([
-      { title_id: "tv-101", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      {
+        title_id: "tv-101",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
     ]);
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/episodes/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser2", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser2",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     const episodesApp = (await import("./episodes")).default;
@@ -202,20 +274,57 @@ describe("GET /episodes/status/:titleId/:season", () => {
   });
 
   it("only returns episodes for the requested season", async () => {
-    const { createUser, upsertTitles, upsertEpisodes } = await import("../db/repository");
+    const { createUser, upsertTitles, upsertEpisodes } =
+      await import("../db/repository");
     const userId = await createUser("testuser3", "hash");
 
-    await upsertTitles([makeParsedTitle({ id: "tv-102", objectType: "SHOW", title: "Test Show 3" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "tv-102",
+        objectType: "SHOW",
+        title: "Test Show 3",
+      }),
+    ]);
 
     await upsertEpisodes([
-      { title_id: "tv-102", season_number: 1, episode_number: 1, name: "S1E1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "tv-102", season_number: 2, episode_number: 1, name: "S2E1", overview: null, air_date: "2024-06-01", still_path: null },
-      { title_id: "tv-102", season_number: 2, episode_number: 2, name: "S2E2", overview: null, air_date: "2024-06-08", still_path: null },
+      {
+        title_id: "tv-102",
+        season_number: 1,
+        episode_number: 1,
+        name: "S1E1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "tv-102",
+        season_number: 2,
+        episode_number: 1,
+        name: "S2E1",
+        overview: null,
+        air_date: "2024-06-01",
+        still_path: null,
+      },
+      {
+        title_id: "tv-102",
+        season_number: 2,
+        episode_number: 2,
+        name: "S2E2",
+        overview: null,
+        air_date: "2024-06-08",
+        still_path: null,
+      },
     ]);
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/episodes/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser3", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser3",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     const episodesApp = (await import("./episodes")).default;
@@ -237,7 +346,13 @@ describe("GET /episodes/status/:titleId/:season", () => {
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/episodes/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser4", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser4",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     const episodesApp = (await import("./episodes")).default;

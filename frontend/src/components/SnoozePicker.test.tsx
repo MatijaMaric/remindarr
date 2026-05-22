@@ -7,19 +7,30 @@ import * as api from "../api";
 import SnoozePicker from "./SnoozePicker";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={newTestClient()}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      {children}
+    </QueryClientProvider>
+  );
 }
 
 let mockSetTitleSnooze: ReturnType<typeof spyOn>;
 let mockSetRemindOnRelease: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-  mockSetTitleSnooze = spyOn(api, "setTitleSnooze").mockResolvedValue({ success: true } as never);
-  mockSetRemindOnRelease = spyOn(api, "setRemindOnRelease").mockResolvedValue({ success: true, scheduledFor: null } as never);
+  mockSetTitleSnooze = spyOn(api, "setTitleSnooze").mockResolvedValue({
+    success: true,
+  } as never);
+  mockSetRemindOnRelease = spyOn(api, "setRemindOnRelease").mockResolvedValue({
+    success: true,
+    scheduledFor: null,
+  } as never);
 });
 
 afterEach(() => {
@@ -30,7 +41,9 @@ afterEach(() => {
 
 describe("SnoozePicker", () => {
   it("renders bell icon when not snoozed", () => {
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, { wrapper: Wrapper });
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, {
+      wrapper: Wrapper,
+    });
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     expect(btn).toBeTruthy();
     expect(btn.getAttribute("aria-pressed")).toBe("false");
@@ -38,14 +51,18 @@ describe("SnoozePicker", () => {
 
   it("renders bell-off icon and shows snoozed state when snoozed", () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} />, { wrapper: Wrapper });
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} />, {
+      wrapper: Wrapper,
+    });
     const btn = screen.getByRole("button", { name: /notifications snoozed/i });
     expect(btn).toBeTruthy();
     expect(btn.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("opens dropdown on click", () => {
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, { wrapper: Wrapper });
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, {
+      wrapper: Wrapper,
+    });
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);
     expect(screen.getByRole("listbox")).toBeTruthy();
@@ -55,7 +72,14 @@ describe("SnoozePicker", () => {
 
   it("calls setTitleSnooze with ~1 day from now when Snooze 1 day is clicked", async () => {
     const onSnoozed = () => {};
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} onSnoozed={onSnoozed} />, { wrapper: Wrapper });
+    render(
+      <SnoozePicker
+        titleId="movie-123"
+        snoozeUntil={null}
+        onSnoozed={onSnoozed}
+      />,
+      { wrapper: Wrapper },
+    );
 
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);
@@ -66,7 +90,10 @@ describe("SnoozePicker", () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(mockSetTitleSnooze).toHaveBeenCalledTimes(1);
-    const [titleId, until] = mockSetTitleSnooze.mock.calls[0] as [string, string | null];
+    const [titleId, until] = mockSetTitleSnooze.mock.calls[0] as [
+      string,
+      string | null,
+    ];
     expect(titleId).toBe("movie-123");
     expect(until).not.toBeNull();
 
@@ -78,7 +105,14 @@ describe("SnoozePicker", () => {
   it("calls setTitleSnooze(id, null) when Clear snooze is clicked", async () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
     const onSnoozed = () => {};
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={futureDate} onSnoozed={onSnoozed} />, { wrapper: Wrapper });
+    render(
+      <SnoozePicker
+        titleId="movie-123"
+        snoozeUntil={futureDate}
+        onSnoozed={onSnoozed}
+      />,
+      { wrapper: Wrapper },
+    );
 
     const btn = screen.getByRole("button", { name: /notifications snoozed/i });
     fireEvent.click(btn);
@@ -89,14 +123,26 @@ describe("SnoozePicker", () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(mockSetTitleSnooze).toHaveBeenCalledTimes(1);
-    const [titleId, until] = mockSetTitleSnooze.mock.calls[0] as [string, string | null];
+    const [titleId, until] = mockSetTitleSnooze.mock.calls[0] as [
+      string,
+      string | null,
+    ];
     expect(titleId).toBe("movie-123");
     expect(until).toBeNull();
   });
 
   it("shows 'Until release' option when releaseDate is provided", () => {
-    const futureRelease = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} releaseDate={futureRelease} />, { wrapper: Wrapper });
+    const futureRelease = new Date(Date.now() + 7 * 86400000)
+      .toISOString()
+      .slice(0, 10);
+    render(
+      <SnoozePicker
+        titleId="movie-123"
+        snoozeUntil={null}
+        releaseDate={futureRelease}
+      />,
+      { wrapper: Wrapper },
+    );
 
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);
@@ -105,13 +151,17 @@ describe("SnoozePicker", () => {
   });
 
   it("does not show 'Clear snooze' when not snoozed", () => {
-    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, { wrapper: Wrapper });
+    render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, {
+      wrapper: Wrapper,
+    });
 
     const btn = screen.getByRole("button", { name: /snooze notifications/i });
     fireEvent.click(btn);
 
     const options = screen.queryAllByRole("option");
-    const clearOption = options.find((o) => o.textContent?.toLowerCase().includes("clear"));
+    const clearOption = options.find((o) =>
+      o.textContent?.toLowerCase().includes("clear"),
+    );
     expect(clearOption).toBeUndefined();
   });
 });

@@ -31,7 +31,11 @@ declare global {
   interface KVNamespace {
     get(key: string, type: "text"): Promise<string | null>;
     get(key: string, type: "json"): Promise<any>;
-    put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+    put(
+      key: string,
+      value: string,
+      options?: { expirationTtl?: number },
+    ): Promise<void>;
     delete(key: string): Promise<void>;
   }
 }
@@ -40,9 +44,21 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { drizzle } from "drizzle-orm/d1";
 import { getDb, runWithDb, schemaExports } from "./db/schema";
-import { getUserCount, createUser, isOidcConfigured, getOidcConfig, getUserByWatchlistShareToken, getTrackedTitles, deleteExpiredSessions } from "./db/repository";
+import {
+  getUserCount,
+  createUser,
+  isOidcConfigured,
+  getOidcConfig,
+  getUserByWatchlistShareToken,
+  getTrackedTitles,
+  deleteExpiredSessions,
+} from "./db/repository";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
-import { rateLimiter, MemoryRateLimitStore, KvRateLimitStore } from "./middleware/rate-limit";
+import {
+  rateLimiter,
+  MemoryRateLimitStore,
+  KvRateLimitStore,
+} from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
@@ -76,19 +92,38 @@ import importRoutes from "./routes/import";
 import upNextRoutes from "./routes/up-next";
 import moviesRoutes from "./routes/movies";
 import overlapRoutes from "./routes/overlap";
-import achievementsRoutes, { leaderboardApp, streakApp } from "./routes/achievements";
+import achievementsRoutes, {
+  leaderboardApp,
+  streakApp,
+} from "./routes/achievements";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig, CONFIG } from "./config";
 import { classifyError } from "./lib/error-classifier";
 import { errorsByCategory } from "./metrics";
 import Sentry from "./sentry";
-import { withSentry, instrumentDurableObjectWithSentry } from "@sentry/cloudflare";
+import {
+  withSentry,
+  instrumentDurableObjectWithSentry,
+} from "@sentry/cloudflare";
 import { CloudflarePlatform } from "./platform/cloudflare";
-import { armCron, cleanupOld, enqueueOnce, processPending, recoverStale, runWithEnv, CRON_JOBS } from "./jobs/backend";
+import {
+  armCron,
+  cleanupOld,
+  enqueueOnce,
+  processPending,
+  recoverStale,
+  runWithEnv,
+  CRON_JOBS,
+} from "./jobs/backend";
 import { JobQueueDO as JobQueueDOBase } from "./jobs/durable-object";
 export const JobQueueDO = instrumentDurableObjectWithSentry(
-  (env: Env) => ({ dsn: env.SENTRY_DSN, release: env.SENTRY_RELEASE, tracesSampleRate: 1.0, sendDefaultPii: false }),
+  (env: Env) => ({
+    dsn: env.SENTRY_DSN,
+    release: env.SENTRY_RELEASE,
+    tracesSampleRate: 1.0,
+    sendDefaultPii: false,
+  }),
   JobQueueDOBase,
 );
 import { createAuth } from "./auth/better-auth";
@@ -145,7 +180,8 @@ function patchConfigFromEnv(env: Env): void {
     TMDB_API_KEY: env.TMDB_API_KEY || "",
     COUNTRY: env.TMDB_COUNTRY || undefined,
     LANGUAGE: env.TMDB_LANGUAGE || undefined,
-    LOG_LEVEL: (env.LOG_LEVEL as "debug" | "info" | "warn" | "error") || undefined,
+    LOG_LEVEL:
+      (env.LOG_LEVEL as "debug" | "info" | "warn" | "error") || undefined,
     CORS_ORIGIN: env.CORS_ORIGIN || undefined,
     SENTRY_DSN: env.SENTRY_DSN || "",
     OIDC_ISSUER_URL: env.OIDC_ISSUER_URL || "",
@@ -163,7 +199,8 @@ function patchConfigFromEnv(env: Env): void {
     PASSKEY_RP_NAME: env.PASSKEY_RP_NAME || undefined,
     PASSKEY_ORIGIN: env.PASSKEY_ORIGIN || undefined,
     STREAMING_AVAILABILITY_API_KEY: env.STREAMING_AVAILABILITY_API_KEY || "",
-    JOB_QUEUE_BACKEND: (env.JOB_QUEUE_BACKEND as "d1" | "durable-object") || "d1",
+    JOB_QUEUE_BACKEND:
+      (env.JOB_QUEUE_BACKEND as "d1" | "durable-object") || "d1",
   });
 
   // Reinitialize logger in case LOG_LEVEL changed
@@ -276,7 +313,7 @@ function createApp(env: Env) {
           const bootstrapLog = logger.child({ module: "worker-bootstrap" });
           bootstrapLog.warn(
             `Admin account created — default password: ${password} (change it after first login)`,
-            { username: "admin" }
+            { username: "admin" },
           );
         }
       } catch (err) {
@@ -331,7 +368,11 @@ function createApp(env: Env) {
 
     const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
 
-    (Sentry.addBreadcrumb as ((opts: { message: string; data: Record<string, string> }) => void) | undefined)?.({
+    (
+      Sentry.addBreadcrumb as
+        | ((opts: { message: string; data: Record<string, string> }) => void)
+        | undefined
+    )?.({
       message: "Unhandled error",
       data: { category, requestId, path: c.req.path, method: c.req.method },
     });
@@ -353,7 +394,9 @@ function createApp(env: Env) {
 
   // CORS — restricted to explicit origins via CORS_ORIGIN env var
   if (env.CORS_ORIGIN) {
-    const origins = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+    const origins = env.CORS_ORIGIN.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean);
     app.use("/api/*", cors({ origin: origins, credentials: true }));
   }
 
@@ -363,14 +406,27 @@ function createApp(env: Env) {
   // Global per-IP cap — applies to all /api/* before any per-route limiter.
   app.use(
     "/api/*",
-    rateLimiter({ store: rateLimitStore, scope: "global", limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 })
+    rateLimiter({
+      store: rateLimitStore,
+      scope: "global",
+      limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE,
+      windowMs: 60_000,
+    }),
   );
 
   // Health check
   app.route("/api/health", healthRoutes);
 
   // Rate limit auth routes: 20 requests per minute to prevent brute-force attacks
-  app.use("/api/auth/*", rateLimiter({ store: rateLimitStore, scope: "auth", limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE, windowMs: 60_000 }));
+  app.use(
+    "/api/auth/*",
+    rateLimiter({
+      store: rateLimitStore,
+      scope: "auth",
+      limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE,
+      windowMs: 60_000,
+    }),
+  );
 
   // Custom auth routes (providers endpoint) — must be before better-auth catch-all
   app.route("/api/auth/custom", authCustomRoutes);
@@ -390,12 +446,22 @@ function createApp(env: Env) {
   app.route("/api/titles", titlesRoutes);
 
   // Rate limit search
-  const searchRateLimiter = rateLimiter({ store: rateLimitStore, scope: "search", limit: 30, windowMs: 60_000 });
+  const searchRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "search",
+    limit: 30,
+    windowMs: 60_000,
+  });
   app.use("/api/search/*", searchRateLimiter, optionalAuth);
   app.use("/api/search", searchRateLimiter, optionalAuth);
   app.route("/api/search", searchRoutes);
 
-  const browseRateLimiter = rateLimiter({ store: rateLimitStore, scope: "browse", limit: 30, windowMs: 60_000 });
+  const browseRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "browse",
+    limit: 30,
+    windowMs: 60_000,
+  });
   app.use("/api/browse/*", browseRateLimiter, optionalAuth);
   app.use("/api/browse", browseRateLimiter, optionalAuth);
   app.route("/api/browse", browseRoutes);
@@ -419,7 +485,12 @@ function createApp(env: Env) {
   app.route("/api/social", socialRoutes);
 
   // Ratings routes — optionalAuth base, POST/DELETE check auth internally
-  const ratingsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "ratings", limit: 60, windowMs: 60_000 });
+  const ratingsRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "ratings",
+    limit: 60,
+    windowMs: 60_000,
+  });
   app.use("/api/ratings/*", ratingsRateLimiter, optionalAuth);
   app.use("/api/ratings", ratingsRateLimiter, optionalAuth);
   app.route("/api/ratings", ratingsRoutes);
@@ -430,7 +501,12 @@ function createApp(env: Env) {
   app.route("/api/recommendations", recommendationsRoutes);
 
   // Suggestions routes (TMDB-based)
-  const suggestionsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "suggestions", limit: 20, windowMs: 60_000 });
+  const suggestionsRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "suggestions",
+    limit: 20,
+    windowMs: 60_000,
+  });
   app.use("/api/suggestions/*", suggestionsRateLimiter, requireAuth);
   app.use("/api/suggestions", suggestionsRateLimiter, requireAuth);
   app.route("/api/suggestions", suggestionsRoutes);
@@ -522,7 +598,10 @@ function createApp(env: Env) {
   // CF stub — all methods return 501 so the path is registered for route-parity.
   const maintenanceStub = new Hono<AppEnv>();
   maintenanceStub.all("/*", (c) =>
-    c.json({ error: "Maintenance endpoints are only available on the Bun server" }, 501)
+    c.json(
+      { error: "Maintenance endpoints are only available on the Bun server" },
+      501,
+    ),
   );
   app.route("/api/admin/maintenance", maintenanceStub);
 
@@ -532,13 +611,23 @@ function createApp(env: Env) {
   app.route("/api/jobs", jobsCfRoutes);
 
   // Detail pages
-  const detailsRateLimiter = rateLimiter({ store: rateLimitStore, scope: "details", limit: 60, windowMs: 60_000 });
+  const detailsRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "details",
+    limit: 60,
+    windowMs: 60_000,
+  });
   app.use("/api/details/*", detailsRateLimiter, optionalAuth);
   app.use("/api/details", detailsRateLimiter, optionalAuth);
   app.route("/api/details", detailsRoutes);
 
   // Sync (admin only — rate limited + require admin)
-  const syncRateLimiter = rateLimiter({ store: rateLimitStore, scope: "sync", limit: 5, windowMs: 60_000 });
+  const syncRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "sync",
+    limit: 5,
+    windowMs: 60_000,
+  });
   app.use("/api/sync/*", syncRateLimiter);
   app.use("/api/sync", syncRateLimiter);
   app.use("/api/sync/*", requireAuth, requireAdmin);
@@ -583,7 +672,9 @@ function createApp(env: Env) {
         const resp = await assets.fetch(url.toString());
         if (resp.ok) {
           const html = await resp.text();
-          const injected = ogTags ? html.replace("</head>", `${ogTags}\n  </head>`) : html;
+          const injected = ogTags
+            ? html.replace("</head>", `${ogTags}\n  </head>`)
+            : html;
           return new Response(injected, {
             status: 200,
             headers: {
@@ -598,7 +689,9 @@ function createApp(env: Env) {
         error: err instanceof Error ? err.message : String(err),
       });
     }
-    return c.html("<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>");
+    return c.html(
+      "<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>",
+    );
   });
 
   // SPA fallback — serve index.html for client-side routes (mirrors serveStatic in index.ts)
@@ -617,7 +710,8 @@ function createApp(env: Env) {
             status: 200,
             headers: {
               "content-type": "text/html; charset=utf-8",
-              "cache-control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800",
+              "cache-control":
+                "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800",
             },
           });
         }
@@ -644,11 +738,17 @@ function getApp(env: Env): Hono<AppEnv> {
 }
 
 const handler = {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
     ctx.passThroughOnException();
     patchConfigFromEnv(env);
     try {
-      const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
+      const db = drizzle(env.DB, {
+        schema: schemaExports,
+      }) as unknown as DrizzleDb;
       const honoApp = getApp(env);
       const cache = env.CACHE_KV
         ? new CloudflareKvCache(env.CACHE_KV)
@@ -657,8 +757,8 @@ const handler = {
       const cfEnv = env as unknown as import("./jobs/backend").CFEnv;
       const response = await runWithEnv(cfEnv, () =>
         runWithCache(cache, () =>
-          runWithDb(db, () => honoApp.fetch(request, env, ctx as any))
-        )
+          runWithDb(db, () => honoApp.fetch(request, env, ctx as any)),
+        ),
       );
 
       // In D1 mode, drain ad-hoc jobs (e.g. sync-show-episodes queued on track)
@@ -667,14 +767,12 @@ const handler = {
       if (CONFIG.JOB_QUEUE_BACKEND !== "durable-object") {
         ctx.waitUntil(
           runWithEnv(cfEnv, () =>
-            runWithCache(cache, () =>
-              runWithDb(db, () => processPending())
-            )
+            runWithCache(cache, () => runWithDb(db, () => processPending())),
           ).catch((err) => {
             logger.error("Background job processing error", {
               error: err instanceof Error ? err.message : String(err),
             });
-          })
+          }),
         );
       }
 
@@ -703,52 +801,62 @@ const handler = {
     }
   },
 
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(
+    event: ScheduledEvent,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
     patchConfigFromEnv(env);
     // Two cron triggers run this handler:
     //   */5 * * * *  — watchdog: arm cron DOs + stale-job recovery only (no heavy cleanup)
     //   0 0 * * *    — daily: same watchdog work + cleanup + one-time migrations
     const isDailyTick = event.cron === "0 0 * * *";
     try {
-      const db = drizzle(env.DB, { schema: schemaExports }) as unknown as DrizzleDb;
+      const db = drizzle(env.DB, {
+        schema: schemaExports,
+      }) as unknown as DrizzleDb;
       const cache = env.CACHE_KV
         ? new CloudflareKvCache(env.CACHE_KV)
         : new MemoryCache();
 
       const cfEnv = env as unknown as import("./jobs/backend").CFEnv;
-      await runWithEnv(cfEnv, () => runWithCache(cache, () => runWithDb(db, async () => {
-        logger.info("Scheduled bootstrap tick", { cron: event.cron });
+      await runWithEnv(cfEnv, () =>
+        runWithCache(cache, () =>
+          runWithDb(db, async () => {
+            logger.info("Scheduled bootstrap tick", { cron: event.cron });
 
-        // Arm every cron-singleton DO. Idempotent — the DO only schedules its
-        // alarm if no `runJob` cron schedule exists. DOs drive their own
-        // sub-daily execution via @cloudflare/actors/alarms. Running on every
-        // 5-min watchdog tick ensures a dropped alarm self-heals within 5 min (#795).
-        for (const { name, cron } of CRON_JOBS) {
-          await armCron(cfEnv, name, cron);
-        }
+            // Arm every cron-singleton DO. Idempotent — the DO only schedules its
+            // alarm if no `runJob` cron schedule exists. DOs drive their own
+            // sub-daily execution via @cloudflare/actors/alarms. Running on every
+            // 5-min watchdog tick ensures a dropped alarm self-heals within 5 min (#795).
+            for (const { name, cron } of CRON_JOBS) {
+              await armCron(cfEnv, name, cron);
+            }
 
-        // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
-        await recoverStale(cfEnv, 15);
-        const processed = await processPending();
-        if (processed > 0) {
-          logger.info("Processed jobs", { count: processed });
-        }
+            // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
+            await recoverStale(cfEnv, 15);
+            const processed = await processPending();
+            if (processed > 0) {
+              logger.info("Processed jobs", { count: processed });
+            }
 
-        // Daily-only work — skip on the 5-min watchdog ticks to avoid repeated
-        // heavy cleanup (session expiry, old job pruning, one-time migrations).
-        if (isDailyTick) {
-          // One-time migrations (idempotent — no-ops once done)
-          await enqueueOnce("migrate-offers");
+            // Daily-only work — skip on the 5-min watchdog ticks to avoid repeated
+            // heavy cleanup (session expiry, old job pruning, one-time migrations).
+            if (isDailyTick) {
+              // One-time migrations (idempotent — no-ops once done)
+              await enqueueOnce("migrate-offers");
 
-          // Daily cleanup — moved out of JobQueueDO alarm to avoid the 30-second
-          // DO alarm hard limit (#726). This handler has no such limit.
-          await deleteExpiredSessions();
-          const cleaned = await cleanupOld(cfEnv, 30);
-          if (cleaned > 0) {
-            logger.info("Daily cleanup pruned old jobs", { cleaned });
-          }
-        }
-      })));
+              // Daily cleanup — moved out of JobQueueDO alarm to avoid the 30-second
+              // DO alarm hard limit (#726). This handler has no such limit.
+              await deleteExpiredSessions();
+              const cleaned = await cleanupOld(cfEnv, 30);
+              if (cleaned > 0) {
+                logger.info("Daily cleanup pruned old jobs", { cleaned });
+              }
+            }
+          }),
+        ),
+      );
     } catch (err) {
       Sentry.captureException(err);
       logger.error("Worker scheduled error", {

@@ -16,7 +16,9 @@ import { relations, sql } from "drizzle-orm";
  * but SQLite text columns only accept string bindings.
  */
 const dateText = customType<{ data: string; driverData: string }>({
-  dataType() { return "text"; },
+  dataType() {
+    return "text";
+  },
   toDriver(value: unknown): string {
     if (value instanceof Date) return value.toISOString();
     return String(value ?? "");
@@ -52,7 +54,7 @@ export const titles = sqliteTable(
   (table) => [
     index("idx_titles_release_date").on(table.releaseDate),
     index("idx_titles_object_type").on(table.objectType),
-  ]
+  ],
 );
 
 export const providers = sqliteTable(
@@ -63,17 +65,21 @@ export const providers = sqliteTable(
     technicalName: text("technical_name"),
     iconUrl: text("icon_url"),
   },
-  (table) => [index("idx_providers_technical_name").on(table.technicalName)]
+  (table) => [index("idx_providers_technical_name").on(table.technicalName)],
 );
 
 export const offers = sqliteTable(
   "offers",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    titleId: text("title_id").references(() => titles.id, { onDelete: "cascade" }),
+    titleId: text("title_id").references(() => titles.id, {
+      onDelete: "cascade",
+    }),
     // onDelete: restrict — providers are a reference/enum-like table seeded from TMDB
     // and are not user-deletable; block deletion if offers reference them.
-    providerId: integer("provider_id").references(() => providers.id, { onDelete: "restrict" }),
+    providerId: integer("provider_id").references(() => providers.id, {
+      onDelete: "restrict",
+    }),
     monetizationType: text("monetization_type"),
     presentationType: text("presentation_type"),
     priceValue: real("price_value"),
@@ -85,7 +91,7 @@ export const offers = sqliteTable(
   (table) => [
     index("idx_offers_title_id").on(table.titleId),
     index("idx_offers_provider_id").on(table.providerId),
-  ]
+  ],
 );
 
 export const scores = sqliteTable("scores", {
@@ -108,7 +114,7 @@ export const titleGenres = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.titleId, table.genre] }),
     index("idx_title_genres_genre").on(table.genre),
-  ]
+  ],
 );
 
 export const episodes = sqliteTable(
@@ -130,12 +136,12 @@ export const episodes = sqliteTable(
     uniqueIndex("episodes_title_season_episode").on(
       table.titleId,
       table.seasonNumber,
-      table.episodeNumber
+      table.episodeNumber,
     ),
     index("idx_episodes_air_date").on(table.airDate),
     index("idx_episodes_title_id").on(table.titleId),
     index("idx_episodes_title_air").on(table.titleId, table.airDate),
-  ]
+  ],
 );
 
 export const users = sqliteTable(
@@ -145,7 +151,9 @@ export const users = sqliteTable(
     username: text("username").notNull().unique(),
     displayUsername: text("display_username"),
     email: text("email"),
-    emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+    emailVerified: integer("email_verified", { mode: "boolean" })
+      .notNull()
+      .default(false),
     name: text("name"),
     image: text("image"),
     role: text("role"),
@@ -168,11 +176,21 @@ export const users = sqliteTable(
     bio: text("bio"),
     countryCode: text("country_code"),
     locale: text("locale"),
-    activityStreamEnabled: integer("activity_stream_enabled").notNull().default(0),
-    streamingDeparturesEnabled: integer("streaming_departures_enabled").notNull().default(1),
-    departureAlertLeadDays: integer("departure_alert_lead_days").notNull().default(7),
-    crowdedWeekThreshold: integer("crowded_week_threshold").notNull().default(5),
-    crowdedWeekBadgeEnabled: integer("crowded_week_badge_enabled").notNull().default(1),
+    activityStreamEnabled: integer("activity_stream_enabled")
+      .notNull()
+      .default(0),
+    streamingDeparturesEnabled: integer("streaming_departures_enabled")
+      .notNull()
+      .default(1),
+    departureAlertLeadDays: integer("departure_alert_lead_days")
+      .notNull()
+      .default(7),
+    crowdedWeekThreshold: integer("crowded_week_threshold")
+      .notNull()
+      .default(5),
+    crowdedWeekBadgeEnabled: integer("crowded_week_badge_enabled")
+      .notNull()
+      .default(1),
     themeVariant: text("theme_variant").notNull().default("dark"),
     accentColor: text("accent_color").notNull().default("amber"),
     density: text("density").notNull().default("comfortable"),
@@ -185,12 +203,14 @@ export const users = sqliteTable(
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(
       table.authProvider,
-      table.providerSubject
+      table.providerSubject,
     ),
     uniqueIndex("users_feed_token_idx").on(table.feedToken),
     uniqueIndex("users_kiosk_token_idx").on(table.kioskToken),
-    uniqueIndex("users_watchlist_share_token_idx").on(table.watchlistShareToken),
-  ]
+    uniqueIndex("users_watchlist_share_token_idx").on(
+      table.watchlistShareToken,
+    ),
+  ],
 );
 
 export const sessions = sqliteTable(
@@ -208,7 +228,7 @@ export const sessions = sqliteTable(
     createdAt: dateText("created_at").default(sql`(datetime('now'))`),
     updatedAt: dateText("updated_at").default(sql`(datetime('now'))`),
   },
-  (table) => [index("idx_sessions_expires_at").on(table.expiresAt)]
+  (table) => [index("idx_sessions_expires_at").on(table.expiresAt)],
 );
 
 export const account = sqliteTable(
@@ -230,7 +250,7 @@ export const account = sqliteTable(
     createdAt: dateText("created_at").default(sql`(datetime('now'))`),
     updatedAt: dateText("updated_at").default(sql`(datetime('now'))`),
   },
-  (table) => [index("idx_account_user_id").on(table.userId)]
+  (table) => [index("idx_account_user_id").on(table.userId)],
 );
 
 export const verification = sqliteTable("verification", {
@@ -261,7 +281,7 @@ export const userSubscribedProviders = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.providerId] }),
     index("idx_user_subscribed_providers_user_id").on(table.userId),
-  ]
+  ],
 );
 
 export const tracked = sqliteTable(
@@ -284,7 +304,7 @@ export const tracked = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.titleId, table.userId] }),
     index("idx_tracked_user_id").on(table.userId),
-  ]
+  ],
 );
 
 export const watchedEpisodes = sqliteTable(
@@ -302,7 +322,7 @@ export const watchedEpisodes = sqliteTable(
     primaryKey({ columns: [table.episodeId, table.userId] }),
     index("idx_watched_episodes_user_id").on(table.userId),
     index("idx_watched_user_episode").on(table.userId, table.episodeId),
-  ]
+  ],
 );
 
 export const watchedTitles = sqliteTable(
@@ -320,7 +340,7 @@ export const watchedTitles = sqliteTable(
     primaryKey({ columns: [table.titleId, table.userId] }),
     index("idx_watched_titles_user_id").on(table.userId),
     index("idx_watched_titles_user_title").on(table.userId, table.titleId),
-  ]
+  ],
 );
 
 export const notifiers = sqliteTable(
@@ -339,12 +359,18 @@ export const notifiers = sqliteTable(
     lastSentDate: text("last_sent_date"),
     digestMode: text("digest_mode"),
     digestDay: integer("digest_day"),
-    streamingAlertsEnabled: integer("streaming_alerts_enabled").notNull().default(1),
+    streamingAlertsEnabled: integer("streaming_alerts_enabled")
+      .notNull()
+      .default(1),
     quietHoursStart: text("quiet_hours_start"),
     quietHoursEnd: text("quiet_hours_end"),
     quietHoursDays: text("quiet_hours_days").notNull().default(""),
-    leavingSoonAlertsEnabled: integer("leaving_soon_alerts_enabled").notNull().default(1),
-    friendActivityAlertsEnabled: integer("friend_activity_alerts_enabled").notNull().default(0),
+    leavingSoonAlertsEnabled: integer("leaving_soon_alerts_enabled")
+      .notNull()
+      .default(1),
+    friendActivityAlertsEnabled: integer("friend_activity_alerts_enabled")
+      .notNull()
+      .default(0),
     achievementsEnabled: integer("achievements_enabled").notNull().default(0),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
@@ -352,7 +378,7 @@ export const notifiers = sqliteTable(
   (table) => [
     index("idx_notifiers_user_id").on(table.userId),
     index("idx_notifiers_enabled_time").on(table.enabled, table.notifyTime),
-  ]
+  ],
 );
 
 export const integrations = sqliteTable(
@@ -374,7 +400,7 @@ export const integrations = sqliteTable(
   (table) => [
     index("idx_integrations_user_id").on(table.userId),
     index("idx_integrations_provider").on(table.provider),
-  ]
+  ],
 );
 
 export const passkey = sqliteTable("passkey", {
@@ -402,37 +428,51 @@ export const oidcStates = sqliteTable("oidc_states", {
 export const follows = sqliteTable(
   "follows",
   {
-    followerId: text("follower_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    followingId: text("following_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followingId: text("following_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
   (table) => [
     primaryKey({ columns: [table.followerId, table.followingId] }),
     index("idx_follows_following").on(table.followingId),
-  ]
+  ],
 );
 
 export const ratings = sqliteTable(
   "ratings",
   {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
     rating: text("rating").notNull(), // 'HATE', 'DISLIKE', 'LIKE', 'LOVE'
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.titleId] }),
     index("idx_ratings_title").on(table.titleId),
-  ]
+  ],
 );
 
 export const recommendations = sqliteTable(
   "recommendations",
   {
     id: text("id").primaryKey(),
-    fromUserId: text("from_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
-    targetUserId: text("target_user_id").references(() => users.id, { onDelete: "cascade" }),
+    fromUserId: text("from_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    targetUserId: text("target_user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
     message: text("message"),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
@@ -440,19 +480,21 @@ export const recommendations = sqliteTable(
     index("idx_recommendations_from_title").on(table.fromUserId, table.titleId),
     index("idx_recommendations_from_user").on(table.fromUserId),
     index("idx_recommendations_target_user").on(table.targetUserId),
-  ]
+  ],
 );
 
 export const recommendationReads = sqliteTable(
   "recommendation_reads",
   {
-    recommendationId: text("recommendation_id").notNull().references(() => recommendations.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    recommendationId: text("recommendation_id")
+      .notNull()
+      .references(() => recommendations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     readAt: text("read_at").default(sql`(datetime('now'))`),
   },
-  (table) => [
-    primaryKey({ columns: [table.recommendationId, table.userId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.recommendationId, table.userId] })],
 );
 
 export const invitations = sqliteTable(
@@ -460,16 +502,18 @@ export const invitations = sqliteTable(
   {
     id: text("id").primaryKey(),
     code: text("code").notNull().unique(),
-    createdById: text("created_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdById: text("created_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     // onDelete: set null — preserves invite audit trail after the redeeming user is deleted.
-    usedById: text("used_by_id").references(() => users.id, { onDelete: "set null" }),
+    usedById: text("used_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
     usedAt: text("used_at"),
     expiresAt: text("expires_at").notNull(),
   },
-  (table) => [
-    index("idx_invitations_code").on(table.code),
-  ]
+  (table) => [index("idx_invitations_code").on(table.code)],
 );
 
 export const plexLibraryItems = sqliteTable(
@@ -492,7 +536,7 @@ export const plexLibraryItems = sqliteTable(
     uniqueIndex("idx_plex_library_user_title").on(table.userId, table.titleId),
     index("idx_plex_library_integration").on(table.integrationId),
     index("idx_plex_library_title").on(table.titleId),
-  ]
+  ],
 );
 
 export const jobs = sqliteTable(
@@ -505,15 +549,19 @@ export const jobs = sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     maxAttempts: integer("max_attempts").notNull().default(3),
     error: text("error"),
-    runAt: text("run_at").notNull().default(sql`(datetime('now'))`),
+    runAt: text("run_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
     startedAt: text("started_at"),
     completedAt: text("completed_at"),
-    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
   },
   (table) => [
     index("idx_jobs_status_run_at").on(table.status, table.runAt),
     index("idx_jobs_name").on(table.name),
-  ]
+  ],
 );
 
 export const cronJobs = sqliteTable("cron_jobs", {
@@ -527,8 +575,12 @@ export const cronJobs = sqliteTable("cron_jobs", {
 export const titleTags = sqliteTable(
   "title_tags",
   {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
     tag: text("tag").notNull(),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
@@ -536,68 +588,91 @@ export const titleTags = sqliteTable(
     primaryKey({ columns: [table.userId, table.titleId, table.tag] }),
     index("idx_title_tags_user_id").on(table.userId),
     index("idx_title_tags_title_id").on(table.titleId),
-  ]
+  ],
 );
 
 export const pinnedTitles = sqliteTable(
   "pinned_titles",
   {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
     position: integer("position").notNull().default(0),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.titleId] }),
     index("idx_pinned_titles_user_id").on(table.userId),
-  ]
+  ],
 );
 
 export const watchHistory = sqliteTable(
   "watch_history",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
-    episodeId: integer("episode_id").references(() => episodes.id, { onDelete: "set null" }),
-    watchedAt: text("watched_at").notNull().default(sql`(datetime('now'))`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    episodeId: integer("episode_id").references(() => episodes.id, {
+      onDelete: "set null",
+    }),
+    watchedAt: text("watched_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
     note: text("note"),
   },
   (table) => [
     index("watch_history_user_title").on(table.userId, table.titleId),
-    index("watch_history_user_title_ts_id").on(table.userId, table.titleId, table.watchedAt, table.id),
-  ]
+    index("watch_history_user_title_ts_id").on(
+      table.userId,
+      table.titleId,
+      table.watchedAt,
+      table.id,
+    ),
+  ],
 );
 
 export const activityKindVisibility = sqliteTable(
   "activity_kind_visibility",
   {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
     visibility: text("visibility").notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.userId, table.kind] }),
-  ]
+  (table) => [primaryKey({ columns: [table.userId, table.kind] })],
 );
 
 export const hiddenActivityEvents = sqliteTable(
   "hidden_activity_events",
   {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     eventKind: text("event_kind").notNull(),
     eventKey: text("event_key").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.eventKind, table.eventKey] }),
-  ]
+  ],
 );
 
 export const episodeRatings = sqliteTable(
   "episode_ratings",
   {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    episodeId: integer("episode_id").notNull().references(() => episodes.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    episodeId: integer("episode_id")
+      .notNull()
+      .references(() => episodes.id, { onDelete: "cascade" }),
     rating: text("rating").notNull(), // 'HATE', 'DISLIKE', 'LIKE', 'LOVE'
     review: text("review"),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
@@ -605,41 +680,61 @@ export const episodeRatings = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.episodeId] }),
     index("idx_episode_ratings_episode").on(table.episodeId),
-  ]
+  ],
 );
 
 export const streamingAlerts = sqliteTable(
   "streaming_alerts",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
     providerId: integer("provider_id").notNull(),
     providerName: text("provider_name").notNull(),
-    alertedAt: text("alerted_at").notNull().default(sql`(datetime('now'))`),
+    alertedAt: text("alerted_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
     kind: text("kind").notNull().default("arrival"),
   },
   (table) => [
-    uniqueIndex("uq_streaming_alerts_user_title_provider_kind").on(table.userId, table.titleId, table.providerId, table.kind),
+    uniqueIndex("uq_streaming_alerts_user_title_provider_kind").on(
+      table.userId,
+      table.titleId,
+      table.providerId,
+      table.kind,
+    ),
     index("idx_streaming_alerts_user_title").on(table.userId, table.titleId),
-  ]
+  ],
 );
 
 export const notificationLog = sqliteTable(
   "notification_log",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    notifierId: text("notifier_id").notNull().references(() => notifiers.id, { onDelete: "cascade" }),
-    attemptedAt: integer("attempted_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-    status: text("status", { enum: ["success", "failure", "skipped"] }).notNull(),
+    notifierId: text("notifier_id")
+      .notNull()
+      .references(() => notifiers.id, { onDelete: "cascade" }),
+    attemptedAt: integer("attempted_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    status: text("status", {
+      enum: ["success", "failure", "skipped"],
+    }).notNull(),
     latencyMs: integer("latency_ms"),
     httpStatus: integer("http_status"),
     errorMessage: text("error_message"),
     eventKind: text("event_kind"),
   },
   (table) => [
-    index("idx_notification_log_notifier").on(table.notifierId, table.attemptedAt),
-  ]
+    index("idx_notification_log_notifier").on(
+      table.notifierId,
+      table.attemptedAt,
+    ),
+  ],
 );
 
 // ─── Relations ──────────────────────────────────────────────────────────────
@@ -655,7 +750,10 @@ export const titlesRelations = relations(titles, ({ many, one }) => ({
 }));
 
 export const titleGenresRelations = relations(titleGenres, ({ one }) => ({
-  title: one(titles, { fields: [titleGenres.titleId], references: [titles.id] }),
+  title: one(titles, {
+    fields: [titleGenres.titleId],
+    references: [titles.id],
+  }),
 }));
 
 export const providersRelations = relations(providers, ({ many }) => ({
@@ -693,15 +791,27 @@ export const usersRelations = relations(users, ({ many }) => ({
   integrations: many(integrations),
 }));
 
-export const integrationsRelations = relations(integrations, ({ one, many }) => ({
-  user: one(users, { fields: [integrations.userId], references: [users.id] }),
-  plexLibraryItems: many(plexLibraryItems),
-}));
+export const integrationsRelations = relations(
+  integrations,
+  ({ one, many }) => ({
+    user: one(users, { fields: [integrations.userId], references: [users.id] }),
+    plexLibraryItems: many(plexLibraryItems),
+  }),
+);
 
-export const plexLibraryItemsRelations = relations(plexLibraryItems, ({ one }) => ({
-  integration: one(integrations, { fields: [plexLibraryItems.integrationId], references: [integrations.id] }),
-  user: one(users, { fields: [plexLibraryItems.userId], references: [users.id] }),
-}));
+export const plexLibraryItemsRelations = relations(
+  plexLibraryItems,
+  ({ one }) => ({
+    integration: one(integrations, {
+      fields: [plexLibraryItems.integrationId],
+      references: [integrations.id],
+    }),
+    user: one(users, {
+      fields: [plexLibraryItems.userId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),
@@ -716,13 +826,25 @@ export const trackedRelations = relations(tracked, ({ one }) => ({
   user: one(users, { fields: [tracked.userId], references: [users.id] }),
 }));
 
-export const watchedEpisodesRelations = relations(watchedEpisodes, ({ one }) => ({
-  episode: one(episodes, { fields: [watchedEpisodes.episodeId], references: [episodes.id] }),
-  user: one(users, { fields: [watchedEpisodes.userId], references: [users.id] }),
-}));
+export const watchedEpisodesRelations = relations(
+  watchedEpisodes,
+  ({ one }) => ({
+    episode: one(episodes, {
+      fields: [watchedEpisodes.episodeId],
+      references: [episodes.id],
+    }),
+    user: one(users, {
+      fields: [watchedEpisodes.userId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const watchedTitlesRelations = relations(watchedTitles, ({ one }) => ({
-  title: one(titles, { fields: [watchedTitles.titleId], references: [titles.id] }),
+  title: one(titles, {
+    fields: [watchedTitles.titleId],
+    references: [titles.id],
+  }),
   user: one(users, { fields: [watchedTitles.userId], references: [users.id] }),
 }));
 
@@ -731,13 +853,27 @@ export const notifiersRelations = relations(notifiers, ({ one, many }) => ({
   logs: many(notificationLog),
 }));
 
-export const notificationLogRelations = relations(notificationLog, ({ one }) => ({
-  notifier: one(notifiers, { fields: [notificationLog.notifierId], references: [notifiers.id] }),
-}));
+export const notificationLogRelations = relations(
+  notificationLog,
+  ({ one }) => ({
+    notifier: one(notifiers, {
+      fields: [notificationLog.notifierId],
+      references: [notifiers.id],
+    }),
+  }),
+);
 
 export const followsRelations = relations(follows, ({ one }) => ({
-  follower: one(users, { fields: [follows.followerId], references: [users.id], relationName: "follower" }),
-  following: one(users, { fields: [follows.followingId], references: [users.id], relationName: "following" }),
+  follower: one(users, {
+    fields: [follows.followerId],
+    references: [users.id],
+    relationName: "follower",
+  }),
+  following: one(users, {
+    fields: [follows.followingId],
+    references: [users.id],
+    relationName: "following",
+  }),
 }));
 
 export const ratingsRelations = relations(ratings, ({ one }) => ({
@@ -747,23 +883,51 @@ export const ratingsRelations = relations(ratings, ({ one }) => ({
 
 export const episodeRatingsRelations = relations(episodeRatings, ({ one }) => ({
   user: one(users, { fields: [episodeRatings.userId], references: [users.id] }),
-  episode: one(episodes, { fields: [episodeRatings.episodeId], references: [episodes.id] }),
+  episode: one(episodes, {
+    fields: [episodeRatings.episodeId],
+    references: [episodes.id],
+  }),
 }));
 
-export const recommendationsRelations = relations(recommendations, ({ one, many }) => ({
-  fromUser: one(users, { fields: [recommendations.fromUserId], references: [users.id] }),
-  title: one(titles, { fields: [recommendations.titleId], references: [titles.id] }),
-  reads: many(recommendationReads),
-}));
+export const recommendationsRelations = relations(
+  recommendations,
+  ({ one, many }) => ({
+    fromUser: one(users, {
+      fields: [recommendations.fromUserId],
+      references: [users.id],
+    }),
+    title: one(titles, {
+      fields: [recommendations.titleId],
+      references: [titles.id],
+    }),
+    reads: many(recommendationReads),
+  }),
+);
 
-export const recommendationReadsRelations = relations(recommendationReads, ({ one }) => ({
-  recommendation: one(recommendations, { fields: [recommendationReads.recommendationId], references: [recommendations.id] }),
-  user: one(users, { fields: [recommendationReads.userId], references: [users.id] }),
-}));
+export const recommendationReadsRelations = relations(
+  recommendationReads,
+  ({ one }) => ({
+    recommendation: one(recommendations, {
+      fields: [recommendationReads.recommendationId],
+      references: [recommendations.id],
+    }),
+    user: one(users, {
+      fields: [recommendationReads.userId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
-  createdBy: one(users, { fields: [invitations.createdById], references: [users.id], relationName: "createdBy" }),
-  usedBy: one(users, { fields: [invitations.usedById], references: [users.id] }),
+  createdBy: one(users, {
+    fields: [invitations.createdById],
+    references: [users.id],
+    relationName: "createdBy",
+  }),
+  usedBy: one(users, {
+    fields: [invitations.usedById],
+    references: [users.id],
+  }),
 }));
 
 // ─── Database Instance ──────────────────────────────────────────────────────
@@ -775,14 +939,20 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 export const dismissedSuggestions = sqliteTable(
   "dismissed_suggestions",
   {
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    titleId: text("title_id").notNull().references(() => titles.id, { onDelete: "cascade" }),
-    dismissedAt: text("dismissed_at").notNull().default(sql`(datetime('now'))`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    dismissedAt: text("dismissed_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.titleId] }),
     index("idx_dismissed_suggestions_user_id").on(table.userId),
-  ]
+  ],
 );
 
 export const achievements = sqliteTable("achievements", {
@@ -820,7 +990,7 @@ export const userAchievements = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.achievementKey] }),
     index("idx_user_achievements_earned").on(table.userId, table.earnedAt),
-  ]
+  ],
 );
 
 export const userAchievementEarns = sqliteTable(
@@ -838,9 +1008,13 @@ export const userAchievementEarns = sqliteTable(
     notified: integer("notified").notNull().default(0),
   },
   (table) => [
-    index("idx_uae_user_key_earnedat").on(table.userId, table.achievementKey, table.earnedAt),
+    index("idx_uae_user_key_earnedat").on(
+      table.userId,
+      table.achievementKey,
+      table.earnedAt,
+    ),
     index("idx_uae_user_earnedat").on(table.userId, table.earnedAt),
-  ]
+  ],
 );
 
 export const userStreaks = sqliteTable("user_streaks", {
@@ -859,15 +1033,68 @@ export type UserAchievementEarnRow = typeof userAchievementEarns.$inferSelect;
 export type UserStreakRow = typeof userStreaks.$inferSelect;
 
 export const schemaExports = {
-  titles, providers, offers, scores, titleGenres, episodes, users, sessions, account, verification, passkey, settings, tracked, watchedEpisodes, watchedTitles, notifiers, oidcStates, jobs, cronJobs, userSubscribedProviders,
-  follows, ratings, episodeRatings, recommendations, recommendationReads, invitations, integrations, plexLibraryItems, titleTags,
-  watchHistory, streamingAlerts, activityKindVisibility, hiddenActivityEvents, notificationLog, dismissedSuggestions,
-  achievements, userAchievements, userAchievementEarns, userStreaks,
-  titlesRelations, providersRelations, offersRelations, scoresRelations, titleGenresRelations, episodesRelations,
+  titles,
+  providers,
+  offers,
+  scores,
+  titleGenres,
+  episodes,
+  users,
+  sessions,
+  account,
+  verification,
+  passkey,
+  settings,
+  tracked,
+  watchedEpisodes,
+  watchedTitles,
+  notifiers,
+  oidcStates,
+  jobs,
+  cronJobs,
+  userSubscribedProviders,
+  follows,
+  ratings,
+  episodeRatings,
+  recommendations,
+  recommendationReads,
+  invitations,
+  integrations,
+  plexLibraryItems,
+  titleTags,
+  watchHistory,
+  streamingAlerts,
+  activityKindVisibility,
+  hiddenActivityEvents,
+  notificationLog,
+  dismissedSuggestions,
+  achievements,
+  userAchievements,
+  userAchievementEarns,
+  userStreaks,
+  titlesRelations,
+  providersRelations,
+  offersRelations,
+  scoresRelations,
+  titleGenresRelations,
+  episodesRelations,
   passkeyRelations,
-  usersRelations, sessionsRelations, accountRelations, trackedRelations, watchedEpisodesRelations, watchedTitlesRelations, notifiersRelations,
-  followsRelations, ratingsRelations, episodeRatingsRelations, recommendationsRelations, recommendationReadsRelations, invitationsRelations,
-  integrationsRelations, plexLibraryItemsRelations, notificationLogRelations,
+  usersRelations,
+  sessionsRelations,
+  accountRelations,
+  trackedRelations,
+  watchedEpisodesRelations,
+  watchedTitlesRelations,
+  notifiersRelations,
+  followsRelations,
+  ratingsRelations,
+  episodeRatingsRelations,
+  recommendationsRelations,
+  recommendationReadsRelations,
+  invitationsRelations,
+  integrationsRelations,
+  plexLibraryItemsRelations,
+  notificationLogRelations,
 };
 
 // Re-export the union type from platform for convenience
@@ -904,5 +1131,7 @@ export function getDb(): DrizzleDb {
   // Fall back to registered singleton (Bun path)
   if (dbSingleton) return dbSingleton;
 
-  throw new Error("Database not initialized. Call initBunDb() or runWithDb() first.");
+  throw new Error(
+    "Database not initialized. Call initBunDb() or runWithDb() first.",
+  );
 }

@@ -17,14 +17,18 @@ export class SubscriptionExpiredError extends Error {
 export class WebPushProvider implements NotificationProvider {
   readonly name = "webpush";
 
-  validateConfig(
-    config: Record<string, string>
-  ): { valid: boolean; error?: string } {
+  validateConfig(config: Record<string, string>): {
+    valid: boolean;
+    error?: string;
+  } {
     if (!config.endpoint) {
       return { valid: false, error: "Push subscription endpoint is required" };
     }
     if (!config.p256dh) {
-      return { valid: false, error: "Push subscription p256dh key is required" };
+      return {
+        valid: false,
+        error: "Push subscription p256dh key is required",
+      };
     }
     if (!config.auth) {
       return { valid: false, error: "Push subscription auth key is required" };
@@ -34,10 +38,21 @@ export class WebPushProvider implements NotificationProvider {
 
   async send(
     config: Record<string, string>,
-    content: NotificationContent
+    content: NotificationContent,
   ): Promise<void> {
-    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
-    if (episodes.length === 0 && movies.length === 0 && streamingAlerts.length === 0 && achievementsEarned.length === 0) return;
+    const {
+      episodes,
+      movies,
+      streamingAlerts = [],
+      achievementsEarned = [],
+    } = content;
+    if (
+      episodes.length === 0 &&
+      movies.length === 0 &&
+      streamingAlerts.length === 0 &&
+      achievementsEarned.length === 0
+    )
+      return;
 
     const vapid = await getVapidKeys();
     webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
@@ -67,13 +82,18 @@ export class WebPushProvider implements NotificationProvider {
           : undefined;
       const message = err instanceof Error ? err.message : String(err);
       throw new Error(
-        `Web push failed (${statusCode ?? "unknown"}): ${body || message}`
+        `Web push failed (${statusCode ?? "unknown"}): ${body || message}`,
       );
     }
   }
 
   private buildPayload(content: NotificationContent) {
-    const { episodes, movies, streamingAlerts = [], achievementsEarned = [] } = content;
+    const {
+      episodes,
+      movies,
+      streamingAlerts = [],
+      achievementsEarned = [],
+    } = content;
     const totalCount = episodes.length + movies.length + streamingAlerts.length;
 
     const lines: string[] = [];
@@ -83,30 +103,39 @@ export class WebPushProvider implements NotificationProvider {
     for (const [showTitle, eps] of showMap) {
       const codes = eps.map(
         (ep) =>
-          `S${String(ep.seasonNumber).padStart(2, "0")}E${String(ep.episodeNumber).padStart(2, "0")}`
+          `S${String(ep.seasonNumber).padStart(2, "0")}E${String(ep.episodeNumber).padStart(2, "0")}`,
       );
       lines.push(`${showTitle} ${codes.join(", ")}`);
     }
 
     for (const movie of movies) {
-      lines.push(movie.releaseYear ? `${movie.title} (${movie.releaseYear})` : movie.title);
+      lines.push(
+        movie.releaseYear
+          ? `${movie.title} (${movie.releaseYear})`
+          : movie.title,
+      );
     }
 
     for (const alert of streamingAlerts) {
       if (alert.kind === "departure") {
-        lines.push(`${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt)}`);
+        lines.push(
+          `${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt)}`,
+        );
       } else {
         lines.push(`${alert.title} — now on ${alert.providerName}`);
       }
     }
 
     if (achievementsEarned.length > 0) {
-      lines.push(`🏆 ${achievementsEarned.map((ae) => `${ae.title} +${ae.points} XP`).join(", ")}`);
+      lines.push(
+        `🏆 ${achievementsEarned.map((ae) => `${ae.title} +${ae.points} XP`).join(", ")}`,
+      );
     }
 
-    const titleSuffix = achievementsEarned.length > 0 && totalCount === 0
-      ? `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`
-      : `${totalCount} new release${totalCount !== 1 ? "s" : ""}`;
+    const titleSuffix =
+      achievementsEarned.length > 0 && totalCount === 0
+        ? `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`
+        : `${totalCount} new release${totalCount !== 1 ? "s" : ""}`;
 
     return {
       title: `Remindarr — ${titleSuffix}`,

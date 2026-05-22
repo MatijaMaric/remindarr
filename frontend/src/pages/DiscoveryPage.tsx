@@ -41,9 +41,19 @@ function becauseLabel(reason: SuggestionSeedReason, title: string): string {
 
 // ─── Small primitives ─────────────────────────────────────────────────────────
 
-type FriendInfo = { username: string; displayName: string | null; image: string | null };
+type FriendInfo = {
+  username: string;
+  displayName: string | null;
+  image: string | null;
+};
 
-function FriendDot({ friend, size = 20 }: { friend: FriendInfo; size?: number }) {
+function FriendDot({
+  friend,
+  size = 20,
+}: {
+  friend: FriendInfo;
+  size?: number;
+}) {
   const name = friend.displayName ?? friend.username;
   const initial = (name || "?")[0].toUpperCase();
   if (friend.image) {
@@ -62,14 +72,25 @@ function FriendDot({ friend, size = 20 }: { friend: FriendInfo; size?: number })
     <div
       title={name}
       className="rounded-full ring-[1.5px] ring-zinc-900 flex items-center justify-center flex-shrink-0 font-bold text-zinc-950"
-      style={{ width: size, height: size, background: bgColor, fontSize: Math.round(size * 0.5) }}
+      style={{
+        width: size,
+        height: size,
+        background: bgColor,
+        fontSize: Math.round(size * 0.5),
+      }}
     >
       {initial}
     </div>
   );
 }
 
-function FriendStack({ friends, max = 4 }: { friends: FriendInfo[]; max?: number }) {
+function FriendStack({
+  friends,
+  max = 4,
+}: {
+  friends: FriendInfo[];
+  max?: number;
+}) {
   const shown = friends.slice(0, max);
   const extra = friends.length - shown.length;
   return (
@@ -82,7 +103,14 @@ function FriendStack({ friends, max = 4 }: { friends: FriendInfo[]; max?: number
       {extra > 0 && (
         <div
           className="ring-[1.5px] ring-zinc-900 rounded-full bg-zinc-700 text-zinc-300 flex items-center justify-center"
-          style={{ marginLeft: -7, height: 18, minWidth: 18, padding: "0 5px", fontSize: 9, fontWeight: 700 }}
+          style={{
+            marginLeft: -7,
+            height: 18,
+            minWidth: 18,
+            padding: "0 5px",
+            fontSize: 9,
+            fontWeight: 700,
+          }}
         >
           +{extra}
         </div>
@@ -109,7 +137,11 @@ function StateBadge({ state }: { state: "tracked" | "dismissed" | null }) {
 
 // ─── Suggestion card ──────────────────────────────────────────────────────────
 
-interface CardItem { id: string; title: string; posterUrl: string | null }
+interface CardItem {
+  id: string;
+  title: string;
+  posterUrl: string | null;
+}
 
 function SuggestionCard({
   item,
@@ -141,7 +173,13 @@ function SuggestionCard({
         to={`/title/${item.id}`}
         imageUrl={src}
         imageAlt={item.title}
-        title={isDismissed ? <span className="line-through">{item.title}</span> : item.title}
+        title={
+          isDismissed ? (
+            <span className="line-through">{item.title}</span>
+          ) : (
+            item.title
+          )
+        }
         titleClamp={2}
         badge={
           state === "tracked"
@@ -164,14 +202,20 @@ function SuggestionCard({
           <div className="flex gap-1.5">
             {isTracked ? (
               <button
-                onClick={(e) => { e.preventDefault(); onTrack(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onTrack();
+                }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400/[0.16] text-amber-400 border border-amber-400/[0.35] cursor-pointer"
               >
                 ✓ Tracked
               </button>
             ) : (
               <button
-                onClick={(e) => { e.preventDefault(); onTrack(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onTrack();
+                }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-black hover:bg-amber-400 transition-colors cursor-pointer"
               >
                 Track
@@ -179,14 +223,20 @@ function SuggestionCard({
             )}
             {isDismissed ? (
               <button
-                onClick={(e) => { e.preventDefault(); onUndismiss(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onUndismiss();
+                }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-zinc-400 border border-white/[0.08] hover:bg-white/[0.08] transition-colors cursor-pointer"
               >
                 Undo
               </button>
             ) : (
               <button
-                onClick={(e) => { e.preventDefault(); onDismiss(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onDismiss();
+                }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
               >
                 Dismiss
@@ -221,18 +271,31 @@ function DiscoveryHero({
   onUndismiss: () => void;
 }) {
   const src = hero.posterUrl ? posterUrl(hero.posterUrl, "w342") : null;
-  const sourceSrc = algoGroup?.source.posterUrl ? posterUrl(algoGroup.source.posterUrl, "w92") : null;
+  const sourceSrc = algoGroup?.source.posterUrl
+    ? posterUrl(algoGroup.source.posterUrl, "w92")
+    : null;
   const state = isTracked ? "tracked" : isDismissed ? "dismissed" : null;
 
   const topFriend = friendRecs[0] ?? null;
 
   return (
-    <Card radius="2xl" padding="lg" className="mb-8 grid grid-cols-1 sm:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] gap-6 sm:gap-8 items-stretch">
+    <Card
+      radius="2xl"
+      padding="lg"
+      className="mb-8 grid grid-cols-1 sm:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] gap-6 sm:gap-8 items-stretch"
+    >
       {/* Poster */}
       <div className="relative aspect-[2/3] rounded-[10px] overflow-hidden max-w-[200px] sm:max-w-none mx-auto sm:mx-0 shadow-2xl">
         <Link to={`/title/${hero.id}`} className="block w-full h-full">
           {src ? (
-            <img src={src} alt={hero.title} className="w-full h-full object-cover" loading="lazy" width={342} height={513} />
+            <img
+              src={src}
+              alt={hero.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              width={342}
+              height={513}
+            />
           ) : (
             <div className="w-full h-full bg-zinc-800" />
           )}
@@ -251,10 +314,20 @@ function DiscoveryHero({
         </h2>
 
         <div className="flex flex-wrap gap-2 mb-5">
-          <Chip variant="default">{hero.objectType === "SHOW" ? "TV Series" : "Movie"}</Chip>
-          {hero.genres?.slice(0, 3).map((g) => <Chip key={g} variant="default">{g}</Chip>)}
-          {hero.releaseYear && <Chip variant="default">{hero.releaseYear}</Chip>}
-          {hero.matchScore != null && <Chip variant="amber">{hero.matchScore}% match</Chip>}
+          <Chip variant="default">
+            {hero.objectType === "SHOW" ? "TV Series" : "Movie"}
+          </Chip>
+          {hero.genres?.slice(0, 3).map((g) => (
+            <Chip key={g} variant="default">
+              {g}
+            </Chip>
+          ))}
+          {hero.releaseYear && (
+            <Chip variant="default">{hero.releaseYear}</Chip>
+          )}
+          {hero.matchScore != null && (
+            <Chip variant="amber">{hero.matchScore}% match</Chip>
+          )}
         </div>
 
         {/* Two-source signal grid */}
@@ -271,21 +344,35 @@ function DiscoveryHero({
               <div className="flex gap-2.5 items-center">
                 {sourceSrc && (
                   <div className="w-8 h-12 rounded overflow-hidden flex-shrink-0 bg-zinc-800">
-                    <img src={sourceSrc} alt={algoGroup.source.title} className="w-full h-full object-cover" loading="lazy" width={32} height={48} />
+                    <img
+                      src={sourceSrc}
+                      alt={algoGroup.source.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      width={32}
+                      height={48}
+                    />
                   </div>
                 )}
                 <div className="min-w-0">
                   <p className="font-mono text-[9px] uppercase tracking-wider text-zinc-500 mb-0.5">
-                    {algoGroup.source.reason === "loved" ? "Because you loved" :
-                     algoGroup.source.reason === "liked" ? "Because you liked" :
-                     algoGroup.source.reason === "watched" ? "Because you watched" :
-                     "Because you tracked"}
+                    {algoGroup.source.reason === "loved"
+                      ? "Because you loved"
+                      : algoGroup.source.reason === "liked"
+                        ? "Because you liked"
+                        : algoGroup.source.reason === "watched"
+                          ? "Because you watched"
+                          : "Because you tracked"}
                   </p>
-                  <p className="text-[13px] text-zinc-200 font-semibold truncate">{algoGroup.source.title}</p>
+                  <p className="text-[13px] text-zinc-200 font-semibold truncate">
+                    {algoGroup.source.title}
+                  </p>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-zinc-400 leading-snug">Top pick from your taste profile.</p>
+              <p className="text-xs text-zinc-400 leading-snug">
+                Top pick from your taste profile.
+              </p>
             )}
           </div>
 
@@ -302,16 +389,34 @@ function DiscoveryHero({
             {friendRecs.length > 0 ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <FriendStack friends={friendRecs.map((r) => ({ username: r.from_user.username, displayName: r.from_user.display_name ?? null, image: r.from_user.image ?? null }))} max={4} />
+                  <FriendStack
+                    friends={friendRecs.map((r) => ({
+                      username: r.from_user.username,
+                      displayName: r.from_user.display_name ?? null,
+                      image: r.from_user.image ?? null,
+                    }))}
+                    max={4}
+                  />
                   <span className="text-xs text-zinc-300 truncate">
-                    {friendRecs.slice(0, 2).map((r) => (r.from_user.display_name ?? r.from_user.username).split(" ")[0]).join(", ")}
+                    {friendRecs
+                      .slice(0, 2)
+                      .map(
+                        (r) =>
+                          (
+                            r.from_user.display_name ?? r.from_user.username
+                          ).split(" ")[0],
+                      )
+                      .join(", ")}
                     {friendRecs.length > 2 ? ` +${friendRecs.length - 2}` : ""}
                   </span>
                 </div>
                 {topFriend?.message && (
                   <p className="text-xs text-zinc-400 italic leading-snug line-clamp-2 select-text">
                     &ldquo;{topFriend.message}&rdquo;
-                    <span className="not-italic text-zinc-500"> — @{topFriend.from_user.username}</span>
+                    <span className="not-italic text-zinc-500">
+                      {" "}
+                      — @{topFriend.from_user.username}
+                    </span>
                   </p>
                 )}
                 {friendRecs.some((r) => r.is_targeted) && (
@@ -321,7 +426,9 @@ function DiscoveryHero({
                 )}
               </div>
             ) : (
-              <p className="text-xs text-zinc-500 leading-snug">None of your friends have recommended this yet.</p>
+              <p className="text-xs text-zinc-500 leading-snug">
+                None of your friends have recommended this yet.
+              </p>
             )}
           </div>
         </div>
@@ -389,12 +496,21 @@ function SectionHead({
     <div className="flex items-center gap-3 mb-4">
       {sourcePosterUrl && sourceId && (
         <Link to={`/title/${sourceId}`} className="flex-shrink-0">
-          <img src={sourcePosterUrl} alt="" className="w-8 h-12 rounded object-cover" loading="lazy" width={32} height={48} />
+          <img
+            src={sourcePosterUrl}
+            alt=""
+            className="w-8 h-12 rounded object-cover"
+            loading="lazy"
+            width={32}
+            height={48}
+          />
         </Link>
       )}
       <div>
         {kicker && <Kicker>{kicker}</Kicker>}
-        <h2 className="text-base font-bold tracking-[-0.01em] text-zinc-100 leading-snug">{title}</h2>
+        <h2 className="text-base font-bold tracking-[-0.01em] text-zinc-100 leading-snug">
+          {title}
+        </h2>
         {sub && <p className="text-xs text-zinc-500 mt-0.5">{sub}</p>}
       </div>
     </div>
@@ -468,44 +584,71 @@ function RecommendationCard({
   const senderInitial = (senderName || "?")[0].toUpperCase();
 
   return (
-    <div ref={cardRef} className={`bg-zinc-900 rounded-lg p-4 ${isUnread ? "border-l-2 border-l-amber-500" : ""}`}>
+    <div
+      ref={cardRef}
+      className={`bg-zinc-900 rounded-lg p-4 ${isUnread ? "border-l-2 border-l-amber-500" : ""}`}
+    >
       <div className="flex items-center gap-2 mb-3">
         {rec.from_user.image ? (
-          <img src={rec.from_user.image} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+          <img
+            src={rec.from_user.image}
+            alt=""
+            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+          />
         ) : (
           <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-medium text-zinc-300 flex-shrink-0">
             {senderInitial}
           </div>
         )}
-        <span className="text-sm text-zinc-300 font-medium select-text">{senderName}</span>
+        <span className="text-sm text-zinc-300 font-medium select-text">
+          {senderName}
+        </span>
         {rec.is_targeted && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
             Direct
           </span>
         )}
-        <span className="text-xs text-zinc-500 ml-auto">{formatRelativeTime(rec.created_at)}</span>
+        <span className="text-xs text-zinc-500 ml-auto">
+          {formatRelativeTime(rec.created_at)}
+        </span>
       </div>
 
       <div className="flex gap-3 mb-3">
         <Link to={`/title/${rec.title.id}`} className="flex-shrink-0">
           {src ? (
-            <img src={src} alt={rec.title.title} className="w-12 h-[72px] rounded object-cover" loading="lazy" width={92} height={138} />
+            <img
+              src={src}
+              alt={rec.title.title}
+              className="w-12 h-[72px] rounded object-cover"
+              loading="lazy"
+              width={92}
+              height={138}
+            />
           ) : (
-            <div className="w-12 h-[72px] rounded bg-zinc-800 flex items-center justify-center text-zinc-600 text-xs">N/A</div>
+            <div className="w-12 h-[72px] rounded bg-zinc-800 flex items-center justify-center text-zinc-600 text-xs">
+              N/A
+            </div>
           )}
         </Link>
         <div className="flex-1 min-w-0">
-          <Link to={`/title/${rec.title.id}`} className="text-sm font-medium text-white hover:text-amber-400 transition-colors line-clamp-2">
+          <Link
+            to={`/title/${rec.title.id}`}
+            className="text-sm font-medium text-white hover:text-amber-400 transition-colors line-clamp-2"
+          >
             {rec.title.title}
           </Link>
           <p className="text-xs text-zinc-500 mt-0.5">
-            {rec.title.object_type === "MOVIE" ? t("discovery.movie") : t("discovery.tv")}
+            {rec.title.object_type === "MOVIE"
+              ? t("discovery.movie")
+              : t("discovery.tv")}
           </p>
         </div>
       </div>
 
       {rec.message && (
-        <p className="text-sm text-zinc-400 mb-3 italic select-text">&ldquo;{rec.message}&rdquo;</p>
+        <p className="text-sm text-zinc-400 mb-3 italic select-text">
+          &ldquo;{rec.message}&rdquo;
+        </p>
       )}
 
       <div className="flex gap-2">
@@ -533,13 +676,23 @@ export default function DiscoveryPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<"foryou" | "activity">("foryou");
   const [trackedSet, setTrackedSet] = useState<Set<string>>(() => new Set());
-  const [dismissedSet, setDismissedSet] = useState<Set<string>>(() => new Set());
+  const [dismissedSet, setDismissedSet] = useState<Set<string>>(
+    () => new Set(),
+  );
 
-  const { isLoading: loading, isError: error, data: recsData } = useQuery({
+  const {
+    isLoading: loading,
+    isError: error,
+    data: recsData,
+  } = useQuery({
     queryKey: ["recommendations"],
-    queryFn: ({ signal }) => api.getRecommendations(undefined, undefined, signal),
+    queryFn: ({ signal }) =>
+      api.getRecommendations(undefined, undefined, signal),
   });
-  const recommendations = useMemo(() => recsData?.recommendations ?? [], [recsData]);
+  const recommendations = useMemo(
+    () => recsData?.recommendations ?? [],
+    [recsData],
+  );
 
   const { data: countData } = useQuery({
     queryKey: ["notification-count"],
@@ -565,50 +718,90 @@ export default function DiscoveryPage() {
 
   // Hero: first algo suggestion that's not tracked or dismissed this session
   const hero = useMemo(
-    () => aggregate?.flat.find((s) => !trackedSet.has(s.id) && !dismissedSet.has(s.id)) ?? null,
+    () =>
+      aggregate?.flat.find(
+        (s) => !trackedSet.has(s.id) && !dismissedSet.has(s.id),
+      ) ?? null,
     [aggregate, trackedSet, dismissedSet],
   );
 
   const heroFriendRecs = hero ? (recsByTitle[hero.id] ?? []) : [];
   const heroAlgoGroup = hero
-    ? (aggregate?.groups.find((g) => g.suggestions.some((s) => s.id === hero.id)) ?? null)
+    ? (aggregate?.groups.find((g) =>
+        g.suggestions.some((s) => s.id === hero.id),
+      ) ?? null)
     : null;
 
   // More for you: flat list minus hero, minus session-tracked/dismissed
   const moreForYou = useMemo(
     () =>
       aggregate?.flat
-        .filter((s) => s.id !== hero?.id && !trackedSet.has(s.id) && !dismissedSet.has(s.id))
+        .filter(
+          (s) =>
+            s.id !== hero?.id &&
+            !trackedSet.has(s.id) &&
+            !dismissedSet.has(s.id),
+        )
         .slice(0, 12) ?? [],
     [aggregate, hero, trackedSet, dismissedSet],
   );
 
   // ─── Suggestion (algo) handlers ───────────────────────────────────────────
 
-  const handleTrackSuggestion = useCallback(async (titleId: string, titleData?: SearchTitle) => {
-    setTrackedSet((prev) => new Set([...prev, titleId]));
-    setDismissedSet((prev) => { const s = new Set(prev); s.delete(titleId); return s; });
-    try {
-      await api.trackTitle(titleId, undefined, titleData ? normalizeSearchTitle(titleData) : undefined);
-    } catch {
-      setTrackedSet((prev) => { const s = new Set(prev); s.delete(titleId); return s; });
-      toast.error(t("discovery.trackFailed"));
-    }
-  }, [t]);
+  const handleTrackSuggestion = useCallback(
+    async (titleId: string, titleData?: SearchTitle) => {
+      setTrackedSet((prev) => new Set([...prev, titleId]));
+      setDismissedSet((prev) => {
+        const s = new Set(prev);
+        s.delete(titleId);
+        return s;
+      });
+      try {
+        await api.trackTitle(
+          titleId,
+          undefined,
+          titleData ? normalizeSearchTitle(titleData) : undefined,
+        );
+      } catch {
+        setTrackedSet((prev) => {
+          const s = new Set(prev);
+          s.delete(titleId);
+          return s;
+        });
+        toast.error(t("discovery.trackFailed"));
+      }
+    },
+    [t],
+  );
 
-  const handleDismissSuggestion = useCallback(async (titleId: string) => {
-    setDismissedSet((prev) => new Set([...prev, titleId]));
-    setTrackedSet((prev) => { const s = new Set(prev); s.delete(titleId); return s; });
-    try {
-      await api.dismissSuggestion(titleId);
-    } catch {
-      setDismissedSet((prev) => { const s = new Set(prev); s.delete(titleId); return s; });
-      toast.error(t("discovery.dismissFailed"));
-    }
-  }, [t]);
+  const handleDismissSuggestion = useCallback(
+    async (titleId: string) => {
+      setDismissedSet((prev) => new Set([...prev, titleId]));
+      setTrackedSet((prev) => {
+        const s = new Set(prev);
+        s.delete(titleId);
+        return s;
+      });
+      try {
+        await api.dismissSuggestion(titleId);
+      } catch {
+        setDismissedSet((prev) => {
+          const s = new Set(prev);
+          s.delete(titleId);
+          return s;
+        });
+        toast.error(t("discovery.dismissFailed"));
+      }
+    },
+    [t],
+  );
 
   const handleUndismiss = useCallback(async (titleId: string) => {
-    setDismissedSet((prev) => { const s = new Set(prev); s.delete(titleId); return s; });
+    setDismissedSet((prev) => {
+      const s = new Set(prev);
+      s.delete(titleId);
+      return s;
+    });
     try {
       await api.undismissSuggestion(titleId);
     } catch {
@@ -618,51 +811,81 @@ export default function DiscoveryPage() {
 
   // ─── Activity-tab handlers ────────────────────────────────────────────────
 
-  const handleMarkRead = useCallback(async (rec: Recommendation) => {
-    try {
-      await api.markRecommendationRead(rec.id);
-      qc.setQueryData<{ recommendations: Recommendation[] }>(["recommendations"], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          recommendations: old.recommendations.map((r) =>
-            r.id === rec.id ? { ...r, read_at: new Date().toISOString() } : r
-          ),
-        };
-      });
-      void qc.invalidateQueries({ queryKey: ["notification-count"] });
-    } catch {
-      // Silent failure for mark-read
-    }
-  }, [qc]);
+  const handleMarkRead = useCallback(
+    async (rec: Recommendation) => {
+      try {
+        await api.markRecommendationRead(rec.id);
+        qc.setQueryData<{ recommendations: Recommendation[] }>(
+          ["recommendations"],
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              recommendations: old.recommendations.map((r) =>
+                r.id === rec.id
+                  ? { ...r, read_at: new Date().toISOString() }
+                  : r,
+              ),
+            };
+          },
+        );
+        void qc.invalidateQueries({ queryKey: ["notification-count"] });
+      } catch {
+        // Silent failure for mark-read
+      }
+    },
+    [qc],
+  );
 
-  const handleTrackRec = useCallback(async (rec: Recommendation) => {
-    try {
-      await api.trackTitle(rec.title.id);
-      if (!rec.read_at) await api.markRecommendationRead(rec.id);
-      qc.setQueryData<{ recommendations: Recommendation[] }>(["recommendations"], (old) => {
-        if (!old) return old;
-        return { ...old, recommendations: old.recommendations.filter((r) => r.id !== rec.id) };
-      });
-      void qc.invalidateQueries({ queryKey: ["notification-count"] });
-      toast.success(t("discovery.tracked", { title: rec.title.title }));
-    } catch {
-      toast.error(t("discovery.trackFailed"));
-    }
-  }, [t, qc]);
+  const handleTrackRec = useCallback(
+    async (rec: Recommendation) => {
+      try {
+        await api.trackTitle(rec.title.id);
+        if (!rec.read_at) await api.markRecommendationRead(rec.id);
+        qc.setQueryData<{ recommendations: Recommendation[] }>(
+          ["recommendations"],
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              recommendations: old.recommendations.filter(
+                (r) => r.id !== rec.id,
+              ),
+            };
+          },
+        );
+        void qc.invalidateQueries({ queryKey: ["notification-count"] });
+        toast.success(t("discovery.tracked", { title: rec.title.title }));
+      } catch {
+        toast.error(t("discovery.trackFailed"));
+      }
+    },
+    [t, qc],
+  );
 
-  const handleDismissRec = useCallback(async (rec: Recommendation) => {
-    try {
-      await api.deleteRecommendation(rec.id);
-      qc.setQueryData<{ recommendations: Recommendation[] }>(["recommendations"], (old) => {
-        if (!old) return old;
-        return { ...old, recommendations: old.recommendations.filter((r) => r.id !== rec.id) };
-      });
-      void qc.invalidateQueries({ queryKey: ["notification-count"] });
-    } catch {
-      toast.error(t("discovery.dismissFailed"));
-    }
-  }, [t, qc]);
+  const handleDismissRec = useCallback(
+    async (rec: Recommendation) => {
+      try {
+        await api.deleteRecommendation(rec.id);
+        qc.setQueryData<{ recommendations: Recommendation[] }>(
+          ["recommendations"],
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              recommendations: old.recommendations.filter(
+                (r) => r.id !== rec.id,
+              ),
+            };
+          },
+        );
+        void qc.invalidateQueries({ queryKey: ["notification-count"] });
+      } catch {
+        toast.error(t("discovery.dismissFailed"));
+      }
+    },
+    [t, qc],
+  );
 
   // ─── Derived counts ───────────────────────────────────────────────────────
 
@@ -678,7 +901,7 @@ export default function DiscoveryPage() {
         kicker="Based on what you watch & who you follow"
         title="For you"
         right={
-          (trackedSet.size > 0 || dismissedSet.size > 0) ? (
+          trackedSet.size > 0 || dismissedSet.size > 0 ? (
             <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-zinc-500">
               {trackedSet.size} tracked · {dismissedSet.size} dismissed
             </span>
@@ -702,13 +925,17 @@ export default function DiscoveryPage() {
       </div>
 
       {/* ── For you tab ─────────────────────────────────────────────────── */}
-      {tab === "foryou" && (
-        loading ? (
+      {tab === "foryou" &&
+        (loading ? (
           <DiscoverySkeleton />
         ) : error ? (
-          <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">{t("discovery.loadFailed", "Failed to load recommendations")}</div>
+          <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
+            {t("discovery.loadFailed", "Failed to load recommendations")}
+          </div>
         ) : isEmpty ? (
-          <p className="text-zinc-500 text-sm py-8 text-center">{t("discovery.empty")}</p>
+          <p className="text-zinc-500 text-sm py-8 text-center">
+            {t("discovery.empty")}
+          </p>
         ) : (
           <div className="space-y-8">
             {/* Hero — combined algo + friends */}
@@ -728,13 +955,25 @@ export default function DiscoveryPage() {
             {/* More for you rail */}
             {moreForYou.length > 0 && (
               <section>
-                <SectionHead kicker="More for you" title="Suggested next" sub="Ranked by score — tracked and dismissed titles are filtered out." />
+                <SectionHead
+                  kicker="More for you"
+                  title="Suggested next"
+                  sub="Ranked by score — tracked and dismissed titles are filtered out."
+                />
                 <ScrollableRow className="gap-3 pb-2">
                   {moreForYou.map((title) => (
                     <SuggestionCard
                       key={title.id}
-                      item={{ id: title.id, title: title.title, posterUrl: title.posterUrl }}
-                      friends={(recsByTitle[title.id] ?? []).map((r) => ({ username: r.from_user.username, displayName: r.from_user.display_name ?? null, image: r.from_user.image ?? null }))}
+                      item={{
+                        id: title.id,
+                        title: title.title,
+                        posterUrl: title.posterUrl,
+                      }}
+                      friends={(recsByTitle[title.id] ?? []).map((r) => ({
+                        username: r.from_user.username,
+                        displayName: r.from_user.display_name ?? null,
+                        image: r.from_user.image ?? null,
+                      }))}
                       isTracked={trackedSet.has(title.id)}
                       isDismissed={dismissedSet.has(title.id)}
                       onTrack={() => handleTrackSuggestion(title.id, title)}
@@ -749,15 +988,26 @@ export default function DiscoveryPage() {
             {/* Friends are recommending */}
             {Object.keys(recsByTitle).length > 0 && (
               <section>
-                <SectionHead kicker="From people you follow" title="Friends are recommending" />
+                <SectionHead
+                  kicker="From people you follow"
+                  title="Friends are recommending"
+                />
                 <ScrollableRow className="gap-3 pb-2">
                   {Object.entries(recsByTitle).map(([titleId, recs]) => {
                     const first = recs[0];
                     return (
                       <SuggestionCard
                         key={titleId}
-                        item={{ id: titleId, title: first.title.title, posterUrl: first.title.poster_url }}
-                        friends={recs.map((r) => ({ username: r.from_user.username, displayName: r.from_user.display_name ?? null, image: r.from_user.image ?? null }))}
+                        item={{
+                          id: titleId,
+                          title: first.title.title,
+                          posterUrl: first.title.poster_url,
+                        }}
+                        friends={recs.map((r) => ({
+                          username: r.from_user.username,
+                          displayName: r.from_user.display_name ?? null,
+                          image: r.from_user.image ?? null,
+                        }))}
                         isTracked={trackedSet.has(titleId)}
                         isDismissed={dismissedSet.has(titleId)}
                         onTrack={() => handleTrackSuggestion(titleId)}
@@ -779,15 +1029,25 @@ export default function DiscoveryPage() {
                 (s) => trackedSet.has(s.id) || dismissedSet.has(s.id),
               ).length;
               const totalHidden = group.hiddenCount + sessionHidden;
-              const sourceSrc = group.source.posterUrl ? posterUrl(group.source.posterUrl, "w92") : null;
+              const sourceSrc = group.source.posterUrl
+                ? posterUrl(group.source.posterUrl, "w92")
+                : null;
 
-              if (visibleSuggestions.length === 0 && totalHidden === 0) return null;
+              if (visibleSuggestions.length === 0 && totalHidden === 0)
+                return null;
 
               return (
                 <section key={group.source.id}>
                   <SectionHead
-                    title={becauseLabel(group.source.reason, group.source.title)}
-                    sub={totalHidden > 0 ? `${totalHidden} hidden — already tracked or dismissed` : undefined}
+                    title={becauseLabel(
+                      group.source.reason,
+                      group.source.title,
+                    )}
+                    sub={
+                      totalHidden > 0
+                        ? `${totalHidden} hidden — already tracked or dismissed`
+                        : undefined
+                    }
                     sourcePosterUrl={sourceSrc}
                     sourceId={group.source.id}
                   />
@@ -796,8 +1056,16 @@ export default function DiscoveryPage() {
                       {visibleSuggestions.map((title) => (
                         <SuggestionCard
                           key={title.id}
-                          item={{ id: title.id, title: title.title, posterUrl: title.posterUrl }}
-                          friends={(recsByTitle[title.id] ?? []).map((r) => ({ username: r.from_user.username, displayName: r.from_user.display_name ?? null, image: r.from_user.image ?? null }))}
+                          item={{
+                            id: title.id,
+                            title: title.title,
+                            posterUrl: title.posterUrl,
+                          }}
+                          friends={(recsByTitle[title.id] ?? []).map((r) => ({
+                            username: r.from_user.username,
+                            displayName: r.from_user.display_name ?? null,
+                            image: r.from_user.image ?? null,
+                          }))}
                           isTracked={trackedSet.has(title.id)}
                           isDismissed={dismissedSet.has(title.id)}
                           onTrack={() => handleTrackSuggestion(title.id, title)}
@@ -807,21 +1075,24 @@ export default function DiscoveryPage() {
                       ))}
                     </ScrollableRow>
                   ) : (
-                    <p className="text-xs text-zinc-500 py-2">All suggestions tracked or dismissed.</p>
+                    <p className="text-xs text-zinc-500 py-2">
+                      All suggestions tracked or dismissed.
+                    </p>
                   )}
                 </section>
               );
             })}
           </div>
-        )
-      )}
+        ))}
 
       {/* ── Activity tab ─────────────────────────────────────────────────── */}
-      {tab === "activity" && (
-        loading ? (
+      {tab === "activity" &&
+        (loading ? (
           <DiscoverySkeleton />
         ) : recommendations.length === 0 ? (
-          <p className="text-zinc-500 text-sm py-8 text-center">{t("discovery.empty")}</p>
+          <p className="text-zinc-500 text-sm py-8 text-center">
+            {t("discovery.empty")}
+          </p>
         ) : (
           <div className="space-y-3">
             {recommendations.map((rec) => (
@@ -834,8 +1105,7 @@ export default function DiscoveryPage() {
               />
             ))}
           </div>
-        )
-      )}
+        ))}
     </div>
   );
 }

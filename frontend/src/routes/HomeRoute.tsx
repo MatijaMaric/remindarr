@@ -13,7 +13,11 @@ export default function HomeRoute() {
   if (user && isMobile) return <Navigate to="/reels" replace />;
   return (
     <ErrorBoundary variant="inline">
-      <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading...</div>}>
+      <Suspense
+        fallback={
+          <div className="text-center py-12 text-zinc-500">Loading...</div>
+        }
+      >
         <HomePage />
       </Suspense>
     </ErrorBoundary>

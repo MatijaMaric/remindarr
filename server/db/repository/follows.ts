@@ -9,7 +9,8 @@ export async function follow(followerId: string, followingId: string) {
       throw new Error("Cannot follow yourself");
     }
     const db = getDb();
-    await db.insert(follows)
+    await db
+      .insert(follows)
       .values({ followerId, followingId })
       .onConflictDoNothing()
       .run();
@@ -19,8 +20,14 @@ export async function follow(followerId: string, followingId: string) {
 export async function unfollow(followerId: string, followingId: string) {
   return traceDbQuery("unfollow", async () => {
     const db = getDb();
-    await db.delete(follows)
-      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+    await db
+      .delete(follows)
+      .where(
+        and(
+          eq(follows.followerId, followerId),
+          eq(follows.followingId, followingId),
+        ),
+      )
       .run();
   });
 }
@@ -61,19 +68,30 @@ export async function getFollowing(userId: string) {
   });
 }
 
-export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
+export async function isFollowing(
+  followerId: string,
+  followingId: string,
+): Promise<boolean> {
   return traceDbQuery("isFollowing", async () => {
     const db = getDb();
     const row = await db
       .select({ followerId: follows.followerId })
       .from(follows)
-      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+      .where(
+        and(
+          eq(follows.followerId, followerId),
+          eq(follows.followingId, followingId),
+        ),
+      )
       .get();
     return row !== undefined;
   });
 }
 
-export async function areMutualFollowers(userId1: string, userId2: string): Promise<boolean> {
+export async function areMutualFollowers(
+  userId1: string,
+  userId2: string,
+): Promise<boolean> {
   return traceDbQuery("areMutualFollowers", async () => {
     const [a, b] = await Promise.all([
       isFollowing(userId1, userId2),
@@ -119,7 +137,10 @@ export interface MutualFollower {
  * Returns users who both follow and are followed by `userId`, ordered by the
  * later of the two follow timestamps (most recent mutual first).
  */
-export async function getMutualFollowers(userId: string, limit = 4): Promise<MutualFollower[]> {
+export async function getMutualFollowers(
+  userId: string,
+  limit = 4,
+): Promise<MutualFollower[]> {
   return traceDbQuery("getMutualFollowers", async () => {
     const db = getDb();
     return db.all<MutualFollower>(sql`

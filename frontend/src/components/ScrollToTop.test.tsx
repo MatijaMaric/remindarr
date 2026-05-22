@@ -29,7 +29,7 @@ describe("ScrollToTop", () => {
     render(
       <MemoryRouter initialEntries={["/title/123"]}>
         <ScrollToTop />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(scrollToMock).toHaveBeenCalledWith(0, 0);
@@ -37,10 +37,13 @@ describe("ScrollToTop", () => {
 
   it("scrolls to top when pathname changes", () => {
     const { unmount } = render(
-      <MemoryRouter initialEntries={["/title/123", "/title/456"]} initialIndex={0}>
+      <MemoryRouter
+        initialEntries={["/title/123", "/title/456"]}
+        initialIndex={0}
+      >
         <ScrollToTop />
         <NavigateTo path="/title/456" />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Called at least once for initial render
@@ -52,7 +55,7 @@ describe("ScrollToTop", () => {
     const { container } = render(
       <MemoryRouter>
         <ScrollToTop />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(container.innerHTML).toBe("");

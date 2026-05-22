@@ -92,7 +92,9 @@ export default function TagList({ titleId, tags, onTagsChange }: Props) {
         className="bg-transparent text-[11px] text-zinc-300 placeholder-zinc-600 outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900 rounded-sm min-w-[60px] max-w-[100px]"
         maxLength={31}
       />
-      {error && <span className="text-[10px] text-red-400 w-full">{error}</span>}
+      {error && (
+        <span className="text-[10px] text-red-400 w-full">{error}</span>
+      )}
     </div>
   );
 }

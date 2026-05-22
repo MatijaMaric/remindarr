@@ -211,7 +211,11 @@ describe("buildWeeklyDigestContent", () => {
   });
 
   it("returns empty content when nothing is in range", async () => {
-    const content = await buildWeeklyDigestContent(userId, "2026-04-07", "2026-04-14");
+    const content = await buildWeeklyDigestContent(
+      userId,
+      "2026-04-07",
+      "2026-04-14",
+    );
 
     expect(content.episodes).toHaveLength(0);
     expect(content.movies).toHaveLength(0);

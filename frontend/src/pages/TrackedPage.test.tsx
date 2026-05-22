@@ -1,11 +1,19 @@
 import { describe, it, expect, mock, afterEach } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 // Initialize i18n before anything else
@@ -14,7 +22,13 @@ import "../i18n";
 // Mock auth context
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "u1", username: "testuser", display_name: null, auth_provider: "local", is_admin: false },
+    user: {
+      id: "u1",
+      username: "testuser",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: { local: true, oidc: null },
     loading: false,
     sessionStatus: "authenticated",
@@ -29,7 +43,7 @@ mock.module("../context/AuthContext", () => ({
 }));
 
 const mockGetTrackedTitles = mock(() =>
-  Promise.resolve({ titles: [], count: 0, profile_public: false })
+  Promise.resolve({ titles: [], count: 0, profile_public: false }),
 );
 const mockBulkTrackAction = mock(() => Promise.resolve({ updated: 0 }));
 
@@ -39,7 +53,9 @@ mock.module("../api", () => ({
   untrackTitle: mock(() => Promise.resolve()),
   bulkTrackAction: mockBulkTrackAction,
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
 }));
 
 const { default: TrackedPage } = await import("./TrackedPage");
@@ -121,11 +137,11 @@ describe("TrackedPage", () => {
 
   it("shows empty message when no tracked titles", async () => {
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles: [], count: 0, profile_public: false })
+      Promise.resolve({ titles: [], count: 0, profile_public: false }),
     );
     render(<TrackedPage />, { wrapper: Wrapper });
     await waitFor(() =>
-      expect(screen.getByText(/No tracked titles yet/)).toBeDefined()
+      expect(screen.getByText(/No tracked titles yet/)).toBeDefined(),
     );
   });
 
@@ -138,7 +154,7 @@ describe("TrackedPage", () => {
       makeMovie("m1"),
     ];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -157,12 +173,9 @@ describe("TrackedPage", () => {
   });
 
   it("does not render empty groups", async () => {
-    const titles = [
-      makeShow("s1", "watching"),
-      makeMovie("m1"),
-    ];
+    const titles = [makeShow("s1", "watching"), makeMovie("m1")];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -194,7 +207,7 @@ describe("TrackedPage", () => {
       makeMovie("m2"),
     ];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -214,7 +227,7 @@ describe("TrackedPage", () => {
       makeMovie("m1"),
     ];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -226,11 +239,9 @@ describe("TrackedPage", () => {
   });
 
   it("renders unreleased section when shows have unreleased status", async () => {
-    const titles = [
-      makeShow("s1", "unreleased"),
-    ];
+    const titles = [makeShow("s1", "unreleased")];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -244,11 +255,9 @@ describe("TrackedPage", () => {
   });
 
   it("does not show movies section when there are no movies", async () => {
-    const titles = [
-      makeShow("s1", "watching"),
-    ];
+    const titles = [makeShow("s1", "watching")];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -267,7 +276,11 @@ describe("TrackedPage", () => {
 describe("TrackedPage select mode", () => {
   it("shows Select toggle button", async () => {
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles: [makeMovie("m1"), makeMovie("m2")], count: 2, profile_public: false })
+      Promise.resolve({
+        titles: [makeMovie("m1"), makeMovie("m2")],
+        count: 2,
+        profile_public: false,
+      }),
     );
     render(<TrackedPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText("Select")).toBeDefined());
@@ -276,7 +289,7 @@ describe("TrackedPage select mode", () => {
   it("enters select mode and shows the bulk action bar when a title is selected", async () => {
     const titles = [makeMovie("m1"), makeMovie("m2")];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -289,14 +302,16 @@ describe("TrackedPage select mode", () => {
 
     // The "Select titles" helper message should appear (0 selected)
     await waitFor(() =>
-      expect(screen.getByText("Select titles to apply bulk actions")).toBeDefined()
+      expect(
+        screen.getByText("Select titles to apply bulk actions"),
+      ).toBeDefined(),
     );
   });
 
   it("exits select mode when Cancel is clicked", async () => {
     const titles = [makeMovie("m1")];
     mockGetTrackedTitles.mockImplementation(() =>
-      Promise.resolve({ titles, count: titles.length, profile_public: false })
+      Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -304,7 +319,9 @@ describe("TrackedPage select mode", () => {
 
     fireEvent.click(screen.getByText("Select"));
     await waitFor(() =>
-      expect(screen.getByText("Select titles to apply bulk actions")).toBeDefined()
+      expect(
+        screen.getByText("Select titles to apply bulk actions"),
+      ).toBeDefined(),
     );
 
     // Click Cancel in the bar
@@ -312,7 +329,9 @@ describe("TrackedPage select mode", () => {
 
     // Bar should be gone
     await waitFor(() =>
-      expect(screen.queryByText("Select titles to apply bulk actions")).toBeNull()
+      expect(
+        screen.queryByText("Select titles to apply bulk actions"),
+      ).toBeNull(),
     );
   });
 });

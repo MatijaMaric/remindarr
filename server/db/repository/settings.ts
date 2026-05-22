@@ -19,7 +19,8 @@ export async function getSetting(key: string): Promise<string | null> {
 export async function setSetting(key: string, value: string) {
   return traceDbQuery("setSetting", async () => {
     const db = getDb();
-    await db.insert(settings)
+    await db
+      .insert(settings)
       .values({ key, value })
       .onConflictDoUpdate({
         target: settings.key,
@@ -36,7 +37,9 @@ export async function deleteSetting(key: string) {
   });
 }
 
-export async function getSettingsByPrefix(prefix: string): Promise<Record<string, string>> {
+export async function getSettingsByPrefix(
+  prefix: string,
+): Promise<Record<string, string>> {
   return traceDbQuery("getSettingsByPrefix", async () => {
     const db = getDb();
     const rows = await db
@@ -56,19 +59,30 @@ export async function getSettingsByPrefix(prefix: string): Promise<Record<string
 
 export async function getOidcConfig() {
   return traceDbQuery("getOidcConfig", async () => {
-    const issuerUrl = CONFIG.OIDC_ISSUER_URL || await getSetting("oidc_issuer_url") || "";
-    const clientId = CONFIG.OIDC_CLIENT_ID || await getSetting("oidc_client_id") || "";
+    const issuerUrl =
+      CONFIG.OIDC_ISSUER_URL || (await getSetting("oidc_issuer_url")) || "";
+    const clientId =
+      CONFIG.OIDC_CLIENT_ID || (await getSetting("oidc_client_id")) || "";
     const clientSecret =
-      CONFIG.OIDC_CLIENT_SECRET || await getSetting("oidc_client_secret") || "";
+      CONFIG.OIDC_CLIENT_SECRET ||
+      (await getSetting("oidc_client_secret")) ||
+      "";
     const redirectUri =
-      CONFIG.OIDC_REDIRECT_URI || await getSetting("oidc_redirect_uri") || "";
+      CONFIG.OIDC_REDIRECT_URI || (await getSetting("oidc_redirect_uri")) || "";
 
     const adminClaim =
-      CONFIG.OIDC_ADMIN_CLAIM || await getSetting("oidc_admin_claim") || "";
+      CONFIG.OIDC_ADMIN_CLAIM || (await getSetting("oidc_admin_claim")) || "";
     const adminValue =
-      CONFIG.OIDC_ADMIN_VALUE || await getSetting("oidc_admin_value") || "";
+      CONFIG.OIDC_ADMIN_VALUE || (await getSetting("oidc_admin_value")) || "";
 
-    return { issuerUrl, clientId, clientSecret, redirectUri, adminClaim, adminValue };
+    return {
+      issuerUrl,
+      clientId,
+      clientSecret,
+      redirectUri,
+      adminClaim,
+      adminValue,
+    };
   });
 }
 

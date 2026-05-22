@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import "../i18n";
 import NotificationPrompt from "./NotificationPrompt";
@@ -7,7 +21,13 @@ import * as push from "../lib/push";
 import * as api from "../api";
 import { AuthContext } from "../context/AuthContext";
 
-const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -24,14 +44,21 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 function WrapperNoUser({ children }: { children: ReactNode }) {
-  return <AuthContext value={{ ...mockAuthValue, user: null } as any}>{children}</AuthContext>;
+  return (
+    <AuthContext value={{ ...mockAuthValue, user: null } as any}>
+      {children}
+    </AuthContext>
+  );
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
 
 function mockNotificationPermission(value: NotificationPermission) {
   Object.defineProperty(globalThis, "Notification", {
-    value: { permission: value, requestPermission: mock(() => Promise.resolve(value)) },
+    value: {
+      permission: value,
+      requestPermission: mock(() => Promise.resolve(value)),
+    },
     writable: true,
     configurable: true,
   });
@@ -43,9 +70,17 @@ beforeEach(() => {
   spies = [
     spyOn(push, "isPushSupported").mockReturnValue(true),
     spyOn(push, "getExistingSubscription").mockResolvedValue(null),
-    spyOn(push, "subscribeToPush").mockResolvedValue({ endpoint: "https://example.com", p256dh: "key", auth: "auth" }),
-    spyOn(api, "getVapidPublicKey").mockResolvedValue({ publicKey: "test-key" }),
-    spyOn(api, "createNotifier").mockResolvedValue({ notifier: { id: "n1" } } as any),
+    spyOn(push, "subscribeToPush").mockResolvedValue({
+      endpoint: "https://example.com",
+      p256dh: "key",
+      auth: "auth",
+    }),
+    spyOn(api, "getVapidPublicKey").mockResolvedValue({
+      publicKey: "test-key",
+    }),
+    spyOn(api, "createNotifier").mockResolvedValue({
+      notifier: { id: "n1" },
+    } as any),
   ];
 });
 
@@ -63,11 +98,17 @@ describe("NotificationPrompt", () => {
       expect(screen.getByRole("banner")).toBeDefined();
     });
 
-    expect(screen.getByText("Enable push notifications to get alerts about new episodes and releases.")).toBeDefined();
+    expect(
+      screen.getByText(
+        "Enable push notifications to get alerts about new episodes and releases.",
+      ),
+    ).toBeDefined();
   });
 
   it("does not show when user is not authenticated", async () => {
-    const { container } = render(<NotificationPrompt />, { wrapper: WrapperNoUser });
+    const { container } = render(<NotificationPrompt />, {
+      wrapper: WrapperNoUser,
+    });
 
     // Wait a tick for the effect to run
     await waitFor(() => {
@@ -106,7 +147,9 @@ describe("NotificationPrompt", () => {
   });
 
   it("does not show when there is an existing subscription", async () => {
-    (push.getExistingSubscription as any).mockResolvedValue({ endpoint: "https://example.com" });
+    (push.getExistingSubscription as any).mockResolvedValue({
+      endpoint: "https://example.com",
+    });
 
     const { container } = render(<NotificationPrompt />, { wrapper: Wrapper });
 
@@ -141,7 +184,10 @@ describe("NotificationPrompt", () => {
   it("enable button triggers push subscription flow", async () => {
     mockNotificationPermission("default");
     Object.defineProperty(globalThis, "Notification", {
-      value: { permission: "default", requestPermission: mock(() => Promise.resolve("granted")) },
+      value: {
+        permission: "default",
+        requestPermission: mock(() => Promise.resolve("granted")),
+      },
       writable: true,
       configurable: true,
     });
@@ -166,7 +212,10 @@ describe("NotificationPrompt", () => {
 
   it("hides banner when permission is denied during enable", async () => {
     Object.defineProperty(globalThis, "Notification", {
-      value: { permission: "default", requestPermission: mock(() => Promise.resolve("denied")) },
+      value: {
+        permission: "default",
+        requestPermission: mock(() => Promise.resolve("denied")),
+      },
       writable: true,
       configurable: true,
     });

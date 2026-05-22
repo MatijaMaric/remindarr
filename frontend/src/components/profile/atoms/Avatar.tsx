@@ -15,7 +15,10 @@ function hashHue(str: string): number {
   return Math.abs(h) % 360;
 }
 
-function initialsFor(displayName: string | null | undefined, username: string): string {
+function initialsFor(
+  displayName: string | null | undefined,
+  username: string,
+): string {
   const src = (displayName?.trim() || username || "?").trim();
   const parts = src.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0]![0]! + parts[1]![0]!).toUpperCase();

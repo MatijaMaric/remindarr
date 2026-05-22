@@ -20,10 +20,14 @@ const LAZY_RETRY_KEY = "__lazy_retry";
 const MOD = { default: (() => null) as React.ComponentType };
 
 // Runs loadWithRetry but races with a 100ms timeout since retry paths return a never-resolving promise.
-async function runWithTimeout(factory: () => Promise<{ default: React.ComponentType }>) {
+async function runWithTimeout(
+  factory: () => Promise<{ default: React.ComponentType }>,
+) {
   return Promise.race([
     loadWithRetry(factory).catch((e: unknown) => ({ threw: e })),
-    new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 100)),
+    new Promise<"timeout">((resolve) =>
+      setTimeout(() => resolve("timeout"), 100),
+    ),
   ]);
 }
 
@@ -42,15 +46,29 @@ afterEach(() => {
 
 describe("isChunkLoadError", () => {
   it("matches Chrome error message", () => {
-    expect(isChunkLoadError(new Error("Failed to fetch dynamically imported module: https://example.com/assets/foo.js"))).toBe(true);
+    expect(
+      isChunkLoadError(
+        new Error(
+          "Failed to fetch dynamically imported module: https://example.com/assets/foo.js",
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("matches Firefox error message", () => {
-    expect(isChunkLoadError(new Error("error loading dynamically imported module: https://example.com/assets/bar.js"))).toBe(true);
+    expect(
+      isChunkLoadError(
+        new Error(
+          "error loading dynamically imported module: https://example.com/assets/bar.js",
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("matches Safari error message", () => {
-    expect(isChunkLoadError(new Error("Importing a module script failed."))).toBe(true);
+    expect(
+      isChunkLoadError(new Error("Importing a module script failed.")),
+    ).toBe(true);
   });
 
   it("matches webpack/vite chunk error", () => {
@@ -58,7 +76,9 @@ describe("isChunkLoadError", () => {
   });
 
   it("does not match unrelated errors", () => {
-    expect(isChunkLoadError(new Error("Cannot read property 'foo' of undefined"))).toBe(false);
+    expect(
+      isChunkLoadError(new Error("Cannot read property 'foo' of undefined")),
+    ).toBe(false);
     expect(isChunkLoadError(new Error("Network request failed"))).toBe(false);
     expect(isChunkLoadError(null)).toBe(false);
     expect(isChunkLoadError("string error")).toBe(false);
@@ -90,7 +110,9 @@ describe("loadWithRetry", () => {
   });
 
   it("retry 0 → 1: calls updateAllRegistrations then reloadPage", async () => {
-    const chunkError = new Error("Failed to fetch dynamically imported module: /assets/Foo.js");
+    const chunkError = new Error(
+      "Failed to fetch dynamically imported module: /assets/Foo.js",
+    );
     const factory = mock(() => Promise.reject(chunkError));
 
     await runWithTimeout(factory);
@@ -103,7 +125,9 @@ describe("loadWithRetry", () => {
 
   it("retry 1 → 2: calls clearPagesCache then reloadPage", async () => {
     sessionStorage.setItem(LAZY_RETRY_KEY, "1");
-    const chunkError = new Error("error loading dynamically imported module: /assets/Bar.js");
+    const chunkError = new Error(
+      "error loading dynamically imported module: /assets/Bar.js",
+    );
     const factory = mock(() => Promise.reject(chunkError));
 
     await runWithTimeout(factory);
@@ -121,7 +145,9 @@ describe("loadWithRetry", () => {
 
     const result = await runWithTimeout(factory);
 
-    expect(result).toMatchObject({ threw: expect.objectContaining({ isChunkLoadError: true }) });
+    expect(result).toMatchObject({
+      threw: expect.objectContaining({ isChunkLoadError: true }),
+    });
     expect(sessionStorage.getItem(LAZY_RETRY_KEY)).toBeNull();
     expect(mockReloadPage).not.toHaveBeenCalled();
   });

@@ -14,7 +14,11 @@ function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function getYear(dateStr?: string): string {
@@ -27,7 +31,9 @@ function creditTitle(credit: PersonCastCredit | PersonCrewCredit): string {
 }
 
 function creditTitleId(credit: PersonCastCredit | PersonCrewCredit): string {
-  return credit.media_type === "movie" ? `movie-${credit.id}` : `tv-${credit.id}`;
+  return credit.media_type === "movie"
+    ? `movie-${credit.id}`
+    : `tv-${credit.id}`;
 }
 
 function deduplicateCast(credits: PersonCastCredit[]): PersonCastCredit[] {
@@ -49,7 +55,13 @@ function deduplicateCrew(credits: PersonCrewCredit[]): PersonCrewCredit[] {
   });
 }
 
-function CreditCard({ credit, subtitle }: { credit: PersonCastCredit | PersonCrewCredit; subtitle: string }) {
+function CreditCard({
+  credit,
+  subtitle,
+}: {
+  credit: PersonCastCredit | PersonCrewCredit;
+  subtitle: string;
+}) {
   return (
     <Link
       to={`/title/${creditTitleId(credit)}`}
@@ -76,7 +88,9 @@ function CreditCard({ credit, subtitle }: { credit: PersonCastCredit | PersonCre
       </p>
       <p className="text-xs text-zinc-400 truncate">{subtitle}</p>
       {getYear(credit.release_date || credit.first_air_date) && (
-        <p className="text-xs text-zinc-500">{getYear(credit.release_date || credit.first_air_date)}</p>
+        <p className="text-xs text-zinc-500">
+          {getYear(credit.release_date || credit.first_air_date)}
+        </p>
       )}
     </Link>
   );
@@ -86,7 +100,11 @@ export default function PersonPage() {
   const { personId } = useParams<{ personId: string }>();
   const [bioExpanded, setBioExpanded] = useState(false);
 
-  const { data, isLoading: loading, isError: error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+  } = useQuery({
     queryKey: ["person", personId],
     queryFn: ({ signal }) => api.getPersonDetails(Number(personId), signal),
     enabled: !!personId,
@@ -107,13 +125,20 @@ export default function PersonPage() {
   const { person } = data;
   const biography = person.biography || "";
   const showBioToggle = biography.length > BIO_TRUNCATE_LENGTH;
-  const displayBio = bioExpanded || !showBioToggle ? biography : biography.slice(0, BIO_TRUNCATE_LENGTH) + "...";
+  const displayBio =
+    bioExpanded || !showBioToggle
+      ? biography
+      : biography.slice(0, BIO_TRUNCATE_LENGTH) + "...";
 
   const castCredits = deduplicateCast(
-    [...person.combined_credits.cast].sort((a, b) => b.popularity - a.popularity)
+    [...person.combined_credits.cast].sort(
+      (a, b) => b.popularity - a.popularity,
+    ),
   );
   const crewCredits = deduplicateCrew(
-    [...person.combined_credits.crew].sort((a, b) => b.popularity - a.popularity)
+    [...person.combined_credits.crew].sort(
+      (a, b) => b.popularity - a.popularity,
+    ),
   );
 
   return (
@@ -139,7 +164,9 @@ export default function PersonPage() {
           </div>
         </div>
         <div className="flex-1 space-y-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white select-text">{person.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white select-text">
+            {person.name}
+          </h1>
           <div className="flex flex-wrap gap-2 text-sm">
             {person.known_for_department && (
               <span className="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded">
@@ -179,7 +206,9 @@ export default function PersonPage() {
       {biography && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-white">Biography</h2>
-          <p className="text-zinc-300 leading-relaxed whitespace-pre-line select-text">{displayBio}</p>
+          <p className="text-zinc-300 leading-relaxed whitespace-pre-line select-text">
+            {displayBio}
+          </p>
           {showBioToggle && (
             <button
               onClick={() => setBioExpanded(!bioExpanded)}
@@ -194,10 +223,16 @@ export default function PersonPage() {
       {/* Acting Credits */}
       {castCredits.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">Acting ({castCredits.length})</h2>
+          <h2 className="text-lg font-semibold text-white">
+            Acting ({castCredits.length})
+          </h2>
           <ScrollableRow className="gap-4 pb-2">
             {castCredits.map((c) => (
-              <CreditCard key={`cast-${c.id}-${c.character}`} credit={c} subtitle={c.character} />
+              <CreditCard
+                key={`cast-${c.id}-${c.character}`}
+                credit={c}
+                subtitle={c.character}
+              />
             ))}
           </ScrollableRow>
         </section>
@@ -206,10 +241,16 @@ export default function PersonPage() {
       {/* Crew Credits */}
       {crewCredits.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">Crew ({crewCredits.length})</h2>
+          <h2 className="text-lg font-semibold text-white">
+            Crew ({crewCredits.length})
+          </h2>
           <ScrollableRow className="gap-4 pb-2">
             {crewCredits.map((c) => (
-              <CreditCard key={`crew-${c.id}-${c.job}`} credit={c} subtitle={c.job} />
+              <CreditCard
+                key={`crew-${c.id}-${c.job}`}
+                credit={c}
+                subtitle={c.job}
+              />
             ))}
           </ScrollableRow>
         </section>

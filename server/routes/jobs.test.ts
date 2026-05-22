@@ -1,9 +1,18 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth, requireAdmin } from "../middleware/auth";
-import { registerCron, enqueueJob, claimNextJob, completeJob } from "../jobs/queue";
+import {
+  registerCron,
+  enqueueJob,
+  claimNextJob,
+  completeJob,
+} from "../jobs/queue";
 import jobsApp from "./jobs";
 import type { AppEnv } from "../types";
 
@@ -46,7 +55,14 @@ beforeEach(async () => {
   app.route("/jobs", jobsApp);
 
   const hash = await Bun.password.hash("admin123");
-  const adminId = await createUser("admin", hash, "Admin", "local", undefined, true);
+  const adminId = await createUser(
+    "admin",
+    hash,
+    "Admin",
+    "local",
+    undefined,
+    true,
+  );
   const token = await createSession(adminId);
   adminCookie = `better-auth.session_token=${token}`;
 });

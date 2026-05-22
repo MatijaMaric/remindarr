@@ -8,7 +8,9 @@ import { errorsByCategory } from "../metrics";
 
 describe("classifyError", () => {
   it("returns 'db' for errors with 'sqlite' in the message", () => {
-    expect(classifyError(new Error("SQLITE_CONSTRAINT: UNIQUE constraint failed"))).toBe("db");
+    expect(
+      classifyError(new Error("SQLITE_CONSTRAINT: UNIQUE constraint failed")),
+    ).toBe("db");
   });
 
   it("returns 'db' for errors with lowercase 'sqlite' in the message", () => {
@@ -26,7 +28,9 @@ describe("classifyError", () => {
   });
 
   it("returns 'db' for errors with a SQLITE_ error code", () => {
-    const err = Object.assign(new Error("constraint failed"), { code: "SQLITE_CONSTRAINT" });
+    const err = Object.assign(new Error("constraint failed"), {
+      code: "SQLITE_CONSTRAINT",
+    });
     expect(classifyError(err)).toBe("db");
   });
 
@@ -36,23 +40,33 @@ describe("classifyError", () => {
   });
 
   it("returns 'external_api' for errors mentioning tmdb", () => {
-    expect(classifyError(new Error("tmdb request timeout"))).toBe("external_api");
+    expect(classifyError(new Error("tmdb request timeout"))).toBe(
+      "external_api",
+    );
   });
 
   it("returns 'external_api' for errors mentioning plex", () => {
-    expect(classifyError(new Error("plex server unreachable"))).toBe("external_api");
+    expect(classifyError(new Error("plex server unreachable"))).toBe(
+      "external_api",
+    );
   });
 
   it("returns 'external_api' for errors mentioning discord", () => {
-    expect(classifyError(new Error("discord webhook returned 429"))).toBe("external_api");
+    expect(classifyError(new Error("discord webhook returned 429"))).toBe(
+      "external_api",
+    );
   });
 
   it("returns 'external_api' for errors mentioning telegram", () => {
-    expect(classifyError(new Error("telegram bot API error"))).toBe("external_api");
+    expect(classifyError(new Error("telegram bot API error"))).toBe(
+      "external_api",
+    );
   });
 
   it("returns 'auth' for errors mentioning unauthorized", () => {
-    expect(classifyError(new Error("unauthorized access attempt"))).toBe("auth");
+    expect(classifyError(new Error("unauthorized access attempt"))).toBe(
+      "auth",
+    );
   });
 
   it("returns 'auth' for errors mentioning forbidden", () => {
@@ -74,11 +88,15 @@ describe("classifyError", () => {
   });
 
   it("returns 'validation' for errors mentioning 'validation'", () => {
-    expect(classifyError(new Error("input validation error"))).toBe("validation");
+    expect(classifyError(new Error("input validation error"))).toBe(
+      "validation",
+    );
   });
 
   it("returns 'unknown' for a plain generic Error", () => {
-    expect(classifyError(new Error("something unexpected happened"))).toBe("unknown");
+    expect(classifyError(new Error("something unexpected happened"))).toBe(
+      "unknown",
+    );
   });
 
   it("returns 'unknown' for a non-Error thrown value", () => {
@@ -129,7 +147,7 @@ describe("global error handler integration", () => {
     errorsByCategory.reset();
     const res = await app.request("/throw-sqlite");
     expect(res.status).toBe(500);
-    const body = await res.json() as { error: string };
+    const body = (await res.json()) as { error: string };
     expect(body.error).toBe("Internal server error");
     // verify counter was incremented for "db"
     const rendered = errorsByCategory.render();

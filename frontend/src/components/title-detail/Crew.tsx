@@ -14,13 +14,17 @@ export default function Crew({ directors, writers }: CrewProps) {
         {directors.length > 0 && (
           <div>
             <span className="text-zinc-400">Director: </span>
-            <span className="text-white">{directors.map((d) => d.name).join(", ")}</span>
+            <span className="text-white">
+              {directors.map((d) => d.name).join(", ")}
+            </span>
           </div>
         )}
         {writers.length > 0 && (
           <div>
             <span className="text-zinc-400">Writers: </span>
-            <span className="text-white">{writers.map((w) => w.name).join(", ")}</span>
+            <span className="text-white">
+              {writers.map((w) => w.name).join(", ")}
+            </span>
           </div>
         )}
       </div>

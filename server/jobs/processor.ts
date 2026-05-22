@@ -25,10 +25,17 @@ import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { getCurrentTimeInTimezone } from "./time-utils";
-import { listEarnedSince, markAchievementsNotified, upsertUserAchievement } from "../db/repository/achievements";
+import {
+  listEarnedSince,
+  markAchievementsNotified,
+  upsertUserAchievement,
+} from "../db/repository/achievements";
 import { recomputeStreakFromHistory } from "../db/repository/streaks";
 import { getSetting, setSetting } from "../db/repository/settings";
-import { ACHIEVEMENTS, type AchievementKind } from "../achievements/definitions";
+import {
+  ACHIEVEMENTS,
+  type AchievementKind,
+} from "../achievements/definitions";
 import {
   evaluateCountMovies,
   evaluateCountEpisodes,
@@ -52,7 +59,9 @@ async function handleSyncTitles(): Promise<void> {
 
 async function handleSyncEpisodes(): Promise<void> {
   if (!CONFIG.TMDB_API_KEY) {
-    log.info("Skipping episode sync", { reason: "TMDB_API_KEY not configured" });
+    log.info("Skipping episode sync", {
+      reason: "TMDB_API_KEY not configured",
+    });
     return;
   }
   const result = await syncEpisodes();
@@ -61,22 +70,34 @@ async function handleSyncEpisodes(): Promise<void> {
 
 async function handleSyncShowEpisodes(data: string | null): Promise<void> {
   if (!CONFIG.TMDB_API_KEY) {
-    log.info("Skipping show episode sync", { reason: "TMDB_API_KEY not configured" });
+    log.info("Skipping show episode sync", {
+      reason: "TMDB_API_KEY not configured",
+    });
     return;
   }
   const parsed = data ? JSON.parse(data) : null;
   if (!parsed?.titleId || !parsed?.tmdbId || !parsed?.title) {
     throw new Error("sync-show-episodes job missing required data fields");
   }
-  const count = await syncEpisodesForShow(parsed.titleId, parsed.tmdbId, parsed.title);
-  log.info("Synced show episodes via job", { title: parsed.title, episodes: count });
+  const count = await syncEpisodesForShow(
+    parsed.titleId,
+    parsed.tmdbId,
+    parsed.title,
+  );
+  log.info("Synced show episodes via job", {
+    title: parsed.title,
+    episodes: count,
+  });
 }
 
 async function handleSendNotifications(): Promise<void> {
   const timezones = await getDistinctNotifierTimezones();
   if (timezones.length === 0) return;
 
-  const timesByTimezone = new Map<string, { time: string; date: string; dayOfWeek: number }>();
+  const timesByTimezone = new Map<
+    string,
+    { time: string; date: string; dayOfWeek: number }
+  >();
   for (const tz of timezones) {
     timesByTimezone.set(tz, getCurrentTimeInTimezone(tz));
   }
@@ -88,7 +109,10 @@ async function handleSendNotifications(): Promise<void> {
 
   // Per-invocation caches keyed by "userId|date" — local to this job run, not global.
   // For N notifiers sharing the same user+date, DB queries drop from 2N to 2.
-  const dailyContentCache = new Map<string, Awaited<ReturnType<typeof buildNotificationContent>>>();
+  const dailyContentCache = new Map<
+    string,
+    Awaited<ReturnType<typeof buildNotificationContent>>
+  >();
 
   async function getDailyContentCached(userId: string, date: string) {
     const key = `${userId}|${date}`;
@@ -105,19 +129,31 @@ async function handleSendNotifications(): Promise<void> {
     try {
       const provider = getProvider(notifier.provider);
       if (!provider) {
-        log.warn("Unknown provider", { provider: notifier.provider, notifierId: notifier.id });
+        log.warn("Unknown provider", {
+          provider: notifier.provider,
+          notifierId: notifier.id,
+        });
         continue;
       }
 
       // Default daily behavior
-      const content = await getDailyContentCached(notifier.user_id, notifier.todayDate);
+      const content = await getDailyContentCached(
+        notifier.user_id,
+        notifier.todayDate,
+      );
 
       // Inject achievements if enabled for this notifier
       let achievementKeys: string[] = [];
       if (notifier.achievementsEnabled) {
-        const lastSentDate = notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
-        const earnedSince = await listEarnedSince(notifier.user_id, lastSentDate);
-        const unnotified = earnedSince.filter((ua) => !ua.earnedNotified && ua.earnedAt != null);
+        const lastSentDate =
+          notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
+        const earnedSince = await listEarnedSince(
+          notifier.user_id,
+          lastSentDate,
+        );
+        const unnotified = earnedSince.filter(
+          (ua) => !ua.earnedNotified && ua.earnedAt != null,
+        );
         if (unnotified.length > 0) {
           content.achievementsEarned = unnotified.map((ua) => {
             const def = ACHIEVEMENTS.find((a) => a.key === ua.achievementKey);
@@ -135,7 +171,11 @@ async function handleSendNotifications(): Promise<void> {
       }
 
       // Skip if nothing to notify about
-      if (content.episodes.length === 0 && content.movies.length === 0 && !(content.achievementsEarned?.length)) {
+      if (
+        content.episodes.length === 0 &&
+        content.movies.length === 0 &&
+        !content.achievementsEarned?.length
+      ) {
         await markNotifierSent(notifier.id, notifier.todayDate);
         continue;
       }
@@ -143,9 +183,21 @@ async function handleSendNotifications(): Promise<void> {
       const dailyStart = Date.now();
       try {
         await provider.send(notifier.config, content);
-        await recordDelivery({ notifierId: notifier.id, status: "success", latencyMs: Date.now() - dailyStart, eventKind: "episode_air" });
+        await recordDelivery({
+          notifierId: notifier.id,
+          status: "success",
+          latencyMs: Date.now() - dailyStart,
+          eventKind: "episode_air",
+        });
       } catch (sendErr) {
-        await recordDelivery({ notifierId: notifier.id, status: "failure", latencyMs: Date.now() - dailyStart, errorMessage: sendErr instanceof Error ? sendErr.message : String(sendErr), eventKind: "episode_air" });
+        await recordDelivery({
+          notifierId: notifier.id,
+          status: "failure",
+          latencyMs: Date.now() - dailyStart,
+          errorMessage:
+            sendErr instanceof Error ? sendErr.message : String(sendErr),
+          eventKind: "episode_air",
+        });
         throw sendErr;
       }
       // Mark achievements as notified after successful send
@@ -153,10 +205,15 @@ async function handleSendNotifications(): Promise<void> {
         await markAchievementsNotified(notifier.user_id, achievementKeys);
       }
       await markNotifierSent(notifier.id, notifier.todayDate);
-      log.info("Sent notification", { provider: notifier.provider, userId: notifier.user_id });
+      log.info("Sent notification", {
+        provider: notifier.provider,
+        userId: notifier.user_id,
+      });
     } catch (err) {
       if (err instanceof SubscriptionExpiredError) {
-        log.warn("Push subscription expired, disabling notifier", { notifierId: notifier.id });
+        log.warn("Push subscription expired, disabling notifier", {
+          notifierId: notifier.id,
+        });
         await disableNotifier(notifier.id);
         continue;
       }
@@ -172,7 +229,9 @@ async function handleSendNotifications(): Promise<void> {
 
 async function handleBackfillTitleOffers(data: string | null): Promise<void> {
   if (!CONFIG.TMDB_API_KEY) {
-    log.info("Skipping offers backfill", { reason: "TMDB_API_KEY not configured" });
+    log.info("Skipping offers backfill", {
+      reason: "TMDB_API_KEY not configured",
+    });
     return;
   }
   const parsed = data ? JSON.parse(data) : null;
@@ -180,12 +239,16 @@ async function handleBackfillTitleOffers(data: string | null): Promise<void> {
     throw new Error("backfill-title-offers job missing required data fields");
   }
   const tmdbId = Number(parsed.tmdbId);
-  const title = parsed.objectType === "MOVIE"
-    ? parseMovieDetails(await fetchMovieDetails(tmdbId))
-    : parseTvDetails(await fetchTvDetails(tmdbId));
+  const title =
+    parsed.objectType === "MOVIE"
+      ? parseMovieDetails(await fetchMovieDetails(tmdbId))
+      : parseTvDetails(await fetchTvDetails(tmdbId));
   if (title.offers.length > 0) {
     await upsertTitles([title]);
-    log.info("Backfilled offers for title", { title: title.title, offers: title.offers.length });
+    log.info("Backfilled offers for title", {
+      title: title.title,
+      offers: title.offers.length,
+    });
   } else {
     log.info("No offers found for title", { title: title.title });
   }
@@ -199,17 +262,24 @@ async function handleMigrateOffers(): Promise<void> {
     // backfill continues across multiple cron ticks. In DO mode the alarm() handler
     // re-enqueues the next batch in DO SQLite instead.
     const db = getDb();
-    await db.insert(jobs).values({ name: "migrate-offers", runAt: new Date().toISOString(), maxAttempts: 1 });
+    await db.insert(jobs).values({
+      name: "migrate-offers",
+      runAt: new Date().toISOString(),
+      maxAttempts: 1,
+    });
     log.info("migrate-offers batch done, re-enqueued for next tick");
   }
 }
 
 async function handleSyncDeepLinks(): Promise<void> {
   if (!CONFIG.STREAMING_AVAILABILITY_API_KEY) {
-    log.info("Skipping deep link sync", { reason: "STREAMING_AVAILABILITY_API_KEY not configured" });
+    log.info("Skipping deep link sync", {
+      reason: "STREAMING_AVAILABILITY_API_KEY not configured",
+    });
     return;
   }
-  const { enrichTitleDeepLinks } = await import("../streaming-availability/enrich");
+  const { enrichTitleDeepLinks } =
+    await import("../streaming-availability/enrich");
   const { RateLimitError } = await import("../streaming-availability/types");
   const { BreakerOpenError } = await import("../lib/circuit-breaker");
   const { getTitlesNeedingSaEnrichment } = await import("../db/repository");
@@ -282,14 +352,23 @@ async function handleEvaluateAchievements(data: string | null): Promise<void> {
             result = await evaluateStreak(userId, a.threshold);
             break;
           case "genre_count":
-            result = await evaluateGenreCount(userId, a.threshold, a.genre ?? "__any__");
+            result = await evaluateGenreCount(
+              userId,
+              a.threshold,
+              a.genre ?? "__any__",
+            );
             break;
           case "completionist":
             result = await evaluateCompletionist(userId, a.threshold, titleId);
             break;
           case "speed_binge_season":
             if (!titleId) continue;
-            result = await evaluateSpeedBingeSeason(userId, a.threshold, a.windowHours ?? 24, titleId);
+            result = await evaluateSpeedBingeSeason(
+              userId,
+              a.threshold,
+              a.windowHours ?? 24,
+              titleId,
+            );
             break;
           case "social_first_follow":
             result = await evaluateSocialFirstFollow(userId);
@@ -298,13 +377,25 @@ async function handleEvaluateAchievements(data: string | null): Promise<void> {
             result = await evaluateSocialFirstRecommendation(userId);
             break;
           default:
-            log.warn("evaluate-achievements: unknown kind, skipping", { kind, userId });
+            log.warn("evaluate-achievements: unknown kind, skipping", {
+              kind,
+              userId,
+            });
             continue;
         }
         const earnedAt = result.earned ? new Date().toISOString() : null;
-        const { newlyEarned } = await upsertUserAchievement(userId, a.key, result.progress, earnedAt);
+        const { newlyEarned } = await upsertUserAchievement(
+          userId,
+          a.key,
+          result.progress,
+          earnedAt,
+        );
         if (newlyEarned) {
-          log.info("Achievement newly earned (deferred)", { userId, key: a.key, kind });
+          log.info("Achievement newly earned (deferred)", {
+            userId,
+            key: a.key,
+            kind,
+          });
         }
       } catch (err) {
         log.error("evaluate-achievements: error evaluating achievement", {
@@ -318,7 +409,9 @@ async function handleEvaluateAchievements(data: string | null): Promise<void> {
   }
 }
 
-async function handleBackfillAchievements(_data?: string | null): Promise<void> {
+async function handleBackfillAchievements(
+  _data?: string | null,
+): Promise<void> {
   const db = getDb();
 
   const cursor = (await getSetting("achievements_backfill_cursor")) ?? "";
@@ -357,7 +450,11 @@ async function handleBackfillAchievements(_data?: string | null): Promise<void> 
               result = await evaluateStreak(userId, a.threshold);
               break;
             case "genre_count":
-              result = await evaluateGenreCount(userId, a.threshold, a.genre ?? "__any__");
+              result = await evaluateGenreCount(
+                userId,
+                a.threshold,
+                a.genre ?? "__any__",
+              );
               break;
             case "completionist":
               result = await evaluateCompletionist(userId, a.threshold);
@@ -377,7 +474,12 @@ async function handleBackfillAchievements(_data?: string | null): Promise<void> 
               let maxProgress = 0;
               let anyEarned = false;
               for (const c of candidateRows) {
-                const r = await evaluateSpeedBingeSeason(userId, threshold, windowHours, c.title_id);
+                const r = await evaluateSpeedBingeSeason(
+                  userId,
+                  threshold,
+                  windowHours,
+                  c.title_id,
+                );
                 if (r.earned) anyEarned = true;
                 maxProgress = Math.max(maxProgress, r.progress);
               }
@@ -394,7 +496,13 @@ async function handleBackfillAchievements(_data?: string | null): Promise<void> 
               continue;
           }
           const earnedAt = result.earned ? new Date().toISOString() : null;
-          await upsertUserAchievement(userId, a.key, result.progress, earnedAt, { earnedNotified: 1 });
+          await upsertUserAchievement(
+            userId,
+            a.key,
+            result.progress,
+            earnedAt,
+            { earnedNotified: 1 },
+          );
         } catch (err) {
           log.warn("Backfill: error evaluating achievement for user", {
             userId,
@@ -418,7 +526,10 @@ async function handleBackfillAchievements(_data?: string | null): Promise<void> 
     // In DO mode the DO re-enqueues into its own SQLite after the handler returns.
     // In D1/Bun mode insert directly so the polling worker picks up the next page.
     if (CONFIG.JOB_QUEUE_BACKEND !== "durable-object") {
-      await db.insert(jobs).values({ name: "backfill-achievements", runAt: new Date(Date.now() + 5000).toISOString() });
+      await db.insert(jobs).values({
+        name: "backfill-achievements",
+        runAt: new Date(Date.now() + 5000).toISOString(),
+      });
     }
     log.info("Backfill: enqueued next batch", { nextCursor: lastUserId });
   } else {
@@ -427,18 +538,19 @@ async function handleBackfillAchievements(_data?: string | null): Promise<void> 
   }
 }
 
-export const handlers: Record<string, (data: string | null) => Promise<void>> = {
-  "sync-titles": () => handleSyncTitles(),
-  "sync-episodes": () => handleSyncEpisodes(),
-  "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
-  "send-notifications": () => handleSendNotifications(),
-  "backfill-title-offers": (data) => handleBackfillTitleOffers(data),
-  "migrate-offers": () => handleMigrateOffers(),
-  "sync-deep-links": () => handleSyncDeepLinks(),
-  "cleanup": () => handleCleanup(),
-  "evaluate-achievements": (data) => handleEvaluateAchievements(data),
-  "backfill-achievements": (data) => handleBackfillAchievements(data),
-};
+export const handlers: Record<string, (data: string | null) => Promise<void>> =
+  {
+    "sync-titles": () => handleSyncTitles(),
+    "sync-episodes": () => handleSyncEpisodes(),
+    "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
+    "send-notifications": () => handleSendNotifications(),
+    "backfill-title-offers": (data) => handleBackfillTitleOffers(data),
+    "migrate-offers": () => handleMigrateOffers(),
+    "sync-deep-links": () => handleSyncDeepLinks(),
+    cleanup: () => handleCleanup(),
+    "evaluate-achievements": (data) => handleEvaluateAchievements(data),
+    "backfill-achievements": (data) => handleBackfillAchievements(data),
+  };
 
 export interface JobRow {
   id: number;
@@ -472,10 +584,17 @@ export async function processPendingJobs(): Promise<number> {
   for (const job of pendingJobs) {
     const handler = handlers[job.name];
     if (!handler) {
-      log.warn("Unknown job type, marking failed", { name: job.name, jobId: job.id });
+      log.warn("Unknown job type, marking failed", {
+        name: job.name,
+        jobId: job.id,
+      });
       await db
         .update(jobs)
-        .set({ status: "failed", error: `Unknown job type: ${job.name}`, completedAt: now })
+        .set({
+          status: "failed",
+          error: `Unknown job type: ${job.name}`,
+          completedAt: now,
+        })
         .where(eq(jobs.id, job.id));
       continue;
     }
@@ -492,7 +611,10 @@ export async function processPendingJobs(): Promise<number> {
       .returning({ id: jobs.id });
 
     if (!claimed) {
-      log.info("Job already claimed by concurrent invocation, skipping", { name: job.name, jobId: job.id });
+      log.info("Job already claimed by concurrent invocation, skipping", {
+        name: job.name,
+        jobId: job.id,
+      });
       continue;
     }
 
@@ -520,7 +642,13 @@ export async function processPendingJobs(): Promise<number> {
           category: "jobs",
           message: "Job retry scheduled",
           level: "warning",
-          data: { name: job.name, jobId: String(job.id), attempt: String(newAttempts), maxAttempts: String(job.maxAttempts), error: message },
+          data: {
+            name: job.name,
+            jobId: String(job.id),
+            attempt: String(newAttempts),
+            maxAttempts: String(job.maxAttempts),
+            error: message,
+          },
         });
         log.warn("Job failed, will retry", {
           name: job.name,
@@ -534,24 +662,37 @@ export async function processPendingJobs(): Promise<number> {
       } else {
         await db
           .update(jobs)
-          .set({ status: "failed", error: message, completedAt: new Date().toISOString() })
+          .set({
+            status: "failed",
+            error: message,
+            completedAt: new Date().toISOString(),
+          })
           .where(eq(jobs.id, job.id));
         Sentry.captureException(err, {
           level: "error",
           tags: { jobName: job.name, jobId: String(job.id) },
-          extra: { attempts: newAttempts, maxAttempts: job.maxAttempts, lastError: message, data: job.data, runAt: job.runAt },
+          extra: {
+            attempts: newAttempts,
+            maxAttempts: job.maxAttempts,
+            lastError: message,
+            data: job.data,
+            runAt: job.runAt,
+          },
           fingerprint: ["job-permanent-failure", job.name],
         });
-        log.error(`Job ${job.name} failed permanently (id=${job.id}, attempts=${newAttempts}/${job.maxAttempts})`, {
-          name: job.name,
-          jobId: job.id,
-          attempts: newAttempts,
-          maxAttempts: job.maxAttempts,
-          error: message,
-          stack: err instanceof Error ? err.stack : undefined,
-          data: job.data,
-          runAt: job.runAt,
-        });
+        log.error(
+          `Job ${job.name} failed permanently (id=${job.id}, attempts=${newAttempts}/${job.maxAttempts})`,
+          {
+            name: job.name,
+            jobId: job.id,
+            attempts: newAttempts,
+            maxAttempts: job.maxAttempts,
+            error: message,
+            stack: err instanceof Error ? err.stack : undefined,
+            data: job.data,
+            runAt: job.runAt,
+          },
+        );
       }
     }
   }
@@ -569,12 +710,16 @@ export async function enqueueCronJob(name: string): Promise<void> {
 /**
  * Enqueue a job by name and return the new job ID, or null if one is already pending/running.
  */
-export async function enqueueJobReturningId(name: string): Promise<number | null> {
+export async function enqueueJobReturningId(
+  name: string,
+): Promise<number | null> {
   const db = getDb();
   const existing = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.name, name), inArray(jobs.status, ["pending", "running"])))
+    .where(
+      and(eq(jobs.name, name), inArray(jobs.status, ["pending", "running"])),
+    )
     .get();
 
   if (existing) {
@@ -625,7 +770,9 @@ export async function enqueueOneTimeMigration(name: string): Promise<void> {
  * Reset jobs that have been stuck in "running" state for too long back to "pending".
  * This recovers jobs that were killed mid-execution (e.g. CF Worker CPU limit).
  */
-export async function recoverStaleJobs(staleMinutes: number = 15): Promise<number> {
+export async function recoverStaleJobs(
+  staleMinutes: number = 15,
+): Promise<number> {
   const db = getDb();
   const cutoff = new Date(Date.now() - staleMinutes * 60 * 1000).toISOString();
   const result = await db
@@ -642,16 +789,20 @@ export async function recoverStaleJobs(staleMinutes: number = 15): Promise<numbe
 /**
  * Clean up old completed/failed jobs.
  */
-export async function cleanupOldJobs(retentionDays: number = 30): Promise<number> {
+export async function cleanupOldJobs(
+  retentionDays: number = 30,
+): Promise<number> {
   const db = getDb();
-  const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(
+    Date.now() - retentionDays * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const result = await db
     .delete(jobs)
     .where(
       and(
         inArray(jobs.status, ["completed", "failed"]),
-        lte(jobs.completedAt, cutoff)
-      )
+        lte(jobs.completedAt, cutoff),
+      ),
     );
   return result.rowsAffected ?? 0;
 }

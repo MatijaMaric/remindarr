@@ -11,11 +11,7 @@ import { Logger } from "../logger";
  *   provided value for the result list. Useful when callers want to fall
  *   back to a degraded value instead of dropping the item.
  */
-export type SyncEachErrorAction<R> =
-  | "stop"
-  | "continue"
-  | { result: R }
-  | void;
+export type SyncEachErrorAction<R> = "stop" | "continue" | { result: R } | void;
 
 export interface SyncEachOptions<T, R> {
   /** Milliseconds to wait between items. Set to 0 to disable. */

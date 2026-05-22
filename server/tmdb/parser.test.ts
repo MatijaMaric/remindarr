@@ -121,10 +121,30 @@ describe("parseMovieDetails", () => {
           HR: {
             link: "https://tmdb.org",
             flatrate: [
-              { logo_path: "/hbo.jpg", provider_id: 384, provider_name: "HBO Max", display_priority: 1 },
-              { logo_path: "/hbo2.jpg", provider_id: 1899, provider_name: "HBO Max", display_priority: 2 },
-              { logo_path: "/prime.jpg", provider_id: 119, provider_name: "Amazon Prime Video", display_priority: 3 },
-              { logo_path: "/prime2.jpg", provider_id: 9, provider_name: "Prime Video", display_priority: 4 },
+              {
+                logo_path: "/hbo.jpg",
+                provider_id: 384,
+                provider_name: "HBO Max",
+                display_priority: 1,
+              },
+              {
+                logo_path: "/hbo2.jpg",
+                provider_id: 1899,
+                provider_name: "HBO Max",
+                display_priority: 2,
+              },
+              {
+                logo_path: "/prime.jpg",
+                provider_id: 119,
+                provider_name: "Amazon Prime Video",
+                display_priority: 3,
+              },
+              {
+                logo_path: "/prime2.jpg",
+                provider_id: 9,
+                provider_name: "Prime Video",
+                display_priority: 4,
+              },
             ],
           },
         },
@@ -189,7 +209,10 @@ describe("parseTvDetails", () => {
 
 describe("parseDiscoverMovie", () => {
   it("parses discover movie result", () => {
-    const genreMap = new Map([[28, "Action"], [12, "Adventure"]]);
+    const genreMap = new Map([
+      [28, "Action"],
+      [12, "Adventure"],
+    ]);
     const movie = makeTmdbDiscoverMovie();
     const result = parseDiscoverMovie(movie, genreMap);
 
@@ -302,7 +325,7 @@ describe("parseSearchResult", () => {
   it("returns null for person results", () => {
     const result = parseSearchResult(
       { id: 999, media_type: "person" },
-      new Map()
+      new Map(),
     );
     expect(result).toBeNull();
   });
@@ -489,9 +512,7 @@ describe("extractProviders", () => {
       }),
       makeParsedTitle({
         id: "movie-456",
-        offers: [
-          makeParsedOffer({ providerId: 8, providerName: "Netflix" }),
-        ],
+        offers: [makeParsedOffer({ providerId: 8, providerName: "Netflix" })],
       }),
     ];
 

@@ -4,21 +4,35 @@ import { Card } from "../components/ui/card";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, CheckCircle, ChevronDown, Circle, MoreHorizontal, Share2 } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle,
+  ChevronDown,
+  Circle,
+  MoreHorizontal,
+  Share2,
+} from "lucide-react";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useAuth } from "../context/AuthContext";
 import ShareButton from "../components/ShareButton";
-import { posterUrl as mkPosterUrl, stillUrl as mkStillUrl } from "../lib/tmdb-images";
+import {
+  posterUrl as mkPosterUrl,
+  stillUrl as mkStillUrl,
+} from "../lib/tmdb-images";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function todayISO(): string {
@@ -42,14 +56,22 @@ export default function SeasonDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const { data, isLoading: loading, isError: error } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError: error,
+  } = useQuery({
     queryKey: ["season-detail", id, season],
     queryFn: ({ signal }) => api.getSeasonDetails(id!, Number(season), signal),
     enabled: !!id && !!season,
   });
   const qc = useQueryClient();
 
-  type SeasonStatusEntry = { episode_number: number; id: number; is_watched: boolean };
+  type SeasonStatusEntry = {
+    episode_number: number;
+    id: number;
+    is_watched: boolean;
+  };
   type SeasonStatusData = { episodes: SeasonStatusEntry[] };
 
   const { data: statusData } = useQuery({
@@ -78,20 +100,40 @@ export default function SeasonDetailPage() {
   const episodeRatings = ratingsData?.ratings ?? {};
 
   const toggleWatchedMutation = useMutation({
-    mutationFn: ({ epId, wasWatched }: { epId: number; wasWatched: boolean }) =>
-      wasWatched ? api.unwatchEpisode(epId) : api.watchEpisode(epId),
+    mutationFn: ({
+      epId,
+      wasWatched,
+    }: {
+      epId: number;
+      wasWatched: boolean;
+    }) => (wasWatched ? api.unwatchEpisode(epId) : api.watchEpisode(epId)),
     onMutate: async ({ epId, wasWatched }) => {
       await qc.cancelQueries({ queryKey: ["season-status", id, season] });
-      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
-      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
-        if (!old) return old;
-        return { ...old, episodes: old.episodes.map((ep) => ep.id === epId ? { ...ep, is_watched: !wasWatched } : ep) };
-      });
+      const snapshot = qc.getQueryData<SeasonStatusData>([
+        "season-status",
+        id,
+        season,
+      ]);
+      qc.setQueryData<SeasonStatusData>(
+        ["season-status", id, season],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            episodes: old.episodes.map((ep) =>
+              ep.id === epId ? { ...ep, is_watched: !wasWatched } : ep,
+            ),
+          };
+        },
+      );
       return { snapshot };
     },
     onError: (_err, _vars, context) => {
-      if (context?.snapshot !== undefined) qc.setQueryData(["season-status", id, season], context.snapshot);
-      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+      if (context?.snapshot !== undefined)
+        qc.setQueryData(["season-status", id, season], context.snapshot);
+      toast.error(
+        t("episodes.watchedError", "Failed to update watched status"),
+      );
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
@@ -101,19 +143,35 @@ export default function SeasonDetailPage() {
   });
 
   const airDateMutation = useMutation({
-    mutationFn: ({ epId }: { epId: number }) => api.watchEpisodesBulk([epId], true, { useAirDate: true }),
+    mutationFn: ({ epId }: { epId: number }) =>
+      api.watchEpisodesBulk([epId], true, { useAirDate: true }),
     onMutate: async ({ epId }) => {
       await qc.cancelQueries({ queryKey: ["season-status", id, season] });
-      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
-      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
-        if (!old) return old;
-        return { ...old, episodes: old.episodes.map((ep) => ep.id === epId ? { ...ep, is_watched: true } : ep) };
-      });
+      const snapshot = qc.getQueryData<SeasonStatusData>([
+        "season-status",
+        id,
+        season,
+      ]);
+      qc.setQueryData<SeasonStatusData>(
+        ["season-status", id, season],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            episodes: old.episodes.map((ep) =>
+              ep.id === epId ? { ...ep, is_watched: true } : ep,
+            ),
+          };
+        },
+      );
       return { snapshot };
     },
     onError: (_err, _vars, context) => {
-      if (context?.snapshot !== undefined) qc.setQueryData(["season-status", id, season], context.snapshot);
-      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+      if (context?.snapshot !== undefined)
+        qc.setQueryData(["season-status", id, season], context.snapshot);
+      toast.error(
+        t("episodes.watchedError", "Failed to update watched status"),
+      );
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
@@ -123,21 +181,48 @@ export default function SeasonDetailPage() {
   });
 
   const allWatchedMutation = useMutation({
-    mutationFn: ({ ids, newWatched, useAirDate }: { ids: number[]; newWatched: boolean; useAirDate?: boolean }) =>
-      api.watchEpisodesBulk(ids, newWatched, newWatched && useAirDate !== undefined ? { useAirDate } : undefined),
+    mutationFn: ({
+      ids,
+      newWatched,
+      useAirDate,
+    }: {
+      ids: number[];
+      newWatched: boolean;
+      useAirDate?: boolean;
+    }) =>
+      api.watchEpisodesBulk(
+        ids,
+        newWatched,
+        newWatched && useAirDate !== undefined ? { useAirDate } : undefined,
+      ),
     onMutate: async ({ ids, newWatched }) => {
       await qc.cancelQueries({ queryKey: ["season-status", id, season] });
-      const snapshot = qc.getQueryData<SeasonStatusData>(["season-status", id, season]);
+      const snapshot = qc.getQueryData<SeasonStatusData>([
+        "season-status",
+        id,
+        season,
+      ]);
       const idSet = new Set(ids);
-      qc.setQueryData<SeasonStatusData>(["season-status", id, season], (old) => {
-        if (!old) return old;
-        return { ...old, episodes: old.episodes.map((ep) => idSet.has(ep.id) ? { ...ep, is_watched: newWatched } : ep) };
-      });
+      qc.setQueryData<SeasonStatusData>(
+        ["season-status", id, season],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            episodes: old.episodes.map((ep) =>
+              idSet.has(ep.id) ? { ...ep, is_watched: newWatched } : ep,
+            ),
+          };
+        },
+      );
       return { snapshot };
     },
     onError: (_err, _vars, context) => {
-      if (context?.snapshot !== undefined) qc.setQueryData(["season-status", id, season], context.snapshot);
-      toast.error(t("episodes.watchedError", "Failed to update watched status"));
+      if (context?.snapshot !== undefined)
+        qc.setQueryData(["season-status", id, season], context.snapshot);
+      toast.error(
+        t("episodes.watchedError", "Failed to update watched status"),
+      );
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
@@ -149,7 +234,10 @@ export default function SeasonDetailPage() {
   const toggleWatched = (episodeNumber: number) => {
     const status = statusMap.get(episodeNumber);
     if (!status) return;
-    toggleWatchedMutation.mutate({ epId: status.id, wasWatched: status.is_watched });
+    toggleWatchedMutation.mutate({
+      epId: status.id,
+      wasWatched: status.is_watched,
+    });
   };
 
   const markEpisodeOnAirDate = (episodeNumber: number) => {
@@ -162,15 +250,25 @@ export default function SeasonDetailPage() {
     const episodes = data?.tmdb?.episodes || [];
     const releasedEps = episodes.filter((ep) => isReleased(ep.air_date));
     const releasedStatuses = releasedEps
-      .map((ep) => ({ episodeNumber: ep.episode_number, status: statusMap.get(ep.episode_number) }))
-      .filter((e): e is { episodeNumber: number; status: EpisodeStatus } => !!e.status);
+      .map((ep) => ({
+        episodeNumber: ep.episode_number,
+        status: statusMap.get(ep.episode_number),
+      }))
+      .filter(
+        (e): e is { episodeNumber: number; status: EpisodeStatus } =>
+          !!e.status,
+      );
 
     if (releasedStatuses.length === 0) return;
 
     const allWatched = releasedStatuses.every((e) => e.status.is_watched);
     const newWatched = !allWatched;
     const ids = releasedStatuses.map((e) => e.status.id);
-    allWatchedMutation.mutate({ ids, newWatched, useAirDate: options?.useAirDate });
+    allWatchedMutation.mutate({
+      ids,
+      newWatched,
+      useAirDate: options?.useAirDate,
+    });
   };
 
   if (loading) {
@@ -190,16 +288,30 @@ export default function SeasonDetailPage() {
   const episodes = tmdb?.episodes || [];
 
   const hasStatus = statusMap.size > 0;
-  const releasedWithStatus = episodes.filter((ep) => isReleased(ep.air_date) && statusMap.has(ep.episode_number));
-  const allReleasedWatched = hasStatus && releasedWithStatus.length > 0 && releasedWithStatus.every((ep) => statusMap.get(ep.episode_number)?.is_watched);
+  const releasedWithStatus = episodes.filter(
+    (ep) => isReleased(ep.air_date) && statusMap.has(ep.episode_number),
+  );
+  const allReleasedWatched =
+    hasStatus &&
+    releasedWithStatus.length > 0 &&
+    releasedWithStatus.every(
+      (ep) => statusMap.get(ep.episode_number)?.is_watched,
+    );
 
   return (
     <div className="space-y-8 pb-12 overflow-x-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-zinc-400">
-        <Link to={`/title/${title.id}`} className="hover:text-white transition-colors">{title.title}</Link>
+        <Link
+          to={`/title/${title.id}`}
+          className="hover:text-white transition-colors"
+        >
+          {title.title}
+        </Link>
         <span className="text-zinc-600">/</span>
-        <span className="text-white">{tmdb?.name || `Season ${seasonNumber}`}</span>
+        <span className="text-white">
+          {tmdb?.name || `Season ${seasonNumber}`}
+        </span>
       </div>
 
       {/* Header */}
@@ -222,29 +334,39 @@ export default function SeasonDetailPage() {
         </div>
 
         <div className="flex-1 space-y-3">
-          <h1 className="text-2xl font-bold text-white">{tmdb?.name || `Season ${seasonNumber}`}</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {tmdb?.name || `Season ${seasonNumber}`}
+          </h1>
           <div className="flex items-center gap-2 text-sm text-zinc-400">
             {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}
             {episodes.length > 0 && (
               <>
                 <span className="text-zinc-600">·</span>
-                <span>{episodes.length} episode{episodes.length !== 1 ? "s" : ""}</span>
+                <span>
+                  {episodes.length} episode{episodes.length !== 1 ? "s" : ""}
+                </span>
               </>
             )}
             {tmdb?.vote_average ? (
               <>
                 <span className="text-zinc-600">·</span>
-                <span className="text-yellow-500">{tmdb.vote_average.toFixed(1)}</span>
+                <span className="text-yellow-500">
+                  {tmdb.vote_average.toFixed(1)}
+                </span>
               </>
             ) : null}
           </div>
 
           {tmdb?.overview && (
-            <p className="text-zinc-300 leading-relaxed select-text">{tmdb.overview}</p>
+            <p className="text-zinc-300 leading-relaxed select-text">
+              {tmdb.overview}
+            </p>
           )}
 
           <div className="pt-2">
-            <ShareButton title={`${title.title} — ${tmdb?.name || `Season ${seasonNumber}`}`} />
+            <ShareButton
+              title={`${title.title} — ${tmdb?.name || `Season ${seasonNumber}`}`}
+            />
           </div>
         </div>
       </div>
@@ -254,7 +376,9 @@ export default function SeasonDetailPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-lg font-semibold text-white">{t("season.episodes", "Episodes")}</h2>
+              <h2 className="text-lg font-semibold text-white">
+                {t("season.episodes", "Episodes")}
+              </h2>
               {seasons && seasons.length > 1 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {seasons.map((s) => {
@@ -262,7 +386,11 @@ export default function SeasonDetailPage() {
                     return (
                       <button
                         key={s.season_number}
-                        onClick={() => navigate(`/title/${title.id}/season/${s.season_number}`)}
+                        onClick={() =>
+                          navigate(
+                            `/title/${title.id}/season/${s.season_number}`,
+                          )
+                        }
                         className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                           active
                             ? "bg-amber-400 text-black"
@@ -280,11 +408,22 @@ export default function SeasonDetailPage() {
             <div className="flex items-center gap-4">
               {hasStatus && releasedWithStatus.length > 0 && (
                 <span className="text-[11px] font-mono text-zinc-500 tracking-wide whitespace-nowrap">
-                  {releasedWithStatus.filter((ep) => statusMap.get(ep.episode_number)?.is_watched).length} of {episodes.length} watched · {episodes.length - releasedWithStatus.filter((ep) => statusMap.get(ep.episode_number)?.is_watched).length} remaining
+                  {
+                    releasedWithStatus.filter(
+                      (ep) => statusMap.get(ep.episode_number)?.is_watched,
+                    ).length
+                  }{" "}
+                  of {episodes.length} watched ·{" "}
+                  {episodes.length -
+                    releasedWithStatus.filter(
+                      (ep) => statusMap.get(ep.episode_number)?.is_watched,
+                    ).length}{" "}
+                  remaining
                 </span>
               )}
-              {hasStatus && releasedWithStatus.length > 0 && (
-                allReleasedWatched ? (
+              {hasStatus &&
+                releasedWithStatus.length > 0 &&
+                (allReleasedWatched ? (
                   <button
                     onClick={() => toggleAllWatched()}
                     className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
@@ -293,8 +432,7 @@ export default function SeasonDetailPage() {
                   </button>
                 ) : (
                   <MarkAllWatchedMenu onMarkAll={toggleAllWatched} />
-                )
-              )}
+                ))}
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -305,7 +443,10 @@ export default function SeasonDetailPage() {
               const watched = status?.is_watched ?? false;
               const ratingCounts = episodeRatings[ep.episode_number];
               const totalRatings = ratingCounts
-                ? ratingCounts.HATE + ratingCounts.DISLIKE + ratingCounts.LIKE + ratingCounts.LOVE
+                ? ratingCounts.HATE +
+                  ratingCounts.DISLIKE +
+                  ratingCounts.LIKE +
+                  ratingCounts.LOVE
                 : 0;
 
               return (
@@ -372,7 +513,9 @@ export default function SeasonDetailPage() {
                         )}
                         {/* Mobile-only meta row */}
                         <div className="sm:hidden flex items-center gap-2 mt-1 text-[11px] font-mono text-zinc-400">
-                          {ep.air_date && <span>{formatDate(ep.air_date)}</span>}
+                          {ep.air_date && (
+                            <span>{formatDate(ep.air_date)}</span>
+                          )}
                           {ep.runtime && (
                             <>
                               <span className="text-zinc-700">·</span>
@@ -382,7 +525,9 @@ export default function SeasonDetailPage() {
                           {ep.vote_average > 0 && (
                             <>
                               <span className="text-zinc-700">·</span>
-                              <span className="text-amber-400">★ {ep.vote_average.toFixed(1)}</span>
+                              <span className="text-amber-400">
+                                ★ {ep.vote_average.toFixed(1)}
+                              </span>
                             </>
                           )}
                         </div>
@@ -398,11 +543,14 @@ export default function SeasonDetailPage() {
                     <div className="hidden sm:block shrink-0 w-[100px] text-xs font-mono text-zinc-400">
                       <div>{ep.runtime ? `${ep.runtime} min` : "—"}</div>
                       {ep.vote_average > 0 && (
-                        <div className="text-amber-400 mt-0.5">★ {ep.vote_average.toFixed(1)}</div>
+                        <div className="text-amber-400 mt-0.5">
+                          ★ {ep.vote_average.toFixed(1)}
+                        </div>
                       )}
                       {totalRatings > 0 && (
                         <div className="text-pink-400 mt-0.5">
-                          {totalRatings} {totalRatings === 1 ? "rating" : "ratings"}
+                          {totalRatings}{" "}
+                          {totalRatings === 1 ? "rating" : "ratings"}
                         </div>
                       )}
                     </div>
@@ -427,8 +575,12 @@ export default function SeasonDetailPage() {
                         episodeNumber={ep.episode_number}
                         episodeName={ep.name}
                         showTitle={title.title}
-                        canMarkOnAirDate={released && !!status && !watched && !!ep.air_date}
-                        onMarkOnAirDate={() => markEpisodeOnAirDate(ep.episode_number)}
+                        canMarkOnAirDate={
+                          released && !!status && !watched && !!ep.air_date
+                        }
+                        onMarkOnAirDate={() =>
+                          markEpisodeOnAirDate(ep.episode_number)
+                        }
                       />
                     </div>
                   </div>
@@ -446,7 +598,13 @@ export default function SeasonDetailPage() {
             <h2 className="text-lg font-semibold text-white">Season Cast</h2>
             <ScrollableRow className="gap-4 pb-2">
               {tmdb.credits.cast.slice(0, 15).map((c) => (
-                <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
+                <PersonCard
+                  key={c.id}
+                  id={c.id}
+                  name={c.name}
+                  role={c.character}
+                  profilePath={c.profile_path}
+                />
               ))}
             </ScrollableRow>
           </section>
@@ -501,9 +659,15 @@ function EpisodeWatchedPill({
           : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:bg-white/10 hover:text-white"
       }`}
     >
-      {watched ? <CheckCircle size={12} aria-hidden="true" /> : <Circle size={12} aria-hidden="true" />}
+      {watched ? (
+        <CheckCircle size={12} aria-hidden="true" />
+      ) : (
+        <Circle size={12} aria-hidden="true" />
+      )}
       <span className="hidden sm:inline">
-        {watched ? t("episodes.watched", "Watched") : t("episodes.markWatchedShort", "Mark")}
+        {watched
+          ? t("episodes.watched", "Watched")
+          : t("episodes.markWatchedShort", "Mark")}
       </span>
     </button>
   );
@@ -521,7 +685,8 @@ function MarkAllWatchedMenu({
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -546,7 +711,10 @@ function MarkAllWatchedMenu({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={t("episodes.markAllWatchedOptions", "Mark all watched options")}
+        aria-label={t(
+          "episodes.markAllWatchedOptions",
+          "Mark all watched options",
+        )}
         className="inline-flex items-center justify-center w-6 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronDown size={14} aria-hidden="true" />
@@ -576,11 +744,23 @@ function MarkAllWatchedMenu({
             }}
             className="w-full flex items-start gap-2 text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
           >
-            <CalendarDays size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
+            <CalendarDays
+              size={13}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0"
+            />
             <span className="flex flex-col">
-              <span>{t("episodes.markAllWatchedOnAirDate", "Mark watched on air date")}</span>
+              <span>
+                {t(
+                  "episodes.markAllWatchedOnAirDate",
+                  "Mark watched on air date",
+                )}
+              </span>
               <span className="text-[11px] text-zinc-500">
-                {t("episodes.markAllWatchedOnAirDateHint", "Backdate to keep stats accurate")}
+                {t(
+                  "episodes.markAllWatchedOnAirDateHint",
+                  "Backdate to keep stats accurate",
+                )}
               </span>
             </span>
           </button>
@@ -615,7 +795,8 @@ function EpisodeOverflowMenu({
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -669,7 +850,9 @@ function EpisodeOverflowMenu({
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              navigate(`/title/${titleId}/season/${seasonNumber}/episode/${episodeNumber}`);
+              navigate(
+                `/title/${titleId}/season/${seasonNumber}/episode/${episodeNumber}`,
+              );
             }}
             className="w-full text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
           >

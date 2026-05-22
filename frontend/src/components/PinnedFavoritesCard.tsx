@@ -22,11 +22,18 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-export function reorderPinned(items: PinnedTitle[], fromId: string, toId: string): PinnedTitle[] {
+export function reorderPinned(
+  items: PinnedTitle[],
+  fromId: string,
+  toId: string,
+): PinnedTitle[] {
   const oldIdx = items.findIndex((t) => t.id === fromId);
   const newIdx = items.findIndex((t) => t.id === toId);
   if (oldIdx < 0 || newIdx < 0) return items;
-  return arrayMove(items, oldIdx, newIdx).map((t, i) => ({ ...t, position: i }));
+  return arrayMove(items, oldIdx, newIdx).map((t, i) => ({
+    ...t,
+    position: i,
+  }));
 }
 
 interface SortableTileProps {
@@ -36,7 +43,14 @@ interface SortableTileProps {
 }
 
 function SortableTile({ title, onUnpin, saving }: SortableTileProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: title.id,
   });
 
@@ -64,7 +78,9 @@ function SortableTile({ title, onUnpin, saving }: SortableTileProps) {
         />
       ) : (
         <div className="w-full rounded-lg aspect-[2/3] bg-zinc-800 flex items-center justify-center border border-white/[0.06]">
-          <span className="text-zinc-600 text-xs text-center px-1 line-clamp-2">{title.title}</span>
+          <span className="text-zinc-600 text-xs text-center px-1 line-clamp-2">
+            {title.title}
+          </span>
         </div>
       )}
       <button
@@ -87,15 +103,23 @@ interface Props {
   onPinnedChanged?: (next: PinnedTitle[]) => void;
 }
 
-export default function PinnedFavoritesCard({ pinned, isOwnProfile, onPinnedChanged }: Props) {
+export default function PinnedFavoritesCard({
+  pinned,
+  isOwnProfile,
+  onPinnedChanged,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const [localPinned, setLocalPinned] = useState<PinnedTitle[]>(pinned);
   const [saving, setSaving] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const displayed = editing ? localPinned : pinned;

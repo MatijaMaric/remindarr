@@ -18,7 +18,9 @@ export class CloudflareKvCache implements Cache {
   }
 
   async set(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-    await this.kv.put(key, JSON.stringify(value), { expirationTtl: ttlSeconds });
+    await this.kv.put(key, JSON.stringify(value), {
+      expirationTtl: ttlSeconds,
+    });
   }
 
   async delete(key: string): Promise<void> {

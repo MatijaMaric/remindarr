@@ -30,7 +30,9 @@ const REFRESH_SECONDS: Record<KioskFidelity, number> = {
 // FLATRATE > FREE > ADS > any other monetization type
 const OFFER_PRIORITY: Record<string, number> = { FLATRATE: 0, FREE: 1, ADS: 2 };
 
-function pickProvider(offers: Array<{ provider_name?: string; monetization_type?: string | null }>): string | null {
+function pickProvider(
+  offers: Array<{ provider_name?: string; monetization_type?: string | null }>,
+): string | null {
   if (offers.length === 0) return null;
   const sorted = [...offers].sort((a, b) => {
     const pa = OFFER_PRIORITY[a.monetization_type ?? ""] ?? 99;
@@ -74,7 +76,10 @@ app.delete("/token", requireAuth, async (c) => {
 app.get(
   "/:token",
   zValidator("param", z.object({ token: z.string().min(1).max(64) })),
-  zValidator("query", z.object({ display: z.enum(FIDELITY_VALUES).optional() })),
+  zValidator(
+    "query",
+    z.object({ display: z.enum(FIDELITY_VALUES).optional() }),
+  ),
   async (c) => {
     const { token } = c.req.valid("param");
     const { display } = c.req.valid("query");
@@ -101,7 +106,8 @@ app.get(
     });
 
     // airing_now — first unwatched today, fall back to first today
-    const airingNow = todayEpisodes.find((e) => !e.is_watched) ?? todayEpisodes[0] ?? null;
+    const airingNow =
+      todayEpisodes.find((e) => !e.is_watched) ?? todayEpisodes[0] ?? null;
 
     // releasing_today — all episodes today, projected with provider + kind
     const releasingToday = todayEpisodes.map((e) => ({
@@ -142,7 +148,10 @@ app.get(
       ep_title: e.name,
       air_date: e.air_date,
       provider: pickProvider(e.offers),
-      left: Math.max(0, (e.total_episodes ?? 0) - (e.watched_episodes_count ?? 0)),
+      left: Math.max(
+        0,
+        (e.total_episodes ?? 0) - (e.watched_episodes_count ?? 0),
+      ),
     }));
 
     const airingNowProjected = airingNow
@@ -174,7 +183,7 @@ app.get(
       releasing_today: releasingToday,
       unwatched_queue: unwatchedQueue,
     });
-  }
+  },
 );
 
 export default app;

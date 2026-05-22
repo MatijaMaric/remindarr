@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { getDb } from "../db/schema";
 import { sessions, users } from "../db/schema";
 import { eq } from "drizzle-orm";
@@ -25,7 +29,13 @@ let adminToken: string;
 function createMockAuth() {
   return {
     api: {
-      getSession: async ({ headers, query }: { headers: Headers; query?: { disableCookieCache?: boolean } }) => {
+      getSession: async ({
+        headers,
+        query,
+      }: {
+        headers: Headers;
+        query?: { disableCookieCache?: boolean };
+      }) => {
         // query.disableCookieCache is accepted but does not change test behaviour —
         // the mock always reads from DB (same as what the production force-refresh achieves).
         void query;
@@ -55,7 +65,14 @@ beforeEach(async () => {
   const userId = await createUser("testuser", "hash", "Test User");
   validToken = await createSession(userId);
 
-  const adminId = await createUser("admin", "hash", "Admin", "local", undefined, true);
+  const adminId = await createUser(
+    "admin",
+    "hash",
+    "Admin",
+    "local",
+    undefined,
+    true,
+  );
   adminToken = await createSession(adminId);
 
   app = new Hono<AppEnv>();
@@ -208,7 +225,14 @@ describe("session expiration", () => {
 describe("requireAdmin — force-refresh regression", () => {
   it("denies access after admin role is revoked in DB, even with a valid session cookie", async () => {
     // Create a user with admin role
-    const userId = await createUser("was-admin", "hash", "Was Admin", "local", undefined, true);
+    const userId = await createUser(
+      "was-admin",
+      "hash",
+      "Was Admin",
+      "local",
+      undefined,
+      true,
+    );
     const token = await createSession(userId);
 
     // Confirm admin access works initially

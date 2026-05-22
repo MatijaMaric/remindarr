@@ -49,7 +49,10 @@ export async function getStreak(userId: string): Promise<StreakRow | null> {
  * Concurrent-write safety: use conditional UPDATE WHERE last_watch_date IS <old value>;
  * retries up to 3× on conflict.
  */
-export async function bumpStreak(userId: string, watchedAt?: string): Promise<StreakRow> {
+export async function bumpStreak(
+  userId: string,
+  watchedAt?: string,
+): Promise<StreakRow> {
   return traceDbQuery("bumpStreak", async () => {
     const db = getDb();
     const today = toUtcDateString(watchedAt ?? new Date().toISOString());
@@ -76,7 +79,13 @@ export async function bumpStreak(userId: string, watchedAt?: string): Promise<St
               updatedAt,
             })
             .run();
-          return { userId, currentStreak: 1, longestStreak: 1, lastWatchDate: today, updatedAt };
+          return {
+            userId,
+            currentStreak: 1,
+            longestStreak: 1,
+            lastWatchDate: today,
+            updatedAt,
+          };
         } catch {
           // Race — another insert beat us, retry
           continue;
@@ -114,20 +123,34 @@ export async function bumpStreak(userId: string, watchedAt?: string): Promise<St
           lastWatchDate: today,
           updatedAt,
         })
-        .where(and(eq(userStreaks.userId, userId), last
-          ? eq(userStreaks.lastWatchDate, last)
-          : sql`${userStreaks.lastWatchDate} IS NULL`
-        ))
+        .where(
+          and(
+            eq(userStreaks.userId, userId),
+            last
+              ? eq(userStreaks.lastWatchDate, last)
+              : sql`${userStreaks.lastWatchDate} IS NULL`,
+          ),
+        )
         .run();
 
       if ((result as unknown as { changes?: number }).changes !== 0) {
-        return { userId, currentStreak: newCurrent, longestStreak: newLongest, lastWatchDate: today, updatedAt };
+        return {
+          userId,
+          currentStreak: newCurrent,
+          longestStreak: newLongest,
+          lastWatchDate: today,
+          updatedAt,
+        };
       }
       // Another write modified last_watch_date — retry
     }
 
     // After all retries, just return current state
-    const row = await db.select().from(userStreaks).where(eq(userStreaks.userId, userId)).get();
+    const row = await db
+      .select()
+      .from(userStreaks)
+      .where(eq(userStreaks.userId, userId))
+      .get();
     return {
       userId: row?.userId ?? userId,
       currentStreak: row?.currentStreak ?? 0,
@@ -143,7 +166,9 @@ export async function bumpStreak(userId: string, watchedAt?: string): Promise<St
  * Reads DISTINCT date(watched_at) UTC from watch_history, runs the same
  * algorithm over sorted dates, then persists the result.
  */
-export async function recomputeStreakFromHistory(userId: string): Promise<StreakRow> {
+export async function recomputeStreakFromHistory(
+  userId: string,
+): Promise<StreakRow> {
   return traceDbQuery("recomputeStreakFromHistory", async () => {
     const db = getDb();
 
@@ -163,13 +188,30 @@ export async function recomputeStreakFromHistory(userId: string): Promise<Streak
       const updatedAt = new Date().toISOString();
       await db
         .insert(userStreaks)
-        .values({ userId, currentStreak: 0, longestStreak: 0, lastWatchDate: null, updatedAt })
+        .values({
+          userId,
+          currentStreak: 0,
+          longestStreak: 0,
+          lastWatchDate: null,
+          updatedAt,
+        })
         .onConflictDoUpdate({
           target: userStreaks.userId,
-          set: { currentStreak: 0, longestStreak: 0, lastWatchDate: null, updatedAt },
+          set: {
+            currentStreak: 0,
+            longestStreak: 0,
+            lastWatchDate: null,
+            updatedAt,
+          },
         })
         .run();
-      return { userId, currentStreak: 0, longestStreak: 0, lastWatchDate: null, updatedAt };
+      return {
+        userId,
+        currentStreak: 0,
+        longestStreak: 0,
+        lastWatchDate: null,
+        updatedAt,
+      };
     }
 
     // Run the streak algorithm over sorted dates
@@ -213,14 +255,31 @@ export async function recomputeStreakFromHistory(userId: string): Promise<Streak
     const updatedAt = new Date().toISOString();
     await db
       .insert(userStreaks)
-      .values({ userId, currentStreak, longestStreak, lastWatchDate: lastDate, updatedAt })
+      .values({
+        userId,
+        currentStreak,
+        longestStreak,
+        lastWatchDate: lastDate,
+        updatedAt,
+      })
       .onConflictDoUpdate({
         target: userStreaks.userId,
-        set: { currentStreak, longestStreak, lastWatchDate: lastDate, updatedAt },
+        set: {
+          currentStreak,
+          longestStreak,
+          lastWatchDate: lastDate,
+          updatedAt,
+        },
       })
       .run();
 
-    return { userId, currentStreak, longestStreak, lastWatchDate: lastDate, updatedAt };
+    return {
+      userId,
+      currentStreak,
+      longestStreak,
+      lastWatchDate: lastDate,
+      updatedAt,
+    };
   });
 }
 
@@ -241,4 +300,3 @@ function dateDiffDays(a: string, b: string): number {
   const bMs = new Date(`${b}T00:00:00Z`).getTime();
   return Math.round((bMs - aMs) / (1000 * 60 * 60 * 24));
 }
-

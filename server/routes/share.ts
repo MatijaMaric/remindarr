@@ -46,7 +46,10 @@ app.get("/watchlist/:token", async (c) => {
   }
   const titles = await getTrackedTitles(user.id);
   const username = user.displayUsername ?? user.username;
-  log.debug("Shared watchlist served", { userId: user.id, count: titles.length });
+  log.debug("Shared watchlist served", {
+    userId: user.id,
+    count: titles.length,
+  });
   return c.json({ username, titles });
 });
 

@@ -11,7 +11,11 @@ const log = logger.child({ module: "sync" });
 import { registerCron, enqueueJob, hasActiveJob } from "./queue";
 import { CONFIG } from "../config";
 import { fetchNewReleases } from "../tmdb/sync-titles";
-import { upsertTitles, getEpisodeIdsBySE, watchEpisodesBulk } from "../db/repository";
+import {
+  upsertTitles,
+  getEpisodeIdsBySE,
+  watchEpisodesBulk,
+} from "../db/repository";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
@@ -29,12 +33,16 @@ export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
 
   registerHandler("release-reminder", async (job) => {
-    const payload = job.data ? JSON.parse(job.data) as Record<string, unknown> : {};
+    const payload = job.data
+      ? (JSON.parse(job.data) as Record<string, unknown>)
+      : {};
     await handleReleaseReminder(payload);
   });
 
   registerHandler("sync-titles", async () => {
-    const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });
+    const titles = await fetchNewReleases({
+      daysBack: CONFIG.DEFAULT_DAYS_BACK,
+    });
     const titleIds = titles.map((t) => t.id);
     const count = await upsertTitles(titles);
     log.info("Synced titles from TMDB", { count });
@@ -44,7 +52,9 @@ export function registerSyncJobs() {
 
   registerHandler("sync-episodes", async () => {
     if (!CONFIG.TMDB_API_KEY) {
-      log.info("Skipping episode sync", { reason: "TMDB_API_KEY not configured" });
+      log.info("Skipping episode sync", {
+        reason: "TMDB_API_KEY not configured",
+      });
       return;
     }
     const result = await syncEpisodes();
@@ -53,19 +63,35 @@ export function registerSyncJobs() {
 
   registerHandler("sync-show-episodes", async (job) => {
     if (!CONFIG.TMDB_API_KEY) {
-      log.info("Skipping show episode sync", { reason: "TMDB_API_KEY not configured" });
+      log.info("Skipping show episode sync", {
+        reason: "TMDB_API_KEY not configured",
+      });
       return;
     }
     const data = job.data ? JSON.parse(job.data) : null;
     if (!data?.titleId || !data?.tmdbId || !data?.title) {
       throw new Error("sync-show-episodes job missing required data fields");
     }
-    const count = await syncEpisodesForShow(data.titleId, data.tmdbId, data.title);
-    log.info("Synced show episodes via job", { title: data.title, episodes: count });
+    const count = await syncEpisodesForShow(
+      data.titleId,
+      data.tmdbId,
+      data.title,
+    );
+    log.info("Synced show episodes via job", {
+      title: data.title,
+      episodes: count,
+    });
 
     // Restore watched episodes if provided (from watchlist import)
-    if (Array.isArray(data.watchedEpisodes) && data.watchedEpisodes.length > 0 && data.userId) {
-      const episodeIds = await getEpisodeIdsBySE(data.titleId, data.watchedEpisodes);
+    if (
+      Array.isArray(data.watchedEpisodes) &&
+      data.watchedEpisodes.length > 0 &&
+      data.userId
+    ) {
+      const episodeIds = await getEpisodeIdsBySE(
+        data.titleId,
+        data.watchedEpisodes,
+      );
       if (episodeIds.length > 0) {
         await watchEpisodesBulk(episodeIds, data.userId);
         log.info("Restored watched episodes from import", {
@@ -79,7 +105,9 @@ export function registerSyncJobs() {
 
   registerHandler("backfill-title-offers", async (job) => {
     if (!CONFIG.TMDB_API_KEY) {
-      log.info("Skipping offers backfill", { reason: "TMDB_API_KEY not configured" });
+      log.info("Skipping offers backfill", {
+        reason: "TMDB_API_KEY not configured",
+      });
       return;
     }
     const data = job.data ? JSON.parse(job.data) : null;
@@ -87,12 +115,16 @@ export function registerSyncJobs() {
       throw new Error("backfill-title-offers job missing required data fields");
     }
     const tmdbId = Number(data.tmdbId);
-    const title = data.objectType === "MOVIE"
-      ? parseMovieDetails(await fetchMovieDetails(tmdbId))
-      : parseTvDetails(await fetchTvDetails(tmdbId));
+    const title =
+      data.objectType === "MOVIE"
+        ? parseMovieDetails(await fetchMovieDetails(tmdbId))
+        : parseTvDetails(await fetchTvDetails(tmdbId));
     if (title.offers.length > 0) {
       await upsertTitles([title]);
-      log.info("Backfilled offers for title", { title: title.title, offers: title.offers.length });
+      log.info("Backfilled offers for title", {
+        title: title.title,
+        offers: title.offers.length,
+      });
     } else {
       log.info("No offers found for title", { title: title.title });
     }
@@ -112,7 +144,9 @@ export function registerSyncJobs() {
 
   registerHandler("sync-deep-links", async () => {
     if (!CONFIG.STREAMING_AVAILABILITY_API_KEY) {
-      log.info("Skipping deep link sync", { reason: "STREAMING_AVAILABILITY_API_KEY not configured" });
+      log.info("Skipping deep link sync", {
+        reason: "STREAMING_AVAILABILITY_API_KEY not configured",
+      });
       return;
     }
     const titleRows = await getTitlesNeedingSaEnrichment();
@@ -138,7 +172,10 @@ export function registerSyncJobs() {
       },
       onError: (err, t) => {
         if (err instanceof RateLimitError) {
-          log.warn("SA rate limit hit, stopping early", { processed, enriched });
+          log.warn("SA rate limit hit, stopping early", {
+            processed,
+            enriched,
+          });
           return "stop";
         }
         if (err instanceof BreakerOpenError) {
@@ -233,7 +270,10 @@ export function registerSyncJobs() {
   }
 
   // Enqueue one-time deep link backfill for existing titles
-  if (CONFIG.STREAMING_AVAILABILITY_API_KEY && !hasActiveJob("sync-deep-links")) {
+  if (
+    CONFIG.STREAMING_AVAILABILITY_API_KEY &&
+    !hasActiveJob("sync-deep-links")
+  ) {
     enqueueJob("sync-deep-links", undefined, { maxAttempts: 1 });
   }
 }

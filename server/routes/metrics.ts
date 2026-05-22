@@ -13,12 +13,17 @@ let sessionsCountCache: { value: number; ts: number } | null = null;
 
 function getSessionsCount(): number {
   const now = Date.now();
-  if (sessionsCountCache && now - sessionsCountCache.ts < SESSIONS_COUNT_CACHE_MS) {
+  if (
+    sessionsCountCache &&
+    now - sessionsCountCache.ts < SESSIONS_COUNT_CACHE_MS
+  ) {
     return sessionsCountCache.value;
   }
   const db = getRawDb();
   const row = db
-    .prepare("SELECT COUNT(*) as count FROM sessions WHERE expires_at > datetime('now')")
+    .prepare(
+      "SELECT COUNT(*) as count FROM sessions WHERE expires_at > datetime('now')",
+    )
     .get() as { count: number } | null;
   const value = row?.count ?? 0;
   sessionsCountCache = { value, ts: now };

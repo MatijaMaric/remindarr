@@ -28,7 +28,10 @@ describe("TelegramProvider.validateConfig", () => {
   });
 
   it("rejects invalid botToken format", () => {
-    const result = telegram.validateConfig({ botToken: "bad-token", chatId: "-1001234567890" });
+    const result = telegram.validateConfig({
+      botToken: "bad-token",
+      chatId: "-1001234567890",
+    });
     expect(result.valid).toBe(false);
     expect(result.error).toContain("Invalid bot token");
   });
@@ -57,7 +60,10 @@ describe("TelegramProvider.send", () => {
 
   beforeEach(() => {
     fetchCalls = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: string | URL | Request, options?: RequestInit) => {
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+      url: string | URL | Request,
+      options?: RequestInit,
+    ) => {
       fetchCalls.push({ url: url as string, options: options ?? {} });
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }) as typeof fetch);
@@ -136,7 +142,11 @@ describe("TelegramProvider.send", () => {
   });
 
   it("skips sending when content is empty", async () => {
-    await telegram.send(config, { date: "2026-03-12", episodes: [], movies: [] });
+    await telegram.send(config, {
+      date: "2026-03-12",
+      episodes: [],
+      movies: [],
+    });
     expect(fetchCalls).toHaveLength(0);
   });
 
@@ -145,7 +155,15 @@ describe("TelegramProvider.send", () => {
       date: "2026-04-05",
       episodes: [],
       movies: [],
-      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix", kind: "arrival" as const }],
+      streamingAlerts: [
+        {
+          titleId: "tt123",
+          title: "Inception",
+          posterUrl: null,
+          providerName: "Netflix",
+          kind: "arrival" as const,
+        },
+      ],
     };
     await telegram.send(config, alertContent);
     expect(fetchCalls).toHaveLength(1);
@@ -156,8 +174,12 @@ describe("TelegramProvider.send", () => {
   });
 
   it("throws on non-2xx response", async () => {
-    fetchSpy.mockImplementation(async () =>
-      new Response(JSON.stringify({ ok: false, description: "Bad Request" }), { status: 400 })
+    fetchSpy.mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({ ok: false, description: "Bad Request" }),
+          { status: 400 },
+        ),
     );
     await expect(telegram.send(config, sampleContent)).rejects.toThrow("400");
   });
@@ -166,7 +188,14 @@ describe("TelegramProvider.send", () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,
       achievementsEarned: [
-        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+        {
+          key: "movies_10",
+          title: "Cinephile I",
+          description: "Watch 10 movies",
+          icon: "Film",
+          points: 10,
+          earnedAt: "2026-01-01T00:00:00.000Z",
+        },
       ],
     };
     await telegram.send(config, contentWithAchievements);

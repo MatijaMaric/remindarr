@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, afterAll, afterEach } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  afterEach,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { getDb, passkey as passkeyTable, users } from "../db/schema";
 import { sql } from "drizzle-orm";
@@ -26,15 +33,17 @@ describe("getPasskeyRpId", () => {
 
 describe("buildPasskeyOrigins", () => {
   it("returns both www and non-www variants for a bare domain", () => {
-    expect(buildPasskeyOrigins("https://remindarr.app").sort()).toEqual(
-      ["https://remindarr.app", "https://www.remindarr.app"]
-    );
+    expect(buildPasskeyOrigins("https://remindarr.app").sort()).toEqual([
+      "https://remindarr.app",
+      "https://www.remindarr.app",
+    ]);
   });
 
   it("returns both www and non-www variants for a www domain", () => {
-    expect(buildPasskeyOrigins("https://www.remindarr.app").sort()).toEqual(
-      ["https://remindarr.app", "https://www.remindarr.app"]
-    );
+    expect(buildPasskeyOrigins("https://www.remindarr.app").sort()).toEqual([
+      "https://remindarr.app",
+      "https://www.remindarr.app",
+    ]);
   });
 });
 
@@ -60,16 +69,20 @@ describe("passkey support", () => {
   it("passkey table has correct columns", async () => {
     const db = getDb();
     // Create a user first to satisfy FK constraint
-    await db.insert(users).values({
-      id: "user-1",
-      username: "testuser",
-      email: "test@example.com",
-      emailVerified: false,
-      authProvider: "local",
-      isAdmin: 0,
-    }).run();
+    await db
+      .insert(users)
+      .values({
+        id: "user-1",
+        username: "testuser",
+        email: "test@example.com",
+        emailVerified: false,
+        authProvider: "local",
+        isAdmin: 0,
+      })
+      .run();
 
-    await db.insert(passkeyTable)
+    await db
+      .insert(passkeyTable)
       .values({
         id: "pk-1",
         publicKey: "test-public-key",
@@ -84,10 +97,7 @@ describe("passkey support", () => {
       })
       .run();
 
-    const row = await db
-      .select()
-      .from(passkeyTable)
-      .get();
+    const row = await db.select().from(passkeyTable).get();
 
     expect(row).toBeDefined();
     expect(row!.id).toBe("pk-1");
@@ -103,16 +113,20 @@ describe("passkey support", () => {
 
   it("passkey can be inserted with null webauthnUserID", async () => {
     const db = getDb();
-    await db.insert(users).values({
-      id: "user-2",
-      username: "testuser2",
-      email: "test2@example.com",
-      emailVerified: false,
-      authProvider: "local",
-      isAdmin: 0,
-    }).run();
+    await db
+      .insert(users)
+      .values({
+        id: "user-2",
+        username: "testuser2",
+        email: "test2@example.com",
+        emailVerified: false,
+        authProvider: "local",
+        isAdmin: 0,
+      })
+      .run();
 
-    await db.insert(passkeyTable)
+    await db
+      .insert(passkeyTable)
       .values({
         id: "pk-2",
         publicKey: "test-public-key-2",
@@ -123,10 +137,7 @@ describe("passkey support", () => {
       })
       .run();
 
-    const row = await db
-      .select()
-      .from(passkeyTable)
-      .get();
+    const row = await db.select().from(passkeyTable).get();
 
     expect(row).toBeDefined();
     expect(row!.webauthnUserID).toBeNull();

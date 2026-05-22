@@ -1,19 +1,38 @@
-import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  mock,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 import EditWatchedAtDialog from "./EditWatchedAtDialog";
 import * as api from "../api";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(() => {
   spies = [
-    spyOn(api, "patchWatchHistoryEntry").mockResolvedValue({ id: "hist-1", watchedAt: "2024-06-01 00:00:00" }),
+    spyOn(api, "patchWatchHistoryEntry").mockResolvedValue({
+      id: "hist-1",
+      watchedAt: "2024-06-01 00:00:00",
+    }),
   ];
 });
 
@@ -23,7 +42,9 @@ afterEach(() => {
   spies = [];
 });
 
-function renderDialog(overrides: Partial<Parameters<typeof EditWatchedAtDialog>[0]> = {}) {
+function renderDialog(
+  overrides: Partial<Parameters<typeof EditWatchedAtDialog>[0]> = {},
+) {
   const defaults = {
     open: true,
     onClose: mock(() => {}),
@@ -35,7 +56,11 @@ function renderDialog(overrides: Partial<Parameters<typeof EditWatchedAtDialog>[
   const props = { ...defaults, ...overrides };
   const qc = newTestClient();
   return {
-    result: render(<QueryClientProvider client={qc}><EditWatchedAtDialog {...props} /></QueryClientProvider>),
+    result: render(
+      <QueryClientProvider client={qc}>
+        <EditWatchedAtDialog {...props} />
+      </QueryClientProvider>,
+    ),
     props,
     qc,
   };
@@ -75,7 +100,8 @@ describe("EditWatchedAtDialog", () => {
     fireEvent.click(screen.getByText("Save"));
     await waitFor(() => {
       expect(api.patchWatchHistoryEntry).toHaveBeenCalled();
-      const [id] = (api.patchWatchHistoryEntry as ReturnType<typeof spyOn>).mock.calls[0] as [string, string];
+      const [id] = (api.patchWatchHistoryEntry as ReturnType<typeof spyOn>).mock
+        .calls[0] as [string, string];
       expect(id).toBe("hist-42");
     });
   });
@@ -94,7 +120,9 @@ describe("EditWatchedAtDialog", () => {
       expect(invalidateSpy).toHaveBeenCalled();
     });
 
-    const keys = invalidateSpy.mock.calls.map((call: any[]) => (call[0] as any)?.queryKey);
+    const keys = invalidateSpy.mock.calls.map(
+      (call: any[]) => (call[0] as any)?.queryKey,
+    );
     expect(keys).toContainEqual(["stats"]);
     expect(keys).toContainEqual(["activity"]);
 

@@ -16,18 +16,22 @@ test.describe("Login flow", () => {
 
     await page.goto("/login");
 
-    await expect(page.getByRole("heading", { name: /sign in to remindarr/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /sign in to remindarr/i }),
+    ).toBeVisible();
     await expect(page.getByLabel("Username")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
   });
 
-  test("redirects authenticated user away from login page", async ({ page }) => {
+  test("redirects authenticated user away from login page", async ({
+    page,
+  }) => {
     await mockLoggedIn(page);
     await mockTitleEndpoints(page);
     await mockBrowseEndpoints(page);
     await page.route("**/api/episodes/upcoming", (route) =>
-      route.fulfill({ json: { today: [], upcoming: [], unwatched: [] } })
+      route.fulfill({ json: { today: [], upcoming: [], unwatched: [] } }),
     );
 
     await page.goto("/login");
@@ -36,7 +40,9 @@ test.describe("Login flow", () => {
     await expect(page).not.toHaveURL(/\/login/);
   });
 
-  test("logs in with valid credentials and redirects to home", async ({ page }) => {
+  test("logs in with valid credentials and redirects to home", async ({
+    page,
+  }) => {
     let sessionRequests = 0;
     await page.route("**/api/auth/get-session", (route) => {
       // First request (on app load): not logged in
@@ -49,20 +55,20 @@ test.describe("Login flow", () => {
       }
     });
     await page.route("**/api/auth/custom/providers", (route) =>
-      route.fulfill({ json: MOCK_PROVIDERS })
+      route.fulfill({ json: MOCK_PROVIDERS }),
     );
     await page.route("**/api/auth/csrf", (route) =>
-      route.fulfill({ json: { csrfToken: "mock-csrf-token" } })
+      route.fulfill({ json: { csrfToken: "mock-csrf-token" } }),
     );
     await page.route("**/api/auth/sign-in/username", (route) =>
       route.fulfill({
         json: { token: "mock-token", user: MOCK_USER },
-      })
+      }),
     );
     await mockTitleEndpoints(page);
     await mockBrowseEndpoints(page);
     await page.route("**/api/episodes/upcoming", (route) =>
-      route.fulfill({ json: { today: [], upcoming: [], unwatched: [] } })
+      route.fulfill({ json: { today: [], upcoming: [], unwatched: [] } }),
     );
 
     await page.goto("/login");
@@ -81,7 +87,7 @@ test.describe("Login flow", () => {
     await page.route("**/api/auth/sign-in/username", (route) =>
       route.fulfill({
         json: { error: { message: "Invalid username or password" } },
-      })
+      }),
     );
 
     await page.goto("/login");
@@ -89,38 +95,42 @@ test.describe("Login flow", () => {
     await page.getByLabel("Password").fill("wrongpass");
     await page.getByRole("button", { name: /sign in/i }).click();
 
-    await expect(
-      page.getByText(/invalid username or password/i)
-    ).toBeVisible();
+    await expect(page.getByText(/invalid username or password/i)).toBeVisible();
   });
 
-  test("shows OIDC sign-in button when OIDC is configured", async ({ page }) => {
+  test("shows OIDC sign-in button when OIDC is configured", async ({
+    page,
+  }) => {
     await page.route("**/api/auth/get-session", (route) =>
-      route.fulfill({ json: null })
+      route.fulfill({ json: null }),
     );
     await page.route("**/api/auth/custom/providers", (route) =>
-      route.fulfill({ json: MOCK_OIDC_PROVIDERS })
+      route.fulfill({ json: MOCK_OIDC_PROVIDERS }),
     );
 
     await page.goto("/login");
 
     await expect(
-      page.getByRole("button", { name: /sign in with pocketid/i })
+      page.getByRole("button", { name: /sign in with pocketid/i }),
     ).toBeVisible();
     // Local login should be hidden behind toggle
     await expect(page.getByLabel("Username")).not.toBeVisible();
   });
 
-  test("reveals local login form when 'sign in with username' is clicked", async ({ page }) => {
+  test("reveals local login form when 'sign in with username' is clicked", async ({
+    page,
+  }) => {
     await page.route("**/api/auth/get-session", (route) =>
-      route.fulfill({ json: null })
+      route.fulfill({ json: null }),
     );
     await page.route("**/api/auth/custom/providers", (route) =>
-      route.fulfill({ json: MOCK_OIDC_PROVIDERS })
+      route.fulfill({ json: MOCK_OIDC_PROVIDERS }),
     );
 
     await page.goto("/login");
-    await page.getByRole("button", { name: /sign in with username instead/i }).click();
+    await page
+      .getByRole("button", { name: /sign in with username instead/i })
+      .click();
 
     await expect(page.getByLabel("Username")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
@@ -131,10 +141,10 @@ test.describe("Login flow", () => {
     await mockTitleEndpoints(page);
     await mockBrowseEndpoints(page);
     await page.route("**/api/episodes/upcoming", (route) =>
-      route.fulfill({ json: { today: [], upcoming: [], unwatched: [] } })
+      route.fulfill({ json: { today: [], upcoming: [], unwatched: [] } }),
     );
     await page.route("**/api/auth/sign-out", (route) =>
-      route.fulfill({ json: { success: true } })
+      route.fulfill({ json: { success: true } }),
     );
 
     await page.goto("/");

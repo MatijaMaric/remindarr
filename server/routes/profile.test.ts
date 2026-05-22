@@ -2,7 +2,15 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, createUser, createSession, getSessionWithUser, trackTitle, updateProfilePublic, updateTrackedVisibility } from "../db/repository";
+import {
+  upsertTitles,
+  createUser,
+  createSession,
+  getSessionWithUser,
+  trackTitle,
+  updateProfilePublic,
+  updateTrackedVisibility,
+} from "../db/repository";
 import { watchTitle } from "../db/repository";
 import { upsertEpisodes, watchEpisode } from "../db/repository";
 import { follow } from "../db/repository";
@@ -193,7 +201,11 @@ describe("GET /user/:username", () => {
   it("separates movies and shows into distinct arrays", async () => {
     await updateProfilePublic(userId, true);
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", title: "Test Movie" }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        title: "Test Movie",
+      }),
       makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show" }),
     ]);
     await trackTitle("movie-1", userId);
@@ -294,14 +306,40 @@ describe("GET /user/:username", () => {
     await trackTitle("show-1", userId);
 
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "show-1", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
-      { title_id: "show-1", season_number: 1, episode_number: 3, name: "Ep 3", overview: null, air_date: "2024-01-15", still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 3,
+        name: "Ep 3",
+        overview: null,
+        air_date: "2024-01-15",
+        still_path: null,
+      },
     ]);
 
     const { getDb } = await import("../db/schema");
     const db = getDb();
-    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-1") });
+    const eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-1"),
+    });
     await watchEpisode(eps[0].id, userId);
 
     const res = await app.request("/user/testuser", { headers: authHeaders() });
@@ -315,17 +353,32 @@ describe("GET /user/:username", () => {
 
   it("includes backdrops for recently watched shows", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show", backdropUrl: "https://example.com/backdrop.jpg" }),
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        title: "Test Show",
+        backdropUrl: "https://example.com/backdrop.jpg",
+      }),
     ]);
     await trackTitle("show-1", userId);
 
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
     ]);
 
     const { getDb } = await import("../db/schema");
     const db = getDb();
-    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-1") });
+    const eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-1"),
+    });
     await watchEpisode(eps[0].id, userId);
 
     const res = await app.request("/user/testuser", { headers: authHeaders() });
@@ -333,7 +386,9 @@ describe("GET /user/:username", () => {
     const body = await res.json();
     expect(body.backdrops).toHaveLength(1);
     expect(body.backdrops[0].id).toBe("show-1");
-    expect(body.backdrops[0].backdrop_url).toBe("https://example.com/backdrop.jpg");
+    expect(body.backdrops[0].backdrop_url).toBe(
+      "https://example.com/backdrop.jpg",
+    );
   });
 
   it("returns empty backdrops when no watched shows", async () => {
@@ -351,15 +406,41 @@ describe("GET /user/:username", () => {
     await trackTitle("show-1", userId);
 
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "show-1", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
-      { title_id: "show-1", season_number: 1, episode_number: 3, name: "Ep 3", overview: null, air_date: "2024-01-15", still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 3,
+        name: "Ep 3",
+        overview: null,
+        air_date: "2024-01-15",
+        still_path: null,
+      },
     ]);
 
     // Watch 1 of 3 episodes — need to get the episode ID first
     const { getDb } = await import("../db/schema");
     const db = getDb();
-    const eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-1") });
+    const eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-1"),
+    });
     await watchEpisode(eps[0].id, userId);
 
     const res = await app.request("/user/testuser");
@@ -373,25 +454,77 @@ describe("GET /user/:username", () => {
   it("includes progress metrics in API response", async () => {
     await updateProfilePublic(userId, true);
     await upsertTitles([
-      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Completed Show" }),
-      makeParsedTitle({ id: "show-2", objectType: "SHOW", title: "Partial Show" }),
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        title: "Completed Show",
+      }),
+      makeParsedTitle({
+        id: "show-2",
+        objectType: "SHOW",
+        title: "Partial Show",
+      }),
     ]);
     await trackTitle("show-1", userId);
     await trackTitle("show-2", userId);
 
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-01-01", still_path: null },
-      { title_id: "show-1", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-01-08", still_path: null },
-      { title_id: "show-2", season_number: 1, episode_number: 1, name: "Ep 1", overview: null, air_date: "2024-02-01", still_path: null },
-      { title_id: "show-2", season_number: 1, episode_number: 2, name: "Ep 2", overview: null, air_date: "2024-02-08", still_path: null },
-      { title_id: "show-2", season_number: 1, episode_number: 3, name: "Ep 3", overview: null, air_date: "2024-02-15", still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
+      {
+        title_id: "show-2",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep 1",
+        overview: null,
+        air_date: "2024-02-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-2",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep 2",
+        overview: null,
+        air_date: "2024-02-08",
+        still_path: null,
+      },
+      {
+        title_id: "show-2",
+        season_number: 1,
+        episode_number: 3,
+        name: "Ep 3",
+        overview: null,
+        air_date: "2024-02-15",
+        still_path: null,
+      },
     ]);
 
     // Watch all episodes of show-1 (completed) and 1 of show-2 (partial)
     const { getDb } = await import("../db/schema");
     const db = getDb();
-    const show1Eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-1") });
-    const show2Eps = await db.query.episodes.findMany({ where: (e, { eq }) => eq(e.titleId, "show-2") });
+    const show1Eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-1"),
+    });
+    const show2Eps = await db.query.episodes.findMany({
+      where: (e, { eq }) => eq(e.titleId, "show-2"),
+    });
     for (const ep of show1Eps) {
       await watchEpisode(ep.id, userId);
     }
@@ -468,7 +601,9 @@ describe("GET /user/search", () => {
     await createUser("alice", "hash", "Alice Smith");
     await createUser("bob", "hash", "Bob Jones");
 
-    const res = await app.request("/user/search?q=alice", { headers: authHeaders() });
+    const res = await app.request("/user/search?q=alice", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.users).toHaveLength(1);
@@ -480,7 +615,9 @@ describe("GET /user/search", () => {
     await createUser("user1", "hash", "Alice Smith");
     await createUser("user2", "hash", "Bob Jones");
 
-    const res = await app.request("/user/search?q=Jones", { headers: authHeaders() });
+    const res = await app.request("/user/search?q=Jones", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.users).toHaveLength(1);
@@ -488,7 +625,9 @@ describe("GET /user/search", () => {
   });
 
   it("returns empty array when no users match", async () => {
-    const res = await app.request("/user/search?q=nonexistent", { headers: authHeaders() });
+    const res = await app.request("/user/search?q=nonexistent", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.users).toHaveLength(0);
@@ -513,9 +652,15 @@ describe("GET /user/search", () => {
     await createUser("normaluser", "hash", "Normal User");
 
     const db = getDb();
-    await db.update(users).set({ banned: true }).where(eq(users.id, bannedId)).run();
+    await db
+      .update(users)
+      .set({ banned: true })
+      .where(eq(users.id, bannedId))
+      .run();
 
-    const res = await app.request("/user/search?q=user", { headers: authHeaders() });
+    const res = await app.request("/user/search?q=user", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     const usernames = body.users.map((u: { username: string }) => u.username);
@@ -526,7 +671,9 @@ describe("GET /user/search", () => {
   it("returns id, username, name, and image fields", async () => {
     await createUser("searchable", "hash", "Searchable User");
 
-    const res = await app.request("/user/search?q=searchable", { headers: authHeaders() });
+    const res = await app.request("/user/search?q=searchable", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.users).toHaveLength(1);
@@ -549,7 +696,9 @@ describe("PATCH /user/me/bio", () => {
     const body = await res.json();
     expect(body.bio).toBe("Tracking 42 shows.");
 
-    const profileRes = await app.request("/user/testuser", { headers: authHeaders() });
+    const profileRes = await app.request("/user/testuser", {
+      headers: authHeaders(),
+    });
     const profile = await profileRes.json();
     expect(profile.user.bio).toBe("Tracking 42 shows.");
   });
@@ -678,13 +827,17 @@ describe("POST /user/me/pinned/:titleId", () => {
   it("returns 401 without authentication", async () => {
     await upsertTitles([makeParsedTitle()]);
 
-    const res = await app.request("/user/me/pinned/movie-123", { method: "POST" });
+    const res = await app.request("/user/me/pinned/movie-123", {
+      method: "POST",
+    });
     expect(res.status).toBe(401);
   });
 
   it("rejects a 9th pin (max 8 enforced)", async () => {
     const titleIds = Array.from({ length: 8 }, (_, i) => `movie-${i + 1}`);
-    await upsertTitles(titleIds.map((id) => makeParsedTitle({ id, title: `Movie ${id}` })));
+    await upsertTitles(
+      titleIds.map((id) => makeParsedTitle({ id, title: `Movie ${id}` })),
+    );
 
     // Pin 8 titles
     for (const id of titleIds) {
@@ -741,13 +894,17 @@ describe("DELETE /user/me/pinned/:titleId", () => {
     expect(body.pinned).toBe(false);
 
     // Profile should have no pinned
-    const profileRes = await app.request("/user/testuser", { headers: authHeaders() });
+    const profileRes = await app.request("/user/testuser", {
+      headers: authHeaders(),
+    });
     const profile = await profileRes.json();
     expect(profile.pinned).toHaveLength(0);
   });
 
   it("returns 401 without authentication", async () => {
-    const res = await app.request("/user/me/pinned/movie-123", { method: "DELETE" });
+    const res = await app.request("/user/me/pinned/movie-123", {
+      method: "DELETE",
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -755,10 +912,15 @@ describe("DELETE /user/me/pinned/:titleId", () => {
 describe("PUT /user/me/pinned/order", () => {
   it("reorders pinned titles (happy path)", async () => {
     const titleIds = ["movie-1", "movie-2", "movie-3"];
-    await upsertTitles(titleIds.map((id) => makeParsedTitle({ id, title: `Movie ${id}` })));
+    await upsertTitles(
+      titleIds.map((id) => makeParsedTitle({ id, title: `Movie ${id}` })),
+    );
 
     for (const id of titleIds) {
-      await app.request(`/user/me/pinned/${id}`, { method: "POST", headers: authHeaders() });
+      await app.request(`/user/me/pinned/${id}`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
     }
 
     // Reverse order
@@ -772,7 +934,9 @@ describe("PUT /user/me/pinned/order", () => {
     expect(body.ok).toBe(true);
 
     // Verify order in profile
-    const profileRes = await app.request("/user/testuser", { headers: authHeaders() });
+    const profileRes = await app.request("/user/testuser", {
+      headers: authHeaders(),
+    });
     const profile = await profileRes.json();
     expect(profile.pinned[0].id).toBe("movie-3");
     expect(profile.pinned[2].id).toBe("movie-1");
@@ -785,7 +949,7 @@ describe("PUT /user/me/pinned/order", () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect(body.issues).toBeInstanceOf(Array);
   });
 
@@ -812,9 +976,11 @@ describe("GET /user/:username — pinned field", () => {
 
 describe("GET /user/me/profile", () => {
   it("returns profile fields for authenticated user", async () => {
-    const res = await app.request("/user/me/profile", { headers: authHeaders() });
+    const res = await app.request("/user/me/profile", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect("display_name" in body).toBe(true);
     expect(body.bio).toBeNull();
     expect(body.country_code).toBeNull();
@@ -832,10 +998,14 @@ describe("PATCH /user/me/profile", () => {
     const res = await app.request("/user/me/profile", {
       method: "PATCH",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ display_name: "My Name", bio: "Hello world", country_code: "US" }),
+      body: JSON.stringify({
+        display_name: "My Name",
+        bio: "Hello world",
+        country_code: "US",
+      }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect(body.display_name).toBe("My Name");
     expect(body.bio).toBe("Hello world");
     expect(body.country_code).toBe("US");
@@ -845,10 +1015,16 @@ describe("PATCH /user/me/profile", () => {
     await app.request("/user/me/profile", {
       method: "PATCH",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ display_name: "Updated", country_code: "DE", locale: "de" }),
+      body: JSON.stringify({
+        display_name: "Updated",
+        country_code: "DE",
+        locale: "de",
+      }),
     });
-    const res = await app.request("/user/me/profile", { headers: authHeaders() });
-    const body = await res.json() as AnyRecord;
+    const res = await app.request("/user/me/profile", {
+      headers: authHeaders(),
+    });
+    const body = (await res.json()) as AnyRecord;
     expect(body.display_name).toBe("Updated");
     expect(body.country_code).toBe("DE");
     expect(body.locale).toBe("de");
@@ -866,7 +1042,7 @@ describe("PATCH /user/me/profile", () => {
       body: JSON.stringify({ display_name: null, country_code: null }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect(body.display_name).toBeNull();
     expect(body.country_code).toBeNull();
   });
@@ -888,7 +1064,7 @@ describe("PATCH /user/me/profile", () => {
     });
     const res = await app.request("/user/testuser");
     expect(res.status).toBe(200);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect(body.user.country_code).toBe("FR");
   });
 });
@@ -901,7 +1077,7 @@ describe("validation — profile extras", () => {
       body: JSON.stringify({ country_code: "us" }),
     });
     expect(res.status).toBe(400);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
@@ -922,7 +1098,7 @@ describe("validation — profile extras", () => {
       body: JSON.stringify({ bio: "x".repeat(281) }),
     });
     expect(res.status).toBe(400);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
   });
@@ -943,7 +1119,7 @@ describe("validation — profile extras", () => {
       body: JSON.stringify({ locale: "en-US" }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as AnyRecord;
+    const body = (await res.json()) as AnyRecord;
     expect(body.locale).toBe("en-US");
   });
 
@@ -956,4 +1132,3 @@ describe("validation — profile extras", () => {
     expect(res.status).toBe(200);
   });
 });
-

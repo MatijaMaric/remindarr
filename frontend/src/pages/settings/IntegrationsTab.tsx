@@ -20,7 +20,8 @@ type ConnectStep =
   | { type: "waiting"; pinId: number; authUrl: string }
   | { type: "pick_server"; authToken: string; servers: PlexServer[] };
 
-const PLEX_POPUP_FEATURES = "width=800,height=700,menubar=no,toolbar=no,location=no,status=no";
+const PLEX_POPUP_FEATURES =
+  "width=800,height=700,menubar=no,toolbar=no,location=no,status=no";
 const PIN_POLL_INTERVAL_MS = 2000;
 
 function PlexSection() {
@@ -43,7 +44,9 @@ function PlexSection() {
     queryFn: ({ signal }) => api.getIntegrations(signal),
   });
 
-  const integrations = (data?.integrations ?? []).filter((i) => i.provider === "plex");
+  const integrations = (data?.integrations ?? []).filter(
+    (i) => i.provider === "plex",
+  );
 
   const deleteIntegrationMutation = useMutation({
     mutationFn: (id: string) => api.deleteIntegration(id),
@@ -70,7 +73,9 @@ function PlexSection() {
         }
         setStep({ type: "pick_server", authToken: result.authToken!, servers });
         setSelectedServer(servers[0]);
-        const firstConn = servers[0].connections.find((c) => !c.relay) ?? servers[0].connections[0];
+        const firstConn =
+          servers[0].connections.find((c) => !c.relay) ??
+          servers[0].connections[0];
         setSelectedUri(firstConn?.uri ?? "");
       } catch {
         // Silently retry on next interval
@@ -100,7 +105,8 @@ function PlexSection() {
 
   function selectServer(server: PlexServer) {
     setSelectedServer(server);
-    const firstConn = server.connections.find((c) => !c.relay) ?? server.connections[0];
+    const firstConn =
+      server.connections.find((c) => !c.relay) ?? server.connections[0];
     setSelectedUri(firstConn?.uri ?? "");
   }
 
@@ -113,7 +119,9 @@ function PlexSection() {
       setStep({ type: "pick_server", authToken: step.authToken, servers });
       if (servers.length > 0) {
         const current = selectedServer
-          ? servers.find((s) => s.clientIdentifier === selectedServer.clientIdentifier)
+          ? servers.find(
+              (s) => s.clientIdentifier === selectedServer.clientIdentifier,
+            )
           : null;
         selectServer(current ?? servers[0]);
       }
@@ -157,7 +165,9 @@ function PlexSection() {
     try {
       const result = await api.triggerPlexSync(id);
       if (result.success) {
-        setMsg(`Sync complete — ${result.moviesMarked ?? 0} movies, ${result.episodesMarked ?? 0} episodes marked watched.`);
+        setMsg(
+          `Sync complete — ${result.moviesMarked ?? 0} movies, ${result.episodesMarked ?? 0} episodes marked watched.`,
+        );
       } else {
         setErr(result.error ?? "Sync failed.");
       }
@@ -174,7 +184,9 @@ function PlexSection() {
     setErr("");
     setToggling(integration.id);
     try {
-      await api.updateIntegration(integration.id, { enabled: !integration.enabled });
+      await api.updateIntegration(integration.id, {
+        enabled: !integration.enabled,
+      });
       void qc.invalidateQueries({ queryKey: ["integrations"] });
     } catch {
       setErr("Failed to update integration.");
@@ -226,7 +238,9 @@ function PlexSection() {
                     </SStatusPill>
                   </div>
                   <div className="text-[11px] text-zinc-500 font-mono space-y-0.5">
-                    <div className="truncate">{integration.config.serverUrl}</div>
+                    <div className="truncate">
+                      {integration.config.serverUrl}
+                    </div>
                     <div>
                       Last sync: {formatSyncTime(integration.last_sync_at)}
                     </div>
@@ -236,8 +250,24 @@ function PlexSection() {
                       </div>
                     )}
                     <div className="flex gap-3 pt-1">
-                      <span className={integration.config.syncMovies ? "text-zinc-300" : "text-zinc-600"}>Movies</span>
-                      <span className={integration.config.syncEpisodes ? "text-zinc-300" : "text-zinc-600"}>Episodes</span>
+                      <span
+                        className={
+                          integration.config.syncMovies
+                            ? "text-zinc-300"
+                            : "text-zinc-600"
+                        }
+                      >
+                        Movies
+                      </span>
+                      <span
+                        className={
+                          integration.config.syncEpisodes
+                            ? "text-zinc-300"
+                            : "text-zinc-600"
+                        }
+                      >
+                        Episodes
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -248,12 +278,18 @@ function PlexSection() {
                     onClick={() => handleToggle(integration)}
                     disabled={toggling === integration.id}
                   >
-                    {toggling === integration.id ? "..." : integration.enabled ? "Disable" : "Enable"}
+                    {toggling === integration.id
+                      ? "..."
+                      : integration.enabled
+                        ? "Disable"
+                        : "Enable"}
                   </SButton>
                   <SButton
                     small
                     onClick={() => handleSync(integration.id)}
-                    disabled={syncing === integration.id || !integration.enabled}
+                    disabled={
+                      syncing === integration.id || !integration.enabled
+                    }
                   >
                     {syncing === integration.id ? "Syncing..." : "Sync now"}
                   </SButton>
@@ -278,7 +314,8 @@ function PlexSection() {
         {step.type === "waiting" && (
           <SHint kind="amber">
             <div className="mb-2">
-              Waiting for authorization&hellip; Sign in and authorize Remindarr in the Plex popup.
+              Waiting for authorization&hellip; Sign in and authorize Remindarr
+              in the Plex popup.
             </div>
             <div className="text-[11px] text-zinc-400 mb-3">
               Popup blocked?{" "}
@@ -299,7 +336,9 @@ function PlexSection() {
 
         {step.type === "pick_server" && (
           <div className="bg-zinc-800 rounded-[10px] p-4 space-y-4">
-            <div className="text-sm font-semibold text-zinc-100">Select a Plex server</div>
+            <div className="text-sm font-semibold text-zinc-100">
+              Select a Plex server
+            </div>
 
             <div className="space-y-2">
               {step.servers.map((server) => (
@@ -310,7 +349,10 @@ function PlexSection() {
                   <input
                     type="radio"
                     name="plex_server"
-                    checked={selectedServer?.clientIdentifier === server.clientIdentifier}
+                    checked={
+                      selectedServer?.clientIdentifier ===
+                      server.clientIdentifier
+                    }
                     onChange={() => selectServer(server)}
                     className="accent-amber-400"
                   />
@@ -338,7 +380,8 @@ function PlexSection() {
                 >
                   {selectedServer.connections.map((conn) => (
                     <option key={conn.uri} value={conn.uri}>
-                      {conn.uri}{conn.local ? " (local)" : conn.relay ? " (relay)" : ""}
+                      {conn.uri}
+                      {conn.local ? " (local)" : conn.relay ? " (relay)" : ""}
                     </option>
                   ))}
                 </select>
@@ -370,7 +413,10 @@ function PlexSection() {
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <SButton onClick={handleSaveServer} disabled={saving || !selectedServer || !selectedUri}>
+              <SButton
+                onClick={handleSaveServer}
+                disabled={saving || !selectedServer || !selectedUri}
+              >
                 {saving ? "Connecting..." : "Connect"}
               </SButton>
               <SButton variant="ghost" onClick={handleCancelConnect}>
@@ -430,7 +476,9 @@ function CalendarFeedSection() {
             const url = `${window.location.origin}/api/feed/${flavor.path}?token=${token}`;
             return (
               <div key={flavor.key} className="space-y-1">
-                <div className="text-xs text-zinc-400 font-medium">{t(flavor.labelKey)}</div>
+                <div className="text-xs text-zinc-400 font-medium">
+                  {t(flavor.labelKey)}
+                </div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <SInput
                     value={url}
@@ -439,8 +487,14 @@ function CalendarFeedSection() {
                     aria-label={t(flavor.labelKey)}
                   />
                   <div className="flex gap-2 shrink-0">
-                    <SButton variant="ghost" small onClick={() => handleCopy(flavor.key, url)}>
-                      {copiedKey === flavor.key ? t("feed.copied") : t("feed.copyUrl")}
+                    <SButton
+                      variant="ghost"
+                      small
+                      onClick={() => handleCopy(flavor.key, url)}
+                    >
+                      {copiedKey === flavor.key
+                        ? t("feed.copied")
+                        : t("feed.copyUrl")}
                     </SButton>
                   </div>
                 </div>
@@ -454,14 +508,21 @@ function CalendarFeedSection() {
               onClick={() => regenerateMutation.mutate()}
               disabled={regenerateMutation.isPending}
             >
-              {regenerateMutation.isPending ? t("feed.regenerating") : t("feed.regenerate")}
+              {regenerateMutation.isPending
+                ? t("feed.regenerating")
+                : t("feed.regenerate")}
             </SButton>
           </div>
           <SHint kind="info">{t("feed.warning")}</SHint>
         </div>
       ) : (
-        <SButton onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending}>
-          {regenerateMutation.isPending ? t("feed.generating") : t("feed.generate")}
+        <SButton
+          onClick={() => regenerateMutation.mutate()}
+          disabled={regenerateMutation.isPending}
+        >
+          {regenerateMutation.isPending
+            ? t("feed.generating")
+            : t("feed.generate")}
         </SButton>
       )}
     </SCard>
@@ -511,7 +572,13 @@ function KioskSection() {
               aria-label={t("kiosk.title")}
             />
             <div className="flex gap-2 shrink-0">
-              <SButton variant="ghost" small onClick={() => handleCopy(`${window.location.origin}/kiosk/${token}`)}>
+              <SButton
+                variant="ghost"
+                small
+                onClick={() =>
+                  handleCopy(`${window.location.origin}/kiosk/${token}`)
+                }
+              >
                 {copied ? t("kiosk.copied") : t("kiosk.copyUrl")}
               </SButton>
               <SButton
@@ -520,7 +587,9 @@ function KioskSection() {
                 onClick={() => regenerateMutation.mutate()}
                 disabled={regenerateMutation.isPending}
               >
-                {regenerateMutation.isPending ? t("kiosk.regenerating") : t("kiosk.regenerate")}
+                {regenerateMutation.isPending
+                  ? t("kiosk.regenerating")
+                  : t("kiosk.regenerate")}
               </SButton>
               <SButton
                 variant="ghost"
@@ -528,15 +597,22 @@ function KioskSection() {
                 onClick={() => revokeMutation.mutate()}
                 disabled={revokeMutation.isPending}
               >
-                {revokeMutation.isPending ? t("kiosk.revoking") : t("kiosk.revoke")}
+                {revokeMutation.isPending
+                  ? t("kiosk.revoking")
+                  : t("kiosk.revoke")}
               </SButton>
             </div>
           </div>
           <SHint kind="info">{t("kiosk.warning")}</SHint>
         </div>
       ) : (
-        <SButton onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending}>
-          {regenerateMutation.isPending ? t("kiosk.generating") : t("kiosk.generate")}
+        <SButton
+          onClick={() => regenerateMutation.mutate()}
+          disabled={regenerateMutation.isPending}
+        >
+          {regenerateMutation.isPending
+            ? t("kiosk.generating")
+            : t("kiosk.generate")}
         </SButton>
       )}
     </SCard>
@@ -557,13 +633,15 @@ function WatchlistShareSection() {
   const regenerateMutation = useMutation({
     mutationFn: () => api.regenerateWatchlistShareToken(),
     onError: () => toast.error("Failed to regenerate watchlist share token"),
-    onSettled: () => void qc.invalidateQueries({ queryKey: ["watchlist-share-token"] }),
+    onSettled: () =>
+      void qc.invalidateQueries({ queryKey: ["watchlist-share-token"] }),
   });
 
   const revokeMutation = useMutation({
     mutationFn: () => api.revokeWatchlistShareToken(),
     onError: () => toast.error("Failed to revoke watchlist share token"),
-    onSettled: () => void qc.invalidateQueries({ queryKey: ["watchlist-share-token"] }),
+    onSettled: () =>
+      void qc.invalidateQueries({ queryKey: ["watchlist-share-token"] }),
   });
 
   async function handleCopy(url: string) {
@@ -586,7 +664,15 @@ function WatchlistShareSection() {
               aria-label={t("share.title")}
             />
             <div className="flex gap-2 shrink-0">
-              <SButton variant="ghost" small onClick={() => handleCopy(`${window.location.origin}/share/watchlist/${token}`)}>
+              <SButton
+                variant="ghost"
+                small
+                onClick={() =>
+                  handleCopy(
+                    `${window.location.origin}/share/watchlist/${token}`,
+                  )
+                }
+              >
                 {copied ? t("share.copied") : t("share.copyUrl")}
               </SButton>
               <SButton
@@ -595,7 +681,9 @@ function WatchlistShareSection() {
                 onClick={() => regenerateMutation.mutate()}
                 disabled={regenerateMutation.isPending}
               >
-                {regenerateMutation.isPending ? t("share.regenerating") : t("share.regenerate")}
+                {regenerateMutation.isPending
+                  ? t("share.regenerating")
+                  : t("share.regenerate")}
               </SButton>
               <SButton
                 variant="ghost"
@@ -603,15 +691,22 @@ function WatchlistShareSection() {
                 onClick={() => revokeMutation.mutate()}
                 disabled={revokeMutation.isPending}
               >
-                {revokeMutation.isPending ? t("share.revoking") : t("share.revoke")}
+                {revokeMutation.isPending
+                  ? t("share.revoking")
+                  : t("share.revoke")}
               </SButton>
             </div>
           </div>
           <SHint kind="info">{t("share.warning")}</SHint>
         </div>
       ) : (
-        <SButton onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending}>
-          {regenerateMutation.isPending ? t("share.generating") : t("share.generate")}
+        <SButton
+          onClick={() => regenerateMutation.mutate()}
+          disabled={regenerateMutation.isPending}
+        >
+          {regenerateMutation.isPending
+            ? t("share.generating")
+            : t("share.generate")}
         </SButton>
       )}
     </SCard>
@@ -646,10 +741,15 @@ function WatchlistSection() {
     setImporting(true);
     try {
       const result = await api.importWatchlist(file);
-      setMsg(t("profile.importComplete", {
-        imported: result.imported,
-        skippedText: result.skipped > 0 ? t("profile.importSkipped", { count: result.skipped }) : "",
-      }));
+      setMsg(
+        t("profile.importComplete", {
+          imported: result.imported,
+          skippedText:
+            result.skipped > 0
+              ? t("profile.importSkipped", { count: result.skipped })
+              : "",
+        }),
+      );
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -723,7 +823,9 @@ function CsvImportSection() {
     setImporting(true);
     try {
       const result = await api.importCsv(file);
-      const parts: string[] = [`${result.imported} title${result.imported !== 1 ? "s" : ""} imported`];
+      const parts: string[] = [
+        `${result.imported} title${result.imported !== 1 ? "s" : ""} imported`,
+      ];
       if (result.failed > 0) parts.push(`${result.failed} failed`);
       if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
       setMsg(parts.join(", ") + ".");
@@ -759,9 +861,16 @@ function CsvImportSection() {
             { n: "IMDB", hint: t("import.imdbHint") },
             { n: "Trakt", hint: t("import.traktHint") },
           ].map((s) => (
-            <div key={s.n} className="p-3.5 bg-zinc-800 border border-white/[0.08] rounded-[10px]">
-              <div className="text-[13px] font-bold text-zinc-100 mb-1">{s.n}</div>
-              <div className="text-[11px] text-zinc-500 font-mono leading-relaxed">{s.hint}</div>
+            <div
+              key={s.n}
+              className="p-3.5 bg-zinc-800 border border-white/[0.08] rounded-[10px]"
+            >
+              <div className="text-[13px] font-bold text-zinc-100 mb-1">
+                {s.n}
+              </div>
+              <div className="text-[11px] text-zinc-500 font-mono leading-relaxed">
+                {s.hint}
+              </div>
             </div>
           ))}
         </div>
@@ -774,7 +883,10 @@ function CsvImportSection() {
               : "border-zinc-700 hover:border-zinc-500 bg-white/[0.015]",
             importing && "opacity-50 pointer-events-none",
           )}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}

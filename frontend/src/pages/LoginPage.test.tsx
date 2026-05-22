@@ -1,14 +1,31 @@
 import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 
 import "../i18n";
 
 type PasskeyError = { code?: string; message?: string; status?: number };
 type PasskeyResult = { data: unknown; error: PasskeyError | null };
-type SessionResult = { data: { user: { id: string; name?: string; username?: string; role?: string | null } } | null };
+type SessionResult = {
+  data: {
+    user: {
+      id: string;
+      name?: string;
+      username?: string;
+      role?: string | null;
+    };
+  } | null;
+};
 
-let mockPasskeySignIn: (opts?: { autoFill?: boolean }) => Promise<PasskeyResult>;
+let mockPasskeySignIn: (opts?: {
+  autoFill?: boolean;
+}) => Promise<PasskeyResult>;
 let mockGetSession: () => Promise<SessionResult>;
 
 mock.module("../lib/auth-client", () => ({
@@ -37,7 +54,9 @@ mock.module("../context/AuthContext", () => ({
     logout: () => Promise.resolve(),
     refresh: () => Promise.resolve(),
   }),
-  AuthContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
+  AuthContext: {
+    Provider: ({ children }: { children: React.ReactNode }) => children,
+  },
   // AuthProvider export preserved so sibling test files that import it from
   // the same cached module don't get "Export named 'AuthProvider' not found".
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -45,11 +64,15 @@ mock.module("../context/AuthContext", () => ({
 
 const { default: LoginPage } = await import("./LoginPage");
 
-const originalPublicKeyCredential = (globalThis as unknown as { PublicKeyCredential?: unknown }).PublicKeyCredential;
+const originalPublicKeyCredential = (
+  globalThis as unknown as { PublicKeyCredential?: unknown }
+).PublicKeyCredential;
 
 beforeEach(() => {
   // Make isWebAuthnSupported() true without triggering conditional mediation.
-  (globalThis as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {
+  (
+    globalThis as unknown as { PublicKeyCredential: unknown }
+  ).PublicKeyCredential = {
     isConditionalMediationAvailable: () => Promise.resolve(false),
   };
   mockGetSession = () => Promise.resolve({ data: null });
@@ -58,9 +81,12 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   if (originalPublicKeyCredential === undefined) {
-    delete (globalThis as unknown as { PublicKeyCredential?: unknown }).PublicKeyCredential;
+    delete (globalThis as unknown as { PublicKeyCredential?: unknown })
+      .PublicKeyCredential;
   } else {
-    (globalThis as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = originalPublicKeyCredential;
+    (
+      globalThis as unknown as { PublicKeyCredential: unknown }
+    ).PublicKeyCredential = originalPublicKeyCredential;
   }
 });
 
@@ -69,16 +95,22 @@ describe("LoginPage passkey sign-in", () => {
     mockPasskeySignIn = () =>
       Promise.resolve({
         data: null,
-        error: { code: "AUTH_CANCELLED", message: "AUTH_CANCELLED", status: 400 },
+        error: {
+          code: "AUTH_CANCELLED",
+          message: "AUTH_CANCELLED",
+          status: 400,
+        },
       });
 
     render(
       <MemoryRouter>
         <LoginPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    const button = await screen.findByRole("button", { name: /sign in with passkey/i });
+    const button = await screen.findByRole("button", {
+      name: /sign in with passkey/i,
+    });
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -92,16 +124,22 @@ describe("LoginPage passkey sign-in", () => {
     mockPasskeySignIn = () =>
       Promise.resolve({
         data: null,
-        error: { code: "INVALID_CHALLENGE", message: "Challenge expired", status: 400 },
+        error: {
+          code: "INVALID_CHALLENGE",
+          message: "Challenge expired",
+          status: 400,
+        },
       });
 
     render(
       <MemoryRouter>
         <LoginPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    const button = await screen.findByRole("button", { name: /sign in with passkey/i });
+    const button = await screen.findByRole("button", {
+      name: /sign in with passkey/i,
+    });
     fireEvent.click(button);
 
     expect(await screen.findByText(/Challenge expired/)).toBeDefined();
@@ -117,10 +155,12 @@ describe("LoginPage passkey sign-in", () => {
     render(
       <MemoryRouter>
         <LoginPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    const button = await screen.findByRole("button", { name: /sign in with passkey/i });
+    const button = await screen.findByRole("button", {
+      name: /sign in with passkey/i,
+    });
     fireEvent.click(button);
 
     expect(await screen.findByText(/Passkey sign-in failed/i)).toBeDefined();

@@ -32,7 +32,9 @@ describe("getServers()", () => {
         name: "My Server",
         clientIdentifier: "abc123",
         provides: "server",
-        connections: [{ uri: "http://192.168.1.10:32400", local: true, relay: false }],
+        connections: [
+          { uri: "http://192.168.1.10:32400", local: true, relay: false },
+        ],
       },
       {
         name: "My Player",
@@ -44,7 +46,9 @@ describe("getServers()", () => {
         name: "Server and Player",
         clientIdentifier: "ghi789",
         provides: "server,player",
-        connections: [{ uri: "http://192.168.1.11:32400", local: true, relay: false }],
+        connections: [
+          { uri: "http://192.168.1.11:32400", local: true, relay: false },
+        ],
       },
     ];
 

@@ -1,4 +1,10 @@
-import { type ReactNode, useId, isValidElement, cloneElement, Children } from "react";
+import {
+  type ReactNode,
+  useId,
+  isValidElement,
+  cloneElement,
+  Children,
+} from "react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
@@ -18,10 +24,7 @@ export function SCard({
   className?: string;
 }) {
   return (
-    <Card
-      padding="lg"
-      className={cn("mb-4", className)}
-    >
+    <Card padding="lg" className={cn("mb-4", className)}>
       {(title || subtitle || action) && (
         <div className="mb-5 flex justify-between gap-4">
           <div className="min-w-0">
@@ -67,7 +70,9 @@ export function SHead({
           {title}
         </div>
         {subtitle && (
-          <div className="text-[13px] text-zinc-400 max-w-[620px]">{subtitle}</div>
+          <div className="text-[13px] text-zinc-400 max-w-[620px]">
+            {subtitle}
+          </div>
         )}
       </div>
       {action}
@@ -97,13 +102,18 @@ export function SLabel({
   );
   if (htmlFor) {
     return (
-      <label htmlFor={htmlFor} className={cn("flex justify-between items-baseline mb-1.5", className)}>
+      <label
+        htmlFor={htmlFor}
+        className={cn("flex justify-between items-baseline mb-1.5", className)}
+      >
         {inner}
       </label>
     );
   }
   return (
-    <div className={cn("flex justify-between items-baseline mb-1.5", className)}>
+    <div
+      className={cn("flex justify-between items-baseline mb-1.5", className)}
+    >
       {inner}
     </div>
   );
@@ -129,12 +139,16 @@ export function SFormRow({
   const [firstChild, ...restChildren] = childArray;
   const patchedFirst =
     firstChild && isValidElement(firstChild)
-      ? cloneElement(firstChild as React.ReactElement<{ id?: string }>, { id: generatedId })
+      ? cloneElement(firstChild as React.ReactElement<{ id?: string }>, {
+          id: generatedId,
+        })
       : firstChild;
 
   return (
     <div className={cn("mb-3.5", className)}>
-      <SLabel hint={hint} htmlFor={generatedId}>{label}</SLabel>
+      <SLabel hint={hint} htmlFor={generatedId}>
+        {label}
+      </SLabel>
       {patchedFirst}
       {restChildren}
     </div>
@@ -160,7 +174,12 @@ export function SSwitch({
   return (
     <div className="flex items-center justify-between py-3.5 gap-5 border-b border-white/[0.04] last:border-b-0">
       <div className="min-w-0 flex-1">
-        <div id={labelId} className="text-sm font-semibold text-zinc-100 mb-0.5">{label}</div>
+        <div
+          id={labelId}
+          className="text-sm font-semibold text-zinc-100 mb-0.5"
+        >
+          {label}
+        </div>
         {sub && (
           <div
             className={cn(
@@ -172,13 +191,24 @@ export function SSwitch({
           </div>
         )}
       </div>
-      <SToggle on={on} onChange={onChange} disabled={disabled} aria-labelledby={labelId} />
+      <SToggle
+        on={on}
+        onChange={onChange}
+        disabled={disabled}
+        aria-labelledby={labelId}
+      />
     </div>
   );
 }
 
-type SToggleProps = { on: boolean; onChange?: (v: boolean) => void; disabled?: boolean } &
-  ({ "aria-label": string; "aria-labelledby"?: never } | { "aria-labelledby": string; "aria-label"?: never });
+type SToggleProps = {
+  on: boolean;
+  onChange?: (v: boolean) => void;
+  disabled?: boolean;
+} & (
+  | { "aria-label": string; "aria-labelledby"?: never }
+  | { "aria-labelledby": string; "aria-label"?: never }
+);
 
 export function SToggle({
   on,
@@ -262,7 +292,9 @@ export function SRadioCard({
           {title}
         </span>
         {desc && (
-          <span className="block text-xs text-zinc-400 leading-relaxed">{desc}</span>
+          <span className="block text-xs text-zinc-400 leading-relaxed">
+            {desc}
+          </span>
         )}
       </span>
     </button>
@@ -363,7 +395,9 @@ export function SKeyValue({
 }) {
   return (
     <div className="flex justify-between gap-3 py-2 border-b border-white/[0.04] text-xs">
-      <div className="font-mono tracking-[0.04em] text-zinc-400 shrink-0">{k}</div>
+      <div className="font-mono tracking-[0.04em] text-zinc-400 shrink-0">
+        {k}
+      </div>
       <div
         className={cn(
           "text-right text-zinc-200 min-w-0 truncate",

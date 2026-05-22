@@ -80,9 +80,21 @@ describe("groupShowsByStatus", () => {
 
   it("sorts watching by latest_released_air_date DESC", () => {
     const shows = [
-      makeShow({ id: "s1", show_status: "watching", latest_released_air_date: "2024-01-01" }),
-      makeShow({ id: "s2", show_status: "watching", latest_released_air_date: "2024-06-15" }),
-      makeShow({ id: "s3", show_status: "watching", latest_released_air_date: "2024-03-10" }),
+      makeShow({
+        id: "s1",
+        show_status: "watching",
+        latest_released_air_date: "2024-01-01",
+      }),
+      makeShow({
+        id: "s2",
+        show_status: "watching",
+        latest_released_air_date: "2024-06-15",
+      }),
+      makeShow({
+        id: "s3",
+        show_status: "watching",
+        latest_released_air_date: "2024-03-10",
+      }),
     ];
 
     const groups = groupShowsByStatus(shows);
@@ -91,9 +103,21 @@ describe("groupShowsByStatus", () => {
 
   it("sorts caught_up by next_episode_air_date ASC", () => {
     const shows = [
-      makeShow({ id: "s1", show_status: "caught_up", next_episode_air_date: "2025-03-01" }),
-      makeShow({ id: "s2", show_status: "caught_up", next_episode_air_date: "2025-01-15" }),
-      makeShow({ id: "s3", show_status: "caught_up", next_episode_air_date: "2025-06-01" }),
+      makeShow({
+        id: "s1",
+        show_status: "caught_up",
+        next_episode_air_date: "2025-03-01",
+      }),
+      makeShow({
+        id: "s2",
+        show_status: "caught_up",
+        next_episode_air_date: "2025-01-15",
+      }),
+      makeShow({
+        id: "s3",
+        show_status: "caught_up",
+        next_episode_air_date: "2025-06-01",
+      }),
     ];
 
     const groups = groupShowsByStatus(shows);
@@ -102,8 +126,16 @@ describe("groupShowsByStatus", () => {
 
   it("sorts not_started by latest_released_air_date DESC", () => {
     const shows = [
-      makeShow({ id: "s1", show_status: "not_started", latest_released_air_date: "2024-01-01" }),
-      makeShow({ id: "s2", show_status: "not_started", latest_released_air_date: "2024-12-01" }),
+      makeShow({
+        id: "s1",
+        show_status: "not_started",
+        latest_released_air_date: "2024-01-01",
+      }),
+      makeShow({
+        id: "s2",
+        show_status: "not_started",
+        latest_released_air_date: "2024-12-01",
+      }),
     ];
 
     const groups = groupShowsByStatus(shows);
@@ -112,8 +144,16 @@ describe("groupShowsByStatus", () => {
 
   it("sorts unreleased by release_date ASC", () => {
     const shows = [
-      makeShow({ id: "s1", show_status: "unreleased", release_date: "2025-12-01" }),
-      makeShow({ id: "s2", show_status: "unreleased", release_date: "2025-06-01" }),
+      makeShow({
+        id: "s1",
+        show_status: "unreleased",
+        release_date: "2025-12-01",
+      }),
+      makeShow({
+        id: "s2",
+        show_status: "unreleased",
+        release_date: "2025-06-01",
+      }),
     ];
 
     const groups = groupShowsByStatus(shows);
@@ -122,8 +162,16 @@ describe("groupShowsByStatus", () => {
 
   it("sorts completed by tracked_at DESC", () => {
     const shows = [
-      makeShow({ id: "s1", show_status: "completed", tracked_at: "2024-01-01T00:00:00Z" }),
-      makeShow({ id: "s2", show_status: "completed", tracked_at: "2024-06-01T00:00:00Z" }),
+      makeShow({
+        id: "s1",
+        show_status: "completed",
+        tracked_at: "2024-01-01T00:00:00Z",
+      }),
+      makeShow({
+        id: "s2",
+        show_status: "completed",
+        tracked_at: "2024-06-01T00:00:00Z",
+      }),
     ];
 
     const groups = groupShowsByStatus(shows);
@@ -132,8 +180,16 @@ describe("groupShowsByStatus", () => {
 
   it("pushes null dates to the end in date-sorted groups", () => {
     const shows = [
-      makeShow({ id: "s1", show_status: "watching", latest_released_air_date: null }),
-      makeShow({ id: "s2", show_status: "watching", latest_released_air_date: "2024-06-15" }),
+      makeShow({
+        id: "s1",
+        show_status: "watching",
+        latest_released_air_date: null,
+      }),
+      makeShow({
+        id: "s2",
+        show_status: "watching",
+        latest_released_air_date: "2024-06-15",
+      }),
     ];
 
     const groups = groupShowsByStatus(shows);

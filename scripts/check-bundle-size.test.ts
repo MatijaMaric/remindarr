@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { evaluateChecks, formatBytes, type Budgets, type CheckResult } from "./check-bundle-size";
+import {
+  evaluateChecks,
+  formatBytes,
+  type Budgets,
+  type CheckResult,
+} from "./check-bundle-size";
 
 // ---------------------------------------------------------------------------
 // formatBytes
@@ -37,9 +42,24 @@ const budgets: Budgets = {
 describe("evaluateChecks — all within budget", () => {
   test("marks all results as not over when actual < budget", () => {
     const input = [
-      { label: "frontend_entry_gzip", filePath: "/fake/index-abc.js", actual: 22671, budget: budgets.frontend_entry_gzip },
-      { label: "frontend_css_gzip", filePath: "/fake/index-abc.css", actual: 22851, budget: budgets.frontend_css_gzip },
-      { label: "worker_gzip", filePath: "/fake/worker.js", actual: 1421178, budget: budgets.worker_gzip },
+      {
+        label: "frontend_entry_gzip",
+        filePath: "/fake/index-abc.js",
+        actual: 22671,
+        budget: budgets.frontend_entry_gzip,
+      },
+      {
+        label: "frontend_css_gzip",
+        filePath: "/fake/index-abc.css",
+        actual: 22851,
+        budget: budgets.frontend_css_gzip,
+      },
+      {
+        label: "worker_gzip",
+        filePath: "/fake/worker.js",
+        actual: 1421178,
+        budget: budgets.worker_gzip,
+      },
     ];
 
     const results = evaluateChecks(input);
@@ -52,7 +72,12 @@ describe("evaluateChecks — all within budget", () => {
 
   test("marks a result as not over when actual === budget (boundary)", () => {
     const input = [
-      { label: "frontend_entry_gzip", filePath: "/fake/index.js", actual: 30000, budget: 30000 },
+      {
+        label: "frontend_entry_gzip",
+        filePath: "/fake/index.js",
+        actual: 30000,
+        budget: 30000,
+      },
     ];
     const results = evaluateChecks(input);
     expect(results[0].over).toBe(false);
@@ -62,7 +87,12 @@ describe("evaluateChecks — all within budget", () => {
 describe("evaluateChecks — over budget", () => {
   test("marks result as over when actual > budget", () => {
     const input = [
-      { label: "frontend_entry_gzip", filePath: "/fake/index.js", actual: 30001, budget: 30000 },
+      {
+        label: "frontend_entry_gzip",
+        filePath: "/fake/index.js",
+        actual: 30001,
+        budget: 30000,
+      },
     ];
     const results = evaluateChecks(input);
     expect(results[0].over).toBe(true);
@@ -70,9 +100,24 @@ describe("evaluateChecks — over budget", () => {
 
   test("marks only the failing artifact when others are within budget", () => {
     const input = [
-      { label: "frontend_entry_gzip", filePath: "/fake/index.js", actual: 50000, budget: 30000 },
-      { label: "frontend_css_gzip", filePath: "/fake/index.css", actual: 10000, budget: 30000 },
-      { label: "worker_gzip", filePath: "/fake/worker.js", actual: 1000000, budget: 1600000 },
+      {
+        label: "frontend_entry_gzip",
+        filePath: "/fake/index.js",
+        actual: 50000,
+        budget: 30000,
+      },
+      {
+        label: "frontend_css_gzip",
+        filePath: "/fake/index.css",
+        actual: 10000,
+        budget: 30000,
+      },
+      {
+        label: "worker_gzip",
+        filePath: "/fake/worker.js",
+        actual: 1000000,
+        budget: 1600000,
+      },
     ];
 
     const results = evaluateChecks(input);
@@ -84,9 +129,24 @@ describe("evaluateChecks — over budget", () => {
 
   test("marks multiple over-budget artifacts", () => {
     const input = [
-      { label: "frontend_entry_gzip", filePath: "/fake/index.js", actual: 40000, budget: 30000 },
-      { label: "frontend_css_gzip", filePath: "/fake/index.css", actual: 35000, budget: 30000 },
-      { label: "worker_gzip", filePath: "/fake/worker.js", actual: 2000000, budget: 1600000 },
+      {
+        label: "frontend_entry_gzip",
+        filePath: "/fake/index.js",
+        actual: 40000,
+        budget: 30000,
+      },
+      {
+        label: "frontend_css_gzip",
+        filePath: "/fake/index.css",
+        actual: 35000,
+        budget: 30000,
+      },
+      {
+        label: "worker_gzip",
+        filePath: "/fake/worker.js",
+        actual: 2000000,
+        budget: 1600000,
+      },
     ];
 
     const results = evaluateChecks(input);
@@ -99,7 +159,12 @@ describe("evaluateChecks — over budget", () => {
 describe("evaluateChecks — output shape", () => {
   test("preserves label, filePath, actual and budget in each result", () => {
     const input = [
-      { label: "worker_gzip", filePath: "/fake/worker.js", actual: 1421178, budget: 1600000 },
+      {
+        label: "worker_gzip",
+        filePath: "/fake/worker.js",
+        actual: 1421178,
+        budget: 1600000,
+      },
     ];
     const results: CheckResult[] = evaluateChecks(input);
 
@@ -118,7 +183,12 @@ describe("evaluateChecks — output shape", () => {
 describe("evaluateChecks — delta accuracy", () => {
   test("actual and budget values allow callers to compute delta", () => {
     const input = [
-      { label: "frontend_entry_gzip", filePath: "/fake/index.js", actual: 35000, budget: 30000 },
+      {
+        label: "frontend_entry_gzip",
+        filePath: "/fake/index.js",
+        actual: 35000,
+        budget: 30000,
+      },
     ];
     const results = evaluateChecks(input);
     const delta = results[0].actual - results[0].budget;

@@ -52,8 +52,17 @@ describe("zValidator", () => {
     // Filter by message to avoid counting unrelated console.error calls from
     // other test files running in parallel on CI.
     const validatorLogs = errSpy.mock.calls
-      .map(([line]) => { try { return JSON.parse(line as string); } catch { return null; } })
-      .filter((e): e is Record<string, unknown> => !!e && e.msg === "Request validation failed");
+      .map(([line]) => {
+        try {
+          return JSON.parse(line as string);
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (e): e is Record<string, unknown> =>
+          !!e && e.msg === "Request validation failed",
+      );
     expect(validatorLogs).toHaveLength(1);
     const entry = validatorLogs[0];
     expect(entry.level).toBe("warn");
@@ -75,8 +84,16 @@ describe("zValidator", () => {
     });
     // Filter by module to avoid false positives from parallel test files.
     const validatorLogs = errSpy.mock.calls
-      .map(([line]) => { try { return JSON.parse(line as string); } catch { return null; } })
-      .filter((e): e is Record<string, unknown> => !!e && e.module === "validator");
+      .map(([line]) => {
+        try {
+          return JSON.parse(line as string);
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (e): e is Record<string, unknown> => !!e && e.module === "validator",
+      );
     expect(validatorLogs).toHaveLength(0);
     errSpy.mockRestore();
   });

@@ -1,11 +1,28 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import type { TmdbSearchMultiResult } from "../tmdb/types";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { CONFIG } from "../config";
-import { upsertTitles, trackTitle, createUser, getOffersForTitle } from "../db/repository";
-import { makeParsedTitle, makeTmdbSearchMultiMovie, makeTmdbMovieDetails } from "../test-utils/fixtures";
+import {
+  upsertTitles,
+  trackTitle,
+  createUser,
+  getOffersForTitle,
+} from "../db/repository";
+import {
+  makeParsedTitle,
+  makeTmdbSearchMultiMovie,
+  makeTmdbMovieDetails,
+} from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
 import Sentry from "../sentry";
 
@@ -21,11 +38,20 @@ beforeEach(() => {
   app.route("/search", searchApp);
 
   spies = [
-    spyOn(tmdbClient, "searchMulti").mockResolvedValue({ results: [] as TmdbSearchMultiResult[], total_pages: 1, total_results: 0, page: 1 } as any),
+    spyOn(tmdbClient, "searchMulti").mockResolvedValue({
+      results: [] as TmdbSearchMultiResult[],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
+    } as any),
     spyOn(tmdbClient, "fetchMovieDetails").mockResolvedValue({} as any),
     spyOn(tmdbClient, "fetchTvDetails").mockResolvedValue({} as any),
-    spyOn(tmdbClient, "getMovieGenres").mockResolvedValue(new Map([[28, "Action"]])),
-    spyOn(tmdbClient, "getTvGenres").mockResolvedValue(new Map([[18, "Drama"]])),
+    spyOn(tmdbClient, "getMovieGenres").mockResolvedValue(
+      new Map([[28, "Action"]]),
+    ),
+    spyOn(tmdbClient, "getTvGenres").mockResolvedValue(
+      new Map([[18, "Drama"]]),
+    ),
   ];
 });
 
@@ -50,9 +76,14 @@ describe("GET /search", () => {
   it("returns search results with isTracked=false when no user", async () => {
     const movie = makeTmdbSearchMultiMovie({ id: 42 });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: 42 }));
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: 42 }),
+    );
 
     const res = await app.request("/search?q=test");
     expect(res.status).toBe(200);
@@ -65,20 +96,32 @@ describe("GET /search", () => {
   it("persists titles with offers to database", async () => {
     const movie = makeTmdbSearchMultiMovie({ id: 42 });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({
-      id: 42,
-      "watch/providers": {
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({
         id: 42,
-        results: {
-          [CONFIG.COUNTRY]: {
-            link: "https://tmdb.org",
-            flatrate: [{ logo_path: "/nf.jpg", provider_id: 8, provider_name: "Netflix", display_priority: 1 }],
+        "watch/providers": {
+          id: 42,
+          results: {
+            [CONFIG.COUNTRY]: {
+              link: "https://tmdb.org",
+              flatrate: [
+                {
+                  logo_path: "/nf.jpg",
+                  provider_id: 8,
+                  provider_name: "Netflix",
+                  display_priority: 1,
+                },
+              ],
+            },
           },
         },
-      },
-    }));
+      }),
+    );
 
     const res = await app.request("/search?q=test");
     expect(res.status).toBe(200);
@@ -99,13 +142,24 @@ describe("GET /search", () => {
 
     const movie = makeTmdbSearchMultiMovie({ id: 42 });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: 42 }));
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: 42 }),
+    );
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/search/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     authedApp.route("/search", searchApp);
@@ -120,11 +174,21 @@ describe("GET /search", () => {
 describe("GET /search — filter params", () => {
   it("filters results by type=MOVIE", async () => {
     const movie = makeTmdbSearchMultiMovie({ id: 10, media_type: "movie" });
-    const show = { ...makeTmdbSearchMultiMovie({ id: 20 }), media_type: "tv" as const, name: "Test Show", title: undefined };
+    const show = {
+      ...makeTmdbSearchMultiMovie({ id: 20 }),
+      media_type: "tv" as const,
+      name: "Test Show",
+      title: undefined,
+    };
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie, show], total_pages: 1, total_results: 2, page: 1,
+      results: [movie, show],
+      total_pages: 1,
+      total_results: 2,
+      page: 1,
     });
-    (tmdbClient.fetchMovieDetails as any).mockResolvedValue(makeTmdbMovieDetails({ id: 10 }));
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValue(
+      makeTmdbMovieDetails({ id: 10 }),
+    );
 
     const res = await app.request("/search?q=test&type=MOVIE");
     expect(res.status).toBe(200);
@@ -134,11 +198,20 @@ describe("GET /search — filter params", () => {
 
   it("filters results by type=SHOW", async () => {
     const movie = makeTmdbSearchMultiMovie({ id: 10, media_type: "movie" });
-    const show = { ...makeTmdbSearchMultiMovie({ id: 20 }), media_type: "tv" as const, name: "Test Show" };
+    const show = {
+      ...makeTmdbSearchMultiMovie({ id: 20 }),
+      media_type: "tv" as const,
+      name: "Test Show",
+    };
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie, show], total_pages: 1, total_results: 2, page: 1,
+      results: [movie, show],
+      total_pages: 1,
+      total_results: 2,
+      page: 1,
     });
-    (tmdbClient.fetchTvDetails as any).mockResolvedValue(makeTmdbMovieDetails({ id: 20 }));
+    (tmdbClient.fetchTvDetails as any).mockResolvedValue(
+      makeTmdbMovieDetails({ id: 20 }),
+    );
 
     const res = await app.request("/search?q=test&type=SHOW");
     expect(res.status).toBe(200);
@@ -149,37 +222,61 @@ describe("GET /search — filter params", () => {
   it("filters results by year_min", async () => {
     // Year filter is applied before detail fetch (on basicTitles from parseSearchResult)
     // Only the matching title will have its details fetched — so mock only one detail call
-    const oldMovie = makeTmdbSearchMultiMovie({ id: 11, release_date: "2010-06-01" });
-    const newMovie = makeTmdbSearchMultiMovie({ id: 12, release_date: "2022-06-01" });
+    const oldMovie = makeTmdbSearchMultiMovie({
+      id: 11,
+      release_date: "2010-06-01",
+    });
+    const newMovie = makeTmdbSearchMultiMovie({
+      id: 12,
+      release_date: "2022-06-01",
+    });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [oldMovie, newMovie], total_pages: 1, total_results: 2, page: 1,
+      results: [oldMovie, newMovie],
+      total_pages: 1,
+      total_results: 2,
+      page: 1,
     });
     // Only id=12 survives year_min=2020 filter, so only one detail fetch happens
-    (tmdbClient.fetchMovieDetails as any)
-      .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 12, release_date: "2022-06-01" }));
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: 12, release_date: "2022-06-01" }),
+    );
 
     const res = await app.request("/search?q=test&year_min=2020");
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.titles.every((t: any) => (t.releaseYear ?? 0) >= 2020)).toBe(true);
+    expect(body.titles.every((t: any) => (t.releaseYear ?? 0) >= 2020)).toBe(
+      true,
+    );
   });
 
   it("filters results by year_max", async () => {
     // Year filter is applied before detail fetch (on basicTitles from parseSearchResult)
     // Only the matching title will have its details fetched — so mock only one detail call
-    const oldMovie = makeTmdbSearchMultiMovie({ id: 13, release_date: "2010-06-01" });
-    const newMovie = makeTmdbSearchMultiMovie({ id: 14, release_date: "2022-06-01" });
+    const oldMovie = makeTmdbSearchMultiMovie({
+      id: 13,
+      release_date: "2010-06-01",
+    });
+    const newMovie = makeTmdbSearchMultiMovie({
+      id: 14,
+      release_date: "2022-06-01",
+    });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [oldMovie, newMovie], total_pages: 1, total_results: 2, page: 1,
+      results: [oldMovie, newMovie],
+      total_pages: 1,
+      total_results: 2,
+      page: 1,
     });
     // Only id=13 survives year_max=2015 filter, so only one detail fetch happens
-    (tmdbClient.fetchMovieDetails as any)
-      .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 13, release_date: "2010-06-01" }));
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: 13, release_date: "2010-06-01" }),
+    );
 
     const res = await app.request("/search?q=test&year_max=2015");
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.titles.every((t: any) => (t.releaseYear ?? 9999) <= 2015)).toBe(true);
+    expect(body.titles.every((t: any) => (t.releaseYear ?? 9999) <= 2015)).toBe(
+      true,
+    );
   });
 
   it("filters results by language", async () => {
@@ -188,11 +285,18 @@ describe("GET /search — filter params", () => {
     const movie1 = makeTmdbSearchMultiMovie({ id: 21 });
     const movie2 = makeTmdbSearchMultiMovie({ id: 22 });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie1, movie2], total_pages: 1, total_results: 2, page: 1,
+      results: [movie1, movie2],
+      total_pages: 1,
+      total_results: 2,
+      page: 1,
     });
     (tmdbClient.fetchMovieDetails as any)
-      .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 21, original_language: "en" }))
-      .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 22, original_language: "fr" }));
+      .mockResolvedValueOnce(
+        makeTmdbMovieDetails({ id: 21, original_language: "en" }),
+      )
+      .mockResolvedValueOnce(
+        makeTmdbMovieDetails({ id: 22, original_language: "fr" }),
+      );
 
     const res = await app.request("/search?q=test&language=fr");
     expect(res.status).toBe(200);
@@ -207,19 +311,23 @@ describe("GET /search — filter params", () => {
   it("filters by min_rating and returns only titles meeting the threshold", async () => {
     const movie = makeTmdbSearchMultiMovie({ id: 30, vote_average: 8.5 });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
     (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
-      makeTmdbMovieDetails({ id: 30, vote_average: 8.5 })
+      makeTmdbMovieDetails({ id: 30, vote_average: 8.5 }),
     );
 
     const res = await app.request("/search?q=test&min_rating=9");
     expect(res.status).toBe(200);
     const body = await res.json();
     // All returned titles should meet the rating threshold (or none returned if filtered out)
-    expect(body.titles.every((t: any) => (t.scores?.tmdbScore ?? 0) >= 9)).toBe(true);
+    expect(body.titles.every((t: any) => (t.scores?.tmdbScore ?? 0) >= 9)).toBe(
+      true,
+    );
   });
-
 });
 
 describe("GET /search — validation", () => {
@@ -276,7 +384,9 @@ describe("GET /search — validation", () => {
 
 describe("GET /search — outer catch (TMDB failure)", () => {
   it("returns 500 with a generic message and captures the error when TMDB search throws", async () => {
-    (tmdbClient.searchMulti as any).mockRejectedValueOnce(new Error("TMDB upstream 503"));
+    (tmdbClient.searchMulti as any).mockRejectedValueOnce(
+      new Error("TMDB upstream 503"),
+    );
     const captureSpy = spyOn(Sentry, "captureException");
     const res = await app.request("/search?q=malcolm");
     expect(res.status).toBe(500);
@@ -291,10 +401,15 @@ describe("GET /search — enrichment graceful degradation", () => {
   it("returns HTTP 200 with base title data when TMDB detail fetch throws", async () => {
     const movie = makeTmdbSearchMultiMovie({ id: 55 });
     (tmdbClient.searchMulti as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
     // Simulate TMDB enrichment failure
-    (tmdbClient.fetchMovieDetails as any).mockRejectedValueOnce(new Error("TMDB rate limit"));
+    (tmdbClient.fetchMovieDetails as any).mockRejectedValueOnce(
+      new Error("TMDB rate limit"),
+    );
 
     const res = await app.request("/search?q=test");
 

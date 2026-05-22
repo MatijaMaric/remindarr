@@ -13,7 +13,13 @@ export default function Cast({ cast }: CastProps) {
     <Section title="Cast">
       <ScrollableRow className="gap-4 pb-2">
         {cast.map((c) => (
-          <PersonCard key={c.id} id={c.id} name={c.name} role={c.character} profilePath={c.profile_path} />
+          <PersonCard
+            key={c.id}
+            id={c.id}
+            name={c.name}
+            role={c.character}
+            profilePath={c.profile_path}
+          />
         ))}
       </ScrollableRow>
     </Section>

@@ -1,7 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import * as notifContent from "../notifications/content";
 import notifierApp from "./notifiers";
@@ -126,7 +138,10 @@ describe("POST /notifiers", () => {
     const res = await app.request("/notifiers", {
       method: "POST",
       headers: jsonHeaders(),
-      body: JSON.stringify({ ...validNotifier, provider: "nonexistent_provider" }),
+      body: JSON.stringify({
+        ...validNotifier,
+        provider: "nonexistent_provider",
+      }),
     });
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -264,7 +279,9 @@ describe("POST /notifiers/:id/test", () => {
     const mockProvider = {
       name: "discord",
       validateConfig: () => ({ valid: true }),
-      send: async () => { throw new Error("Connection refused"); },
+      send: async () => {
+        throw new Error("Connection refused");
+      },
     };
     spies.push(spyOn(registry, "getProvider").mockReturnValue(mockProvider));
     spies.push(spyOn(Sentry, "captureException").mockImplementation(() => ""));
@@ -286,10 +303,14 @@ describe("POST /notifiers/:id/test", () => {
     const mockProvider = {
       name: "discord",
       validateConfig: () => ({ valid: true }),
-      send: async () => { throw sendError; },
+      send: async () => {
+        throw sendError;
+      },
     };
     spies.push(spyOn(registry, "getProvider").mockReturnValue(mockProvider));
-    const sentrySpy = spyOn(Sentry, "captureException").mockImplementation(() => "");
+    const sentrySpy = spyOn(Sentry, "captureException").mockImplementation(
+      () => "",
+    );
     spies.push(sentrySpy);
 
     await app.request(`/notifiers/${notifier.id}/test`, {
@@ -306,10 +327,14 @@ describe("POST /notifiers/:id/test", () => {
     const mockProvider = {
       name: "discord",
       validateConfig: () => ({ valid: true }),
-      send: async () => { throw new SubscriptionExpiredError("https://example.com/push"); },
+      send: async () => {
+        throw new SubscriptionExpiredError("https://example.com/push");
+      },
     };
     spies.push(spyOn(registry, "getProvider").mockReturnValue(mockProvider));
-    const sentrySpy = spyOn(Sentry, "captureException").mockImplementation(() => "");
+    const sentrySpy = spyOn(Sentry, "captureException").mockImplementation(
+      () => "",
+    );
     spies.push(sentrySpy);
 
     await app.request(`/notifiers/${notifier.id}/test`, {
@@ -324,7 +349,8 @@ describe("POST /notifiers/:id/test", () => {
 describe("POST /notifiers/renew-subscription", () => {
   const validWebpushConfig = {
     endpoint: "https://push.example.com/sub/123",
-    p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlqHgx9tSimHctjAmKDF5lbREqX5L2tZIFO4-SrZs",
+    p256dh:
+      "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlqHgx9tSimHctjAmKDF5lbREqX5L2tZIFO4-SrZs",
     auth: "tBHItJI5svbpez7KI4CCXg",
   };
 
@@ -333,10 +359,18 @@ describe("POST /notifiers/renew-subscription", () => {
     await app.request("/notifiers", {
       method: "POST",
       headers: jsonHeaders(),
-      body: JSON.stringify({ provider: "webpush", config: validWebpushConfig, notify_time: "09:00", timezone: "UTC" }),
+      body: JSON.stringify({
+        provider: "webpush",
+        config: validWebpushConfig,
+        notify_time: "09:00",
+        timezone: "UTC",
+      }),
     });
 
-    const newConfig = { ...validWebpushConfig, endpoint: "https://push.example.com/sub/456" };
+    const newConfig = {
+      ...validWebpushConfig,
+      endpoint: "https://push.example.com/sub/456",
+    };
     const res = await app.request("/notifiers/renew-subscription", {
       method: "POST",
       headers: jsonHeaders(),
@@ -354,7 +388,12 @@ describe("POST /notifiers/renew-subscription", () => {
     const createRes = await app.request("/notifiers", {
       method: "POST",
       headers: jsonHeaders(),
-      body: JSON.stringify({ provider: "webpush", config: validWebpushConfig, notify_time: "09:00", timezone: "UTC" }),
+      body: JSON.stringify({
+        provider: "webpush",
+        config: validWebpushConfig,
+        notify_time: "09:00",
+        timezone: "UTC",
+      }),
     });
     const { notifier } = await createRes.json();
 
@@ -397,13 +436,21 @@ describe("POST /notifiers/renew-subscription", () => {
     await app.request("/notifiers", {
       method: "POST",
       headers: jsonHeaders(),
-      body: JSON.stringify({ provider: "webpush", config: validWebpushConfig, notify_time: "09:00", timezone: "UTC" }),
+      body: JSON.stringify({
+        provider: "webpush",
+        config: validWebpushConfig,
+        notify_time: "09:00",
+        timezone: "UTC",
+      }),
     });
 
     const res = await app.request("/notifiers/renew-subscription", {
       method: "POST",
       headers: jsonHeaders(),
-      body: JSON.stringify({ p256dh: validWebpushConfig.p256dh, auth: validWebpushConfig.auth }),
+      body: JSON.stringify({
+        p256dh: validWebpushConfig.p256dh,
+        auth: validWebpushConfig.auth,
+      }),
     });
     expect(res.status).toBe(400);
   });
@@ -466,7 +513,11 @@ describe("digest_mode", () => {
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
-    expect(body.issues.some((i: { path: unknown[] }) => i.path.includes("digest_day"))).toBe(true);
+    expect(
+      body.issues.some((i: { path: unknown[] }) =>
+        i.path.includes("digest_day"),
+      ),
+    ).toBe(true);
   });
 
   it("rejects invalid digest_mode value", async () => {
@@ -482,7 +533,11 @@ describe("digest_mode", () => {
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
-    expect(body.issues.some((i: { path: unknown[] }) => i.path.includes("digest_mode"))).toBe(true);
+    expect(
+      body.issues.some((i: { path: unknown[] }) =>
+        i.path.includes("digest_mode"),
+      ),
+    ).toBe(true);
   });
 
   it("rejects digest_day out of range", async () => {
@@ -499,7 +554,11 @@ describe("digest_mode", () => {
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
-    expect(body.issues.some((i: { path: unknown[] }) => i.path.includes("digest_day"))).toBe(true);
+    expect(
+      body.issues.some((i: { path: unknown[] }) =>
+        i.path.includes("digest_day"),
+      ),
+    ).toBe(true);
   });
 
   it("updates digest_mode via PUT", async () => {
@@ -545,7 +604,11 @@ describe("validation", () => {
     const res = await app.request("/notifiers", {
       method: "POST",
       headers: jsonHeaders(),
-      body: JSON.stringify({ config: {}, notify_time: "09:00", timezone: "UTC" }),
+      body: JSON.stringify({
+        config: {},
+        notify_time: "09:00",
+        timezone: "UTC",
+      }),
     });
     expect(res.status).toBe(400);
     const body = await res.json();

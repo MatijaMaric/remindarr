@@ -31,7 +31,7 @@ export function getHeroBannerSlides(unwatched: Episode[]): HeroBannerSlide[] {
     eps.sort((a, b) =>
       a.season_number !== b.season_number
         ? a.season_number - b.season_number
-        : a.episode_number - b.episode_number
+        : a.episode_number - b.episode_number,
     );
     const featured = eps[0];
     slides.push({
@@ -81,18 +81,19 @@ export default function HeroBanner({
 
   const imageUrls = useMemo(
     () => slides.map((s) => getHeroImageUrl(s.featured)),
-    [slides]
+    [slides],
   );
   const colors = useDominantColors(imageUrls);
 
   // Clamp to valid range without mutating state (avoids extra re-render)
-  const safeIndex = slides.length > 0 ? Math.min(activeIndex, slides.length - 1) : 0;
+  const safeIndex =
+    slides.length > 0 ? Math.min(activeIndex, slides.length - 1) : 0;
 
   const goTo = useCallback(
     (index: number) => {
       setActiveIndex((index + slides.length) % slides.length);
     },
-    [slides.length]
+    [slides.length],
   );
 
   // Auto-advance
@@ -181,72 +182,81 @@ export default function HeroBanner({
       {/* Content overlay — bottom-left anchored, text aligned to main container */}
       <div className="relative z-10 h-full flex items-end pb-12">
         <div className="max-w-[1440px] mx-auto px-4 w-full">
-        <div className="max-w-[560px]">
-          {/* Kicker */}
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-400 mb-3">
-            Continue watching
-            {current.remainingCount > 0 && ` · ${current.remainingCount} unwatched`}
-          </p>
-
-          {/* Title */}
-          <Link to={`/title/${current.featured.title_id}`} className="group">
-            <h2 className="text-5xl sm:text-[56px] font-extrabold tracking-[-0.03em] leading-none text-white group-hover:text-amber-300 transition-colors mb-4 select-text">
-              {current.featured.show_title}
-            </h2>
-          </Link>
-
-          {/* Episode info */}
-          <p className="text-base text-zinc-300 leading-relaxed mb-6 line-clamp-2 select-text">
-            {formatEpisodeCode(current.featured)}
-            {current.featured.name && ` · ${current.featured.name}`}
-            {current.featured.overview && ` — ${current.featured.overview}`}
-          </p>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Link
-              to={`/title/${current.featured.title_id}`}
-              className="inline-flex items-center bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 h-10 rounded-lg transition-colors"
-            >
-              ▶ Play S{current.featured.season_number}·E{current.featured.episode_number}
-            </Link>
-            <button
-              onClick={handleMarkWatched}
-              disabled={markingWatched}
-              className="inline-flex items-center bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 h-10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {markingWatched ? "Marking…" : "Mark watched"}
-            </button>
-            <WatchButtonGroup offers={current.featured.offers ?? []} variant="inline" maxVisible={2} buttonClassName="text-sm px-4 h-10" />
-          </div>
-          {/* Metadata strip */}
-          {current.featured.offers && current.featured.offers.length > 0 && (
-            <p className="mt-3 font-mono text-[11px] text-zinc-500 tracking-wide">
-              {current.featured.offers[0].provider_name}
+          <div className="max-w-[560px]">
+            {/* Kicker */}
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-400 mb-3">
+              Continue watching
+              {current.remainingCount > 0 &&
+                ` · ${current.remainingCount} unwatched`}
             </p>
-          )}
 
-          {/* Slide dots */}
-          {slides.length > 1 && (
-            <div className="flex gap-1 mt-6">
-              {slides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goTo(i)}
-                  aria-label={`Slide ${i + 1} of ${slides.length}`}
-                  aria-current={i === safeIndex ? "true" : undefined}
-                  className="p-2 cursor-pointer"
-                >
-                  <span
-                    className={`block h-1 rounded-full transition-all ${
-                      i === safeIndex ? "w-6 bg-amber-400" : "w-2 bg-white/30 hover:bg-white/50"
-                    }`}
-                  />
-                </button>
-              ))}
+            {/* Title */}
+            <Link to={`/title/${current.featured.title_id}`} className="group">
+              <h2 className="text-5xl sm:text-[56px] font-extrabold tracking-[-0.03em] leading-none text-white group-hover:text-amber-300 transition-colors mb-4 select-text">
+                {current.featured.show_title}
+              </h2>
+            </Link>
+
+            {/* Episode info */}
+            <p className="text-base text-zinc-300 leading-relaxed mb-6 line-clamp-2 select-text">
+              {formatEpisodeCode(current.featured)}
+              {current.featured.name && ` · ${current.featured.name}`}
+              {current.featured.overview && ` — ${current.featured.overview}`}
+            </p>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Link
+                to={`/title/${current.featured.title_id}`}
+                className="inline-flex items-center bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 h-10 rounded-lg transition-colors"
+              >
+                ▶ Play S{current.featured.season_number}·E
+                {current.featured.episode_number}
+              </Link>
+              <button
+                onClick={handleMarkWatched}
+                disabled={markingWatched}
+                className="inline-flex items-center bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 h-10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {markingWatched ? "Marking…" : "Mark watched"}
+              </button>
+              <WatchButtonGroup
+                offers={current.featured.offers ?? []}
+                variant="inline"
+                maxVisible={2}
+                buttonClassName="text-sm px-4 h-10"
+              />
             </div>
-          )}
-        </div>
+            {/* Metadata strip */}
+            {current.featured.offers && current.featured.offers.length > 0 && (
+              <p className="mt-3 font-mono text-[11px] text-zinc-500 tracking-wide">
+                {current.featured.offers[0].provider_name}
+              </p>
+            )}
+
+            {/* Slide dots */}
+            {slides.length > 1 && (
+              <div className="flex gap-1 mt-6">
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goTo(i)}
+                    aria-label={`Slide ${i + 1} of ${slides.length}`}
+                    aria-current={i === safeIndex ? "true" : undefined}
+                    className="p-2 cursor-pointer"
+                  >
+                    <span
+                      className={`block h-1 rounded-full transition-all ${
+                        i === safeIndex
+                          ? "w-6 bg-amber-400"
+                          : "w-2 bg-white/30 hover:bg-white/50"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Slide nav arrows — top-right of hero */}
@@ -267,7 +277,6 @@ export default function HeroBanner({
           </div>
         )}
       </div>
-
     </div>
   );
 }

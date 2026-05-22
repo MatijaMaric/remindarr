@@ -124,7 +124,8 @@ describe("CategoryBrowse pagination", () => {
     browseSpy.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          resolvePage2 = () => resolve(makeBrowseResponse(2, [makeSearchTitle(2)], 2));
+          resolvePage2 = () =>
+            resolve(makeBrowseResponse(2, [makeSearchTitle(2)], 2));
         }),
     );
     spies.push(browseSpy);
@@ -202,8 +203,12 @@ describe("CategoryBrowse pagination", () => {
 
   it("does not auto-chain to page 3 after page 2 resolves without a new intersection", async () => {
     const browseSpy = spyOn(api, "browseTitles");
-    browseSpy.mockResolvedValueOnce(makeBrowseResponse(1, [makeSearchTitle(1)], 3));
-    browseSpy.mockResolvedValueOnce(makeBrowseResponse(2, [makeSearchTitle(2)], 3));
+    browseSpy.mockResolvedValueOnce(
+      makeBrowseResponse(1, [makeSearchTitle(1)], 3),
+    );
+    browseSpy.mockResolvedValueOnce(
+      makeBrowseResponse(2, [makeSearchTitle(2)], 3),
+    );
     spies.push(browseSpy);
 
     render(

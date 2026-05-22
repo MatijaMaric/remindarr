@@ -34,19 +34,23 @@ function makeTitle(overrides: Partial<Title> = {}): Title {
 }
 
 const mockGetSharedWatchlist = mock(() =>
-  Promise.resolve({ username: "testuser", titles: [makeTitle()] })
+  Promise.resolve({ username: "testuser", titles: [makeTitle()] }),
 );
 
 mock.module("../api", () => ({
   getSharedWatchlist: mockGetSharedWatchlist,
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
 }));
 
 const { default: SharedWatchlistPage } = await import("./SharedWatchlistPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ token = "abc123" }: { token?: string }) {
@@ -54,7 +58,10 @@ function Wrapper({ token = "abc123" }: { token?: string }) {
     <QueryClientProvider client={newTestClient()}>
       <MemoryRouter initialEntries={[`/share/watchlist/${token}`]}>
         <Routes>
-          <Route path="/share/watchlist/:token" element={<SharedWatchlistPage />} />
+          <Route
+            path="/share/watchlist/:token"
+            element={<SharedWatchlistPage />}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -63,7 +70,7 @@ function Wrapper({ token = "abc123" }: { token?: string }) {
 
 beforeEach(() => {
   mockGetSharedWatchlist.mockImplementation(() =>
-    Promise.resolve({ username: "testuser", titles: [makeTitle()] })
+    Promise.resolve({ username: "testuser", titles: [makeTitle()] }),
   );
 });
 
@@ -90,7 +97,7 @@ describe("SharedWatchlistPage", () => {
 
   it("shows 'This watchlist is empty' when titles array is empty", async () => {
     mockGetSharedWatchlist.mockImplementation(() =>
-      Promise.resolve({ username: "emptyuser", titles: [] })
+      Promise.resolve({ username: "emptyuser", titles: [] }),
     );
     render(<Wrapper />);
     await waitFor(() => {
@@ -100,7 +107,7 @@ describe("SharedWatchlistPage", () => {
 
   it("shows error state when fetch throws", async () => {
     mockGetSharedWatchlist.mockImplementation(() =>
-      Promise.reject(new Error("Not found"))
+      Promise.reject(new Error("Not found")),
     );
     render(<Wrapper />);
     await waitFor(() => {
@@ -112,8 +119,11 @@ describe("SharedWatchlistPage", () => {
     mockGetSharedWatchlist.mockImplementation(() =>
       Promise.resolve({
         username: "multiuser",
-        titles: [makeTitle({ id: "t1", title: "Movie A" }), makeTitle({ id: "t2", title: "Movie B" })],
-      })
+        titles: [
+          makeTitle({ id: "t1", title: "Movie A" }),
+          makeTitle({ id: "t2", title: "Movie B" }),
+        ],
+      }),
     );
     render(<Wrapper />);
     await waitFor(() => {

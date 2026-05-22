@@ -51,62 +51,120 @@ function makeOffer(providerName: string, technicalName: string) {
 
 describe("filterBrowseTitles", () => {
   const titles: Title[] = [
-    makeTitle({ id: "1", genres: ["Action", "Drama"], original_language: "en", offers: [makeOffer("Netflix", "netflix")] }),
-    makeTitle({ id: "2", genres: ["Comedy"], original_language: "fr", offers: [makeOffer("Disney Plus", "disney_plus")] }),
-    makeTitle({ id: "3", genres: ["Action", "Comedy"], original_language: "en", offers: [makeOffer("Netflix", "netflix"), makeOffer("Disney Plus", "disney_plus")] }),
+    makeTitle({
+      id: "1",
+      genres: ["Action", "Drama"],
+      original_language: "en",
+      offers: [makeOffer("Netflix", "netflix")],
+    }),
+    makeTitle({
+      id: "2",
+      genres: ["Comedy"],
+      original_language: "fr",
+      offers: [makeOffer("Disney Plus", "disney_plus")],
+    }),
+    makeTitle({
+      id: "3",
+      genres: ["Action", "Comedy"],
+      original_language: "en",
+      offers: [
+        makeOffer("Netflix", "netflix"),
+        makeOffer("Disney Plus", "disney_plus"),
+      ],
+    }),
   ];
 
   it("returns all titles when no filters are active", () => {
-    const result = filterBrowseTitles(titles, { genre: [], provider: [], language: [] });
+    const result = filterBrowseTitles(titles, {
+      genre: [],
+      provider: [],
+      language: [],
+    });
     expect(result.length).toBe(3);
   });
 
   it("filters by genre", () => {
-    const result = filterBrowseTitles(titles, { genre: ["Action"], provider: [], language: [] });
+    const result = filterBrowseTitles(titles, {
+      genre: ["Action"],
+      provider: [],
+      language: [],
+    });
     expect(result.length).toBe(2);
     expect(result.map((t) => t.id)).toEqual(["1", "3"]);
   });
 
   it("filters by multiple genres (OR)", () => {
-    const result = filterBrowseTitles(titles, { genre: ["Action", "Comedy"], provider: [], language: [] });
+    const result = filterBrowseTitles(titles, {
+      genre: ["Action", "Comedy"],
+      provider: [],
+      language: [],
+    });
     expect(result.length).toBe(3);
   });
 
   it("filters by provider", () => {
-    const result = filterBrowseTitles(titles, { genre: [], provider: ["disney_plus"], language: [] });
+    const result = filterBrowseTitles(titles, {
+      genre: [],
+      provider: ["disney_plus"],
+      language: [],
+    });
     expect(result.length).toBe(2);
     expect(result.map((t) => t.id)).toEqual(["2", "3"]);
   });
 
   it("filters by multiple providers (OR)", () => {
-    const result = filterBrowseTitles(titles, { genre: [], provider: ["netflix", "disney_plus"], language: [] });
+    const result = filterBrowseTitles(titles, {
+      genre: [],
+      provider: ["netflix", "disney_plus"],
+      language: [],
+    });
     expect(result.length).toBe(3);
   });
 
   it("filters by language", () => {
-    const result = filterBrowseTitles(titles, { genre: [], provider: [], language: ["fr"] });
+    const result = filterBrowseTitles(titles, {
+      genre: [],
+      provider: [],
+      language: ["fr"],
+    });
     expect(result.length).toBe(1);
     expect(result[0].id).toBe("2");
   });
 
   it("filters by multiple languages (OR)", () => {
-    const result = filterBrowseTitles(titles, { genre: [], provider: [], language: ["en", "fr"] });
+    const result = filterBrowseTitles(titles, {
+      genre: [],
+      provider: [],
+      language: ["en", "fr"],
+    });
     expect(result.length).toBe(3);
   });
 
   it("combines filters with AND logic between categories", () => {
-    const result = filterBrowseTitles(titles, { genre: ["Action"], provider: ["netflix"], language: ["en"] });
+    const result = filterBrowseTitles(titles, {
+      genre: ["Action"],
+      provider: ["netflix"],
+      language: ["en"],
+    });
     expect(result.length).toBe(2);
     expect(result.map((t) => t.id)).toEqual(["1", "3"]);
   });
 
   it("returns empty array when no titles match", () => {
-    const result = filterBrowseTitles(titles, { genre: ["Horror"], provider: [], language: [] });
+    const result = filterBrowseTitles(titles, {
+      genre: ["Horror"],
+      provider: [],
+      language: [],
+    });
     expect(result.length).toBe(0);
   });
 
   it("handles empty titles array", () => {
-    const result = filterBrowseTitles([], { genre: ["Action"], provider: [], language: [] });
+    const result = filterBrowseTitles([], {
+      genre: ["Action"],
+      provider: [],
+      language: [],
+    });
     expect(result.length).toBe(0);
   });
 });
@@ -134,7 +192,13 @@ describe("extractBrowseGenres", () => {
 describe("extractBrowseProviders", () => {
   it("extracts unique providers sorted by name", () => {
     const titles = [
-      makeTitle({ id: "1", offers: [makeOffer("Netflix", "netflix"), makeOffer("Disney Plus", "disney_plus")] }),
+      makeTitle({
+        id: "1",
+        offers: [
+          makeOffer("Netflix", "netflix"),
+          makeOffer("Disney Plus", "disney_plus"),
+        ],
+      }),
       makeTitle({ id: "2", offers: [makeOffer("Netflix", "netflix")] }),
     ];
     const providers = extractBrowseProviders(titles);

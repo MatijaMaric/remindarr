@@ -24,30 +24,44 @@ beforeEach(async () => {
   userId = await createUser("testuser", "hash", "Test User");
 
   // Insert a movie title
-  await upsertTitles([makeParsedTitle({ id: "movie-1", objectType: "MOVIE", title: "Test Movie" })]);
+  await upsertTitles([
+    makeParsedTitle({
+      id: "movie-1",
+      objectType: "MOVIE",
+      title: "Test Movie",
+    }),
+  ]);
   movieTitleId = "movie-1";
 
   // Insert a show title
-  await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show" })]);
+  await upsertTitles([
+    makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Test Show" }),
+  ]);
   showTitleId = "show-1";
 
   // Insert an episode
-  await upsertEpisodes([{
-    title_id: showTitleId,
-    season_number: 1,
-    episode_number: 1,
-    name: "Pilot",
-    air_date: "2024-01-01",
-    overview: null,
-    still_path: null,
-  }]);
+  await upsertEpisodes([
+    {
+      title_id: showTitleId,
+      season_number: 1,
+      episode_number: 1,
+      name: "Pilot",
+      air_date: "2024-01-01",
+      overview: null,
+      still_path: null,
+    },
+  ]);
 
   // Get the episode ID by querying
   const { getDb } = await import("../db/schema");
   const { episodes } = await import("../db/schema");
   const { eq } = await import("drizzle-orm");
   const db = getDb();
-  const ep = await db.select().from(episodes).where(eq(episodes.titleId, showTitleId)).get();
+  const ep = await db
+    .select()
+    .from(episodes)
+    .where(eq(episodes.titleId, showTitleId))
+    .get();
   episodeId = ep!.id;
 });
 
@@ -66,10 +80,21 @@ describe("onWatchedTitle", () => {
       lastWatchDate: "2026-01-01",
       updatedAt: new Date().toISOString(),
     });
-    const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
-    const evalMoviesSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({ progress: 1, earned: false });
-    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
+    const upsertSpy = spyOn(
+      achievementsRepo,
+      "upsertUserAchievement",
+    ).mockResolvedValue({ newlyEarned: false });
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
+    const evalMoviesSpy = spyOn(
+      evaluate,
+      "evaluateCountMovies",
+    ).mockResolvedValue({ progress: 1, earned: false });
+    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({
+      progress: 1,
+      earned: false,
+    });
 
     await onWatchedTitle(userId, movieTitleId, true);
 
@@ -78,7 +103,11 @@ describe("onWatchedTitle", () => {
     expect(evalStreakSpy).toHaveBeenCalled();
     expect(enqueueSpy).toHaveBeenCalledWith(
       "evaluate-achievements",
-      expect.objectContaining({ userId, kinds: expect.arrayContaining(["completionist", "genre_count"]), titleId: movieTitleId })
+      expect.objectContaining({
+        userId,
+        kinds: expect.arrayContaining(["completionist", "genre_count"]),
+        titleId: movieTitleId,
+      }),
     );
 
     bumpSpy.mockRestore();
@@ -98,10 +127,21 @@ describe("onWatchedTitle", () => {
       lastWatchDate: "2026-01-01",
       updatedAt: new Date().toISOString(),
     });
-    const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
-    const evalMoviesSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({ progress: 1, earned: false });
-    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
+    const upsertSpy = spyOn(
+      achievementsRepo,
+      "upsertUserAchievement",
+    ).mockResolvedValue({ newlyEarned: false });
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
+    const evalMoviesSpy = spyOn(
+      evaluate,
+      "evaluateCountMovies",
+    ).mockResolvedValue({ progress: 1, earned: false });
+    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({
+      progress: 1,
+      earned: false,
+    });
 
     await onWatchedTitle(userId, showTitleId, false);
 
@@ -129,10 +169,21 @@ describe("onWatchedEpisode", () => {
       lastWatchDate: "2026-01-01",
       updatedAt: new Date().toISOString(),
     });
-    const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
-    const evalEpsSpy = spyOn(evaluate, "evaluateCountEpisodes").mockResolvedValue({ progress: 1, earned: false });
-    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
+    const upsertSpy = spyOn(
+      achievementsRepo,
+      "upsertUserAchievement",
+    ).mockResolvedValue({ newlyEarned: false });
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
+    const evalEpsSpy = spyOn(
+      evaluate,
+      "evaluateCountEpisodes",
+    ).mockResolvedValue({ progress: 1, earned: false });
+    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({
+      progress: 1,
+      earned: false,
+    });
 
     await onWatchedEpisode(userId, String(episodeId));
 
@@ -143,8 +194,12 @@ describe("onWatchedEpisode", () => {
       "evaluate-achievements",
       expect.objectContaining({
         userId,
-        kinds: expect.arrayContaining(["completionist", "genre_count", "speed_binge_season"]),
-      })
+        kinds: expect.arrayContaining([
+          "completionist",
+          "genre_count",
+          "speed_binge_season",
+        ]),
+      }),
     );
 
     bumpSpy.mockRestore();
@@ -166,17 +221,30 @@ describe("onWatchedEpisodesBulk", () => {
       lastWatchDate: "2026-01-01",
       updatedAt: new Date().toISOString(),
     });
-    const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: false });
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
-    const evalEpsSpy = spyOn(evaluate, "evaluateCountEpisodes").mockResolvedValue({ progress: 5, earned: false });
-    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({ progress: 1, earned: false });
+    const upsertSpy = spyOn(
+      achievementsRepo,
+      "upsertUserAchievement",
+    ).mockResolvedValue({ newlyEarned: false });
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
+    const evalEpsSpy = spyOn(
+      evaluate,
+      "evaluateCountEpisodes",
+    ).mockResolvedValue({ progress: 5, earned: false });
+    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({
+      progress: 1,
+      earned: false,
+    });
 
     // 5 episodes across 2 shows
     const titleIds = new Set(["show-1", "show-2"]);
     await onWatchedEpisodesBulk(userId, ["1", "2", "3", "4", "5"], titleIds);
 
     // Should enqueue 2 jobs (one per distinct titleId), not 5
-    const jobCalls = enqueueSpy.mock.calls.filter((c) => c[0] === "evaluate-achievements");
+    const jobCalls = enqueueSpy.mock.calls.filter(
+      (c) => c[0] === "evaluate-achievements",
+    );
     expect(jobCalls.length).toBe(2);
 
     bumpSpy.mockRestore();
@@ -191,9 +259,17 @@ describe("onFollow", () => {
   it("evaluates social_first_follow inline and does not enqueue any job", async () => {
     const { onFollow } = await import("./triggers");
 
-    const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: true });
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
-    const evalFollowSpy = spyOn(evaluate, "evaluateSocialFirstFollow").mockResolvedValue({ progress: 1, earned: true });
+    const upsertSpy = spyOn(
+      achievementsRepo,
+      "upsertUserAchievement",
+    ).mockResolvedValue({ newlyEarned: true });
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
+    const evalFollowSpy = spyOn(
+      evaluate,
+      "evaluateSocialFirstFollow",
+    ).mockResolvedValue({ progress: 1, earned: true });
 
     await onFollow(userId);
 
@@ -211,9 +287,17 @@ describe("onRecommendation", () => {
   it("evaluates social_first_recommendation inline and does not enqueue any job", async () => {
     const { onRecommendation } = await import("./triggers");
 
-    const upsertSpy = spyOn(achievementsRepo, "upsertUserAchievement").mockResolvedValue({ newlyEarned: true });
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
-    const evalRecSpy = spyOn(evaluate, "evaluateSocialFirstRecommendation").mockResolvedValue({ progress: 1, earned: true });
+    const upsertSpy = spyOn(
+      achievementsRepo,
+      "upsertUserAchievement",
+    ).mockResolvedValue({ newlyEarned: true });
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
+    const evalRecSpy = spyOn(
+      evaluate,
+      "evaluateSocialFirstRecommendation",
+    ).mockResolvedValue({ progress: 1, earned: true });
 
     await onRecommendation(userId);
 
@@ -232,19 +316,36 @@ describe("onRecommendation", () => {
 describe("DELETE /watched/:episodeId — no trigger fired", () => {
   it("does not call onWatchedEpisode, bumpStreak, or enqueueJob when un-watching an episode", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    await upsertTitles([makeParsedTitle({ id: "show-del-1", objectType: "SHOW" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "show-del-1", objectType: "SHOW" }),
+    ]);
     await upsertEpisodes([
-      { title_id: "show-del-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: today, still_path: null },
+      {
+        title_id: "show-del-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
     ]);
 
     const { getDb } = await import("../db/schema");
     const { episodes } = await import("../db/schema");
     const { eq } = await import("drizzle-orm");
     const db = getDb();
-    const ep = await db.select().from(episodes).where(eq(episodes.titleId, "show-del-1")).get();
+    const ep = await db
+      .select()
+      .from(episodes)
+      .where(eq(episodes.titleId, "show-del-1"))
+      .get();
     const epId = ep!.id;
 
-    const onWatchedEpisodeSpy = spyOn(triggers, "onWatchedEpisode").mockResolvedValue(undefined);
+    const onWatchedEpisodeSpy = spyOn(
+      triggers,
+      "onWatchedEpisode",
+    ).mockResolvedValue(undefined);
     const bumpSpy = spyOn(streaksRepo, "bumpStreak").mockResolvedValue({
       userId,
       currentStreak: 0,
@@ -252,12 +353,20 @@ describe("DELETE /watched/:episodeId — no trigger fired", () => {
       lastWatchDate: null,
       updatedAt: new Date().toISOString(),
     });
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
 
     const watchedApp = (await import("../routes/watched")).default;
     const app = new Hono<AppEnv>();
     app.use("*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     app.route("/watched", watchedApp);
@@ -277,20 +386,39 @@ describe("DELETE /watched/:episodeId — no trigger fired", () => {
 
 describe("DELETE /watched/movies/:titleId — no trigger fired", () => {
   it("does not call onWatchedTitle when un-watching a movie", async () => {
-    await upsertTitles([makeParsedTitle({ id: "movie-del-1", objectType: "MOVIE", title: "Delete Me" })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-del-1",
+        objectType: "MOVIE",
+        title: "Delete Me",
+      }),
+    ]);
 
-    const onWatchedTitleSpy = spyOn(triggers, "onWatchedTitle").mockResolvedValue(undefined);
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
+    const onWatchedTitleSpy = spyOn(
+      triggers,
+      "onWatchedTitle",
+    ).mockResolvedValue(undefined);
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
 
     const watchedApp = (await import("../routes/watched")).default;
     const app = new Hono<AppEnv>();
     app.use("*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     app.route("/watched", watchedApp);
 
-    const res = await app.request("/watched/movies/movie-del-1", { method: "DELETE" });
+    const res = await app.request("/watched/movies/movie-del-1", {
+      method: "DELETE",
+    });
     expect(res.status).toBe(200);
 
     expect(onWatchedTitleSpy).not.toHaveBeenCalled();
@@ -305,18 +433,30 @@ describe("DELETE /social/follow/:userId — no trigger fired", () => {
   it("does not call onFollow when unfollowing a user", async () => {
     const targetUserId = await createUser("targetuser", "hash2", "Target User");
 
-    const onFollowSpy = spyOn(triggers, "onFollow").mockResolvedValue(undefined);
-    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(undefined);
+    const onFollowSpy = spyOn(triggers, "onFollow").mockResolvedValue(
+      undefined,
+    );
+    const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
+      undefined,
+    );
 
     const socialApp = (await import("../routes/social")).default;
     const app = new Hono<AppEnv>();
     app.use("*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     app.route("/social", socialApp);
 
-    const res = await app.request(`/social/follow/${targetUserId}`, { method: "DELETE" });
+    const res = await app.request(`/social/follow/${targetUserId}`, {
+      method: "DELETE",
+    });
     expect(res.status).toBe(200);
 
     expect(onFollowSpy).not.toHaveBeenCalled();

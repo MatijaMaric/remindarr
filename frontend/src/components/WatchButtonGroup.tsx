@@ -2,7 +2,12 @@ import { useState, useRef, useMemo } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import type { Offer } from "../types";
-import WatchButton, { monetizationLabel, PLEX_PROVIDER_ID, plexDeepLink, getPlexPlatform } from "./WatchButton";
+import WatchButton, {
+  monetizationLabel,
+  PLEX_PROVIDER_ID,
+  plexDeepLink,
+  getPlexPlatform,
+} from "./WatchButton";
 import { getUniqueProviders } from "./EpisodeComponents";
 import { getProviderColor } from "../data/providerColors";
 import { useAuth } from "../context/AuthContext";
@@ -17,11 +22,18 @@ interface Props {
   buttonClassName?: string;
 }
 
-export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisible = 4, size = "sm", fullWidth, buttonClassName }: Props) {
+export default function WatchButtonGroup({
+  offers,
+  variant = "dropdown",
+  maxVisible = 4,
+  size = "sm",
+  fullWidth,
+  buttonClassName,
+}: Props) {
   const { subscriptions } = useAuth();
   const subscribedSet = useMemo(
     () => new Set(subscriptions?.providerIds ?? []),
-    [subscriptions]
+    [subscriptions],
   );
   // Plex is treated as always subscribed — it's a self-hosted library, not a paid streaming service
   const isSubscribed = (providerId: number) =>
@@ -31,13 +43,14 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
   if (rawProviders.length === 0) return null;
 
   // Sort subscribed providers first; stable sort preserves relative order within each group
-  const providers = subscribedSet.size > 0
-    ? [...rawProviders].sort((a, b) => {
-        const aS = isSubscribed(a.provider_id) ? 0 : 1;
-        const bS = isSubscribed(b.provider_id) ? 0 : 1;
-        return aS - bS;
-      })
-    : rawProviders;
+  const providers =
+    subscribedSet.size > 0
+      ? [...rawProviders].sort((a, b) => {
+          const aS = isSubscribed(a.provider_id) ? 0 : 1;
+          const bS = isSubscribed(b.provider_id) ? 0 : 1;
+          return aS - bS;
+        })
+      : rawProviders;
 
   if (variant === "inline") {
     return (
@@ -45,7 +58,11 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
         {providers.slice(0, maxVisible).map((o) => (
           <div
             key={o.provider_id}
-            className={subscribedSet.size > 0 && !isSubscribed(o.provider_id) ? "opacity-50" : undefined}
+            className={
+              subscribedSet.size > 0 && !isSubscribed(o.provider_id)
+                ? "opacity-50"
+                : undefined
+            }
           >
             <WatchButton
               url={o.url}
@@ -73,21 +90,45 @@ export default function WatchButtonGroup({ offers, variant = "dropdown", maxVisi
         providerIconUrl={providers[0].provider_icon_url}
         monetizationType={providers[0].monetization_type}
         variant="full"
-        className={isLg ? "w-full justify-center px-6 py-3 rounded-xl text-base font-semibold" : fullWidth ? "w-full justify-center" : undefined}
+        className={
+          isLg
+            ? "w-full justify-center px-6 py-3 rounded-xl text-base font-semibold"
+            : fullWidth
+              ? "w-full justify-center"
+              : undefined
+        }
       />
     );
   }
 
-  return <SplitWatchButton providers={providers} subscribedSet={subscribedSet} size={size} fullWidth={fullWidth} />;
+  return (
+    <SplitWatchButton
+      providers={providers}
+      subscribedSet={subscribedSet}
+      size={size}
+      fullWidth={fullWidth}
+    />
+  );
 }
 
-function DropdownProviderItem({ offer, isLg, isSubscribed }: { offer: Offer; isLg: boolean; isSubscribed: boolean }) {
+function DropdownProviderItem({
+  offer,
+  isLg,
+  isSubscribed,
+}: {
+  offer: Offer;
+  isLg: boolean;
+  isSubscribed: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
   const c = getProviderColor(offer.provider_id);
   const lbl = monetizationLabel(offer.monetization_type);
-  const platform = offer.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
+  const platform =
+    offer.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
   const useMobileDeepLink = platform === "ios" || platform === "android";
-  const effectiveUrl = useMobileDeepLink ? plexDeepLink(offer.url, platform) : offer.url;
+  const effectiveUrl = useMobileDeepLink
+    ? plexDeepLink(offer.url, platform)
+    : offer.url;
 
   return (
     <a
@@ -97,20 +138,37 @@ function DropdownProviderItem({ offer, isLg, isSubscribed }: { offer: Offer; isL
       aria-label={`Watch on ${offer.provider_name}${!isSubscribed ? " (not subscribed)" : ""}`}
       data-subscribed={isSubscribed}
       className={`flex items-center justify-center gap-1.5 font-semibold transition-colors duration-200 ${
-        isLg ? "rounded-xl px-6 py-3 text-base" : "rounded-lg px-3 py-1.5 text-xs"
+        isLg
+          ? "rounded-xl px-6 py-3 text-base"
+          : "rounded-lg px-3 py-1.5 text-xs"
       }${!isSubscribed ? " opacity-50" : ""}`}
       style={{ backgroundColor: hovered ? c.bg : c.hover, color: c.text }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {lbl && <span className="opacity-75">{lbl}</span>}
-      <img src={offer.provider_icon_url} alt={offer.provider_name} className="w-5 h-5 rounded" loading="lazy" />
+      <img
+        src={offer.provider_icon_url}
+        alt={offer.provider_name}
+        className="w-5 h-5 rounded"
+        loading="lazy"
+      />
       <ExternalLink size={14} className="opacity-60" />
     </a>
   );
 }
 
-function SplitWatchButton({ providers, subscribedSet, size, fullWidth }: { providers: Offer[]; subscribedSet: Set<number>; size: "sm" | "lg"; fullWidth?: boolean }) {
+function SplitWatchButton({
+  providers,
+  subscribedSet,
+  size,
+  fullWidth,
+}: {
+  providers: Offer[];
+  subscribedSet: Set<number>;
+  size: "sm" | "lg";
+  fullWidth?: boolean;
+}) {
   const [primaryHovered, setPrimaryHovered] = useState(false);
   const [caretHovered, setCaretHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -120,12 +178,18 @@ function SplitWatchButton({ providers, subscribedSet, size, fullWidth }: { provi
   const label = monetizationLabel(primary.monetization_type);
   const isLg = size === "lg";
 
-  const platform = primary.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
+  const platform =
+    primary.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
   const useMobileDeepLink = platform === "ios" || platform === "android";
-  const primaryUrl = useMobileDeepLink ? plexDeepLink(primary.url, platform) : primary.url;
+  const primaryUrl = useMobileDeepLink
+    ? plexDeepLink(primary.url, platform)
+    : primary.url;
 
   return (
-    <div ref={containerRef} className={`flex${fullWidth || isLg ? " w-full" : ""} ${isLg ? "min-h-[3.25rem]" : "min-h-8"}`}>
+    <div
+      ref={containerRef}
+      className={`flex${fullWidth || isLg ? " w-full" : ""} ${isLg ? "min-h-[3.25rem]" : "min-h-8"}`}
+    >
       {/* Primary provider link */}
       <a
         href={primaryUrl}
@@ -136,12 +200,20 @@ function SplitWatchButton({ providers, subscribedSet, size, fullWidth }: { provi
             ? "rounded-l-xl px-6 py-3 text-base"
             : "rounded-l-lg px-3 py-1.5 text-xs"
         }`}
-        style={{ backgroundColor: primaryHovered ? color.hover : color.bg, color: color.text }}
+        style={{
+          backgroundColor: primaryHovered ? color.hover : color.bg,
+          color: color.text,
+        }}
         onMouseEnter={() => setPrimaryHovered(true)}
         onMouseLeave={() => setPrimaryHovered(false)}
       >
         {label && <span className="opacity-75">{label}</span>}
-        <img src={primary.provider_icon_url} alt={primary.provider_name} className="w-5 h-5 rounded" loading="lazy" />
+        <img
+          src={primary.provider_icon_url}
+          alt={primary.provider_name}
+          className="w-5 h-5 rounded"
+          loading="lazy"
+        />
         <ExternalLink size={14} className="opacity-60" />
       </a>
 
@@ -151,7 +223,10 @@ function SplitWatchButton({ providers, subscribedSet, size, fullWidth }: { provi
           className={`flex items-center border-l border-white/20 transition-colors duration-200 cursor-pointer ${
             isLg ? "rounded-r-xl px-2.5" : "rounded-r-lg px-1.5"
           }`}
-          style={{ backgroundColor: caretHovered ? color.hover : color.bg, color: color.text }}
+          style={{
+            backgroundColor: caretHovered ? color.hover : color.bg,
+            color: color.text,
+          }}
           onMouseEnter={() => setCaretHovered(true)}
           onMouseLeave={() => setCaretHovered(false)}
           aria-label={`More streaming options (${rest.length} more)`}
@@ -169,7 +244,16 @@ function SplitWatchButton({ providers, subscribedSet, size, fullWidth }: { provi
           >
             <Popover.Popup className="flex flex-col gap-1 p-1">
               {rest.map((o) => (
-                <DropdownProviderItem key={o.provider_id} offer={o} isLg={isLg} isSubscribed={subscribedSet.size === 0 || subscribedSet.has(o.provider_id) || o.provider_id === PLEX_PROVIDER_ID} />
+                <DropdownProviderItem
+                  key={o.provider_id}
+                  offer={o}
+                  isLg={isLg}
+                  isSubscribed={
+                    subscribedSet.size === 0 ||
+                    subscribedSet.has(o.provider_id) ||
+                    o.provider_id === PLEX_PROVIDER_ID
+                  }
+                />
               ))}
             </Popover.Popup>
           </Popover.Positioner>

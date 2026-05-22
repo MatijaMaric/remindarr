@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,11 +14,17 @@ import * as sonner from "sonner";
 import TagList from "./TagList";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={newTestClient()}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={newTestClient()}>
+      {children}
+    </QueryClientProvider>
+  );
 }
 
 let spies: ReturnType<typeof spyOn>[] = [];
@@ -33,7 +45,11 @@ afterEach(() => {
 describe("TagList", () => {
   it("renders existing tags", () => {
     render(
-      <TagList titleId="t-1" tags={["action", "scifi"]} onTagsChange={() => {}} />,
+      <TagList
+        titleId="t-1"
+        tags={["action", "scifi"]}
+        onTagsChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
     expect(screen.getByText("action")).toBeTruthy();
@@ -41,26 +57,40 @@ describe("TagList", () => {
   });
 
   it("renders an input for adding new tags", () => {
-    render(<TagList titleId="t-1" tags={[]} onTagsChange={() => {}} />, { wrapper: Wrapper });
+    render(<TagList titleId="t-1" tags={[]} onTagsChange={() => {}} />, {
+      wrapper: Wrapper,
+    });
     expect(screen.getByRole("textbox")).toBeTruthy();
   });
 
   it("calls api.updateTrackedTags when adding a tag via Enter", async () => {
-    render(<TagList titleId="t-1" tags={["action"]} onTagsChange={() => {}} />, { wrapper: Wrapper });
+    render(
+      <TagList titleId="t-1" tags={["action"]} onTagsChange={() => {}} />,
+      { wrapper: Wrapper },
+    );
 
     const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "drama" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() => {
-      expect(api.updateTrackedTags).toHaveBeenCalledWith("t-1", ["action", "drama"]);
+      expect(api.updateTrackedTags).toHaveBeenCalledWith("t-1", [
+        "action",
+        "drama",
+      ]);
     });
   });
 
   it("calls onTagsChange callback after saving", async () => {
     let called: string[] | undefined;
     render(
-      <TagList titleId="t-1" tags={[]} onTagsChange={(tags) => { called = tags; }} />,
+      <TagList
+        titleId="t-1"
+        tags={[]}
+        onTagsChange={(tags) => {
+          called = tags;
+        }}
+      />,
       { wrapper: Wrapper },
     );
 
@@ -75,7 +105,11 @@ describe("TagList", () => {
 
   it("removes a tag when the remove button is clicked", async () => {
     render(
-      <TagList titleId="t-1" tags={["action", "drama"]} onTagsChange={() => {}} />,
+      <TagList
+        titleId="t-1"
+        tags={["action", "drama"]}
+        onTagsChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
 
@@ -90,7 +124,9 @@ describe("TagList", () => {
   it("shows error toast when API call fails", async () => {
     (api.updateTrackedTags as any).mockRejectedValueOnce(new Error("fail"));
 
-    render(<TagList titleId="t-1" tags={[]} onTagsChange={() => {}} />, { wrapper: Wrapper });
+    render(<TagList titleId="t-1" tags={[]} onTagsChange={() => {}} />, {
+      wrapper: Wrapper,
+    });
 
     const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "fail-tag" } });

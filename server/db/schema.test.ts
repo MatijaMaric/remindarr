@@ -40,7 +40,9 @@ describe("FK onDelete behavior", () => {
 
   test("test database has foreign keys enabled", () => {
     const raw = getRawDb();
-    const row = raw.prepare("PRAGMA foreign_keys").get() as { foreign_keys: number };
+    const row = raw.prepare("PRAGMA foreign_keys").get() as {
+      foreign_keys: number;
+    };
     expect(row.foreign_keys).toBe(1);
   });
 
@@ -74,7 +76,14 @@ describe("FK onDelete behavior", () => {
     await trackTitle("movie-1", userId);
     await watchTitle("movie-1", userId);
     await watchEpisode(episodeId, userId);
-    await createNotifier(userId, "discord", "Test", { webhook: "x" }, "09:00", "UTC");
+    await createNotifier(
+      userId,
+      "discord",
+      "Test",
+      { webhook: "x" },
+      "09:00",
+      "UTC",
+    );
     await createRecommendation(userId, "movie-1", "Watch this");
 
     // Create rows for a second user that must survive deletion of the first
@@ -85,7 +94,11 @@ describe("FK onDelete behavior", () => {
     await deleteUser(userId);
 
     // Every user-owned row for the deleted user should be gone
-    const trackedRows = await db.select().from(tracked).where(eq(tracked.userId, userId)).all();
+    const trackedRows = await db
+      .select()
+      .from(tracked)
+      .where(eq(tracked.userId, userId))
+      .all();
     expect(trackedRows).toHaveLength(0);
 
     const watchedEpRows = await db
@@ -128,11 +141,15 @@ describe("FK onDelete behavior", () => {
   test("deleting a title cascades to offers, episodes, tracked, watched_titles, ratings, recommendations", async () => {
     const userId = await createUser("alice", "hash");
 
-    await upsertTitles([makeParsedTitle({ id: "show-x", objectType: "SHOW", title: "Show X" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "show-x", objectType: "SHOW", title: "Show X" }),
+    ]);
 
     // offers: insert directly (requires a provider row)
     const raw = getRawDb();
-    raw.prepare("INSERT INTO providers (id, name) VALUES (?, ?)").run(99, "TestProvider");
+    raw
+      .prepare("INSERT INTO providers (id, name) VALUES (?, ?)")
+      .run(99, "TestProvider");
     const db = getDb();
     await db
       .insert(offers)
@@ -164,13 +181,25 @@ describe("FK onDelete behavior", () => {
     // Delete the title
     await db.run("DELETE FROM titles WHERE id = 'show-x'");
 
-    const offersRows = await db.select().from(offers).where(eq(offers.titleId, "show-x")).all();
+    const offersRows = await db
+      .select()
+      .from(offers)
+      .where(eq(offers.titleId, "show-x"))
+      .all();
     expect(offersRows).toHaveLength(0);
 
-    const epRows = await db.select().from(episodes).where(eq(episodes.titleId, "show-x")).all();
+    const epRows = await db
+      .select()
+      .from(episodes)
+      .where(eq(episodes.titleId, "show-x"))
+      .all();
     expect(epRows).toHaveLength(0);
 
-    const trackedRows = await db.select().from(tracked).where(eq(tracked.titleId, "show-x")).all();
+    const trackedRows = await db
+      .select()
+      .from(tracked)
+      .where(eq(tracked.titleId, "show-x"))
+      .all();
     expect(trackedRows).toHaveLength(0);
 
     const watchedTitleRows = await db
@@ -180,7 +209,11 @@ describe("FK onDelete behavior", () => {
       .all();
     expect(watchedTitleRows).toHaveLength(0);
 
-    const ratingRows = await db.select().from(ratings).where(eq(ratings.titleId, "show-x")).all();
+    const ratingRows = await db
+      .select()
+      .from(ratings)
+      .where(eq(ratings.titleId, "show-x"))
+      .all();
     expect(ratingRows).toHaveLength(0);
 
     const recRows = await db
@@ -194,7 +227,9 @@ describe("FK onDelete behavior", () => {
   test("deleting an episode cascades to watched_episodes and sets watch_history.episode_id to null", async () => {
     const userId = await createUser("alice", "hash");
 
-    await upsertTitles([makeParsedTitle({ id: "show-y", objectType: "SHOW", title: "Show Y" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "show-y", objectType: "SHOW", title: "Show Y" }),
+    ]);
     await upsertEpisodes([
       {
         title_id: "show-y",

@@ -1,9 +1,24 @@
 import { useSyncExternalStore, useEffect } from "react";
 
-export type Theme = "dark" | "light" | "oled" | "midnight" | "moss" | "plum" | "auto";
+export type Theme =
+  | "dark"
+  | "light"
+  | "oled"
+  | "midnight"
+  | "moss"
+  | "plum"
+  | "auto";
 
 const STORAGE_KEY = "remindarr-theme";
-const VALID_THEMES: Theme[] = ["dark", "light", "oled", "midnight", "moss", "plum", "auto"];
+const VALID_THEMES: Theme[] = [
+  "dark",
+  "light",
+  "oled",
+  "midnight",
+  "moss",
+  "plum",
+  "auto",
+];
 const BASE_THEMES: Theme[] = [...VALID_THEMES];
 
 export function isValidTheme(value: string | null): value is Theme {
@@ -13,7 +28,9 @@ export function isValidTheme(value: string | null): value is Theme {
 /** Resolves "auto" to dark or light based on prefers-color-scheme. */
 function resolveAutoTheme(): "dark" | "light" {
   if (typeof window === "undefined") return "dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
 }
 
 function applyTheme(theme: Theme) {
@@ -40,7 +57,9 @@ const listeners = new Set<() => void>();
 
 function subscribe(callback: () => void) {
   listeners.add(callback);
-  return () => { listeners.delete(callback); };
+  return () => {
+    listeners.delete(callback);
+  };
 }
 
 function setTheme(newTheme: Theme) {

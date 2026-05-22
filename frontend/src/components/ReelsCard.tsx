@@ -15,7 +15,11 @@ function formatEpisodeCode(ep: Episode): string {
 function formatAirDate(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const date = new Date(dateStr + "T00:00:00");
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function isToday(dateStr: string | null): boolean {
@@ -28,15 +32,27 @@ function getCountdownLabel(airDate: string | null): string | null {
   if (!airDate) return null;
   const today = new Date().toISOString().slice(0, 10);
   if (airDate === today) return null; // handled as live
-  const diff = Math.ceil((new Date(airDate + "T00:00:00").getTime() - new Date().setHours(0,0,0,0)) / 86400000);
+  const diff = Math.ceil(
+    (new Date(airDate + "T00:00:00").getTime() -
+      new Date().setHours(0, 0, 0, 0)) /
+      86400000,
+  );
   if (diff === 1) return "TOMORROW";
-  if (diff <= 6) return new Date(airDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).toUpperCase();
-  return new Date(airDate + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (diff <= 6)
+    return new Date(airDate + "T00:00:00")
+      .toLocaleDateString(undefined, { weekday: "short" })
+      .toUpperCase();
+  return new Date(airDate + "T00:00:00").toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 async function shareEpisode(episode: Episode) {
   const url = `${window.location.origin}/title/${episode.title_id}`;
-  const text = episode.name ? `${episode.show_title} — ${episode.name}` : episode.show_title;
+  const text = episode.name
+    ? `${episode.show_title} — ${episode.name}`
+    : episode.show_title;
   try {
     if (navigator.share) {
       await navigator.share({ title: text, url });
@@ -44,7 +60,9 @@ async function shareEpisode(episode: Episode) {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied!");
     }
-  } catch { /* user cancelled */ }
+  } catch {
+    /* user cancelled */
+  }
 }
 
 export function getBackgroundImageUrl(episode: Episode): string | null {
@@ -74,18 +92,30 @@ interface ReelsCardProps {
   isMovie?: boolean;
 }
 
-export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, total, undoInfo, isMovie }: ReelsCardProps) {
+export default function ReelsCard({
+  episode,
+  caughtUp,
+  onMarkWatched,
+  index,
+  total,
+  undoInfo,
+  isMovie,
+}: ReelsCardProps) {
   const bgUrl = getBackgroundImageUrl(episode);
   const airDateFormatted = formatAirDate(episode.air_date);
   const isLive = isToday(episode.air_date);
   const countdownLabel = getCountdownLabel(episode.air_date);
 
-  const providerName = episode.offers && episode.offers.length > 0
-    ? episode.offers[0].provider_name
-    : null;
+  const providerName =
+    episode.offers && episode.offers.length > 0
+      ? episode.offers[0].provider_name
+      : null;
 
   return (
-    <div className="dark-section snap-start snap-always w-full relative flex-shrink-0 overflow-hidden" style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))" }}>
+    <div
+      className="dark-section snap-start snap-always w-full relative flex-shrink-0 overflow-hidden"
+      style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))" }}
+    >
       {/* Background image */}
       {bgUrl ? (
         <img
@@ -101,11 +131,18 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
       )}
 
       {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-transparent to-transparent" style={{ height: 180 }} />
-      <div className="absolute bottom-0 left-0 right-0" style={{
-        height: 420,
-        background: "linear-gradient(0deg, rgba(9,9,11,1) 0%, rgba(9,9,11,0.93) 25%, rgba(9,9,11,0.65) 55%, transparent 100%)",
-      }} />
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-black/85 via-transparent to-transparent"
+        style={{ height: 180 }}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0"
+        style={{
+          height: 420,
+          background:
+            "linear-gradient(0deg, rgba(9,9,11,1) 0%, rgba(9,9,11,0.93) 25%, rgba(9,9,11,0.65) 55%, transparent 100%)",
+        }}
+      />
       {/* Right-edge vignette behind action rail */}
       <div className="absolute top-0 bottom-0 right-0 w-28 bg-gradient-to-l from-black/40 to-transparent" />
 
@@ -138,7 +175,10 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
 
       {/* Right-edge action rail */}
       {!caughtUp && (
-        <div className="absolute z-10 flex flex-col gap-3.5 items-center" style={{ right: 14, bottom: 240 }}>
+        <div
+          className="absolute z-10 flex flex-col gap-3.5 items-center"
+          style={{ right: 14, bottom: 240 }}
+        >
           <button
             onClick={() => shareEpisode(episode)}
             className="flex flex-col items-center gap-1"
@@ -146,19 +186,29 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
             <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-white/12 flex items-center justify-center text-white">
               <Share2 size={18} />
             </div>
-            <span className="text-[9px] text-white/75 font-semibold tracking-[0.05em]">Share</span>
+            <span className="text-[9px] text-white/75 font-semibold tracking-[0.05em]">
+              Share
+            </span>
           </button>
-          <Link to={`/title/${episode.title_id}`} className="flex flex-col items-center gap-1">
+          <Link
+            to={`/title/${episode.title_id}`}
+            className="flex flex-col items-center gap-1"
+          >
             <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-white/12 flex items-center justify-center text-white">
               <Info size={18} />
             </div>
-            <span className="text-[9px] text-white/75 font-semibold tracking-[0.05em]">Info</span>
+            <span className="text-[9px] text-white/75 font-semibold tracking-[0.05em]">
+              Info
+            </span>
           </Link>
         </div>
       )}
 
       {/* Reel index dots — right-center */}
-      <div className="absolute z-10 flex flex-col gap-1 items-center" style={{ right: 6, top: "50%", transform: "translateY(-50%)" }}>
+      <div
+        className="absolute z-10 flex flex-col gap-1 items-center"
+        style={{ right: 6, top: "50%", transform: "translateY(-50%)" }}
+      >
         {Array.from({ length: total }).map((_, i) => (
           <div
             key={i}
@@ -174,15 +224,23 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
 
       {/* Swipe hint on first card */}
       {index === 0 && !caughtUp && (
-        <div className="absolute z-10 text-right" style={{ right: 20, top: 160 }}>
+        <div
+          className="absolute z-10 text-right"
+          style={{ right: 20, top: 160 }}
+        >
           <div className="font-mono text-[10px] text-zinc-400 tracking-[0.12em] uppercase leading-relaxed">
-            ↑ SWIPE<br />FOR NEXT
+            ↑ SWIPE
+            <br />
+            FOR NEXT
           </div>
         </div>
       )}
 
       {/* Bottom content */}
-      <div className="absolute bottom-0 left-0 z-10 pb-24 sm:pb-6" style={{ right: caughtUp ? 0 : 84, padding: "0 20px 96px" }}>
+      <div
+        className="absolute bottom-0 left-0 z-10 pb-24 sm:pb-6"
+        style={{ right: caughtUp ? 0 : 84, padding: "0 20px 96px" }}
+      >
         {caughtUp ? (
           <div className="text-center py-8">
             <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full text-lg font-semibold mb-2">
@@ -208,16 +266,24 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
             </Link>
 
             {/* Episode name — large */}
-            <Link to={isMovie ? `/title/${episode.title_id}` : `/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}>
+            <Link
+              to={
+                isMovie
+                  ? `/title/${episode.title_id}`
+                  : `/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`
+              }
+            >
               <h2 className="text-[30px] font-extrabold tracking-[-0.02em] leading-[1.02] text-white mb-2.5 drop-shadow-lg hover:text-amber-300 transition-colors select-text">
-                {episode.name ?? (isMovie ? episode.show_title : formatEpisodeCode(episode))}
+                {episode.name ??
+                  (isMovie ? episode.show_title : formatEpisodeCode(episode))}
               </h2>
             </Link>
 
             {/* Meta line */}
             {airDateFormatted && (
               <div className="font-mono text-[12px] text-zinc-300 mb-3.5 drop-shadow">
-                {airDateFormatted}{providerName ? ` · ${providerName}` : ""}
+                {airDateFormatted}
+                {providerName ? ` · ${providerName}` : ""}
               </div>
             )}
 
@@ -233,15 +299,23 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
               const total = episode.total_episodes ?? 0;
               const watched = episode.watched_episodes_count ?? 0;
               if (total <= 0) return null;
-              const pct = Math.max(0, Math.min(100, Math.round((watched / total) * 100)));
+              const pct = Math.max(
+                0,
+                Math.min(100, Math.round((watched / total) * 100)),
+              );
               return (
                 <div className="mb-4">
                   <div className="flex justify-between mb-1.5 font-mono text-[10px] text-zinc-500 tracking-[0.1em]">
                     <span>{pct}% CAUGHT UP</span>
-                    <span>{watched} OF {total}</span>
+                    <span>
+                      {watched} OF {total}
+                    </span>
                   </div>
                   <div className="h-[3px] bg-white/[0.15] rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                    <div
+                      className="h-full bg-amber-400 rounded-full"
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
               );
@@ -249,7 +323,12 @@ export default function ReelsCard({ episode, caughtUp, onMarkWatched, index, tot
 
             {/* Watch on provider button */}
             <div className="mb-2">
-              <WatchButtonGroup offers={episode.offers ?? []} variant="dropdown" size="lg" fullWidth />
+              <WatchButtonGroup
+                offers={episode.offers ?? []}
+                variant="dropdown"
+                size="lg"
+                fullWidth
+              />
             </div>
 
             {/* Undo/rating bar for previously marked episode */}

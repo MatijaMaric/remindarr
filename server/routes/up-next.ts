@@ -52,7 +52,13 @@ app.get("/", zValidator("query", querySchema), async (c) => {
   // Group by titleId so we can determine in-progress vs newly-aired.
   const byTitle = new Map<
     string,
-    { watchedCount: number; totalEpisodes: number; title: string; posterUrl: string | null; rows: typeof unwatchedRows }
+    {
+      watchedCount: number;
+      totalEpisodes: number;
+      title: string;
+      posterUrl: string | null;
+      rows: typeof unwatchedRows;
+    }
   >();
 
   for (const row of unwatchedRows) {
@@ -93,7 +99,11 @@ app.get("/", zValidator("query", querySchema), async (c) => {
     ...inProgressTitleIds.slice(0, limit),
     ...newlyAiredTitleIds.slice(0, limit),
   ];
-  const nextEpMap = await getNextUnwatchedEpisodesForTitles(user.id, candidateTitleIds, timezone);
+  const nextEpMap = await getNextUnwatchedEpisodesForTitles(
+    user.id,
+    candidateTitleIds,
+    timezone,
+  );
 
   // 5. Build result items.
   const items: UpNextItem[] = [];

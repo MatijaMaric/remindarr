@@ -13,13 +13,20 @@ interface Props {
   variant?: "button" | "overlay";
 }
 
-export default function VisibilityButton({ titleId, isPublic, isTracked, onToggle, variant = "button" }: Props) {
+export default function VisibilityButton({
+  titleId,
+  isPublic,
+  isTracked,
+  onToggle,
+  variant = "button",
+}: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [publicState, setPublicState] = useState(isPublic);
 
   const visibilityMutation = useMutation({
-    mutationFn: ({ newState }: { newState: boolean }) => api.updateTitleVisibility(titleId, newState),
+    mutationFn: ({ newState }: { newState: boolean }) =>
+      api.updateTitleVisibility(titleId, newState),
     onMutate: ({ newState }) => setPublicState(newState),
     onSuccess: (_data, { newState }) => {
       onToggle?.(newState);
@@ -52,7 +59,11 @@ export default function VisibilityButton({ titleId, isPublic, isTracked, onToggl
             ? "bg-zinc-900/70 text-zinc-300 hover:bg-zinc-900/90 hover:text-white"
             : "bg-red-500/80 text-white hover:bg-red-500"
         } disabled:opacity-50`}
-        title={publicState ? "Visible on profile — click to hide" : "Hidden from profile — click to show"}
+        title={
+          publicState
+            ? "Visible on profile — click to hide"
+            : "Hidden from profile — click to show"
+        }
       >
         <Icon className="size-4" />
       </button>
@@ -68,7 +79,11 @@ export default function VisibilityButton({ titleId, isPublic, isTracked, onToggl
           ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
           : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
       } disabled:opacity-50`}
-      title={publicState ? "Visible on profile — click to hide" : "Hidden from profile — click to show"}
+      title={
+        publicState
+          ? "Visible on profile — click to hide"
+          : "Hidden from profile — click to show"
+      }
     >
       <Icon className="size-3.5" />
       {publicState ? "Public" : "Hidden"}

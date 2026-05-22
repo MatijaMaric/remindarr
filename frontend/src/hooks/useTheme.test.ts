@@ -6,12 +6,20 @@ describe("useTheme", () => {
   beforeEach(() => {
     localStorage.removeItem(STORAGE_KEY);
     // Remove all theme classes
-    document.documentElement.classList.remove("theme-dark", "theme-light", "theme-oled");
+    document.documentElement.classList.remove(
+      "theme-dark",
+      "theme-light",
+      "theme-oled",
+    );
   });
 
   afterEach(() => {
     localStorage.removeItem(STORAGE_KEY);
-    document.documentElement.classList.remove("theme-dark", "theme-light", "theme-oled");
+    document.documentElement.classList.remove(
+      "theme-dark",
+      "theme-light",
+      "theme-oled",
+    );
   });
 
   it("exports useTheme as a function", async () => {

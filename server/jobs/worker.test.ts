@@ -1,17 +1,34 @@
-import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  mock,
+  spyOn,
+} from "bun:test";
 import Sentry from "../sentry";
 import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { enqueueJob, registerCron, getCronExpression, getJobStats } from "./queue";
+import {
+  enqueueJob,
+  registerCron,
+  getCronExpression,
+  getJobStats,
+} from "./queue";
 import { registerHandler, processJobs, stopWorker } from "./worker";
 
-const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(
-  ((_slug: string, fn: () => unknown, _config?: unknown) => {
-    return fn();
-  }) as typeof Sentry.withMonitor
-);
+const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(((
+  _slug: string,
+  fn: () => unknown,
+  _config?: unknown,
+) => {
+  return fn();
+}) as typeof Sentry.withMonitor);
 
-const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id");
+const captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue(
+  "test-event-id",
+);
 
 beforeEach(() => {
   setupTestDb();
@@ -53,7 +70,7 @@ describe("worker Sentry monitoring", () => {
       {
         schedule: { type: "crontab", value: "*/10 * * * *" },
         maxRuntime: 30,
-      }
+      },
     );
   });
 
@@ -108,7 +125,9 @@ describe("worker handler timeout", () => {
 describe("worker error logging includes stack traces", () => {
   it("logs raw err object so the stack is preserved", async () => {
     // Child loggers write to console.error for error/warn level
-    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(
+      () => {},
+    );
 
     const jobError = new Error("stack trace test");
     registerHandler("stack-trace-job", async () => {
@@ -120,8 +139,17 @@ describe("worker error logging includes stack traces", () => {
 
     expect(consoleErrorSpy).toHaveBeenCalled();
     const errorCalls = consoleErrorSpy.mock.calls
-      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
-      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
+      .map((args) => {
+        try {
+          return JSON.parse(args[0] as string) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (obj): obj is Record<string, unknown> =>
+          obj !== null && obj.level === "error",
+      );
 
     const failedLog = errorCalls.find((obj) => obj.msg === "Failed job");
     expect(failedLog).toBeDefined();

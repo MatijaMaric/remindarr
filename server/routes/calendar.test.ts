@@ -78,14 +78,25 @@ describe("GET /calendar", () => {
 
   it("filters by object type", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", releaseDate: "2026-03-15" }),
-      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "A Show", releaseDate: "2026-03-15" }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        releaseDate: "2026-03-15",
+      }),
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        title: "A Show",
+        releaseDate: "2026-03-15",
+      }),
     ]);
 
     const res = await app.request("/calendar?month=2026-03&type=SHOW");
     expect(res.status).toBe(200);
     const body = await res.json();
-    const movieTitles = body.titles.filter((t: any) => t.object_type === "MOVIE");
+    const movieTitles = body.titles.filter(
+      (t: any) => t.object_type === "MOVIE",
+    );
     expect(movieTitles).toHaveLength(0);
   });
 
@@ -94,13 +105,25 @@ describe("GET /calendar", () => {
       makeParsedTitle({
         id: "movie-1",
         releaseDate: "2026-03-15",
-        offers: [makeParsedOffer({ titleId: "movie-1", providerId: 8, providerName: "Netflix" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-1",
+            providerId: 8,
+            providerName: "Netflix",
+          }),
+        ],
       }),
       makeParsedTitle({
         id: "movie-2",
         title: "Disney Movie",
         releaseDate: "2026-03-15",
-        offers: [makeParsedOffer({ titleId: "movie-2", providerId: 337, providerName: "Disney Plus" })],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-2",
+            providerId: 337,
+            providerName: "Disney Plus",
+          }),
+        ],
       }),
     ]);
 
@@ -156,7 +179,9 @@ describe("GET /calendar", () => {
     });
 
     it("happy-path: month + type + provider", async () => {
-      const res = await app.request("/calendar?month=2026-05&type=MOVIE&provider=8");
+      const res = await app.request(
+        "/calendar?month=2026-05&type=MOVIE&provider=8",
+      );
       expect(res.status).toBe(200);
     });
   });

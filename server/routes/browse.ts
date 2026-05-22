@@ -18,7 +18,12 @@ import {
   parseTvDetails,
   type ParsedTitle,
 } from "../tmdb/parser";
-import { getTrackedTitleIds, upsertTitles, getSubscribedProviderIds, getTitlesByTmdbIds } from "../db/repository";
+import {
+  getTrackedTitleIds,
+  upsertTitles,
+  getSubscribedProviderIds,
+  getTitlesByTmdbIds,
+} from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { syncFailureTotal, browseCacheTotal } from "../metrics";
@@ -73,20 +78,25 @@ const browseQuerySchema = z.object({
   year_min: z.coerce.number().int().optional(),
   year_max: z.coerce.number().int().optional(),
   min_rating: z.coerce.number().min(0).max(10).optional(),
-  onlyMine: z.literal("true").optional().transform((v) => v === "true"),
+  onlyMine: z
+    .literal("true")
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-
 interface CategoryDiscoverOptions {
   page: number;
   filters: DiscoverFilters;
 }
 
-function fetchMoviesByCategory(category: Category, opts: CategoryDiscoverOptions) {
+function fetchMoviesByCategory(
+  category: Category,
+  opts: CategoryDiscoverOptions,
+) {
   const { page, filters } = opts;
   switch (category) {
     case "popular":
@@ -104,7 +114,12 @@ function fetchMoviesByCategory(category: Category, opts: CategoryDiscoverOptions
       });
     }
     case "top_rated":
-      return discoverMovies({ sortBy: "vote_average.desc", voteCountGte: "200", page, filters });
+      return discoverMovies({
+        sortBy: "vote_average.desc",
+        voteCountGte: "200",
+        page,
+        filters,
+      });
   }
 }
 
@@ -126,17 +141,37 @@ function fetchTvByCategory(category: Category, opts: CategoryDiscoverOptions) {
       });
     }
     case "top_rated":
-      return discoverTv({ sortBy: "vote_average.desc", voteCountGte: "200", page, filters });
+      return discoverTv({
+        sortBy: "vote_average.desc",
+        voteCountGte: "200",
+        page,
+        filters,
+      });
   }
 }
 
 const app = new Hono<AppEnv>();
 
 app.get("/", zValidator("query", browseQuerySchema), async (c) => {
-  const { category, type, page, genre: genreParam, provider: providerParam, language: languageParam, year_min: yearMin, year_max: yearMax, min_rating: minRating, onlyMine } = c.req.valid("query");
+  const {
+    category,
+    type,
+    page,
+    genre: genreParam,
+    provider: providerParam,
+    language: languageParam,
+    year_min: yearMin,
+    year_max: yearMax,
+    min_rating: minRating,
+    onlyMine,
+  } = c.req.valid("query");
   const genreNames = genreParam ? genreParam.split(",").filter(Boolean) : [];
-  let providerValues = providerParam ? providerParam.split(",").filter(Boolean) : [];
-  const languageValues = languageParam ? languageParam.split(",").filter(Boolean) : [];
+  let providerValues = providerParam
+    ? providerParam.split(",").filter(Boolean)
+    : [];
+  const languageValues = languageParam
+    ? languageParam.split(",").filter(Boolean)
+    : [];
   const typeValues = type ? type.split(",").filter(Boolean) : [];
 
   const user = c.get("user");
@@ -148,9 +183,10 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
         return ok(c, { titles: [], page, totalPages: 0, totalResults: 0 });
       }
       const subscribedStrings = subscribedIds.map(String);
-      providerValues = providerValues.length > 0
-        ? providerValues.filter((p) => subscribedStrings.includes(p))
-        : subscribedStrings;
+      providerValues =
+        providerValues.length > 0
+          ? providerValues.filter((p) => subscribedStrings.includes(p))
+          : subscribedStrings;
       if (providerValues.length === 0) {
         return ok(c, { titles: [], page, totalPages: 0, totalResults: 0 });
       }
@@ -170,7 +206,12 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       onlyMine,
     });
 
-    const cachedPayload = await getCache().get<{ titles: ParsedTitle[]; page: number; totalPages: number; totalResults: number }>(browseCacheKey);
+    const cachedPayload = await getCache().get<{
+      titles: ParsedTitle[];
+      page: number;
+      totalPages: number;
+      totalResults: number;
+    }>(browseCacheKey);
     if (cachedPayload !== null) {
       browseCacheTotal.inc({ result: "hit" });
       Sentry.addBreadcrumb({
@@ -179,8 +220,13 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
         level: "info",
         data: { cacheKey: browseCacheKey },
       });
-      const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
-      const titlesWithTracked = cachedPayload.titles.map((t) => ({ ...t, isTracked: trackedIds.has(t.id) }));
+      const trackedIds = user
+        ? await getTrackedTitleIds(user.id)
+        : new Set<string>();
+      const titlesWithTracked = cachedPayload.titles.map((t) => ({
+        ...t,
+        isTracked: trackedIds.has(t.id),
+      }));
       setPublicCacheIfAnon(c, 1800);
       return ok(c, { ...cachedPayload, titles: titlesWithTracked });
     }
@@ -199,13 +245,17 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       const genreIds = genreNames.flatMap((name) =>
         expandGenreIds(name, movieGenreMap, tvGenreMap),
       );
-      if (genreIds.length > 0) filters.withGenres = genreIds.map(String).join("|");
+      if (genreIds.length > 0)
+        filters.withGenres = genreIds.map(String).join("|");
     }
-    if (providerValues.length > 0) filters.withProviders = providerValues.join("|");
-    if (languageValues.length > 0) filters.withOriginalLanguage = languageValues[0];
+    if (providerValues.length > 0)
+      filters.withProviders = providerValues.join("|");
+    if (languageValues.length > 0)
+      filters.withOriginalLanguage = languageValues[0];
     if (yearMin != null && Number.isFinite(yearMin)) filters.yearMin = yearMin;
     if (yearMax != null && Number.isFinite(yearMax)) filters.yearMax = yearMax;
-    if (minRating != null && Number.isFinite(minRating)) filters.voteAverageGte = minRating;
+    if (minRating != null && Number.isFinite(minRating))
+      filters.voteAverageGte = minRating;
 
     const discoverOpts: CategoryDiscoverOptions = { page, filters };
 
@@ -217,7 +267,10 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
     const fetchShows = typeValues.length === 0 || typeValues.includes("SHOW");
 
     if (fetchMovies && !fetchShows) {
-      const res = await fetchMoviesByCategory(category as Category, discoverOpts);
+      const res = await fetchMoviesByCategory(
+        category as Category,
+        discoverOpts,
+      );
       basicTitles = res.results.map((m) => parseDiscoverMovie(m, allGenres));
       totalPages = Math.min(res.total_pages, 500);
       totalResults = res.total_results;
@@ -231,18 +284,28 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
         fetchMoviesByCategory(category as Category, discoverOpts),
         fetchTvByCategory(category as Category, discoverOpts),
       ]);
-      const movies = movieRes.results.map((m) => parseDiscoverMovie(m, allGenres));
+      const movies = movieRes.results.map((m) =>
+        parseDiscoverMovie(m, allGenres),
+      );
       const tvShows = tvRes.results.map((t) => parseDiscoverTv(t, allGenres));
       basicTitles = [...movies, ...tvShows];
-      totalPages = Math.min(Math.max(movieRes.total_pages, tvRes.total_pages), 500);
+      totalPages = Math.min(
+        Math.max(movieRes.total_pages, tvRes.total_pages),
+        500,
+      );
       totalResults = movieRes.total_results + tvRes.total_results;
     }
 
     // Batch-read known titles from DB to skip TMDB calls for already-stored titles
     const dbTitles = await getTitlesByTmdbIds(
-      basicTitles.map((t) => ({ tmdbId: parseInt(t.tmdbId || "0", 10), objectType: t.objectType })),
+      basicTitles.map((t) => ({
+        tmdbId: parseInt(t.tmdbId || "0", 10),
+        objectType: t.objectType,
+      })),
     );
-    const dbByKey = new Map(dbTitles.map((t) => [`${t.objectType}:${t.tmdbId}`, t]));
+    const dbByKey = new Map(
+      dbTitles.map((t) => [`${t.objectType}:${t.tmdbId}`, t]),
+    );
 
     // Fetch full details with watch providers for each result — capped at 5
     // concurrent requests to avoid bursting TMDB's rate limit. DB-stored titles
@@ -266,17 +329,22 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
               try {
                 const tmdbId = parseInt(t.tmdbId || "0", 10);
                 if (t.objectType === "MOVIE") {
-                  return parseMovieDetails(await cachedFetchMovieDetails(tmdbId));
+                  return parseMovieDetails(
+                    await cachedFetchMovieDetails(tmdbId),
+                  );
                 } else {
                   return parseTvDetails(await cachedFetchTvDetails(tmdbId));
                 }
               } catch (fanoutErr) {
-                log.warn("TMDB enrichment failed for title", { titleId: t.tmdbId, err: fanoutErr });
+                log.warn("TMDB enrichment failed for title", {
+                  titleId: t.tmdbId,
+                  err: fanoutErr,
+                });
                 syncFailureTotal.inc({ source: "tmdb" });
                 return t;
               }
-            })
-          )
+            }),
+          ),
         ),
     );
 
@@ -295,14 +363,22 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
     const titlesWithOffers = titles.filter((t) => t.offers.length > 0);
     if (titlesWithOffers.length > 0) {
       upsertTitles(titlesWithOffers).catch((e) => {
-        log.error("Failed to persist browse titles", { error: (e as Error).message });
+        log.error("Failed to persist browse titles", {
+          error: (e as Error).message,
+        });
       });
     }
 
     // Cache the user-agnostic payload (isTracked is applied after cache read)
-    await getCache().set(browseCacheKey, { titles, page, totalPages, totalResults }, CONFIG.CACHE_TTL_BROWSE);
+    await getCache().set(
+      browseCacheKey,
+      { titles, page, totalPages, totalResults },
+      CONFIG.CACHE_TTL_BROWSE,
+    );
 
-    const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
+    const trackedIds = user
+      ? await getTrackedTitleIds(user.id)
+      : new Set<string>();
     const titlesWithTracked = titles.map((t) => ({
       ...t,
       isTracked: trackedIds.has(t.id),

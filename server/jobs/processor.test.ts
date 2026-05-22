@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { getDb, jobs } from "../db/schema";
 import { eq } from "drizzle-orm";
@@ -7,19 +15,35 @@ import Sentry from "../sentry";
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 import * as syncTitlesModule from "../tmdb/sync-titles";
-const mockFetchNewReleases = spyOn(syncTitlesModule, "fetchNewReleases").mockResolvedValue([]);
+const mockFetchNewReleases = spyOn(
+  syncTitlesModule,
+  "fetchNewReleases",
+).mockResolvedValue([]);
 
 import * as repository from "../db/repository";
 const mockUpsertTitles = spyOn(repository, "upsertTitles").mockResolvedValue(0);
-const mockDeleteExpiredSessions = spyOn(repository, "deleteExpiredSessions").mockResolvedValue();
+const mockDeleteExpiredSessions = spyOn(
+  repository,
+  "deleteExpiredSessions",
+).mockResolvedValue();
 
 import * as syncModule from "../tmdb/sync";
-const mockSyncEpisodes = spyOn(syncModule, "syncEpisodes").mockResolvedValue({ synced: 0, shows: 0 });
-const mockSyncEpisodesForShow = spyOn(syncModule, "syncEpisodesForShow").mockResolvedValue(0);
+const mockSyncEpisodes = spyOn(syncModule, "syncEpisodes").mockResolvedValue({
+  synced: 0,
+  shows: 0,
+});
+const mockSyncEpisodesForShow = spyOn(
+  syncModule,
+  "syncEpisodesForShow",
+).mockResolvedValue(0);
 
 import { CONFIG } from "../config";
 
-import { processPendingJobs, enqueueCronJob, cleanupOldJobs } from "./processor";
+import {
+  processPendingJobs,
+  enqueueCronJob,
+  cleanupOldJobs,
+} from "./processor";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
@@ -45,7 +69,11 @@ afterAll(() => {
   mockDeleteExpiredSessions.mockRestore();
 });
 
-async function insertJob(name: string, data?: Record<string, unknown>, status = "pending") {
+async function insertJob(
+  name: string,
+  data?: Record<string, unknown>,
+  status = "pending",
+) {
   const db = getDb();
   await db.insert(jobs).values({
     name,
@@ -109,7 +137,11 @@ describe("processPendingJobs", () => {
     const count = await processPendingJobs();
 
     expect(count).toBe(1);
-    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith("tv-95557", "95557", "Invincible");
+    expect(mockSyncEpisodesForShow).toHaveBeenCalledWith(
+      "tv-95557",
+      "95557",
+      "Invincible",
+    );
 
     const allJobs = await getAllJobs();
     expect(allJobs[0].status).toBe("completed");
@@ -209,7 +241,9 @@ describe("processPendingJobs", () => {
     expect(entry.msg).toContain("attempts=3/3");
     expect(captureSpy).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ fingerprint: ["job-permanent-failure", "sync-titles"] }),
+      expect.objectContaining({
+        fingerprint: ["job-permanent-failure", "sync-titles"],
+      }),
     );
 
     consoleSpy.mockRestore();
@@ -259,7 +293,10 @@ describe("processPendingJobs", () => {
 
     await insertJob("sync-titles");
 
-    const [c1, c2] = await Promise.all([processPendingJobs(), processPendingJobs()]);
+    const [c1, c2] = await Promise.all([
+      processPendingJobs(),
+      processPendingJobs(),
+    ]);
 
     expect(callCount).toBe(1);
     expect(c1 + c2).toBe(1);
@@ -308,7 +345,9 @@ describe("enqueueCronJob", () => {
 describe("cleanupOldJobs", () => {
   it("removes old completed jobs", async () => {
     const db = getDb();
-    const oldDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+    const oldDate = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000,
+    ).toISOString();
     await db.insert(jobs).values({
       name: "sync-titles",
       status: "completed",
@@ -342,19 +381,34 @@ describe("cleanupOldJobs", () => {
 describe("processor error logging includes stack traces", () => {
   it("logs raw err object on retry so stack is preserved", async () => {
     // Spy on console.error — the logger routes error/warn there as JSON
-    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(
+      () => {},
+    );
 
-    mockFetchNewReleases.mockRejectedValueOnce(new Error("TMDB timeout with stack"));
+    mockFetchNewReleases.mockRejectedValueOnce(
+      new Error("TMDB timeout with stack"),
+    );
 
     await insertJob("sync-titles");
     await processPendingJobs();
 
     expect(consoleErrorSpy).toHaveBeenCalled();
     const warnCalls = consoleErrorSpy.mock.calls
-      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
-      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "warn");
+      .map((args) => {
+        try {
+          return JSON.parse(args[0] as string) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (obj): obj is Record<string, unknown> =>
+          obj !== null && obj.level === "warn",
+      );
 
-    const retryLog = warnCalls.find((obj) => obj.msg === "Job failed, will retry");
+    const retryLog = warnCalls.find(
+      (obj) => obj.msg === "Job failed, will retry",
+    );
     expect(retryLog).toBeDefined();
     // stack must be a top-level string field (not nested inside err)
     expect(typeof retryLog!.stack).toBe("string");
@@ -364,7 +418,9 @@ describe("processor error logging includes stack traces", () => {
   });
 
   it("logs raw err object on permanent failure so stack is preserved", async () => {
-    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(
+      () => {},
+    );
 
     mockFetchNewReleases.mockRejectedValueOnce(new Error("Permanent failure"));
 
@@ -380,10 +436,22 @@ describe("processor error logging includes stack traces", () => {
     await processPendingJobs();
 
     const errorCalls = consoleErrorSpy.mock.calls
-      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
-      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
+      .map((args) => {
+        try {
+          return JSON.parse(args[0] as string) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (obj): obj is Record<string, unknown> =>
+          obj !== null && obj.level === "error",
+      );
 
-    const permanentLog = errorCalls.find((obj) => typeof obj.msg === "string" && obj.msg.includes("failed permanently"));
+    const permanentLog = errorCalls.find(
+      (obj) =>
+        typeof obj.msg === "string" && obj.msg.includes("failed permanently"),
+    );
     expect(permanentLog).toBeDefined();
     // stack must be a top-level string field (not nested inside err)
     expect(typeof permanentLog!.stack).toBe("string");
@@ -395,14 +463,22 @@ describe("processor error logging includes stack traces", () => {
 
 describe("processor Sentry capture on permanent failure", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let captureExceptionSpy: ReturnType<typeof spyOn<typeof Sentry, "captureException">>;
+  let captureExceptionSpy: ReturnType<
+    typeof spyOn<typeof Sentry, "captureException">
+  >;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let addBreadcrumbSpy: ReturnType<typeof spyOn<typeof Sentry, "addBreadcrumb">>;
+  let addBreadcrumbSpy: ReturnType<
+    typeof spyOn<typeof Sentry, "addBreadcrumb">
+  >;
 
   beforeEach(() => {
-    captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue("test-event-id" as any);
+    captureExceptionSpy = spyOn(Sentry, "captureException").mockReturnValue(
+      "test-event-id" as any,
+    );
     captureExceptionSpy.mockClear();
-    addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(() => {});
+    addBreadcrumbSpy = spyOn(Sentry, "addBreadcrumb").mockImplementation(
+      () => {},
+    );
     addBreadcrumbSpy.mockClear();
   });
 
@@ -412,7 +488,9 @@ describe("processor Sentry capture on permanent failure", () => {
   });
 
   it("captures permanent failures to Sentry with stable fingerprint and tags", async () => {
-    mockFetchNewReleases.mockRejectedValueOnce(new Error("permanent sync error"));
+    mockFetchNewReleases.mockRejectedValueOnce(
+      new Error("permanent sync error"),
+    );
     const db = getDb();
     await db.insert(jobs).values({
       name: "sync-titles",
@@ -446,24 +524,33 @@ describe("processor Sentry capture on permanent failure", () => {
   });
 
   it("adds a breadcrumb on retry without calling captureException", async () => {
-    mockFetchNewReleases.mockRejectedValueOnce(new Error("transient for breadcrumb"));
+    mockFetchNewReleases.mockRejectedValueOnce(
+      new Error("transient for breadcrumb"),
+    );
     await insertJob("sync-titles"); // attempts=0, maxAttempts=3
     await processPendingJobs();
 
     expect(captureExceptionSpy).not.toHaveBeenCalled();
     const retryBreadcrumb = addBreadcrumbSpy.mock.calls.find(
-      (args) => (args[0] as { message?: string }).message === "Job retry scheduled",
+      (args) =>
+        (args[0] as { message?: string }).message === "Job retry scheduled",
     );
     expect(retryBreadcrumb).toBeDefined();
-    const bc = retryBreadcrumb![0] as { data?: { name?: string; attempt?: string } };
+    const bc = retryBreadcrumb![0] as {
+      data?: { name?: string; attempt?: string };
+    };
     expect(bc.data?.name).toBe("sync-titles");
     expect(bc.data?.attempt).toBe("1");
   });
 
   it("surfaces job payload and runAt in permanent failure Sentry extra and log", async () => {
-    const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(
+      () => {},
+    );
     consoleErrorSpy.mockClear(); // discard calls leaked from prior test files (Bun cross-file spy leak on Linux CI)
-    mockFetchNewReleases.mockRejectedValueOnce(new Error("payload test failure"));
+    mockFetchNewReleases.mockRejectedValueOnce(
+      new Error("payload test failure"),
+    );
     const db = getDb();
     await db.insert(jobs).values({
       name: "sync-titles",
@@ -478,15 +565,29 @@ describe("processor Sentry capture on permanent failure", () => {
 
     // Sentry extra has data and runAt
     expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
-    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1] as { extra?: Record<string, unknown> };
+    const capturedCtx = captureExceptionSpy.mock.calls[0]?.[1] as {
+      extra?: Record<string, unknown>;
+    };
     expect(capturedCtx?.extra?.data).toBe('{"marker":"p801"}');
     expect(typeof capturedCtx?.extra?.runAt).toBe("string");
 
     // JSON log line has data and runAt
     const errorCalls = consoleErrorSpy.mock.calls
-      .map((args) => { try { return JSON.parse(args[0] as string) as Record<string, unknown>; } catch { return null; } })
-      .filter((obj): obj is Record<string, unknown> => obj !== null && obj.level === "error");
-    const permanentLog = errorCalls.find((obj) => typeof obj.msg === "string" && obj.msg.includes("failed permanently"));
+      .map((args) => {
+        try {
+          return JSON.parse(args[0] as string) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (obj): obj is Record<string, unknown> =>
+          obj !== null && obj.level === "error",
+      );
+    const permanentLog = errorCalls.find(
+      (obj) =>
+        typeof obj.msg === "string" && obj.msg.includes("failed permanently"),
+    );
     expect(permanentLog).toBeDefined();
     expect(permanentLog!.data).toBe('{"marker":"p801"}');
     expect(typeof permanentLog!.runAt).toBe("string");

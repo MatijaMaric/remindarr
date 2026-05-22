@@ -62,7 +62,9 @@ function SuggestionsRowInner({ titleId, type }: SuggestionsRowProps) {
                 {title.title}
               </p>
               {title.releaseYear && (
-                <p className="font-mono text-[10px] text-zinc-500">{title.releaseYear}</p>
+                <p className="font-mono text-[10px] text-zinc-500">
+                  {title.releaseYear}
+                </p>
               )}
             </Link>
           ))}

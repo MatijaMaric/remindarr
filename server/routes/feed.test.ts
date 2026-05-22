@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { createUser, createSession, getSessionWithUser, upsertTitles, trackTitle } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+  upsertTitles,
+  trackTitle,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import feedApp from "./feed";
 import type { AppEnv } from "../types";
@@ -76,7 +82,7 @@ describe("GET /feed/calendar.ics", () => {
       headers: authHeaders(),
     });
     expect(tokenRes.status).toBe(200);
-    const { token } = await tokenRes.json() as { token: string };
+    const { token } = (await tokenRes.json()) as { token: string };
     expect(typeof token).toBe("string");
     expect(token.length).toBeGreaterThan(0);
 
@@ -97,19 +103,21 @@ describe("GET /feed/calendar.ics", () => {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token } = await tokenRes.json() as { token: string };
+    const { token } = (await tokenRes.json()) as { token: string };
 
     // Create and track a future movie
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 10);
     const releaseDate = futureDate.toISOString().slice(0, 10);
 
-    await upsertTitles([makeParsedTitle({
-      id: "movie-future",
-      objectType: "MOVIE",
-      title: "Future Movie",
-      releaseDate,
-    })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-future",
+        objectType: "MOVIE",
+        title: "Future Movie",
+        releaseDate,
+      }),
+    ]);
     await trackTitle("movie-future", userId);
 
     const feedRes = await app.request(`/feed/calendar.ics?token=${token}`);
@@ -128,7 +136,7 @@ describe("GET /feed/token", () => {
   it("returns null token before any regeneration", async () => {
     const res = await app.request("/feed/token", { headers: authHeaders() });
     expect(res.status).toBe(200);
-    const body = await res.json() as { token: string | null };
+    const body = (await res.json()) as { token: string | null };
     expect(body.token).toBeNull();
   });
 
@@ -139,7 +147,7 @@ describe("GET /feed/token", () => {
     });
     const res = await app.request("/feed/token", { headers: authHeaders() });
     expect(res.status).toBe(200);
-    const body = await res.json() as { token: string };
+    const body = (await res.json()) as { token: string };
     expect(typeof body.token).toBe("string");
   });
 });
@@ -156,7 +164,7 @@ describe("POST /feed/token/regenerate", () => {
       headers: authHeaders(),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as { token: string };
+    const body = (await res.json()) as { token: string };
     expect(typeof body.token).toBe("string");
     expect(body.token.length).toBeGreaterThan(0);
   });
@@ -166,13 +174,13 @@ describe("POST /feed/token/regenerate", () => {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token: token1 } = await res1.json() as { token: string };
+    const { token: token1 } = (await res1.json()) as { token: string };
 
     const res2 = await app.request("/feed/token/regenerate", {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token: token2 } = await res2.json() as { token: string };
+    const { token: token2 } = (await res2.json()) as { token: string };
 
     expect(token1).not.toBe(token2);
 
@@ -202,18 +210,20 @@ describe("GET /feed/episodes.ics", () => {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token } = await tokenRes.json() as { token: string };
+    const { token } = (await tokenRes.json()) as { token: string };
 
     // Track a future movie (should NOT appear in episodes feed)
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 10);
     const releaseDate = futureDate.toISOString().slice(0, 10);
-    await upsertTitles([makeParsedTitle({
-      id: "movie-ep-test",
-      objectType: "MOVIE",
-      title: "Movie For Episode Test",
-      releaseDate,
-    })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-ep-test",
+        objectType: "MOVIE",
+        title: "Movie For Episode Test",
+        releaseDate,
+      }),
+    ]);
     await trackTitle("movie-ep-test", userId);
 
     const feedRes = await app.request(`/feed/episodes.ics?token=${token}`);
@@ -243,18 +253,20 @@ describe("GET /feed/releases.ics", () => {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token } = await tokenRes.json() as { token: string };
+    const { token } = (await tokenRes.json()) as { token: string };
 
     // Track a future movie
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 10);
     const releaseDate = futureDate.toISOString().slice(0, 10);
-    await upsertTitles([makeParsedTitle({
-      id: "movie-releases-test",
-      objectType: "MOVIE",
-      title: "Future Release Movie",
-      releaseDate,
-    })]);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-releases-test",
+        objectType: "MOVIE",
+        title: "Future Release Movie",
+        releaseDate,
+      }),
+    ]);
     await trackTitle("movie-releases-test", userId);
 
     const feedRes = await app.request(`/feed/releases.ics?token=${token}`);
@@ -285,7 +297,7 @@ describe("GET /feed/streaming.ics", () => {
       method: "POST",
       headers: authHeaders(),
     });
-    const { token } = await tokenRes.json() as { token: string };
+    const { token } = (await tokenRes.json()) as { token: string };
 
     const feedRes = await app.request(`/feed/streaming.ics?token=${token}`);
     expect(feedRes.status).toBe(200);

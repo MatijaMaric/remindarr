@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -8,14 +22,17 @@ import * as AuthContextModule from "../context/AuthContext";
 import * as useIsMobileModule from "../hooks/useIsMobile";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 // Initialize i18n before anything else (avoids mock.module leak)
 import "../i18n";
 
 // Must import after spies are set up in beforeEach
-const { default: CalendarPage, SlideOverPanel } = await import("./CalendarPage");
+const { default: CalendarPage, SlideOverPanel } =
+  await import("./CalendarPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
@@ -26,7 +43,9 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
-let useIsMobileSpy: ReturnType<typeof spyOn<typeof useIsMobileModule, "useIsMobile">>;
+let useIsMobileSpy: ReturnType<
+  typeof spyOn<typeof useIsMobileModule, "useIsMobile">
+>;
 let apiSpies: ReturnType<typeof spyOn>[];
 let mockWatchMovie: ReturnType<typeof spyOn<typeof api, "watchMovie">>;
 let mockUnwatchMovie: ReturnType<typeof spyOn<typeof api, "unwatchMovie">>;
@@ -44,16 +63,29 @@ beforeEach(() => {
     logout: mock(() => Promise.resolve()),
     refresh: mock(() => Promise.resolve()),
   });
-  useIsMobileSpy = spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(false);
+  useIsMobileSpy = spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(
+    false,
+  );
   mockWatchMovie = spyOn(api, "watchMovie").mockResolvedValue(undefined as any);
-  mockUnwatchMovie = spyOn(api, "unwatchMovie").mockResolvedValue(undefined as any);
+  mockUnwatchMovie = spyOn(api, "unwatchMovie").mockResolvedValue(
+    undefined as any,
+  );
   apiSpies = [
-    spyOn(api, "getCalendarTitles").mockResolvedValue({ titles: [], episodes: [], count: 0 } as any),
+    spyOn(api, "getCalendarTitles").mockResolvedValue({
+      titles: [],
+      episodes: [],
+      count: 0,
+    } as any),
     spyOn(api, "watchEpisode").mockResolvedValue(undefined as any),
     spyOn(api, "unwatchEpisode").mockResolvedValue(undefined as any),
     spyOn(api, "watchEpisodesBulk").mockResolvedValue(undefined as any),
-    spyOn(api, "getCrowdedWeekSettings").mockResolvedValue({ crowdedWeekThreshold: 5, crowdedWeekBadgeEnabled: 1 } as any),
-    spyOn(api, "getSubscriptions").mockResolvedValue({ providerIds: [] } as any),
+    spyOn(api, "getCrowdedWeekSettings").mockResolvedValue({
+      crowdedWeekThreshold: 5,
+      crowdedWeekBadgeEnabled: 1,
+    } as any),
+    spyOn(api, "getSubscriptions").mockResolvedValue({
+      providerIds: [],
+    } as any),
   ];
 });
 
@@ -62,7 +94,7 @@ afterEach(() => {
   useIsMobileSpy.mockRestore();
   mockWatchMovie.mockRestore();
   mockUnwatchMovie.mockRestore();
-  apiSpies.forEach(s => s.mockRestore());
+  apiSpies.forEach((s) => s.mockRestore());
   cleanup();
 });
 
@@ -174,15 +206,31 @@ describe("CalendarPage", () => {
     render(<CalendarPage />, { wrapper: Wrapper });
 
     // Default is grid view
-    expect(screen.getByRole("button", { name: /grid view/i }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: /agenda view/i }).getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: /grid view/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /agenda view/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
 
     // Switch to agenda
     fireEvent.click(screen.getByRole("button", { name: /agenda view/i }));
 
     // Re-query after state update
-    expect(screen.getByRole("button", { name: /grid view/i }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByRole("button", { name: /agenda view/i }).getAttribute("aria-pressed")).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /grid view/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: /agenda view/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("hide watched button has aria-label attribute", () => {
@@ -211,7 +259,9 @@ describe("CalendarPage", () => {
     fireEvent.click(screen.getByTitle("Week view"));
 
     // Week view renders 7 day-column headers (date numbers in header row)
-    const weekDayNumbers = await waitFor(() => screen.getAllByTestId("week-day-number"));
+    const weekDayNumbers = await waitFor(() =>
+      screen.getAllByTestId("week-day-number"),
+    );
     expect(weekDayNumbers.length).toBe(7);
   });
 
@@ -219,7 +269,9 @@ describe("CalendarPage", () => {
     render(<CalendarPage />, { wrapper: Wrapper });
     fireEvent.click(screen.getByTitle("Week view"));
 
-    const columns = await waitFor(() => screen.getAllByTestId("week-day-column"));
+    const columns = await waitFor(() =>
+      screen.getAllByTestId("week-day-column"),
+    );
     expect(columns.length).toBe(7);
   });
 
@@ -229,9 +281,11 @@ describe("CalendarPage", () => {
         <MemoryRouter initialEntries={["/?view=week"]}>
           <CalendarPage />
         </MemoryRouter>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
-    const columns = await waitFor(() => screen.getAllByTestId("week-day-column"));
+    const columns = await waitFor(() =>
+      screen.getAllByTestId("week-day-column"),
+    );
     expect(columns.length).toBe(7);
   });
 
@@ -276,7 +330,7 @@ describe("CalendarPage", () => {
         <MemoryRouter initialEntries={["/?density=compact"]}>
           <CalendarPage />
         </MemoryRouter>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     const compactBtn = screen.getByRole("button", { name: /compact/i });
     expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
@@ -310,7 +364,9 @@ describe("SlideOverPanel — movie watched toggle", () => {
 
   const noop = () => {};
 
-  function renderSlideOver(onToggleTitleWatched?: (id: string, watched: boolean) => void) {
+  function renderSlideOver(
+    onToggleTitleWatched?: (id: string, watched: boolean) => void,
+  ) {
     return render(
       <QueryClientProvider client={newTestClient()}>
         <MemoryRouter>
@@ -351,6 +407,8 @@ describe("SlideOverPanel — movie watched toggle", () => {
 
   it("does NOT render a watched toggle when onToggleTitleWatched is not provided", () => {
     renderSlideOver(undefined);
-    expect(screen.queryByRole("button", { name: /mark as watched/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /mark as watched/i }),
+    ).toBeNull();
   });
 });

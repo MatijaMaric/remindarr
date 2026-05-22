@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  spyOn,
+  mock,
+} from "bun:test";
 import * as Sentry from "@sentry/react";
 
 const mockReloadPage = mock(() => {});
@@ -44,7 +52,9 @@ describe("ErrorBoundary", () => {
   it("handleReset clears the error state", () => {
     const instance = new ErrorBoundary({ children: null });
     instance.state = { hasError: true, error: new Error("boom") };
-    instance.setState = ((updater: Partial<{ hasError: boolean; error: Error | null }>) => {
+    instance.setState = ((
+      updater: Partial<{ hasError: boolean; error: Error | null }>,
+    ) => {
       Object.assign(instance.state, updater);
     }) as typeof instance.setState;
 
@@ -56,7 +66,10 @@ describe("ErrorBoundary", () => {
   it("componentDidCatch tags non-chunk errors as 'render' in Sentry", async () => {
     const instance = new ErrorBoundary({ children: null });
     const error = new Error("render crash");
-    const info = { componentStack: "<App>\n<ErrorBoundary>", digest: undefined };
+    const info = {
+      componentStack: "<App>\n<ErrorBoundary>",
+      digest: undefined,
+    };
 
     const origError = console.error;
     console.error = () => {};
@@ -73,7 +86,9 @@ describe("ErrorBoundary", () => {
 
   it("componentDidCatch tags chunk-load errors as 'chunk-load' in Sentry", async () => {
     const instance = new ErrorBoundary({ children: null });
-    const error = new Error("error loading dynamically imported module: /assets/Foo.js");
+    const error = new Error(
+      "error loading dynamically imported module: /assets/Foo.js",
+    );
     const info = { componentStack: "<App>", digest: undefined };
 
     const origError = console.error;
@@ -94,7 +109,9 @@ describe("ErrorBoundary", () => {
 
     await instance.handleReload();
 
-    expect((caches.delete as ReturnType<typeof mock>)).toHaveBeenCalledWith("pages");
+    expect(caches.delete as ReturnType<typeof mock>).toHaveBeenCalledWith(
+      "pages",
+    );
     expect(mockReloadPage).toHaveBeenCalledTimes(1);
   });
 });

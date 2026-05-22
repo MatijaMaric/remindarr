@@ -23,7 +23,10 @@ export function useFocusTrap(
   useEffect(() => {
     if (!isOpen) {
       // Restore focus to whoever had it when the modal opened
-      if (savedFocusRef.current && savedFocusRef.current instanceof HTMLElement) {
+      if (
+        savedFocusRef.current &&
+        savedFocusRef.current instanceof HTMLElement
+      ) {
         savedFocusRef.current.focus();
       }
       savedFocusRef.current = null;

@@ -17,28 +17,48 @@ const OPTIONS = [
 describe("MultiSelectDropdown", () => {
   it("renders button with label when nothing selected", () => {
     render(
-      <MultiSelectDropdown label="Pick one" options={OPTIONS} selected={[]} onChange={() => {}} />,
+      <MultiSelectDropdown
+        label="Pick one"
+        options={OPTIONS}
+        selected={[]}
+        onChange={() => {}}
+      />,
     );
     expect(screen.getByText("Pick one")).toBeDefined();
   });
 
   it("shows selected items in summary", () => {
     render(
-      <MultiSelectDropdown label="Pick one" options={OPTIONS} selected={["a"]} onChange={() => {}} />,
+      <MultiSelectDropdown
+        label="Pick one"
+        options={OPTIONS}
+        selected={["a"]}
+        onChange={() => {}}
+      />,
     );
     expect(screen.getByText("Alpha")).toBeDefined();
   });
 
   it("shows count when 3+ items selected", () => {
     render(
-      <MultiSelectDropdown label="Pick" options={OPTIONS} selected={["a", "b", "c"]} onChange={() => {}} />,
+      <MultiSelectDropdown
+        label="Pick"
+        options={OPTIONS}
+        selected={["a", "b", "c"]}
+        onChange={() => {}}
+      />,
     );
     expect(screen.getByText("3 selected")).toBeDefined();
   });
 
   it("opens dropdown and shows search input on click", () => {
     render(
-      <MultiSelectDropdown label="Pick" options={OPTIONS} selected={[]} onChange={() => {}} />,
+      <MultiSelectDropdown
+        label="Pick"
+        options={OPTIONS}
+        selected={[]}
+        onChange={() => {}}
+      />,
     );
     fireEvent.click(screen.getByText("Pick"));
     expect(screen.getByPlaceholderText("Search...")).toBeDefined();
@@ -46,7 +66,12 @@ describe("MultiSelectDropdown", () => {
 
   it("filters options by search query", () => {
     render(
-      <MultiSelectDropdown label="Pick" options={OPTIONS} selected={[]} onChange={() => {}} />,
+      <MultiSelectDropdown
+        label="Pick"
+        options={OPTIONS}
+        selected={[]}
+        onChange={() => {}}
+      />,
     );
     fireEvent.click(screen.getByText("Pick"));
     const searchInput = screen.getByPlaceholderText("Search...");
@@ -64,7 +89,12 @@ describe("MultiSelectDropdown", () => {
       { label: "Group B", options: [{ value: "b", label: "Beta" }] },
     ];
     render(
-      <MultiSelectDropdown label="Pick" sections={sections} selected={[]} onChange={() => {}} />,
+      <MultiSelectDropdown
+        label="Pick"
+        sections={sections}
+        selected={[]}
+        onChange={() => {}}
+      />,
     );
     fireEvent.click(screen.getByText("Pick"));
     expect(screen.getByText("Group A")).toBeDefined();
@@ -79,7 +109,12 @@ describe("MultiSelectDropdown", () => {
       { label: "Group B", options: [{ value: "b", label: "Beta" }] },
     ];
     render(
-      <MultiSelectDropdown label="Pick" sections={sections} selected={[]} onChange={() => {}} />,
+      <MultiSelectDropdown
+        label="Pick"
+        sections={sections}
+        selected={[]}
+        onChange={() => {}}
+      />,
     );
     fireEvent.click(screen.getByText("Pick"));
     const searchInput = screen.getByPlaceholderText("Search...");
@@ -94,7 +129,12 @@ describe("MultiSelectDropdown", () => {
   it("calls onChange when toggling an option", () => {
     const onChange = mock(() => {});
     render(
-      <MultiSelectDropdown label="Pick" options={OPTIONS} selected={[]} onChange={onChange} />,
+      <MultiSelectDropdown
+        label="Pick"
+        options={OPTIONS}
+        selected={[]}
+        onChange={onChange}
+      />,
     );
     fireEvent.click(screen.getByText("Pick"));
     fireEvent.click(screen.getByText("Alpha"));

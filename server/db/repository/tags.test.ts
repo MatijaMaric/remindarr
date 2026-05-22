@@ -71,7 +71,9 @@ describe("addTagToTitlesBulk", () => {
       id: `bulk-title-${i}`,
       title: `Bulk Title ${i}`,
     }));
-    await upsertTitles(extraTitles.map(({ id, title }) => makeParsedTitle({ id, title })));
+    await upsertTitles(
+      extraTitles.map(({ id, title }) => makeParsedTitle({ id, title })),
+    );
     for (const { id } of extraTitles) {
       await trackTitle(id, userId);
     }

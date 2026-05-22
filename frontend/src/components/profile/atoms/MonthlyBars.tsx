@@ -8,8 +8,18 @@ interface MonthlyBarsProps {
 }
 
 const MONTH_SHORT = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 function formatMonth(month: string): string {
@@ -32,13 +42,20 @@ export function MonthlyBars({
   const barArea = height - 20;
 
   return (
-    <div className="flex items-end gap-2.5" style={{ height: `${height}px` }} data-testid="monthly-bars">
+    <div
+      className="flex items-end gap-2.5"
+      style={{ height: `${height}px` }}
+      data-testid="monthly-bars"
+    >
       {monthly.map((m) => {
         const total = m.episodes_watched + m.movies_watched;
         const totalPct = (total / maxTotal) * 100;
         const moviesPct = total > 0 ? (m.movies_watched / total) * 100 : 0;
         return (
-          <div key={m.month} className="flex-1 flex flex-col items-center gap-1.5">
+          <div
+            key={m.month}
+            className="flex-1 flex flex-col items-center gap-1.5"
+          >
             <div
               className="w-full flex flex-col justify-end"
               style={{ height: `${barArea}px` }}
@@ -47,7 +64,9 @@ export function MonthlyBars({
                 className="w-full rounded overflow-hidden flex flex-col"
                 style={{ height: `${totalPct}%` }}
               >
-                <div style={{ height: `${moviesPct}%`, background: movieColor }} />
+                <div
+                  style={{ height: `${moviesPct}%`, background: movieColor }}
+                />
                 <div style={{ flex: 1, background: episodeColor }} />
               </div>
             </div>

@@ -23,10 +23,14 @@ function PodiumSpot({
   return (
     <div
       className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl border ${
-        isMe ? "border-amber-400/40 bg-amber-400/[0.06]" : "border-white/[0.06] bg-white/[0.02]"
+        isMe
+          ? "border-amber-400/40 bg-amber-400/[0.06]"
+          : "border-white/[0.06] bg-white/[0.02]"
       }`}
     >
-      <span className={`font-mono text-2xl font-extrabold ${textColor}`}>#{entry.rank}</span>
+      <span className={`font-mono text-2xl font-extrabold ${textColor}`}>
+        #{entry.rank}
+      </span>
       <Avatar
         username={entry.username}
         displayName={entry.name}
@@ -37,13 +41,19 @@ function PodiumSpot({
         <div className="text-sm font-bold text-zinc-100 truncate max-w-[120px]">
           {entry.name ?? entry.username}
         </div>
-        <div className="font-mono text-xs text-zinc-400 truncate">@{entry.username}</div>
+        <div className="font-mono text-xs text-zinc-400 truncate">
+          @{entry.username}
+        </div>
       </div>
       <div className="flex items-center gap-1.5">
         <Star size={13} className="text-amber-400" />
-        <span className="font-mono text-sm font-bold text-amber-400">{entry.xp} XP</span>
+        <span className="font-mono text-sm font-bold text-amber-400">
+          {entry.xp} XP
+        </span>
       </div>
-      <div className="font-mono text-xs text-zinc-500">{entry.badgeCount} badge{entry.badgeCount !== 1 ? "s" : ""}</div>
+      <div className="font-mono text-xs text-zinc-500">
+        {entry.badgeCount} badge{entry.badgeCount !== 1 ? "s" : ""}
+      </div>
     </div>
   );
 }
@@ -78,7 +88,10 @@ export default function LeaderboardPage() {
         <div className="h-8 w-48 bg-zinc-800 rounded animate-pulse" />
         <div className="grid grid-cols-3 gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-40 bg-zinc-800 rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="h-40 bg-zinc-800 rounded-xl animate-pulse"
+            />
           ))}
         </div>
         {[1, 2, 3, 4, 5].map((i) => (
@@ -105,12 +118,16 @@ export default function LeaderboardPage() {
           <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-400 font-semibold mb-1">
             Leaderboard
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">
+            Leaderboard
+          </h1>
           <p className="text-zinc-400 text-sm mt-1">Among people you follow</p>
         </div>
         <div className="text-center py-12">
           <Trophy size={40} className="text-zinc-600 mx-auto mb-3" />
-          <p className="text-zinc-400">Follow people to see them on the leaderboard.</p>
+          <p className="text-zinc-400">
+            Follow people to see them on the leaderboard.
+          </p>
         </div>
       </div>
     );
@@ -121,9 +138,7 @@ export default function LeaderboardPage() {
 
   // Reorder podium for visual display: 2nd left, 1st center, 3rd right
   const podiumDisplay =
-    podium.length === 3
-      ? [podium[1]!, podium[0]!, podium[2]!]
-      : podium;
+    podium.length === 3 ? [podium[1]!, podium[0]!, podium[2]!] : podium;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -136,9 +151,15 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Podium */}
-      <div className={`grid gap-3 ${podium.length === 3 ? "grid-cols-3" : podium.length === 2 ? "grid-cols-2" : "grid-cols-1 max-w-xs mx-auto"}`}>
+      <div
+        className={`grid gap-3 ${podium.length === 3 ? "grid-cols-3" : podium.length === 2 ? "grid-cols-2" : "grid-cols-1 max-w-xs mx-auto"}`}
+      >
         {podiumDisplay.map((entry) => (
-          <PodiumSpot key={entry.userId} entry={entry} currentUserId={user?.id} />
+          <PodiumSpot
+            key={entry.userId}
+            entry={entry}
+            currentUserId={user?.id}
+          />
         ))}
       </div>
 
@@ -174,8 +195,12 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-mono text-sm font-bold text-amber-400">{entry.xp} XP</div>
-                  <div className="font-mono text-xs text-zinc-500">{entry.badgeCount} badges</div>
+                  <div className="font-mono text-sm font-bold text-amber-400">
+                    {entry.xp} XP
+                  </div>
+                  <div className="font-mono text-xs text-zinc-500">
+                    {entry.badgeCount} badges
+                  </div>
                 </div>
               </div>
             );

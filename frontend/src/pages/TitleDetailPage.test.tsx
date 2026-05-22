@@ -1,4 +1,12 @@
-import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import type { ReactNode } from "react";
@@ -19,7 +27,9 @@ mock.module("./title/ShowDetail", () => ({
 const { default: TitleDetailPage } = await import("./TitleDetailPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function makeWrapper(titleId: string) {
@@ -49,7 +59,12 @@ const movieResponse = {
 } as unknown as MovieDetailsResponse;
 
 const showResponse = {
-  title: { ...mockMovieTitle, id: "tv-1", title: "Test Show", object_type: "SHOW" },
+  title: {
+    ...mockMovieTitle,
+    id: "tv-1",
+    title: "Test Show",
+    object_type: "SHOW",
+  },
   tmdb: null,
   country: "US",
 } as unknown as ShowDetailsResponse;

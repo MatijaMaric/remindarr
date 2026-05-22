@@ -11,14 +11,21 @@ import * as tmdbClient from "../tmdb/client";
 import * as tmdbParser from "../tmdb/parser";
 import * as repository from "../db/repository";
 
-const mockFetchMovieDetails = spyOn(tmdbClient, "fetchMovieDetails").mockResolvedValue({} as any);
-const mockFetchTvDetails = spyOn(tmdbClient, "fetchTvDetails").mockResolvedValue({} as any);
+const mockFetchMovieDetails = spyOn(
+  tmdbClient,
+  "fetchMovieDetails",
+).mockResolvedValue({} as any);
+const mockFetchTvDetails = spyOn(
+  tmdbClient,
+  "fetchTvDetails",
+).mockResolvedValue({} as any);
 
-const mockParseMovieDetails = spyOn(tmdbParser, "parseMovieDetails").mockReturnValue(
-  makeParsedTitle({ offers: [] })
-);
+const mockParseMovieDetails = spyOn(
+  tmdbParser,
+  "parseMovieDetails",
+).mockReturnValue(makeParsedTitle({ offers: [] }));
 const mockParseTvDetails = spyOn(tmdbParser, "parseTvDetails").mockReturnValue(
-  makeParsedTitle({ id: "tv-1", objectType: "SHOW", offers: [] })
+  makeParsedTitle({ id: "tv-1", objectType: "SHOW", offers: [] }),
 );
 
 const mockUpsertTitles = spyOn(repository, "upsertTitles");
@@ -31,27 +38,33 @@ import { migrateOffers } from "./migrate-offers";
 function insertTitle(id: string, objectType: string, tmdbId: string) {
   const db = getRawDb();
   db.prepare(
-    `INSERT INTO titles (id, object_type, tmdb_id, title, release_date) VALUES (?, ?, ?, ?, '2024-01-01')`
+    `INSERT INTO titles (id, object_type, tmdb_id, title, release_date) VALUES (?, ?, ?, ?, '2024-01-01')`,
   ).run(id, objectType, tmdbId, `Title ${id}`);
 }
 
 function insertOffer(titleId: string) {
   const db = getRawDb();
-  db.prepare(`INSERT OR IGNORE INTO providers (id, name) VALUES (8, 'Netflix')`).run();
   db.prepare(
-    `INSERT INTO offers (title_id, provider_id, monetization_type) VALUES (?, 8, 'FLATRATE')`
+    `INSERT OR IGNORE INTO providers (id, name) VALUES (8, 'Netflix')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO offers (title_id, provider_id, monetization_type) VALUES (?, 8, 'FLATRATE')`,
   ).run(titleId);
 }
 
 function countOffers(titleId: string): number {
   const db = getRawDb();
-  const row = db.prepare("SELECT COUNT(*) as cnt FROM offers WHERE title_id = ?").get(titleId) as any;
+  const row = db
+    .prepare("SELECT COUNT(*) as cnt FROM offers WHERE title_id = ?")
+    .get(titleId) as any;
   return row.cnt;
 }
 
 function getOffersChecked(titleId: string): number {
   const db = getRawDb();
-  const row = db.prepare("SELECT offers_checked FROM titles WHERE id = ?").get(titleId) as any;
+  const row = db
+    .prepare("SELECT offers_checked FROM titles WHERE id = ?")
+    .get(titleId) as any;
   return row.offers_checked;
 }
 
@@ -88,7 +101,12 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0, hasMore: false });
+    expect(result).toEqual({
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      hasMore: false,
+    });
     expect(mockFetchMovieDetails).not.toHaveBeenCalled();
     expect(mockFetchTvDetails).not.toHaveBeenCalled();
   });
@@ -96,16 +114,28 @@ describe("migrateOffers", () => {
   it("returns zeros when no titles exist", async () => {
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0, hasMore: false });
+    expect(result).toEqual({
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      hasMore: false,
+    });
   });
 
   it("skips titles that are already marked as checked", async () => {
     insertTitle("movie-100", "MOVIE", "100");
-    getRawDb().prepare("UPDATE titles SET offers_checked = 1 WHERE id = ?").run("movie-100");
+    getRawDb()
+      .prepare("UPDATE titles SET offers_checked = 1 WHERE id = ?")
+      .run("movie-100");
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 0, hasMore: false });
+    expect(result).toEqual({
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      hasMore: false,
+    });
     expect(mockFetchMovieDetails).not.toHaveBeenCalled();
   });
 
@@ -122,7 +152,12 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 1, skipped: 0, failed: 0, hasMore: false });
+    expect(result).toEqual({
+      updated: 1,
+      skipped: 0,
+      failed: 0,
+      hasMore: false,
+    });
     expect(mockFetchMovieDetails).toHaveBeenCalledWith(200);
     expect(countOffers("movie-200")).toBe(1);
   });
@@ -141,7 +176,12 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 1, skipped: 0, failed: 0, hasMore: false });
+    expect(result).toEqual({
+      updated: 1,
+      skipped: 0,
+      failed: 0,
+      hasMore: false,
+    });
     expect(mockFetchTvDetails).toHaveBeenCalledWith(300);
     expect(countOffers("tv-300")).toBe(1);
   });
@@ -150,11 +190,18 @@ describe("migrateOffers", () => {
     insertTitle("movie-400", "MOVIE", "400");
 
     mockFetchMovieDetails.mockResolvedValueOnce({} as any);
-    mockParseMovieDetails.mockReturnValueOnce(makeParsedTitle({ id: "movie-400", offers: [] }));
+    mockParseMovieDetails.mockReturnValueOnce(
+      makeParsedTitle({ id: "movie-400", offers: [] }),
+    );
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 1, failed: 0, hasMore: false });
+    expect(result).toEqual({
+      updated: 0,
+      skipped: 1,
+      failed: 0,
+      hasMore: false,
+    });
     expect(countOffers("movie-400")).toBe(0);
   });
 
@@ -162,7 +209,9 @@ describe("migrateOffers", () => {
     insertTitle("movie-450", "MOVIE", "450");
 
     mockFetchMovieDetails.mockResolvedValueOnce({} as any);
-    mockParseMovieDetails.mockReturnValueOnce(makeParsedTitle({ id: "movie-450", offers: [] }));
+    mockParseMovieDetails.mockReturnValueOnce(
+      makeParsedTitle({ id: "movie-450", offers: [] }),
+    );
 
     await migrateOffers();
 
@@ -190,7 +239,12 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 0, skipped: 0, failed: 1, hasMore: false });
+    expect(result).toEqual({
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+      hasMore: false,
+    });
   });
 
   it("continues after a failure and processes remaining titles", async () => {
@@ -208,7 +262,12 @@ describe("migrateOffers", () => {
 
     const result = await migrateOffers();
 
-    expect(result).toEqual({ updated: 1, skipped: 0, failed: 1, hasMore: false });
+    expect(result).toEqual({
+      updated: 1,
+      skipped: 0,
+      failed: 1,
+      hasMore: false,
+    });
   });
 
   it("returns hasMore: true when the batch is full and more titles remain", async () => {

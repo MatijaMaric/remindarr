@@ -199,7 +199,14 @@ export interface TmdbVideo {
   id: string;
   key: string;
   site: "YouTube" | "Vimeo" | string;
-  type: "Trailer" | "Teaser" | "Clip" | "Featurette" | "Behind the Scenes" | "Bloopers" | string;
+  type:
+    | "Trailer"
+    | "Teaser"
+    | "Clip"
+    | "Featurette"
+    | "Behind the Scenes"
+    | "Bloopers"
+    | string;
   official: boolean;
   size: number;
   published_at: string;
@@ -317,7 +324,12 @@ export interface TmdbMovieFullDetails {
   "watch/providers": { results: Record<string, TmdbWatchProviderCountry> };
   external_ids?: TmdbExternalIds;
   videos?: { results: TmdbVideo[] };
-  belongs_to_collection: { id: number; name: string; poster_path: string | null; backdrop_path: string | null } | null;
+  belongs_to_collection: {
+    id: number;
+    name: string;
+    poster_path: string | null;
+    backdrop_path: string | null;
+  } | null;
 }
 
 export interface TmdbCollectionPart {

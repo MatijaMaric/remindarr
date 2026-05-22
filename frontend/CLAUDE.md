@@ -1,6 +1,7 @@
 # Frontend guidance
 
 ## Stack
+
 - **React 19** + Vite + **Tailwind CSS 4** + shadcn/ui + react-router + Vite PWA
 - TypeScript strict mode; ESLint with zero errors and zero warnings
 - Testing: `@testing-library/react` with `happy-dom` (preloaded in `frontend/src/test-utils/setup.ts`)
@@ -8,13 +9,13 @@
 
 ## Entry points
 
-| File | Purpose |
-|------|---------|
-| `frontend/src/main.tsx` | App entry with BrowserRouter + ErrorBoundary + AuthProvider |
-| `frontend/src/App.tsx` | Lazy-loaded route tree with RequireAuth guards |
-| `frontend/src/api.ts` | API client functions for all backend routes (uses `fetchJson` helper) |
-| `frontend/src/types.ts` | Title/Offer/Provider types + `normalizeSearchTitle()` |
-| `frontend/src/sw.ts` | Service worker (Workbox strategies + BackgroundSync + push handler) |
+| File                    | Purpose                                                               |
+| ----------------------- | --------------------------------------------------------------------- |
+| `frontend/src/main.tsx` | App entry with BrowserRouter + ErrorBoundary + AuthProvider           |
+| `frontend/src/App.tsx`  | Lazy-loaded route tree with RequireAuth guards                        |
+| `frontend/src/api.ts`   | API client functions for all backend routes (uses `fetchJson` helper) |
+| `frontend/src/types.ts` | Title/Offer/Provider types + `normalizeSearchTitle()`                 |
+| `frontend/src/sw.ts`    | Service worker (Workbox strategies + BackgroundSync + push handler)   |
 
 ## Key patterns
 
@@ -29,6 +30,7 @@
 Server-cache state lives in `@tanstack/react-query`. The `QueryClient` singleton is in `lib/queryClient.ts` (staleTime 30s, gcTime 5m, retry 1) and is mounted in `main.tsx`. Functions in `api.ts` are the raw fetchers — they belong inside `queryFn`/`mutationFn`, never called directly from a component's `useEffect`.
 
 **Reads → `useQuery`**: Any GET that renders server data.
+
 - `queryFn: ({ signal }) => api.foo(signal)` — always forward the `signal` for cancellation
 - Use a structured array key; **reuse an existing key when components share data** (e.g. `["filters"]`, `["stats"]`)
 - Gate auth-dependent queries with `enabled`
@@ -36,15 +38,17 @@ Server-cache state lives in `@tanstack/react-query`. The `QueryClient` singleton
 - Reference: `HomePage.tsx` (`["home","auth"]` query, line ~297)
 
 **Writes → `useMutation`** with optimistic update + invalidation:
+
 - `onMutate`: `cancelQueries` → snapshot via `getQueryData` → `setQueryData` optimistic → return snapshot
 - `onError`: roll back from snapshot + `toast.error`
 - `onSettled`: `invalidateQueries` for **every** affected key (e.g. a watch toggle invalidates `["stats"]`, `["activity"]`, `["calendar"]`, `["home","auth"]`)
 - Reference: `HomePage.tsx` `toggleWatchedMutation` (line ~333)
 
 **Keep a raw `api.ts` call (no Query) when**:
+
 - One-shot imperative action with no cached view to update (file import/export, token download, share-link copy)
 - Auth/session flow owned by `AuthContext` / better-auth
-- The call is *inside* a `queryFn` or `mutationFn` — that is the correct home for `api.ts`
+- The call is _inside_ a `queryFn` or `mutationFn` — that is the correct home for `api.ts`
 
 **Deferred — do NOT migrate yet**: Settings-tab **form-value submit** handlers (`updateMyProfile`, `updateAdminSettings`, `updateAppearanceSettings`, `updateActivitySettings`, `updateHomepageLayout`, `updateCrowdedWeekSettings`, `updateDepartureAlertSettings`) wait for the planned react-hook-form work. Their reads and action writes (delete/test/trigger/regenerate) are fair game now.
 
@@ -52,27 +56,27 @@ Server-cache state lives in `@tanstack/react-query`. The `QueryClient` singleton
 
 ## Pages (`frontend/src/pages/`)
 
-| File | Purpose |
-|------|---------|
-| `HomePage.tsx` | Browse + search landing with customizable layout |
-| `BrowsePage.tsx` | Category browsing + filters |
-| `CalendarPage.tsx` | Monthly episode calendar grid |
-| `DiscoveryPage.tsx` | Personalized discovery feed |
-| `TrackedPage.tsx` | Watchlist + stats view |
-| `UpcomingPage.tsx` | Legacy; redirects to `/calendar` |
-| `StatsPage.tsx` | User statistics |
-| `ReelsPage.tsx` | Swipeable short-form discovery |
-| `TitleDetailPage.tsx` / `SeasonDetailPage.tsx` / `EpisodeDetailPage.tsx` | Content detail pages |
-| `PersonPage.tsx` | Actor/crew details and filmography |
-| `UserProfilePage.tsx` | Public user profile |
-| `ProfilePage.tsx` | Current user; redirects to UserProfilePage |
-| `SettingsPage.tsx` | Notifiers, integrations, password, invitations, layout |
-| `InvitePage.tsx` | Create/manage invitations |
-| `LoginPage.tsx` | Local + passkey + OIDC login |
-| `SignupPage.tsx` | Local signup |
-| `MorePage.tsx` | Mobile-only menu overlay |
-| `AdminUsersPage.tsx` | Admin user management |
-| `NotFoundPage.tsx` | 404 fallback |
+| File                                                                     | Purpose                                                |
+| ------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `HomePage.tsx`                                                           | Browse + search landing with customizable layout       |
+| `BrowsePage.tsx`                                                         | Category browsing + filters                            |
+| `CalendarPage.tsx`                                                       | Monthly episode calendar grid                          |
+| `DiscoveryPage.tsx`                                                      | Personalized discovery feed                            |
+| `TrackedPage.tsx`                                                        | Watchlist + stats view                                 |
+| `UpcomingPage.tsx`                                                       | Legacy; redirects to `/calendar`                       |
+| `StatsPage.tsx`                                                          | User statistics                                        |
+| `ReelsPage.tsx`                                                          | Swipeable short-form discovery                         |
+| `TitleDetailPage.tsx` / `SeasonDetailPage.tsx` / `EpisodeDetailPage.tsx` | Content detail pages                                   |
+| `PersonPage.tsx`                                                         | Actor/crew details and filmography                     |
+| `UserProfilePage.tsx`                                                    | Public user profile                                    |
+| `ProfilePage.tsx`                                                        | Current user; redirects to UserProfilePage             |
+| `SettingsPage.tsx`                                                       | Notifiers, integrations, password, invitations, layout |
+| `InvitePage.tsx`                                                         | Create/manage invitations                              |
+| `LoginPage.tsx`                                                          | Local + passkey + OIDC login                           |
+| `SignupPage.tsx`                                                         | Local signup                                           |
+| `MorePage.tsx`                                                           | Mobile-only menu overlay                               |
+| `AdminUsersPage.tsx`                                                     | Admin user management                                  |
+| `NotFoundPage.tsx`                                                       | 404 fallback                                           |
 
 ## Components (`frontend/src/components/`) — broad groups
 

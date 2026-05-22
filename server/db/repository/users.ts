@@ -10,12 +10,13 @@ export async function createUser(
   displayName?: string,
   authProvider = "local",
   providerSubject?: string,
-  isAdmin = false
+  isAdmin = false,
 ): Promise<string> {
   return traceDbQuery("createUser", async () => {
     const db = getDb();
     const id = crypto.randomUUID();
-    await db.insert(users)
+    await db
+      .insert(users)
       .values({
         id,
         username,
@@ -33,20 +34,26 @@ export async function createUser(
 
     // Create corresponding account record for better-auth
     if (authProvider === "local" && passwordHash) {
-      await db.insert(account).values({
-        id: crypto.randomUUID(),
-        userId: id,
-        accountId: username,
-        providerId: "credential",
-        password: passwordHash,
-      }).run();
+      await db
+        .insert(account)
+        .values({
+          id: crypto.randomUUID(),
+          userId: id,
+          accountId: username,
+          providerId: "credential",
+          password: passwordHash,
+        })
+        .run();
     } else if (authProvider === "oidc" && providerSubject) {
-      await db.insert(account).values({
-        id: crypto.randomUUID(),
-        userId: id,
-        accountId: providerSubject,
-        providerId: "pocketid",
-      }).run();
+      await db
+        .insert(account)
+        .values({
+          id: crypto.randomUUID(),
+          userId: id,
+          accountId: providerSubject,
+          providerId: "pocketid",
+        })
+        .run();
     }
 
     return id;
@@ -70,18 +77,33 @@ const userColumns = {
 export async function getUserByUsername(username: string) {
   return traceDbQuery("getUserByUsername", async () => {
     const db = getDb();
-    return await db.select(userColumns).from(users).where(eq(users.username, username)).get() ?? null;
+    return (
+      (await db
+        .select(userColumns)
+        .from(users)
+        .where(eq(users.username, username))
+        .get()) ?? null
+    );
   });
 }
 
 export async function getUserById(id: string) {
   return traceDbQuery("getUserById", async () => {
     const db = getDb();
-    return await db.select(userColumns).from(users).where(eq(users.id, id)).get() ?? null;
+    return (
+      (await db
+        .select(userColumns)
+        .from(users)
+        .where(eq(users.id, id))
+        .get()) ?? null
+    );
   });
 }
 
-export async function getUserDepartureSettings(userId: string): Promise<{ streamingDeparturesEnabled: number; departureAlertLeadDays: number } | null> {
+export async function getUserDepartureSettings(userId: string): Promise<{
+  streamingDeparturesEnabled: number;
+  departureAlertLeadDays: number;
+} | null> {
   return traceDbQuery("getUserDepartureSettings", async () => {
     const db = getDb();
     const row = await db
@@ -98,13 +120,18 @@ export async function getUserDepartureSettings(userId: string): Promise<{ stream
 
 export async function updateUserDepartureSettings(
   userId: string,
-  settings: { streamingDeparturesEnabled?: boolean; departureAlertLeadDays?: number }
+  settings: {
+    streamingDeparturesEnabled?: boolean;
+    departureAlertLeadDays?: number;
+  },
 ): Promise<void> {
   return traceDbQuery("updateUserDepartureSettings", async () => {
     const db = getDb();
     const patch: Record<string, number> = {};
     if (settings.streamingDeparturesEnabled !== undefined) {
-      patch.streamingDeparturesEnabled = settings.streamingDeparturesEnabled ? 1 : 0;
+      patch.streamingDeparturesEnabled = settings.streamingDeparturesEnabled
+        ? 1
+        : 0;
     }
     if (settings.departureAlertLeadDays !== undefined) {
       patch.departureAlertLeadDays = settings.departureAlertLeadDays;
@@ -114,7 +141,10 @@ export async function updateUserDepartureSettings(
   });
 }
 
-export async function getCrowdedWeekSettings(userId: string): Promise<{ crowdedWeekThreshold: number; crowdedWeekBadgeEnabled: number } | null> {
+export async function getCrowdedWeekSettings(userId: string): Promise<{
+  crowdedWeekThreshold: number;
+  crowdedWeekBadgeEnabled: number;
+} | null> {
   return traceDbQuery("getCrowdedWeekSettings", async () => {
     const db = getDb();
     const row = await db
@@ -131,7 +161,7 @@ export async function getCrowdedWeekSettings(userId: string): Promise<{ crowdedW
 
 export async function updateCrowdedWeekSettings(
   userId: string,
-  settings: { crowdedWeekThreshold?: number; crowdedWeekBadgeEnabled?: number }
+  settings: { crowdedWeekThreshold?: number; crowdedWeekBadgeEnabled?: number },
 ): Promise<void> {
   return traceDbQuery("updateCrowdedWeekSettings", async () => {
     const db = getDb();
@@ -185,18 +215,24 @@ export async function updateAppearanceSettings(
     highContrast?: number;
     hideEpisodeSpoilers?: number;
     autoplayTrailers?: number;
-  }
+  },
 ): Promise<void> {
   return traceDbQuery("updateAppearanceSettings", async () => {
     const db = getDb();
     const patch: Record<string, string | number> = {};
-    if (settings.themeVariant !== undefined) patch.themeVariant = settings.themeVariant;
-    if (settings.accentColor !== undefined) patch.accentColor = settings.accentColor;
+    if (settings.themeVariant !== undefined)
+      patch.themeVariant = settings.themeVariant;
+    if (settings.accentColor !== undefined)
+      patch.accentColor = settings.accentColor;
     if (settings.density !== undefined) patch.density = settings.density;
-    if (settings.reduceMotion !== undefined) patch.reduceMotion = settings.reduceMotion;
-    if (settings.highContrast !== undefined) patch.highContrast = settings.highContrast;
-    if (settings.hideEpisodeSpoilers !== undefined) patch.hideEpisodeSpoilers = settings.hideEpisodeSpoilers;
-    if (settings.autoplayTrailers !== undefined) patch.autoplayTrailers = settings.autoplayTrailers;
+    if (settings.reduceMotion !== undefined)
+      patch.reduceMotion = settings.reduceMotion;
+    if (settings.highContrast !== undefined)
+      patch.highContrast = settings.highContrast;
+    if (settings.hideEpisodeSpoilers !== undefined)
+      patch.hideEpisodeSpoilers = settings.hideEpisodeSpoilers;
+    if (settings.autoplayTrailers !== undefined)
+      patch.autoplayTrailers = settings.autoplayTrailers;
     if (Object.keys(patch).length === 0) return;
     await db.update(users).set(patch).where(eq(users.id, userId)).run();
   });
@@ -204,21 +240,21 @@ export async function updateAppearanceSettings(
 
 export async function getUserByProviderSubject(
   authProvider: string,
-  providerSubject: string
+  providerSubject: string,
 ) {
   return traceDbQuery("getUserByProviderSubject", async () => {
     const db = getDb();
     return (
-      await db
+      (await db
         .select(userColumns)
         .from(users)
         .where(
           and(
             eq(users.authProvider, authProvider),
-            eq(users.providerSubject, providerSubject)
-          )
+            eq(users.providerSubject, providerSubject),
+          ),
         )
-        .get() ?? null
+        .get()) ?? null
     );
   });
 }
@@ -235,18 +271,17 @@ export async function updateUserPassword(userId: string, passwordHash: string) {
   return traceDbQuery("updateUserPassword", async () => {
     const db = getDb();
     // Update legacy column
-    await db.update(users)
+    await db
+      .update(users)
       .set({ passwordHash })
       .where(eq(users.id, userId))
       .run();
     // Update better-auth account
-    await db.update(account)
+    await db
+      .update(account)
       .set({ password: passwordHash })
       .where(
-        and(
-          eq(account.userId, userId),
-          eq(account.providerId, "credential")
-        )
+        and(eq(account.userId, userId), eq(account.providerId, "credential")),
       )
       .run();
   });
@@ -255,7 +290,8 @@ export async function updateUserPassword(userId: string, passwordHash: string) {
 export async function updateUserAdmin(userId: string, isAdmin: boolean) {
   return traceDbQuery("updateUserAdmin", async () => {
     const db = getDb();
-    await db.update(users)
+    await db
+      .update(users)
       .set({
         isAdmin: isAdmin ? 1 : 0,
         role: isAdmin ? "admin" : "user",
@@ -280,8 +316,8 @@ export async function searchUsers(query: string, limit = 10) {
       .where(
         and(
           sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`,
-          sql`COALESCE(${users.banned}, 0) = 0`
-        )
+          sql`COALESCE(${users.banned}, 0) = 0`,
+        ),
       )
       .limit(limit)
       .all();
@@ -295,9 +331,7 @@ export async function createSession(userId: string): Promise<string> {
     const db = getDb();
     const id = crypto.randomUUID();
     const token = crypto.randomUUID();
-    const expiresAt = new Date(
-      Date.now() + 7 * 24 * 3600 * 1000
-    ).toISOString();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
     await db.insert(sessions).values({ id, userId, token, expiresAt }).run();
     return token;
   });
@@ -318,7 +352,10 @@ export async function getSessionWithUser(token: string) {
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
       .where(
-        and(eq(sessions.token, token), sql`${sessions.expiresAt} > datetime('now')`)
+        and(
+          eq(sessions.token, token),
+          sql`${sessions.expiresAt} > datetime('now')`,
+        ),
       )
       .get();
 
@@ -344,22 +381,29 @@ export async function deleteSession(token: string) {
 export async function deleteExpiredSessions() {
   return traceDbQuery("deleteExpiredSessions", async () => {
     const db = getDb();
-    const result = await db.delete(sessions)
+    const result = await db
+      .delete(sessions)
       .where(sql`${sessions.expiresAt} <= datetime('now')`)
       .run();
-    const changes = typeof result === "object" && result !== null && "changes" in result
-      ? (result as any).changes
-      : 0;
+    const changes =
+      typeof result === "object" && result !== null && "changes" in result
+        ? (result as any).changes
+        : 0;
     if (changes > 0) {
-      logger.child({ module: "db" }).info("Cleaned up expired sessions", { count: changes });
+      logger
+        .child({ module: "db" })
+        .info("Cleaned up expired sessions", { count: changes });
     }
   });
 }
 
-export async function getHomepageLayout(userId: string): Promise<string | null> {
+export async function getHomepageLayout(
+  userId: string,
+): Promise<string | null> {
   return traceDbQuery("getHomepageLayout", async () => {
     const db = getDb();
-    const row = await db.select({ homepageLayout: users.homepageLayout })
+    const row = await db
+      .select({ homepageLayout: users.homepageLayout })
       .from(users)
       .where(eq(users.id, userId))
       .get();
@@ -367,10 +411,14 @@ export async function getHomepageLayout(userId: string): Promise<string | null> 
   });
 }
 
-export async function setHomepageLayout(userId: string, layout: string): Promise<void> {
+export async function setHomepageLayout(
+  userId: string,
+  layout: string,
+): Promise<void> {
   return traceDbQuery("setHomepageLayout", async () => {
     const db = getDb();
-    await db.update(users)
+    await db
+      .update(users)
       .set({ homepageLayout: layout })
       .where(eq(users.id, userId))
       .run();
@@ -379,7 +427,14 @@ export async function setHomepageLayout(userId: string, layout: string): Promise
 
 // ─── Admin user management ────────────────────────────────────────────────────
 
-export async function getAllUsers(opts: { search?: string; filter?: "all" | "banned" | "active"; limit?: number; offset?: number } = {}) {
+export async function getAllUsers(
+  opts: {
+    search?: string;
+    filter?: "all" | "banned" | "active";
+    limit?: number;
+    offset?: number;
+  } = {},
+) {
   return traceDbQuery("getAllUsers", async () => {
     const db = getDb();
     const { search, filter = "all", limit = 50, offset = 0 } = opts;
@@ -388,7 +443,9 @@ export async function getAllUsers(opts: { search?: string; filter?: "all" | "ban
 
     if (search) {
       const pattern = `%${search}%`;
-      conditions.push(sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`);
+      conditions.push(
+        sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`,
+      );
     }
 
     if (filter === "banned") {
@@ -423,7 +480,9 @@ export async function getAllUsers(opts: { search?: string; filter?: "all" | "ban
   });
 }
 
-export async function getAdminUserCount(opts: { search?: string; filter?: "all" | "banned" | "active" } = {}) {
+export async function getAdminUserCount(
+  opts: { search?: string; filter?: "all" | "banned" | "active" } = {},
+) {
   return traceDbQuery("getAdminUserCount", async () => {
     const db = getDb();
     const { search, filter = "all" } = opts;
@@ -432,7 +491,9 @@ export async function getAdminUserCount(opts: { search?: string; filter?: "all" 
 
     if (search) {
       const pattern = `%${search}%`;
-      conditions.push(sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`);
+      conditions.push(
+        sql`(${users.username} LIKE ${pattern} OR ${users.name} LIKE ${pattern})`,
+      );
     }
 
     if (filter === "banned") {
@@ -454,12 +515,20 @@ export async function getAdminUserCount(opts: { search?: string; filter?: "all" 
 export async function getUserTrackedCount(userId: string): Promise<number> {
   return traceDbQuery("getUserTrackedCount", async () => {
     const db = getDb();
-    const row = await db.select({ cnt: count() }).from(tracked).where(eq(tracked.userId, userId)).get();
+    const row = await db
+      .select({ cnt: count() })
+      .from(tracked)
+      .where(eq(tracked.userId, userId))
+      .get();
     return row?.cnt ?? 0;
   });
 }
 
-export async function banUser(userId: string, reason: string | null, expiresAt: number | null) {
+export async function banUser(
+  userId: string,
+  reason: string | null,
+  expiresAt: number | null,
+) {
   return traceDbQuery("banUser", async () => {
     const db = getDb();
     await db
@@ -493,22 +562,39 @@ export async function deleteUser(userId: string) {
 export async function getFeedToken(userId: string): Promise<string | null> {
   return traceDbQuery("getFeedToken", async () => {
     const db = getDb();
-    const row = await db.select({ feedToken: users.feedToken }).from(users).where(eq(users.id, userId)).get();
+    const row = await db
+      .select({ feedToken: users.feedToken })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
     return row?.feedToken ?? null;
   });
 }
 
-export async function setFeedToken(userId: string, token: string): Promise<void> {
+export async function setFeedToken(
+  userId: string,
+  token: string,
+): Promise<void> {
   return traceDbQuery("setFeedToken", async () => {
     const db = getDb();
-    await db.update(users).set({ feedToken: token }).where(eq(users.id, userId)).run();
+    await db
+      .update(users)
+      .set({ feedToken: token })
+      .where(eq(users.id, userId))
+      .run();
   });
 }
 
-export async function getUserByFeedToken(token: string): Promise<{ id: string } | null> {
+export async function getUserByFeedToken(
+  token: string,
+): Promise<{ id: string } | null> {
   return traceDbQuery("getUserByFeedToken", async () => {
     const db = getDb();
-    const row = await db.select({ id: users.id }).from(users).where(eq(users.feedToken, token)).get();
+    const row = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.feedToken, token))
+      .get();
     return row ?? null;
   });
 }
@@ -518,23 +604,42 @@ export async function getUserByFeedToken(token: string): Promise<{ id: string } 
 export async function getKioskToken(userId: string): Promise<string | null> {
   return traceDbQuery("getKioskToken", async () => {
     const db = getDb();
-    const row = await db.select({ kioskToken: users.kioskToken }).from(users).where(eq(users.id, userId)).get();
+    const row = await db
+      .select({ kioskToken: users.kioskToken })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
     return row?.kioskToken ?? null;
   });
 }
 
-export async function setKioskToken(userId: string, token: string | null): Promise<void> {
+export async function setKioskToken(
+  userId: string,
+  token: string | null,
+): Promise<void> {
   return traceDbQuery("setKioskToken", async () => {
     const db = getDb();
-    await db.update(users).set({ kioskToken: token }).where(eq(users.id, userId)).run();
+    await db
+      .update(users)
+      .set({ kioskToken: token })
+      .where(eq(users.id, userId))
+      .run();
   });
 }
 
-export async function getUserByKioskToken(token: string): Promise<{ id: string; username: string; displayUsername: string | null } | null> {
+export async function getUserByKioskToken(token: string): Promise<{
+  id: string;
+  username: string;
+  displayUsername: string | null;
+} | null> {
   return traceDbQuery("getUserByKioskToken", async () => {
     const db = getDb();
     const row = await db
-      .select({ id: users.id, username: users.username, displayUsername: users.displayUsername })
+      .select({
+        id: users.id,
+        username: users.username,
+        displayUsername: users.displayUsername,
+      })
       .from(users)
       .where(eq(users.kioskToken, token))
       .get();
@@ -544,26 +649,47 @@ export async function getUserByKioskToken(token: string): Promise<{ id: string; 
 
 // ─── Watchlist share token ────────────────────────────────────────────────────
 
-export async function getWatchlistShareToken(userId: string): Promise<string | null> {
+export async function getWatchlistShareToken(
+  userId: string,
+): Promise<string | null> {
   return traceDbQuery("getWatchlistShareToken", async () => {
     const db = getDb();
-    const row = await db.select({ watchlistShareToken: users.watchlistShareToken }).from(users).where(eq(users.id, userId)).get();
+    const row = await db
+      .select({ watchlistShareToken: users.watchlistShareToken })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
     return row?.watchlistShareToken ?? null;
   });
 }
 
-export async function setWatchlistShareToken(userId: string, token: string | null): Promise<void> {
+export async function setWatchlistShareToken(
+  userId: string,
+  token: string | null,
+): Promise<void> {
   return traceDbQuery("setWatchlistShareToken", async () => {
     const db = getDb();
-    await db.update(users).set({ watchlistShareToken: token }).where(eq(users.id, userId)).run();
+    await db
+      .update(users)
+      .set({ watchlistShareToken: token })
+      .where(eq(users.id, userId))
+      .run();
   });
 }
 
-export async function getUserByWatchlistShareToken(token: string): Promise<{ id: string; username: string; displayUsername: string | null } | null> {
+export async function getUserByWatchlistShareToken(token: string): Promise<{
+  id: string;
+  username: string;
+  displayUsername: string | null;
+} | null> {
   return traceDbQuery("getUserByWatchlistShareToken", async () => {
     const db = getDb();
     const row = await db
-      .select({ id: users.id, username: users.username, displayUsername: users.displayUsername })
+      .select({
+        id: users.id,
+        username: users.username,
+        displayUsername: users.displayUsername,
+      })
       .from(users)
       .where(eq(users.watchlistShareToken, token))
       .get();

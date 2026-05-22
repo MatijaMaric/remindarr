@@ -37,9 +37,11 @@ export const CONFIG = {
 
   // Rate limit knob for /api/auth/* — keeps brute-force protection on by
   // default but lets e2e / CI raise the cap so test flows don't 429.
-  AUTH_RATE_LIMIT_PER_MINUTE: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE) || 20,
+  AUTH_RATE_LIMIT_PER_MINUTE:
+    Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE) || 20,
   // Global per-IP cap across all /api/* routes — guards against aggregate abuse.
-  GLOBAL_RATE_LIMIT_PER_MINUTE: Number(process.env.GLOBAL_RATE_LIMIT_PER_MINUTE) || 300,
+  GLOBAL_RATE_LIMIT_PER_MINUTE:
+    Number(process.env.GLOBAL_RATE_LIMIT_PER_MINUTE) || 300,
 
   // Passkeys (WebAuthn)
   PASSKEY_RP_ID: process.env.PASSKEY_RP_ID || "",
@@ -63,7 +65,8 @@ export const CONFIG = {
   VAPID_SUBJECT: process.env.VAPID_SUBJECT || "",
 
   // Streaming Availability API (deep links)
-  STREAMING_AVAILABILITY_API_KEY: process.env.STREAMING_AVAILABILITY_API_KEY || "",
+  STREAMING_AVAILABILITY_API_KEY:
+    process.env.STREAMING_AVAILABILITY_API_KEY || "",
   SYNC_DEEP_LINKS_CRON: process.env.SYNC_DEEP_LINKS_CRON || "0 4 * * *",
 
   // Plex
@@ -97,7 +100,8 @@ export const CONFIG = {
   CACHE_TTL_DETAILS: Number(process.env.CACHE_TTL_DETAILS) || 86400,
   CACHE_TTL_BROWSE: Number(process.env.CACHE_TTL_BROWSE) || 900,
   CACHE_TTL_STREAMING: Number(process.env.CACHE_TTL_STREAMING) || 86400,
-  CACHE_MAX_MEMORY_ENTRIES: Number(process.env.CACHE_MAX_MEMORY_ENTRIES) || 1000,
+  CACHE_MAX_MEMORY_ENTRIES:
+    Number(process.env.CACHE_MAX_MEMORY_ENTRIES) || 1000,
 };
 
 /**

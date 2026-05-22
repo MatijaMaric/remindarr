@@ -1,10 +1,18 @@
 import { useEffect } from "react";
-import { isPushSupported, subscribeToPush, getExistingSubscription } from "../lib/push";
+import {
+  isPushSupported,
+  subscribeToPush,
+  getExistingSubscription,
+} from "../lib/push";
 import * as api from "../api";
 
 async function renewSubscription() {
   if (!isPushSupported()) return;
-  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  if (
+    typeof Notification === "undefined" ||
+    Notification.permission !== "granted"
+  )
+    return;
 
   const [{ notifiers }, existingSub] = await Promise.all([
     api.getNotifiers(),
@@ -18,7 +26,10 @@ async function renewSubscription() {
   if (!webpushNotifier.enabled || !existingSub) {
     const { publicKey } = await api.getVapidPublicKey();
     const subscription = await subscribeToPush(publicKey);
-    await api.updateNotifier(webpushNotifier.id, { config: subscription, enabled: true });
+    await api.updateNotifier(webpushNotifier.id, {
+      config: subscription,
+      enabled: true,
+    });
   }
 }
 
@@ -34,9 +45,15 @@ export function usePushSubscriptionSync() {
       renewSubscription().catch(() => {});
     };
 
-    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      handleControllerChange,
+    );
     return () => {
-      navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        handleControllerChange,
+      );
     };
   }, []);
 }

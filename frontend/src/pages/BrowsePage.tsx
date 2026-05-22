@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, useReducer, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useReducer,
+  useMemo,
+} from "react";
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,7 +27,12 @@ import { useAsyncError } from "../hooks/useAsyncError";
 import { Card } from "../components/ui/card";
 import { useAuth } from "../context/AuthContext";
 
-const VALID_CATEGORIES: BrowseCategory[] = ["new_releases", "popular", "upcoming", "top_rated"];
+const VALID_CATEGORIES: BrowseCategory[] = [
+  "new_releases",
+  "popular",
+  "upcoming",
+  "top_rated",
+];
 
 const CATEGORY_LABEL_KEYS: Record<BrowseCategory, string> = {
   new_releases: "browse.categories.new_releases",
@@ -33,7 +45,7 @@ function useQueryParam(
   searchParams: URLSearchParams,
   setSearchParams: ReturnType<typeof useSearchParams>[1],
   key: string,
-  defaultValue = ""
+  defaultValue = "",
 ): [string, (value: string) => void] {
   const value = searchParams.get(key) || defaultValue;
   const setValue = useCallback(
@@ -48,10 +60,10 @@ function useQueryParam(
           }
           return next;
         },
-        { replace: true }
+        { replace: true },
       );
     },
-    [setSearchParams, key, defaultValue]
+    [setSearchParams, key, defaultValue],
   );
   return [value, setValue];
 }
@@ -59,7 +71,7 @@ function useQueryParam(
 function useQueryParamArray(
   searchParams: URLSearchParams,
   setSearchParams: ReturnType<typeof useSearchParams>[1],
-  key: string
+  key: string,
 ): [string[], (values: string[]) => void] {
   const raw = searchParams.get(key) || "";
   const value = useMemo(() => (raw ? raw.split(",") : []), [raw]);
@@ -75,18 +87,38 @@ function useQueryParamArray(
           }
           return next;
         },
-        { replace: true }
+        { replace: true },
       );
     },
-    [setSearchParams, key]
+    [setSearchParams, key],
   );
   return [value, setValue];
 }
 
-export const FILTER_KEYS = ["type", "genre", "provider", "language", "daysBack", "yearMin", "yearMax", "minRating"] as const;
+export const FILTER_KEYS = [
+  "type",
+  "genre",
+  "provider",
+  "language",
+  "daysBack",
+  "yearMin",
+  "yearMax",
+  "minRating",
+] as const;
 
-type SearchAdvanced = { type: "" | "MOVIE" | "SHOW"; yearMin: string; yearMax: string; minRating: string; language: string };
-type SearchState = { status: "idle" | "loading" | "done"; results: Title[] | null; lastQuery: string | null; advanced: SearchAdvanced };
+type SearchAdvanced = {
+  type: "" | "MOVIE" | "SHOW";
+  yearMin: string;
+  yearMax: string;
+  minRating: string;
+  language: string;
+};
+type SearchState = {
+  status: "idle" | "loading" | "done";
+  results: Title[] | null;
+  lastQuery: string | null;
+  advanced: SearchAdvanced;
+};
 type SearchAction =
   | { type: "SEARCH_START"; query: string }
   | { type: "SEARCH_SUCCESS"; results: Title[] }
@@ -94,20 +126,37 @@ type SearchAction =
   | { type: "CLEAR_SEARCH" }
   | { type: "SET_ADVANCED"; key: keyof SearchAdvanced; value: string };
 
-const SEARCH_INIT: SearchState = { status: "idle", results: null, lastQuery: null, advanced: { type: "", yearMin: "", yearMax: "", minRating: "", language: "" } };
+const SEARCH_INIT: SearchState = {
+  status: "idle",
+  results: null,
+  lastQuery: null,
+  advanced: { type: "", yearMin: "", yearMax: "", minRating: "", language: "" },
+};
 
 function searchReducer(state: SearchState, action: SearchAction): SearchState {
   switch (action.type) {
-    case "SEARCH_START": return { ...state, status: "loading", lastQuery: action.query };
-    case "SEARCH_SUCCESS": return { ...state, status: "done", results: action.results };
-    case "SEARCH_ERROR": return { ...state, status: "idle" };
-    case "CLEAR_SEARCH": return SEARCH_INIT;
-    case "SET_ADVANCED": return { ...state, advanced: { ...state.advanced, [action.key]: action.value } };
-    default: return state;
+    case "SEARCH_START":
+      return { ...state, status: "loading", lastQuery: action.query };
+    case "SEARCH_SUCCESS":
+      return { ...state, status: "done", results: action.results };
+    case "SEARCH_ERROR":
+      return { ...state, status: "idle" };
+    case "CLEAR_SEARCH":
+      return SEARCH_INIT;
+    case "SET_ADVANCED":
+      return {
+        ...state,
+        advanced: { ...state.advanced, [action.key]: action.value },
+      };
+    default:
+      return state;
   }
 }
 
-export function buildCategoryParams(prev: URLSearchParams, cat: BrowseCategory): URLSearchParams {
+export function buildCategoryParams(
+  prev: URLSearchParams,
+  cat: BrowseCategory,
+): URLSearchParams {
   const next = new URLSearchParams(prev);
   if (cat === "popular") {
     next.delete("category");
@@ -121,7 +170,11 @@ export default function BrowsePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, searchDispatch] = useReducer(searchReducer, SEARCH_INIT);
   const [resultsCount, setResultsCount] = useState<number | null>(null);
-  const { run: runAsync, error: searchError, reset: resetSearchError } = useAsyncError();
+  const {
+    run: runAsync,
+    error: searchError,
+    reset: resetSearchError,
+  } = useAsyncError();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { user, subscriptions, loading: authLoading } = useAuth();
@@ -129,8 +182,7 @@ export default function BrowsePage() {
   // provider-race double-fire. For unauthenticated visits (no user) auth loading
   // finishing is sufficient. For authenticated visits we wait until subscriptions
   // is non-null (populated).
-  const subscriptionsReady =
-    !authLoading && (!user || subscriptions !== null);
+  const subscriptionsReady = !authLoading && (!user || subscriptions !== null);
   useGridNavigation();
 
   // ── Browse filter data (shared cache, loaded once across pages) ──────────────
@@ -149,40 +201,64 @@ export default function BrowsePage() {
   const searchResults = search.results;
   const searchLoading = search.status === "loading";
   const lastQuery = search.lastQuery;
-  const { type: searchType, yearMin, yearMax, minRating, language: searchLanguage } = search.advanced;
+  const {
+    type: searchType,
+    yearMin,
+    yearMax,
+    minRating,
+    language: searchLanguage,
+  } = search.advanced;
 
   // ── Advanced search language options (loaded once) ──────────────────────────
-  const [availableLanguages, setAvailableLanguages] = useState<{ code: string; label: string }[]>([]);
+  const [availableLanguages, setAvailableLanguages] = useState<
+    { code: string; label: string }[]
+  >([]);
 
   // Load languages once for the dropdown
   useEffect(() => {
     const controller = new AbortController();
-    api.getLanguages(controller.signal).then(({ languages }) => {
-      if (!controller.signal.aborted) {
-        setAvailableLanguages(
-          languages.map((code) => {
-            let label = code;
-            try {
-              label = new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
-            } catch { /* noop */ }
-            return { code, label };
-          }).sort((a, b) => a.label.localeCompare(b.label))
-        );
-      }
-    }).catch(() => { /* ignore */ });
+    api
+      .getLanguages(controller.signal)
+      .then(({ languages }) => {
+        if (!controller.signal.aborted) {
+          setAvailableLanguages(
+            languages
+              .map((code) => {
+                let label = code;
+                try {
+                  label =
+                    new Intl.DisplayNames(["en"], { type: "language" }).of(
+                      code,
+                    ) ?? code;
+                } catch {
+                  /* noop */
+                }
+                return { code, label };
+              })
+              .sort((a, b) => a.label.localeCompare(b.label)),
+          );
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      });
     return () => controller.abort();
   }, []);
 
   const rawCategory = searchParams.get("category") || "popular";
-  const category: BrowseCategory = VALID_CATEGORIES.includes(rawCategory as BrowseCategory)
+  const category: BrowseCategory = VALID_CATEGORIES.includes(
+    rawCategory as BrowseCategory,
+  )
     ? (rawCategory as BrowseCategory)
     : "popular";
 
   const setCategory = useCallback(
     (cat: BrowseCategory) => {
-      setSearchParams((prev) => buildCategoryParams(prev, cat), { replace: true });
+      setSearchParams((prev) => buildCategoryParams(prev, cat), {
+        replace: true,
+      });
     },
-    [setSearchParams]
+    [setSearchParams],
   );
 
   const clearFilters = useCallback(() => {
@@ -194,42 +270,83 @@ export default function BrowsePage() {
         }
         return next;
       },
-      { replace: true }
+      { replace: true },
     );
   }, [setSearchParams]);
 
-  const [type, setType] = useQueryParamArray(searchParams, setSearchParams, "type");
-  const [genre, setGenre] = useQueryParamArray(searchParams, setSearchParams, "genre");
-  const [provider, setProvider] = useQueryParamArray(searchParams, setSearchParams, "provider");
-  const [language, setLanguage] = useQueryParamArray(searchParams, setSearchParams, "language");
-  const [browseYearMin, setBrowseYearMin] = useQueryParam(searchParams, setSearchParams, "yearMin");
-  const [browseYearMax, setBrowseYearMax] = useQueryParam(searchParams, setSearchParams, "yearMax");
-  const [browseMinRating, setBrowseMinRating] = useQueryParam(searchParams, setSearchParams, "minRating");
+  const [type, setType] = useQueryParamArray(
+    searchParams,
+    setSearchParams,
+    "type",
+  );
+  const [genre, setGenre] = useQueryParamArray(
+    searchParams,
+    setSearchParams,
+    "genre",
+  );
+  const [provider, setProvider] = useQueryParamArray(
+    searchParams,
+    setSearchParams,
+    "provider",
+  );
+  const [language, setLanguage] = useQueryParamArray(
+    searchParams,
+    setSearchParams,
+    "language",
+  );
+  const [browseYearMin, setBrowseYearMin] = useQueryParam(
+    searchParams,
+    setSearchParams,
+    "yearMin",
+  );
+  const [browseYearMax, setBrowseYearMax] = useQueryParam(
+    searchParams,
+    setSearchParams,
+    "yearMax",
+  );
+  const [browseMinRating, setBrowseMinRating] = useQueryParam(
+    searchParams,
+    setSearchParams,
+    "minRating",
+  );
   const setBrowseYearRange = useCallback(
     (min: string, max: string) => {
       setBrowseYearMin(min);
       setBrowseYearMax(max);
     },
-    [setBrowseYearMin, setBrowseYearMax]
+    [setBrowseYearMin, setBrowseYearMax],
   );
-  const [daysBackStr, setDaysBackStr] = useQueryParam(searchParams, setSearchParams, "daysBack", "30");
+  const [daysBackStr, setDaysBackStr] = useQueryParam(
+    searchParams,
+    setSearchParams,
+    "daysBack",
+    "30",
+  );
   const daysBack = parseInt(daysBackStr, 10) || 30;
   const setDaysBack = useCallback(
     (days: number) => setDaysBackStr(String(days)),
-    [setDaysBackStr]
+    [setDaysBackStr],
   );
-  const [hideTrackedStr, setHideTrackedStr] = useQueryParam(searchParams, setSearchParams, "hideTracked");
+  const [hideTrackedStr, setHideTrackedStr] = useQueryParam(
+    searchParams,
+    setSearchParams,
+    "hideTracked",
+  );
   const hideTracked = hideTrackedStr === "1";
   const setHideTracked = useCallback(
     (value: boolean) => setHideTrackedStr(value ? "1" : ""),
-    [setHideTrackedStr]
+    [setHideTrackedStr],
   );
 
-  const [onlyMineStr, setOnlyMineStr] = useQueryParam(searchParams, setSearchParams, "onlyMine");
+  const [onlyMineStr, setOnlyMineStr] = useQueryParam(
+    searchParams,
+    setSearchParams,
+    "onlyMine",
+  );
   const onlyMine = onlyMineStr === "true";
   const setOnlyMine = useCallback(
     (value: boolean) => setOnlyMineStr(value ? "true" : ""),
-    [setOnlyMineStr]
+    [setOnlyMineStr],
   );
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -254,25 +371,41 @@ export default function BrowsePage() {
 
   async function runSearch(
     query: string,
-    overrides?: { type?: "" | "MOVIE" | "SHOW"; yearMin?: string; yearMax?: string; minRating?: string; language?: string }
+    overrides?: {
+      type?: "" | "MOVIE" | "SHOW";
+      yearMin?: string;
+      yearMax?: string;
+      minRating?: string;
+      language?: string;
+    },
   ) {
     searchDispatch({ type: "SEARCH_START", query });
     let succeeded = false;
     await runAsync(async () => {
-      const effectiveType = overrides?.type !== undefined ? overrides.type : searchType;
-      const effectiveYearMin = overrides?.yearMin !== undefined ? overrides.yearMin : yearMin;
-      const effectiveYearMax = overrides?.yearMax !== undefined ? overrides.yearMax : yearMax;
-      const effectiveMinRating = overrides?.minRating !== undefined ? overrides.minRating : minRating;
-      const effectiveLanguage = overrides?.language !== undefined ? overrides.language : searchLanguage;
+      const effectiveType =
+        overrides?.type !== undefined ? overrides.type : searchType;
+      const effectiveYearMin =
+        overrides?.yearMin !== undefined ? overrides.yearMin : yearMin;
+      const effectiveYearMax =
+        overrides?.yearMax !== undefined ? overrides.yearMax : yearMax;
+      const effectiveMinRating =
+        overrides?.minRating !== undefined ? overrides.minRating : minRating;
+      const effectiveLanguage =
+        overrides?.language !== undefined ? overrides.language : searchLanguage;
       const filters = {
         type: (effectiveType || undefined) as "MOVIE" | "SHOW" | undefined,
         yearMin: effectiveYearMin ? parseInt(effectiveYearMin, 10) : undefined,
         yearMax: effectiveYearMax ? parseInt(effectiveYearMax, 10) : undefined,
-        minRating: effectiveMinRating ? parseFloat(effectiveMinRating) : undefined,
+        minRating: effectiveMinRating
+          ? parseFloat(effectiveMinRating)
+          : undefined,
         language: effectiveLanguage || undefined,
       };
       const res = await api.searchTitles(query, filters);
-      searchDispatch({ type: "SEARCH_SUCCESS", results: res.titles.map(normalizeSearchTitle) });
+      searchDispatch({
+        type: "SEARCH_SUCCESS",
+        results: res.titles.map(normalizeSearchTitle),
+      });
       succeeded = true;
     });
     if (!succeeded) searchDispatch({ type: "SEARCH_ERROR" });
@@ -288,7 +421,10 @@ export default function BrowsePage() {
     await runAsync(async () => {
       const res = await api.resolveImdb(url);
       if (res.title) {
-        searchDispatch({ type: "SEARCH_SUCCESS", results: [normalizeSearchTitle(res.title)] });
+        searchDispatch({
+          type: "SEARCH_SUCCESS",
+          results: [normalizeSearchTitle(res.title)],
+        });
         succeeded = true;
       }
     });
@@ -300,15 +436,27 @@ export default function BrowsePage() {
     resetSearchError();
   }
 
-
-  const RATING_OPTIONS = ["5", "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5"] as const;
+  const RATING_OPTIONS = [
+    "5",
+    "5.5",
+    "6",
+    "6.5",
+    "7",
+    "7.5",
+    "8",
+    "8.5",
+    "9",
+    "9.5",
+  ] as const;
   const inputCls =
     "bg-zinc-800 border border-zinc-700 text-white text-sm rounded-md px-2 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900";
   const selectCls =
     "bg-zinc-800 border border-zinc-700 text-white text-sm rounded-md px-2 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 w-full";
-  const pillBase = "px-3 py-1 rounded-full text-sm font-medium border transition-colors cursor-pointer";
+  const pillBase =
+    "px-3 py-1 rounded-full text-sm font-medium border transition-colors cursor-pointer";
   const pillActive = "bg-white text-black border-white";
-  const pillInactive = "bg-transparent text-zinc-300 border-zinc-600 hover:border-zinc-400";
+  const pillInactive =
+    "bg-transparent text-zinc-300 border-zinc-600 hover:border-zinc-400";
 
   return (
     <div className="space-y-6">
@@ -322,8 +470,11 @@ export default function BrowsePage() {
         }
         title="Browse"
       />
-      <SearchBar onSearch={handleSearch} onImdb={handleImdb} loading={searchLoading} />
-
+      <SearchBar
+        onSearch={handleSearch}
+        onImdb={handleImdb}
+        loading={searchLoading}
+      />
 
       {/* Advanced search filters shown only while search results are displayed */}
       {searchResults !== null && lastQuery !== null && (
@@ -336,19 +487,40 @@ export default function BrowsePage() {
             <div className="flex items-center gap-1">
               <button
                 className={`${pillBase} ${searchType === "" ? pillActive : pillInactive}`}
-                onClick={() => { searchDispatch({ type: "SET_ADVANCED", key: "type", value: "" }); void runSearch(lastQuery!, { type: "" }); }}
+                onClick={() => {
+                  searchDispatch({
+                    type: "SET_ADVANCED",
+                    key: "type",
+                    value: "",
+                  });
+                  void runSearch(lastQuery!, { type: "" });
+                }}
               >
                 {t("filter.all")}
               </button>
               <button
                 className={`${pillBase} ${searchType === "MOVIE" ? pillActive : pillInactive}`}
-                onClick={() => { searchDispatch({ type: "SET_ADVANCED", key: "type", value: "MOVIE" }); void runSearch(lastQuery!, { type: "MOVIE" }); }}
+                onClick={() => {
+                  searchDispatch({
+                    type: "SET_ADVANCED",
+                    key: "type",
+                    value: "MOVIE",
+                  });
+                  void runSearch(lastQuery!, { type: "MOVIE" });
+                }}
               >
                 {t("filter.movies")}
               </button>
               <button
                 className={`${pillBase} ${searchType === "SHOW" ? pillActive : pillInactive}`}
-                onClick={() => { searchDispatch({ type: "SET_ADVANCED", key: "type", value: "SHOW" }); void runSearch(lastQuery!, { type: "SHOW" }); }}
+                onClick={() => {
+                  searchDispatch({
+                    type: "SET_ADVANCED",
+                    key: "type",
+                    value: "SHOW",
+                  });
+                  void runSearch(lastQuery!, { type: "SHOW" });
+                }}
               >
                 {t("filter.shows")}
               </button>
@@ -362,7 +534,13 @@ export default function BrowsePage() {
                 value={yearMin}
                 min={1900}
                 max={2100}
-                onChange={(e) => searchDispatch({ type: "SET_ADVANCED", key: "yearMin", value: e.target.value })}
+                onChange={(e) =>
+                  searchDispatch({
+                    type: "SET_ADVANCED",
+                    key: "yearMin",
+                    value: e.target.value,
+                  })
+                }
                 onBlur={() => void runSearch(lastQuery!)}
               />
               <span className="text-zinc-500 text-sm">–</span>
@@ -373,7 +551,13 @@ export default function BrowsePage() {
                 value={yearMax}
                 min={1900}
                 max={2100}
-                onChange={(e) => searchDispatch({ type: "SET_ADVANCED", key: "yearMax", value: e.target.value })}
+                onChange={(e) =>
+                  searchDispatch({
+                    type: "SET_ADVANCED",
+                    key: "yearMax",
+                    value: e.target.value,
+                  })
+                }
                 onBlur={() => void runSearch(lastQuery!)}
               />
             </div>
@@ -382,7 +566,14 @@ export default function BrowsePage() {
               <select
                 className={selectCls}
                 value={minRating}
-                onChange={(e) => { searchDispatch({ type: "SET_ADVANCED", key: "minRating", value: e.target.value }); void runSearch(lastQuery!, { minRating: e.target.value }); }}
+                onChange={(e) => {
+                  searchDispatch({
+                    type: "SET_ADVANCED",
+                    key: "minRating",
+                    value: e.target.value,
+                  });
+                  void runSearch(lastQuery!, { minRating: e.target.value });
+                }}
               >
                 <option value="">{t("filter.anyRating")}</option>
                 {RATING_OPTIONS.map((v) => (
@@ -398,7 +589,14 @@ export default function BrowsePage() {
                 <select
                   className={selectCls}
                   value={searchLanguage}
-                  onChange={(e) => { searchDispatch({ type: "SET_ADVANCED", key: "language", value: e.target.value }); void runSearch(lastQuery!, { language: e.target.value }); }}
+                  onChange={(e) => {
+                    searchDispatch({
+                      type: "SET_ADVANCED",
+                      key: "language",
+                      value: e.target.value,
+                    });
+                    void runSearch(lastQuery!, { language: e.target.value });
+                  }}
                 >
                   <option value="">{t("filter.allLanguages")}</option>
                   {availableLanguages.map(({ code, label }) => (
@@ -428,7 +626,17 @@ export default function BrowsePage() {
                 aria-label={mobileFiltersOpen ? "Hide filters" : "Show filters"}
                 className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 transition-colors"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M3 6h18M6 12h12M10 18h4" />
                 </svg>
                 {activeFilterCount > 0 && (
@@ -444,7 +652,17 @@ export default function BrowsePage() {
                   aria-label="Clear all filters"
                   className="inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 hover:text-white transition-colors"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
                     <path d="M18 6 6 18M6 6l12 12" />
                   </svg>
                 </button>
@@ -485,7 +703,11 @@ export default function BrowsePage() {
                   genres={filterGenres}
                   provider={provider}
                   onProviderChange={setProvider}
-                  providers={filterProviders.map((p) => ({ id: p.id, name: p.name, iconUrl: p.icon_url }))}
+                  providers={filterProviders.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    iconUrl: p.icon_url,
+                  }))}
                   regionProviderIds={filterRegionProviderIds}
                   yearMin={browseYearMin}
                   yearMax={browseYearMax}
@@ -509,103 +731,117 @@ export default function BrowsePage() {
       )}
 
       {/* On my services toggle chip — shown when user has subscribed providers */}
-      {searchResults === null && subscriptions && subscriptions.providerIds.length > 0 && (!isMobile || mobileFiltersOpen) && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setOnlyMine(!onlyMine)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold font-mono border transition-colors ${
-              onlyMine
-                ? "bg-amber-400 text-black border-amber-400"
-                : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500"
-            }`}
-            aria-pressed={onlyMine}
-          >
-            {onlyMine ? "✓ " : ""}On my services
-          </button>
-        </div>
-      )}
+      {searchResults === null &&
+        subscriptions &&
+        subscriptions.providerIds.length > 0 &&
+        (!isMobile || mobileFiltersOpen) && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setOnlyMine(!onlyMine)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold font-mono border transition-colors ${
+                onlyMine
+                  ? "bg-amber-400 text-black border-amber-400"
+                  : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500"
+              }`}
+              aria-pressed={onlyMine}
+            >
+              {onlyMine ? "✓ " : ""}On my services
+            </button>
+          </div>
+        )}
 
       {/* Active filter chips */}
-      {searchResults === null && (!isMobile || mobileFiltersOpen) && (onlyMine || type.length > 0 || genre.length > 0 || provider.length > 0 || language.length > 0 || browseYearMin !== "" || browseYearMax !== "" || browseMinRating !== "") && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">Active</span>
-          {onlyMine && (
-            <button
-              type="button"
-              onClick={() => setOnlyMine(false)}
-              aria-label="Remove 'On my services' filter"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-            >
-              On my services ×
-            </button>
-          )}
-          {type.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setType(type.filter((v) => v !== t))}
-              aria-label={`Remove ${t === "MOVIE" ? "Movies" : "Shows"} filter`}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-            >
-              {t === "MOVIE" ? "Movies" : "Shows"} ×
-            </button>
-          ))}
-          {genre.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGenre(genre.filter((v) => v !== g))}
-              aria-label={`Remove ${g} filter`}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-            >
-              {g} ×
-            </button>
-          ))}
-          {provider.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setProvider(provider.filter((v) => v !== p))}
-              aria-label={`Remove ${filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} filter`}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-            >
-              {filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} ×
-            </button>
-          ))}
-          {language.map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLanguage(language.filter((v) => v !== l))}
-              aria-label={`Remove ${l} language filter`}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-            >
-              {l} ×
-            </button>
-          ))}
-          {(browseYearMin !== "" || browseYearMax !== "") && (
-            <button
-              type="button"
-              onClick={() => setBrowseYearRange("", "")}
-              aria-label="Remove year range filter"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-            >
-              {browseYearMin || "…"}–{browseYearMax || "…"} ×
-            </button>
-          )}
-          {browseMinRating !== "" && (
-            <button
-              type="button"
-              onClick={() => setBrowseMinRating("")}
-              aria-label="Remove minimum rating filter"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-            >
-              ★ {browseMinRating}+ ×
-            </button>
-          )}
-        </div>
-      )}
+      {searchResults === null &&
+        (!isMobile || mobileFiltersOpen) &&
+        (onlyMine ||
+          type.length > 0 ||
+          genre.length > 0 ||
+          provider.length > 0 ||
+          language.length > 0 ||
+          browseYearMin !== "" ||
+          browseYearMax !== "" ||
+          browseMinRating !== "") && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">
+              Active
+            </span>
+            {onlyMine && (
+              <button
+                type="button"
+                onClick={() => setOnlyMine(false)}
+                aria-label="Remove 'On my services' filter"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+              >
+                On my services ×
+              </button>
+            )}
+            {type.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(type.filter((v) => v !== t))}
+                aria-label={`Remove ${t === "MOVIE" ? "Movies" : "Shows"} filter`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+              >
+                {t === "MOVIE" ? "Movies" : "Shows"} ×
+              </button>
+            ))}
+            {genre.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGenre(genre.filter((v) => v !== g))}
+                aria-label={`Remove ${g} filter`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+              >
+                {g} ×
+              </button>
+            ))}
+            {provider.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setProvider(provider.filter((v) => v !== p))}
+                aria-label={`Remove ${filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} filter`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+              >
+                {filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} ×
+              </button>
+            ))}
+            {language.map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLanguage(language.filter((v) => v !== l))}
+                aria-label={`Remove ${l} language filter`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+              >
+                {l} ×
+              </button>
+            ))}
+            {(browseYearMin !== "" || browseYearMax !== "") && (
+              <button
+                type="button"
+                onClick={() => setBrowseYearRange("", "")}
+                aria-label="Remove year range filter"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+              >
+                {browseYearMin || "…"}–{browseYearMax || "…"} ×
+              </button>
+            )}
+            {browseMinRating !== "" && (
+              <button
+                type="button"
+                onClick={() => setBrowseMinRating("")}
+                aria-label="Remove minimum rating filter"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+              >
+                ★ {browseMinRating}+ ×
+              </button>
+            )}
+          </div>
+        )}
 
       {searchError && (
         <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm select-text">
@@ -616,7 +852,9 @@ export default function BrowsePage() {
       {searchResults !== null ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-[-0.01em]">{t("browse.searchResults", { count: searchResults.length })}</h2>
+            <h2 className="text-xl font-bold tracking-[-0.01em]">
+              {t("browse.searchResults", { count: searchResults.length })}
+            </h2>
             <button
               onClick={clearSearch}
               className="text-sm text-zinc-400 hover:text-white cursor-pointer"
@@ -624,11 +862,16 @@ export default function BrowsePage() {
               {t("browse.clear")}
             </button>
           </div>
-          <TitleList titles={searchResults} emptyMessage={t("browse.noResults")} />
+          <TitleList
+            titles={searchResults}
+            emptyMessage={t("browse.noResults")}
+          />
         </div>
       ) : (
         <div>
-          <h2 className="text-xl font-bold tracking-[-0.01em] mb-4">{t(CATEGORY_LABEL_KEYS[category])}</h2>
+          <h2 className="text-xl font-bold tracking-[-0.01em] mb-4">
+            {t(CATEGORY_LABEL_KEYS[category])}
+          </h2>
           {category === "new_releases" ? (
             <NewReleases
               type={type}

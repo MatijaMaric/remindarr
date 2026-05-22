@@ -9,7 +9,11 @@ export type SchemaExports = typeof schema;
  * All repository functions must use `await` on query results since the
  * underlying adapter may return a Promise (D1) or a plain value (bun:sqlite).
  */
-export type DrizzleDb = BaseSQLiteDatabase<"sync" | "async", any, SchemaExports>;
+export type DrizzleDb = BaseSQLiteDatabase<
+  "sync" | "async",
+  any,
+  SchemaExports
+>;
 
 /**
  * Platform abstraction for runtime-specific functionality.

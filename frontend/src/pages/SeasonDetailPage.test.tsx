@@ -1,56 +1,133 @@
 import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 import * as sonner from "sonner";
 import "../i18n";
 
-let mockUser: any = { id: "user1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+let mockUser: any = {
+  id: "user1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({ user: mockUser, loading: false, sessionStatus: "authenticated" }),
+  useAuth: () => ({
+    user: mockUser,
+    loading: false,
+    sessionStatus: "authenticated",
+  }),
   AuthContext: { Provider: ({ children }: any) => children },
 }));
 
 const defaultSeasons = [
-  { id: 1, name: "Season 1", overview: "", air_date: "2024-01-01", episode_count: 3, poster_path: null, season_number: 1, vote_average: 8.0 },
-  { id: 2, name: "Season 2", overview: "", air_date: "2024-06-01", episode_count: 5, poster_path: null, season_number: 2, vote_average: 7.5 },
-];
-
-const mockGetSeasonDetails = mock(() => Promise.resolve({
-  title: { id: "tv-100", title: "Test Show", is_tracked: true },
-  tmdb: {
+  {
     id: 1,
     name: "Season 1",
-    overview: "Overview",
+    overview: "",
     air_date: "2024-01-01",
+    episode_count: 3,
     poster_path: null,
     season_number: 1,
     vote_average: 8.0,
-    episodes: [
-      { id: 101, name: "Pilot", overview: "First episode", air_date: "2024-01-01", episode_number: 1, season_number: 1, still_path: null, runtime: 45, vote_average: 8.5, guest_stars: [], crew: [] },
-      { id: 102, name: "Second", overview: "The second one", air_date: "2024-01-08", episode_number: 2, season_number: 1, still_path: null, runtime: 42, vote_average: 7.9, guest_stars: [], crew: [] },
-      { id: 103, name: "Future", overview: "Unreleased", air_date: "2099-12-31", episode_number: 3, season_number: 1, still_path: null, runtime: null, vote_average: 0, guest_stars: [], crew: [] },
-    ],
-    credits: { cast: [], crew: [] },
   },
-  seasonNumber: 1,
-  country: "US",
-  seasons: defaultSeasons,
-}));
+  {
+    id: 2,
+    name: "Season 2",
+    overview: "",
+    air_date: "2024-06-01",
+    episode_count: 5,
+    poster_path: null,
+    season_number: 2,
+    vote_average: 7.5,
+  },
+];
 
-const mockGetSeasonEpisodeStatus = mock(() => Promise.resolve({
-  episodes: [
-    { episode_number: 1, id: 10, is_watched: false },
-    { episode_number: 2, id: 11, is_watched: true },
-    { episode_number: 3, id: 12, is_watched: false },
-  ],
-}));
+const mockGetSeasonDetails = mock(() =>
+  Promise.resolve({
+    title: { id: "tv-100", title: "Test Show", is_tracked: true },
+    tmdb: {
+      id: 1,
+      name: "Season 1",
+      overview: "Overview",
+      air_date: "2024-01-01",
+      poster_path: null,
+      season_number: 1,
+      vote_average: 8.0,
+      episodes: [
+        {
+          id: 101,
+          name: "Pilot",
+          overview: "First episode",
+          air_date: "2024-01-01",
+          episode_number: 1,
+          season_number: 1,
+          still_path: null,
+          runtime: 45,
+          vote_average: 8.5,
+          guest_stars: [],
+          crew: [],
+        },
+        {
+          id: 102,
+          name: "Second",
+          overview: "The second one",
+          air_date: "2024-01-08",
+          episode_number: 2,
+          season_number: 1,
+          still_path: null,
+          runtime: 42,
+          vote_average: 7.9,
+          guest_stars: [],
+          crew: [],
+        },
+        {
+          id: 103,
+          name: "Future",
+          overview: "Unreleased",
+          air_date: "2099-12-31",
+          episode_number: 3,
+          season_number: 1,
+          still_path: null,
+          runtime: null,
+          vote_average: 0,
+          guest_stars: [],
+          crew: [],
+        },
+      ],
+      credits: { cast: [], crew: [] },
+    },
+    seasonNumber: 1,
+    country: "US",
+    seasons: defaultSeasons,
+  }),
+);
+
+const mockGetSeasonEpisodeStatus = mock(() =>
+  Promise.resolve({
+    episodes: [
+      { episode_number: 1, id: 10, is_watched: false },
+      { episode_number: 2, id: 11, is_watched: true },
+      { episode_number: 3, id: 12, is_watched: false },
+    ],
+  }),
+);
 
 const mockWatchEpisode = mock(() => Promise.resolve());
 const mockUnwatchEpisode = mock(() => Promise.resolve());
@@ -67,7 +144,9 @@ mock.module("../api", () => ({
   unwatchEpisode: mockUnwatchEpisode,
   watchEpisodesBulk: mockWatchEpisodesBulk,
   // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() => Promise.resolve({ providerIds: [], onlyMine: false })),
+  getSubscriptions: mock(() =>
+    Promise.resolve({ providerIds: [], onlyMine: false }),
+  ),
 }));
 
 const { default: SeasonDetailPage } = await import("./SeasonDetailPage");
@@ -91,31 +170,84 @@ afterEach(() => {
   mockWatchEpisode.mockReset();
   mockUnwatchEpisode.mockReset();
   mockWatchEpisodesBulk.mockReset();
-  mockUser = { id: "user1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+  mockUser = {
+    id: "user1",
+    username: "test",
+    display_name: null,
+    auth_provider: "local",
+    is_admin: false,
+  };
 
   // Re-set default implementations
-  mockGetSeasonDetails.mockImplementation(() => Promise.resolve({
-    title: { id: "tv-100", title: "Test Show", is_tracked: true },
-    tmdb: {
-      id: 1, name: "Season 1", overview: "Overview", air_date: "2024-01-01", poster_path: null, season_number: 1, vote_average: 8.0,
-      episodes: [
-        { id: 101, name: "Pilot", overview: "First", air_date: "2024-01-01", episode_number: 1, season_number: 1, still_path: null, runtime: 45, vote_average: 8.5, guest_stars: [], crew: [] },
-        { id: 102, name: "Second", overview: "The second one", air_date: "2024-01-08", episode_number: 2, season_number: 1, still_path: null, runtime: 42, vote_average: 7.9, guest_stars: [], crew: [] },
-        { id: 103, name: "Future", overview: "Unreleased", air_date: "2099-12-31", episode_number: 3, season_number: 1, still_path: null, runtime: null, vote_average: 0, guest_stars: [], crew: [] },
-      ],
-      credits: { cast: [], crew: [] },
-    },
-    seasonNumber: 1, country: "US",
-    seasons: defaultSeasons,
-  }));
+  mockGetSeasonDetails.mockImplementation(() =>
+    Promise.resolve({
+      title: { id: "tv-100", title: "Test Show", is_tracked: true },
+      tmdb: {
+        id: 1,
+        name: "Season 1",
+        overview: "Overview",
+        air_date: "2024-01-01",
+        poster_path: null,
+        season_number: 1,
+        vote_average: 8.0,
+        episodes: [
+          {
+            id: 101,
+            name: "Pilot",
+            overview: "First",
+            air_date: "2024-01-01",
+            episode_number: 1,
+            season_number: 1,
+            still_path: null,
+            runtime: 45,
+            vote_average: 8.5,
+            guest_stars: [],
+            crew: [],
+          },
+          {
+            id: 102,
+            name: "Second",
+            overview: "The second one",
+            air_date: "2024-01-08",
+            episode_number: 2,
+            season_number: 1,
+            still_path: null,
+            runtime: 42,
+            vote_average: 7.9,
+            guest_stars: [],
+            crew: [],
+          },
+          {
+            id: 103,
+            name: "Future",
+            overview: "Unreleased",
+            air_date: "2099-12-31",
+            episode_number: 3,
+            season_number: 1,
+            still_path: null,
+            runtime: null,
+            vote_average: 0,
+            guest_stars: [],
+            crew: [],
+          },
+        ],
+        credits: { cast: [], crew: [] },
+      },
+      seasonNumber: 1,
+      country: "US",
+      seasons: defaultSeasons,
+    }),
+  );
 
-  mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({
-    episodes: [
-      { episode_number: 1, id: 10, is_watched: false },
-      { episode_number: 2, id: 11, is_watched: true },
-      { episode_number: 3, id: 12, is_watched: false },
-    ],
-  }));
+  mockGetSeasonEpisodeStatus.mockImplementation(() =>
+    Promise.resolve({
+      episodes: [
+        { episode_number: 1, id: 10, is_watched: false },
+        { episode_number: 2, id: 11, is_watched: true },
+        { episode_number: 3, id: 12, is_watched: false },
+      ],
+    }),
+  );
 });
 
 describe("SeasonDetailPage", () => {
@@ -131,7 +263,9 @@ describe("SeasonDetailPage", () => {
 
   it("does not render watched icons when not authenticated", async () => {
     mockUser = null;
-    mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({ episodes: [] }));
+    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({ episodes: [] }),
+    );
 
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
@@ -143,7 +277,9 @@ describe("SeasonDetailPage", () => {
   });
 
   it("does not render watched icons when status is empty", async () => {
-    mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({ episodes: [] }));
+    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({ episodes: [] }),
+    );
 
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
@@ -182,21 +318,27 @@ describe("SeasonDetailPage", () => {
   });
 
   it("calls unwatchEpisode API when toggling watched episode", async () => {
-    mockGetSeasonEpisodeStatus.mockImplementation(() => Promise.resolve({
-      episodes: [
-        { episode_number: 1, id: 10, is_watched: false },
-        { episode_number: 2, id: 11, is_watched: true },
-        { episode_number: 3, id: 12, is_watched: false },
-      ],
-    }));
+    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({
+        episodes: [
+          { episode_number: 1, id: 10, is_watched: false },
+          { episode_number: 2, id: 11, is_watched: true },
+          { episode_number: 3, id: 12, is_watched: false },
+        ],
+      }),
+    );
 
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
-    await waitFor(() => expect(screen.getAllByText("Second").length).toBeGreaterThanOrEqual(1));
+    await waitFor(() =>
+      expect(screen.getAllByText("Second").length).toBeGreaterThanOrEqual(1),
+    );
 
     // Wait for status to load and "mark as unwatched" button to appear
     await waitFor(() => {
-      expect(screen.getAllByLabelText(/mark as unwatched/i).length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByLabelText(/mark as unwatched/i).length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     const unwatchButtons = screen.getAllByLabelText(/mark as unwatched/i);
@@ -210,8 +352,12 @@ describe("SeasonDetailPage", () => {
   });
 
   it("shows toast on toggle error and reverts", async () => {
-    const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(() => "1" as any);
-    mockWatchEpisode.mockImplementation(() => Promise.reject(new Error("fail")));
+    const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(
+      () => "1" as any,
+    );
+    mockWatchEpisode.mockImplementation(() =>
+      Promise.reject(new Error("fail")),
+    );
 
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
@@ -243,7 +389,11 @@ describe("SeasonDetailPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true, undefined);
+      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith(
+        [10, 11],
+        true,
+        undefined,
+      );
     });
   });
 
@@ -252,18 +402,24 @@ describe("SeasonDetailPage", () => {
 
     await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
 
-    const optionsBtn = screen.getByRole("button", { name: /mark all watched options/i });
+    const optionsBtn = screen.getByRole("button", {
+      name: /mark all watched options/i,
+    });
     await act(async () => {
       fireEvent.click(optionsBtn);
     });
 
-    const airDateOption = screen.getByRole("menuitem", { name: /mark watched on air date/i });
+    const airDateOption = screen.getByRole("menuitem", {
+      name: /mark watched on air date/i,
+    });
     await act(async () => {
       fireEvent.click(airDateOption);
     });
 
     await waitFor(() => {
-      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true, { useAirDate: true });
+      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true, {
+        useAirDate: true,
+      });
     });
   });
 
@@ -280,18 +436,52 @@ describe("SeasonDetailPage", () => {
 
   it("shows AIRING NOW indicator for episodes airing today", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    mockGetSeasonDetails.mockImplementation(() => Promise.resolve({
-      title: { id: "tv-100", title: "Test Show", is_tracked: true },
-      tmdb: {
-        id: 1, name: "Season 1", overview: "Overview", air_date: "2024-01-01", poster_path: null, season_number: 1, vote_average: 8.0,
-        episodes: [
-          { id: 101, name: "Today Ep", overview: "Airing today", air_date: today, episode_number: 1, season_number: 1, still_path: null, runtime: 45, vote_average: 0, guest_stars: [], crew: [] },
-          { id: 102, name: "Other Ep", overview: "Not today", air_date: "2024-01-08", episode_number: 2, season_number: 1, still_path: null, runtime: 42, vote_average: 0, guest_stars: [], crew: [] },
-        ],
-        credits: { cast: [], crew: [] },
-      },
-      seasonNumber: 1, country: "US", seasons: defaultSeasons,
-    }));
+    mockGetSeasonDetails.mockImplementation(() =>
+      Promise.resolve({
+        title: { id: "tv-100", title: "Test Show", is_tracked: true },
+        tmdb: {
+          id: 1,
+          name: "Season 1",
+          overview: "Overview",
+          air_date: "2024-01-01",
+          poster_path: null,
+          season_number: 1,
+          vote_average: 8.0,
+          episodes: [
+            {
+              id: 101,
+              name: "Today Ep",
+              overview: "Airing today",
+              air_date: today,
+              episode_number: 1,
+              season_number: 1,
+              still_path: null,
+              runtime: 45,
+              vote_average: 0,
+              guest_stars: [],
+              crew: [],
+            },
+            {
+              id: 102,
+              name: "Other Ep",
+              overview: "Not today",
+              air_date: "2024-01-08",
+              episode_number: 2,
+              season_number: 1,
+              still_path: null,
+              runtime: 42,
+              vote_average: 0,
+              guest_stars: [],
+              crew: [],
+            },
+          ],
+          credits: { cast: [], crew: [] },
+        },
+        seasonNumber: 1,
+        country: "US",
+        seasons: defaultSeasons,
+      }),
+    );
 
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
@@ -323,18 +513,50 @@ describe("SeasonDetailPage", () => {
   });
 
   it("does not render season pill tabs when only one season", async () => {
-    mockGetSeasonDetails.mockImplementation(() => Promise.resolve({
-      title: { id: "tv-100", title: "Test Show", is_tracked: true },
-      tmdb: {
-        id: 1, name: "Season 1", overview: "Overview", air_date: "2024-01-01", poster_path: null, season_number: 1, vote_average: 8.0,
-        episodes: [
-          { id: 101, name: "Pilot", overview: "First", air_date: "2024-01-01", episode_number: 1, season_number: 1, still_path: null, runtime: 45, vote_average: 8.5, guest_stars: [], crew: [] },
+    mockGetSeasonDetails.mockImplementation(() =>
+      Promise.resolve({
+        title: { id: "tv-100", title: "Test Show", is_tracked: true },
+        tmdb: {
+          id: 1,
+          name: "Season 1",
+          overview: "Overview",
+          air_date: "2024-01-01",
+          poster_path: null,
+          season_number: 1,
+          vote_average: 8.0,
+          episodes: [
+            {
+              id: 101,
+              name: "Pilot",
+              overview: "First",
+              air_date: "2024-01-01",
+              episode_number: 1,
+              season_number: 1,
+              still_path: null,
+              runtime: 45,
+              vote_average: 8.5,
+              guest_stars: [],
+              crew: [],
+            },
+          ],
+          credits: { cast: [], crew: [] },
+        },
+        seasonNumber: 1,
+        country: "US",
+        seasons: [
+          {
+            id: 1,
+            name: "Season 1",
+            overview: "",
+            air_date: "2024-01-01",
+            episode_count: 1,
+            poster_path: null,
+            season_number: 1,
+            vote_average: 8.0,
+          },
         ],
-        credits: { cast: [], crew: [] },
-      },
-      seasonNumber: 1, country: "US",
-      seasons: [{ id: 1, name: "Season 1", overview: "", air_date: "2024-01-01", episode_count: 1, poster_path: null, season_number: 1, vote_average: 8.0 }],
-    }));
+      }),
+    );
 
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
@@ -356,7 +578,9 @@ describe("SeasonDetailPage", () => {
       fireEvent.click(moreButtons[0]);
     });
 
-    expect(screen.getByRole("menuitem", { name: /view details/i })).toBeDefined();
+    expect(
+      screen.getByRole("menuitem", { name: /view details/i }),
+    ).toBeDefined();
     expect(screen.getByRole("menuitem", { name: /share/i })).toBeDefined();
   });
 });

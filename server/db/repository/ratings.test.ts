@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser, upsertEpisodes, watchTitle } from "../repository";
+import {
+  upsertTitles,
+  createUser,
+  upsertEpisodes,
+  watchTitle,
+} from "../repository";
 import { follow } from "./follows";
 import {
   rateTitle,
@@ -37,11 +42,30 @@ beforeEach(async () => {
     makeParsedTitle({ id: "show-1", title: "Test Show", objectType: "SHOW" }),
   ]);
   await upsertEpisodes([
-    { title_id: "show-1", season_number: 1, episode_number: 1, name: "Pilot", overview: null, air_date: "2024-01-01", still_path: null },
-    { title_id: "show-1", season_number: 1, episode_number: 2, name: "Episode 2", overview: null, air_date: "2024-01-08", still_path: null },
+    {
+      title_id: "show-1",
+      season_number: 1,
+      episode_number: 1,
+      name: "Pilot",
+      overview: null,
+      air_date: "2024-01-01",
+      still_path: null,
+    },
+    {
+      title_id: "show-1",
+      season_number: 1,
+      episode_number: 2,
+      name: "Episode 2",
+      overview: null,
+      air_date: "2024-01-08",
+      still_path: null,
+    },
   ]);
   const db = getDb();
-  const eps = await db.select({ id: episodes.id, episodeNumber: episodes.episodeNumber }).from(episodes).all();
+  const eps = await db
+    .select({ id: episodes.id, episodeNumber: episodes.episodeNumber })
+    .from(episodes)
+    .all();
   episodeId1 = eps.find((e) => e.episodeNumber === 1)!.id;
   episodeId2 = eps.find((e) => e.episodeNumber === 2)!.id;
 });

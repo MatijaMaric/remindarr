@@ -16,7 +16,9 @@ export function useGridNavigation(enabled = true) {
       if (isInputFocused()) return;
       if (e.key !== "j" && e.key !== "k") return;
 
-      const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-title-link]"));
+      const cards = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-title-link]"),
+      );
       if (cards.length === 0) return;
 
       e.preventDefault();
@@ -32,7 +34,10 @@ export function useGridNavigation(enabled = true) {
       }
 
       cards[indexRef.current].focus();
-      cards[indexRef.current].scrollIntoView({ behavior: "smooth", block: "nearest" });
+      cards[indexRef.current].scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
 
     window.addEventListener("keydown", handleKeyDown);

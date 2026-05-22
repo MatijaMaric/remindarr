@@ -11,7 +11,9 @@ describe("WebhookProvider.validateConfig", () => {
   });
 
   it("accepts http URL", () => {
-    const result = webhook.validateConfig({ url: "http://internal.local/hook" });
+    const result = webhook.validateConfig({
+      url: "http://internal.local/hook",
+    });
     expect(result.valid).toBe(true);
   });
 
@@ -40,7 +42,10 @@ describe("WebhookProvider.send", () => {
 
   beforeEach(() => {
     fetchCalls = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: string | URL | Request, options?: RequestInit) => {
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+      url: string | URL | Request,
+      options?: RequestInit,
+    ) => {
       fetchCalls.push({ url: url as string, options: options ?? {} });
       return new Response("ok", { status: 200 });
     }) as typeof fetch);
@@ -94,7 +99,10 @@ describe("WebhookProvider.send", () => {
   });
 
   it("includes X-Remindarr-Signature header when secret provided", async () => {
-    await webhook.send({ url: "https://example.com/hook", secret: "my-secret" }, sampleContent);
+    await webhook.send(
+      { url: "https://example.com/hook", secret: "my-secret" },
+      sampleContent,
+    );
     const headers = fetchCalls[0].options.headers as Record<string, string>;
     expect(headers["X-Remindarr-Signature"]).toMatch(/^sha256=[0-9a-f]{64}$/);
   });
@@ -112,7 +120,10 @@ describe("WebhookProvider.send", () => {
   });
 
   it("skips sending when content is empty", async () => {
-    await webhook.send({ url: "https://example.com/hook" }, { date: "2026-03-12", episodes: [], movies: [] });
+    await webhook.send(
+      { url: "https://example.com/hook" },
+      { date: "2026-03-12", episodes: [], movies: [] },
+    );
     expect(fetchCalls).toHaveLength(0);
   });
 
@@ -121,7 +132,15 @@ describe("WebhookProvider.send", () => {
       date: "2026-04-05",
       episodes: [],
       movies: [],
-      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix", kind: "arrival" as const }],
+      streamingAlerts: [
+        {
+          titleId: "tt123",
+          title: "Inception",
+          posterUrl: null,
+          providerName: "Netflix",
+          kind: "arrival" as const,
+        },
+      ],
     };
     await webhook.send({ url: "https://example.com/hook" }, alertContent);
     expect(fetchCalls).toHaveLength(1);
@@ -132,15 +151,29 @@ describe("WebhookProvider.send", () => {
   });
 
   it("throws on non-2xx response", async () => {
-    fetchSpy.mockImplementation(async () => new Response("Server Error", { status: 500 }));
-    await expect(webhook.send({ url: "https://example.com/hook" }, sampleContent)).rejects.toThrow("500");
+    fetchSpy.mockImplementation(
+      async () => new Response("Server Error", { status: 500 }),
+    );
+    await expect(
+      webhook.send({ url: "https://example.com/hook" }, sampleContent),
+    ).rejects.toThrow("500");
   });
 
   it("signature is deterministic for same body and secret", async () => {
-    await webhook.send({ url: "https://example.com/hook", secret: "abc" }, sampleContent);
-    const sig1 = (fetchCalls[0].options.headers as Record<string, string>)["X-Remindarr-Signature"];
-    await webhook.send({ url: "https://example.com/hook", secret: "abc" }, sampleContent);
-    const sig2 = (fetchCalls[1].options.headers as Record<string, string>)["X-Remindarr-Signature"];
+    await webhook.send(
+      { url: "https://example.com/hook", secret: "abc" },
+      sampleContent,
+    );
+    const sig1 = (fetchCalls[0].options.headers as Record<string, string>)[
+      "X-Remindarr-Signature"
+    ];
+    await webhook.send(
+      { url: "https://example.com/hook", secret: "abc" },
+      sampleContent,
+    );
+    const sig2 = (fetchCalls[1].options.headers as Record<string, string>)[
+      "X-Remindarr-Signature"
+    ];
     expect(sig1).toBe(sig2);
   });
 
@@ -148,10 +181,20 @@ describe("WebhookProvider.send", () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,
       achievementsEarned: [
-        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+        {
+          key: "movies_10",
+          title: "Cinephile I",
+          description: "Watch 10 movies",
+          icon: "Film",
+          points: 10,
+          earnedAt: "2026-01-01T00:00:00.000Z",
+        },
       ],
     };
-    await webhook.send({ url: "https://example.com/hook" }, contentWithAchievements);
+    await webhook.send(
+      { url: "https://example.com/hook" },
+      contentWithAchievements,
+    );
     const body = JSON.parse(fetchCalls[0].options.body as string);
     expect(body.achievements_earned).toBeArray();
     expect(body.achievements_earned.length).toBe(1);
@@ -164,7 +207,10 @@ describe("WebhookProvider.send", () => {
       ...sampleContent,
       achievementsEarned: [],
     };
-    await webhook.send({ url: "https://example.com/hook" }, contentNoAchievements);
+    await webhook.send(
+      { url: "https://example.com/hook" },
+      contentNoAchievements,
+    );
     const body = JSON.parse(fetchCalls[0].options.body as string);
     expect(body.achievements_earned).toBeArray();
     expect(body.achievements_earned.length).toBe(0);

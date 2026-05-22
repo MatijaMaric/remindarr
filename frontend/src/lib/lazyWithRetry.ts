@@ -41,6 +41,8 @@ export async function loadWithRetry(
   }
 }
 
-export function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>) {
+export function lazyWithRetry(
+  factory: () => Promise<{ default: React.ComponentType }>,
+) {
   return lazy(() => loadWithRetry(factory));
 }

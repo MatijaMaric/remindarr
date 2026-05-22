@@ -1,6 +1,14 @@
 import { eq, inArray, sql, isNull, asc, desc } from "drizzle-orm";
 import { getDb } from "../schema";
-import { offers, providers, titles, tracked, watchedTitles, watchedEpisodes, episodes } from "../schema";
+import {
+  offers,
+  providers,
+  titles,
+  tracked,
+  watchedTitles,
+  watchedEpisodes,
+  episodes,
+} from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getPlexOffersForUser } from "./plex-library";
 
@@ -33,7 +41,8 @@ export async function getOffersForTitle(titleId: string) {
 
 export async function getOffersForTitles(titleIds: string[]) {
   return traceDbQuery("getOffersForTitles", async () => {
-    if (titleIds.length === 0) return new Map<string, Awaited<ReturnType<typeof getOffersForTitle>>>();
+    if (titleIds.length === 0)
+      return new Map<string, Awaited<ReturnType<typeof getOffersForTitle>>>();
     const db = getDb();
     const allOffers = await db
       .select(offerColumns)

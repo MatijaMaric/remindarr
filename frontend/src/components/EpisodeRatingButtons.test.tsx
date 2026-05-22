@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
@@ -9,7 +23,13 @@ import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 import type { EpisodeRatingResponse } from "../types";
 
-const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -22,13 +42,23 @@ const mockAuthValue = {
 };
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+function Wrapper({
+  children,
+  authValue,
+}: {
+  children: ReactNode;
+  authValue?: typeof mockAuthValue;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+      <AuthContext value={(authValue ?? mockAuthValue) as any}>
+        {children}
+      </AuthContext>
     </QueryClientProvider>
   );
 }
@@ -90,7 +120,7 @@ describe("EpisodeRatingButtons", () => {
 
   it("shows loading skeleton on mount", () => {
     (api.getEpisodeRating as any).mockImplementation(
-      () => new Promise<EpisodeRatingResponse>(() => {})
+      () => new Promise<EpisodeRatingResponse>(() => {}),
     );
 
     render(<EpisodeRatingButtons episodeId={1} />, { wrapper: Wrapper });
@@ -101,7 +131,11 @@ describe("EpisodeRatingButtons", () => {
   it("clicking a rating calls rateEpisode API", async () => {
     (api.getEpisodeRating as any)
       .mockResolvedValueOnce(emptyResponse)
-      .mockResolvedValueOnce({ ...emptyResponse, user_rating: "LIKE", aggregated: { ...emptyResponse.aggregated, LIKE: 1 } });
+      .mockResolvedValueOnce({
+        ...emptyResponse,
+        user_rating: "LIKE",
+        aggregated: { ...emptyResponse.aggregated, LIKE: 1 },
+      });
 
     render(<EpisodeRatingButtons episodeId={1} />, { wrapper: Wrapper });
 
@@ -121,7 +155,11 @@ describe("EpisodeRatingButtons", () => {
   it("clicking active rating calls unrateEpisode API", async () => {
     (api.getEpisodeRating as any)
       .mockResolvedValueOnce(ratedResponse)
-      .mockResolvedValueOnce({ ...ratedResponse, user_rating: null, aggregated: { ...ratedResponse.aggregated, LIKE: 2 } });
+      .mockResolvedValueOnce({
+        ...ratedResponse,
+        user_rating: null,
+        aggregated: { ...ratedResponse.aggregated, LIKE: 2 },
+      });
 
     render(<EpisodeRatingButtons episodeId={1} />, { wrapper: Wrapper });
 
@@ -141,7 +179,11 @@ describe("EpisodeRatingButtons", () => {
   it("shows review textarea after rating", async () => {
     (api.getEpisodeRating as any)
       .mockResolvedValueOnce(emptyResponse)
-      .mockResolvedValueOnce({ ...emptyResponse, user_rating: "LOVE", aggregated: { ...emptyResponse.aggregated, LOVE: 1 } });
+      .mockResolvedValueOnce({
+        ...emptyResponse,
+        user_rating: "LOVE",
+        aggregated: { ...emptyResponse.aggregated, LOVE: 1 },
+      });
 
     render(<EpisodeRatingButtons episodeId={1} />, { wrapper: Wrapper });
 
@@ -165,7 +207,9 @@ describe("EpisodeRatingButtons", () => {
     render(<EpisodeRatingButtons episodeId={1} />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      const textarea = screen.getByPlaceholderText(/short review/i) as HTMLTextAreaElement;
+      const textarea = screen.getByPlaceholderText(
+        /short review/i,
+      ) as HTMLTextAreaElement;
       expect(textarea.value).toBe("Loved this episode!");
     });
   });
@@ -192,16 +236,22 @@ describe("EpisodeRatingButtons", () => {
         <AuthContext value={noUserAuth as any}>
           <EpisodeRatingButtons episodeId={1} />
         </AuthContext>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Like" })).toBeDefined();
     });
 
-    expect(screen.getByRole("button", { name: "Hate" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Like" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Love" }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Hate" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Like" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Love" }).hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   it("shows error toast when rating fails", async () => {
@@ -216,7 +266,9 @@ describe("EpisodeRatingButtons", () => {
     fireEvent.click(screen.getByRole("button", { name: "Love" }));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update rating");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Failed to update rating",
+      );
     });
   });
 });

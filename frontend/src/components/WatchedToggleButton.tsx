@@ -40,7 +40,11 @@ export default function WatchedToggleButton({
         role="img"
       >
         <Circle size={iconSize} aria-hidden="true" />
-        {compactOnMobile ? <span className="hidden sm:inline">{label}</span> : label}
+        {compactOnMobile ? (
+          <span className="hidden sm:inline">{label}</span>
+        ) : (
+          label
+        )}
       </span>
     );
   }
@@ -52,7 +56,9 @@ export default function WatchedToggleButton({
         onClick();
       }}
       aria-pressed={watched}
-      aria-label={watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")}
+      aria-label={
+        watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")
+      }
       className={`inline-flex items-center flex-shrink-0 border cursor-pointer transition-colors ${
         watched
           ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-zinc-800 hover:text-zinc-400 hover:border-zinc-700"
@@ -70,7 +76,11 @@ export default function WatchedToggleButton({
       ) : (
         <Circle size={iconSize} aria-hidden="true" />
       )}
-      {compactOnMobile ? <span className="hidden sm:inline">{label}</span> : label}
+      {compactOnMobile ? (
+        <span className="hidden sm:inline">{label}</span>
+      ) : (
+        label
+      )}
     </button>
   );
 }

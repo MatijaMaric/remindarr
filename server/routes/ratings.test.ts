@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { createUser, createSession, getSessionWithUser, follow } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+  follow,
+} from "../db/repository";
 import { getRawDb } from "../db/bun-db";
 import { optionalAuth } from "../middleware/auth";
 import ratingsApp from "./ratings";
@@ -70,7 +75,7 @@ function authHeaders(token: string) {
 function insertTitle(id: string) {
   const db = getRawDb();
   db.prepare(
-    `INSERT INTO titles (id, object_type, title, release_date) VALUES (?, 'MOVIE', ?, '2024-01-01')`
+    `INSERT INTO titles (id, object_type, title, release_date) VALUES (?, 'MOVIE', ?, '2024-01-01')`,
   ).run(id, `Title ${id}`);
 }
 
@@ -329,7 +334,10 @@ describe("validation", () => {
   it("rejects POST /:titleId with unknown rating enum value", async () => {
     const res = await app.request("/ratings/movie-123", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ rating: "OKAY" }),
     });
     expect(res.status).toBe(400);
@@ -342,7 +350,10 @@ describe("validation", () => {
   it("rejects POST /episode/:episodeId when episodeId is not numeric", async () => {
     const res = await app.request("/ratings/episode/abc", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ rating: "LIKE" }),
     });
     expect(res.status).toBe(400);
@@ -354,7 +365,10 @@ describe("validation", () => {
   it("rejects POST /episode/:episodeId with review over 500 chars", async () => {
     const res = await app.request("/ratings/episode/1", {
       method: "POST",
-      headers: { ...authHeaders(userAToken), "Content-Type": "application/json" },
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ rating: "LIKE", review: "x".repeat(501) }),
     });
     expect(res.status).toBe(400);

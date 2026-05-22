@@ -14,7 +14,11 @@ interface CollectionRowProps {
   currentTitleId: string;
 }
 
-function CollectionRowInner({ collectionId, collectionName, currentTitleId }: CollectionRowProps) {
+function CollectionRowInner({
+  collectionId,
+  collectionName,
+  currentTitleId,
+}: CollectionRowProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["collection", collectionId],
     queryFn: ({ signal }) => api.getCollection(collectionId, signal),
@@ -83,7 +87,9 @@ function CollectionRowInner({ collectionId, collectionName, currentTitleId }: Co
                   {part.title}
                 </p>
                 {part.release_date && (
-                  <p className="font-mono text-[10px] text-zinc-500">{part.release_date.slice(0, 4)}</p>
+                  <p className="font-mono text-[10px] text-zinc-500">
+                    {part.release_date.slice(0, 4)}
+                  </p>
                 )}
               </Link>
             );

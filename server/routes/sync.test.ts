@@ -1,8 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import * as syncTitles from "../tmdb/sync-titles";
 import type { AppEnv } from "../types";
@@ -39,11 +51,20 @@ let spies: ReturnType<typeof spyOn>[] = [];
 beforeEach(async () => {
   setupTestDb();
 
-  const adminId = await createUser("adminuser", "hash", "Admin", "local", undefined, true);
+  const adminId = await createUser(
+    "adminuser",
+    "hash",
+    "Admin",
+    "local",
+    undefined,
+    true,
+  );
   adminToken = await createSession(adminId);
 
   spies = [
-    spyOn(syncTitles, "fetchNewReleases").mockResolvedValue([makeParsedTitle()]),
+    spyOn(syncTitles, "fetchNewReleases").mockResolvedValue([
+      makeParsedTitle(),
+    ]),
   ];
 
   const syncApp = (await import("./sync")).default;
@@ -105,7 +126,9 @@ describe("POST /sync", () => {
   });
 
   it("syncs titles with default parameters", async () => {
-    (syncTitles.fetchNewReleases as any).mockResolvedValueOnce([makeParsedTitle()]);
+    (syncTitles.fetchNewReleases as any).mockResolvedValueOnce([
+      makeParsedTitle(),
+    ]);
 
     const res = await authedApp.request("/sync", {
       method: "POST",
@@ -144,7 +167,9 @@ describe("POST /sync", () => {
   });
 
   it("returns 500 when fetchNewReleases throws", async () => {
-    (syncTitles.fetchNewReleases as any).mockRejectedValueOnce(new Error("TMDB API down"));
+    (syncTitles.fetchNewReleases as any).mockRejectedValueOnce(
+      new Error("TMDB API down"),
+    );
 
     const res = await authedApp.request("/sync", {
       method: "POST",

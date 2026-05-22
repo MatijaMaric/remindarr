@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export function mapChangedFilesToTests(
   files: string[],
-  exists: (p: string) => boolean
+  exists: (p: string) => boolean,
 ): { server: string[]; frontend: string[] } {
   const server = new Set<string>();
   const frontend = new Set<string>();
@@ -67,19 +67,25 @@ if (import.meta.main) {
   const baseRef = resolveBaseRef();
 
   if (!baseRef) {
-    console.log("⚠️  No origin/master found — running full test suite as fallback.");
+    console.log(
+      "⚠️  No origin/master found — running full test suite as fallback.",
+    );
     const ok =
       runBunTest(["server/"], repoRoot) &&
       runBunTest(["src/"], join(repoRoot, "frontend"));
     process.exit(ok ? 0 : 1);
   }
 
-  const { out } = git(["diff", "--name-only", "--diff-filter=ACMR", `${baseRef}...HEAD`]);
+  const { out } = git([
+    "diff",
+    "--name-only",
+    "--diff-filter=ACMR",
+    `${baseRef}...HEAD`,
+  ]);
   const changedFiles = out.split("\n").filter(Boolean);
 
-  const { server, frontend } = mapChangedFilesToTests(
-    changedFiles,
-    (p) => existsSync(join(repoRoot, p))
+  const { server, frontend } = mapChangedFilesToTests(changedFiles, (p) =>
+    existsSync(join(repoRoot, p)),
   );
 
   if (server.length === 0 && frontend.length === 0) {

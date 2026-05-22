@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  mock,
+  spyOn,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { getRawDb } from "../db/bun-db";
 import { CONFIG } from "../config";
@@ -7,12 +15,18 @@ import { CONFIG } from "../config";
 
 import * as tmdbClient from "../tmdb/client";
 
-const mockFetchMovieDetails = spyOn(tmdbClient, "fetchMovieDetails" as any).mockResolvedValue({
+const mockFetchMovieDetails = spyOn(
+  tmdbClient,
+  "fetchMovieDetails" as any,
+).mockResolvedValue({
   title: "English Movie Title",
   original_title: "Original Movie Title",
 });
 
-const mockFetchTvDetails = spyOn(tmdbClient, "fetchTvDetails" as any).mockResolvedValue({
+const mockFetchTvDetails = spyOn(
+  tmdbClient,
+  "fetchTvDetails" as any,
+).mockResolvedValue({
   name: "English Show Name",
   original_name: "Original Show Name",
 });
@@ -32,7 +46,7 @@ function insertTitle(opts: {
   const db = getRawDb();
   db.prepare(
     `INSERT INTO titles (id, object_type, tmdb_id, title, original_title, release_date)
-     VALUES (?, ?, ?, ?, ?, '2024-01-01')`
+     VALUES (?, ?, ?, ?, ?, '2024-01-01')`,
   ).run(opts.id, opts.objectType, opts.tmdbId, opts.title, opts.originalTitle);
 }
 
@@ -109,7 +123,9 @@ describe("migrateTitles", () => {
     expect(mockFetchMovieDetails).toHaveBeenCalledWith(100);
 
     const db = getRawDb();
-    const row = db.prepare("SELECT title, original_title FROM titles WHERE id = ?").get("movie-100") as any;
+    const row = db
+      .prepare("SELECT title, original_title FROM titles WHERE id = ?")
+      .get("movie-100") as any;
     expect(row.title).toBe("English Movie");
     expect(row.original_title).toBe("Original Film");
   });
@@ -134,7 +150,9 @@ describe("migrateTitles", () => {
     expect(mockFetchTvDetails).toHaveBeenCalledWith(200);
 
     const db = getRawDb();
-    const row = db.prepare("SELECT title, original_title FROM titles WHERE id = ?").get("tv-200") as any;
+    const row = db
+      .prepare("SELECT title, original_title FROM titles WHERE id = ?")
+      .get("tv-200") as any;
     expect(row.title).toBe("English Show");
     expect(row.original_title).toBe("Original Naziv");
   });
@@ -217,7 +235,10 @@ describe("migrateTitles", () => {
 
     mockFetchMovieDetails
       .mockRejectedValueOnce(new Error("API error"))
-      .mockResolvedValueOnce({ title: "Success", original_title: "Success Original" });
+      .mockResolvedValueOnce({
+        title: "Success",
+        original_title: "Success Original",
+      });
 
     const result = await migrateTitles();
 
@@ -228,7 +249,7 @@ describe("migrateTitles", () => {
     const db = getRawDb();
     db.prepare(
       `INSERT INTO titles (id, object_type, tmdb_id, title, original_title, release_date)
-       VALUES ('movie-no-tmdb', 'MOVIE', NULL, 'No TMDB', NULL, '2024-01-01')`
+       VALUES ('movie-no-tmdb', 'MOVIE', NULL, 'No TMDB', NULL, '2024-01-01')`,
     ).run();
 
     const result = await migrateTitles();
@@ -238,14 +259,35 @@ describe("migrateTitles", () => {
   });
 
   it("migrates multiple titles and returns correct counts", async () => {
-    insertTitle({ id: "movie-700", objectType: "MOVIE", tmdbId: "700", title: "Movie 1", originalTitle: null });
-    insertTitle({ id: "movie-701", objectType: "MOVIE", tmdbId: "701", title: "Movie 2", originalTitle: null });
-    insertTitle({ id: "tv-702", objectType: "SHOW", tmdbId: "702", title: "Show 1", originalTitle: null });
+    insertTitle({
+      id: "movie-700",
+      objectType: "MOVIE",
+      tmdbId: "700",
+      title: "Movie 1",
+      originalTitle: null,
+    });
+    insertTitle({
+      id: "movie-701",
+      objectType: "MOVIE",
+      tmdbId: "701",
+      title: "Movie 2",
+      originalTitle: null,
+    });
+    insertTitle({
+      id: "tv-702",
+      objectType: "SHOW",
+      tmdbId: "702",
+      title: "Show 1",
+      originalTitle: null,
+    });
 
     mockFetchMovieDetails
       .mockResolvedValueOnce({ title: "Movie 1 EN", original_title: "Film 1" })
       .mockResolvedValueOnce({ title: "Movie 2 EN", original_title: "Film 2" });
-    mockFetchTvDetails.mockResolvedValueOnce({ name: "Show 1 EN", original_name: "Serija 1" });
+    mockFetchTvDetails.mockResolvedValueOnce({
+      name: "Show 1 EN",
+      original_name: "Serija 1",
+    });
 
     const result = await migrateTitles();
 

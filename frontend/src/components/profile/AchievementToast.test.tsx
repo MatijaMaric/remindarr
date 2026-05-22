@@ -15,10 +15,18 @@ const storedData: Record<string, string> = {};
 
 const localStorageMock = {
   getItem: (key: string): string | null => storedData[key] ?? null,
-  setItem: (key: string, value: string): void => { storedData[key] = value; },
-  removeItem: (key: string): void => { delete storedData[key]; },
-  clear: (): void => { for (const k of Object.keys(storedData)) delete storedData[k]; },
-  get length() { return Object.keys(storedData).length; },
+  setItem: (key: string, value: string): void => {
+    storedData[key] = value;
+  },
+  removeItem: (key: string): void => {
+    delete storedData[key];
+  },
+  clear: (): void => {
+    for (const k of Object.keys(storedData)) delete storedData[k];
+  },
+  get length() {
+    return Object.keys(storedData).length;
+  },
   key: (_index: number): string | null => null,
 };
 
@@ -30,7 +38,9 @@ Object.defineProperty(globalThis, "localStorage", {
 
 // ---- factories -----------------------------------------------------------------
 
-function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievement {
+function makeAchievement(
+  overrides: Partial<UserAchievement> = {},
+): UserAchievement {
   return {
     key: "movies_10",
     kind: "count_movies",
@@ -83,8 +93,15 @@ describe("useNewAchievements", () => {
   it("surfaces only achievements earned after lastSeenAchievementAt", async () => {
     const oldDate = "2025-01-01T00:00:00Z";
     const newDate = "2026-06-01T00:00:00Z";
-    const oldAchievement = makeAchievement({ key: "movies_10", earnedAt: oldDate });
-    const newAchievement = makeAchievement({ key: "movies_50", title: "Cinephile II", earnedAt: newDate });
+    const oldAchievement = makeAchievement({
+      key: "movies_10",
+      earnedAt: oldDate,
+    });
+    const newAchievement = makeAchievement({
+      key: "movies_50",
+      title: "Cinephile II",
+      earnedAt: newDate,
+    });
 
     spy.mockResolvedValue([oldAchievement, newAchievement]);
     // Set lastSeenAchievementAt between the two earnedAt dates
@@ -180,7 +197,10 @@ describe("AchievementToast", () => {
   });
 
   it("shows achievement title in the toast", async () => {
-    const achievement = makeAchievement({ key: "movies_10", title: "Cinephile I" });
+    const achievement = makeAchievement({
+      key: "movies_10",
+      title: "Cinephile I",
+    });
     spy.mockResolvedValue([achievement]);
 
     render(<AchievementToast />);

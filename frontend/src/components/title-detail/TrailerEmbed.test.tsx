@@ -43,7 +43,9 @@ describe("TrailerEmbed", () => {
 
     const img = screen.getByRole("img", { name: /thumbnail/i });
     expect(img).toBeDefined();
-    expect((img as HTMLImageElement).src).toContain("img.youtube.com/vi/abc123/hqdefault.jpg");
+    expect((img as HTMLImageElement).src).toContain(
+      "img.youtube.com/vi/abc123/hqdefault.jpg",
+    );
   });
 
   it("swaps to an iframe after clicking the thumbnail facade", () => {
@@ -54,7 +56,9 @@ describe("TrailerEmbed", () => {
     expect(screen.queryByTitle("Trailer")).toBeNull();
 
     // Click the facade container
-    const container = screen.getByRole("img", { name: /thumbnail/i }).closest("div") as HTMLElement;
+    const container = screen
+      .getByRole("img", { name: /thumbnail/i })
+      .closest("div") as HTMLElement;
     fireEvent.click(container);
 
     const iframe = screen.getByTitle("Trailer") as HTMLIFrameElement;
@@ -63,7 +67,10 @@ describe("TrailerEmbed", () => {
   });
 
   it("returns null when videos contain only non-Trailer types", () => {
-    const videos = [makeVideo({ type: "Featurette" }), makeVideo({ type: "Teaser" })];
+    const videos = [
+      makeVideo({ type: "Featurette" }),
+      makeVideo({ type: "Teaser" }),
+    ];
     const { container } = render(<TrailerEmbed videos={videos} />);
     expect(container.firstChild).toBeNull();
   });
@@ -80,7 +87,9 @@ describe("TrailerEmbed", () => {
     ];
     render(<TrailerEmbed videos={videos} />);
 
-    const img = screen.getByRole("img", { name: /thumbnail/i }) as HTMLImageElement;
+    const img = screen.getByRole("img", {
+      name: /thumbnail/i,
+    }) as HTMLImageElement;
     expect(img.src).toContain("vi/official/");
   });
 
@@ -91,7 +100,9 @@ describe("TrailerEmbed", () => {
     ];
     render(<TrailerEmbed videos={videos} />);
 
-    const img = screen.getByRole("img", { name: /thumbnail/i }) as HTMLImageElement;
+    const img = screen.getByRole("img", {
+      name: /thumbnail/i,
+    }) as HTMLImageElement;
     expect(img.src).toContain("vi/hd/");
   });
 

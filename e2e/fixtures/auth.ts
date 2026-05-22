@@ -28,7 +28,7 @@ function randSuffix(): string {
  */
 export async function registerUser(
   request: APIRequestContext,
-  options: RegisterOptions = {}
+  options: RegisterOptions = {},
 ): Promise<RegisteredUser> {
   // better-auth's default validator accepts [a-zA-Z0-9_.] only — avoid
   // dashes in the generated username.
@@ -61,7 +61,7 @@ export async function registerUser(
 export async function loginApi(
   request: APIRequestContext,
   username: string,
-  password: string
+  password: string,
 ): Promise<{ token?: string }> {
   const res = await request.post("/api/auth/sign-in/username", {
     data: { username, password },
@@ -81,13 +81,13 @@ export async function loginApi(
  * Works with the DB_PATH convention used in e2e/globalSetup.
  */
 export function readBootstrapAdminCredentials(
-  dbPath = ".e2e/remindarr.sqlite"
+  dbPath = ".e2e/remindarr.sqlite",
 ): { username: string; password: string } {
   const abs = path.resolve(dbPath);
   const passwordFile = path.resolve(path.dirname(abs), "admin-password.txt");
   if (!fs.existsSync(passwordFile)) {
     throw new Error(
-      `Admin bootstrap password file not found at ${passwordFile}. Was the backend started with a fresh DB?`
+      `Admin bootstrap password file not found at ${passwordFile}. Was the backend started with a fresh DB?`,
     );
   }
   const contents = fs.readFileSync(passwordFile, "utf-8");
@@ -105,7 +105,7 @@ export function readBootstrapAdminCredentials(
  */
 export async function loginAdminApi(
   request: APIRequestContext,
-  dbPath?: string
+  dbPath?: string,
 ): Promise<{ token?: string; username: string }> {
   const { username, password } = readBootstrapAdminCredentials(dbPath);
   const { token } = await loginApi(request, username, password);

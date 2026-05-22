@@ -21,7 +21,9 @@ import { ThinProgress } from "../profile/atoms/ThinProgress";
 import { tierFromRung, TIER_COLORS } from "./tier";
 import type { UserAchievement } from "../../types";
 
-type IconComponent = ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
+type IconComponent = ForwardRefExoticComponent<
+  Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>
+>;
 
 const ICON_MAP: Record<string, IconComponent> = {
   Film,
@@ -50,8 +52,23 @@ export interface BadgeTileProps {
   baseHref?: string;
 }
 
-export function BadgeTile({ achievement, mode, compact = false, baseHref = "/achievements" }: BadgeTileProps) {
-  const { key, icon, title, earned, progress, threshold, earnedCount, rungIndex, tier } = achievement;
+export function BadgeTile({
+  achievement,
+  mode,
+  compact = false,
+  baseHref = "/achievements",
+}: BadgeTileProps) {
+  const {
+    key,
+    icon,
+    title,
+    earned,
+    progress,
+    threshold,
+    earnedCount,
+    rungIndex,
+    tier,
+  } = achievement;
 
   // Other users only see earned badges
   if (!earned && mode === "other") {
@@ -92,7 +109,7 @@ export function BadgeTile({ achievement, mode, compact = false, baseHref = "/ach
         compact ? "p-2" : "p-3",
         earned
           ? cn("border-white/10", bgClass, ringClass)
-          : "bg-white/[0.03] border-white/[0.06] opacity-60"
+          : "bg-white/[0.03] border-white/[0.06] opacity-60",
       )}
       title={achievement.description}
     >
@@ -113,7 +130,7 @@ export function BadgeTile({ achievement, mode, compact = false, baseHref = "/ach
         className={cn(
           "font-semibold leading-tight truncate",
           compact ? "text-[10px]" : "text-[12px]",
-          earned ? (textColorClass || "text-zinc-200") : "text-zinc-400"
+          earned ? textColorClass || "text-zinc-200" : "text-zinc-400",
         )}
       >
         {title}
@@ -121,7 +138,12 @@ export function BadgeTile({ achievement, mode, compact = false, baseHref = "/ach
 
       {/* Progress bar for locked self-view */}
       {!earned && mode === "self" && (
-        <ThinProgress value={progress} max={threshold} color="#71717a" height={3} />
+        <ThinProgress
+          value={progress}
+          max={threshold}
+          color="#71717a"
+          height={3}
+        />
       )}
     </Link>
   );

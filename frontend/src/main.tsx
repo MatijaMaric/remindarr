@@ -23,5 +23,5 @@ createRoot(document.getElementById("root")!).render(
         </QueryClientProvider>
       </ErrorBoundary>
     </BrowserRouter>
-  </StrictMode>
+  </StrictMode>,
 );

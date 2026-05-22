@@ -1,9 +1,20 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../schema";
-import { users, watchedTitles, watchedEpisodes, episodes, titles, activityKindVisibility } from "../schema";
+import {
+  users,
+  watchedTitles,
+  watchedEpisodes,
+  episodes,
+  titles,
+  activityKindVisibility,
+} from "../schema";
 import type { ActivityType, ActivityKindVisibilityMap } from "./activity";
 import { traceDbQuery } from "../../tracing";
-import { getPublicTrackedTitles, getPublicTrackedCount, getTrackedTitles } from "./tracked";
+import {
+  getPublicTrackedTitles,
+  getPublicTrackedCount,
+  getTrackedTitles,
+} from "./tracked";
 import {
   getFollowerCount,
   getFollowingCount,
@@ -25,7 +36,11 @@ import {
 
 export type ProfileVisibility = "public" | "friends_only" | "private";
 
-export async function getUserPublicProfile(username: string, isOwnProfile = false, viewerId?: string | null) {
+export async function getUserPublicProfile(
+  username: string,
+  isOwnProfile = false,
+  viewerId?: string | null,
+) {
   return traceDbQuery("getUserPublicProfile", async () => {
     const db = getDb();
 
@@ -48,7 +63,8 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
 
     if (!user) return null;
 
-    const visibility = (user.profile_visibility || (user.profile_public ? "public" : "private")) as ProfileVisibility;
+    const visibility = (user.profile_visibility ||
+      (user.profile_public ? "public" : "private")) as ProfileVisibility;
 
     let showWatchlist: boolean;
     if (isOwnProfile) {
@@ -71,8 +87,14 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
       watch_time_minutes_shows: 0,
     };
     const emptyShowsByStatus: ShowsByStatus = {
-      watching: 0, caught_up: 0, completed: 0, not_started: 0,
-      unreleased: 0, on_hold: 0, dropped: 0, plan_to_watch: 0,
+      watching: 0,
+      caught_up: 0,
+      completed: 0,
+      not_started: 0,
+      unreleased: 0,
+      on_hold: 0,
+      dropped: 0,
+      plan_to_watch: 0,
     };
 
     const [
@@ -102,24 +124,40 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
         .where(eq(watchedEpisodes.userId, user.id))
         .get(),
       isOwnProfile
-        ? getTrackedTitles(user.id).then(t => t.map(r => ({ ...r, is_public: r.public })))
+        ? getTrackedTitles(user.id).then((t) =>
+            t.map((r) => ({ ...r, is_public: r.public })),
+          )
         : showWatchlist
-          ? getPublicTrackedTitles(user.id).then(t => t.map(r => ({ ...r, is_public: true })))
+          ? getPublicTrackedTitles(user.id).then((t) =>
+              t.map((r) => ({ ...r, is_public: true })),
+            )
           : Promise.resolve([]),
       showWatchlist
         ? getRecentlyWatchedBackdrops(db, user.id)
         : Promise.resolve([]),
       getFollowerCount(user.id),
       getFollowingCount(user.id),
-      viewerId && !isOwnProfile ? isFollowing(viewerId, user.id) : Promise.resolve(false),
-      showWatchlist ? getStatsOverview(user.id) : Promise.resolve(emptyStatsOverview),
-      showWatchlist ? getUserGenreBreakdown(user.id, 6) : Promise.resolve([] as GenreCount[]),
-      showWatchlist ? getMonthlyActivity(user.id, 12) : Promise.resolve([] as MonthlyActivity[]),
-      showWatchlist ? getShowsByStatus(user.id) : Promise.resolve(emptyShowsByStatus),
-      showWatchlist ? getMutualFollowers(user.id, 4) : Promise.resolve([] as MutualFollower[]),
+      viewerId && !isOwnProfile
+        ? isFollowing(viewerId, user.id)
+        : Promise.resolve(false),
+      showWatchlist
+        ? getStatsOverview(user.id)
+        : Promise.resolve(emptyStatsOverview),
+      showWatchlist
+        ? getUserGenreBreakdown(user.id, 6)
+        : Promise.resolve([] as GenreCount[]),
+      showWatchlist
+        ? getMonthlyActivity(user.id, 12)
+        : Promise.resolve([] as MonthlyActivity[]),
+      showWatchlist
+        ? getShowsByStatus(user.id)
+        : Promise.resolve(emptyShowsByStatus),
+      showWatchlist
+        ? getMutualFollowers(user.id, 4)
+        : Promise.resolve([] as MutualFollower[]),
     ]);
 
-    const shows = allTitles.filter(t => t.object_type === "SHOW");
+    const shows = allTitles.filter((t) => t.object_type === "SHOW");
 
     // Compute show progress metrics
     let showsCompleted = 0;
@@ -138,14 +176,22 @@ export async function getUserPublicProfile(username: string, isOwnProfile = fals
     }
 
     // Sort movies by most recently watched first, unwatched movies last
-    const movieTitles = allTitles.filter(t => t.object_type === "MOVIE");
-    const movieIds = movieTitles.map(t => t.id);
+    const movieTitles = allTitles.filter((t) => t.object_type === "MOVIE");
+    const movieIds = movieTitles.map((t) => t.id);
     const watchedAtMap = new Map<string, string | null>();
     if (movieIds.length > 0) {
       const watchedRows = await db
-        .select({ titleId: watchedTitles.titleId, watchedAt: watchedTitles.watchedAt })
+        .select({
+          titleId: watchedTitles.titleId,
+          watchedAt: watchedTitles.watchedAt,
+        })
         .from(watchedTitles)
-        .where(sql`${watchedTitles.titleId} IN (${sql.join(movieIds.map(id => sql`${id}`), sql`, `)}) AND ${watchedTitles.userId} = ${user.id}`)
+        .where(
+          sql`${watchedTitles.titleId} IN (${sql.join(
+            movieIds.map((id) => sql`${id}`),
+            sql`, `,
+          )}) AND ${watchedTitles.userId} = ${user.id}`,
+        )
         .limit(movieIds.length)
         .all();
       for (const row of watchedRows) {
@@ -226,8 +272,8 @@ export async function getUserVisibilityByUsername(username: string) {
       .where(sql`lower(${users.username}) = lower(${username})`)
       .get();
     if (!row) return null;
-    const visibility = (row.profile_visibility
-      || (row.profile_public ? "public" : "private")) as ProfileVisibility;
+    const visibility = (row.profile_visibility ||
+      (row.profile_public ? "public" : "private")) as ProfileVisibility;
     return {
       id: row.id,
       username: row.username,
@@ -237,17 +283,25 @@ export async function getUserVisibilityByUsername(username: string) {
   });
 }
 
-export async function getActivityKindVisibilityMap(userId: string): Promise<ActivityKindVisibilityMap> {
+export async function getActivityKindVisibilityMap(
+  userId: string,
+): Promise<ActivityKindVisibilityMap> {
   return traceDbQuery("getActivityKindVisibilityMap", async () => {
     const db = getDb();
     const rows = await db
-      .select({ kind: activityKindVisibility.kind, visibility: activityKindVisibility.visibility })
+      .select({
+        kind: activityKindVisibility.kind,
+        visibility: activityKindVisibility.visibility,
+      })
       .from(activityKindVisibility)
       .where(eq(activityKindVisibility.userId, userId))
       .all();
     const map: ActivityKindVisibilityMap = {};
     for (const row of rows) {
-      map[row.kind as ActivityType] = row.visibility as "public" | "friends_only" | "private";
+      map[row.kind as ActivityType] = row.visibility as
+        | "public"
+        | "friends_only"
+        | "private";
     }
     return map;
   });
@@ -263,7 +317,8 @@ export async function setActivitySettings(
 
     if (data.enabled !== undefined) {
       ops.push(
-        db.update(users)
+        db
+          .update(users)
           .set({ activityStreamEnabled: data.enabled ? 1 : 0 })
           .where(eq(users.id, userId))
           .run(),
@@ -274,10 +329,14 @@ export async function setActivitySettings(
       for (const [kind, visibility] of Object.entries(data.kindVisibility)) {
         if (visibility === undefined) continue;
         ops.push(
-          db.insert(activityKindVisibility)
+          db
+            .insert(activityKindVisibility)
             .values({ userId, kind, visibility })
             .onConflictDoUpdate({
-              target: [activityKindVisibility.userId, activityKindVisibility.kind],
+              target: [
+                activityKindVisibility.userId,
+                activityKindVisibility.kind,
+              ],
               set: { visibility },
             })
             .run(),
@@ -296,18 +355,26 @@ export async function getActivitySettings(userId: string): Promise<{
   return traceDbQuery("getActivitySettings", async () => {
     const db = getDb();
     const [userRow, kindRows] = await Promise.all([
-      db.select({ activity_stream_enabled: users.activityStreamEnabled })
+      db
+        .select({ activity_stream_enabled: users.activityStreamEnabled })
         .from(users)
         .where(eq(users.id, userId))
         .get(),
-      db.select({ kind: activityKindVisibility.kind, visibility: activityKindVisibility.visibility })
+      db
+        .select({
+          kind: activityKindVisibility.kind,
+          visibility: activityKindVisibility.visibility,
+        })
         .from(activityKindVisibility)
         .where(eq(activityKindVisibility.userId, userId))
         .all(),
     ]);
     const kind_visibility: ActivityKindVisibilityMap = {};
     for (const row of kindRows) {
-      kind_visibility[row.kind as ActivityType] = row.visibility as "public" | "friends_only" | "private";
+      kind_visibility[row.kind as ActivityType] = row.visibility as
+        | "public"
+        | "friends_only"
+        | "private";
     }
     return {
       enabled: Boolean(userRow?.activity_stream_enabled),
@@ -319,10 +386,7 @@ export async function getActivitySettings(userId: string): Promise<{
 export async function updateUserBio(userId: string, bio: string | null) {
   return traceDbQuery("updateUserBio", async () => {
     const db = getDb();
-    await db.update(users)
-      .set({ bio })
-      .where(eq(users.id, userId))
-      .run();
+    await db.update(users).set({ bio }).where(eq(users.id, userId)).run();
   });
 }
 
@@ -345,7 +409,12 @@ export async function getMyProfile(userId: string) {
 
 export async function updateMyProfile(
   userId: string,
-  data: { display_name?: string | null; bio?: string | null; country_code?: string | null; locale?: string | null }
+  data: {
+    display_name?: string | null;
+    bio?: string | null;
+    country_code?: string | null;
+    locale?: string | null;
+  },
 ): Promise<void> {
   return traceDbQuery("updateMyProfile", async () => {
     const db = getDb();
@@ -359,7 +428,11 @@ export async function updateMyProfile(
   });
 }
 
-async function getRecentlyWatchedBackdrops(db: ReturnType<typeof getDb>, userId: string, limit = 5) {
+async function getRecentlyWatchedBackdrops(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  limit = 5,
+) {
   const rows = await db
     .select({
       id: titles.id,
@@ -369,7 +442,9 @@ async function getRecentlyWatchedBackdrops(db: ReturnType<typeof getDb>, userId:
     .from(watchedEpisodes)
     .innerJoin(episodes, eq(episodes.id, watchedEpisodes.episodeId))
     .innerJoin(titles, eq(titles.id, episodes.titleId))
-    .where(sql`${watchedEpisodes.userId} = ${userId} AND ${titles.backdropUrl} IS NOT NULL`)
+    .where(
+      sql`${watchedEpisodes.userId} = ${userId} AND ${titles.backdropUrl} IS NOT NULL`,
+    )
     .groupBy(titles.id)
     .orderBy(sql`MAX(${watchedEpisodes.watchedAt}) DESC`)
     .limit(limit)
@@ -378,7 +453,10 @@ async function getRecentlyWatchedBackdrops(db: ReturnType<typeof getDb>, userId:
   return rows as { id: string; title: string; backdrop_url: string }[];
 }
 
-export async function updateProfilePublic(userId: string, isPublicOrVisibility: boolean | ProfileVisibility) {
+export async function updateProfilePublic(
+  userId: string,
+  isPublicOrVisibility: boolean | ProfileVisibility,
+) {
   return traceDbQuery("updateProfilePublic", async () => {
     const db = getDb();
     let visibility: ProfileVisibility;
@@ -387,7 +465,8 @@ export async function updateProfilePublic(userId: string, isPublicOrVisibility: 
     } else {
       visibility = isPublicOrVisibility;
     }
-    await db.update(users)
+    await db
+      .update(users)
       .set({
         profilePublic: visibility === "public" ? 1 : 0,
         profileVisibility: visibility,

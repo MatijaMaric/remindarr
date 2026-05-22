@@ -9,12 +9,12 @@ interface AccentMeta {
 }
 
 const ACCENTS: AccentMeta[] = [
-  { value: "amber",  labelKey: "settings.accent.amber",  hex: "#fbbf24" },
-  { value: "ember",  labelKey: "settings.accent.ember",  hex: "#f97316" },
-  { value: "plum",   labelKey: "settings.accent.plum",   hex: "#c084fc" },
+  { value: "amber", labelKey: "settings.accent.amber", hex: "#fbbf24" },
+  { value: "ember", labelKey: "settings.accent.ember", hex: "#f97316" },
+  { value: "plum", labelKey: "settings.accent.plum", hex: "#c084fc" },
   { value: "cobalt", labelKey: "settings.accent.cobalt", hex: "#60a5fa" },
-  { value: "moss",   labelKey: "settings.accent.moss",   hex: "#4ade80" },
-  { value: "sand",   labelKey: "settings.accent.sand",   hex: "#d4d4aa" },
+  { value: "moss", labelKey: "settings.accent.moss", hex: "#4ade80" },
+  { value: "sand", labelKey: "settings.accent.sand", hex: "#d4d4aa" },
 ];
 
 interface Props {
@@ -49,7 +49,9 @@ export default function AccentPicker({ value, onChange }: Props) {
               style={{
                 background: meta.hex,
                 // Use CSS custom property to set Tailwind's ring color
-                ["--tw-ring-color" as string]: isActive ? meta.hex : "transparent",
+                ["--tw-ring-color" as string]: isActive
+                  ? meta.hex
+                  : "transparent",
               }}
             />
             <span

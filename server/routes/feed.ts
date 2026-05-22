@@ -18,7 +18,11 @@ function addDays(dateStr: string, days: number): string {
 }
 
 function escapeIcal(str: string): string {
-  return str.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  return str
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
 }
 
 function foldLine(line: string): string {
@@ -52,7 +56,7 @@ function buildIcalFooter(): string[] {
 }
 
 function buildEpisodeVEvents(
-  episodes: Awaited<ReturnType<typeof getEpisodesByDateRange>>
+  episodes: Awaited<ReturnType<typeof getEpisodesByDateRange>>,
 ): string[] {
   const lines: string[] = [];
   for (const ep of episodes) {
@@ -75,7 +79,7 @@ function buildEpisodeVEvents(
 }
 
 function buildMovieVEvents(
-  movies: Awaited<ReturnType<typeof getUpcomingTrackedMovies>>
+  movies: Awaited<ReturnType<typeof getUpcomingTrackedMovies>>,
 ): string[] {
   const lines: string[] = [];
   for (const movie of movies) {
@@ -93,7 +97,10 @@ function buildMovieVEvents(
   return lines;
 }
 
-function buildIcsResponse(lines: string[]): { body: string; headers: Record<string, string> } {
+function buildIcsResponse(lines: string[]): {
+  body: string;
+  headers: Record<string, string>;
+} {
   const body = lines.join("\r\n") + "\r\n";
   return {
     body,

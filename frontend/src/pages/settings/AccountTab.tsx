@@ -6,7 +6,11 @@ import { toast } from "sonner";
 import { SUPPORTED_LANGUAGES, setLanguage } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import * as api from "../../api";
-import type { ActivitySettings, ActivityType, ActivityKindVisibility } from "../../types";
+import type {
+  ActivitySettings,
+  ActivityType,
+  ActivityKindVisibility,
+} from "../../types";
 import { authClient } from "../../lib/auth-client";
 import { UserPlus } from "lucide-react";
 import { useAsyncError } from "../../hooks/useAsyncError";
@@ -99,7 +103,9 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
             >
               <option value="">{t("profile.noCountry")}</option>
               {COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>{c.name}</option>
+                <option key={c.code} value={c.code}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </SFormRow>
@@ -176,7 +182,14 @@ function UserSection() {
   }
 
   const strength = passwordStrength(newPassword);
-  const strengthLabel = strength >= 4 ? "strong" : strength >= 3 ? "good" : strength > 0 ? "weak" : "";
+  const strengthLabel =
+    strength >= 4
+      ? "strong"
+      : strength >= 3
+        ? "good"
+        : strength > 0
+          ? "weak"
+          : "";
 
   const initials = (user?.username ?? "??").slice(0, 2).toUpperCase();
 
@@ -202,7 +215,10 @@ function UserSection() {
               <SInput value={user?.auth_provider ?? "local"} mono readOnly />
             </SFormRow>
             <SFormRow label="Display name">
-              <SInput value={user?.display_name ?? user?.username ?? ""} readOnly />
+              <SInput
+                value={user?.display_name ?? user?.username ?? ""}
+                readOnly
+              />
             </SFormRow>
             <SFormRow label="Role">
               <SInput value={user?.is_admin ? "admin" : "user"} mono readOnly />
@@ -231,7 +247,11 @@ function UserSection() {
               </SFormRow>
               <SFormRow
                 label={t("profile.newPassword")}
-                hint={strengthLabel ? <span>strength: {strengthLabel}</span> : undefined}
+                hint={
+                  strengthLabel ? (
+                    <span>strength: {strengthLabel}</span>
+                  ) : undefined
+                }
               >
                 <SInput
                   type="password"
@@ -310,7 +330,10 @@ type PasskeyAction =
   | { type: "OP_DONE"; passkeys: PasskeyItem[]; message: string }
   | { type: "OP_ERROR"; error: string };
 
-function passkeyReducer(state: PasskeyState, action: PasskeyAction): PasskeyState {
+function passkeyReducer(
+  state: PasskeyState,
+  action: PasskeyAction,
+): PasskeyState {
   switch (action.type) {
     case "LOAD_SUCCESS":
       return { ...state, status: "idle", passkeys: action.passkeys };
@@ -319,9 +342,21 @@ function passkeyReducer(state: PasskeyState, action: PasskeyAction): PasskeyStat
     case "ADD_START":
       return { ...state, status: "adding", message: "", error: "" };
     case "DELETE_START":
-      return { ...state, status: "deleting", message: "", error: "", pendingId: action.id };
+      return {
+        ...state,
+        status: "deleting",
+        message: "",
+        error: "",
+        pendingId: action.id,
+      };
     case "OP_DONE":
-      return { status: "idle", passkeys: action.passkeys, message: action.message, error: "", pendingId: null };
+      return {
+        status: "idle",
+        passkeys: action.passkeys,
+        message: action.message,
+        error: "",
+        pendingId: null,
+      };
     case "OP_ERROR":
       return { ...state, status: "idle", error: action.error, pendingId: null };
     default:
@@ -347,13 +382,22 @@ function PasskeySection() {
   const loading = status === "loading";
   const adding = status === "adding";
 
-  const webauthnSupported = typeof window !== "undefined" && !!window.PublicKeyCredential;
+  const webauthnSupported =
+    typeof window !== "undefined" && !!window.PublicKeyCredential;
 
   useEffect(() => {
-    if (!webauthnSupported) { dispatch({ type: "LOAD_DONE" }); return; }
-    authClient.passkey.listUserPasskeys()
+    if (!webauthnSupported) {
+      dispatch({ type: "LOAD_DONE" });
+      return;
+    }
+    authClient.passkey
+      .listUserPasskeys()
       .then((result) => {
-        if (result.data) dispatch({ type: "LOAD_SUCCESS", passkeys: result.data as PasskeyItem[] });
+        if (result.data)
+          dispatch({
+            type: "LOAD_SUCCESS",
+            passkeys: result.data as PasskeyItem[],
+          });
         else dispatch({ type: "LOAD_DONE" });
       })
       .catch(() => dispatch({ type: "LOAD_DONE" }));
@@ -366,14 +410,23 @@ function PasskeySection() {
         name: passkeyName || user?.username || undefined,
       });
       if (result?.error) {
-        throw new Error(String(result.error.message || t("profile.passkeyAddFailed")));
+        throw new Error(
+          String(result.error.message || t("profile.passkeyAddFailed")),
+        );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
-      dispatch({ type: "OP_DONE", passkeys: (listResult.data as PasskeyItem[]) ?? [], message: t("profile.passkeyAdded") });
+      dispatch({
+        type: "OP_DONE",
+        passkeys: (listResult.data as PasskeyItem[]) ?? [],
+        message: t("profile.passkeyAdded"),
+      });
       setPasskeyName("");
     } catch (e: unknown) {
       if (!(e instanceof Error) || e.name !== "NotAllowedError") {
-        dispatch({ type: "OP_ERROR", error: e instanceof Error ? e.message : String(e) });
+        dispatch({
+          type: "OP_ERROR",
+          error: e instanceof Error ? e.message : String(e),
+        });
       } else {
         dispatch({ type: "OP_ERROR", error: "" });
       }
@@ -385,28 +438,49 @@ function PasskeySection() {
     try {
       const result = await authClient.passkey.deletePasskey({ id });
       if (result?.error) {
-        throw new Error(String(result.error.message || "Failed to delete passkey"));
+        throw new Error(
+          String(result.error.message || "Failed to delete passkey"),
+        );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
-      dispatch({ type: "OP_DONE", passkeys: (listResult.data as PasskeyItem[]) ?? [], message: t("profile.passkeyDeleted") });
+      dispatch({
+        type: "OP_DONE",
+        passkeys: (listResult.data as PasskeyItem[]) ?? [],
+        message: t("profile.passkeyDeleted"),
+      });
     } catch (e: unknown) {
-      dispatch({ type: "OP_ERROR", error: e instanceof Error ? e.message : String(e) });
+      dispatch({
+        type: "OP_ERROR",
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
   async function handleRenamePasskey(id: string) {
     if (!editName.trim()) return;
     try {
-      const result = await authClient.passkey.updatePasskey({ id, name: editName.trim() });
+      const result = await authClient.passkey.updatePasskey({
+        id,
+        name: editName.trim(),
+      });
       if (result?.error) {
-        throw new Error(String(result.error.message || "Failed to rename passkey"));
+        throw new Error(
+          String(result.error.message || "Failed to rename passkey"),
+        );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
-      dispatch({ type: "OP_DONE", passkeys: (listResult.data as PasskeyItem[]) ?? [], message: t("profile.passkeyRenamed") });
+      dispatch({
+        type: "OP_DONE",
+        passkeys: (listResult.data as PasskeyItem[]) ?? [],
+        message: t("profile.passkeyRenamed"),
+      });
       setEditing(null);
       setEditName("");
     } catch (e: unknown) {
-      dispatch({ type: "OP_ERROR", error: e instanceof Error ? e.message : String(e) });
+      dispatch({
+        type: "OP_ERROR",
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
@@ -426,7 +500,9 @@ function PasskeySection() {
         ) : (
           <>
             {passkeys.length === 0 ? (
-              <p className="text-zinc-400 text-sm py-1">{t("profile.noPasskeys")}</p>
+              <p className="text-zinc-400 text-sm py-1">
+                {t("profile.noPasskeys")}
+              </p>
             ) : (
               <ul className="space-y-2">
                 {passkeys.map((pk) => (
@@ -437,7 +513,10 @@ function PasskeySection() {
                     {editing === pk.id ? (
                       <form
                         className="flex items-center gap-2 flex-1"
-                        onSubmit={(e) => { e.preventDefault(); handleRenamePasskey(pk.id); }}
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleRenamePasskey(pk.id);
+                        }}
                       >
                         <SInput
                           value={editName}
@@ -452,7 +531,10 @@ function PasskeySection() {
                           type="button"
                           variant="ghost"
                           small
-                          onClick={() => { setEditing(null); setEditName(""); }}
+                          onClick={() => {
+                            setEditing(null);
+                            setEditName("");
+                          }}
                         >
                           {t("common.cancel")}
                         </SButton>
@@ -471,14 +553,18 @@ function PasskeySection() {
                           </div>
                           {pk.createdAt && (
                             <div className="text-[11px] text-zinc-500 font-mono">
-                              Created {new Date(pk.createdAt).toLocaleDateString()}
+                              Created{" "}
+                              {new Date(pk.createdAt).toLocaleDateString()}
                             </div>
                           )}
                         </div>
                         <SButton
                           variant="ghost"
                           small
-                          onClick={() => { setEditing(pk.id); setEditName(pk.name || ""); }}
+                          onClick={() => {
+                            setEditing(pk.id);
+                            setEditName(pk.name || "");
+                          }}
                         >
                           {t("profile.renamePasskey")}
                         </SButton>
@@ -486,10 +572,14 @@ function PasskeySection() {
                           variant="outline"
                           small
                           danger
-                          disabled={status === "deleting" && pendingId === pk.id}
+                          disabled={
+                            status === "deleting" && pendingId === pk.id
+                          }
                           onClick={() => handleDeletePasskey(pk.id)}
                         >
-                          {status === "deleting" && pendingId === pk.id ? t("profile.deletingPasskey") : t("profile.deletePasskey")}
+                          {status === "deleting" && pendingId === pk.id
+                            ? t("profile.deletingPasskey")
+                            : t("profile.deletePasskey")}
                         </SButton>
                       </>
                     )}
@@ -500,7 +590,10 @@ function PasskeySection() {
 
             <div className="flex flex-col sm:flex-row gap-2 sm:items-end pt-1 bg-zinc-800 rounded-[10px] p-3.5">
               <div className="flex-1">
-                <SLabel htmlFor="passkey-name-input" hint={<span>optional</span>}>
+                <SLabel
+                  htmlFor="passkey-name-input"
+                  hint={<span>optional</span>}
+                >
                   {t("profile.passkeyName")}
                 </SLabel>
                 <SInput
@@ -533,11 +626,13 @@ function ProfileVisibilitySection() {
     queryFn: ({ signal }) => api.getTrackedTitles(signal),
   });
 
-  const visibility = data?.profile_visibility ?? (data?.profile_public ? "public" : "private");
+  const visibility =
+    data?.profile_visibility ?? (data?.profile_public ? "public" : "private");
   const titles = data?.titles ?? [];
 
   const updateVisibilityMutation = useMutation({
-    mutationFn: (newVisibility: string) => api.updateProfileVisibility(newVisibility),
+    mutationFn: (newVisibility: string) =>
+      api.updateProfileVisibility(newVisibility),
     onError: (e: unknown) => {
       setErr(e instanceof Error ? e.message : String(e));
       toast.error("Failed to update visibility");
@@ -648,7 +743,9 @@ function ProfileVisibilitySection() {
           </div>
         </>
       ) : (
-        <p className="text-zinc-500 text-sm mt-4">{t("settings.noTrackedTitles")}</p>
+        <p className="text-zinc-500 text-sm mt-4">
+          {t("settings.noTrackedTitles")}
+        </p>
       )}
     </SCard>
   );
@@ -672,7 +769,10 @@ const ACTIVITY_KINDS: ActivityType[] = [
   "recommendation",
 ];
 
-const KIND_VIS_OPTIONS: Array<{ value: "public" | "friends_only" | "private"; label: string }> = [
+const KIND_VIS_OPTIONS: Array<{
+  value: "public" | "friends_only" | "private";
+  label: string;
+}> = [
   { value: "public", label: "Everyone" },
   { value: "friends_only", label: "Friends only" },
   { value: "private", label: "Only me" },
@@ -710,13 +810,21 @@ function ActivityStreamSection() {
     }
   }
 
-  async function handleKindChange(kind: ActivityType, value: "public" | "friends_only" | "private") {
-    const next: ActivityKindVisibility = { ...settings.kind_visibility, [kind]: value };
+  async function handleKindChange(
+    kind: ActivityType,
+    value: "public" | "friends_only" | "private",
+  ) {
+    const next: ActivityKindVisibility = {
+      ...settings.kind_visibility,
+      [kind]: value,
+    };
     setSettings((prev) => ({ ...prev, kind_visibility: next }));
     setSaving(true);
     setErr("");
     try {
-      const updated = await api.updateActivitySettings({ kind_visibility: next });
+      const updated = await api.updateActivitySettings({
+        kind_visibility: next,
+      });
       setSettings(updated);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -727,7 +835,10 @@ function ActivityStreamSection() {
 
   if (loading) {
     return (
-      <SCard title="Activity stream" subtitle="Share your activity on your public profile.">
+      <SCard
+        title="Activity stream"
+        subtitle="Share your activity on your public profile."
+      >
         <div className="text-zinc-500 text-sm">Loading…</div>
       </SCard>
     );
@@ -745,7 +856,11 @@ function ActivityStreamSection() {
       )}
       <SSwitch
         label="Show activity on profile"
-        sub={settings.enabled ? "Visitors who can see your profile will see your activity feed." : "Activity feed is hidden from other users."}
+        sub={
+          settings.enabled
+            ? "Visitors who can see your profile will see your activity feed."
+            : "Activity feed is hidden from other users."
+        }
         on={settings.enabled}
         onChange={handleToggle}
         disabled={saving}
@@ -754,14 +869,20 @@ function ActivityStreamSection() {
         <>
           <SDivider label="Per-kind visibility" />
           <p className="text-xs text-zinc-500 mb-3">
-            Override who can see each type of activity. Falls back to your profile visibility when set to "Everyone".
+            Override who can see each type of activity. Falls back to your
+            profile visibility when set to "Everyone".
           </p>
           <div className="space-y-2">
             {ACTIVITY_KINDS.map((kind) => {
               const current = settings.kind_visibility[kind] ?? "public";
               return (
-                <div key={kind} className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-b-0">
-                  <span className="text-sm text-zinc-300">{ACTIVITY_KIND_LABELS[kind]}</span>
+                <div
+                  key={kind}
+                  className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-b-0"
+                >
+                  <span className="text-sm text-zinc-300">
+                    {ACTIVITY_KIND_LABELS[kind]}
+                  </span>
                   <div className="flex items-center gap-1">
                     {KIND_VIS_OPTIONS.map((opt) => (
                       <button

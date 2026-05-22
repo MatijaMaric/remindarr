@@ -48,7 +48,7 @@ export function getNextCronDate(cron: string, after: Date = new Date()): Date {
 export function enqueueJob(
   name: string,
   data?: Record<string, unknown>,
-  options?: { runAt?: Date; maxAttempts?: number }
+  options?: { runAt?: Date; maxAttempts?: number },
 ): number {
   const db = getRawDb();
   const runAt = (options?.runAt ?? new Date()).toISOString();
@@ -57,7 +57,7 @@ export function enqueueJob(
 
   const result = db
     .prepare(
-      "INSERT INTO jobs (name, data, run_at, max_attempts) VALUES (?, ?, ?, ?)"
+      "INSERT INTO jobs (name, data, run_at, max_attempts) VALUES (?, ?, ?, ?)",
     )
     .run(name, dataStr, runAt, maxAttempts);
 
@@ -79,7 +79,7 @@ export function claimNextJob(name: string): Job | null {
          ORDER BY run_at ASC
          LIMIT 1
        )
-       RETURNING *`
+       RETURNING *`,
     )
     .get(now, name, now) as Job | null;
 
@@ -89,7 +89,7 @@ export function claimNextJob(name: string): Job | null {
 export function completeJob(id: number) {
   const db = getRawDb();
   db.prepare(
-    "UPDATE jobs SET status = 'completed', completed_at = datetime('now') WHERE id = ?"
+    "UPDATE jobs SET status = 'completed', completed_at = datetime('now') WHERE id = ?",
   ).run(id);
 }
 
@@ -103,11 +103,11 @@ export function failJob(id: number, error: string) {
     db.prepare(
       `UPDATE jobs SET status = 'pending', error = ?,
        run_at = datetime('now', '+' || ? || ' seconds')
-       WHERE id = ?`
+       WHERE id = ?`,
     ).run(error, delaySec, id);
   } else {
     db.prepare(
-      "UPDATE jobs SET status = 'failed', error = ?, completed_at = datetime('now') WHERE id = ?"
+      "UPDATE jobs SET status = 'failed', error = ?, completed_at = datetime('now') WHERE id = ?",
     ).run(error, id);
   }
 }
@@ -120,7 +120,7 @@ export function hasActiveJob(name: string): boolean {
   const db = getRawDb();
   const row = db
     .prepare(
-      "SELECT id FROM jobs WHERE name = ? AND status IN ('pending', 'running', 'completed') LIMIT 1"
+      "SELECT id FROM jobs WHERE name = ? AND status IN ('pending', 'running', 'completed') LIMIT 1",
     )
     .get(name);
   return row !== null;
@@ -132,7 +132,7 @@ export function cleanupOldJobs(retentionDays: number = 30) {
     .prepare(
       `DELETE FROM jobs
        WHERE status IN ('completed', 'failed')
-       AND completed_at < datetime('now', '-' || ? || ' days')`
+       AND completed_at < datetime('now', '-' || ? || ' days')`,
     )
     .run(retentionDays);
   return result.changes;
@@ -145,7 +145,7 @@ export function recoverStaleJobs(staleMinutes: number = 30) {
     .prepare(
       `UPDATE jobs SET status = 'pending', error = 'Recovered after stale timeout'
        WHERE status = 'running'
-       AND started_at < datetime('now', '-' || ? || ' minutes')`
+       AND started_at < datetime('now', '-' || ? || ' minutes')`,
     )
     .run(staleMinutes);
   if (result.changes > 0) {
@@ -153,15 +153,21 @@ export function recoverStaleJobs(staleMinutes: number = 30) {
   }
 }
 
-export function getJobStats(): Record<string, { pending: number; running: number; completed: number; failed: number }> {
+export function getJobStats(): Record<
+  string,
+  { pending: number; running: number; completed: number; failed: number }
+> {
   const db = getRawDb();
   const rows = db
     .prepare(
-      `SELECT name, status, COUNT(*) as count FROM jobs GROUP BY name, status`
+      `SELECT name, status, COUNT(*) as count FROM jobs GROUP BY name, status`,
     )
     .all() as { name: string; status: JobStatus; count: number }[];
 
-  const stats: Record<string, { pending: number; running: number; completed: number; failed: number }> = {};
+  const stats: Record<
+    string,
+    { pending: number; running: number; completed: number; failed: number }
+  > = {};
   for (const row of rows) {
     if (!stats[row.name]) {
       stats[row.name] = { pending: 0, running: 0, completed: 0, failed: 0 };
@@ -180,7 +186,7 @@ export function registerCron(name: string, cron: string) {
   db.prepare(
     `INSERT INTO cron_jobs (name, cron, next_run)
      VALUES (?, ?, ?)
-     ON CONFLICT(name) DO UPDATE SET cron = excluded.cron, next_run = excluded.next_run`
+     ON CONFLICT(name) DO UPDATE SET cron = excluded.cron, next_run = excluded.next_run`,
   ).run(name, cron, nextRun);
 
   log.info("Registered cron", { name, cron, nextRun });
@@ -191,16 +197,14 @@ export function tickCrons() {
   const now = new Date().toISOString();
 
   const dueCrons = db
-    .prepare(
-      "SELECT * FROM cron_jobs WHERE enabled = 1 AND next_run <= ?"
-    )
+    .prepare("SELECT * FROM cron_jobs WHERE enabled = 1 AND next_run <= ?")
     .all(now) as CronJob[];
 
   for (const cron of dueCrons) {
     // Check if there's already a pending/running job for this cron
     const existing = db
       .prepare(
-        "SELECT id FROM jobs WHERE name = ? AND status IN ('pending', 'running') LIMIT 1"
+        "SELECT id FROM jobs WHERE name = ? AND status IN ('pending', 'running') LIMIT 1",
       )
       .get(cron.name);
 
@@ -212,7 +216,7 @@ export function tickCrons() {
     // Advance to next run
     const nextRun = getNextCronDate(cron.cron, new Date()).toISOString();
     db.prepare(
-      "UPDATE cron_jobs SET last_run = ?, next_run = ? WHERE name = ?"
+      "UPDATE cron_jobs SET last_run = ?, next_run = ? WHERE name = ?",
     ).run(now, nextRun, cron.name);
   }
 }
@@ -233,8 +237,6 @@ export function getCronJobs(): CronJob[] {
 export function getRecentJobs(limit: number = 20): Job[] {
   const db = getRawDb();
   return db
-    .prepare(
-      `SELECT * FROM jobs ORDER BY id DESC LIMIT ?`
-    )
+    .prepare(`SELECT * FROM jobs ORDER BY id DESC LIMIT ?`)
     .all(limit) as Job[];
 }

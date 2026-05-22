@@ -1,13 +1,30 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { createUser, createSession, getSessionWithUser } from "../db/repository";
+import {
+  createUser,
+  createSession,
+  getSessionWithUser,
+} from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import * as resolver from "../imdb/resolver";
 import * as repository from "../db/repository";
 import type { AppEnv } from "../types";
-import { parseCsv, detectCsvFormat, extractImdbIdFromRow, type CsvFormat } from "./import";
+import {
+  parseCsv,
+  detectCsvFormat,
+  extractImdbIdFromRow,
+  type CsvFormat,
+} from "./import";
 
 // ─── Auth helper ───────────────────────────────────────────────────────────
 
@@ -64,12 +81,24 @@ describe("parseCsv", () => {
 
 describe("detectCsvFormat", () => {
   it("detects Letterboxd format", () => {
-    const headers = ["Name", "Year", "Letterboxd URI", "Rating", "Watched Date"];
+    const headers = [
+      "Name",
+      "Year",
+      "Letterboxd URI",
+      "Rating",
+      "Watched Date",
+    ];
     expect(detectCsvFormat(headers)).toBe("letterboxd");
   });
 
   it("detects IMDB format", () => {
-    const headers = ["Const", "Your Rating", "Date Rated", "Title", "Title Type"];
+    const headers = [
+      "Const",
+      "Your Rating",
+      "Date Rated",
+      "Title",
+      "Title Type",
+    ];
     expect(detectCsvFormat(headers)).toBe("imdb");
   });
 
@@ -106,7 +135,13 @@ describe("extractImdbIdFromRow", () => {
   });
 
   it("returns null for IMDB row with invalid Const value", () => {
-    const row = { Const: "nm0000093", "Your Rating": "9", "Date Rated": "", Title: "Brad Pitt", "Title Type": "name" };
+    const row = {
+      Const: "nm0000093",
+      "Your Rating": "9",
+      "Date Rated": "",
+      Title: "Brad Pitt",
+      "Title Type": "name",
+    };
     expect(extractImdbIdFromRow(row, "imdb")).toBeNull();
   });
 
@@ -122,7 +157,12 @@ describe("extractImdbIdFromRow", () => {
   });
 
   it("returns null for Trakt row with empty imdb_id", () => {
-    const row = { imdb_id: "", tmdb_id: "27205", title: "Inception", type: "movie" };
+    const row = {
+      imdb_id: "",
+      tmdb_id: "27205",
+      title: "Inception",
+      type: "movie",
+    };
     expect(extractImdbIdFromRow(row, "trakt")).toBeNull();
   });
 
@@ -180,7 +220,10 @@ function makeFormData(csvContent: string, filename = "test.csv"): FormData {
 describe("POST /import/csv", () => {
   it("returns 401 without auth", async () => {
     const form = makeFormData("Const,Title\ntt1234567,Inception");
-    const res = await app.request("/import/csv", { method: "POST", body: form });
+    const res = await app.request("/import/csv", {
+      method: "POST",
+      body: form,
+    });
     expect(res.status).toBe(401);
   });
 
@@ -214,7 +257,8 @@ describe("POST /import/csv", () => {
     const title = makeParsedTitle({ id: "movie-imdb-1", title: "Inception" });
     (resolver.resolveImdbUrl as any).mockResolvedValueOnce(title);
 
-    const csv = "Const,Your Rating,Date Rated,Title,Title Type\ntt1375666,9,2024-01-01,Inception,movie";
+    const csv =
+      "Const,Your Rating,Date Rated,Title,Title Type\ntt1375666,9,2024-01-01,Inception,movie";
     const form = makeFormData(csv);
     const res = await app.request("/import/csv", {
       method: "POST",
@@ -232,7 +276,8 @@ describe("POST /import/csv", () => {
     const title = makeParsedTitle({ id: "movie-trakt-1", title: "Dune" });
     (resolver.resolveImdbUrl as any).mockResolvedValueOnce(title);
 
-    const csv = "imdb_id,tmdb_id,title,type,listed_at\ntt1160419,438631,Dune,movie,2024-01-01";
+    const csv =
+      "imdb_id,tmdb_id,title,type,listed_at\ntt1160419,438631,Dune,movie,2024-01-01";
     const form = makeFormData(csv);
     const res = await app.request("/import/csv", {
       method: "POST",
@@ -250,7 +295,8 @@ describe("POST /import/csv", () => {
     const title = makeParsedTitle({ id: "movie-lb-1", title: "Parasite" });
     (resolver.resolveImdbUrl as any).mockResolvedValueOnce(title);
 
-    const csv = "Date,Name,Year,Letterboxd URI,Rating,Watched Date,IMDB URI\n2024-01-01,Parasite,2019,https://letterboxd.com/film/parasite-2019/,5,2024-01-01,https://www.imdb.com/title/tt6751668/";
+    const csv =
+      "Date,Name,Year,Letterboxd URI,Rating,Watched Date,IMDB URI\n2024-01-01,Parasite,2019,https://letterboxd.com/film/parasite-2019/,5,2024-01-01,https://www.imdb.com/title/tt6751668/";
     const form = makeFormData(csv);
     const res = await app.request("/import/csv", {
       method: "POST",
@@ -281,7 +327,8 @@ describe("POST /import/csv", () => {
   it("counts rows where resolver returns null as failed", async () => {
     (resolver.resolveImdbUrl as any).mockResolvedValueOnce(null);
 
-    const csv = "Const,Your Rating,Date Rated,Title,Title Type\ntt9999999,5,2024-01-01,Unknown,movie";
+    const csv =
+      "Const,Your Rating,Date Rated,Title,Title Type\ntt9999999,5,2024-01-01,Unknown,movie";
     const form = makeFormData(csv);
     const res = await app.request("/import/csv", {
       method: "POST",
@@ -311,9 +358,12 @@ describe("POST /import/csv", () => {
   });
 
   it("returns errors array with details for failed rows", async () => {
-    (resolver.resolveImdbUrl as any).mockRejectedValueOnce(new Error("TMDB timeout"));
+    (resolver.resolveImdbUrl as any).mockRejectedValueOnce(
+      new Error("TMDB timeout"),
+    );
 
-    const csv = "Const,Your Rating,Date Rated,Title,Title Type\ntt0000001,5,2024-01-01,Ghost,movie";
+    const csv =
+      "Const,Your Rating,Date Rated,Title,Title Type\ntt0000001,5,2024-01-01,Ghost,movie";
     const form = makeFormData(csv);
     const res = await app.request("/import/csv", {
       method: "POST",

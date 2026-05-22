@@ -9,7 +9,10 @@ interface Props {
   isPinned?: boolean;
 }
 
-export default function PinButton({ titleId, isPinned: isPinnedProp = false }: Props) {
+export default function PinButton({
+  titleId,
+  isPinned: isPinnedProp = false,
+}: Props) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [pinned, setPinned] = useState(isPinnedProp);
@@ -23,10 +26,17 @@ export default function PinButton({ titleId, isPinned: isPinnedProp = false }: P
       wasPinned ? api.unpinTitle(titleId) : api.pinTitle(titleId),
     onMutate: ({ wasPinned }) => setPinned(!wasPinned),
     onSuccess: (_data, { wasPinned }) =>
-      toast.success(!wasPinned ? "Added to pinned favorites" : "Removed from pinned favorites"),
+      toast.success(
+        !wasPinned
+          ? "Added to pinned favorites"
+          : "Removed from pinned favorites",
+      ),
     onError: (err, { wasPinned }) => {
       setPinned(wasPinned);
-      const msg = err instanceof Error ? err.message : "Failed to update pinned favorites";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Failed to update pinned favorites";
       toast.error(msg);
     },
     onSettled: () => {

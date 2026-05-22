@@ -20,7 +20,11 @@ app.post("/", zValidator("json", syncBodySchema), async (c) => {
   const maxPages = body.maxPages ?? 10;
 
   try {
-    const titles = await syncTitles.fetchNewReleases({ daysBack, objectType, maxPages });
+    const titles = await syncTitles.fetchNewReleases({
+      daysBack,
+      objectType,
+      maxPages,
+    });
     const count = await upsertTitles(titles);
     return ok(c, { count, message: `Synced ${count} titles` });
   } catch (e: unknown) {

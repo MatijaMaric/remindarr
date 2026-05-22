@@ -13,7 +13,7 @@ Tool: Chrome Lighthouse 12.x via `chrome://` Lighthouse panel. Pages loaded in l
 ## Score Snapshot
 
 | Page         | Form factor | Perf | A11y | Best Practices | SEO |
-|--------------|-------------|------|------|----------------|-----|
+| ------------ | ----------- | ---- | ---- | -------------- | --- |
 | Home         | desktop     | 72   | 85   | 77             | 83  |
 | Home         | mobile      | 77   | 96   | 81             | 83  |
 | Browse       | desktop     | 74   | 96   | 81             | 83  |
@@ -36,7 +36,7 @@ Worst single score: Home/Profile mobile perf (72), Settings a11y (81).
 The following thresholds apply to all five mandated pages (Home, Browse, Title Detail, Settings, Calendar) on **both desktop and mobile**. A score below any threshold is a regression and should block release.
 
 | Category       | Threshold |
-|----------------|-----------|
+| -------------- | --------- |
 | Performance    | ≥ 90      |
 | Accessibility  | ≥ 95      |
 | Best Practices | ≥ 90      |
@@ -50,45 +50,45 @@ Current scores are below threshold across the board. Each follow-up issue below 
 
 ### Accessibility
 
-| Audit | Pages affected | Follow-up |
-|-------|---------------|-----------|
-| `button-name` — carousel pagination dots have no accessible name | Home, Title detail | [#682](https://github.com/MatijaMaric/remindarr/issues/682) |
-| `target-size` — pagination dots are 8×4 px (min: 24×24 px) | Home, Title detail | [#682](https://github.com/MatijaMaric/remindarr/issues/682) |
-| `label-content-name-mismatch` — nav search `aria-label="Search"` doesn't contain visible text | All pages | [#683](https://github.com/MatijaMaric/remindarr/issues/683) |
-| `label` + `select-name` — Settings form inputs and country `<select>` have no `<label>` association | Settings | [#684](https://github.com/MatijaMaric/remindarr/issues/684) |
-| `button-name` — `SToggle` (role=switch) without accessible name | Settings | [#685](https://github.com/MatijaMaric/remindarr/issues/685) |
-| SettingsSidebar tabs — no `role="tab"` / `aria-selected` (pre-existing, noted in #505 thread) | Settings | [#686](https://github.com/MatijaMaric/remindarr/issues/686) |
-| `link-text` — BottomTabBar "More" link is non-descriptive | All pages (mobile) | [#687](https://github.com/MatijaMaric/remindarr/issues/687) |
-| `color-contrast` — `text-zinc-500` and `opacity-60` on dark surfaces (44 nodes on Settings alone) | Home, Title detail, Settings | [#688](https://github.com/MatijaMaric/remindarr/issues/688) |
+| Audit                                                                                               | Pages affected               | Follow-up                                                   |
+| --------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------- |
+| `button-name` — carousel pagination dots have no accessible name                                    | Home, Title detail           | [#682](https://github.com/MatijaMaric/remindarr/issues/682) |
+| `target-size` — pagination dots are 8×4 px (min: 24×24 px)                                          | Home, Title detail           | [#682](https://github.com/MatijaMaric/remindarr/issues/682) |
+| `label-content-name-mismatch` — nav search `aria-label="Search"` doesn't contain visible text       | All pages                    | [#683](https://github.com/MatijaMaric/remindarr/issues/683) |
+| `label` + `select-name` — Settings form inputs and country `<select>` have no `<label>` association | Settings                     | [#684](https://github.com/MatijaMaric/remindarr/issues/684) |
+| `button-name` — `SToggle` (role=switch) without accessible name                                     | Settings                     | [#685](https://github.com/MatijaMaric/remindarr/issues/685) |
+| SettingsSidebar tabs — no `role="tab"` / `aria-selected` (pre-existing, noted in #505 thread)       | Settings                     | [#686](https://github.com/MatijaMaric/remindarr/issues/686) |
+| `link-text` — BottomTabBar "More" link is non-descriptive                                           | All pages (mobile)           | [#687](https://github.com/MatijaMaric/remindarr/issues/687) |
+| `color-contrast` — `text-zinc-500` and `opacity-60` on dark surfaces (44 nodes on Settings alone)   | Home, Title detail, Settings | [#688](https://github.com/MatijaMaric/remindarr/issues/688) |
 
 ### Performance
 
-| Audit | Pages affected | Follow-up |
-|-------|---------------|-----------|
-| `lcp-discovery-insight` — hero image has no `fetchpriority="high"`, not in initial document | Home | [#689](https://github.com/MatijaMaric/remindarr/issues/689) |
-| `image-delivery-insight` — episode thumbnails use `w1280` for ~318×179 display (≥107 KB wasted/image) | Home, Title detail | [#690](https://github.com/MatijaMaric/remindarr/issues/690) |
-| `unused-javascript` — Sentry Replay/Feedback/ReplayCanvas: ≈85 KB wasted bytes in `vendor-sentry-*.js` | All pages | [#691](https://github.com/MatijaMaric/remindarr/issues/691) |
-| `render-blocking-insight` — `registerSW.js` is synchronous in `<head>` | All pages | [#692](https://github.com/MatijaMaric/remindarr/issues/692) |
-| `legacy-javascript-insight` — `Array.from` polyfill shipped via Sentry chunk (~11 KB) | All pages | [#693](https://github.com/MatijaMaric/remindarr/issues/693) |
-| `cumulative-layout-shift` — Home 0.45, Settings 0.37, Title detail 0.13 (target ≤0.1) | Home, Settings, Title detail | [#694](https://github.com/MatijaMaric/remindarr/issues/694) |
+| Audit                                                                                                  | Pages affected               | Follow-up                                                   |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------- | ----------------------------------------------------------- |
+| `lcp-discovery-insight` — hero image has no `fetchpriority="high"`, not in initial document            | Home                         | [#689](https://github.com/MatijaMaric/remindarr/issues/689) |
+| `image-delivery-insight` — episode thumbnails use `w1280` for ~318×179 display (≥107 KB wasted/image)  | Home, Title detail           | [#690](https://github.com/MatijaMaric/remindarr/issues/690) |
+| `unused-javascript` — Sentry Replay/Feedback/ReplayCanvas: ≈85 KB wasted bytes in `vendor-sentry-*.js` | All pages                    | [#691](https://github.com/MatijaMaric/remindarr/issues/691) |
+| `render-blocking-insight` — `registerSW.js` is synchronous in `<head>`                                 | All pages                    | [#692](https://github.com/MatijaMaric/remindarr/issues/692) |
+| `legacy-javascript-insight` — `Array.from` polyfill shipped via Sentry chunk (~11 KB)                  | All pages                    | [#693](https://github.com/MatijaMaric/remindarr/issues/693) |
+| `cumulative-layout-shift` — Home 0.45, Settings 0.37, Title detail 0.13 (target ≤0.1)                  | Home, Settings, Title detail | [#694](https://github.com/MatijaMaric/remindarr/issues/694) |
 
 ### Best Practices
 
-| Audit | Pages affected | Follow-up |
-|-------|---------------|-----------|
-| `errors-in-console` — CORS errors for `image.tmdb.org` on every page load | All pages | [#695](https://github.com/MatijaMaric/remindarr/issues/695) |
-| `deprecations` — `SharedStorage`, `StorageType.persistent`, `Fledge` from `cdn-cgi/challenge-platform` (Cloudflare Bot Fight) | All pages | Out of our control — documented, no action |
+| Audit                                                                                                                         | Pages affected | Follow-up                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
+| `errors-in-console` — CORS errors for `image.tmdb.org` on every page load                                                     | All pages      | [#695](https://github.com/MatijaMaric/remindarr/issues/695) |
+| `deprecations` — `SharedStorage`, `StorageType.persistent`, `Fledge` from `cdn-cgi/challenge-platform` (Cloudflare Bot Fight) | All pages      | Out of our control — documented, no action                  |
 
 ### SEO
 
-| Audit | Pages affected | Follow-up |
-|-------|---------------|-----------|
-| `meta-description` — no `<meta name="description">` in `index.html` | All pages | [#696](https://github.com/MatijaMaric/remindarr/issues/696) |
+| Audit                                                               | Pages affected | Follow-up                                                   |
+| ------------------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
+| `meta-description` — no `<meta name="description">` in `index.html` | All pages      | [#696](https://github.com/MatijaMaric/remindarr/issues/696) |
 
 ### CI / Regression Guard
 
-| Task | Follow-up |
-|------|-----------|
+| Task                                                                 | Follow-up                                                   |
+| -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | Set up Lighthouse CI to enforce thresholds on PRs targeting `master` | [#697](https://github.com/MatijaMaric/remindarr/issues/697) |
 
 ---

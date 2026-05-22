@@ -8,21 +8,29 @@ let fetchSpy: ReturnType<typeof spyOn>;
 beforeEach(() => {
   lastFetchUrl = "";
   lastFetchOptions = undefined;
-  fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async (url: string | URL | Request, options?: RequestInit) => {
-    lastFetchUrl = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-    lastFetchOptions = options;
-    return new Response(
-      JSON.stringify({ titles: [], page: 1, totalPages: 1 }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-  });
+  fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+    async (url: string | URL | Request, options?: RequestInit) => {
+      lastFetchUrl =
+        typeof url === "string"
+          ? url
+          : url instanceof URL
+            ? url.toString()
+            : url.url;
+      lastFetchOptions = options;
+      return new Response(
+        JSON.stringify({ titles: [], page: 1, totalPages: 1 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  );
 });
 
 afterEach(() => {
   fetchSpy.mockRestore();
 });
 
-const { getTitles, browseTitles, getAdminSettings, updateAdminSettings } = await import("./api");
+const { getTitles, browseTitles, getAdminSettings, updateAdminSettings } =
+  await import("./api");
 
 describe("getTitles", () => {
   it("includes offset=0 in query params (falsy zero must not be dropped)", async () => {
@@ -89,14 +97,21 @@ describe("getAdminSettings", () => {
       },
       oidc_configured: true,
     };
-    fetchSpy.mockImplementationOnce(async (url: string | URL | Request, options?: RequestInit) => {
-      lastFetchUrl = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      lastFetchOptions = options;
-      return new Response(JSON.stringify(mockSettings), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
+    fetchSpy.mockImplementationOnce(
+      async (url: string | URL | Request, options?: RequestInit) => {
+        lastFetchUrl =
+          typeof url === "string"
+            ? url
+            : url instanceof URL
+              ? url.toString()
+              : url.url;
+        lastFetchOptions = options;
+        return new Response(JSON.stringify(mockSettings), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    );
     const result = await getAdminSettings();
     expect(lastFetchUrl).toBe("/api/admin/settings");
     expect(result.oidc_configured).toBe(true);
@@ -108,14 +123,21 @@ describe("getAdminSettings", () => {
 describe("updateAdminSettings", () => {
   it("calls PUT /api/admin/settings with body", async () => {
     const mockResponse = { success: true, oidc_configured: true };
-    fetchSpy.mockImplementationOnce(async (url: string | URL | Request, options?: RequestInit) => {
-      lastFetchUrl = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      lastFetchOptions = options;
-      return new Response(JSON.stringify(mockResponse), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
+    fetchSpy.mockImplementationOnce(
+      async (url: string | URL | Request, options?: RequestInit) => {
+        lastFetchUrl =
+          typeof url === "string"
+            ? url
+            : url instanceof URL
+              ? url.toString()
+              : url.url;
+        lastFetchOptions = options;
+        return new Response(JSON.stringify(mockResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    );
     const result = await updateAdminSettings({
       oidc_issuer_url: "https://example.com",
       oidc_client_id: "my-client",

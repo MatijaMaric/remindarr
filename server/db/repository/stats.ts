@@ -68,12 +68,16 @@ export async function getStatsOverview(userId: string): Promise<StatsOverview> {
     };
     return {
       ...row,
-      watch_time_minutes: row.watch_time_minutes_movies + row.watch_time_minutes_shows,
+      watch_time_minutes:
+        row.watch_time_minutes_movies + row.watch_time_minutes_shows,
     };
   });
 }
 
-export async function getUserGenreBreakdown(userId: string, limit = 10): Promise<GenreCount[]> {
+export async function getUserGenreBreakdown(
+  userId: string,
+  limit = 10,
+): Promise<GenreCount[]> {
   return traceDbQuery("getUserGenreBreakdown", async () => {
     const db = getDb();
     return db.all<GenreCount>(sql`
@@ -93,7 +97,10 @@ export async function getUserGenreBreakdown(userId: string, limit = 10): Promise
   });
 }
 
-export async function getUserLanguageBreakdown(userId: string, limit = 10): Promise<LanguageCount[]> {
+export async function getUserLanguageBreakdown(
+  userId: string,
+  limit = 10,
+): Promise<LanguageCount[]> {
   return traceDbQuery("getUserLanguageBreakdown", async () => {
     const db = getDb();
     return db.all<LanguageCount>(sql`
@@ -114,7 +121,10 @@ export async function getUserLanguageBreakdown(userId: string, limit = 10): Prom
   });
 }
 
-export async function getMonthlyActivity(userId: string, months = 13): Promise<MonthlyActivity[]> {
+export async function getMonthlyActivity(
+  userId: string,
+  months = 13,
+): Promise<MonthlyActivity[]> {
   return traceDbQuery("getMonthlyActivity", async () => {
     const db = getDb();
     const cutoff = `-${months} months`;
@@ -136,8 +146,12 @@ export async function getMonthlyActivity(userId: string, months = 13): Promise<M
         ORDER BY month ASC
       `),
     ]);
-    const moviesByMonth = new Map(monthlyMovieRows.map((r) => [r.month, r.count]));
-    const episodesByMonth = new Map(monthlyEpisodeRows.map((r) => [r.month, r.count]));
+    const moviesByMonth = new Map(
+      monthlyMovieRows.map((r) => [r.month, r.count]),
+    );
+    const episodesByMonth = new Map(
+      monthlyEpisodeRows.map((r) => [r.month, r.count]),
+    );
     return buildMonthRange(months).map((month) => ({
       month,
       movies_watched: moviesByMonth.get(month) ?? 0,
@@ -168,8 +182,14 @@ export async function getShowsByStatus(userId: string): Promise<ShowsByStatus> {
     `);
 
     const byStatus: ShowsByStatus = {
-      watching: 0, caught_up: 0, completed: 0, not_started: 0,
-      unreleased: 0, on_hold: 0, dropped: 0, plan_to_watch: 0,
+      watching: 0,
+      caught_up: 0,
+      completed: 0,
+      not_started: 0,
+      unreleased: 0,
+      on_hold: 0,
+      dropped: 0,
+      plan_to_watch: 0,
     };
     for (const row of rows) {
       if (row.user_status && row.user_status in byStatus) {
@@ -228,7 +248,10 @@ export async function getUserPace(userId: string): Promise<UserPace> {
   });
 }
 
-export function computeEta(remainingMinutes: number, minutesPerDay: number | null): number | null {
+export function computeEta(
+  remainingMinutes: number,
+  minutesPerDay: number | null,
+): number | null {
   if (!minutesPerDay || minutesPerDay <= 0) return null;
   return Math.ceil(remainingMinutes / minutesPerDay);
 }
@@ -239,7 +262,9 @@ export function buildMonthRange(count: number): string[] {
   const now = new Date();
   for (let i = count - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    months.push(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+    );
   }
   return months;
 }

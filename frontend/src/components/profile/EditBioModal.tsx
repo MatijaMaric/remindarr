@@ -13,7 +13,11 @@ interface EditBioModalProps {
 
 const MAX_LEN = 280;
 
-export function EditBioModal({ initialValue, onClose, onSaved }: EditBioModalProps) {
+export function EditBioModal({
+  initialValue,
+  onClose,
+  onSaved,
+}: EditBioModalProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState(initialValue);
   const [saving, setSaving] = useState(false);
@@ -54,7 +58,9 @@ export function EditBioModal({ initialValue, onClose, onSaved }: EditBioModalPro
         padding="lg"
         className="w-full max-w-md space-y-4"
       >
-        <h2 className="text-lg font-semibold text-white">{t("userProfile.dossier.bio")}</h2>
+        <h2 className="text-lg font-semibold text-white">
+          {t("userProfile.dossier.bio")}
+        </h2>
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}

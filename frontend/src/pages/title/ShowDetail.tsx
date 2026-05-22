@@ -1,5 +1,9 @@
 import { Link } from "react-router";
-import type { SeasonSummary, ShowDetailsResponse, WatchProviderCountry } from "../../types";
+import type {
+  SeasonSummary,
+  ShowDetailsResponse,
+  WatchProviderCountry,
+} from "../../types";
 import BackdateWatchedButton from "../../components/BackdateWatchedButton";
 import Cast from "../../components/title-detail/Cast";
 import ExternalLinks from "../../components/ExternalLinks";
@@ -17,7 +21,9 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   const { title, tmdb, country } = data;
   const overview = tmdb?.overview || title.short_description;
 
-  const watchProviders = tmdb?.["watch/providers"]?.results?.[country] as WatchProviderCountry | undefined;
+  const watchProviders = tmdb?.["watch/providers"]?.results?.[country] as
+    | WatchProviderCountry
+    | undefined;
 
   const creators = tmdb?.created_by || [];
   const cast = tmdb?.credits?.cast?.slice(0, 20) || [];
@@ -25,7 +31,9 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   // Filter out specials (season 0) and sort
   const seasons = (tmdb?.seasons || [])
     .filter((s: SeasonSummary) => s.season_number > 0)
-    .sort((a: SeasonSummary, b: SeasonSummary) => a.season_number - b.season_number);
+    .sort(
+      (a: SeasonSummary, b: SeasonSummary) => a.season_number - b.season_number,
+    );
 
   return (
     <div className="space-y-8 pb-12">
@@ -37,12 +45,27 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
         {[
           { label: "TYPE", value: "TV Show" },
           tmdb?.status ? { label: "STATUS", value: tmdb.status } : null,
-          tmdb?.number_of_seasons != null ? { label: "SEASONS", value: String(tmdb.number_of_seasons) } : null,
-          tmdb?.number_of_episodes != null ? { label: "EPISODES", value: String(tmdb.number_of_episodes) } : null,
-          title.next_episode_air_date ? { label: "NEXT EP", value: formatDate(title.next_episode_air_date) } : null,
-          title.offers[0]?.provider_name ? { label: "NETWORK", value: title.offers[0].provider_name } : null,
-          tmdb?.episode_run_time?.[0] ? { label: "AVG RUNTIME", value: `${tmdb.episode_run_time[0]} min` } : null,
-          title.imdb_score ? { label: "IMDB", value: `★ ${title.imdb_score.toFixed(1)}` } : null,
+          tmdb?.number_of_seasons != null
+            ? { label: "SEASONS", value: String(tmdb.number_of_seasons) }
+            : null,
+          tmdb?.number_of_episodes != null
+            ? { label: "EPISODES", value: String(tmdb.number_of_episodes) }
+            : null,
+          title.next_episode_air_date
+            ? {
+                label: "NEXT EP",
+                value: formatDate(title.next_episode_air_date),
+              }
+            : null,
+          title.offers[0]?.provider_name
+            ? { label: "NETWORK", value: title.offers[0].provider_name }
+            : null,
+          tmdb?.episode_run_time?.[0]
+            ? { label: "AVG RUNTIME", value: `${tmdb.episode_run_time[0]} min` }
+            : null,
+          title.imdb_score
+            ? { label: "IMDB", value: `★ ${title.imdb_score.toFixed(1)}` }
+            : null,
         ]
           .filter(Boolean)
           .map((cell) => (
@@ -50,7 +73,9 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">
                 {cell!.label}
               </div>
-              <div className="font-mono text-[13px] font-semibold text-zinc-100">{cell!.value}</div>
+              <div className="font-mono text-[13px] font-semibold text-zinc-100">
+                {cell!.value}
+              </div>
             </div>
           ))}
       </div>
@@ -58,13 +83,18 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {/* Overview */}
       {overview && (
         <Section title="Overview">
-          <p className="text-zinc-300 leading-relaxed select-text">{overview}</p>
+          <p className="text-zinc-300 leading-relaxed select-text">
+            {overview}
+          </p>
         </Section>
       )}
 
       {/* Rating & Social */}
       <SectionErrorBoundary label="ratings">
-        <RatingsSection titleId={title.id} shareTitle={tmdb?.name || title.title} />
+        <RatingsSection
+          titleId={title.id}
+          shareTitle={tmdb?.name || title.title}
+        />
       </SectionErrorBoundary>
 
       {/* Creators & Cast */}
@@ -73,7 +103,13 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           <Section title="Created By">
             <div className="flex gap-4">
               {creators.map((c) => (
-                <PersonCard key={c.id} id={c.id} name={c.name} role="Creator" profilePath={c.profile_path} />
+                <PersonCard
+                  key={c.id}
+                  id={c.id}
+                  name={c.name}
+                  role="Creator"
+                  profilePath={c.profile_path}
+                />
               ))}
             </div>
           </Section>
@@ -88,8 +124,14 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {seasons.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-[18px] font-semibold text-white tracking-tight leading-tight">Seasons</h2>
-            <BackdateWatchedButton scope="title" titleId={title.id} variant="ghost" />
+            <h2 className="text-[18px] font-semibold text-white tracking-tight leading-tight">
+              Seasons
+            </h2>
+            <BackdateWatchedButton
+              scope="title"
+              titleId={title.id}
+              variant="ghost"
+            />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {seasons.map((s: SeasonSummary) => {
@@ -132,7 +174,8 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                       )}
                     </div>
                     <p className="text-xs text-zinc-400 mt-0.5">
-                      {s.episode_count} episode{s.episode_count !== 1 ? "s" : ""}
+                      {s.episode_count} episode
+                      {s.episode_count !== 1 ? "s" : ""}
                       {s.air_date && ` · ${s.air_date.slice(0, 4)}`}
                     </p>
                   </div>
@@ -145,7 +188,11 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
       {/* Streaming Availability */}
       <SectionErrorBoundary label="streaming providers">
-        <ProvidersSection offers={title.offers} watchProviders={watchProviders} watchLink={watchProviders?.link} />
+        <ProvidersSection
+          offers={title.offers}
+          watchProviders={watchProviders}
+          watchLink={watchProviders?.link}
+        />
       </SectionErrorBoundary>
 
       {/* Suggestions */}
@@ -154,7 +201,11 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {/* External Links */}
       {tmdb && (
         <Section title="Links">
-          <ExternalLinks externalIds={tmdb.external_ids} tmdbId={tmdb.id} type="tv" />
+          <ExternalLinks
+            externalIds={tmdb.external_ids}
+            tmdbId={tmdb.id}
+            type="tv"
+          />
         </Section>
       )}
 
@@ -171,7 +222,9 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
             {tmdb.original_language && (
               <div>
                 <span className="text-zinc-400 block">Original Language</span>
-                <span className="text-zinc-300">{tmdb.original_language.toUpperCase()}</span>
+                <span className="text-zinc-300">
+                  {tmdb.original_language.toUpperCase()}
+                </span>
               </div>
             )}
             {tmdb.production_countries?.length > 0 && (

@@ -2,7 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { getDb, dismissedSuggestions } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
-export async function dismissTitle(userId: string, titleId: string): Promise<void> {
+export async function dismissTitle(
+  userId: string,
+  titleId: string,
+): Promise<void> {
   return traceDbQuery("dismissTitle", async () => {
     const db = getDb();
     await db
@@ -13,7 +16,10 @@ export async function dismissTitle(userId: string, titleId: string): Promise<voi
   });
 }
 
-export async function undismissTitle(userId: string, titleId: string): Promise<void> {
+export async function undismissTitle(
+  userId: string,
+  titleId: string,
+): Promise<void> {
   return traceDbQuery("undismissTitle", async () => {
     const db = getDb();
     await db
@@ -28,7 +34,9 @@ export async function undismissTitle(userId: string, titleId: string): Promise<v
   });
 }
 
-export async function getDismissedTitleIds(userId: string): Promise<Set<string>> {
+export async function getDismissedTitleIds(
+  userId: string,
+): Promise<Set<string>> {
   return traceDbQuery("getDismissedTitleIds", async () => {
     const db = getDb();
     const rows = await db

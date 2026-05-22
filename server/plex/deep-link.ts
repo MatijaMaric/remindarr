@@ -10,7 +10,7 @@ export function buildPlexDeepLink(
   serverId: string,
   ratingKey: string,
   slug?: string | null,
-  mediaType?: string | null
+  mediaType?: string | null,
 ): string {
   let url = `https://app.plex.tv/#!/server/${serverId}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`;
   if (slug && mediaType) {

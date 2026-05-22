@@ -9,7 +9,10 @@ interface TopGenresCardProps {
   limit?: number;
 }
 
-export default function TopGenresCard({ genres, limit = 6 }: TopGenresCardProps) {
+export default function TopGenresCard({
+  genres,
+  limit = 6,
+}: TopGenresCardProps) {
   const { t } = useTranslation();
   if (genres.length === 0) return null;
   const slice = genres.slice(0, limit);

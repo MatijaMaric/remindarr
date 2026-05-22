@@ -15,10 +15,17 @@ function formatSince(iso: string | null): string {
   if (!iso) return "";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "short" });
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+  });
 }
 
-export default function FriendsCard({ friends, profileUsername, totalFriends }: FriendsCardProps) {
+export default function FriendsCard({
+  friends,
+  profileUsername,
+  totalFriends,
+}: FriendsCardProps) {
   const { t } = useTranslation();
   if (friends.length === 0) return null;
 
@@ -54,7 +61,9 @@ export default function FriendsCard({ friends, profileUsername, totalFriends }: 
                 {f.display_name || f.username}
               </div>
               <div className="font-mono text-[10px] text-zinc-500 truncate">
-                {t("userProfile.dossier.followedSince", { date: formatSince(f.since) })}
+                {t("userProfile.dossier.followedSince", {
+                  date: formatSince(f.since),
+                })}
               </div>
             </div>
           </Link>

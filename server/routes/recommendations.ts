@@ -49,18 +49,39 @@ app.post("/", zValidator("json", createRecommendationSchema), async (c) => {
     }
     const following = await isFollowing(user.id, targetUserId);
     if (!following) {
-      return err(c, "You can only send targeted recommendations to users you follow", 403);
+      return err(
+        c,
+        "You can only send targeted recommendations to users you follow",
+        403,
+      );
     }
   }
 
   // Check for duplicate recommendation (same sender, same title, same target)
-  const existing = await getUserRecommendation(user.id, body.titleId, targetUserId);
+  const existing = await getUserRecommendation(
+    user.id,
+    body.titleId,
+    targetUserId,
+  );
   if (existing) {
-    return err(c, "You have already recommended this title to this recipient", 409);
+    return err(
+      c,
+      "You have already recommended this title to this recipient",
+      409,
+    );
   }
 
-  const id = await createRecommendation(user.id, body.titleId, body.message, targetUserId);
-  log.info("Recommendation created", { fromUserId: user.id, titleId: body.titleId, targetUserId: targetUserId ?? null });
+  const id = await createRecommendation(
+    user.id,
+    body.titleId,
+    body.message,
+    targetUserId,
+  );
+  log.info("Recommendation created", {
+    fromUserId: user.id,
+    titleId: body.titleId,
+    targetUserId: targetUserId ?? null,
+  });
   await onRecommendation(user.id);
   return c.json({ success: true, id }, 201);
 });
@@ -94,9 +115,14 @@ app.get("/sent", async (c) => {
     },
     message: r.message,
     created_at: r.createdAt,
-    target_user: r.targetUserId != null
-      ? { id: r.targetUserId, username: r.targetUsername ?? "", display_name: r.targetDisplayName ?? null }
-      : null,
+    target_user:
+      r.targetUserId != null
+        ? {
+            id: r.targetUserId,
+            username: r.targetUsername ?? "",
+            display_name: r.targetDisplayName ?? null,
+          }
+        : null,
   }));
 
   return ok(c, { recommendations });

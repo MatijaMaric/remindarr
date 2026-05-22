@@ -1,11 +1,33 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
-import type { TmdbDiscoverMovieResult, TmdbDiscoverTvResult } from "../tmdb/types";
+import type {
+  TmdbDiscoverMovieResult,
+  TmdbDiscoverTvResult,
+} from "../tmdb/types";
 import type { AppEnv } from "../types";
 import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { upsertTitles, trackTitle, createUser, getOffersForTitle } from "../db/repository";
-import { makeParsedTitle, makeTmdbDiscoverMovie, makeTmdbDiscoverTv, makeTmdbMovieDetails, makeTmdbTvDetails } from "../test-utils/fixtures";
+import {
+  upsertTitles,
+  trackTitle,
+  createUser,
+  getOffersForTitle,
+} from "../db/repository";
+import {
+  makeParsedTitle,
+  makeTmdbDiscoverMovie,
+  makeTmdbDiscoverTv,
+  makeTmdbMovieDetails,
+  makeTmdbTvDetails,
+} from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
 import * as repository from "../db/repository";
 import { initCache } from "../cache";
@@ -27,13 +49,38 @@ beforeEach(() => {
   app.route("/browse", browseApp);
 
   spies = [
-    spyOn(tmdbClient, "discoverMovies").mockResolvedValue({ results: [] as TmdbDiscoverMovieResult[], total_pages: 1, total_results: 0, page: 1 }),
-    spyOn(tmdbClient, "discoverTv").mockResolvedValue({ results: [] as TmdbDiscoverTvResult[], total_pages: 1, total_results: 0, page: 1 }),
+    spyOn(tmdbClient, "discoverMovies").mockResolvedValue({
+      results: [] as TmdbDiscoverMovieResult[],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
+    }),
+    spyOn(tmdbClient, "discoverTv").mockResolvedValue({
+      results: [] as TmdbDiscoverTvResult[],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
+    }),
     spyOn(tmdbClient, "cachedFetchMovieDetails").mockResolvedValue({} as any),
     spyOn(tmdbClient, "cachedFetchTvDetails").mockResolvedValue({} as any),
-    spyOn(tmdbClient, "getMovieGenres").mockResolvedValue(new Map([[28, "Action"], [878, "Science Fiction"]])),
-    spyOn(tmdbClient, "getTvGenres").mockResolvedValue(new Map([[18, "Drama"], [10765, "Sci-Fi & Fantasy"]])),
-    spyOn(tmdbClient, "searchMulti").mockResolvedValue({ results: [], total_pages: 1, total_results: 0, page: 1 } as any),
+    spyOn(tmdbClient, "getMovieGenres").mockResolvedValue(
+      new Map([
+        [28, "Action"],
+        [878, "Science Fiction"],
+      ]),
+    ),
+    spyOn(tmdbClient, "getTvGenres").mockResolvedValue(
+      new Map([
+        [18, "Drama"],
+        [10765, "Sci-Fi & Fantasy"],
+      ]),
+    ),
+    spyOn(tmdbClient, "searchMulti").mockResolvedValue({
+      results: [],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
+    } as any),
   ];
 });
 
@@ -63,9 +110,14 @@ describe("GET /browse", () => {
   it("fetches popular movies when type=MOVIE", async () => {
     const movie = makeTmdbDiscoverMovie();
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 5, total_results: 100, page: 1,
+      results: [movie],
+      total_pages: 5,
+      total_results: 100,
+      page: 1,
     });
-    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: movie.id }));
+    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: movie.id }),
+    );
 
     const res = await app.request("/browse?category=popular&type=MOVIE");
     expect(res.status).toBe(200);
@@ -76,7 +128,9 @@ describe("GET /browse", () => {
     expect(body.totalPages).toBe(5);
     expect(body.totalResults).toBe(100);
     expect(tmdbClient.discoverMovies).toHaveBeenCalledTimes(1);
-    const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    const callArgs = (
+      (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+    )[0] as Record<string, unknown>;
     expect(callArgs.sortBy).toBe("popularity.desc");
     expect(tmdbClient.discoverTv).not.toHaveBeenCalled();
   });
@@ -84,9 +138,14 @@ describe("GET /browse", () => {
   it("fetches popular TV when type=SHOW", async () => {
     const tv = makeTmdbDiscoverTv();
     (tmdbClient.discoverTv as any).mockResolvedValueOnce({
-      results: [tv], total_pages: 3, total_results: 60, page: 1,
+      results: [tv],
+      total_pages: 3,
+      total_results: 60,
+      page: 1,
     });
-    (tmdbClient.cachedFetchTvDetails as any).mockResolvedValueOnce(makeTmdbTvDetails({ id: tv.id }));
+    (tmdbClient.cachedFetchTvDetails as any).mockResolvedValueOnce(
+      makeTmdbTvDetails({ id: tv.id }),
+    );
 
     const res = await app.request("/browse?category=popular&type=SHOW");
     expect(res.status).toBe(200);
@@ -94,7 +153,9 @@ describe("GET /browse", () => {
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(tmdbClient.discoverTv).toHaveBeenCalledTimes(1);
-    const callArgs = ((tmdbClient.discoverTv as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    const callArgs = (
+      (tmdbClient.discoverTv as any).mock.calls[0] as unknown[]
+    )[0] as Record<string, unknown>;
     expect(callArgs.sortBy).toBe("popularity.desc");
     expect(tmdbClient.discoverMovies).not.toHaveBeenCalled();
   });
@@ -103,13 +164,23 @@ describe("GET /browse", () => {
     const movie = makeTmdbDiscoverMovie();
     const tv = makeTmdbDiscoverTv();
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 2, total_results: 40, page: 1,
+      results: [movie],
+      total_pages: 2,
+      total_results: 40,
+      page: 1,
     });
     (tmdbClient.discoverTv as any).mockResolvedValueOnce({
-      results: [tv], total_pages: 3, total_results: 60, page: 1,
+      results: [tv],
+      total_pages: 3,
+      total_results: 60,
+      page: 1,
     });
-    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: movie.id }));
-    (tmdbClient.cachedFetchTvDetails as any).mockResolvedValueOnce(makeTmdbTvDetails({ id: tv.id }));
+    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: movie.id }),
+    );
+    (tmdbClient.cachedFetchTvDetails as any).mockResolvedValueOnce(
+      makeTmdbTvDetails({ id: tv.id }),
+    );
 
     const res = await app.request("/browse?category=popular");
     expect(res.status).toBe(200);
@@ -124,13 +195,18 @@ describe("GET /browse", () => {
 
   it("uses discover endpoint for upcoming movies with date range", async () => {
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [], total_pages: 1, total_results: 0, page: 1,
+      results: [],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
     });
 
     const res = await app.request("/browse?category=upcoming&type=MOVIE");
     expect(res.status).toBe(200);
     expect(tmdbClient.discoverMovies).toHaveBeenCalledTimes(1);
-    const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    const callArgs = (
+      (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+    )[0] as Record<string, unknown>;
     expect(callArgs.releaseDateGte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(callArgs.releaseDateLte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(callArgs.sortBy).toBe("release_date.asc");
@@ -139,13 +215,18 @@ describe("GET /browse", () => {
 
   it("uses discover endpoint for upcoming TV shows with date range", async () => {
     (tmdbClient.discoverTv as any).mockResolvedValueOnce({
-      results: [], total_pages: 1, total_results: 0, page: 1,
+      results: [],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
     });
 
     const res = await app.request("/browse?category=upcoming&type=SHOW");
     expect(res.status).toBe(200);
     expect(tmdbClient.discoverTv).toHaveBeenCalledTimes(1);
-    const callArgs = ((tmdbClient.discoverTv as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    const callArgs = (
+      (tmdbClient.discoverTv as any).mock.calls[0] as unknown[]
+    )[0] as Record<string, unknown>;
     expect(callArgs.firstAirDateGte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(callArgs.firstAirDateLte).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(callArgs.sortBy).toBe("first_air_date.asc");
@@ -153,19 +234,26 @@ describe("GET /browse", () => {
 
   it("uses top_rated discover for top_rated category", async () => {
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [], total_pages: 1, total_results: 0, page: 1,
+      results: [],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
     });
 
     const res = await app.request("/browse?category=top_rated&type=MOVIE");
     expect(res.status).toBe(200);
     expect(tmdbClient.discoverMovies).toHaveBeenCalledTimes(1);
-    const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    const callArgs = (
+      (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+    )[0] as Record<string, unknown>;
     expect(callArgs.sortBy).toBe("vote_average.desc");
     expect(callArgs.voteCountGte).toBe("200");
   });
 
   it("rejects negative page", async () => {
-    const res = await app.request("/browse?category=popular&type=MOVIE&page=-5");
+    const res = await app.request(
+      "/browse?category=popular&type=MOVIE&page=-5",
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
@@ -173,7 +261,9 @@ describe("GET /browse", () => {
   });
 
   it("rejects non-numeric page", async () => {
-    const res = await app.request("/browse?category=popular&type=MOVIE&page=abc");
+    const res = await app.request(
+      "/browse?category=popular&type=MOVIE&page=abc",
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
@@ -182,7 +272,10 @@ describe("GET /browse", () => {
 
   it("passes page parameter correctly", async () => {
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [], total_pages: 10, total_results: 200, page: 3,
+      results: [],
+      total_pages: 10,
+      total_results: 200,
+      page: 3,
     });
 
     const res = await app.request("/browse?category=popular&type=MOVIE&page=3");
@@ -190,16 +283,23 @@ describe("GET /browse", () => {
 
     const body = await res.json();
     expect(body.page).toBe(3);
-    const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    const callArgs = (
+      (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+    )[0] as Record<string, unknown>;
     expect(callArgs.page).toBe(3);
   });
 
   it("falls back to basic data when detail fetch fails", async () => {
     const movie = makeTmdbDiscoverMovie();
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.cachedFetchMovieDetails as any).mockRejectedValueOnce(new Error("API error"));
+    (tmdbClient.cachedFetchMovieDetails as any).mockRejectedValueOnce(
+      new Error("API error"),
+    );
 
     const res = await app.request("/browse?category=popular&type=MOVIE");
     expect(res.status).toBe(200);
@@ -212,9 +312,14 @@ describe("GET /browse", () => {
   it("returns isTracked=false when no user is authenticated", async () => {
     const movie = makeTmdbDiscoverMovie();
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: movie.id }));
+    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: movie.id }),
+    );
 
     const res = await app.request("/browse?category=popular&type=MOVIE");
     const body = await res.json();
@@ -225,21 +330,36 @@ describe("GET /browse", () => {
   it("returns genres and offers in response for filtering", async () => {
     const movie = makeTmdbDiscoverMovie({ id: 900 });
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({
-      id: 900,
-      genres: [{ id: 28, name: "Action" }, { id: 35, name: "Comedy" }],
-      "watch/providers": {
+    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({
         id: 900,
-        results: {
-          [CONFIG.COUNTRY]: {
-            link: "https://tmdb.org",
-            flatrate: [{ logo_path: "/nf.jpg", provider_id: 8, provider_name: "Netflix", display_priority: 1 }],
+        genres: [
+          { id: 28, name: "Action" },
+          { id: 35, name: "Comedy" },
+        ],
+        "watch/providers": {
+          id: 900,
+          results: {
+            [CONFIG.COUNTRY]: {
+              link: "https://tmdb.org",
+              flatrate: [
+                {
+                  logo_path: "/nf.jpg",
+                  provider_id: 8,
+                  provider_name: "Netflix",
+                  display_priority: 1,
+                },
+              ],
+            },
           },
         },
-      },
-    }));
+      }),
+    );
 
     const res = await app.request("/browse?category=popular&type=MOVIE");
     const body = await res.json();
@@ -252,7 +372,10 @@ describe("GET /browse", () => {
 
   it("response contains exactly the slim shape (no catalogue fields)", async () => {
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [], total_pages: 1, total_results: 0, page: 1,
+      results: [],
+      total_pages: 1,
+      total_results: 0,
+      page: 1,
     });
 
     const res = await app.request("/browse?category=popular&type=MOVIE");
@@ -280,13 +403,24 @@ describe("GET /browse", () => {
 
     const movie = makeTmdbDiscoverMovie({ id: 555 });
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: 555 }));
+    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: 555 }),
+    );
 
     const authedApp = new Hono<AppEnv>();
     authedApp.use("/browse/*", async (c, next) => {
-      c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+      c.set("user", {
+        id: userId,
+        username: "testuser",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
       await next();
     });
     authedApp.route("/browse", browseApp);
@@ -300,20 +434,32 @@ describe("GET /browse", () => {
   it("persists titles with offers to database", async () => {
     const movie = makeTmdbDiscoverMovie({ id: 900 });
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-      results: [movie], total_pages: 1, total_results: 1, page: 1,
+      results: [movie],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
     });
-    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({
-      id: 900,
-      "watch/providers": {
+    (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({
         id: 900,
-        results: {
-          [CONFIG.COUNTRY]: {
-            link: "https://tmdb.org",
-            flatrate: [{ logo_path: "/nf.jpg", provider_id: 8, provider_name: "Netflix", display_priority: 1 }],
+        "watch/providers": {
+          id: 900,
+          results: {
+            [CONFIG.COUNTRY]: {
+              link: "https://tmdb.org",
+              flatrate: [
+                {
+                  logo_path: "/nf.jpg",
+                  provider_id: 8,
+                  provider_name: "Netflix",
+                  display_priority: 1,
+                },
+              ],
+            },
           },
         },
-      },
-    }));
+      }),
+    );
 
     const res = await app.request("/browse?category=popular&type=MOVIE");
     expect(res.status).toBe(200);
@@ -329,14 +475,21 @@ describe("GET /browse", () => {
   describe("genre filtering", () => {
     it("expands grouped genre to all constituent TMDB IDs", async () => {
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
       // "Action & Adventure" should expand to Action (28) from movies + Action & Adventure TV genres
-      const res = await app.request("/browse?category=popular&type=MOVIE&genre=Action%20%26%20Adventure");
+      const res = await app.request(
+        "/browse?category=popular&type=MOVIE&genre=Action%20%26%20Adventure",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
       // Should contain movie Action ID (28)
       expect(filters.withGenres).toBeDefined();
@@ -345,13 +498,20 @@ describe("GET /browse", () => {
 
     it("passes TV genre filter correctly for grouped genres", async () => {
       (tmdbClient.discoverTv as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
-      const res = await app.request("/browse?category=upcoming&type=SHOW&genre=Sci-Fi%20%26%20Fantasy");
+      const res = await app.request(
+        "/browse?category=upcoming&type=SHOW&genre=Sci-Fi%20%26%20Fantasy",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverTv as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverTv as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
       expect(filters.withGenres).toBeDefined();
       // Should contain both Science Fiction (878) and Sci-Fi & Fantasy (10765)
@@ -362,13 +522,20 @@ describe("GET /browse", () => {
 
     it("does not pass genre filter when genre name is not found", async () => {
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
-      const res = await app.request("/browse?category=popular&type=MOVIE&genre=Nonexistent");
+      const res = await app.request(
+        "/browse?category=popular&type=MOVIE&genre=Nonexistent",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
       expect(filters.withGenres).toBeUndefined();
     });
@@ -377,13 +544,20 @@ describe("GET /browse", () => {
   describe("provider filtering", () => {
     it("passes provider ID to discover filters", async () => {
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
-      const res = await app.request("/browse?category=popular&type=MOVIE&provider=8");
+      const res = await app.request(
+        "/browse?category=popular&type=MOVIE&provider=8",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
       expect(filters.withProviders).toBe("8");
     });
@@ -392,13 +566,20 @@ describe("GET /browse", () => {
   describe("language filtering", () => {
     it("passes language code to discover filters", async () => {
       (tmdbClient.discoverTv as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
-      const res = await app.request("/browse?category=popular&type=SHOW&language=ja");
+      const res = await app.request(
+        "/browse?category=popular&type=SHOW&language=ja",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverTv as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverTv as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
       expect(filters.withOriginalLanguage).toBe("ja");
     });
@@ -407,13 +588,20 @@ describe("GET /browse", () => {
   describe("combined filters", () => {
     it("passes all filters together", async () => {
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
-      const res = await app.request("/browse?category=top_rated&type=MOVIE&genre=Drama&provider=8&language=en");
+      const res = await app.request(
+        "/browse?category=top_rated&type=MOVIE&genre=Drama&provider=8&language=en",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, string>;
       // Drama is not grouped, so it maps to a single ID
       expect(filters.withGenres).toBeDefined();
@@ -426,13 +614,20 @@ describe("GET /browse", () => {
   describe("year and rating filtering", () => {
     it("passes yearMin/yearMax to discover filters", async () => {
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
-      const res = await app.request("/browse?category=popular&type=MOVIE&year_min=2020&year_max=2024");
+      const res = await app.request(
+        "/browse?category=popular&type=MOVIE&year_min=2020&year_max=2024",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, unknown>;
       expect(filters.yearMin).toBe(2020);
       expect(filters.yearMax).toBe(2024);
@@ -440,19 +635,28 @@ describe("GET /browse", () => {
 
     it("passes minRating as voteAverageGte", async () => {
       (tmdbClient.discoverTv as any).mockResolvedValueOnce({
-        results: [], total_pages: 1, total_results: 0, page: 1,
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
       });
 
-      const res = await app.request("/browse?category=popular&type=SHOW&min_rating=7.5");
+      const res = await app.request(
+        "/browse?category=popular&type=SHOW&min_rating=7.5",
+      );
       expect(res.status).toBe(200);
 
-      const callArgs = ((tmdbClient.discoverTv as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const callArgs = (
+        (tmdbClient.discoverTv as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = callArgs.filters as Record<string, unknown>;
       expect(filters.voteAverageGte).toBe(7.5);
     });
 
     it("rejects non-numeric year/rating values", async () => {
-      const res = await app.request("/browse?category=popular&type=MOVIE&year_min=abc&min_rating=xyz");
+      const res = await app.request(
+        "/browse?category=popular&type=MOVIE&year_min=abc&min_rating=xyz",
+      );
       expect(res.status).toBe(400);
       const body = await res.json();
       expect(body.error).toBe("Validation failed");
@@ -469,9 +673,14 @@ describe("GET /browse", () => {
     it("browse route calls cachedFetchMovieDetails (not the uncached variant) for movie fan-out", async () => {
       const movie = makeTmdbDiscoverMovie({ id: 42 });
       (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
-        results: [movie], total_pages: 1, total_results: 1, page: 1,
+        results: [movie],
+        total_pages: 1,
+        total_results: 1,
+        page: 1,
       });
-      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(makeTmdbMovieDetails({ id: 42 }));
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+        makeTmdbMovieDetails({ id: 42 }),
+      );
 
       const res = await app.request("/browse?category=popular&type=MOVIE");
       expect(res.status).toBe(200);
@@ -481,9 +690,14 @@ describe("GET /browse", () => {
     it("browse route calls cachedFetchTvDetails (not the uncached variant) for TV fan-out", async () => {
       const tv = makeTmdbDiscoverTv({ id: 43 });
       (tmdbClient.discoverTv as any).mockResolvedValueOnce({
-        results: [tv], total_pages: 1, total_results: 1, page: 1,
+        results: [tv],
+        total_pages: 1,
+        total_results: 1,
+        page: 1,
       });
-      (tmdbClient.cachedFetchTvDetails as any).mockResolvedValueOnce(makeTmdbTvDetails({ id: 43 }));
+      (tmdbClient.cachedFetchTvDetails as any).mockResolvedValueOnce(
+        makeTmdbTvDetails({ id: 43 }),
+      );
 
       const res = await app.request("/browse?category=popular&type=SHOW");
       expect(res.status).toBe(200);
@@ -533,7 +747,9 @@ describe("GET /browse", () => {
     });
 
     it("rejects non-numeric year_min", async () => {
-      const res = await app.request("/browse?category=popular&year_min=notanumber");
+      const res = await app.request(
+        "/browse?category=popular&year_min=notanumber",
+      );
       expect(res.status).toBe(400);
       const body = await res.json();
       expect(body.error).toBe("Validation failed");
@@ -552,11 +768,18 @@ describe("GET /browse", () => {
       const res = await app.request("/browse?category=popular");
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(Object.keys(body).sort()).toEqual(["page", "titles", "totalPages", "totalResults"]);
+      expect(Object.keys(body).sort()).toEqual([
+        "page",
+        "titles",
+        "totalPages",
+        "totalResults",
+      ]);
     });
 
     it("happy-path: category + year filters + min_rating", async () => {
-      const res = await app.request("/browse?category=popular&year_min=2000&min_rating=7.5");
+      const res = await app.request(
+        "/browse?category=popular&year_min=2000&min_rating=7.5",
+      );
       expect(res.status).toBe(200);
     });
   });
@@ -564,18 +787,28 @@ describe("GET /browse", () => {
   describe("onlyMine filtering", () => {
     it("returns 500 via route catch when getSubscribedProviderIds throws", async () => {
       spies.push(
-        spyOn(repository, "getSubscribedProviderIds").mockRejectedValueOnce(new Error("D1 connection lost"))
+        spyOn(repository, "getSubscribedProviderIds").mockRejectedValueOnce(
+          new Error("D1 connection lost"),
+        ),
       );
 
       const userId = await createUser("onlymine-err-user", "hash");
       const authedApp = new Hono<AppEnv>();
       authedApp.use("/browse/*", async (c, next) => {
-        c.set("user", { id: userId, username: "onlymine-err-user", name: null, role: null, is_admin: false });
+        c.set("user", {
+          id: userId,
+          username: "onlymine-err-user",
+          name: null,
+          role: null,
+          is_admin: false,
+        });
         await next();
       });
       authedApp.route("/browse", browseApp);
 
-      const res = await authedApp.request("/browse?category=popular&onlyMine=true");
+      const res = await authedApp.request(
+        "/browse?category=popular&onlyMine=true",
+      );
       expect(res.status).toBe(500);
       const body = await res.json();
       expect(body.error).toBeDefined();
@@ -583,23 +816,35 @@ describe("GET /browse", () => {
 
     it("happy-path: onlyMine=true passes subscribed providers to discover filters", async () => {
       spies.push(
-        spyOn(repository, "getSubscribedProviderIds").mockResolvedValueOnce([8])
+        spyOn(repository, "getSubscribedProviderIds").mockResolvedValueOnce([
+          8,
+        ]),
       );
 
       const userId = await createUser("onlymine-ok-user", "hash");
       const authedApp = new Hono<AppEnv>();
       authedApp.use("/browse/*", async (c, next) => {
-        c.set("user", { id: userId, username: "onlymine-ok-user", name: null, role: null, is_admin: false });
+        c.set("user", {
+          id: userId,
+          username: "onlymine-ok-user",
+          name: null,
+          role: null,
+          is_admin: false,
+        });
         await next();
       });
       authedApp.route("/browse", browseApp);
 
-      const res = await authedApp.request("/browse?category=popular&onlyMine=true");
+      const res = await authedApp.request(
+        "/browse?category=popular&onlyMine=true",
+      );
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.titles).toBeDefined();
       expect(tmdbClient.discoverMovies).toHaveBeenCalled();
-      const movieCallFilters = ((tmdbClient.discoverMovies as any).mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const movieCallFilters = (
+        (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       const filters = movieCallFilters.filters as Record<string, string>;
       expect(filters.withProviders).toBe("8");
     });
@@ -609,12 +854,19 @@ describe("GET /browse", () => {
     it("cache hit: second identical request does not call TMDB discover/detail again", async () => {
       const movie = makeTmdbDiscoverMovie({ id: 111 });
       (tmdbClient.discoverMovies as any).mockResolvedValue({
-        results: [movie], total_pages: 1, total_results: 1, page: 1,
+        results: [movie],
+        total_pages: 1,
+        total_results: 1,
+        page: 1,
       });
-      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValue(makeTmdbMovieDetails({ id: 111 }));
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValue(
+        makeTmdbMovieDetails({ id: 111 }),
+      );
 
       // First request — should populate cache
-      const res1 = await app.request("/browse?category=popular&type=MOVIE&page=1");
+      const res1 = await app.request(
+        "/browse?category=popular&type=MOVIE&page=1",
+      );
       expect(res1.status).toBe(200);
       const body1 = await res1.json();
       expect(body1.titles).toHaveLength(1);
@@ -623,7 +875,9 @@ describe("GET /browse", () => {
       expect(body1.totalResults).toBe(1);
 
       // Second request — same params → cache hit, no extra TMDB calls
-      const res2 = await app.request("/browse?category=popular&type=MOVIE&page=1");
+      const res2 = await app.request(
+        "/browse?category=popular&type=MOVIE&page=1",
+      );
       expect(res2.status).toBe(200);
       const body2 = await res2.json();
       expect(body2.titles).toHaveLength(1);
@@ -640,12 +894,19 @@ describe("GET /browse", () => {
 
       const movie = makeTmdbDiscoverMovie({ id: 222 });
       (tmdbClient.discoverMovies as any).mockResolvedValue({
-        results: [movie], total_pages: 1, total_results: 1, page: 1,
+        results: [movie],
+        total_pages: 1,
+        total_results: 1,
+        page: 1,
       });
-      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValue(makeTmdbMovieDetails({ id: 222 }));
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValue(
+        makeTmdbMovieDetails({ id: 222 }),
+      );
 
       // First request — anon user, populates cache, isTracked=false
-      const res1 = await app.request("/browse?category=popular&type=MOVIE&page=2");
+      const res1 = await app.request(
+        "/browse?category=popular&type=MOVIE&page=2",
+      );
       expect(res1.status).toBe(200);
       const body1 = await res1.json();
       expect(body1.titles[0].isTracked).toBe(false);
@@ -653,12 +914,20 @@ describe("GET /browse", () => {
       // Second request — authed user with tracked title, hits cache but isTracked should be true
       const authedApp = new Hono<AppEnv>();
       authedApp.use("/browse/*", async (c, next) => {
-        c.set("user", { id: userId, username: "cache-tracked-user", name: null, role: null, is_admin: false });
+        c.set("user", {
+          id: userId,
+          username: "cache-tracked-user",
+          name: null,
+          role: null,
+          is_admin: false,
+        });
         await next();
       });
       authedApp.route("/browse", browseApp);
 
-      const res2 = await authedApp.request("/browse?category=popular&type=MOVIE&page=2");
+      const res2 = await authedApp.request(
+        "/browse?category=popular&type=MOVIE&page=2",
+      );
       expect(res2.status).toBe(200);
       const body2 = await res2.json();
       expect(body2.titles[0].isTracked).toBe(true);
@@ -673,17 +942,31 @@ describe("GET /browse", () => {
 
       // Page 1 returns movie1
       (tmdbClient.discoverMovies as any)
-        .mockResolvedValueOnce({ results: [movie1], total_pages: 5, total_results: 100, page: 1 })
+        .mockResolvedValueOnce({
+          results: [movie1],
+          total_pages: 5,
+          total_results: 100,
+          page: 1,
+        })
         // Page 2 returns movie2
-        .mockResolvedValueOnce({ results: [movie2], total_pages: 5, total_results: 100, page: 2 });
+        .mockResolvedValueOnce({
+          results: [movie2],
+          total_pages: 5,
+          total_results: 100,
+          page: 2,
+        });
       (tmdbClient.cachedFetchMovieDetails as any)
         .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 331 }))
         .mockResolvedValueOnce(makeTmdbMovieDetails({ id: 332 }));
 
-      const res1 = await app.request("/browse?category=popular&type=MOVIE&page=1");
+      const res1 = await app.request(
+        "/browse?category=popular&type=MOVIE&page=1",
+      );
       const body1 = await res1.json();
 
-      const res2 = await app.request("/browse?category=popular&type=MOVIE&page=2");
+      const res2 = await app.request(
+        "/browse?category=popular&type=MOVIE&page=2",
+      );
       const body2 = await res2.json();
 
       expect(body1.titles[0].tmdbId).toBe("331");
@@ -694,13 +977,19 @@ describe("GET /browse", () => {
 
     it("onlyMine=true with empty subscriptions does NOT write to cache", async () => {
       spies.push(
-        spyOn(repository, "getSubscribedProviderIds").mockResolvedValueOnce([])
+        spyOn(repository, "getSubscribedProviderIds").mockResolvedValueOnce([]),
       );
 
       const userId = await createUser("onlymine-nocache-user", "hash");
       const authedApp = new Hono<AppEnv>();
       authedApp.use("/browse/*", async (c, next) => {
-        c.set("user", { id: userId, username: "onlymine-nocache-user", name: null, role: null, is_admin: false });
+        c.set("user", {
+          id: userId,
+          username: "onlymine-nocache-user",
+          name: null,
+          role: null,
+          is_admin: false,
+        });
         await next();
       });
       authedApp.route("/browse", browseApp);
@@ -710,7 +999,9 @@ describe("GET /browse", () => {
       const cacheSpy = spyOn(cache, "set");
       spies.push(cacheSpy);
 
-      const res = await authedApp.request("/browse?category=popular&onlyMine=true");
+      const res = await authedApp.request(
+        "/browse?category=popular&onlyMine=true",
+      );
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.titles).toHaveLength(0);

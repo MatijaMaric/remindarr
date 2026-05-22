@@ -38,7 +38,9 @@ export async function unhideActivityEvent(
   });
 }
 
-export async function getHiddenActivityEventKeys(userId: string): Promise<Set<string>> {
+export async function getHiddenActivityEventKeys(
+  userId: string,
+): Promise<Set<string>> {
   return traceDbQuery("getHiddenActivityEventKeys", async () => {
     const db = getDb();
     const rows = await db

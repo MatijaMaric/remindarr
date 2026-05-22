@@ -3,7 +3,9 @@ import { extractImdbId } from "./resolver";
 
 describe("extractImdbId", () => {
   it("extracts ID from full IMDB URL", () => {
-    expect(extractImdbId("https://www.imdb.com/title/tt1234567")).toBe("tt1234567");
+    expect(extractImdbId("https://www.imdb.com/title/tt1234567")).toBe(
+      "tt1234567",
+    );
   });
 
   it("extracts ID from URL without www", () => {
@@ -11,11 +13,15 @@ describe("extractImdbId", () => {
   });
 
   it("extracts ID from URL with trailing path", () => {
-    expect(extractImdbId("https://www.imdb.com/title/tt1234567/reviews")).toBe("tt1234567");
+    expect(extractImdbId("https://www.imdb.com/title/tt1234567/reviews")).toBe(
+      "tt1234567",
+    );
   });
 
   it("extracts ID from http URL", () => {
-    expect(extractImdbId("http://www.imdb.com/title/tt9876543")).toBe("tt9876543");
+    expect(extractImdbId("http://www.imdb.com/title/tt9876543")).toBe(
+      "tt9876543",
+    );
   });
 
   it("extracts bare IMDB ID", () => {

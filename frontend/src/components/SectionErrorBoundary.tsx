@@ -18,7 +18,11 @@ export default class SectionErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`[SectionErrorBoundary] ${this.props.label ?? "section"} failed to render`, error, info.componentStack);
+    console.error(
+      `[SectionErrorBoundary] ${this.props.label ?? "section"} failed to render`,
+      error,
+      info.componentStack,
+    );
   }
 
   handleRetry = () => {

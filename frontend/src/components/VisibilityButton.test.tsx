@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, afterEach, beforeEach, spyOn } from "bun:test";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import VisibilityButton from "./VisibilityButton";
@@ -8,10 +22,18 @@ import * as sonner from "sonner";
 import { AuthContext } from "../context/AuthContext";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -54,7 +76,7 @@ describe("VisibilityButton", () => {
         <AuthContext value={noUserAuth as any}>
           <VisibilityButton titleId="123" isPublic={true} isTracked={true} />
         </AuthContext>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     expect(container.innerHTML).toBe("");
   });
@@ -62,7 +84,7 @@ describe("VisibilityButton", () => {
   it("returns null when title is not tracked", () => {
     const { container } = render(
       <VisibilityButton titleId="123" isPublic={true} isTracked={false} />,
-      { wrapper: Wrapper }
+      { wrapper: Wrapper },
     );
     expect(container.innerHTML).toBe("");
   });
@@ -70,7 +92,7 @@ describe("VisibilityButton", () => {
   it("renders 'Public' when isPublic is true (button variant)", () => {
     render(
       <VisibilityButton titleId="123" isPublic={true} isTracked={true} />,
-      { wrapper: Wrapper }
+      { wrapper: Wrapper },
     );
     expect(screen.getByText("Public")).toBeDefined();
   });
@@ -78,7 +100,7 @@ describe("VisibilityButton", () => {
   it("renders 'Hidden' when isPublic is false (button variant)", () => {
     render(
       <VisibilityButton titleId="123" isPublic={false} isTracked={true} />,
-      { wrapper: Wrapper }
+      { wrapper: Wrapper },
     );
     expect(screen.getByText("Hidden")).toBeDefined();
   });
@@ -86,8 +108,13 @@ describe("VisibilityButton", () => {
   it("toggles from public to hidden on click", async () => {
     const onToggle = mock(() => {});
     render(
-      <VisibilityButton titleId="123" isPublic={true} isTracked={true} onToggle={onToggle} />,
-      { wrapper: Wrapper }
+      <VisibilityButton
+        titleId="123"
+        isPublic={true}
+        isTracked={true}
+        onToggle={onToggle}
+      />,
+      { wrapper: Wrapper },
     );
 
     fireEvent.click(screen.getByRole("button"));
@@ -104,8 +131,13 @@ describe("VisibilityButton", () => {
   it("toggles from hidden to public on click", async () => {
     const onToggle = mock(() => {});
     render(
-      <VisibilityButton titleId="456" isPublic={false} isTracked={true} onToggle={onToggle} />,
-      { wrapper: Wrapper }
+      <VisibilityButton
+        titleId="456"
+        isPublic={false}
+        isTracked={true}
+        onToggle={onToggle}
+      />,
+      { wrapper: Wrapper },
     );
 
     fireEvent.click(screen.getByRole("button"));
@@ -124,20 +156,27 @@ describe("VisibilityButton", () => {
 
     render(
       <VisibilityButton titleId="123" isPublic={true} isTracked={true} />,
-      { wrapper: Wrapper }
+      { wrapper: Wrapper },
     );
 
     fireEvent.click(screen.getByRole("button"));
 
     await waitFor(() => {
-      expect(sonner.toast.error).toHaveBeenCalledWith("Failed to update visibility");
+      expect(sonner.toast.error).toHaveBeenCalledWith(
+        "Failed to update visibility",
+      );
     });
   });
 
   it("renders overlay variant", () => {
     render(
-      <VisibilityButton titleId="123" isPublic={true} isTracked={true} variant="overlay" />,
-      { wrapper: Wrapper }
+      <VisibilityButton
+        titleId="123"
+        isPublic={true}
+        isTracked={true}
+        variant="overlay"
+      />,
+      { wrapper: Wrapper },
     );
 
     const button = screen.getByRole("button");

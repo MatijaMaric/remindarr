@@ -72,7 +72,10 @@ describe("MediaCard", () => {
   it("renders accent badge with bg-amber-400", () => {
     const { container } = render(
       <MemoryRouter>
-        <MediaCard {...baseProps} badge={{ label: "in 5 days", tone: "accent" }} />
+        <MediaCard
+          {...baseProps}
+          badge={{ label: "in 5 days", tone: "accent" }}
+        />
       </MemoryRouter>,
     );
     expect(screen.getByText("in 5 days")).toBeTruthy();
@@ -82,7 +85,10 @@ describe("MediaCard", () => {
   it("renders badge at left-2 when position is top-left", () => {
     const { container } = render(
       <MemoryRouter>
-        <MediaCard {...baseProps} badge={{ label: "new", position: "top-left" }} />
+        <MediaCard
+          {...baseProps}
+          badge={{ label: "new", position: "top-left" }}
+        />
       </MemoryRouter>,
     );
     expect(hasClass(container, "left-2")).toBe(true);

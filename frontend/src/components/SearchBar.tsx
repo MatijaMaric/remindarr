@@ -19,7 +19,13 @@ export default function SearchBar({ onSearch, onImdb, loading }: Props) {
   useEffect(() => {
     if (searchParams.get("focus") === "search") {
       inputRef.current?.focus();
-      setSearchParams((p) => { p.delete("focus"); return p; }, { replace: true });
+      setSearchParams(
+        (p) => {
+          p.delete("focus");
+          return p;
+        },
+        { replace: true },
+      );
     }
   }, [searchParams, setSearchParams]);
 

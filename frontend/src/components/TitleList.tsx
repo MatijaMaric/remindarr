@@ -1,4 +1,11 @@
-import { memo, useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
+import {
+  memo,
+  useRef,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+} from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import type { Title } from "../types";
 import TitleCard from "./TitleCard";
@@ -62,7 +69,7 @@ function TitleListImpl({
   // Memoize the slice so a referentially-stable list doesn't produce a new array each render.
   const displayTitles = useMemo(
     () => (maxItems ? titles.slice(0, maxItems) : titles),
-    [titles, maxItems]
+    [titles, maxItems],
   );
   const isTruncated = maxItems ? titles.length > maxItems : false;
   const shouldVirtualize = !maxRows && displayTitles.length > VIRTUAL_THRESHOLD;
@@ -88,7 +95,9 @@ function TitleListImpl({
     if (!shouldVirtualize || !containerRef.current) return;
     const update = () => {
       if (!containerRef.current) return;
-      setScrollMargin(containerRef.current.getBoundingClientRect().top + window.scrollY);
+      setScrollMargin(
+        containerRef.current.getBoundingClientRect().top + window.scrollY,
+      );
     };
     update();
     window.addEventListener("resize", update, { passive: true });
@@ -138,11 +147,13 @@ function TitleListImpl({
       showTags,
       showProviderBadge,
       showRating,
-    ]
+    ],
   );
 
   if (titles.length === 0) {
-    return <div className="text-center py-12 text-zinc-500">{emptyMessage}</div>;
+    return (
+      <div className="text-center py-12 text-zinc-500">{emptyMessage}</div>
+    );
   }
 
   return (
@@ -151,7 +162,10 @@ function TitleListImpl({
         <div
           ref={containerRef}
           data-testid="virtual-list"
-          style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            position: "relative",
+          }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => (
             <div

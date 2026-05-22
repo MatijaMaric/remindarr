@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Plus, Trash2, Clock, CheckCircle2, XCircle, UserPlus } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  UserPlus,
+} from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import * as api from "../api";
 import type { InvitationItem } from "../types";
@@ -45,21 +52,26 @@ export default function InvitePage() {
     queryFn: ({ signal }) => api.getInvitations(signal),
   });
 
-  const invitations = (invitationsData?.invitations ?? []).slice().sort((a, b) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  const invitations = (invitationsData?.invitations ?? [])
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
 
   const createMutation = useMutation({
     mutationFn: () => api.createInvitation(),
     onSuccess: () => toast.success(t("invite.created")),
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : String(err)),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["invitations"] }),
   });
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => api.revokeInvitation(id),
     onSuccess: () => toast.success(t("invite.revoked")),
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : String(err)),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["invitations"] }),
   });
 
@@ -69,9 +81,11 @@ export default function InvitePage() {
     if (!code || redeeming) return;
 
     setRedeeming(true); // eslint-disable-line react-hooks/set-state-in-effect -- guards against running the effect twice
-    api.redeemInvitation(code)
+    api
+      .redeemInvitation(code)
       .then((result) => {
-        const inviterName = result.inviter.display_name || result.inviter.username;
+        const inviterName =
+          result.inviter.display_name || result.inviter.username;
         setRedeemResult({ status: "success", inviterName });
         toast.success(t("invite.redeemSuccess", { name: inviterName }));
       })
@@ -110,7 +124,9 @@ export default function InvitePage() {
       )}
 
       {redeeming && (
-        <div className="text-center py-8 text-zinc-400">{t("invite.redeeming")}</div>
+        <div className="text-center py-8 text-zinc-400">
+          {t("invite.redeeming")}
+        </div>
       )}
 
       {/* Generate button */}
@@ -120,14 +136,19 @@ export default function InvitePage() {
         className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
       >
         <Plus className="size-4" />
-        {createMutation.isPending ? t("invite.creating") : t("invite.createLink")}
+        {createMutation.isPending
+          ? t("invite.creating")
+          : t("invite.createLink")}
       </button>
 
       {/* Invitations list */}
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-zinc-900 rounded-lg p-4 animate-pulse h-24" />
+            <div
+              key={i}
+              className="bg-zinc-900 rounded-lg p-4 animate-pulse h-24"
+            />
           ))}
         </div>
       ) : invitations.length === 0 ? (
@@ -138,7 +159,9 @@ export default function InvitePage() {
             <InvitationCard
               key={inv.id}
               invitation={inv}
-              revoking={revokeMutation.isPending && revokeMutation.variables === inv.id}
+              revoking={
+                revokeMutation.isPending && revokeMutation.variables === inv.id
+              }
               onRevoke={(id) => revokeMutation.mutate(id)}
             />
           ))}
@@ -185,17 +208,21 @@ function InvitationCard({
 
       {/* Dates */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500 mb-3">
-        <span>{t("invite.created_at")}: {formatDate(invitation.created_at)}</span>
-        <span>{t("invite.expires_at")}: {formatDate(invitation.expires_at)}</span>
+        <span>
+          {t("invite.created_at")}: {formatDate(invitation.created_at)}
+        </span>
+        <span>
+          {t("invite.expires_at")}: {formatDate(invitation.expires_at)}
+        </span>
       </div>
 
       {/* Used by info */}
       {status === "used" && invitation.used_by && (
         <div className="text-sm text-green-300 mb-3">
           {t("invite.usedBy", {
-            username: invitation.used_by.display_name || invitation.used_by.username,
-          })}
-          {" "}
+            username:
+              invitation.used_by.display_name || invitation.used_by.username,
+          })}{" "}
           <Link
             to={`/user/${invitation.used_by.username}`}
             className="text-amber-500 hover:text-amber-400 transition-colors"

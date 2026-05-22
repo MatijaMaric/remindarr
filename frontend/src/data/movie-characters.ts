@@ -112,5 +112,7 @@ export const movieCharacterUsernames: string[] = [
 export function getDailyPlaceholder(): string {
   const now = new Date();
   const daysSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
-  return movieCharacterUsernames[daysSinceEpoch % movieCharacterUsernames.length];
+  return movieCharacterUsernames[
+    daysSinceEpoch % movieCharacterUsernames.length
+  ];
 }

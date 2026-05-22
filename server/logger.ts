@@ -146,13 +146,18 @@ export function resetLogLevel(level: LogLevel): void {
  *   /api/details/show/123/season/2  → /api/details/show/:id/season/:id
  */
 export function normalizeRoutePath(path: string): string {
-  return path
-    // Replace UUID segments first (must come before numeric to prevent partial matches)
-    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi, "/:id")
-    // Replace IMDB IDs (tt followed by digits)
-    .replace(/\/tt\d+(?=\/|$)/g, "/:id")
-    // Replace purely numeric ID segments
-    .replace(/\/\d+(?=\/|$)/g, "/:id");
+  return (
+    path
+      // Replace UUID segments first (must come before numeric to prevent partial matches)
+      .replace(
+        /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi,
+        "/:id",
+      )
+      // Replace IMDB IDs (tt followed by digits)
+      .replace(/\/tt\d+(?=\/|$)/g, "/:id")
+      // Replace purely numeric ID segments
+      .replace(/\/\d+(?=\/|$)/g, "/:id")
+  );
 }
 
 const SLOW_REQUEST_THRESHOLD_MS = 5000;
@@ -168,22 +173,37 @@ export function requestLogger(): MiddlewareHandler {
     const route = normalizeRoutePath(c.req.path);
 
     if (durationMs > SLOW_REQUEST_THRESHOLD_MS) {
-      log.warn(`Slow request: ${method} ${c.req.path} (${Math.round(durationMs)}ms)`, {
-        status, duration: Math.round(durationMs), route, method,
-      });
+      log.warn(
+        `Slow request: ${method} ${c.req.path} (${Math.round(durationMs)}ms)`,
+        {
+          status,
+          duration: Math.round(durationMs),
+          route,
+          method,
+        },
+      );
     }
 
     // 5xx → error; 401/403 auth failures → info (expected from bots/expired sessions);
     // other 4xx → warn; 2xx/3xx → info
     const level: LogLevel =
-      status >= 500 ? "error"
-      : status === 401 || status === 403 ? "info"
-      : status >= 400 ? "warn"
-      : "info";
-    log[level](`${method} ${c.req.path}`, { status, duration: Math.round(durationMs) });
+      status >= 500
+        ? "error"
+        : status === 401 || status === 403
+          ? "info"
+          : status >= 400
+            ? "warn"
+            : "info";
+    log[level](`${method} ${c.req.path}`, {
+      status,
+      duration: Math.round(durationMs),
+    });
 
     const statusStr = String(status);
     httpRequestsTotal.inc({ method, route, status: statusStr });
-    httpRequestDurationSeconds.observe({ method, route, status: statusStr }, durationMs / 1000);
+    httpRequestDurationSeconds.observe(
+      { method, route, status: statusStr },
+      durationMs / 1000,
+    );
   };
 }

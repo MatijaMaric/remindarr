@@ -22,9 +22,7 @@ const RIGHT_FADE_STYLE: React.CSSProperties = {
 const LEFT_ARROW_STYLE: React.CSSProperties = { left: ARROW_OFFSET };
 const RIGHT_ARROW_STYLE: React.CSSProperties = { right: ARROW_OFFSET };
 
-function FullBleedCarouselImpl({
-  children,
-}: FullBleedCarouselProps) {
+function FullBleedCarouselImpl({ children }: FullBleedCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -78,7 +76,7 @@ function FullBleedCarouselImpl({
       scrollPaddingLeft: EDGE_PAD,
       scrollPaddingRight: EDGE_PAD,
     }),
-    []
+    [],
   );
 
   return (
@@ -113,8 +111,18 @@ function FullBleedCarouselImpl({
           style={LEFT_ARROW_STYLE}
           className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 transition-opacity"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
       )}
@@ -126,8 +134,18 @@ function FullBleedCarouselImpl({
           style={RIGHT_ARROW_STYLE}
           className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 transition-opacity"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       )}

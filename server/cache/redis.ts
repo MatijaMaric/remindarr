@@ -38,11 +38,16 @@ export class RedisCache implements Cache {
   private async connect(url: string): Promise<void> {
     try {
       // Dynamic import — ioredis is an optional dependency
-      const mod = (await import(/* webpackIgnore: true */ "ioredis" as string)) as {
+      const mod = (await import(
+        /* webpackIgnore: true */ "ioredis" as string
+      )) as {
         default?: RedisConstructor;
       } & RedisConstructor;
       const Redis: RedisConstructor = mod.default ?? mod;
-      const client = new Redis(url, { lazyConnect: false, maxRetriesPerRequest: 3 });
+      const client = new Redis(url, {
+        lazyConnect: false,
+        maxRetriesPerRequest: 3,
+      });
       client.on("error", (err: Error) => {
         log.error("Redis connection error", { error: err.message });
       });

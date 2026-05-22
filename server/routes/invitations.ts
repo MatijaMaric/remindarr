@@ -24,12 +24,18 @@ app.post("/", async (c) => {
   }
 
   const invitation = await createInvitation(user.id);
-  log.info("Invitation created", { userId: user.id, invitationId: invitation.id });
-  return c.json({
-    id: invitation.id,
-    code: invitation.code,
-    expires_at: invitation.expiresAt,
-  }, 201);
+  log.info("Invitation created", {
+    userId: user.id,
+    invitationId: invitation.id,
+  });
+  return c.json(
+    {
+      id: invitation.id,
+      code: invitation.code,
+      expires_at: invitation.expiresAt,
+    },
+    201,
+  );
 });
 
 // GET / — List user's invitations
@@ -42,7 +48,11 @@ app.get("/", async (c) => {
   const rows = await getUserInvitations(user.id);
 
   // Batch-fetch all users referenced by usedById to avoid N+1 queries
-  const usedByIds = [...new Set(rows.map((r) => r.usedById).filter((id): id is string => id !== null))];
+  const usedByIds = [
+    ...new Set(
+      rows.map((r) => r.usedById).filter((id): id is string => id !== null),
+    ),
+  ];
   const usedByUsers = await getUsersByIds(usedByIds);
 
   const invitations = rows.map((row) => {

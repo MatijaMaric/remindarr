@@ -1,5 +1,20 @@
-import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
-import { render, screen, waitFor, cleanup, act, fireEvent } from "@testing-library/react";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  act,
+  fireEvent,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
@@ -7,12 +22,16 @@ import * as api from "../api";
 const { default: UserSearchDropdown } = await import("./UserSearchDropdown");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={newTestClient()}>{children}</QueryClientProvider>
+    <QueryClientProvider client={newTestClient()}>
+      {children}
+    </QueryClientProvider>
   );
 }
 
@@ -24,7 +43,9 @@ const mockUsers = [
 let searchUsersSpy: ReturnType<typeof spyOn<typeof api, "searchUsers">>;
 
 beforeEach(() => {
-  searchUsersSpy = spyOn(api, "searchUsers").mockResolvedValue({ users: mockUsers });
+  searchUsersSpy = spyOn(api, "searchUsers").mockResolvedValue({
+    users: mockUsers,
+  });
 });
 
 afterEach(() => {
@@ -34,19 +55,17 @@ afterEach(() => {
 
 describe("UserSearchDropdown", () => {
   test("renders search input", () => {
-    render(
-      <UserSearchDropdown onSelect={mock(() => {})} />,
-      { wrapper: Wrapper }
-    );
+    render(<UserSearchDropdown onSelect={mock(() => {})} />, {
+      wrapper: Wrapper,
+    });
 
     expect(screen.getByTestId("user-search-input")).toBeDefined();
   });
 
   test("no dropdown shown on empty input", () => {
-    render(
-      <UserSearchDropdown onSelect={mock(() => {})} />,
-      { wrapper: Wrapper }
-    );
+    render(<UserSearchDropdown onSelect={mock(() => {})} />, {
+      wrapper: Wrapper,
+    });
 
     expect(screen.queryByTestId("user-search-results")).toBeNull();
   });
@@ -55,10 +74,9 @@ describe("UserSearchDropdown", () => {
     // The query triggers after debounce — we type and wait
     searchUsersSpy.mockResolvedValue({ users: mockUsers });
 
-    render(
-      <UserSearchDropdown onSelect={mock(() => {})} />,
-      { wrapper: Wrapper }
-    );
+    render(<UserSearchDropdown onSelect={mock(() => {})} />, {
+      wrapper: Wrapper,
+    });
 
     const input = screen.getByTestId("user-search-input");
     await act(async () => {

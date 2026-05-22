@@ -6,7 +6,10 @@ const cache = new Map<string, { color: string; isDark: boolean }>();
 
 const DEFAULT_COLOR = { color: "rgb(24, 24, 27)", isDark: true };
 
-function getCachedOrDefault(url: string | null): { color: string; isDark: boolean } {
+function getCachedOrDefault(url: string | null): {
+  color: string;
+  isDark: boolean;
+} {
   if (!url) return DEFAULT_COLOR;
   return cache.get(url) ?? DEFAULT_COLOR;
 }
@@ -55,12 +58,12 @@ export function useDominantColor(imageUrl: string | null): {
 
 /** Hook that precomputes dominant colors for multiple URLs at once */
 export function useDominantColors(
-  imageUrls: (string | null)[]
+  imageUrls: (string | null)[],
 ): { color: string; isDark: boolean }[] {
   const urlKey = imageUrls.join(",");
 
   const [results, setResults] = useState<{ color: string; isDark: boolean }[]>(
-    () => imageUrls.map((url) => getCachedOrDefault(url))
+    () => imageUrls.map((url) => getCachedOrDefault(url)),
   );
 
   useEffect(() => {

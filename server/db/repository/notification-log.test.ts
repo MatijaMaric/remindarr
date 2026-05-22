@@ -19,9 +19,11 @@ beforeEach(async () => {
     userId,
     "discord",
     "Discord",
-    { webhookUrl: "https://discord.com/api/webhooks/123456789/abcdefghijklmnop" },
+    {
+      webhookUrl: "https://discord.com/api/webhooks/123456789/abcdefghijklmnop",
+    },
     "09:00",
-    "UTC"
+    "UTC",
   );
 });
 
@@ -31,7 +33,12 @@ afterAll(() => {
 
 describe("recordDelivery", () => {
   it("writes a success row", async () => {
-    await recordDelivery({ notifierId, status: "success", latencyMs: 150, eventKind: "test" });
+    await recordDelivery({
+      notifierId,
+      status: "success",
+      latencyMs: 150,
+      eventKind: "test",
+    });
     const rows = await getRecentForNotifier(notifierId, 10);
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe("success");
@@ -42,7 +49,13 @@ describe("recordDelivery", () => {
   });
 
   it("writes a failure row with errorMessage", async () => {
-    await recordDelivery({ notifierId, status: "failure", latencyMs: 200, errorMessage: "Connection refused", eventKind: "episode_air" });
+    await recordDelivery({
+      notifierId,
+      status: "failure",
+      latencyMs: 200,
+      errorMessage: "Connection refused",
+      eventKind: "episode_air",
+    });
     const rows = await getRecentForNotifier(notifierId, 10);
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe("failure");
@@ -62,16 +75,36 @@ describe("recordDelivery", () => {
 describe("getRecentForNotifier", () => {
   it("returns at most n rows", async () => {
     for (let i = 0; i < 8; i++) {
-      await recordDelivery({ notifierId, status: "success", latencyMs: i * 10, eventKind: "test" });
+      await recordDelivery({
+        notifierId,
+        status: "success",
+        latencyMs: i * 10,
+        eventKind: "test",
+      });
     }
     const rows = await getRecentForNotifier(notifierId, 5);
     expect(rows).toHaveLength(5);
   });
 
   it("returns rows ordered by most-recent first", async () => {
-    await recordDelivery({ notifierId, status: "success", latencyMs: 10, eventKind: "first" });
-    await recordDelivery({ notifierId, status: "failure", latencyMs: 20, eventKind: "second" });
-    await recordDelivery({ notifierId, status: "skipped", latencyMs: 30, eventKind: "third" });
+    await recordDelivery({
+      notifierId,
+      status: "success",
+      latencyMs: 10,
+      eventKind: "first",
+    });
+    await recordDelivery({
+      notifierId,
+      status: "failure",
+      latencyMs: 20,
+      eventKind: "second",
+    });
+    await recordDelivery({
+      notifierId,
+      status: "skipped",
+      latencyMs: 30,
+      eventKind: "third",
+    });
 
     const rows = await getRecentForNotifier(notifierId, 10);
     expect(rows).toHaveLength(3);
@@ -157,7 +190,12 @@ describe("pruneOldRows", () => {
 
   it("keeps the most recent rows after pruning", async () => {
     for (let i = 0; i < 205; i++) {
-      await recordDelivery({ notifierId, status: "success", latencyMs: i, eventKind: `event-${i}` });
+      await recordDelivery({
+        notifierId,
+        status: "success",
+        latencyMs: i,
+        eventKind: `event-${i}`,
+      });
     }
 
     await pruneOldRows();

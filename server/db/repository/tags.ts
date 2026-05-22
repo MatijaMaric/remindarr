@@ -5,7 +5,9 @@ import { traceDbQuery } from "../../tracing";
 /**
  * Returns all tags for a given user, keyed by title ID.
  */
-export async function getTagsForUser(userId: string): Promise<Record<string, string[]>> {
+export async function getTagsForUser(
+  userId: string,
+): Promise<Record<string, string[]>> {
   return traceDbQuery("getTagsForUser", async () => {
     const db = getDb();
     const rows = await db
@@ -26,7 +28,10 @@ export async function getTagsForUser(userId: string): Promise<Record<string, str
 /**
  * Returns the tags for a specific (user, title) pair.
  */
-export async function getTagsForTitle(userId: string, titleId: string): Promise<string[]> {
+export async function getTagsForTitle(
+  userId: string,
+  titleId: string,
+): Promise<string[]> {
   return traceDbQuery("getTagsForTitle", async () => {
     const db = getDb();
     const rows = await db
@@ -48,7 +53,9 @@ export async function getTagsForTitles(
     const rows = await db
       .select({ titleId: titleTags.titleId, tag: titleTags.tag })
       .from(titleTags)
-      .where(and(eq(titleTags.userId, userId), inArray(titleTags.titleId, titleIds)))
+      .where(
+        and(eq(titleTags.userId, userId), inArray(titleTags.titleId, titleIds)),
+      )
       .all();
     const out = new Map<string, string[]>();
     for (const r of rows) {
@@ -89,14 +96,20 @@ export async function addTagToTitlesBulk(
  * delete-all-then-insert, so a crash between the two writes never
  * leaves the row completely tag-less (only new tags would be missing).
  */
-export async function setTags(userId: string, titleId: string, tags: string[]): Promise<void> {
+export async function setTags(
+  userId: string,
+  titleId: string,
+  tags: string[],
+): Promise<void> {
   return traceDbQuery("setTags", async () => {
     const db = getDb();
 
     if (tags.length === 0) {
       await db
         .delete(titleTags)
-        .where(and(eq(titleTags.userId, userId), eq(titleTags.titleId, titleId)))
+        .where(
+          and(eq(titleTags.userId, userId), eq(titleTags.titleId, titleId)),
+        )
         .run();
       return;
     }
@@ -108,8 +121,8 @@ export async function setTags(userId: string, titleId: string, tags: string[]): 
         and(
           eq(titleTags.userId, userId),
           eq(titleTags.titleId, titleId),
-          notInArray(titleTags.tag, tags)
-        )
+          notInArray(titleTags.tag, tags),
+        ),
       )
       .run();
 

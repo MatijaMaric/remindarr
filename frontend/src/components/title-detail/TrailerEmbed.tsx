@@ -10,7 +10,9 @@ export function hasTrailer(videos: TmdbVideo[]): boolean {
 }
 
 function pickBestTrailer(videos: TmdbVideo[]): TmdbVideo | null {
-  const trailers = videos.filter((v) => v.site === "YouTube" && v.type === "Trailer");
+  const trailers = videos.filter(
+    (v) => v.site === "YouTube" && v.type === "Trailer",
+  );
   if (trailers.length === 0) return null;
 
   // Sort: official first, then highest size, then most recent published_at
@@ -31,7 +33,8 @@ export default function TrailerEmbed({ videos }: TrailerEmbedProps) {
 
   const { key } = trailer;
   const prefersReducedMotion =
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const autoplay = prefersReducedMotion ? 0 : 1;
 
   if (playing) {
@@ -51,7 +54,10 @@ export default function TrailerEmbed({ videos }: TrailerEmbedProps) {
   const thumbnailUrl = `https://img.youtube.com/vi/${key}/hqdefault.jpg`;
 
   return (
-    <div className="relative w-full aspect-video rounded-xl overflow-hidden cursor-pointer group" onClick={() => setPlaying(true)}>
+    <div
+      className="relative w-full aspect-video rounded-xl overflow-hidden cursor-pointer group"
+      onClick={() => setPlaying(true)}
+    >
       <img
         src={thumbnailUrl}
         alt="Trailer thumbnail"
@@ -70,7 +76,14 @@ export default function TrailerEmbed({ videos }: TrailerEmbedProps) {
           xmlns="http://www.w3.org/2000/svg"
           aria-label="Play trailer"
         >
-          <circle cx="32" cy="32" r="30" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
+          <circle
+            cx="32"
+            cy="32"
+            r="30"
+            fill="rgba(0,0,0,0.6)"
+            stroke="rgba(255,255,255,0.8)"
+            strokeWidth="2"
+          />
           <polygon points="26,20 26,44 46,32" fill="white" />
         </svg>
       </div>

@@ -10,9 +10,24 @@ interface DensityMeta {
 }
 
 const DENSITIES: DensityMeta[] = [
-  { value: "comfortable", labelKey: "settings.density.comfortable", descKey: "settings.density.comfortableDesc", rows: [8, 6, 8] },
-  { value: "cozy",        labelKey: "settings.density.cozy",        descKey: "settings.density.cozyDesc",        rows: [6, 4, 6] },
-  { value: "compact",     labelKey: "settings.density.compact",     descKey: "settings.density.compactDesc",     rows: [4, 3, 4] },
+  {
+    value: "comfortable",
+    labelKey: "settings.density.comfortable",
+    descKey: "settings.density.comfortableDesc",
+    rows: [8, 6, 8],
+  },
+  {
+    value: "cozy",
+    labelKey: "settings.density.cozy",
+    descKey: "settings.density.cozyDesc",
+    rows: [6, 4, 6],
+  },
+  {
+    value: "compact",
+    labelKey: "settings.density.compact",
+    descKey: "settings.density.compactDesc",
+    rows: [4, 3, 4],
+  },
 ];
 
 interface Props {
@@ -49,7 +64,12 @@ export default function DensityPicker({ value, onChange }: Props) {
                 />
               ))}
             </div>
-            <div className={cn("text-[13px] font-semibold mb-0.5", isActive ? "text-amber-400" : "text-zinc-100")}>
+            <div
+              className={cn(
+                "text-[13px] font-semibold mb-0.5",
+                isActive ? "text-amber-400" : "text-zinc-100",
+              )}
+            >
               {t(meta.labelKey)}
             </div>
             <div className="text-[11px] text-zinc-500">{t(meta.descKey)}</div>

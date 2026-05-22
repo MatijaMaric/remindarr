@@ -29,7 +29,7 @@ export default async function globalSetup() {
   // can discover the mock listener.
   fs.writeFileSync(
     path.resolve(MOCK_WEBHOOK_STATE_FILE),
-    JSON.stringify({ url: webhookServer.url, port: webhookServer.port })
+    JSON.stringify({ url: webhookServer.url, port: webhookServer.port }),
   );
 
   process.env.E2E_OIDC_ISSUER_URL = oidcServer.url;
@@ -37,7 +37,10 @@ export default async function globalSetup() {
 
   // Stash references so globalTeardown can clean up.
   const storage = globalThis as unknown as {
-    __e2eServers?: { oidcServer: MockOidcServer | null; webhookServer: MockWebhookServer | null };
+    __e2eServers?: {
+      oidcServer: MockOidcServer | null;
+      webhookServer: MockWebhookServer | null;
+    };
   };
   storage.__e2eServers = { oidcServer, webhookServer };
 }

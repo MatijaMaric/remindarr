@@ -1,4 +1,12 @@
-import { describe, test, expect, spyOn, afterEach, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  afterEach,
+  beforeEach,
+  mock,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import type { ReactNode } from "react";
@@ -10,7 +18,13 @@ import type { UserAchievement } from "../types";
 // Returns a full shape so cross-file leaks don't corrupt other tests.
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "current-user", username: "me", display_name: "Me", auth_provider: "local", is_admin: false },
+    user: {
+      id: "current-user",
+      username: "me",
+      display_name: "Me",
+      auth_provider: "local",
+      is_admin: false,
+    },
     providers: { local: true, oidc: null },
     loading: false,
     sessionStatus: "authenticated",
@@ -29,7 +43,9 @@ mock.module("../context/AuthContext", () => ({
 const { default: AchievementsPage } = await import("./AchievementsPage");
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 // Renders the page as the current user (own profile — /achievements)
@@ -58,7 +74,9 @@ function OtherWrapper({ children }: { children: ReactNode }) {
   );
 }
 
-function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievement {
+function makeAchievement(
+  overrides: Partial<UserAchievement> = {},
+): UserAchievement {
   return {
     key: "watch-1",
     kind: "watch_count",
@@ -83,8 +101,12 @@ function makeAchievement(overrides: Partial<UserAchievement> = {}): UserAchievem
   };
 }
 
-let getMyAchievementsSpy: ReturnType<typeof spyOn<typeof api, "getMyAchievements">>;
-let getUserAchievementsSpy: ReturnType<typeof spyOn<typeof api, "getUserAchievements">>;
+let getMyAchievementsSpy: ReturnType<
+  typeof spyOn<typeof api, "getMyAchievements">
+>;
+let getUserAchievementsSpy: ReturnType<
+  typeof spyOn<typeof api, "getUserAchievements">
+>;
 
 beforeEach(() => {
   getMyAchievementsSpy = spyOn(api, "getMyAchievements");
@@ -97,8 +119,19 @@ afterEach(() => {
   cleanup();
 });
 
-const earnedWatching = makeAchievement({ key: "watch-1", category: "watching", earned: true, points: 50 });
-const earnedStreaks = makeAchievement({ key: "streak-1", category: "streaks", earned: true, points: 30, earnedAt: "2025-02-01T00:00:00.000Z" });
+const earnedWatching = makeAchievement({
+  key: "watch-1",
+  category: "watching",
+  earned: true,
+  points: 50,
+});
+const earnedStreaks = makeAchievement({
+  key: "streak-1",
+  category: "streaks",
+  earned: true,
+  points: 30,
+  earnedAt: "2025-02-01T00:00:00.000Z",
+});
 const inProgressWatching = makeAchievement({
   key: "watch-2",
   category: "watching",
@@ -114,7 +147,9 @@ const inProgressWatching = makeAchievement({
 
 describe("AchievementsPage — own profile", () => {
   test("renders 'Achievements' kicker", async () => {
-    getMyAchievementsSpy.mockImplementation(() => Promise.resolve([earnedWatching]));
+    getMyAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([earnedWatching]),
+    );
 
     render(<AchievementsPage />, { wrapper: OwnWrapper });
 
@@ -125,7 +160,7 @@ describe("AchievementsPage — own profile", () => {
 
   test("shows earned/total/XP summary chip", async () => {
     getMyAchievementsSpy.mockImplementation(() =>
-      Promise.resolve([earnedWatching, inProgressWatching])
+      Promise.resolve([earnedWatching, inProgressWatching]),
     );
 
     render(<AchievementsPage />, { wrapper: OwnWrapper });
@@ -138,7 +173,7 @@ describe("AchievementsPage — own profile", () => {
 
   test("NextUpStrip section is visible for own profile when in-progress badges exist", async () => {
     getMyAchievementsSpy.mockImplementation(() =>
-      Promise.resolve([earnedWatching, inProgressWatching])
+      Promise.resolve([earnedWatching, inProgressWatching]),
     );
 
     render(<AchievementsPage />, { wrapper: OwnWrapper });
@@ -150,7 +185,7 @@ describe("AchievementsPage — own profile", () => {
 
   test("category filter chip 'Watching' filters grid to only watching category", async () => {
     getMyAchievementsSpy.mockImplementation(() =>
-      Promise.resolve([earnedWatching, earnedStreaks])
+      Promise.resolve([earnedWatching, earnedStreaks]),
     );
 
     render(<AchievementsPage />, {
@@ -180,7 +215,7 @@ describe("AchievementsPage — own profile", () => {
 
   test("'All' filter (no cat param) shows all categories", async () => {
     getMyAchievementsSpy.mockImplementation(() =>
-      Promise.resolve([earnedWatching, earnedStreaks])
+      Promise.resolve([earnedWatching, earnedStreaks]),
     );
 
     render(<AchievementsPage />, { wrapper: OwnWrapper });
@@ -196,7 +231,7 @@ describe("AchievementsPage — own profile", () => {
 
   test("hides 'recently earned' section when no achievements are earned", async () => {
     getMyAchievementsSpy.mockImplementation(() =>
-      Promise.resolve([inProgressWatching])
+      Promise.resolve([inProgressWatching]),
     );
 
     render(<AchievementsPage />, { wrapper: OwnWrapper });
@@ -212,7 +247,7 @@ describe("AchievementsPage — own profile", () => {
 describe("AchievementsPage — other user profile", () => {
   test("NextUpStrip section is hidden for other user profiles", async () => {
     getUserAchievementsSpy.mockImplementation(() =>
-      Promise.resolve([earnedWatching, inProgressWatching])
+      Promise.resolve([earnedWatching, inProgressWatching]),
     );
 
     // Render as the "alice" profile view (other user)

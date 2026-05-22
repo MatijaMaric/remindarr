@@ -58,14 +58,21 @@ app.get("/:friendUsername", async (c) => {
   const isSelf = viewerId === friendId;
 
   if (!isSelf) {
-    const visibility = (friendUser.profile_visibility ?? "private") as "public" | "friends_only" | "private";
+    const visibility = (friendUser.profile_visibility ?? "private") as
+      | "public"
+      | "friends_only"
+      | "private";
     if (visibility === "private") {
       return err(c, "This user's watchlist is private", 403);
     }
     if (visibility === "friends_only") {
       const mutual = await areMutualFollowers(viewerId, friendId);
       if (!mutual) {
-        return err(c, "This user's watchlist is only visible to mutual followers", 403);
+        return err(
+          c,
+          "This user's watchlist is only visible to mutual followers",
+          403,
+        );
       }
     }
     // "public" — allow
@@ -216,8 +223,16 @@ app.get("/:friendUsername", async (c) => {
 
   // 8. Ratings for both users across intersection
   const [viewerRatings, friendRatings] = await Promise.all([
-    Promise.all(intersectionIds.map((id) => getUserRating(viewerId, id).then((r) => [id, r] as const))),
-    Promise.all(intersectionIds.map((id) => getUserRating(friendId, id).then((r) => [id, r] as const))),
+    Promise.all(
+      intersectionIds.map((id) =>
+        getUserRating(viewerId, id).then((r) => [id, r] as const),
+      ),
+    ),
+    Promise.all(
+      intersectionIds.map((id) =>
+        getUserRating(friendId, id).then((r) => [id, r] as const),
+      ),
+    ),
   ]);
 
   const viewerRatingMap = new Map(viewerRatings);
@@ -266,7 +281,9 @@ app.get("/:friendUsername", async (c) => {
 
   titlesWithDetails.sort((a, b) => b._sort_score - a._sort_score);
 
-  const titlesOut = titlesWithDetails.map(({ _sort_score: _s, ...rest }) => rest);
+  const titlesOut = titlesWithDetails.map(
+    ({ _sort_score: _s, ...rest }) => rest,
+  );
 
   return ok(c, {
     titles: titlesOut,

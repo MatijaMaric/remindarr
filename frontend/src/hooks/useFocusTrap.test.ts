@@ -7,7 +7,10 @@ import { useFocusTrap } from "./useFocusTrap";
  * Helper — build a container with N buttons appended to document.body,
  * returning the container and the buttons.
  */
-function buildContainer(count: number): { container: HTMLDivElement; buttons: HTMLButtonElement[] } {
+function buildContainer(count: number): {
+  container: HTMLDivElement;
+  buttons: HTMLButtonElement[];
+} {
   const container = document.createElement("div");
   const buttons: HTMLButtonElement[] = [];
   for (let i = 0; i < count; i++) {

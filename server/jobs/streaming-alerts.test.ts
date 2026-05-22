@@ -1,4 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  mock,
+  spyOn,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
   createUser,
@@ -36,16 +45,32 @@ afterAll(() => {
 
 describe("getStreamingAlertNotifiersForUser", () => {
   it("returns notifiers with streaming_alerts_enabled=true", async () => {
-    const { getStreamingAlertNotifiersForUser } = await import("../db/repository/notifiers");
-    await createNotifier(userId, "discord", "Discord", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    const { getStreamingAlertNotifiersForUser } =
+      await import("../db/repository/notifiers");
+    await createNotifier(
+      userId,
+      "discord",
+      "Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
     const notifiers = await getStreamingAlertNotifiersForUser(userId);
     expect(notifiers).toHaveLength(1);
     expect(notifiers[0].provider).toBe("discord");
   });
 
   it("excludes notifiers with streaming_alerts_enabled=false", async () => {
-    const { getStreamingAlertNotifiersForUser } = await import("../db/repository/notifiers");
-    const id = await createNotifier(userId, "discord", "Discord", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    const { getStreamingAlertNotifiersForUser } =
+      await import("../db/repository/notifiers");
+    const id = await createNotifier(
+      userId,
+      "discord",
+      "Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
     // Update to disable streaming alerts
     const { updateNotifier } = await import("../db/repository/notifiers");
     await updateNotifier(id, userId, { streamingAlertsEnabled: false });
@@ -54,8 +79,16 @@ describe("getStreamingAlertNotifiersForUser", () => {
   });
 
   it("excludes disabled notifiers", async () => {
-    const { getStreamingAlertNotifiersForUser } = await import("../db/repository/notifiers");
-    const id = await createNotifier(userId, "discord", "Discord", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    const { getStreamingAlertNotifiersForUser } =
+      await import("../db/repository/notifiers");
+    const id = await createNotifier(
+      userId,
+      "discord",
+      "Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
     const { updateNotifier } = await import("../db/repository/notifiers");
     await updateNotifier(id, userId, { enabled: false });
     const notifiers = await getStreamingAlertNotifiersForUser(userId);
@@ -86,13 +119,22 @@ describe("streaming alert flow via sync", () => {
 
     // User has a notifier with streaming alerts enabled
     const sendFn = mock(async () => {});
-    spies.push(spyOn(registry, "getProvider").mockReturnValue({
-      name: "discord",
-      send: sendFn,
-      validateConfig: () => ({ valid: true }),
-    } as any));
+    spies.push(
+      spyOn(registry, "getProvider").mockReturnValue({
+        name: "discord",
+        send: sendFn,
+        validateConfig: () => ({ valid: true }),
+      } as any),
+    );
 
-    await createNotifier(userId, "discord", "Discord", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await createNotifier(
+      userId,
+      "discord",
+      "Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
 
     // Simulate what checkStreamingAlerts does by importing and calling it
     // We use the internal module directly for white-box testing
@@ -106,7 +148,9 @@ describe("streaming alert flow via sync", () => {
     expect(content.streamingAlerts[0].providerName).toBe(PROVIDER_NAME);
 
     // After alerting, the provider should be marked
-    const unalerted = await getUnalertedProviders(userId, TITLE_ID, [PROVIDER_ID]);
+    const unalerted = await getUnalertedProviders(userId, TITLE_ID, [
+      PROVIDER_ID,
+    ]);
     expect(unalerted).toEqual([]);
 
     // Second call should NOT send again
@@ -134,13 +178,22 @@ describe("streaming alert flow via sync", () => {
     await trackTitle(TITLE_ID, userId);
 
     const sendFn = mock(async () => {});
-    spies.push(spyOn(registry, "getProvider").mockReturnValue({
-      name: "discord",
-      send: sendFn,
-      validateConfig: () => ({ valid: true }),
-    } as any));
+    spies.push(
+      spyOn(registry, "getProvider").mockReturnValue({
+        name: "discord",
+        send: sendFn,
+        validateConfig: () => ({ valid: true }),
+      } as any),
+    );
 
-    await createNotifier(userId, "discord", "Discord", { webhookUrl: "https://discord.com/api/webhooks/1/a" }, "09:00", "UTC");
+    await createNotifier(
+      userId,
+      "discord",
+      "Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
 
     const { checkStreamingAlerts } = await import("./check-streaming-alerts");
     await checkStreamingAlerts([TITLE_ID]);

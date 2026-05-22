@@ -18,7 +18,11 @@ function deriveStatus(t: Title): StatusMeta {
   const key = user ?? show;
   switch (key) {
     case "watching":
-      return { labelKey: "userProfile.dossier.status.watching", color: "#000", background: "#fbbf24" };
+      return {
+        labelKey: "userProfile.dossier.status.watching",
+        color: "#000",
+        background: "#fbbf24",
+      };
     case "caught_up":
       return {
         labelKey: "userProfile.dossier.status.caughtUp",
@@ -127,8 +131,12 @@ export default function WatchlistCard({ title }: WatchlistCardProps) {
         )}
       </div>
       <div className="px-3 py-2.5">
-        <div className="text-[13px] font-semibold text-zinc-100 truncate mb-0.5">{title.title}</div>
-        <div className="font-mono text-[11px] text-zinc-400 truncate">{meta || "—"}</div>
+        <div className="text-[13px] font-semibold text-zinc-100 truncate mb-0.5">
+          {title.title}
+        </div>
+        <div className="font-mono text-[11px] text-zinc-400 truncate">
+          {meta || "—"}
+        </div>
       </div>
     </Link>
   );

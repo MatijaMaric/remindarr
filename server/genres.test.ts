@@ -35,15 +35,26 @@ describe("toCanonicalGenre", () => {
 
 describe("expandGenreGroup", () => {
   it("expands 'Action & Adventure' to all members", () => {
-    expect(expandGenreGroup("Action & Adventure")).toEqual(["Action", "Adventure", "Action & Adventure"]);
+    expect(expandGenreGroup("Action & Adventure")).toEqual([
+      "Action",
+      "Adventure",
+      "Action & Adventure",
+    ]);
   });
 
   it("expands 'Sci-Fi & Fantasy' to all members", () => {
-    expect(expandGenreGroup("Sci-Fi & Fantasy")).toEqual(["Science Fiction", "Fantasy", "Sci-Fi & Fantasy"]);
+    expect(expandGenreGroup("Sci-Fi & Fantasy")).toEqual([
+      "Science Fiction",
+      "Fantasy",
+      "Sci-Fi & Fantasy",
+    ]);
   });
 
   it("expands 'War & Politics' to all members", () => {
-    expect(expandGenreGroup("War & Politics")).toEqual(["War", "War & Politics"]);
+    expect(expandGenreGroup("War & Politics")).toEqual([
+      "War",
+      "War & Politics",
+    ]);
   });
 
   it("returns non-grouped genre as single-element array", () => {

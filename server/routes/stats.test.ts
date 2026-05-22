@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
-import { upsertTitles, upsertEpisodes, createUser, trackTitle, watchEpisode } from "../db/repository";
+import {
+  upsertTitles,
+  upsertEpisodes,
+  createUser,
+  trackTitle,
+  watchEpisode,
+} from "../db/repository";
 import { getRawDb } from "../db/bun-db";
 import statsApp from "./stats";
 import type { AppEnv } from "../types";
@@ -12,7 +18,13 @@ let userId: string;
 function makeAuthedApp() {
   const a = new Hono<AppEnv>();
   a.use("*", async (c, next) => {
-    c.set("user", { id: userId, username: "testuser", name: null, role: null, is_admin: false });
+    c.set("user", {
+      id: userId,
+      username: "testuser",
+      name: null,
+      role: null,
+      is_admin: false,
+    });
     await next();
   });
   a.route("/stats", statsApp);
@@ -75,12 +87,24 @@ describe("GET /stats", () => {
 
   it("counts watched movies and calculates watch time", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", runtimeMinutes: 120 }),
-      makeParsedTitle({ id: "movie-2", objectType: "MOVIE", runtimeMinutes: 90 }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        runtimeMinutes: 120,
+      }),
+      makeParsedTitle({
+        id: "movie-2",
+        objectType: "MOVIE",
+        runtimeMinutes: 90,
+      }),
     ]);
     const db = getRawDb();
-    db.prepare("INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run("movie-1", userId);
-    db.prepare("INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run("movie-2", userId);
+    db.prepare(
+      "INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))",
+    ).run("movie-1", userId);
+    db.prepare(
+      "INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))",
+    ).run("movie-2", userId);
 
     const app = makeAuthedApp();
     const res = await app.request("/stats");
@@ -92,17 +116,47 @@ describe("GET /stats", () => {
   });
 
   it("counts watched episodes and calculates show watch time", async () => {
-    await upsertTitles([makeParsedTitle({ id: "show-1", objectType: "SHOW", runtimeMinutes: 45 })]);
+    await upsertTitles([
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", runtimeMinutes: 45 }),
+    ]);
     const today = new Date().toISOString().slice(0, 10);
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
-      { title_id: "show-1", season_number: 1, episode_number: 2, name: "E2", overview: null, air_date: today, still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "E2",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
     ]);
     const db = getRawDb();
-    const ep1 = db.prepare("SELECT id FROM episodes WHERE title_id = ? AND episode_number = 1").get("show-1") as { id: number };
-    const ep2 = db.prepare("SELECT id FROM episodes WHERE title_id = ? AND episode_number = 2").get("show-1") as { id: number };
-    db.prepare("INSERT INTO watched_episodes (episode_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run(ep1.id, userId);
-    db.prepare("INSERT INTO watched_episodes (episode_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run(ep2.id, userId);
+    const ep1 = db
+      .prepare(
+        "SELECT id FROM episodes WHERE title_id = ? AND episode_number = 1",
+      )
+      .get("show-1") as { id: number };
+    const ep2 = db
+      .prepare(
+        "SELECT id FROM episodes WHERE title_id = ? AND episode_number = 2",
+      )
+      .get("show-1") as { id: number };
+    db.prepare(
+      "INSERT INTO watched_episodes (episode_id, user_id, watched_at) VALUES (?, ?, datetime('now'))",
+    ).run(ep1.id, userId);
+    db.prepare(
+      "INSERT INTO watched_episodes (episode_id, user_id, watched_at) VALUES (?, ?, datetime('now'))",
+    ).run(ep2.id, userId);
 
     const app = makeAuthedApp();
     const res = await app.request("/stats");
@@ -115,16 +169,32 @@ describe("GET /stats", () => {
 
   it("sums movie and show watch time into watch_time_minutes", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", runtimeMinutes: 120 }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        runtimeMinutes: 120,
+      }),
       makeParsedTitle({ id: "show-1", objectType: "SHOW", runtimeMinutes: 30 }),
     ]);
     const today = new Date().toISOString().slice(0, 10);
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
     ]);
     const db = getRawDb();
-    db.prepare("INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run("movie-1", userId);
-    const ep = db.prepare("SELECT id FROM episodes WHERE title_id = ?").get("show-1") as { id: number };
+    db.prepare(
+      "INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))",
+    ).run("movie-1", userId);
+    const ep = db
+      .prepare("SELECT id FROM episodes WHERE title_id = ?")
+      .get("show-1") as { id: number };
     await watchEpisode(ep.id, userId);
 
     const app = makeAuthedApp();
@@ -148,16 +218,32 @@ describe("GET /stats", () => {
 
   it("includes show genres when episodes are watched", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "movie-1", objectType: "MOVIE", genres: ["Action"] }),
+      makeParsedTitle({
+        id: "movie-1",
+        objectType: "MOVIE",
+        genres: ["Action"],
+      }),
       makeParsedTitle({ id: "show-1", objectType: "SHOW", genres: ["Comedy"] }),
     ]);
     const db = getRawDb();
-    db.prepare("INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))").run("movie-1", userId);
+    db.prepare(
+      "INSERT INTO watched_titles (title_id, user_id, watched_at) VALUES (?, ?, datetime('now'))",
+    ).run("movie-1", userId);
     const today = new Date().toISOString().slice(0, 10);
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
     ]);
-    const ep = db.prepare("SELECT id FROM episodes WHERE title_id = ?").get("show-1") as { id: number };
+    const ep = db
+      .prepare("SELECT id FROM episodes WHERE title_id = ?")
+      .get("show-1") as { id: number };
     await watchEpisode(ep.id, userId);
 
     const app = makeAuthedApp();
@@ -170,14 +256,29 @@ describe("GET /stats", () => {
 
   it("includes show language when episodes are watched", async () => {
     await upsertTitles([
-      makeParsedTitle({ id: "show-1", objectType: "SHOW", originalLanguage: "ja", genres: [] }),
+      makeParsedTitle({
+        id: "show-1",
+        objectType: "SHOW",
+        originalLanguage: "ja",
+        genres: [],
+      }),
     ]);
     const db = getRawDb();
     const today = new Date().toISOString().slice(0, 10);
     await upsertEpisodes([
-      { title_id: "show-1", season_number: 1, episode_number: 1, name: "E1", overview: null, air_date: today, still_path: null },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "E1",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
     ]);
-    const ep = db.prepare("SELECT id FROM episodes WHERE title_id = ?").get("show-1") as { id: number };
+    const ep = db
+      .prepare("SELECT id FROM episodes WHERE title_id = ?")
+      .get("show-1") as { id: number };
     await watchEpisode(ep.id, userId);
 
     const app = makeAuthedApp();

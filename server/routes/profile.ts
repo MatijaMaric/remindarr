@@ -57,15 +57,31 @@ app.patch("/me/bio", zValidator("json", bioSchema), async (c) => {
 const profileSchema = z.object({
   display_name: z.string().max(100).nullable().optional(),
   bio: z.string().max(280).nullable().optional(),
-  country_code: z.string().regex(/^[A-Z]{2}$/).nullable().optional(),
-  locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).nullable().optional(),
+  country_code: z
+    .string()
+    .regex(/^[A-Z]{2}$/)
+    .nullable()
+    .optional(),
+  locale: z
+    .string()
+    .regex(/^[a-z]{2}(-[A-Z]{2})?$/)
+    .nullable()
+    .optional(),
 });
 
 app.get("/me/profile", async (c) => {
   const user = c.get("user");
   if (!user) return err(c, "Authentication required", 401);
   const profile = await getMyProfile(user.id);
-  return ok(c, profile ?? { display_name: null, bio: null, country_code: null, locale: null });
+  return ok(
+    c,
+    profile ?? {
+      display_name: null,
+      bio: null,
+      country_code: null,
+      locale: null,
+    },
+  );
 });
 
 app.patch("/me/profile", zValidator("json", profileSchema), async (c) => {
@@ -73,13 +89,31 @@ app.patch("/me/profile", zValidator("json", profileSchema), async (c) => {
   if (!user) return err(c, "Authentication required", 401);
   const body = c.req.valid("json");
   await updateMyProfile(user.id, {
-    display_name: body.display_name === undefined ? undefined : (body.display_name === null ? null : body.display_name.trim() || null),
-    bio: body.bio === undefined ? undefined : (body.bio === null ? null : body.bio.trim() || null),
+    display_name:
+      body.display_name === undefined
+        ? undefined
+        : body.display_name === null
+          ? null
+          : body.display_name.trim() || null,
+    bio:
+      body.bio === undefined
+        ? undefined
+        : body.bio === null
+          ? null
+          : body.bio.trim() || null,
     country_code: body.country_code,
     locale: body.locale,
   });
   const profile = await getMyProfile(user.id);
-  return ok(c, profile ?? { display_name: null, bio: null, country_code: null, locale: null });
+  return ok(
+    c,
+    profile ?? {
+      display_name: null,
+      bio: null,
+      country_code: null,
+      locale: null,
+    },
+  );
 });
 
 const activityKindEnum = z.enum([
@@ -104,30 +138,38 @@ app.get("/me/activity-settings", async (c) => {
   return ok(c, settings);
 });
 
-app.patch("/me/activity-settings", zValidator("json", activitySettingsSchema), async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
-  const { enabled, kind_visibility } = c.req.valid("json");
-  await setActivitySettings(user.id, {
-    enabled,
-    kindVisibility: kind_visibility,
-  });
-  const updated = await getActivitySettings(user.id);
-  return ok(c, updated);
-});
+app.patch(
+  "/me/activity-settings",
+  zValidator("json", activitySettingsSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
+    const { enabled, kind_visibility } = c.req.valid("json");
+    await setActivitySettings(user.id, {
+      enabled,
+      kindVisibility: kind_visibility,
+    });
+    const updated = await getActivitySettings(user.id);
+    return ok(c, updated);
+  },
+);
 
 const hideEventSchema = z.object({
   event_kind: activityKindEnum,
   event_key: z.string().min(1).max(200),
 });
 
-app.post("/me/activity/hide", zValidator("json", hideEventSchema), async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
-  const { event_kind, event_key } = c.req.valid("json");
-  await hideActivityEvent(user.id, event_kind, event_key);
-  return ok(c, { hidden: true });
-});
+app.post(
+  "/me/activity/hide",
+  zValidator("json", hideEventSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
+    const { event_kind, event_key } = c.req.valid("json");
+    await hideActivityEvent(user.id, event_kind, event_key);
+    return ok(c, { hidden: true });
+  },
+);
 
 app.delete("/me/activity/hide/:event_kind/:event_key", async (c) => {
   const user = c.get("user");
@@ -158,7 +200,8 @@ app.get("/search", async (c) => {
 app.get("/:username", async (c) => {
   const username = c.req.param("username");
   const viewer = c.get("user");
-  const isOwnProfile = viewer?.username?.toLowerCase() === username.toLowerCase();
+  const isOwnProfile =
+    viewer?.username?.toLowerCase() === username.toLowerCase();
 
   const viewerId = viewer?.id ?? null;
   const profile = await getUserPublicProfile(username, isOwnProfile, viewerId);
@@ -181,60 +224,68 @@ const activityQuerySchema = z.object({
   before: z.string().min(1).optional(),
 });
 
-app.get("/:username/activity", zValidator("query", activityQuerySchema), async (c) => {
-  const username = c.req.param("username");
-  const viewer = c.get("user");
-  const profileUser = await getUserVisibilityByUsername(username);
-  if (!profileUser) {
-    return err(c, "User not found", 404);
-  }
-
-  const isOwnProfile = viewer?.id === profileUser.id;
-
-  if (!isOwnProfile && !profileUser.activity_stream_enabled) {
-    return ok(c, { activities: [], has_more: false, next_cursor: null });
-  }
-
-  let canView: boolean;
-  let viewerRelation: "self" | "friend" | "public" = "public";
-  if (isOwnProfile) {
-    canView = true;
-    viewerRelation = "self";
-  } else if (profileUser.visibility === "public") {
-    canView = true;
-    // Check friendship even on public profiles for per-kind visibility to work correctly.
-    if (viewer?.id) {
-      const mutual = await areMutualFollowers(viewer.id, profileUser.id);
-      viewerRelation = mutual ? "friend" : "public";
+app.get(
+  "/:username/activity",
+  zValidator("query", activityQuerySchema),
+  async (c) => {
+    const username = c.req.param("username");
+    const viewer = c.get("user");
+    const profileUser = await getUserVisibilityByUsername(username);
+    if (!profileUser) {
+      return err(c, "User not found", 404);
     }
-  } else if (profileUser.visibility === "friends_only" && viewer?.id) {
-    const mutual = await areMutualFollowers(viewer.id, profileUser.id);
-    canView = mutual;
-    viewerRelation = mutual ? "friend" : "public";
-  } else {
-    canView = false;
-  }
 
-  if (!canView) {
-    return ok(c, { activities: [], has_more: false, next_cursor: null });
-  }
+    const isOwnProfile = viewer?.id === profileUser.id;
 
-  const { limit, before } = c.req.valid("query");
+    if (!isOwnProfile && !profileUser.activity_stream_enabled) {
+      return ok(c, { activities: [], has_more: false, next_cursor: null });
+    }
 
-  const [kindVisibility, hiddenKeys] = await Promise.all([
-    isOwnProfile ? Promise.resolve<ActivityKindVisibilityMap>({}) : getActivityKindVisibilityMap(profileUser.id),
-    isOwnProfile ? getHiddenActivityEventKeys(profileUser.id) : Promise.resolve(new Set<string>()),
-  ]);
+    let canView: boolean;
+    let viewerRelation: "self" | "friend" | "public" = "public";
+    if (isOwnProfile) {
+      canView = true;
+      viewerRelation = "self";
+    } else if (profileUser.visibility === "public") {
+      canView = true;
+      // Check friendship even on public profiles for per-kind visibility to work correctly.
+      if (viewer?.id) {
+        const mutual = await areMutualFollowers(viewer.id, profileUser.id);
+        viewerRelation = mutual ? "friend" : "public";
+      }
+    } else if (profileUser.visibility === "friends_only" && viewer?.id) {
+      const mutual = await areMutualFollowers(viewer.id, profileUser.id);
+      canView = mutual;
+      viewerRelation = mutual ? "friend" : "public";
+    } else {
+      canView = false;
+    }
 
-  const result = await getUserActivity(profileUser.id, {
-    limit,
-    before,
-    kindVisibility,
-    viewerRelation,
-    hiddenKeys,
-  });
-  return ok(c, result);
-});
+    if (!canView) {
+      return ok(c, { activities: [], has_more: false, next_cursor: null });
+    }
+
+    const { limit, before } = c.req.valid("query");
+
+    const [kindVisibility, hiddenKeys] = await Promise.all([
+      isOwnProfile
+        ? Promise.resolve<ActivityKindVisibilityMap>({})
+        : getActivityKindVisibilityMap(profileUser.id),
+      isOwnProfile
+        ? getHiddenActivityEventKeys(profileUser.id)
+        : Promise.resolve(new Set<string>()),
+    ]);
+
+    const result = await getUserActivity(profileUser.id, {
+      limit,
+      before,
+      kindVisibility,
+      viewerRelation,
+      hiddenKeys,
+    });
+    return ok(c, result);
+  },
+);
 
 const reorderSchema = z.object({
   titleIds: z.array(z.string().min(1)).min(0).max(8),
@@ -274,15 +325,23 @@ app.delete("/me/pinned/:titleId", requireAuth, async (c) => {
 });
 
 // PUT /me/pinned/order — reorder pinned titles (auth required)
-app.put("/me/pinned/order", requireAuth, zValidator("json", reorderSchema), async (c) => {
-  const user = c.get("user")!;
-  const { titleIds } = c.req.valid("json");
+app.put(
+  "/me/pinned/order",
+  requireAuth,
+  zValidator("json", reorderSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { titleIds } = c.req.valid("json");
 
-  await reorderPinnedTitles(user.id, titleIds);
+    await reorderPinnedTitles(user.id, titleIds);
 
-  log.info("Pinned titles reordered", { userId: user.id, count: titleIds.length });
-  return ok(c, { ok: true });
-});
+    log.info("Pinned titles reordered", {
+      userId: user.id,
+      count: titleIds.length,
+    });
+    return ok(c, { ok: true });
+  },
+);
 
 export { ACTIVITY_KINDS };
 export default app;

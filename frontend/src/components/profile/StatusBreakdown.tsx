@@ -13,12 +13,36 @@ interface StatusCell {
 }
 
 const STATUS_CELLS: StatusCell[] = [
-  { key: "watching", labelKey: "userProfile.dossier.status.watching", color: "#fbbf24" },
-  { key: "caught_up", labelKey: "userProfile.dossier.status.caughtUp", color: "oklch(0.72 0.14 180)" },
-  { key: "completed", labelKey: "userProfile.dossier.status.completed", color: "oklch(0.72 0.16 145)" },
-  { key: "on_hold", labelKey: "userProfile.dossier.status.onHold", color: "oklch(0.78 0.16 90)" },
-  { key: "plan_to_watch", labelKey: "userProfile.dossier.status.planToWatch", color: "oklch(0.68 0.13 240)" },
-  { key: "dropped", labelKey: "userProfile.dossier.status.dropped", color: "oklch(0.65 0.18 25)" },
+  {
+    key: "watching",
+    labelKey: "userProfile.dossier.status.watching",
+    color: "#fbbf24",
+  },
+  {
+    key: "caught_up",
+    labelKey: "userProfile.dossier.status.caughtUp",
+    color: "oklch(0.72 0.14 180)",
+  },
+  {
+    key: "completed",
+    labelKey: "userProfile.dossier.status.completed",
+    color: "oklch(0.72 0.16 145)",
+  },
+  {
+    key: "on_hold",
+    labelKey: "userProfile.dossier.status.onHold",
+    color: "oklch(0.78 0.16 90)",
+  },
+  {
+    key: "plan_to_watch",
+    labelKey: "userProfile.dossier.status.planToWatch",
+    color: "oklch(0.68 0.13 240)",
+  },
+  {
+    key: "dropped",
+    labelKey: "userProfile.dossier.status.dropped",
+    color: "oklch(0.65 0.18 25)",
+  },
 ];
 
 export default function StatusBreakdown({ byStatus }: StatusBreakdownProps) {

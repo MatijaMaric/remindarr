@@ -5,7 +5,12 @@ import { toast } from "sonner";
 import * as api from "../../api";
 import type { Notifier } from "../../api";
 import type { UserSettings } from "../../types";
-import { isPushSupported, subscribeToPush, unsubscribeFromPush, getExistingSubscription } from "../../lib/push";
+import {
+  isPushSupported,
+  subscribeToPush,
+  unsubscribeFromPush,
+  getExistingSubscription,
+} from "../../lib/push";
 import {
   SCard,
   SFormRow,
@@ -25,22 +30,41 @@ const TIMEZONE_OPTIONS = (() => {
   try {
     return Intl.supportedValuesOf("timeZone");
   } catch {
-    return ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Europe/Zagreb", "Asia/Tokyo"];
+    return [
+      "UTC",
+      "America/New_York",
+      "America/Chicago",
+      "America/Denver",
+      "America/Los_Angeles",
+      "Europe/London",
+      "Europe/Berlin",
+      "Europe/Zagreb",
+      "Asia/Tokyo",
+    ];
   }
 })();
 
 const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-const PROVIDER_META: Record<string, { label: string; icon: string; color: string }> = {
-  discord:  { label: "Discord",  icon: "D", color: "oklch(0.6 0.18 275)" },
+const PROVIDER_META: Record<
+  string,
+  { label: string; icon: string; color: string }
+> = {
+  discord: { label: "Discord", icon: "D", color: "oklch(0.6 0.18 275)" },
   telegram: { label: "Telegram", icon: "T", color: "oklch(0.72 0.13 225)" },
-  ntfy:     { label: "ntfy",     icon: "◉", color: "oklch(0.72 0.17 25)" },
-  gotify:   { label: "Gotify",   icon: "G", color: "oklch(0.72 0.15 85)" },
-  webhook:  { label: "Webhook",  icon: "W", color: "oklch(0.7 0.06 200)" },
+  ntfy: { label: "ntfy", icon: "◉", color: "oklch(0.72 0.17 25)" },
+  gotify: { label: "Gotify", icon: "G", color: "oklch(0.72 0.15 85)" },
+  webhook: { label: "Webhook", icon: "W", color: "oklch(0.7 0.06 200)" },
 };
 
 function providerMeta(id: string) {
-  return PROVIDER_META[id] ?? { label: id.charAt(0).toUpperCase() + id.slice(1), icon: id.charAt(0).toUpperCase(), color: "oklch(0.7 0.06 200)" };
+  return (
+    PROVIDER_META[id] ?? {
+      label: id.charAt(0).toUpperCase() + id.slice(1),
+      icon: id.charAt(0).toUpperCase(),
+      color: "oklch(0.7 0.06 200)",
+    }
+  );
 }
 
 function PushNotificationsSection() {
@@ -49,7 +73,9 @@ function PushNotificationsSection() {
   const [disabling, setDisabling] = useState(false);
   const [pushNotifier, setPushNotifier] = useState<Notifier | null>(null);
   const [hasSubscription, setHasSubscription] = useState(false);
-  const [permissionState, setPermissionState] = useState(Notification.permission);
+  const [permissionState, setPermissionState] = useState(
+    Notification.permission,
+  );
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [testing, setTesting] = useState(false);
@@ -61,16 +87,31 @@ function PushNotificationsSection() {
         getExistingSubscription(),
       ]);
       if (signal?.aborted) return;
-      const webpushNotifier = notifiers.find((n) => n.provider === "webpush") || null;
+      const webpushNotifier =
+        notifiers.find((n) => n.provider === "webpush") || null;
 
       if (webpushNotifier && !webpushNotifier.enabled) {
-        try { await unsubscribeFromPush(); } catch { /* ignore */ }
-        try { await api.deleteNotifier(webpushNotifier.id); } catch { /* ignore */ }
+        try {
+          await unsubscribeFromPush();
+        } catch {
+          /* ignore */
+        }
+        try {
+          await api.deleteNotifier(webpushNotifier.id);
+        } catch {
+          /* ignore */
+        }
         setPushNotifier(null);
         setHasSubscription(false);
-        setErr("Push subscription expired. Please re-enable push notifications.");
+        setErr(
+          "Push subscription expired. Please re-enable push notifications.",
+        );
       } else if (webpushNotifier && !subscription) {
-        try { await api.deleteNotifier(webpushNotifier.id); } catch { /* ignore */ }
+        try {
+          await api.deleteNotifier(webpushNotifier.id);
+        } catch {
+          /* ignore */
+        }
         setPushNotifier(null);
         setHasSubscription(false);
       } else {
@@ -99,7 +140,9 @@ function PushNotificationsSection() {
       const permission = await Notification.requestPermission();
       setPermissionState(permission);
       if (permission !== "granted") {
-        setErr("Notification permission denied. Please enable it in your browser settings.");
+        setErr(
+          "Notification permission denied. Please enable it in your browser settings.",
+        );
         return;
       }
 
@@ -114,10 +157,23 @@ function PushNotificationsSection() {
       });
 
       const testResult = await api.testNotifier(notifier.id);
-      if (!testResult.success && testResult.message.toLowerCase().includes("subscription expired")) {
-        try { await unsubscribeFromPush(); } catch { /* ignore */ }
-        try { await api.deleteNotifier(notifier.id); } catch { /* ignore */ }
-        setErr("Could not establish a working push subscription. Please try clearing site data and re-enabling.");
+      if (
+        !testResult.success &&
+        testResult.message.toLowerCase().includes("subscription expired")
+      ) {
+        try {
+          await unsubscribeFromPush();
+        } catch {
+          /* ignore */
+        }
+        try {
+          await api.deleteNotifier(notifier.id);
+        } catch {
+          /* ignore */
+        }
+        setErr(
+          "Could not establish a working push subscription. Please try clearing site data and re-enabling.",
+        );
         await refresh();
         return;
       }
@@ -158,12 +214,24 @@ function PushNotificationsSection() {
       const result = await api.testNotifier(pushNotifier.id);
       if (result.success) {
         setMsg(result.message);
-      } else if (result.message.toLowerCase().includes("subscription expired")) {
-        try { await unsubscribeFromPush(); } catch { /* ignore */ }
-        try { await api.deleteNotifier(pushNotifier.id); } catch { /* ignore */ }
+      } else if (
+        result.message.toLowerCase().includes("subscription expired")
+      ) {
+        try {
+          await unsubscribeFromPush();
+        } catch {
+          /* ignore */
+        }
+        try {
+          await api.deleteNotifier(pushNotifier.id);
+        } catch {
+          /* ignore */
+        }
         setPushNotifier(null);
         setHasSubscription(false);
-        setErr("Push subscription expired. Please re-enable push notifications.");
+        setErr(
+          "Push subscription expired. Please re-enable push notifications.",
+        );
       } else {
         setErr(result.message);
       }
@@ -182,7 +250,9 @@ function PushNotificationsSection() {
         title={t("profile.pushNotifications")}
         subtitle="Native notifications directly from the browser. Works even when Remindarr is closed."
       >
-        <div className="text-zinc-500 text-sm">{t("profile.loadingPushStatus")}</div>
+        <div className="text-zinc-500 text-sm">
+          {t("profile.loadingPushStatus")}
+        </div>
       </SCard>
     );
   }
@@ -211,7 +281,9 @@ function PushNotificationsSection() {
             aria-hidden="true"
             className={cn(
               "w-14 h-14 rounded-[14px] flex items-center justify-center font-mono font-extrabold text-2xl shrink-0",
-              isEnabled ? "bg-amber-400 text-black" : "bg-zinc-700 text-zinc-400",
+              isEnabled
+                ? "bg-amber-400 text-black"
+                : "bg-zinc-700 text-zinc-400",
             )}
           >
             ◉
@@ -219,7 +291,9 @@ function PushNotificationsSection() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 mb-1 flex-wrap">
               <div className="text-base font-bold text-zinc-100">
-                {isEnabled ? "Push notifications are enabled" : "Get notified about new releases"}
+                {isEnabled
+                  ? "Push notifications are enabled"
+                  : "Get notified about new releases"}
               </div>
               {isEnabled && <SStatusPill kind="ok">Active</SStatusPill>}
             </div>
@@ -234,11 +308,17 @@ function PushNotificationsSection() {
           <div className="flex gap-2 shrink-0">
             {isEnabled ? (
               <>
-                <SButton variant="ghost" onClick={handleTest} disabled={testing}>
+                <SButton
+                  variant="ghost"
+                  onClick={handleTest}
+                  disabled={testing}
+                >
                   {testing ? t("profile.testing") : t("profile.testPush")}
                 </SButton>
                 <SButton danger onClick={handleDisable} disabled={disabling}>
-                  {disabling ? t("profile.disabling") : t("profile.disablePush")}
+                  {disabling
+                    ? t("profile.disabling")
+                    : t("profile.disablePush")}
                 </SButton>
               </>
             ) : (
@@ -279,14 +359,22 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
   });
 
   if (loading) {
-    return <div className="text-zinc-500 text-xs font-mono mt-3">Loading history...</div>;
+    return (
+      <div className="text-zinc-500 text-xs font-mono mt-3">
+        Loading history...
+      </div>
+    );
   }
 
   if (!history || history.rows.length === 0) {
     return (
       <div className="mt-3 pt-3 border-t border-white/[0.04]">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-1.5">Delivery History</div>
-        <div className="text-zinc-500 text-xs font-mono">No deliveries recorded yet.</div>
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-1.5">
+          Delivery History
+        </div>
+        <div className="text-zinc-500 text-xs font-mono">
+          No deliveries recorded yet.
+        </div>
       </div>
     );
   }
@@ -294,24 +382,42 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
   return (
     <div className="mt-3 pt-3 border-t border-white/[0.04]">
       <div className="flex items-center gap-2 mb-2">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Delivery History</div>
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+          Delivery History
+        </div>
         <SStatusPill kind={statusPillKind(history.successRate)}>
           {history.successRate}% 7d
         </SStatusPill>
       </div>
       <div className="space-y-1">
         {history.rows.map((row) => (
-          <div key={row.id} className="flex items-start gap-2 text-xs font-mono py-1 border-b border-white/[0.03] last:border-b-0">
-            <span className={cn(
-              "shrink-0 w-2 h-2 rounded-full mt-0.5",
-              row.status === "success" ? "bg-emerald-400" :
-              row.status === "failure" ? "bg-red-400" : "bg-zinc-500"
-            )} />
-            <span className="text-zinc-500 shrink-0">{formatAttemptedAt(row.attemptedAt)}</span>
-            {row.eventKind && <span className="text-zinc-400 shrink-0">{row.eventKind}</span>}
-            {row.latencyMs != null && <span className="text-zinc-600 shrink-0">{row.latencyMs}ms</span>}
+          <div
+            key={row.id}
+            className="flex items-start gap-2 text-xs font-mono py-1 border-b border-white/[0.03] last:border-b-0"
+          >
+            <span
+              className={cn(
+                "shrink-0 w-2 h-2 rounded-full mt-0.5",
+                row.status === "success"
+                  ? "bg-emerald-400"
+                  : row.status === "failure"
+                    ? "bg-red-400"
+                    : "bg-zinc-500",
+              )}
+            />
+            <span className="text-zinc-500 shrink-0">
+              {formatAttemptedAt(row.attemptedAt)}
+            </span>
+            {row.eventKind && (
+              <span className="text-zinc-400 shrink-0">{row.eventKind}</span>
+            )}
+            {row.latencyMs != null && (
+              <span className="text-zinc-600 shrink-0">{row.latencyMs}ms</span>
+            )}
             {row.status === "failure" && row.errorMessage && (
-              <span className="text-red-400 truncate" title={row.errorMessage}>{row.errorMessage}</span>
+              <span className="text-red-400 truncate" title={row.errorMessage}>
+                {row.errorMessage}
+              </span>
             )}
           </div>
         ))}
@@ -329,7 +435,9 @@ function NotificationsSection() {
   const [testing, setTesting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
-  const [previewContent, setPreviewContent] = useState<Record<string, import("../../api").NotificationContent>>({});
+  const [previewContent, setPreviewContent] = useState<
+    Record<string, import("../../api").NotificationContent>
+  >({});
 
   const [formProvider, setFormProvider] = useState("discord");
   const [formWebhookUrl, setFormWebhookUrl] = useState("");
@@ -340,7 +448,9 @@ function NotificationsSection() {
   const [formChatId, setFormChatId] = useState("");
   const [formTime, setFormTime] = useState("09:00");
   const [formTimezone, setFormTimezone] = useState(USER_TIMEZONE);
-  const [formDigestMode, setFormDigestMode] = useState<"daily" | "weekly" | "off">("daily");
+  const [formDigestMode, setFormDigestMode] = useState<
+    "daily" | "weekly" | "off"
+  >("daily");
   const [formDigestDay, setFormDigestDay] = useState<number>(1);
   const [formStreamingAlerts, setFormStreamingAlerts] = useState(true);
   const [formQuietStart, setFormQuietStart] = useState("");
@@ -361,8 +471,12 @@ function NotificationsSection() {
     queryFn: ({ signal }) => api.getNotifierProviders(signal),
   });
 
-  const notifiers = (notifiersData?.notifiers ?? []).filter((x) => x.provider !== "webpush");
-  const providers = (providersData?.providers ?? []).filter((x) => x !== "webpush");
+  const notifiers = (notifiersData?.notifiers ?? []).filter(
+    (x) => x.provider !== "webpush",
+  );
+  const providers = (providersData?.providers ?? []).filter(
+    (x) => x !== "webpush",
+  );
   const loading = notifiersLoading || providersLoading;
 
   const deleteNotifierMutation = useMutation({
@@ -405,12 +519,25 @@ function NotificationsSection() {
     setFormChatId(n.config.chatId || "");
     setFormTime(n.notify_time);
     setFormTimezone(n.timezone);
-    setFormDigestMode(n.digest_mode === "weekly" ? "weekly" : n.digest_mode === "off" ? "off" : "daily");
+    setFormDigestMode(
+      n.digest_mode === "weekly"
+        ? "weekly"
+        : n.digest_mode === "off"
+          ? "off"
+          : "daily",
+    );
     setFormDigestDay(n.digest_day ?? 1);
     setFormStreamingAlerts(n.streaming_alerts_enabled !== false);
     setFormQuietStart(n.quiet_hours_start ?? "");
     setFormQuietEnd(n.quiet_hours_end ?? "");
-    setFormQuietDays(n.quiet_hours_days ? n.quiet_hours_days.split(",").map(Number).filter((d) => d >= 0 && d <= 6) : []);
+    setFormQuietDays(
+      n.quiet_hours_days
+        ? n.quiet_hours_days
+            .split(",")
+            .map(Number)
+            .filter((d) => d >= 0 && d <= 6)
+        : [],
+    );
     setFormLeavingSoon(n.leaving_soon_alerts_enabled !== false);
     setFormFriendActivity(n.friend_activity_alerts_enabled === true);
     setFormAchievements(n.achievements_enabled === true);
@@ -552,7 +679,15 @@ function NotificationsSection() {
 
   function describeDigest(n: Notifier) {
     if (n.digest_mode === "weekly") {
-      const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][n.digest_day ?? 1];
+      const dayName = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ][n.digest_day ?? 1];
       return `Weekly · ${dayName}`;
     }
     if (n.digest_mode === "off") return "Off · per-event";
@@ -566,7 +701,15 @@ function NotificationsSection() {
         subtitle="How and when you receive alerts"
         action={
           !showForm && (
-            <SButton icon="+" onClick={() => { resetForm(); setShowForm(true); setMsg(""); setErr(""); }}>
+            <SButton
+              icon="+"
+              onClick={() => {
+                resetForm();
+                setShowForm(true);
+                setMsg("");
+                setErr("");
+              }}
+            >
               Add notifier
             </SButton>
           )
@@ -577,7 +720,9 @@ function NotificationsSection() {
           {err && <SMessage kind="error">{err}</SMessage>}
 
           {notifiers.length === 0 && !showForm && (
-            <p className="text-zinc-500 text-sm py-1">No notifiers configured.</p>
+            <p className="text-zinc-500 text-sm py-1">
+              No notifiers configured.
+            </p>
           )}
 
           {notifiers.map((n) => {
@@ -600,7 +745,9 @@ function NotificationsSection() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <div className="text-[15px] font-bold text-zinc-100">{meta.label}</div>
+                      <div className="text-[15px] font-bold text-zinc-100">
+                        {meta.label}
+                      </div>
                       <SStatusPill kind={n.enabled ? "ok" : "neutral"}>
                         {n.enabled ? "Enabled" : "Disabled"}
                       </SStatusPill>
@@ -616,18 +763,36 @@ function NotificationsSection() {
                       onClick={() => handleToggle(n)}
                       disabled={toggling === n.id}
                     >
-                      {toggling === n.id ? "..." : n.enabled ? "Disable" : "Enable"}
+                      {toggling === n.id
+                        ? "..."
+                        : n.enabled
+                          ? "Disable"
+                          : "Enable"}
                     </SButton>
-                    <SButton small onClick={() => handleTest(n.id)} disabled={testing === n.id}>
+                    <SButton
+                      small
+                      onClick={() => handleTest(n.id)}
+                      disabled={testing === n.id}
+                    >
                       {testing === n.id ? "Sending..." : "Test"}
                     </SButton>
-                    <SButton variant="ghost" small onClick={() => handlePreview(n.id)} disabled={previewing === n.id}>
+                    <SButton
+                      variant="ghost"
+                      small
+                      onClick={() => handlePreview(n.id)}
+                      disabled={previewing === n.id}
+                    >
                       {previewing === n.id ? "Loading..." : "Preview"}
                     </SButton>
                     <SButton variant="ghost" small onClick={() => startEdit(n)}>
                       Edit
                     </SButton>
-                    <SButton variant="outline" small danger onClick={() => handleDelete(n.id)}>
+                    <SButton
+                      variant="outline"
+                      small
+                      danger
+                      onClick={() => handleDelete(n.id)}
+                    >
                       Delete
                     </SButton>
                   </div>
@@ -639,12 +804,22 @@ function NotificationsSection() {
                 </div>
                 {previewContent[n.id] && (
                   <div className="mt-3 pt-3 border-t border-white/[0.04]">
-                    <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-2">Content Preview · {previewContent[n.id].date}</div>
-                    <pre className="text-[11px] text-zinc-300 font-mono whitespace-pre-wrap overflow-auto max-h-48 bg-zinc-900 rounded-lg p-3 leading-relaxed">{JSON.stringify(previewContent[n.id], null, 2)}</pre>
+                    <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-2">
+                      Content Preview · {previewContent[n.id].date}
+                    </div>
+                    <pre className="text-[11px] text-zinc-300 font-mono whitespace-pre-wrap overflow-auto max-h-48 bg-zinc-900 rounded-lg p-3 leading-relaxed">
+                      {JSON.stringify(previewContent[n.id], null, 2)}
+                    </pre>
                     <button
                       type="button"
                       className="mt-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 font-mono transition-colors"
-                      onClick={() => setPreviewContent((prev) => { const next = { ...prev }; delete next[n.id]; return next; })}
+                      onClick={() =>
+                        setPreviewContent((prev) => {
+                          const next = { ...prev };
+                          delete next[n.id];
+                          return next;
+                        })
+                      }
                     >
                       Dismiss
                     </button>
@@ -679,7 +854,9 @@ function NotificationsSection() {
                       isActive
                         ? "bg-amber-400 text-black"
                         : "bg-zinc-800 text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1]",
-                      !!editingId && !isActive && "opacity-30 cursor-not-allowed",
+                      !!editingId &&
+                        !isActive &&
+                        "opacity-30 cursor-not-allowed",
                     )}
                   >
                     {meta.label}
@@ -690,7 +867,11 @@ function NotificationsSection() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {formProvider === "discord" && (
-                <SFormRow label="Webhook URL" hint={<span>required</span>} className="sm:col-span-2">
+                <SFormRow
+                  label="Webhook URL"
+                  hint={<span>required</span>}
+                  className="sm:col-span-2"
+                >
                   <SInput
                     type="url"
                     value={formWebhookUrl}
@@ -702,7 +883,9 @@ function NotificationsSection() {
                 </SFormRow>
               )}
 
-              {(formProvider === "ntfy" || formProvider === "webhook" || formProvider === "gotify") && (
+              {(formProvider === "ntfy" ||
+                formProvider === "webhook" ||
+                formProvider === "gotify") && (
                 <SFormRow
                   label={
                     formProvider === "ntfy"
@@ -733,15 +916,25 @@ function NotificationsSection() {
 
               {(formProvider === "ntfy" || formProvider === "gotify") && (
                 <SFormRow
-                  label={formProvider === "gotify" ? "Application token" : "Access token"}
-                  hint={formProvider === "ntfy" ? <span>optional</span> : undefined}
+                  label={
+                    formProvider === "gotify"
+                      ? "Application token"
+                      : "Access token"
+                  }
+                  hint={
+                    formProvider === "ntfy" ? <span>optional</span> : undefined
+                  }
                   className="sm:col-span-2"
                 >
                   <SInput
                     type="password"
                     value={formToken}
                     onChange={setFormToken}
-                    placeholder={formProvider === "gotify" ? "App token from Gotify" : "Bearer token (leave empty for public topics)"}
+                    placeholder={
+                      formProvider === "gotify"
+                        ? "App token from Gotify"
+                        : "Bearer token (leave empty for public topics)"
+                    }
                     required={formProvider === "gotify"}
                   />
                 </SFormRow>
@@ -785,7 +978,13 @@ function NotificationsSection() {
               )}
 
               <SFormRow label="Notification time">
-                <SInput type="time" value={formTime} onChange={setFormTime} mono required />
+                <SInput
+                  type="time"
+                  value={formTime}
+                  onChange={setFormTime}
+                  mono
+                  required
+                />
               </SFormRow>
               <SFormRow label="Timezone">
                 <SInput
@@ -848,24 +1047,48 @@ function NotificationsSection() {
 
             <SDivider label="Quiet hours" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-2">
-              <SFormRow label="Start (do not send after)" hint={<span>optional</span>}>
-                <SInput type="time" value={formQuietStart} onChange={setFormQuietStart} mono />
+              <SFormRow
+                label="Start (do not send after)"
+                hint={<span>optional</span>}
+              >
+                <SInput
+                  type="time"
+                  value={formQuietStart}
+                  onChange={setFormQuietStart}
+                  mono
+                />
               </SFormRow>
-              <SFormRow label="End (resume sending at)" hint={<span>optional</span>}>
-                <SInput type="time" value={formQuietEnd} onChange={setFormQuietEnd} mono />
+              <SFormRow
+                label="End (resume sending at)"
+                hint={<span>optional</span>}
+              >
+                <SInput
+                  type="time"
+                  value={formQuietEnd}
+                  onChange={setFormQuietEnd}
+                  mono
+                />
               </SFormRow>
             </div>
             <div className="mb-1">
               <SLabel>Days active</SLabel>
-              <div className="text-[11px] text-zinc-500 mb-2">Leave all unchecked to apply every day</div>
+              <div className="text-[11px] text-zinc-500 mb-2">
+                Leave all unchecked to apply every day
+              </div>
               <div className="flex gap-1.5 flex-wrap">
-                {(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const).map((day, idx) => (
+                {(
+                  ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
+                ).map((day, idx) => (
                   <button
                     key={day}
                     type="button"
-                    onClick={() => setFormQuietDays((prev) =>
-                      prev.includes(idx) ? prev.filter((d) => d !== idx) : [...prev, idx]
-                    )}
+                    onClick={() =>
+                      setFormQuietDays((prev) =>
+                        prev.includes(idx)
+                          ? prev.filter((d) => d !== idx)
+                          : [...prev, idx],
+                      )
+                    }
                     className={cn(
                       "px-2.5 py-1 rounded-md text-[12px] font-semibold transition-colors cursor-pointer",
                       formQuietDays.includes(idx)
@@ -907,7 +1130,11 @@ function NotificationsSection() {
 
             <div className="flex gap-2 mt-5 flex-wrap">
               <SButton type="submit" disabled={saving}>
-                {saving ? "Saving..." : editingId ? "Update notifier" : "Create notifier"}
+                {saving
+                  ? "Saving..."
+                  : editingId
+                    ? "Update notifier"
+                    : "Create notifier"}
               </SButton>
               <SButton type="button" variant="ghost" onClick={resetForm}>
                 Cancel
@@ -922,8 +1149,14 @@ function NotificationsSection() {
 
 const DEPARTURE_LEAD_DAY_OPTIONS = [1, 3, 7, 14, 30];
 
-function DepartureAlertsControls({ initialData }: { initialData: UserSettings }) {
-  const [departuresEnabled, setDeparturesEnabled] = useState(initialData.streamingDeparturesEnabled);
+function DepartureAlertsControls({
+  initialData,
+}: {
+  initialData: UserSettings;
+}) {
+  const [departuresEnabled, setDeparturesEnabled] = useState(
+    initialData.streamingDeparturesEnabled,
+  );
   const [leadDays, setLeadDays] = useState(initialData.departureAlertLeadDays);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -933,7 +1166,9 @@ function DepartureAlertsControls({ initialData }: { initialData: UserSettings })
     setErr("");
     setDeparturesEnabled(val);
     try {
-      const updated = await api.updateDepartureAlertSettings({ streamingDeparturesEnabled: val });
+      const updated = await api.updateDepartureAlertSettings({
+        streamingDeparturesEnabled: val,
+      });
       setDeparturesEnabled(updated.streamingDeparturesEnabled);
       setMsg("Settings saved");
     } catch (e: unknown) {
@@ -946,7 +1181,9 @@ function DepartureAlertsControls({ initialData }: { initialData: UserSettings })
     setErr("");
     setLeadDays(val);
     try {
-      const updated = await api.updateDepartureAlertSettings({ departureAlertLeadDays: val });
+      const updated = await api.updateDepartureAlertSettings({
+        departureAlertLeadDays: val,
+      });
       setLeadDays(updated.departureAlertLeadDays);
       setMsg("Settings saved");
     } catch (e: unknown) {
@@ -955,7 +1192,10 @@ function DepartureAlertsControls({ initialData }: { initialData: UserSettings })
   }
 
   return (
-    <SCard title="Streaming departure alerts" subtitle="Get notified when a tracked title is leaving a streaming service.">
+    <SCard
+      title="Streaming departure alerts"
+      subtitle="Get notified when a tracked title is leaving a streaming service."
+    >
       <div className="space-y-4">
         {msg && <SMessage kind="success">{msg}</SMessage>}
         {err && <SMessage kind="error">{err}</SMessage>}
@@ -975,7 +1215,9 @@ function DepartureAlertsControls({ initialData }: { initialData: UserSettings })
               className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
             >
               {DEPARTURE_LEAD_DAY_OPTIONS.map((d) => (
-                <option key={d} value={d}>{d} day{d !== 1 ? "s" : ""} before departure</option>
+                <option key={d} value={d}>
+                  {d} day{d !== 1 ? "s" : ""} before departure
+                </option>
               ))}
             </select>
             <div className="text-[11px] text-zinc-500 mt-1 font-mono">
@@ -996,7 +1238,10 @@ function DepartureAlertsSection() {
 
   if (loading) {
     return (
-      <SCard title="Streaming departure alerts" subtitle="Get notified when a tracked title is leaving a streaming service.">
+      <SCard
+        title="Streaming departure alerts"
+        subtitle="Get notified when a tracked title is leaving a streaming service."
+      >
         <div className="text-zinc-500 text-sm">Loading...</div>
       </SCard>
     );

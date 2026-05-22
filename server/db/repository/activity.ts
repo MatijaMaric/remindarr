@@ -49,7 +49,9 @@ export interface ActivityEvent {
   status?: UserStatus | null;
 }
 
-export type ActivityKindVisibilityMap = Partial<Record<ActivityType, "public" | "friends_only" | "private">>;
+export type ActivityKindVisibilityMap = Partial<
+  Record<ActivityType, "public" | "friends_only" | "private">
+>;
 
 interface ActivityQueryOptions {
   limit?: number;
@@ -78,7 +80,10 @@ interface ActivityQueryOptions {
  * Cursor pagination beats OFFSET here because new events get inserted between
  * pages otherwise.
  */
-export async function getUserActivity(userId: string, options: ActivityQueryOptions = {}) {
+export async function getUserActivity(
+  userId: string,
+  options: ActivityQueryOptions = {},
+) {
   return traceDbQuery("getUserActivity", async () => {
     const limit = Math.max(1, Math.min(options.limit ?? 20, 50));
     const before = options.before ?? null;
@@ -106,7 +111,10 @@ export async function getUserActivity(userId: string, options: ActivityQueryOpti
       .all();
 
     const episodeRatingFilters = before
-      ? and(eq(episodeRatings.userId, userId), lt(episodeRatings.createdAt, before))
+      ? and(
+          eq(episodeRatings.userId, userId),
+          lt(episodeRatings.createdAt, before),
+        )
       : eq(episodeRatings.userId, userId);
     const episodeRatingsRows = await db
       .select({
@@ -132,7 +140,10 @@ export async function getUserActivity(userId: string, options: ActivityQueryOpti
       .all();
 
     const watchedTitleFilters = before
-      ? and(eq(watchedTitles.userId, userId), lt(watchedTitles.watchedAt, before))
+      ? and(
+          eq(watchedTitles.userId, userId),
+          lt(watchedTitles.watchedAt, before),
+        )
       : eq(watchedTitles.userId, userId);
     const watchedTitlesRows = await db
       .select({
@@ -151,7 +162,10 @@ export async function getUserActivity(userId: string, options: ActivityQueryOpti
       .all();
 
     const watchedEpisodeFilters = before
-      ? and(eq(watchedEpisodes.userId, userId), lt(watchedEpisodes.watchedAt, before))
+      ? and(
+          eq(watchedEpisodes.userId, userId),
+          lt(watchedEpisodes.watchedAt, before),
+        )
       : eq(watchedEpisodes.userId, userId);
     const watchedEpisodesRows = await db
       .select({
@@ -175,7 +189,11 @@ export async function getUserActivity(userId: string, options: ActivityQueryOpti
       .all();
 
     const trackedFilters = before
-      ? and(eq(tracked.userId, userId), lt(tracked.trackedAt, before), eq(tracked.public, 1))
+      ? and(
+          eq(tracked.userId, userId),
+          lt(tracked.trackedAt, before),
+          eq(tracked.public, 1),
+        )
       : and(eq(tracked.userId, userId), eq(tracked.public, 1));
     const trackedRows = await db
       .select({
@@ -195,7 +213,10 @@ export async function getUserActivity(userId: string, options: ActivityQueryOpti
       .all();
 
     const recommendationFilters = before
-      ? and(eq(recommendations.fromUserId, userId), lt(recommendations.createdAt, before))
+      ? and(
+          eq(recommendations.fromUserId, userId),
+          lt(recommendations.createdAt, before),
+        )
       : eq(recommendations.fromUserId, userId);
     const recommendationRows = await db
       .select({
@@ -339,14 +360,16 @@ export async function getUserActivity(userId: string, options: ActivityQueryOpti
       if (kindVisibility && viewerRelation && viewerRelation !== "self") {
         const kindVis = kindVisibility[event.type];
         if (kindVis === "private") return false;
-        if (kindVis === "friends_only" && viewerRelation !== "friend") return false;
+        if (kindVis === "friends_only" && viewerRelation !== "friend")
+          return false;
       }
       return true;
     });
 
     const page = filtered.slice(0, limit);
     const hasMore = filtered.length > limit;
-    const nextCursor = hasMore && page.length > 0 ? page[page.length - 1].created_at : null;
+    const nextCursor =
+      hasMore && page.length > 0 ? page[page.length - 1].created_at : null;
 
     return {
       activities: page,

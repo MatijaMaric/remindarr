@@ -2,7 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import * as api from "../../api";
-import type { HomepageSection, AppearanceSettings, AccentColor, Density } from "../../types";
+import type {
+  HomepageSection,
+  AppearanceSettings,
+  AccentColor,
+  Density,
+} from "../../types";
 import { DEFAULT_HOMEPAGE_LAYOUT } from "../../types";
 import { GripVertical, Eye, EyeOff } from "lucide-react";
 import ThemePicker from "../../components/ThemePicker";
@@ -41,7 +46,11 @@ function ThemeSection() {
   );
 }
 
-function AppearanceControls({ initialData }: { initialData: AppearanceSettings }) {
+function AppearanceControls({
+  initialData,
+}: {
+  initialData: AppearanceSettings;
+}) {
   const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [settings, setSettings] = useState<AppearanceSettings>(initialData);
@@ -51,25 +60,29 @@ function AppearanceControls({ initialData }: { initialData: AppearanceSettings }
   // Apply appearance and theme on mount from server-fetched data
   useEffect(() => {
     applyAppearance(initialData);
-    if (initialData.themeVariant) setTheme(initialData.themeVariant as Parameters<typeof setTheme>[0]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (initialData.themeVariant)
+      setTheme(initialData.themeVariant as Parameters<typeof setTheme>[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount-only — initialData is stable on first render; setTheme identity not tracked
 
-  const save = useCallback(async (patch: Partial<AppearanceSettings>) => {
-    const next = { ...settings, ...patch };
-    setSettings(next);
-    applyAppearance(next);
-    try {
-      const updated = await api.updateAppearanceSettings(patch);
-      setSettings(updated);
-      applyAppearance(updated);
-      setSaved(true);
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // silently ignore
-    }
-  }, [settings]);
+  const save = useCallback(
+    async (patch: Partial<AppearanceSettings>) => {
+      const next = { ...settings, ...patch };
+      setSettings(next);
+      applyAppearance(next);
+      try {
+        const updated = await api.updateAppearanceSettings(patch);
+        setSettings(updated);
+        applyAppearance(updated);
+        setSaved(true);
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => setSaved(false), 2000);
+      } catch {
+        // silently ignore
+      }
+    },
+    [settings],
+  );
 
   function handleAccentChange(accent: AccentColor) {
     save({ accentColor: accent });
@@ -85,9 +98,14 @@ function AppearanceControls({ initialData }: { initialData: AppearanceSettings }
         title={t("settings.accent.title")}
         subtitle={t("settings.accent.subtitle")}
       >
-        <AccentPicker value={settings.accentColor} onChange={handleAccentChange} />
+        <AccentPicker
+          value={settings.accentColor}
+          onChange={handleAccentChange}
+        />
         <div className="mt-3 min-h-[18px] font-mono text-[11px]">
-          {saved && <span className="text-emerald-400">{t("settings.saved")}</span>}
+          {saved && (
+            <span className="text-emerald-400">{t("settings.saved")}</span>
+          )}
         </div>
       </SCard>
 
@@ -95,7 +113,10 @@ function AppearanceControls({ initialData }: { initialData: AppearanceSettings }
         title={t("settings.density.title")}
         subtitle={t("settings.density.subtitle")}
       >
-        <DensityPicker value={settings.density} onChange={handleDensityChange} />
+        <DensityPicker
+          value={settings.density}
+          onChange={handleDensityChange}
+        />
       </SCard>
 
       <SCard
@@ -146,7 +167,9 @@ function AppearanceSection() {
 
 function HomepageLayoutSection() {
   const { t } = useTranslation();
-  const [layout, setLayout] = useState<HomepageSection[]>(DEFAULT_HOMEPAGE_LAYOUT);
+  const [layout, setLayout] = useState<HomepageSection[]>(
+    DEFAULT_HOMEPAGE_LAYOUT,
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const dragIndexRef = useRef<number | null>(null);
@@ -178,7 +201,9 @@ function HomepageLayoutSection() {
   }
 
   function toggleEnabled(id: string) {
-    const updated = layout.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
+    const updated = layout.map((s) =>
+      s.id === id ? { ...s, enabled: !s.enabled } : s,
+    );
     setLayout(updated);
     save(updated);
   }
@@ -240,7 +265,11 @@ function HomepageLayoutSection() {
             <button
               onClick={() => toggleEnabled(section.id)}
               className="text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer p-1"
-              aria-label={section.enabled ? t("settings.homepage.hideSection") : t("settings.homepage.showSection")}
+              aria-label={
+                section.enabled
+                  ? t("settings.homepage.hideSection")
+                  : t("settings.homepage.showSection")
+              }
             >
               {section.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
@@ -248,8 +277,14 @@ function HomepageLayoutSection() {
         ))}
       </div>
       <div className="mt-3 min-h-[18px] font-mono text-[11px]">
-        {saved && <span className="text-emerald-400">{t("settings.homepage.saved")}</span>}
-        {saving && !saved && <span className="text-zinc-400">{t("settings.homepage.saving")}</span>}
+        {saved && (
+          <span className="text-emerald-400">
+            {t("settings.homepage.saved")}
+          </span>
+        )}
+        {saving && !saved && (
+          <span className="text-zinc-400">{t("settings.homepage.saving")}</span>
+        )}
       </div>
     </SCard>
   );
@@ -274,7 +309,10 @@ function CrowdedWeekSection() {
     }
   }, [data]);
 
-  async function save(updates: { crowdedWeekBadgeEnabled?: number; crowdedWeekThreshold?: number }) {
+  async function save(updates: {
+    crowdedWeekBadgeEnabled?: number;
+    crowdedWeekThreshold?: number;
+  }) {
     setSaving(true);
     setSaved(false);
     try {
@@ -321,14 +359,14 @@ function CrowdedWeekSection() {
             aria-pressed={enabled}
             className={cn(
               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
-              enabled ? "bg-amber-500" : "bg-zinc-700"
+              enabled ? "bg-amber-500" : "bg-zinc-700",
             )}
           >
             <span
               aria-hidden="true"
               className={cn(
                 "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform",
-                enabled ? "translate-x-5" : "translate-x-0"
+                enabled ? "translate-x-5" : "translate-x-0",
               )}
             />
           </button>
@@ -336,7 +374,10 @@ function CrowdedWeekSection() {
 
         {enabled && (
           <div className="flex items-center justify-between">
-            <label htmlFor="crowded-week-threshold" className="text-sm font-medium text-zinc-200">
+            <label
+              htmlFor="crowded-week-threshold"
+              className="text-sm font-medium text-zinc-200"
+            >
               {t("settings.crowdedWeek.thresholdLabel")}
             </label>
             <input
@@ -353,8 +394,16 @@ function CrowdedWeekSection() {
         )}
       </div>
       <div className="mt-3 min-h-[18px] font-mono text-[11px]">
-        {saved && <span className="text-emerald-400">{t("settings.crowdedWeek.saved")}</span>}
-        {saving && !saved && <span className="text-zinc-400">{t("settings.crowdedWeek.saving")}</span>}
+        {saved && (
+          <span className="text-emerald-400">
+            {t("settings.crowdedWeek.saved")}
+          </span>
+        )}
+        {saving && !saved && (
+          <span className="text-zinc-400">
+            {t("settings.crowdedWeek.saving")}
+          </span>
+        )}
       </div>
     </SCard>
   );

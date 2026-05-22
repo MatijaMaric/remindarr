@@ -71,7 +71,10 @@ export default function KeyboardShortcutsModal({ open, onClose }: Props) {
         </div>
         <div className="space-y-3">
           {SHORTCUTS.map((s) => (
-            <div key={s.key} className="flex items-center justify-between gap-4">
+            <div
+              key={s.key}
+              className="flex items-center justify-between gap-4"
+            >
               <span className="text-sm text-zinc-300">{t(s.descKey)}</span>
               <kbd className="shrink-0 text-xs font-mono bg-zinc-800 border border-white/[0.1] px-2 py-0.5 rounded text-zinc-300">
                 {s.key}

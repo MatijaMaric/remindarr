@@ -15,7 +15,9 @@ export class BreakerOpenError extends Error {
     public readonly host: string,
     public readonly openUntil: number,
   ) {
-    super(`Circuit breaker open for ${host} until ${new Date(openUntil).toISOString()}`);
+    super(
+      `Circuit breaker open for ${host} until ${new Date(openUntil).toISOString()}`,
+    );
   }
 }
 
@@ -44,7 +46,8 @@ export class CircuitBreaker {
   ) {
     this.threshold = opts?.failureThreshold ?? FAILURE_THRESHOLD;
     this.windowMs = opts?.failureWindowMs ?? FAILURE_WINDOW_MS;
-    this.defaultOpenMs = opts?.defaultOpenDurationMs ?? DEFAULT_OPEN_DURATION_MS;
+    this.defaultOpenMs =
+      opts?.defaultOpenDurationMs ?? DEFAULT_OPEN_DURATION_MS;
     this.now = opts?.now ?? (() => Date.now());
   }
 
@@ -105,7 +108,10 @@ export class CircuitBreaker {
     this.state = to;
     circuitBreakerStateChangesTotal.inc({ host: this.host, from, to });
     if (to === "open") {
-      log.warn("Circuit breaker opened", { host: this.host, openUntil: new Date(this.openUntil).toISOString() });
+      log.warn("Circuit breaker opened", {
+        host: this.host,
+        openUntil: new Date(this.openUntil).toISOString(),
+      });
     } else if (to === "half-open") {
       log.info("Circuit breaker half-open, probing", { host: this.host });
     } else if (to === "closed") {

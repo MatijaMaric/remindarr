@@ -25,7 +25,9 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-export default function MonthlyActivityCard({ monthly }: MonthlyActivityCardProps) {
+export default function MonthlyActivityCard({
+  monthly,
+}: MonthlyActivityCardProps) {
   const { t } = useTranslation();
   const totals = useMemo(() => {
     let episodes = 0;
@@ -52,11 +54,21 @@ export default function MonthlyActivityCard({ monthly }: MonthlyActivityCardProp
           </div>
         </div>
         <div className="flex gap-3.5 text-[11px] text-zinc-400">
-          <Legend color={EPISODE_COLOR} label={t("userProfile.dossier.legendEpisodes")} />
-          <Legend color={MOVIE_COLOR} label={t("userProfile.dossier.legendMovies")} />
+          <Legend
+            color={EPISODE_COLOR}
+            label={t("userProfile.dossier.legendEpisodes")}
+          />
+          <Legend
+            color={MOVIE_COLOR}
+            label={t("userProfile.dossier.legendMovies")}
+          />
         </div>
       </div>
-      <MonthlyBars monthly={monthly} episodeColor={EPISODE_COLOR} movieColor={MOVIE_COLOR} />
+      <MonthlyBars
+        monthly={monthly}
+        episodeColor={EPISODE_COLOR}
+        movieColor={MOVIE_COLOR}
+      />
     </DossierCard>
   );
 }

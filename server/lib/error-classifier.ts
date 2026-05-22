@@ -1,4 +1,9 @@
-export type ErrorCategory = "db" | "external_api" | "auth" | "validation" | "unknown";
+export type ErrorCategory =
+  | "db"
+  | "external_api"
+  | "auth"
+  | "validation"
+  | "unknown";
 
 export function classifyError(err: unknown): ErrorCategory {
   if (err instanceof Error) {
@@ -13,7 +18,8 @@ export function classifyError(err: unknown): ErrorCategory {
       return "db";
     }
     // External API: fetch failures or messages mentioning external services
-    if (err.constructor.name === "TypeError" && msg.includes("fetch")) return "external_api";
+    if (err.constructor.name === "TypeError" && msg.includes("fetch"))
+      return "external_api";
     if (
       msg.includes("tmdb") ||
       msg.includes("plex") ||
@@ -31,7 +37,8 @@ export function classifyError(err: unknown): ErrorCategory {
       return "auth";
     }
     // Validation errors (zod, etc.)
-    if (err.constructor.name === "ZodError" || msg.includes("validation")) return "validation";
+    if (err.constructor.name === "ZodError" || msg.includes("validation"))
+      return "validation";
   }
   return "unknown";
 }

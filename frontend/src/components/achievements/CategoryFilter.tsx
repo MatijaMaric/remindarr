@@ -46,7 +46,7 @@ export function CategoryFilter({ categories, className }: CategoryFilterProps) {
           "px-3 py-1 rounded-full text-xs font-semibold transition-colors",
           activeCat === null
             ? "bg-white/10 text-white"
-            : "text-zinc-400 hover:text-white hover:bg-white/5"
+            : "text-zinc-400 hover:text-white hover:bg-white/5",
         )}
       >
         All
@@ -59,7 +59,7 @@ export function CategoryFilter({ categories, className }: CategoryFilterProps) {
             "px-3 py-1 rounded-full text-xs font-semibold transition-colors",
             activeCat === cat
               ? "bg-white/10 text-white"
-              : "text-zinc-400 hover:text-white hover:bg-white/5"
+              : "text-zinc-400 hover:text-white hover:bg-white/5",
           )}
         >
           {CATEGORY_LABELS[cat]}

@@ -1,8 +1,20 @@
 import { logger } from "../logger";
-import { getLibrarySections, getAllMoviesInSection, getShowsInSection, getPlexMetadataSlug, PlexAuthError } from "./client";
+import {
+  getLibrarySections,
+  getAllMoviesInSection,
+  getShowsInSection,
+  getPlexMetadataSlug,
+  PlexAuthError,
+} from "./client";
 import { parsePlexGuids, parseLegacyGuid, toRemindarrTitleId } from "./guid";
-import { upsertPlexLibraryItems, deleteStaleLibraryItems } from "../db/repository/plex-library";
-import { updateIntegrationSyncStatus, disableIntegration } from "../db/repository";
+import {
+  upsertPlexLibraryItems,
+  deleteStaleLibraryItems,
+} from "../db/repository/plex-library";
+import {
+  updateIntegrationSyncStatus,
+  disableIntegration,
+} from "../db/repository";
 import type { PlexConfig } from "../db/repository/integrations";
 
 const log = logger.child({ module: "plex-library-sync" });
@@ -19,7 +31,9 @@ type IntegrationRow = {
   config: PlexConfig;
 };
 
-export async function syncPlexLibrary(integration: IntegrationRow): Promise<LibrarySyncResult> {
+export async function syncPlexLibrary(
+  integration: IntegrationRow,
+): Promise<LibrarySyncResult> {
   const { id: integrationId, user_id: userId, config } = integration;
   const { plexToken, serverUrl } = config;
 
@@ -34,14 +48,18 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
     // ─── Scan movie sections ───────────────────────────────────────────────
     const movieSections = sections.filter((s) => s.type === "movie");
     for (const section of movieSections) {
-      const movies = await getAllMoviesInSection(serverUrl, plexToken, section.key);
+      const movies = await getAllMoviesInSection(
+        serverUrl,
+        plexToken,
+        section.key,
+      );
       const slugResults = await Promise.allSettled(
         movies.map((item) => {
           const guids = parsePlexGuids(item.Guid) || parseLegacyGuid(item.guid);
           return guids.tmdbId
             ? getPlexMetadataSlug(guids.tmdbId.toString(), "movie", plexToken)
             : Promise.resolve(null);
-        })
+        }),
       );
       for (let i = 0; i < movies.length; i++) {
         const item = movies[i];
@@ -50,7 +68,8 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
         const titleId = toRemindarrTitleId("movie", guids.tmdbId);
         currentTitleIds.push(titleId);
         const slugResult = slugResults[i];
-        const slug = slugResult.status === "fulfilled" ? slugResult.value : null;
+        const slug =
+          slugResult.status === "fulfilled" ? slugResult.value : null;
         itemsToUpsert.push({
           integrationId,
           userId,
@@ -73,7 +92,7 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
           return guids.tmdbId
             ? getPlexMetadataSlug(guids.tmdbId.toString(), "show", plexToken)
             : Promise.resolve(null);
-        })
+        }),
       );
       for (let i = 0; i < shows.length; i++) {
         const item = shows[i];
@@ -82,7 +101,8 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
         const titleId = toRemindarrTitleId("show", guids.tmdbId);
         currentTitleIds.push(titleId);
         const slugResult = slugResults[i];
-        const slug = slugResult.status === "fulfilled" ? slugResult.value : null;
+        const slug =
+          slugResult.status === "fulfilled" ? slugResult.value : null;
         itemsToUpsert.push({
           integrationId,
           userId,
@@ -97,9 +117,17 @@ export async function syncPlexLibrary(integration: IntegrationRow): Promise<Libr
 
     // Upsert all items, then remove stale ones in a single pass
     await upsertPlexLibraryItems(itemsToUpsert);
-    const itemsRemoved = await deleteStaleLibraryItems(integrationId, currentTitleIds);
+    const itemsRemoved = await deleteStaleLibraryItems(
+      integrationId,
+      currentTitleIds,
+    );
 
-    log.info("Plex library sync complete", { integrationId, moviesAdded, showsAdded, itemsRemoved });
+    log.info("Plex library sync complete", {
+      integrationId,
+      moviesAdded,
+      showsAdded,
+      itemsRemoved,
+    });
     return { moviesAdded, showsAdded, itemsRemoved };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);

@@ -16,7 +16,11 @@ interface Props {
   onClear?: () => void;
 }
 
-export default function UserSearchDropdown({ onSelect, selected, onClear }: Props) {
+export default function UserSearchDropdown({
+  onSelect,
+  selected,
+  onClear,
+}: Props) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,20 +40,24 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
           username: u.username,
           displayName: u.display_name ?? null,
           image: u.image,
-        }))
+        })),
       ),
     placeholderData: (prev) => prev,
     staleTime: 30_000,
   });
 
   const results = data ?? [];
-  const open = query.length >= 1 && debouncedQuery.length >= 1 && results.length > 0;
+  const open =
+    query.length >= 1 && debouncedQuery.length >= 1 && results.length > 0;
   const loading = isFetching;
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setQuery("");
       }
     }
@@ -72,9 +80,13 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white truncate">{selected.displayName || selected.username}</div>
+          <div className="text-sm font-medium text-white truncate">
+            {selected.displayName || selected.username}
+          </div>
           {selected.displayName && (
-            <div className="text-xs text-zinc-400 truncate">@{selected.username}</div>
+            <div className="text-xs text-zinc-400 truncate">
+              @{selected.username}
+            </div>
           )}
         </div>
         <button
@@ -103,7 +115,10 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
       </div>
 
       {open && (
-        <div className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-48 overflow-y-auto" data-testid="user-search-results">
+        <div
+          className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-48 overflow-y-auto"
+          data-testid="user-search-results"
+        >
           {results.map((user) => (
             <button
               key={user.id}
@@ -126,9 +141,13 @@ export default function UserSearchDropdown({ onSelect, selected, onClear }: Prop
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white truncate">{user.displayName || user.username}</div>
+                <div className="text-sm font-medium text-white truncate">
+                  {user.displayName || user.username}
+                </div>
                 {user.displayName && (
-                  <div className="text-xs text-zinc-400 truncate">@{user.username}</div>
+                  <div className="text-xs text-zinc-400 truncate">
+                    @{user.username}
+                  </div>
                 )}
               </div>
             </button>

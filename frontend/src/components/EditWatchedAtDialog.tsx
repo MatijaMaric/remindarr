@@ -28,10 +28,19 @@ function toYMD(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default function EditWatchedAtDialog({ open, onClose, entryId, currentWatchedAt, anchorDate, onUpdated }: Props) {
+export default function EditWatchedAtDialog({
+  open,
+  onClose,
+  entryId,
+  currentWatchedAt,
+  anchorDate,
+  onUpdated,
+}: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [selected, setSelected] = useState<Date | undefined>(toDate(currentWatchedAt));
+  const [selected, setSelected] = useState<Date | undefined>(
+    toDate(currentWatchedAt),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +82,9 @@ export default function EditWatchedAtDialog({ open, onClose, entryId, currentWat
   return (
     <AlertDialog open={open} onOpenChange={(o) => !o && onClose()}>
       <AlertDialogPopup className="max-w-sm space-y-4">
-        <AlertDialogTitle>{t("watchedAt.editTitle", "Edit watched date")}</AlertDialogTitle>
+        <AlertDialogTitle>
+          {t("watchedAt.editTitle", "Edit watched date")}
+        </AlertDialogTitle>
 
         <div className="flex flex-wrap gap-2">
           <button

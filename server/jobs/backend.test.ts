@@ -8,7 +8,15 @@
  * - enqueueOnce always uses D1 (one-time migration semantics)
  * - CRON_BY_EXPRESSION lookup table
  */
-import { describe, it, expect, beforeEach, afterAll, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  mock,
+  spyOn,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { getDb, jobs } from "../db/schema";
 import { CONFIG } from "../config";
@@ -29,17 +37,38 @@ import {
 
 // ─── Processor mocks (D1 path) ────────────────────────────────────────────────
 
-const mockEnqueueCronJob = spyOn(processorModule, "enqueueCronJob").mockResolvedValue(undefined);
-const mockProcessPendingJobs = spyOn(processorModule, "processPendingJobs").mockResolvedValue(0);
-const mockRecoverStaleJobs = spyOn(processorModule, "recoverStaleJobs").mockResolvedValue(0);
-const mockEnqueueOneTimeMigration = spyOn(processorModule, "enqueueOneTimeMigration").mockResolvedValue(undefined);
-const mockCleanupOldJobs = spyOn(processorModule, "cleanupOldJobs").mockResolvedValue(0);
+const mockEnqueueCronJob = spyOn(
+  processorModule,
+  "enqueueCronJob",
+).mockResolvedValue(undefined);
+const mockProcessPendingJobs = spyOn(
+  processorModule,
+  "processPendingJobs",
+).mockResolvedValue(0);
+const mockRecoverStaleJobs = spyOn(
+  processorModule,
+  "recoverStaleJobs",
+).mockResolvedValue(0);
+const mockEnqueueOneTimeMigration = spyOn(
+  processorModule,
+  "enqueueOneTimeMigration",
+).mockResolvedValue(undefined);
+const mockCleanupOldJobs = spyOn(
+  processorModule,
+  "cleanupOldJobs",
+).mockResolvedValue(0);
 
 // ─── DO stub factory ──────────────────────────────────────────────────────────
 
-interface FetchCall { path: string; method: string; body: unknown }
+interface FetchCall {
+  path: string;
+  method: string;
+  body: unknown;
+}
 
-function makeFakeDoNamespace(onFetch?: (path: string, method: string, body: unknown) => unknown) {
+function makeFakeDoNamespace(
+  onFetch?: (path: string, method: string, body: unknown) => unknown,
+) {
   const calls: FetchCall[] = [];
 
   const stub = {
@@ -166,7 +195,11 @@ describe("enqueueAdhoc (D1 mode)", () => {
   it("inserts a row into the D1 jobs table", async () => {
     const db = getDb();
     await runWithDb(db, async () => {
-      await enqueueAdhoc("sync-show-episodes", { titleId: 42, tmdbId: 999, title: "Test" });
+      await enqueueAdhoc("sync-show-episodes", {
+        titleId: 42,
+        tmdbId: 999,
+        title: "Test",
+      });
     });
     const rows = await db.select().from(jobs).all();
     expect(rows).toHaveLength(1);
@@ -190,13 +223,19 @@ describe("armCron (DO mode)", () => {
   it("sends POST /arm to the named DO", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace();
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     await armCron(env, "sync-titles", "0 3 * * *");
 
     expect(ns.calls).toHaveLength(1);
     expect(ns.calls[0].path).toBe("/arm");
-    expect(ns.calls[0].body).toMatchObject({ name: "sync-titles", cron: "0 3 * * *" });
+    expect(ns.calls[0].body).toMatchObject({
+      name: "sync-titles",
+      cron: "0 3 * * *",
+    });
     expect(mockEnqueueCronJob).not.toHaveBeenCalled();
   });
 });
@@ -214,10 +253,17 @@ describe("enqueueAdhoc (DO mode)", () => {
   it("routes sync-show-episodes to a partitioned DO (by titleId)", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => ({ id: 1 }));
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     await runWithEnv(env, async () => {
-      await enqueueAdhoc("sync-show-episodes", { titleId: 42, tmdbId: 999, title: "Test" });
+      await enqueueAdhoc("sync-show-episodes", {
+        titleId: 42,
+        tmdbId: 999,
+        title: "Test",
+      });
     });
 
     expect(ns.calls).toHaveLength(1);
@@ -231,10 +277,16 @@ describe("enqueueAdhoc (DO mode)", () => {
   it("routes backfill-title-offers to a partitioned DO (by tmdbId)", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => ({ id: 1 }));
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     await runWithEnv(env, async () => {
-      await enqueueAdhoc("backfill-title-offers", { tmdbId: 77, objectType: "MOVIE" });
+      await enqueueAdhoc("backfill-title-offers", {
+        tmdbId: 77,
+        objectType: "MOVIE",
+      });
     });
 
     expect(ns.calls).toHaveLength(1);
@@ -245,7 +297,10 @@ describe("enqueueAdhoc (DO mode)", () => {
   it("routes a non-partitioned job to a singleton DO", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => ({ id: 1 }));
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     await runWithEnv(env, async () => {
       await enqueueAdhoc("sync-plex-library");
@@ -271,7 +326,10 @@ describe("scheduled() bootstrap pattern (DO mode)", () => {
       fetchCalls.push({ path, method, body });
       return { ok: true };
     });
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     // Mirror what worker.ts scheduled() now does
     for (const { name, cron } of CRON_JOBS) {
@@ -282,7 +340,10 @@ describe("scheduled() bootstrap pattern (DO mode)", () => {
     expect(armCalls).toHaveLength(CRON_JOBS.length);
     for (const { name, cron } of CRON_JOBS) {
       expect(armCalls).toContainEqual(
-        expect.objectContaining({ path: "/arm", body: expect.objectContaining({ name, cron }) }),
+        expect.objectContaining({
+          path: "/arm",
+          body: expect.objectContaining({ name, cron }),
+        }),
       );
     }
   });
@@ -290,7 +351,10 @@ describe("scheduled() bootstrap pattern (DO mode)", () => {
   it("does not call enqueueCronJob (D1 path) in DO mode", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => ({ ok: true }));
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     for (const { name, cron } of CRON_JOBS) {
       await armCron(env, name, cron);
@@ -306,7 +370,10 @@ describe("runWithEnv", () => {
   it("makes env available in the callback for DO mode", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => ({ id: 1 }));
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     // If runWithEnv works, enqueueAdhoc inside can get the env
     await runWithEnv(env, async () => {
@@ -331,14 +398,21 @@ describe("cleanupOld (DO mode)", () => {
   it("fans out POST /cleanup to all 5 cron DOs and sums counts", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => ({ count: 2 }));
-    const env = { ...d1Env, JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
 
     const total = await cleanupOld(env, 30);
 
     // 4 CRON_JOB_NAMES + "cleanup" = 5 DOs
     expect(ns.calls).toHaveLength(5);
-    expect(ns.calls.every((c) => c.path === "/cleanup" && c.method === "POST")).toBe(true);
-    expect(ns.calls.every((c) => (c.body as any).retentionDays === 30)).toBe(true);
+    expect(
+      ns.calls.every((c) => c.path === "/cleanup" && c.method === "POST"),
+    ).toBe(true);
+    expect(ns.calls.every((c) => (c.body as any).retentionDays === 30)).toBe(
+      true,
+    );
     expect(total).toBe(10); // 5 × 2
     expect(mockCleanupOldJobs).not.toHaveBeenCalled();
   });
@@ -361,7 +435,10 @@ describe("cleanupOld (DO mode)", () => {
         },
       }),
     };
-    const env = { ...d1Env, JOB_QUEUE_DO: failingNs as unknown as DurableObjectNamespace };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: failingNs as unknown as DurableObjectNamespace,
+    };
 
     const total = await cleanupOld(env, 30);
 

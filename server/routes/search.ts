@@ -1,8 +1,19 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { pLimit } from "../lib/p-limit";
-import { searchMulti, fetchMovieDetails, fetchTvDetails, getMovieGenres, getTvGenres } from "../tmdb/client";
-import { parseSearchResult, parseMovieDetails, parseTvDetails, type ParsedTitle } from "../tmdb/parser";
+import {
+  searchMulti,
+  fetchMovieDetails,
+  fetchTvDetails,
+  getMovieGenres,
+  getTvGenres,
+} from "../tmdb/client";
+import {
+  parseSearchResult,
+  parseMovieDetails,
+  parseTvDetails,
+  type ParsedTitle,
+} from "../tmdb/parser";
 import { getTrackedTitleIds, upsertTitles } from "../db/repository";
 import { logger } from "../logger";
 import { syncFailureTotal } from "../metrics";
@@ -26,7 +37,14 @@ const searchQuerySchema = z.object({
 const app = new Hono<AppEnv>();
 
 app.get("/", zValidator("query", searchQuerySchema), async (c) => {
-  const { q: query, year_min: yearMin, year_max: yearMax, min_rating: minRating, type: typeParam, language: languageParam } = c.req.valid("query");
+  const {
+    q: query,
+    year_min: yearMin,
+    year_max: yearMax,
+    min_rating: minRating,
+    type: typeParam,
+    language: languageParam,
+  } = c.req.valid("query");
 
   try {
     const [genreMap, tvGenreMap, searchResult] = await Promise.all([
@@ -50,15 +68,21 @@ app.get("/", zValidator("query", searchQuerySchema), async (c) => {
 
     // Apply year filters on TMDB results
     if (yearMin != null && !isNaN(yearMin)) {
-      basicTitles = basicTitles.filter((t) => t.releaseYear != null && t.releaseYear >= yearMin);
+      basicTitles = basicTitles.filter(
+        (t) => t.releaseYear != null && t.releaseYear >= yearMin,
+      );
     }
     if (yearMax != null && !isNaN(yearMax)) {
-      basicTitles = basicTitles.filter((t) => t.releaseYear != null && t.releaseYear <= yearMax);
+      basicTitles = basicTitles.filter(
+        (t) => t.releaseYear != null && t.releaseYear <= yearMax,
+      );
     }
 
     // Apply language filter on TMDB results (originalLanguage may be null for search results)
     if (languageParam) {
-      basicTitles = basicTitles.filter((t) => t.originalLanguage === languageParam);
+      basicTitles = basicTitles.filter(
+        (t) => t.originalLanguage === languageParam,
+      );
     }
 
     // Fetch watch providers for each result — capped at 5 concurrent requests.
@@ -74,12 +98,15 @@ app.get("/", zValidator("query", searchQuerySchema), async (c) => {
               return parseTvDetails(await fetchTvDetails(tmdbId));
             }
           } catch (err) {
-            log.warn("TMDB enrichment failed for title", { titleId: t.tmdbId, err });
+            log.warn("TMDB enrichment failed for title", {
+              titleId: t.tmdbId,
+              err,
+            });
             syncFailureTotal.inc({ source: "search_enrichment" });
             return t; // Fallback to basic data without watch providers
           }
-        })
-      )
+        }),
+      ),
     );
 
     // Apply rating filter only after fetching details (TMDB search results lack ratings;
@@ -96,18 +123,25 @@ app.get("/", zValidator("query", searchQuerySchema), async (c) => {
     const titlesWithOffers = filteredTitles.filter((t) => t.offers.length > 0);
     if (titlesWithOffers.length > 0) {
       upsertTitles(titlesWithOffers).catch((e) => {
-        log.error("Failed to persist search titles", { error: (e as Error).message });
+        log.error("Failed to persist search titles", {
+          error: (e as Error).message,
+        });
       });
     }
 
     const user = c.get("user");
-    const trackedIds = user ? await getTrackedTitleIds(user.id) : new Set<string>();
+    const trackedIds = user
+      ? await getTrackedTitleIds(user.id)
+      : new Set<string>();
     const titlesWithTracked = filteredTitles.map((t) => ({
       ...t,
       isTracked: trackedIds.has(t.id),
     }));
 
-    return ok(c, { titles: titlesWithTracked, count: titlesWithTracked.length });
+    return ok(c, {
+      titles: titlesWithTracked,
+      count: titlesWithTracked.length,
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     const stack = e instanceof Error ? e.stack : undefined;

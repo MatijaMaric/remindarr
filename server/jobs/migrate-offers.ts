@@ -25,19 +25,28 @@ function delay(ms: number): Promise<void> {
  * not retried on every subsequent run.
  * Returns `hasMore: true` when the batch was full — callers should re-enqueue.
  */
-export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{ updated: number; skipped: number; failed: number; hasMore: boolean }> {
+export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{
+  updated: number;
+  skipped: number;
+  failed: number;
+  hasMore: boolean;
+}> {
   if (!CONFIG.TMDB_API_KEY) {
-    log.info("Skipping offers migration", { reason: "TMDB_API_KEY not configured" });
+    log.info("Skipping offers migration", {
+      reason: "TMDB_API_KEY not configured",
+    });
     return { updated: 0, skipped: 0, failed: 0, hasMore: false };
   }
 
   const db = getDb();
   const rows = await db
-    .select({ id: titles.id, objectType: titles.objectType, tmdbId: titles.tmdbId })
+    .select({
+      id: titles.id,
+      objectType: titles.objectType,
+      tmdbId: titles.tmdbId,
+    })
     .from(titles)
-    .where(
-      sql`${titles.tmdbId} IS NOT NULL AND ${titles.offersChecked} = 0`
-    )
+    .where(sql`${titles.tmdbId} IS NOT NULL AND ${titles.offersChecked} = 0`)
     .limit(batchSize)
     .all();
 
@@ -74,11 +83,19 @@ export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{ u
     }
 
     // Mark as checked regardless of outcome so it isn't retried on the next run.
-    await db.update(titles).set({ offersChecked: 1 }).where(eq(titles.id, row.id));
+    await db
+      .update(titles)
+      .set({ offersChecked: 1 })
+      .where(eq(titles.id, row.id));
 
     await delay(DELAY_MS);
   }
 
-  log.info("Offers migration batch complete", { updated, skipped, failed, hasMore });
+  log.info("Offers migration batch complete", {
+    updated,
+    skipped,
+    failed,
+    hasMore,
+  });
   return { updated, skipped, failed, hasMore };
 }

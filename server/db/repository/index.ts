@@ -1,7 +1,12 @@
 // Re-exports all repository functions for backward compatibility.
 // Individual modules can be imported directly for smaller dependency scope.
 
-export { getOffersForTitle, getOffersForTitles, getOffersWithPlex, getTitlesNeedingSaEnrichment } from "./offers";
+export {
+  getOffersForTitle,
+  getOffersForTitles,
+  getOffersWithPlex,
+  getTitlesNeedingSaEnrichment,
+} from "./offers";
 export {
   upsertPlexLibraryItems,
   deleteStaleLibraryItems,
@@ -83,9 +88,20 @@ export {
   setRemindOnRelease,
   getSuggestionSeedTitles,
 } from "./tracked";
-export type { UserStatus, NotificationMode, SuggestionSourceTitle, SuggestionSeedReason } from "./tracked";
+export type {
+  UserStatus,
+  NotificationMode,
+  SuggestionSourceTitle,
+  SuggestionSeedReason,
+} from "./tracked";
 
-export { getTagsForUser, getTagsForTitle, setTags, getTagsForTitles, addTagToTitlesBulk } from "./tags";
+export {
+  getTagsForUser,
+  getTagsForTitle,
+  setTags,
+  getTagsForTitles,
+  addTagToTitlesBulk,
+} from "./tags";
 
 export {
   getUserPublicProfile,
@@ -228,9 +244,19 @@ export {
 } from "./recommendations";
 
 export { getUserActivity } from "./activity";
-export type { ActivityEvent, ActivityType, ActivityTitleRef, ActivityEpisodeRef, ActivityKindVisibilityMap } from "./activity";
+export type {
+  ActivityEvent,
+  ActivityType,
+  ActivityTitleRef,
+  ActivityEpisodeRef,
+  ActivityKindVisibilityMap,
+} from "./activity";
 
-export { hideActivityEvent, unhideActivityEvent, getHiddenActivityEventKeys } from "./hidden-activity";
+export {
+  hideActivityEvent,
+  unhideActivityEvent,
+  getHiddenActivityEventKeys,
+} from "./hidden-activity";
 
 export {
   createInvitation,

@@ -10,7 +10,9 @@ const TITLE_ID = "movie-streaming-1";
 beforeEach(async () => {
   setupTestDb();
   userId = await createUser("alertuser", "hash");
-  await upsertTitles([makeParsedTitle({ id: TITLE_ID, title: "Streaming Movie" })]);
+  await upsertTitles([
+    makeParsedTitle({ id: TITLE_ID, title: "Streaming Movie" }),
+  ]);
 });
 
 afterAll(() => {
@@ -53,7 +55,9 @@ describe("getUnalertedProviders", () => {
 
   it("is scoped per title — alerts for other titles don't affect this title", async () => {
     const OTHER_TITLE_ID = "movie-streaming-2";
-    await upsertTitles([makeParsedTitle({ id: OTHER_TITLE_ID, title: "Other Movie" })]);
+    await upsertTitles([
+      makeParsedTitle({ id: OTHER_TITLE_ID, title: "Other Movie" }),
+    ]);
     await markAlerted(userId, OTHER_TITLE_ID, 8, "Netflix");
     // TITLE_ID has NOT been alerted for provider 8
     const result = await getUnalertedProviders(userId, TITLE_ID, [8]);

@@ -7,7 +7,9 @@ import "../../i18n";
 import * as api from "../../api";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
 function wrapper(client: QueryClient) {

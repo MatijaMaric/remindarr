@@ -28,13 +28,19 @@ describe("GotifyProvider.validateConfig", () => {
   });
 
   it("rejects non-http(s) URL", () => {
-    const result = gotify.validateConfig({ url: "ftp://gotify.example.com", token: "mytoken" });
+    const result = gotify.validateConfig({
+      url: "ftp://gotify.example.com",
+      token: "mytoken",
+    });
     expect(result.valid).toBe(false);
     expect(result.error).toContain("http");
   });
 
   it("rejects invalid URL", () => {
-    const result = gotify.validateConfig({ url: "not-a-url", token: "mytoken" });
+    const result = gotify.validateConfig({
+      url: "not-a-url",
+      token: "mytoken",
+    });
     expect(result.valid).toBe(false);
     expect(result.error).toContain("Invalid");
   });
@@ -52,7 +58,10 @@ describe("GotifyProvider.send", () => {
 
   beforeEach(() => {
     fetchCalls = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: string | URL | Request, options?: RequestInit) => {
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+      url: string | URL | Request,
+      options?: RequestInit,
+    ) => {
       fetchCalls.push({ url: url as string, options: options ?? {} });
       return new Response(JSON.stringify({ id: 1 }), { status: 200 });
     }) as typeof fetch);
@@ -96,7 +105,10 @@ describe("GotifyProvider.send", () => {
   });
 
   it("strips trailing slash from base URL", async () => {
-    await gotify.send({ url: "https://gotify.example.com/", token: "mytoken" }, sampleContent);
+    await gotify.send(
+      { url: "https://gotify.example.com/", token: "mytoken" },
+      sampleContent,
+    );
     expect(fetchCalls[0].url).toBe("https://gotify.example.com/message");
   });
 
@@ -120,7 +132,15 @@ describe("GotifyProvider.send", () => {
       date: "2026-04-05",
       episodes: [],
       movies: [],
-      streamingAlerts: [{ titleId: "tt123", title: "Inception", posterUrl: null, providerName: "Netflix", kind: "arrival" as const }],
+      streamingAlerts: [
+        {
+          titleId: "tt123",
+          title: "Inception",
+          posterUrl: null,
+          providerName: "Netflix",
+          kind: "arrival" as const,
+        },
+      ],
     };
     await gotify.send(config, alertContent);
     expect(fetchCalls).toHaveLength(1);
@@ -131,7 +151,9 @@ describe("GotifyProvider.send", () => {
   });
 
   it("throws on non-2xx response", async () => {
-    fetchSpy.mockImplementation(async () => new Response("Unauthorized", { status: 401 }));
+    fetchSpy.mockImplementation(
+      async () => new Response("Unauthorized", { status: 401 }),
+    );
     await expect(gotify.send(config, sampleContent)).rejects.toThrow("401");
   });
 
@@ -139,7 +161,14 @@ describe("GotifyProvider.send", () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,
       achievementsEarned: [
-        { key: "movies_10", title: "Cinephile I", description: "Watch 10 movies", icon: "Film", points: 10, earnedAt: "2026-01-01T00:00:00.000Z" },
+        {
+          key: "movies_10",
+          title: "Cinephile I",
+          description: "Watch 10 movies",
+          icon: "Film",
+          points: 10,
+          earnedAt: "2026-01-01T00:00:00.000Z",
+        },
       ],
     };
     await gotify.send(config, contentWithAchievements);

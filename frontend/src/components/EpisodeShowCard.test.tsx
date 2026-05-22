@@ -69,7 +69,7 @@ describe("EpisodeShowCard", () => {
     const { container } = render(
       <Wrapper>
         <EpisodeShowCard episode={episode} episodeCount={1} />
-      </Wrapper>
+      </Wrapper>,
     );
     const link = container.querySelector('a[href="https://example.com/watch"]');
     expect(link).toBeTruthy();
@@ -80,7 +80,7 @@ describe("EpisodeShowCard", () => {
     const { container } = render(
       <Wrapper>
         <EpisodeShowCard episode={episode} episodeCount={1} />
-      </Wrapper>
+      </Wrapper>,
     );
     const link = container.querySelector('a[href="https://example.com/watch"]');
     expect(link).toBeNull();
@@ -91,7 +91,7 @@ describe("EpisodeShowCard", () => {
     const { container } = render(
       <Wrapper>
         <EpisodeShowCard episode={episode} episodeCount={1} />
-      </Wrapper>
+      </Wrapper>,
     );
     const link = container.querySelector('a[href="https://example.com/watch"]');
     expect(link).toBeNull();
@@ -103,7 +103,7 @@ describe("EpisodeShowCard", () => {
     const { container } = render(
       <Wrapper>
         <EpisodeShowCard episode={episode} episodeCount={1} />
-      </Wrapper>
+      </Wrapper>,
     );
     const link = container.querySelector('a[href="https://example.com/watch"]');
     expect(link).toBeTruthy();
@@ -119,11 +119,11 @@ describe("EpisodeShowCard", () => {
           showActions
           onToggleWatched={() => {}}
         />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const streamLink = container.querySelector(
-      'a[href="https://example.com/watch"]'
+      'a[href="https://example.com/watch"]',
     );
     const markWatchedBtn = container.querySelector("button.bg-amber-500");
     expect(streamLink).toBeTruthy();

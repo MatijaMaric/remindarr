@@ -5,19 +5,25 @@ import { traceDbQuery } from "../../tracing";
 
 async function isMovie(titleId: string): Promise<boolean> {
   const db = getDb();
-  const row = await db.select({ objectType: titles.objectType }).from(titles).where(eq(titles.id, titleId)).get();
+  const row = await db
+    .select({ objectType: titles.objectType })
+    .from(titles)
+    .where(eq(titles.id, titleId))
+    .get();
   return row?.objectType === "MOVIE";
 }
 
 export async function watchTitle(titleId: string, userId: string) {
   return traceDbQuery("watchTitle", async () => {
     const db = getDb();
-    await db.insert(watchedTitles)
+    await db
+      .insert(watchedTitles)
       .values({ titleId, userId })
       .onConflictDoNothing()
       .run();
     if (await isMovie(titleId)) {
-      await db.update(tracked)
+      await db
+        .update(tracked)
         .set({ userStatus: "completed" })
         .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
         .run();
@@ -28,13 +34,26 @@ export async function watchTitle(titleId: string, userId: string) {
 export async function unwatchTitle(titleId: string, userId: string) {
   return traceDbQuery("unwatchTitle", async () => {
     const db = getDb();
-    await db.delete(watchedTitles)
-      .where(and(eq(watchedTitles.titleId, titleId), eq(watchedTitles.userId, userId)))
+    await db
+      .delete(watchedTitles)
+      .where(
+        and(
+          eq(watchedTitles.titleId, titleId),
+          eq(watchedTitles.userId, userId),
+        ),
+      )
       .run();
     if (await isMovie(titleId)) {
-      await db.update(tracked)
+      await db
+        .update(tracked)
         .set({ userStatus: null })
-        .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId), eq(tracked.userStatus, "completed")))
+        .where(
+          and(
+            eq(tracked.titleId, titleId),
+            eq(tracked.userId, userId),
+            eq(tracked.userStatus, "completed"),
+          ),
+        )
         .run();
     }
   });
@@ -50,7 +69,12 @@ export async function setWatchedTitleWatchedAt(
     await db
       .update(watchedTitles)
       .set({ watchedAt })
-      .where(and(eq(watchedTitles.titleId, titleId), eq(watchedTitles.userId, userId)))
+      .where(
+        and(
+          eq(watchedTitles.titleId, titleId),
+          eq(watchedTitles.userId, userId),
+        ),
+      )
       .run();
   });
 }

@@ -14,7 +14,7 @@ const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
 export async function httpFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
-  opts: RetryOptions = {}
+  opts: RetryOptions = {},
 ): Promise<Response> {
   const { maxRetries = 3, baseDelayMs = 250, maxDelayMs = 30_000 } = opts;
   let lastError: unknown;

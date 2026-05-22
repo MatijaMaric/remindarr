@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  mock,
+  spyOn,
+} from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
@@ -10,10 +18,18 @@ import BottomTabBar from "./BottomTabBar";
 import { AuthContext } from "../context/AuthContext";
 
 function newTestClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 }
 
-const mockUser = { id: "1", username: "test", display_name: null, auth_provider: "local", is_admin: false };
+const mockUser = {
+  id: "1",
+  username: "test",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
 const mockAuthValue = {
   user: mockUser,
@@ -24,11 +40,19 @@ const mockAuthValue = {
   refresh: mock(() => Promise.resolve()),
 };
 
-function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typeof mockAuthValue }) {
+function Wrapper({
+  children,
+  authValue,
+}: {
+  children: ReactNode;
+  authValue?: typeof mockAuthValue;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
       <MemoryRouter>
-        <AuthContext value={(authValue ?? mockAuthValue) as any}>{children}</AuthContext>
+        <AuthContext value={(authValue ?? mockAuthValue) as any}>
+          {children}
+        </AuthContext>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -37,7 +61,9 @@ function Wrapper({ children, authValue }: { children: ReactNode; authValue?: typ
 let getCountSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-  getCountSpy = spyOn(api, "getUnreadRecommendationCount").mockResolvedValue({ count: 0 } as never);
+  getCountSpy = spyOn(api, "getUnreadRecommendationCount").mockResolvedValue({
+    count: 0,
+  } as never);
 });
 
 afterEach(() => {
@@ -65,7 +91,7 @@ describe("BottomTabBar", () => {
             <BottomTabBar />
           </AuthContext>
         </MemoryRouter>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByText("Browse")).toBeDefined();
@@ -85,7 +111,7 @@ describe("BottomTabBar", () => {
             <BottomTabBar />
           </AuthContext>
         </MemoryRouter>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     expect(container.innerHTML).toBe("");
@@ -118,7 +144,7 @@ describe("BottomTabBar", () => {
             <BottomTabBar />
           </AuthContext>
         </MemoryRouter>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     const links = screen.getAllByRole("link");
@@ -129,12 +155,16 @@ describe("BottomTabBar", () => {
 
   it("nav has accessible label", () => {
     render(<BottomTabBar />, { wrapper: Wrapper });
-    expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toBeDefined();
+    expect(
+      screen.getByRole("navigation", { name: "Mobile navigation" }),
+    ).toBeDefined();
   });
 
   it("More link has descriptive aria-label", () => {
     render(<BottomTabBar />, { wrapper: Wrapper });
-    const moreLink = screen.getByRole("link", { name: "More navigation options" });
+    const moreLink = screen.getByRole("link", {
+      name: "More navigation options",
+    });
     expect(moreLink).toBeDefined();
     expect(moreLink.getAttribute("href")).toBe("/more");
   });

@@ -1,5 +1,9 @@
 import { describe, test, expect } from "bun:test";
-import { checkAdminClaim, buildPasskeyOrigins, getPasskeyRpId } from "./better-auth";
+import {
+  checkAdminClaim,
+  buildPasskeyOrigins,
+  getPasskeyRpId,
+} from "./better-auth";
 
 describe("checkAdminClaim", () => {
   test("returns false when claimName is empty", () => {
@@ -31,11 +35,15 @@ describe("checkAdminClaim", () => {
   });
 
   test("returns true when array claim contains the value", () => {
-    expect(checkAdminClaim({ groups: ["admins", "users"] }, "groups", "admins")).toBe(true);
+    expect(
+      checkAdminClaim({ groups: ["admins", "users"] }, "groups", "admins"),
+    ).toBe(true);
   });
 
   test("returns false when array claim does not contain the value", () => {
-    expect(checkAdminClaim({ groups: ["users"] }, "groups", "admins")).toBe(false);
+    expect(checkAdminClaim({ groups: ["users"] }, "groups", "admins")).toBe(
+      false,
+    );
   });
 
   test("coerces array elements to string for comparison", () => {
@@ -61,7 +69,9 @@ describe("getPasskeyRpId", () => {
   });
 
   test("preserves subdomain that is not www", () => {
-    expect(getPasskeyRpId("https://app.remindarr.app")).toBe("app.remindarr.app");
+    expect(getPasskeyRpId("https://app.remindarr.app")).toBe(
+      "app.remindarr.app",
+    );
   });
 
   test("returns localhost for localhost URL", () => {
