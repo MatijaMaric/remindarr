@@ -5,10 +5,12 @@ Generate a safe Drizzle migration for remindarr (Cloudflare D1 + Bun SQLite).
 Example: `/migration users notification_mode text "email"`
 
 **Safety check first — REJECT if:**
+
 - `<table>` is `users`, `titles`, or `providers` AND the change is anything other than `ADD COLUMN`
 - The column is `NOT NULL` without a `DEFAULT` (would fail on existing rows)
 
 **Steps:**
+
 1. List `server/db/migrations/` and find the highest-numbered file (e.g., `0042_...sql`)
 2. Generate the next file as `<N+1>_add_<column>_to_<table>.sql`:
    ```sql

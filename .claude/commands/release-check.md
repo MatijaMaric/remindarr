@@ -8,6 +8,7 @@ Run the full pre-PR validation gauntlet for remindarr.
 3. After both complete: `bun run test:e2e -- --project=chromium` — Playwright e2e suite
 
 **Then report:**
+
 - ✅ or ❌ for each of the three steps
 - For any failure: first error with file:line
 - `git status` — unstaged/uncommitted files
