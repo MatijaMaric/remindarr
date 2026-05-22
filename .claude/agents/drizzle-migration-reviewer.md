@@ -1,6 +1,7 @@
 ---
 name: drizzle-migration-reviewer
 description: Reviews a proposed Drizzle migration against remindarr's CF-D1 safety rules. Use BEFORE applying any migration that touches a parent table or adds a non-null column.
+model: opus
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -17,7 +18,7 @@ You review Drizzle migrations for remindarr. The repo runs on **Cloudflare D1**,
 1. Read every `-- statement-breakpoint`-separated statement in the migration file
 2. Identify any `DROP TABLE` or `CREATE TABLE ... AS SELECT` on a parent
 3. Check if the intent could be served by `ALTER TABLE ... ADD COLUMN ... DEFAULT ...`
-4. Run `bun test server/db/migrations.test.ts` and include the output
+4. Run `bun run eval:migrations` (superset of `migrations.test.ts` — covers cascade-survival and integrity tests) and include the output
 
 **Output format:**
 

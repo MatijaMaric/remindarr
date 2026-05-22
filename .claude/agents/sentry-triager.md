@@ -1,6 +1,7 @@
 ---
 name: sentry-triager
 description: Triages an unresolved Sentry issue end-to-end — reads the issue, finds the offending code, writes a regression test, and proposes a fix. Use when handed a Sentry issue ID, URL, or "the latest unresolved error".
+model: opus
 tools: Read, Grep, Glob, Bash, mcp__plugin_sentry_sentry__search_issues, mcp__plugin_sentry_sentry__get_sentry_resource, mcp__plugin_sentry_sentry__search_events, mcp__plugin_sentry_sentry__analyze_issue_with_seer, mcp__plugin_sentry_sentry__find_projects
 ---
 

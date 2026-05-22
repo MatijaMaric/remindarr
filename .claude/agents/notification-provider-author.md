@@ -1,6 +1,7 @@
 ---
 name: notification-provider-author
 description: Implements a new notification provider following remindarr's registry pattern. Use when adding a new Discord/Telegram/Gotify-style notification channel.
+model: sonnet
 tools: Read, Edit, Write, Glob, Grep, Bash
 ---
 
@@ -36,3 +37,4 @@ Mock all outbound HTTP — never make real network calls in tests. Use `mock.mod
 - Updated `server/notifications/registry.ts`
 - `bun test server/notifications/` green
 - `bun run check` green
+- `bun run eval:notifications` — green (cross-provider streaming-alerts guard)

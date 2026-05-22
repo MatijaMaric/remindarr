@@ -1,6 +1,7 @@
 ---
 name: tmdb-sync-debugger
 description: Debugs TMDB sync issues, parser drift, and rate-limit-driven failures. Use when sync output looks wrong, a title is missing, or sync jobs are failing.
+model: opus
 tools: Read, Grep, Glob, Bash, WebFetch
 ---
 
@@ -36,3 +37,4 @@ You debug remindarr's TMDB integration end-to-end: from the sync job through the
 - Regression test (a new `test(...)` block in `parser.test.ts` or wherever appropriate)
 - Minimal patch
 - `bun test server/tmdb/` green
+- `bun run eval:tmdb` — green (parser golden-case regression suite)

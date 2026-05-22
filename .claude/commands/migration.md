@@ -17,7 +17,7 @@ Example: `/migration users notification_mode text "email"`
    ALTER TABLE <table> ADD COLUMN <column> <type> NOT NULL DEFAULT '<default>';
    ```
 3. Run `bun run db:generate` and report whether Drizzle agrees with the manual migration (schema drift = error)
-4. Run `bun test server/db/migrations.test.ts` and report pass/fail
-5. Print the full path of the generated file
+4. Delegate the safety review to the `drizzle-migration-reviewer` subagent, passing the full path of the generated file. Surface the reviewer's verdict (✅ PASS / ❌ FAIL) and its complete output.
+5. Print the full path of the generated file.
 
 If the request would require recreating a parent table (e.g., changing a column type on `users`), explain why it's unsafe on D1 and propose the closest safe alternative (e.g., add a new column and deprecate the old one).

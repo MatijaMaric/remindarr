@@ -1,6 +1,7 @@
 ---
 name: route-zod-validator
 description: Adds zValidator + happy-path test to a Hono route. Use whenever a route accepts user input (query params, JSON body, path params) and lacks zod validation.
+model: sonnet
 tools: Read, Edit, Glob, Grep, Bash
 ---
 
