@@ -20,8 +20,8 @@ const mockDiscoverTv = spyOn(tmdbClient, "discoverTv").mockResolvedValue({
   page: 1,
   total_results: 0,
 });
-spyOn(tmdbClient, "fetchMovieDetails").mockResolvedValue({} as any);
-spyOn(tmdbClient, "fetchTvDetails").mockResolvedValue({} as any);
+// fetchMovieDetails / fetchTvDetails are only called when discoverMovies/discoverTv
+// return non-empty results. All tests in this file return empty results, so no spy needed.
 
 // Spy on syncFailureTotal.inc so we can assert metric increments
 const incSpy = spyOn(metricsModule.syncFailureTotal, "inc").mockImplementation(
