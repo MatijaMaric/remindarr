@@ -1,0 +1,4 @@
+# Enforce LF line endings on all platforms.
+# Prevents CRLF/LF drift on Windows (core.autocrlf) that breaks Prettier in
+# git worktrees — see issue #857.
+* text=auto eol=lf
