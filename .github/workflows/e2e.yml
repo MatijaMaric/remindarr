@@ -12,7 +12,7 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
@@ -30,17 +30,43 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Run e2e tests
-        # Scope to the specs introduced for passkey / OIDC / feed / notifications
-        # coverage. The pre-existing mock-backed specs (auth / episodes / search /
-        # tracking) have separate ownership and are already covered by the
-        # frontend unit tests — including them here would introduce cross-spec
-        # flake that isn't this workflow's job to police.
+        # Full Playwright coverage. The four legacy specs (auth / episodes /
+        # search / tracking) remain excluded — they are deemed flaky/redundant
+        # per e2e/CLAUDE.md and have no Page Object equivalents.
         run: |
           bun run test:e2e --project=chromium \
             e2e/passkey.spec.ts \
             e2e/oidc.spec.ts \
             e2e/calendar-feed.spec.ts \
-            e2e/notifications.spec.ts
+            e2e/notifications.spec.ts \
+            e2e/achievements.spec.ts \
+            e2e/admin-users.spec.ts \
+            e2e/browse.spec.ts \
+            e2e/calendar.spec.ts \
+            e2e/discovery.spec.ts \
+            e2e/home.spec.ts \
+            e2e/invite-accept.spec.ts \
+            e2e/kiosk.spec.ts \
+            e2e/leaderboard.spec.ts \
+            e2e/more.spec.ts \
+            e2e/person.spec.ts \
+            e2e/profile.spec.ts \
+            e2e/recommendations.spec.ts \
+            e2e/reels.spec.ts \
+            e2e/season-detail.spec.ts \
+            e2e/settings-account.spec.ts \
+            e2e/settings-admin.spec.ts \
+            e2e/settings-appearance.spec.ts \
+            e2e/settings-integrations.spec.ts \
+            e2e/settings-notifications.spec.ts \
+            e2e/settings-subscriptions.spec.ts \
+            e2e/shared-watchlist.spec.ts \
+            e2e/signup.spec.ts \
+            e2e/stats.spec.ts \
+            e2e/title-detail.spec.ts \
+            e2e/up-next.spec.ts \
+            e2e/user-overlap.spec.ts \
+            e2e/watched-ratings.spec.ts
         env:
           CI: "1"
 
