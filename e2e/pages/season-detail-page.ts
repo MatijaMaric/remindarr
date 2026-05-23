@@ -6,7 +6,7 @@ export class SeasonDetailPage extends BasePage {
     super(page);
   }
 
-  async goto(titleId: string, season: number): Promise<void> {
+  async gotoSeason(titleId: string, season: number): Promise<void> {
     await super.goto(`/title/${titleId}/season/${season}`);
   }
 

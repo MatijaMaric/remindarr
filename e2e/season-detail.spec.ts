@@ -109,7 +109,7 @@ test.describe("Season detail page", () => {
     const sdp = new SeasonDetailPage(page);
     await setupSeasonMocks(page);
     await mockLoggedOut(page);
-    await sdp.goto("tv-tt9876543", 1);
+    await sdp.gotoSeason("tv-tt9876543", 1);
     await sdp.waitForVisible(sdp.heading());
 
     await expect(sdp.heading()).toHaveText("Season 1");
@@ -134,7 +134,7 @@ test.describe("Season detail page", () => {
     const sdp = new SeasonDetailPage(page);
     await setupSeasonMocks(page);
     await mockLoggedOut(page);
-    await sdp.goto("tv-tt9876543", 1);
+    await sdp.gotoSeason("tv-tt9876543", 1);
     await sdp.waitForVisible(sdp.heading());
 
     // Episode number badges
@@ -155,7 +155,7 @@ test.describe("Season detail page", () => {
     const sdp = new SeasonDetailPage(page);
     await setupSeasonMocks(page);
     await mockLoggedOut(page);
-    await sdp.goto("tv-tt9876543", 1);
+    await sdp.gotoSeason("tv-tt9876543", 1);
     await sdp.waitForVisible(sdp.heading());
 
     expect(page.url()).toContain("/title/tv-tt9876543/season/1");
@@ -186,7 +186,7 @@ test.describe("Season detail page", () => {
     await page.route("**/api/details/show/tv-tt9876543/season/1", (route) =>
       route.fulfill({ json: SEASON_DETAILS }),
     );
-    await sdp.goto("tv-tt9876543", 1);
+    await sdp.gotoSeason("tv-tt9876543", 1);
     await sdp.waitForVisible(sdp.heading());
 
     // Watched pill buttons should appear for released episodes
@@ -232,7 +232,7 @@ test.describe("Season detail page", () => {
     await page.route("**/api/details/show/tv-tt9876543/season/1", (route) =>
       route.fulfill({ json: SEASON_DETAILS }),
     );
-    await sdp.goto("tv-tt9876543", 1);
+    await sdp.gotoSeason("tv-tt9876543", 1);
     await sdp.waitForVisible(sdp.heading());
     await sdp.waitForVisible(sdp.markAllWatchedButton());
 
@@ -253,7 +253,7 @@ test.describe("Season detail page", () => {
     const sdp = new SeasonDetailPage(page);
     await setupSeasonMocks(page);
     await mockLoggedOut(page);
-    await sdp.goto("tv-tt9876543", 1);
+    await sdp.gotoSeason("tv-tt9876543", 1);
     await sdp.waitForVisible(sdp.heading());
 
     await sdp.showBreadcrumb("Test Show").click();
@@ -272,7 +272,7 @@ test.describe("Season detail page", () => {
     await page.route("**/api/details/show/tv-tt9876543/season/99", (route) =>
       route.fulfill({ status: 404, json: { error: "Season not found" } }),
     );
-    await sdp.goto("tv-tt9876543", 99);
+    await sdp.gotoSeason("tv-tt9876543", 99);
     await page.waitForTimeout(1000);
 
     await expect(page.getByText("Season not found")).toBeVisible();
