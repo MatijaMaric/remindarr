@@ -270,6 +270,8 @@ describe("registerSyncJobs", () => {
 
 describe("sync-titles handler", () => {
   beforeEach(() => {
+    // Ensure the TMDB_API_KEY guard doesn't skip the handler in CI (no env set)
+    CONFIG.TMDB_API_KEY = "test-key";
     registerSyncJobs();
     // Drain the auto-enqueued migrate-titles job to avoid interfering with assertions
     claimNextJob("migrate-titles");
