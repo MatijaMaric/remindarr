@@ -40,14 +40,33 @@ export function registerSyncJobs() {
   });
 
   registerHandler("sync-titles", async () => {
+    if (!CONFIG.TMDB_API_KEY) {
+      log.info("Skipping title sync", {
+        reason: "TMDB_API_KEY not configured",
+      });
+      return;
+    }
     const titles = await fetchNewReleases({
       daysBack: CONFIG.DEFAULT_DAYS_BACK,
+      continueOnError: true,
     });
     const titleIds = titles.map((t) => t.id);
     const count = await upsertTitles(titles);
     log.info("Synced titles from TMDB", { count });
-    await checkStreamingAlerts(titleIds);
-    await checkStreamingDepartures(titleIds);
+    // Isolate post-upsert notification checks: titles are already committed, so
+    // a notification failure must not re-trigger a full TMDB re-fetch + re-upsert.
+    try {
+      await checkStreamingAlerts(titleIds);
+    } catch (err) {
+      log.error("checkStreamingAlerts failed", { err });
+      syncFailureTotal.inc({ source: "streaming-alerts" });
+    }
+    try {
+      await checkStreamingDepartures(titleIds);
+    } catch (err) {
+      log.error("checkStreamingDepartures failed", { err });
+      syncFailureTotal.inc({ source: "streaming-departures" });
+    }
   });
 
   registerHandler("sync-episodes", async () => {

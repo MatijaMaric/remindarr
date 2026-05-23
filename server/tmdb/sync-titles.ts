@@ -1,5 +1,6 @@
 import { CONFIG } from "../config";
 import { logger } from "../logger";
+import { syncFailureTotal } from "../metrics";
 
 const log = logger.child({ module: "tmdb" });
 import {
@@ -29,11 +30,19 @@ export async function fetchNewReleases(options: {
   daysBack?: number;
   objectType?: "MOVIE" | "SHOW";
   maxPages?: number;
+  /**
+   * When true, a failure in the movie or TV discover/genre calls is caught,
+   * logged, and counted — the other path still runs and partial results are
+   * returned. Default false preserves the throwing contract (used by the
+   * admin sync route and CLI so operators see real errors).
+   */
+  continueOnError?: boolean;
 }): Promise<ParsedTitle[]> {
   const {
     daysBack = CONFIG.DEFAULT_DAYS_BACK,
     objectType,
     maxPages = 5,
+    continueOnError = false,
   } = options;
 
   const dateGte = dateString(daysBack);
@@ -42,66 +51,80 @@ export async function fetchNewReleases(options: {
 
   // Fetch movies
   if (!objectType || objectType === "MOVIE") {
-    const [movieGenres] = await Promise.all([getMovieGenres()]);
+    try {
+      const [movieGenres] = await Promise.all([getMovieGenres()]);
 
-    for (let page = 1; page <= maxPages; page++) {
-      const result = await discoverMovies({
-        releaseDateGte: dateGte,
-        releaseDateLte: dateLte,
-        page,
+      for (let page = 1; page <= maxPages; page++) {
+        const result = await discoverMovies({
+          releaseDateGte: dateGte,
+          releaseDateLte: dateLte,
+          page,
+        });
+
+        if (result.results.length === 0) break;
+
+        // Fetch full details for each movie (includes watch providers)
+        const { results: parsed } = await syncEachWithDelay(result.results, {
+          delayMs: CONFIG.PAGE_DELAY_MS,
+          label: "sync-titles:movie",
+          log,
+          onItem: async (movie) =>
+            parseMovieDetails(await fetchMovieDetails(movie.id)),
+          onError: (err, movie) => {
+            // Fallback to discover data without watch providers
+            log.error("Failed to fetch movie details", {
+              movieId: movie.id,
+              err,
+            });
+            return { result: parseDiscoverMovie(movie, movieGenres) };
+          },
+        });
+        allTitles.push(...parsed);
+
+        if (page >= result.total_pages) break;
+      }
+    } catch (err) {
+      if (!continueOnError) throw err;
+      log.error("Movie release fetch failed, continuing with TV titles", {
+        err,
       });
-
-      if (result.results.length === 0) break;
-
-      // Fetch full details for each movie (includes watch providers)
-      const { results: parsed } = await syncEachWithDelay(result.results, {
-        delayMs: CONFIG.PAGE_DELAY_MS,
-        label: "sync-titles:movie",
-        log,
-        onItem: async (movie) =>
-          parseMovieDetails(await fetchMovieDetails(movie.id)),
-        onError: (err, movie) => {
-          // Fallback to discover data without watch providers
-          log.error("Failed to fetch movie details", {
-            movieId: movie.id,
-            err,
-          });
-          return { result: parseDiscoverMovie(movie, movieGenres) };
-        },
-      });
-      allTitles.push(...parsed);
-
-      if (page >= result.total_pages) break;
+      syncFailureTotal.inc({ source: "tmdb-movies" });
     }
   }
 
   // Fetch TV shows
   if (!objectType || objectType === "SHOW") {
-    const [tvGenres] = await Promise.all([getTvGenres()]);
+    try {
+      const [tvGenres] = await Promise.all([getTvGenres()]);
 
-    for (let page = 1; page <= maxPages; page++) {
-      const result = await discoverTv({
-        firstAirDateGte: dateGte,
-        firstAirDateLte: dateLte,
-        page,
-      });
+      for (let page = 1; page <= maxPages; page++) {
+        const result = await discoverTv({
+          firstAirDateGte: dateGte,
+          firstAirDateLte: dateLte,
+          page,
+        });
 
-      if (result.results.length === 0) break;
+        if (result.results.length === 0) break;
 
-      // Fetch full details for each show (includes watch providers)
-      const { results: parsed } = await syncEachWithDelay(result.results, {
-        delayMs: CONFIG.PAGE_DELAY_MS,
-        label: "sync-titles:show",
-        log,
-        onItem: async (show) => parseTvDetails(await fetchTvDetails(show.id)),
-        onError: (err, show) => {
-          log.error("Failed to fetch TV details", { showId: show.id, err });
-          return { result: parseDiscoverTv(show, tvGenres) };
-        },
-      });
-      allTitles.push(...parsed);
+        // Fetch full details for each show (includes watch providers)
+        const { results: parsed } = await syncEachWithDelay(result.results, {
+          delayMs: CONFIG.PAGE_DELAY_MS,
+          label: "sync-titles:show",
+          log,
+          onItem: async (show) => parseTvDetails(await fetchTvDetails(show.id)),
+          onError: (err, show) => {
+            log.error("Failed to fetch TV details", { showId: show.id, err });
+            return { result: parseDiscoverTv(show, tvGenres) };
+          },
+        });
+        allTitles.push(...parsed);
 
-      if (page >= result.total_pages) break;
+        if (page >= result.total_pages) break;
+      }
+    } catch (err) {
+      if (!continueOnError) throw err;
+      log.error("TV release fetch failed", { err });
+      syncFailureTotal.inc({ source: "tmdb-tv" });
     }
   }
 

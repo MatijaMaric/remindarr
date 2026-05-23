@@ -116,6 +116,30 @@ describe("processPendingJobs", () => {
     expect(allJobs[0].status).toBe("completed");
   });
 
+  it("passes continueOnError:true to fetchNewReleases for sync-titles", async () => {
+    mockFetchNewReleases.mockResolvedValueOnce([]);
+    mockUpsertTitles.mockResolvedValueOnce(0);
+
+    await insertJob("sync-titles");
+    await processPendingJobs();
+
+    expect(mockFetchNewReleases).toHaveBeenCalledWith(
+      expect.objectContaining({ continueOnError: true }),
+    );
+  });
+
+  it("skips sync-titles when TMDB_API_KEY is not set", async () => {
+    CONFIG.TMDB_API_KEY = "";
+
+    await insertJob("sync-titles");
+    await processPendingJobs();
+
+    expect(mockFetchNewReleases).not.toHaveBeenCalled();
+
+    const allJobs = await getAllJobs();
+    expect(allJobs[0].status).toBe("completed");
+  });
+
   it("processes sync-episodes job", async () => {
     mockSyncEpisodes.mockResolvedValueOnce({ synced: 10, shows: 3 });
 

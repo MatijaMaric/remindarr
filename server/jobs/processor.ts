@@ -52,7 +52,16 @@ const log = logger.child({ module: "job-processor" });
 // ─── Job Handlers ──────────────────────────────────────────────────────────
 
 async function handleSyncTitles(): Promise<void> {
-  const titles = await fetchNewReleases({ daysBack: CONFIG.DEFAULT_DAYS_BACK });
+  if (!CONFIG.TMDB_API_KEY) {
+    log.info("Skipping title sync", {
+      reason: "TMDB_API_KEY not configured",
+    });
+    return;
+  }
+  const titles = await fetchNewReleases({
+    daysBack: CONFIG.DEFAULT_DAYS_BACK,
+    continueOnError: true,
+  });
   const count = await upsertTitles(titles);
   log.info("Synced titles from TMDB", { count });
 }

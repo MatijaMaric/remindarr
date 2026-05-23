@@ -110,6 +110,19 @@ import * as plexLibrarySync from "../plex/library-sync";
 const mockSyncPlexWatched = spyOn(plexSync, "syncPlexWatched");
 const mockSyncPlexLibrary = spyOn(plexLibrarySync, "syncPlexLibrary");
 
+// Mock streaming check jobs so post-upsert checks don't hit the DB in sync-titles tests
+import * as checkAlertsModule from "./check-streaming-alerts";
+const mockCheckStreamingAlerts = spyOn(
+  checkAlertsModule,
+  "checkStreamingAlerts",
+).mockResolvedValue(undefined);
+
+import * as checkDeparturesModule from "./check-streaming-departures";
+const mockCheckStreamingDepartures = spyOn(
+  checkDeparturesModule,
+  "checkStreamingDepartures",
+).mockResolvedValue(undefined);
+
 // Mock getEnabledIntegrationsByProvider for Plex tests
 const mockGetEnabledIntegrations = spyOn(
   repository,
@@ -141,6 +154,8 @@ beforeEach(() => {
   mockSyncPlexWatched.mockClear();
   mockSyncPlexLibrary.mockClear();
   mockGetEnabledIntegrations.mockClear();
+  mockCheckStreamingAlerts.mockClear();
+  mockCheckStreamingDepartures.mockClear();
 });
 
 afterAll(() => {
@@ -162,6 +177,8 @@ afterAll(() => {
   mockSyncPlexWatched.mockRestore();
   mockSyncPlexLibrary.mockRestore();
   mockGetEnabledIntegrations.mockRestore();
+  mockCheckStreamingAlerts.mockRestore();
+  mockCheckStreamingDepartures.mockRestore();
 });
 
 // ─── registerSyncJobs ────────────────────────────────────────────────────────
@@ -271,6 +288,7 @@ describe("sync-titles handler", () => {
     expect(mockFetchNewReleases).toHaveBeenCalledTimes(1);
     expect(mockFetchNewReleases).toHaveBeenCalledWith({
       daysBack: CONFIG.DEFAULT_DAYS_BACK,
+      continueOnError: true,
     });
     expect(mockUpsertTitles).toHaveBeenCalledWith(fakeTitles);
   });
@@ -304,6 +322,46 @@ describe("sync-titles handler", () => {
     await processJobs();
 
     expect(captureExceptionSpy).toHaveBeenCalledWith(error);
+  });
+
+  it("skips sync when TMDB_API_KEY is not set", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "";
+
+    enqueueJob("sync-titles");
+    await processJobs();
+
+    expect(mockFetchNewReleases).not.toHaveBeenCalled();
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("continues after checkStreamingAlerts throws — job completes, departures check still runs", async () => {
+    mockFetchNewReleases.mockResolvedValueOnce([{ id: "title-1" }] as any[]);
+    mockUpsertTitles.mockResolvedValueOnce(1);
+    mockCheckStreamingAlerts.mockRejectedValueOnce(
+      new Error("alerts DB error"),
+    );
+
+    enqueueJob("sync-titles");
+    await processJobs();
+
+    // Job should complete — alert failure must not propagate to the DO retry loop
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
+    // Departures check still runs despite alerts failure
+    expect(mockCheckStreamingDepartures).toHaveBeenCalledWith(["title-1"]);
+  });
+
+  it("continues after checkStreamingDepartures throws — job completes", async () => {
+    mockFetchNewReleases.mockResolvedValueOnce([{ id: "title-2" }] as any[]);
+    mockUpsertTitles.mockResolvedValueOnce(1);
+    mockCheckStreamingDepartures.mockRejectedValueOnce(
+      new Error("departures DB error"),
+    );
+
+    enqueueJob("sync-titles");
+    await processJobs();
+
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
   });
 });
 
