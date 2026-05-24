@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, X } from "lucide-react";
 import * as api from "../../api";
 import type { UserAchievement } from "../../types";
 
@@ -69,7 +69,7 @@ function ToastItem({ achievement, onDismiss }: ToastItemProps) {
       <div className="w-9 h-9 rounded-lg bg-amber-400/20 flex items-center justify-center shrink-0">
         <Trophy size={18} className="text-amber-400" />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-xs font-mono font-semibold uppercase tracking-widest text-amber-400 mb-0.5">
           Achievement unlocked
         </div>
@@ -80,6 +80,14 @@ function ToastItem({ achievement, onDismiss }: ToastItemProps) {
           {achievement.description}
         </div>
       </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss achievement notification"
+        className="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors p-1 -mr-1"
+      >
+        <X size={14} />
+      </button>
     </div>
   );
 }
@@ -97,7 +105,7 @@ export default function AchievementToast() {
   if (visible.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 sm:bottom-6">
+    <div className="fixed bottom-24 right-4 z-50 flex flex-col gap-2 sm:bottom-6">
       {visible.map((a) => (
         <ToastItem
           key={a.key}
