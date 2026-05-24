@@ -216,12 +216,14 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <NavLink
-                to="/login"
-                className="text-sm text-zinc-300 hover:text-white transition-colors"
-              >
-                {t("nav.signIn")}
-              </NavLink>
+              location.pathname !== "/login" && (
+                <NavLink
+                  to="/login"
+                  className="text-sm text-zinc-400 hover:text-white transition-colors"
+                >
+                  {t("nav.signIn")}
+                </NavLink>
+              )
             )}
           </div>
         </div>
