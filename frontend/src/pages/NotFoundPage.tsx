@@ -3,9 +3,9 @@ import { Link } from "react-router";
 export default function NotFoundPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-      <h1 className="text-6xl font-bold text-zinc-600">404</h1>
-      <p className="text-xl text-zinc-400">Page not found</p>
-      <p className="text-sm text-zinc-500">
+      <h1 className="text-6xl font-bold text-zinc-400">404</h1>
+      <p className="text-xl text-zinc-300">Page not found</p>
+      <p className="text-sm text-zinc-400">
         The page you are looking for does not exist.
       </p>
       <Link

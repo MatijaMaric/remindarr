@@ -73,6 +73,7 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <div className="space-y-8">
+        <h1 className="sr-only">{username}</h1>
         <div className="h-[360px] bg-zinc-900 animate-pulse rounded-xl" />
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 max-w-7xl mx-auto px-4">
           <div className="space-y-4">
