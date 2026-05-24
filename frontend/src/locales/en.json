@@ -169,6 +169,9 @@
     "email": "Email",
     "displayName": "Display Name",
     "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "passwordHint": "Minimum 8 characters",
     "creating": "Creating account...",
     "signUp": "Sign Up",
     "alreadyHaveAccount": "Already have an account?",
@@ -603,7 +606,8 @@
     "error": "An error occurred",
     "save": "Save",
     "saving": "Saving...",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "optional": "optional"
   },
   "feed": {
     "title": "Calendar Feed",
