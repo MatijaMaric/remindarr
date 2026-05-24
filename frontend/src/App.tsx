@@ -104,7 +104,7 @@ export default function App() {
 
   return (
     <div
-      className={`bg-zinc-950 text-zinc-100 ${isReelsPage || isKioskPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}
+      className={`bg-zinc-950 text-zinc-100 w-full ${isReelsPage || isKioskPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}
       style={{ background: "var(--bg-app)", color: "var(--text-app)" }}
     >
       {/* Skip to main content link */}
