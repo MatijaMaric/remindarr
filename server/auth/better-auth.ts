@@ -248,6 +248,10 @@ export function createAuth(
             .flatMap(buildPasskeyOrigins)
         : []),
       ...(CONFIG.BASE_URL ? buildPasskeyOrigins(CONFIG.BASE_URL) : []),
+      // Local dev: `bun run dev` serves the SPA from the Vite proxy on :5173, so the
+      // browser's Origin is http://localhost:5173 — not derivable from BASE_URL (unset
+      // locally). Trust it only when BASE_URL is unset; production always sets BASE_URL.
+      ...(CONFIG.BASE_URL ? [] : ["http://localhost:5173"]),
     ].filter((v, i, a) => a.indexOf(v) === i),
     advanced: {
       ipAddress: {
