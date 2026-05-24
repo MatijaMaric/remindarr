@@ -178,10 +178,10 @@ async function main() {
 
         const runEnv: NodeJS.ProcessEnv = {
           ...process.env,
-          LHCI_PRESET: formFactor,
-          LHCI_URLS: urls.join(","),
-          LHCI_OUTPUT_DIR: outputDir,
-          ...(group === "auth" ? { LHCI_COOKIE: cookie } : {}),
+          LH_PRESET: formFactor,
+          LH_URLS: urls.join(","),
+          LH_OUTPUT_DIR: outputDir,
+          ...(group === "auth" ? { LH_COOKIE: cookie } : {}),
         };
 
         console.log(`[lhci] ${formFactor}/${group}: ${urls.join(", ")}`);

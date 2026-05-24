@@ -5,14 +5,16 @@
 // To flip from warn-only to blocking: change "warn" → "error" in assertions
 // and add the lighthouse job to the all-passed gate in .github/workflows/test.yml.
 
-const cookie = process.env.LHCI_COOKIE;
-const preset = process.env.LHCI_PRESET === "desktop" ? "desktop" : undefined;
+// Use LH_* prefix (not LHCI_*) — lhci's yargs env scanner maps LHCI_* to CLI
+// flags, which conflicts with our custom variables.
+const cookie = process.env.LH_COOKIE;
+const preset = process.env.LH_PRESET === "desktop" ? "desktop" : undefined;
 
 /** @type {import('@lhci/cli').LighthouseConfig} */
 module.exports = {
   ci: {
     collect: {
-      url: (process.env.LHCI_URLS || "").split(",").map((u) => u.trim()),
+      url: (process.env.LH_URLS || "").split(",").map((u) => u.trim()),
       numberOfRuns: 1,
       settings: {
         ...(preset ? { preset } : {}),
@@ -38,7 +40,7 @@ module.exports = {
     },
     upload: {
       target: "filesystem",
-      outputDir: process.env.LHCI_OUTPUT_DIR || ".lighthouseci",
+      outputDir: process.env.LH_OUTPUT_DIR || ".lighthouseci",
     },
   },
 };
