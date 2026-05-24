@@ -105,7 +105,7 @@ export default function UserOverlapPage() {
             : t("overlap.error", "Something went wrong loading the overlap.")}
         </p>
         {isPrivate && (
-          <p className="text-zinc-500 text-sm max-w-sm mx-auto">
+          <p className="text-zinc-400 text-sm max-w-sm mx-auto">
             {t(
               "overlap.privateWatchlistHint",
               "Both watchlists must be public and you must follow each other to compare watchlists.",
@@ -232,7 +232,7 @@ export default function UserOverlapPage() {
       {/* Shared providers row */}
       {sharedProviders.length > 0 && (
         <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2 font-semibold">
+          <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2 font-semibold">
             {t("overlap.bothSubscribedTo", "Both subscribed to")}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -272,6 +272,7 @@ export default function UserOverlapPage() {
       </div>
 
       {/* Results */}
+      <h2 className="sr-only">Shared titles</h2>
       {filteredTitles.length === 0 ? (
         <div className="py-16 text-center space-y-3">
           <p className="text-zinc-400 text-lg">

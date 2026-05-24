@@ -20,7 +20,7 @@ function MoreGroup({
 }) {
   return (
     <div className="mb-4">
-      <div className="px-5 pb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-semibold">
+      <div className="px-5 pb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-400 font-semibold">
         {label}
       </div>
       <Card radius="2xl" padding="none" className="mx-4 overflow-hidden">
@@ -61,7 +61,7 @@ function MoreRow({
           {label}
         </div>
         {sub && (
-          <div className="font-mono text-[11px] text-zinc-500 mt-0.5">
+          <div className="font-mono text-[11px] text-zinc-400 mt-0.5">
             {sub}
           </div>
         )}
@@ -105,6 +105,7 @@ export default function MorePage() {
 
   return (
     <div className="pb-32 pt-4">
+      <h1 className="sr-only">More</h1>
       {/* Profile card */}
       <div className="mx-4 mb-6">
         <Link
@@ -118,7 +119,7 @@ export default function MorePage() {
             <div className="text-[15px] font-bold truncate">
               {user.display_name ?? user.username}
             </div>
-            <div className="font-mono text-[11px] text-zinc-500">
+            <div className="font-mono text-[11px] text-zinc-400">
               @{user.username}
             </div>
           </div>
