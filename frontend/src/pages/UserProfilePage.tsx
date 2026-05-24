@@ -189,7 +189,7 @@ export default function UserProfilePage() {
           </aside>
 
           {/* Main column */}
-          <main className="flex flex-col gap-4 min-w-0">
+          <section className="flex flex-col gap-4 min-w-0">
             {show_watchlist ? (
               <>
                 {monthly.length > 0 && (
@@ -228,7 +228,7 @@ export default function UserProfilePage() {
                 )}
               </Card>
             )}
-          </main>
+          </section>
         </div>
       </div>
     </div>

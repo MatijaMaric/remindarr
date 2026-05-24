@@ -53,6 +53,10 @@ export default function AchievementsPage() {
       isOwnProfile
         ? api.getMyAchievements(signal)
         : api.getUserAchievements(username!, signal),
+    // Wait for auth to resolve before firing: avoids a race where the page
+    // fires as a "public" request before the session loads, gets a privacy
+    // error, then never re-fetches once the user is confirmed as the owner.
+    enabled: !!user,
   });
 
   if (loading) {
@@ -79,7 +83,9 @@ export default function AchievementsPage() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
         <div className="flex items-baseline justify-between">
-          <Kicker color="zinc">Achievements</Kicker>
+          <h1 className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 text-zinc-500">
+            Achievements
+          </h1>
         </div>
         <div className="text-zinc-500 text-sm">No achievements yet.</div>
       </div>
@@ -115,7 +121,9 @@ export default function AchievementsPage() {
     <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-baseline justify-between">
-        <Kicker color="zinc">Achievements</Kicker>
+        <h1 className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 text-zinc-500">
+          Achievements
+        </h1>
         <span className="text-[11px] text-zinc-500 font-mono">
           {earned.length}/{achievements.length} earned · {totalXp} XP
         </span>
