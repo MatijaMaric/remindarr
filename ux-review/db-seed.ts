@@ -41,6 +41,10 @@ const { upsertEpisodes } = await import("../server/db/repository/episodes");
 const { trackTitle } = await import("../server/db/repository/tracked");
 const { updateUserAdmin, setKioskToken, setWatchlistShareToken } =
   await import("../server/db/repository/users");
+const { updateProfilePublic } = await import("../server/db/repository/profile");
+const { follow } = await import("../server/db/repository/follows");
+const { upsertUserAchievement } =
+  await import("../server/db/repository/achievements");
 const { makeParsedTitle } = await import("../server/test-utils/fixtures");
 
 const today = new Date().toISOString().slice(0, 10);
@@ -57,7 +61,9 @@ await upsertTitles([
     runtimeMinutes: 136,
     shortDescription: "A seeded movie for UX review.",
     genres: ["Action", "Science Fiction"],
-    posterUrl: null,
+    // TMDB poster URL for The Matrix (tmdb 603)
+    posterUrl:
+      "https://image.tmdb.org/t/p/w342/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
   }),
   makeParsedTitle({
     id: MOVIE_ID_2,
@@ -69,7 +75,9 @@ await upsertTitles([
     runtimeMinutes: 154,
     shortDescription: "Another seeded movie.",
     genres: ["Crime", "Drama"],
-    posterUrl: null,
+    // TMDB poster URL for Pulp Fiction (tmdb 680)
+    posterUrl:
+      "https://image.tmdb.org/t/p/w342/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
   }),
   makeParsedTitle({
     id: MOVIE_ID_3,
@@ -81,7 +89,9 @@ await upsertTitles([
     runtimeMinutes: 142,
     shortDescription: "Third seeded movie.",
     genres: ["Drama", "Crime"],
-    posterUrl: null,
+    // TMDB poster URL for The Shawshank Redemption (tmdb 278)
+    posterUrl:
+      "https://image.tmdb.org/t/p/w342/9cqNxx0GxF0bAY4R1tTEKFTJYuP.jpg",
   }),
   makeParsedTitle({
     id: SHOW_ID,
@@ -93,7 +103,9 @@ await upsertTitles([
     runtimeMinutes: 60,
     shortDescription: "A seeded show for UX review.",
     genres: ["Drama", "Fantasy"],
-    posterUrl: null,
+    // TMDB poster URL for Game of Thrones (tmdb 1399)
+    posterUrl:
+      "https://image.tmdb.org/t/p/w342/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
   }),
 ]);
 
@@ -131,6 +143,23 @@ await trackTitle(SHOW_ID, friendUserId);
 await setKioskToken(seedUserId, KIOSK_TOKEN);
 await setWatchlistShareToken(seedUserId, SHARE_TOKEN);
 
+// #918: Set both users' profiles to public so overlap and achievement pages work.
+await updateProfilePublic(seedUserId, "public");
+await updateProfilePublic(friendUserId, "public");
+
+// #918: Establish mutual follow so the overlap page passes the mutual-follow gate.
+await follow(seedUserId, friendUserId);
+await follow(friendUserId, seedUserId);
+
+// #903/#904: Seed an earned achievement for ux_seed so the achievements page
+// and achievement detail page have content to render.
+await upsertUserAchievement(
+  seedUserId,
+  ACHIEVEMENT_KEY,
+  10,
+  new Date(Date.now() - 7 * 86_400_000).toISOString(),
+);
+
 console.log(
-  `[db-seed] Seeded: titles, episodes, tracking, admin, tokens (achievement key: ${ACHIEVEMENT_KEY})`,
+  `[db-seed] Seeded: titles, episodes, tracking, admin, tokens, profiles, follows, achievements (key: ${ACHIEVEMENT_KEY})`,
 );
