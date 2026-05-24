@@ -175,7 +175,7 @@ export default function EpisodeDetailPage() {
     tmdb?.crew?.filter((c: CrewMember) => c.department === "Writing") || [];
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap">
         <Link
@@ -196,8 +196,8 @@ export default function EpisodeDetailPage() {
       </div>
 
       {/* Still image */}
-      {stillUrl && (
-        <div className="rounded-xl overflow-hidden">
+      <div className="rounded-xl overflow-hidden">
+        {stillUrl ? (
           <img
             src={stillUrl}
             alt={tmdb?.name || `Episode ${episodeNumber}`}
@@ -206,8 +206,12 @@ export default function EpisodeDetailPage() {
             height={439}
             loading="eager"
           />
-        </div>
-      )}
+        ) : (
+          <div className="w-full aspect-video bg-zinc-800 flex items-center justify-center">
+            <span className="text-zinc-400 text-sm">No preview available</span>
+          </div>
+        )}
+      </div>
 
       {/* Episode header */}
       <div className="space-y-3">
