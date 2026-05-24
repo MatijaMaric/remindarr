@@ -1,4 +1,4 @@
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 import {
   Home,
   Search,
@@ -12,11 +12,14 @@ import { useAuth } from "../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
 
+const UNAUTHENTICATED_ROUTES = ["/login", "/signup"];
+
 const ICON_SIZE = 22;
 
 export default function BottomTabBar() {
   const { user, loading } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
 
   const { data: countData } = useQuery({
     queryKey: ["notification-count"],
@@ -27,6 +30,7 @@ export default function BottomTabBar() {
   const unreadCount = countData?.count ?? 0;
 
   if (loading) return null;
+  if (UNAUTHENTICATED_ROUTES.includes(location.pathname)) return null;
 
   const tabClass = (isActive: boolean) =>
     `flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${

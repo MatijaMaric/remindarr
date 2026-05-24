@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { Card } from "../components/ui/card";
 import {
   ChevronRight,
@@ -9,6 +9,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 function MoreGroup({
   label,
@@ -86,8 +87,10 @@ function MoreRow({
 export default function MorePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   if (!user) return null;
+  if (!isMobile) return <Navigate to="/reels" replace />;
 
   const initials = (user.display_name ?? user.username)
     .split(" ")

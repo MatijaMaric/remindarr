@@ -1447,6 +1447,11 @@ function WeekCalendar({
                             ? `/title/${item.data.title_id}/season/${item.data.season_number}/episode/${item.data.episode_number}`
                             : `/title/${item.data.id}`
                         }
+                        aria-label={
+                          isEp
+                            ? `${item.data.show_title} ${prefix.trim()} — ${formatDateKey(day)}`
+                            : `${label} — ${formatDateKey(day)}`
+                        }
                         className="block mb-0.5 bg-amber-400/10 text-amber-400 border-l-2 border-amber-400 px-1.5 py-0.5 rounded-sm text-[10px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap hover:bg-amber-400/20 transition-colors"
                       >
                         <span className="font-mono">{prefix}</span>
