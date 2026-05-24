@@ -1,10 +1,24 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { render, screen, act, cleanup } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  beforeEach,
+  afterEach,
+  spyOn,
+} from "bun:test";
+import {
+  render,
+  screen,
+  act,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
 import type { UserAchievement } from "../../types";
 import * as api from "../../api";
 
-import { useNewAchievements } from "./AchievementToast";
+import { useNewAchievements, ToastItem } from "./AchievementToast";
 import AchievementToast from "./AchievementToast";
 
 // ---- localStorage helper -------------------------------------------------------
@@ -228,5 +242,41 @@ describe("AchievementToast", () => {
 
     const alerts = screen.getAllByRole("alert");
     expect(alerts.length).toBeGreaterThan(0);
+  });
+});
+
+// ---- ToastItem dismiss button --------------------------------------------------
+
+describe("ToastItem", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders the achievement title and dismiss button", () => {
+    const onDismiss = mock(() => {});
+    render(
+      <ToastItem
+        achievement={makeAchievement({ title: "Movie Buff" })}
+        onDismiss={onDismiss}
+      />,
+    );
+    expect(screen.getByText("Movie Buff")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /dismiss achievement notification/i }),
+    ).toBeTruthy();
+  });
+
+  it("calls onDismiss when dismiss button is clicked", () => {
+    const onDismiss = mock(() => {});
+    render(
+      <ToastItem
+        achievement={makeAchievement({ title: "Movie Buff" })}
+        onDismiss={onDismiss}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /dismiss achievement notification/i }),
+    );
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });
