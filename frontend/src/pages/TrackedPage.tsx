@@ -67,14 +67,14 @@ function TrackedStatsBand({ titles }: { titles: Title[] }) {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       {stats.map((s) => (
         <Card key={s.label} padding="none" className="p-[18px]">
-          <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2">
+          <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-400 font-semibold mb-2">
             {s.label}
           </div>
           <div className="flex items-baseline gap-2">
             <div className="text-[30px] sm:text-[36px] font-extrabold tracking-[-0.03em] leading-none">
               {s.value}
             </div>
-            <div className="font-mono text-[11px] text-zinc-500">{s.sub}</div>
+            <div className="font-mono text-[11px] text-zinc-400">{s.sub}</div>
           </div>
         </Card>
       ))}
@@ -257,7 +257,7 @@ export default function TrackedPage() {
                   }`}
                 >
                   {tab.label}
-                  <span className="ml-2 font-mono text-[11px] text-zinc-500">
+                  <span className="ml-2 font-mono text-[11px] text-zinc-400">
                     {count}
                   </span>
                 </button>
@@ -392,6 +392,8 @@ function RowActionsMenu({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
+        aria-label={`More actions for ${title.title}`}
+        aria-expanded={open}
         className="px-2 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         ···
@@ -515,7 +517,7 @@ function TrackedTable({
                     {title.title}
                   </span>
                 </div>
-                <div className="font-mono text-[10px] text-zinc-500 mb-1.5">
+                <div className="font-mono text-[10px] text-zinc-400 mb-1.5">
                   {title.offers[0]?.provider_name ?? ""}
                   {statusKey ? ` · ${statusLabel}` : ""}
                   {title.next_episode_air_date && statusKey !== "completed"
@@ -536,7 +538,7 @@ function TrackedTable({
                   </div>
                 )}
                 {title.eta_days != null && (
-                  <span className="font-mono text-[10px] text-zinc-500">
+                  <span className="font-mono text-[10px] text-zinc-400">
                     ETA: {formatEta(title.eta_days)}
                   </span>
                 )}
@@ -575,7 +577,7 @@ function TrackedTable({
     <div>
       {/* Column header */}
       <div
-        className="grid gap-4 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500"
+        className="grid gap-4 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400"
         style={{
           gridTemplateColumns: selectMode
             ? "32px 50px 1fr 130px 200px 130px 90px 90px"
@@ -708,7 +710,7 @@ function TrackedTable({
                     {title.title}
                   </Link>
                 )}
-                <div className="font-mono text-[11px] text-zinc-500 mt-0.5">
+                <div className="font-mono text-[11px] text-zinc-400 mt-0.5">
                   {title.release_year}
                   {title.object_type === "SHOW" ? " · Show" : " · Movie"}
                   {title.offers[0] && ` · ${title.offers[0].provider_name}`}
@@ -742,13 +744,13 @@ function TrackedTable({
                     </span>
                   </div>
                   {title.eta_days != null && (
-                    <span className="font-mono text-[10px] text-zinc-500">
+                    <span className="font-mono text-[10px] text-zinc-400">
                       ETA: {formatEta(title.eta_days)}
                     </span>
                   )}
                 </div>
               ) : (
-                <div className="font-mono text-[11px] text-zinc-600">—</div>
+                <div className="font-mono text-[11px] text-zinc-400">—</div>
               )}
               {/* Next air date */}
               <div className="font-mono text-[12px] text-zinc-300">

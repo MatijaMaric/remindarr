@@ -933,7 +933,7 @@ function SocialSection() {
           <div className="text-sm font-semibold text-zinc-100 mb-0.5">
             {t("invite.settingsLink")}
           </div>
-          <div className="text-[11px] text-zinc-500 font-mono">
+          <div className="text-[11px] text-zinc-400 font-mono">
             Manage invite codes on the Invite page
           </div>
         </div>

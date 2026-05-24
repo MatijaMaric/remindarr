@@ -222,10 +222,10 @@ export default function ReelsCard({
         ))}
       </div>
 
-      {/* Swipe hint on first card */}
+      {/* Swipe hint on first card — mobile only (irrelevant on pointer devices) */}
       {index === 0 && !caughtUp && (
         <div
-          className="absolute z-10 text-right"
+          className="absolute z-10 text-right sm:hidden"
           style={{ right: 20, top: 160 }}
         >
           <div className="font-mono text-[10px] text-zinc-400 tracking-[0.12em] uppercase leading-relaxed">
