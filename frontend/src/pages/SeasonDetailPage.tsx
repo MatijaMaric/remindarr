@@ -327,7 +327,7 @@ export default function SeasonDetailPage() {
               loading="eager"
             />
           ) : (
-            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">
+            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-300">
               Season {seasonNumber}
             </div>
           )}
@@ -484,7 +484,7 @@ export default function SeasonDetailPage() {
                             height={169}
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-[11px] font-mono">
+                          <div className="w-full h-full flex items-center justify-center text-zinc-300 text-[11px] font-mono">
                             E{String(ep.episode_number).padStart(2, "0")}
                           </div>
                         )}
@@ -507,7 +507,7 @@ export default function SeasonDetailPage() {
                           )}
                         </div>
                         {ep.overview && (
-                          <p className="hidden sm:block text-xs text-zinc-500 mt-1 line-clamp-2 leading-snug select-text">
+                          <p className="hidden sm:block text-xs text-zinc-400 mt-1 line-clamp-2 leading-snug select-text">
                             {ep.overview}
                           </p>
                         )}

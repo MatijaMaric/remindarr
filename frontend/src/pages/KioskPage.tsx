@@ -35,7 +35,7 @@ const PALETTE: Record<KioskFidelity, KioskPalette> = {
     surfaceAlt: "#27272a",
     text: "#fafafa",
     dim: "#a1a1aa",
-    veryDim: "#71717a",
+    veryDim: "#8c8c99",
     border: "rgba(255,255,255,0.06)",
     borderSoft: "rgba(255,255,255,0.06)",
     accent: "#fbbf24",
@@ -48,7 +48,7 @@ const PALETTE: Record<KioskFidelity, KioskPalette> = {
     surfaceAlt: "#27272a",
     text: "#fafafa",
     dim: "#a1a1aa",
-    veryDim: "#71717a",
+    veryDim: "#8c8c99",
     border: "rgba(255,255,255,0.06)",
     borderSoft: "rgba(255,255,255,0.06)",
     accent: "#fbbf24",
@@ -479,8 +479,11 @@ function HeroCard({
 
         {/* Cast button — decorative only (design note 3: deferred until streaming-device registry) */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            aria-hidden="true"
+          <button
+            type="button"
+            disabled
+            aria-label="Cast to TV (not yet available)"
+            title="Cast to TV is not yet available"
             style={{
               background: C.accent,
               color: C.accentInk,
@@ -493,11 +496,11 @@ function HeroCard({
               alignItems: "center",
               gap: 8,
               opacity: 0.5,
-              cursor: "default",
+              cursor: "not-allowed",
             }}
           >
             <CastIcon color={C.accentInk} /> Cast to TV
-          </div>
+          </button>
         </div>
       </div>
     </div>
@@ -655,8 +658,11 @@ function HeroFeatured({
 
         {/* Cast button — decorative only (design note 3: deferred until streaming-device registry) */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            aria-hidden="true"
+          <button
+            type="button"
+            disabled
+            aria-label="Cast to TV (not yet available)"
+            title="Cast to TV is not yet available"
             style={{
               background: C.accent,
               color: C.accentInk,
@@ -669,11 +675,11 @@ function HeroFeatured({
               alignItems: "center",
               gap: 8,
               opacity: 0.5,
-              cursor: "default",
+              cursor: "not-allowed",
             }}
           >
             <CastIcon color={C.accentInk} /> Cast to TV
-          </div>
+          </button>
         </div>
       </div>
     </div>

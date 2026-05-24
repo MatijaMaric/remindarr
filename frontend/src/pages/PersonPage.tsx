@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router";
+import { ChevronLeft } from "lucide-react";
 import * as api from "../api";
 import ScrollableRow from "../components/ScrollableRow";
 import type { PersonCastCredit, PersonCrewCredit } from "../types";
@@ -78,7 +79,7 @@ function CreditCard({
             height={513}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm px-2 text-center">
+          <div className="w-full h-full flex items-center justify-center text-zinc-300 text-sm px-2 text-center">
             {creditTitle(credit)}
           </div>
         )}
@@ -143,6 +144,16 @@ export default function PersonPage() {
 
   return (
     <div className="space-y-8">
+      {/* Back navigation */}
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
+      >
+        <ChevronLeft size={16} />
+        Back
+      </button>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-6">
         <div className="flex-shrink-0">
@@ -157,7 +168,7 @@ export default function PersonPage() {
                 height={278}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-zinc-600 text-5xl">
+              <div className="w-full h-full flex items-center justify-center text-zinc-300 text-5xl">
                 {person.name.charAt(0)}
               </div>
             )}
@@ -177,19 +188,19 @@ export default function PersonPage() {
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-400">
             {person.birthday && (
               <div>
-                <span className="text-zinc-500">Born: </span>
+                <span className="text-zinc-400">Born: </span>
                 <span>{formatDate(person.birthday)}</span>
               </div>
             )}
             {person.deathday && (
               <div>
-                <span className="text-zinc-500">Died: </span>
+                <span className="text-zinc-400">Died: </span>
                 <span>{formatDate(person.deathday)}</span>
               </div>
             )}
             {person.place_of_birth && (
               <div>
-                <span className="text-zinc-500">From: </span>
+                <span className="text-zinc-400">From: </span>
                 <span>{person.place_of_birth}</span>
               </div>
             )}
