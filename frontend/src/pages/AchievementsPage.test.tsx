@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import type { UserAchievement } from "../types";
+import * as authCtx from "../context/AuthContext";
 
 // Mock AuthContext to avoid null context errors.
 // Returns a full shape so cross-file leaks don't corrupt other tests.
@@ -259,5 +260,41 @@ describe("AchievementsPage — other user profile", () => {
 
     // "Next up" section must not appear for other profiles
     expect(screen.queryByText("Next up")).toBeNull();
+  });
+});
+
+describe("AchievementsPage — unauthenticated visitor on public route", () => {
+  let useAuthSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    // Simulate an unauthenticated visitor (user === null)
+    useAuthSpy = spyOn(authCtx, "useAuth").mockReturnValue({
+      user: null,
+      providers: null,
+      loading: false,
+      sessionStatus: "unauthenticated",
+      subscriptions: null,
+      refreshSubscriptions: mock(() => Promise.resolve()),
+      login: mock(() => Promise.resolve()),
+      signup: mock(() => Promise.resolve()),
+      logout: mock(() => Promise.resolve()),
+      refresh: mock(() => Promise.resolve()),
+    } as any);
+  });
+
+  afterEach(() => {
+    useAuthSpy.mockRestore();
+  });
+
+  test("fires getUserAchievements for a public profile even when not logged in", async () => {
+    getUserAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([earnedWatching]),
+    );
+
+    render(<AchievementsPage />, { wrapper: OtherWrapper });
+
+    await waitFor(() => {
+      expect(getUserAchievementsSpy).toHaveBeenCalled();
+    });
   });
 });
