@@ -282,7 +282,7 @@ function DiscoveryHero({
     <Card
       radius="2xl"
       padding="lg"
-      className="mb-8 grid grid-cols-1 sm:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] gap-6 sm:gap-8 items-stretch"
+      className="mb-8 w-full grid grid-cols-1 sm:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr] gap-6 sm:gap-8 items-stretch"
     >
       {/* Poster */}
       <div className="relative aspect-[2/3] rounded-[10px] overflow-hidden max-w-[200px] sm:max-w-none mx-auto sm:mx-0 shadow-2xl">

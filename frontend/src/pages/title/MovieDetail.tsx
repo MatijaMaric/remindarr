@@ -183,7 +183,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
     ) : null;
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 overflow-x-hidden">
       {/* Hero */}
       <MovieHero
         title={title}

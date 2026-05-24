@@ -1307,14 +1307,16 @@ export default function KioskPage() {
         data !== null && <HeroEmpty C={C} epaper={epaper} />
       )}
 
-      {/* Two-column body */}
+      {/* Two-column body — single column on narrow viewports, two columns on wide */}
       <div
+        className="kiosk-body-grid"
         style={{
           margin: "24px 56px 0",
           flex: 1,
           minHeight: 0,
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
           gap: 24,
           overflow: "hidden",
         }}

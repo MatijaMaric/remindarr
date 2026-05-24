@@ -113,7 +113,7 @@ export default function LeaderboardPage() {
 
   if (!entries || entries.length <= 1) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="w-full max-w-2xl mx-auto space-y-6">
         <div>
           <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-400 font-semibold mb-1">
             Leaderboard
@@ -125,8 +125,9 @@ export default function LeaderboardPage() {
         </div>
         <div className="text-center py-12">
           <Trophy size={40} className="text-zinc-600 mx-auto mb-3" />
-          <p className="text-zinc-400">
-            Follow people to see them on the leaderboard.
+          <p className="text-zinc-400 mb-1">No rankings yet.</p>
+          <p className="text-zinc-500 text-sm">
+            Track titles and follow people to appear on the leaderboard.
           </p>
         </div>
       </div>
@@ -141,7 +142,7 @@ export default function LeaderboardPage() {
     podium.length === 3 ? [podium[1]!, podium[0]!, podium[2]!] : podium;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full max-w-2xl mx-auto space-y-6">
       <div>
         <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-400 font-semibold mb-1">
           Leaderboard

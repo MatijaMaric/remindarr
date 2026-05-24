@@ -101,9 +101,17 @@ export default function UserOverlapPage() {
       <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
         <p className="text-zinc-400 text-lg">
           {isPrivate
-            ? t("overlap.privateWatchlist", "This user's watchlist is private.")
+            ? t("overlap.privateWatchlist", "Watchlist overlap unavailable.")
             : t("overlap.error", "Something went wrong loading the overlap.")}
         </p>
+        {isPrivate && (
+          <p className="text-zinc-500 text-sm max-w-sm mx-auto">
+            {t(
+              "overlap.privateWatchlistHint",
+              "Both watchlists must be public and you must follow each other to compare watchlists.",
+            )}
+          </p>
+        )}
         <Link
           to={`/user/${friendUsername}`}
           className="inline-block text-amber-400 hover:text-amber-300 text-sm transition-colors"
