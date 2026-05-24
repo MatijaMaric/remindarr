@@ -166,7 +166,7 @@ export function MediaCard({
             ))}
 
           {meta != null && (
-            <div className="mt-1.5 text-xs text-zinc-500">{meta}</div>
+            <div className="mt-1.5 text-xs text-zinc-400">{meta}</div>
           )}
 
           {footer != null && <div className="mt-auto pt-3">{footer}</div>}
