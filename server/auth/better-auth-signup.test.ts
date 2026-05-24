@@ -2,6 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createAuth } from "./better-auth";
 import { getDb } from "../db/schema";
+import { CONFIG } from "../config";
 import type { Platform } from "../platform/types";
 
 const platform: Platform = {
@@ -51,5 +52,34 @@ describe("better-auth signup", () => {
     expect(response.status).toBe(200);
     expect(data.user).toBeDefined();
     expect(data.user.username).toBe("testuser");
+  });
+
+  test("sign-up succeeds from Vite dev proxy origin (:5173) when BASE_URL is unset", async () => {
+    const original = CONFIG.BASE_URL;
+    CONFIG.BASE_URL = "";
+    try {
+      const auth = createAuth(getDb(), platform);
+      const request = new Request(
+        "http://localhost:3000/api/auth/sign-up/email",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Origin: "http://localhost:5173",
+            "Sec-Fetch-Site": "same-origin",
+          },
+          body: JSON.stringify({
+            username: "viteuser",
+            email: "vite@example.com",
+            password: "password123",
+            name: "Vite User",
+          }),
+        },
+      );
+      const response = await auth.handler(request);
+      expect(response.status).toBe(200);
+    } finally {
+      CONFIG.BASE_URL = original;
+    }
   });
 });
