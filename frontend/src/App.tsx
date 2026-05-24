@@ -177,13 +177,13 @@ export default function App() {
             onClick={() => focusOrNavigateSearch(navigate, location.pathname)}
             className="hidden sm:flex items-center gap-2 w-[260px] bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
           >
-            <span className="opacity-60 text-base leading-none">⌕</span>
-            <span className="flex-1 text-left text-[13px]">
+            <span className="text-zinc-400 text-base leading-none">⌕</span>
+            <span className="flex-1 text-left text-[13px] text-zinc-300">
               Search titles, people…
             </span>
             <span
               aria-hidden="true"
-              className="font-mono text-[11px] opacity-75"
+              className="font-mono text-[11px] text-zinc-400"
             >
               ⌘K
             </span>
@@ -210,7 +210,7 @@ export default function App() {
                 </Link>
                 <button
                   onClick={logout}
-                  className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  className="text-sm text-zinc-300 hover:text-white transition-colors cursor-pointer"
                 >
                   {t("nav.logout")}
                 </button>
@@ -218,7 +218,7 @@ export default function App() {
             ) : (
               <NavLink
                 to="/login"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
+                className="text-sm text-zinc-300 hover:text-white transition-colors"
               >
                 {t("nav.signIn")}
               </NavLink>
@@ -498,13 +498,13 @@ export default function App() {
       <footer
         className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden sm:block"}`}
       >
-        <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
+        <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-400">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>
           <a
             href="https://github.com/MatijaMaric/remindarr"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors"
           >
             <ExternalLink className="size-4" />
             GitHub
