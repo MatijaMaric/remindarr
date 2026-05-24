@@ -206,12 +206,30 @@
   transition-duration: 0.01ms !important;
 }
 
-/* High contrast text */
+/* Global dark-mode color-contrast fixes (WCAG AA)
+ *
+ * text-zinc-500 (#71717a) on zinc-900 (#18181b) = 3.67:1 — fails AA (needs 4.5:1).
+ * Boost to #a1a1aa (zinc-400 value) → 6.91:1 on zinc-900, passes on all dark
+ * theme variants (midnight, moss, plum, oled).
+ *
+ * Explicit ::placeholder color overrides the browser's default ~50%-opacity
+ * rendering which can drop below 3:1 on semi-transparent input backgrounds.
+ */
+.dark .text-zinc-500 {
+  color: #a1a1aa; /* was #71717a (3.67:1 on zinc-900) → now 6.91:1 */
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #a1a1aa; /* 6.91:1 on zinc-900, 7.66:1 on background */
+  opacity: 1; /* prevent browser from dimming placeholder further */
+}
+
+/* High contrast text (additional boost beyond the WCAG AA baseline above) */
 :root.high-contrast .text-zinc-400 {
   color: #d4d4d8;
 }
 :root.high-contrast .text-zinc-500 {
-  color: #a1a1aa;
+  color: #d4d4d8; /* extra boost for users who prefer maximum contrast */
 }
 
 /* Light theme overrides for key zinc utility classes */
@@ -328,7 +346,7 @@
   color: #a1a1aa;
 }
 .theme-light .dark-section .text-zinc-500 {
-  color: #71717a;
+  color: #a1a1aa; /* was #71717a (3.67:1 on zinc-900) → now 6.91:1 */
 }
 .theme-light .dark-section .bg-zinc-700 {
   background-color: #3f3f46;

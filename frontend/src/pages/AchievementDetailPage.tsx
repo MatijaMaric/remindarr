@@ -7,9 +7,11 @@ import { EarnHistoryList } from "../components/achievements/EarnHistoryList";
 import { Kicker } from "../components/design/Kicker";
 import { Link } from "react-router";
 import { ChevronLeft } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function AchievementDetailPage() {
   const { username, key } = useParams<{ username?: string; key: string }>();
+  const { user } = useAuth();
   const isOwnProfile = !username;
 
   const {
@@ -22,7 +24,10 @@ export default function AchievementDetailPage() {
       isOwnProfile
         ? getMyAchievementDetail(key!, signal)
         : getUserAchievementDetail(username!, key!, signal),
-    enabled: !!key,
+    // Wait for auth to resolve before firing: avoids a race where the page
+    // fires as a "public" request before the session loads, gets a privacy
+    // error, then never re-fetches once the user is confirmed as the owner.
+    enabled: !!key && !!user,
   });
 
   const backHref = username ? `/u/${username}/achievements` : "/achievements";
