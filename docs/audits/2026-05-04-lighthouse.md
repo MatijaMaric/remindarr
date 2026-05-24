@@ -91,6 +91,8 @@ Current scores are below threshold across the board. Each follow-up issue below 
 | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | Set up Lighthouse CI to enforce thresholds on PRs targeting `master` | [#697](https://github.com/MatijaMaric/remindarr/issues/697) |
 
+Lighthouse CI is now wired up — see [`docs/lighthouse-ci.md`](../lighthouse-ci.md) for configuration, local usage, and the warn→block phasing plan.
+
 ---
 
 ## Notes
