@@ -53,10 +53,9 @@ export default function AchievementsPage() {
       isOwnProfile
         ? api.getMyAchievements(signal)
         : api.getUserAchievements(username!, signal),
-    // Wait for auth to resolve before firing: avoids a race where the page
-    // fires as a "public" request before the session loads, gets a privacy
-    // error, then never re-fetches once the user is confirmed as the owner.
-    enabled: !!user,
+    // Own profile (/achievements) sits behind RequireAuth so user is always set.
+    // Public profile (/u/:username/achievements) should fire for guests too.
+    enabled: isOwnProfile ? !!user : true,
   });
 
   if (loading) {

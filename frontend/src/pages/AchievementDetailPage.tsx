@@ -24,10 +24,9 @@ export default function AchievementDetailPage() {
       isOwnProfile
         ? getMyAchievementDetail(key!, signal)
         : getUserAchievementDetail(username!, key!, signal),
-    // Wait for auth to resolve before firing: avoids a race where the page
-    // fires as a "public" request before the session loads, gets a privacy
-    // error, then never re-fetches once the user is confirmed as the owner.
-    enabled: !!key && !!user,
+    // Own profile (/achievements/:key) is behind RequireAuth so user is always set.
+    // Public profile (/u/:username/achievements/:key) should fire for guests too.
+    enabled: !!key && (isOwnProfile ? !!user : true),
   });
 
   const backHref = username ? `/u/${username}/achievements` : "/achievements";

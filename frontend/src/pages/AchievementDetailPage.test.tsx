@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import type { AchievementDetail } from "../api";
+import * as authCtx from "../context/AuthContext";
 
 // Mock AuthContext so we don't need a real auth provider.
 mock.module("../context/AuthContext", () => ({
@@ -287,6 +288,42 @@ describe("AchievementDetailPage — other user profile", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Achievement not found/)).toBeDefined();
+    });
+  });
+});
+
+describe("AchievementDetailPage — unauthenticated visitor on public route", () => {
+  let useAuthSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    // Simulate an unauthenticated visitor (user === null)
+    useAuthSpy = spyOn(authCtx, "useAuth").mockReturnValue({
+      user: null,
+      providers: null,
+      loading: false,
+      sessionStatus: "unauthenticated",
+      subscriptions: null,
+      refreshSubscriptions: mock(() => Promise.resolve()),
+      login: mock(() => Promise.resolve()),
+      signup: mock(() => Promise.resolve()),
+      logout: mock(() => Promise.resolve()),
+      refresh: mock(() => Promise.resolve()),
+    } as any);
+  });
+
+  afterEach(() => {
+    useAuthSpy.mockRestore();
+  });
+
+  test("fires getUserAchievementDetail for a public profile even when not logged in", async () => {
+    getUserDetailSpy.mockImplementation(() =>
+      Promise.resolve(makeDetail({ ladder: null, history: [] })),
+    );
+
+    render(<AchievementDetailPage />, { wrapper: OtherWrapper });
+
+    await waitFor(() => {
+      expect(getUserDetailSpy).toHaveBeenCalled();
     });
   });
 });
