@@ -23,7 +23,7 @@ export function SettingsSidebar({
       <nav
         role="tablist"
         aria-label="Settings sections"
-        className="flex sm:hidden gap-1.5 overflow-x-auto scrollbar-none pb-1"
+        className="flex sm:hidden gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] min-w-0 w-full"
       >
         {tabs.map((tab) => {
           const isActive = tab.value === active;

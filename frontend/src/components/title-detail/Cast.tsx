@@ -11,7 +11,7 @@ export default function Cast({ cast }: CastProps) {
   if (cast.length === 0) return null;
   return (
     <Section title="Cast">
-      <ScrollableRow className="gap-4 pb-2">
+      <ScrollableRow className="gap-4 pb-2" focusable ariaLabel="Cast">
         {cast.map((c) => (
           <PersonCard
             key={c.id}

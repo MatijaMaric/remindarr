@@ -6,12 +6,18 @@ interface ScrollableRowProps {
   className?: string;
   /** Enable scroll-snap-type: x mandatory. Defaults to false. */
   scrollSnap?: boolean;
+  /** Make the scrollable region keyboard-focusable (adds tabIndex=0 + role/aria-label). */
+  focusable?: boolean;
+  /** Accessible label for the scrollable region when focusable=true. */
+  ariaLabel?: string;
 }
 
 function ScrollableRowImpl({
   children,
   className,
   scrollSnap = false,
+  focusable = false,
+  ariaLabel,
 }: ScrollableRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -73,6 +79,9 @@ function ScrollableRowImpl({
         ref={scrollRef}
         className={`flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${className ?? ""}`}
         style={scrollSnap ? { scrollSnapType: "x mandatory" } : undefined}
+        {...(focusable
+          ? { tabIndex: 0, role: "region", "aria-label": ariaLabel }
+          : {})}
       >
         {children}
       </div>

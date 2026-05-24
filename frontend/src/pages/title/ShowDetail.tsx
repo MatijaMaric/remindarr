@@ -36,12 +36,12 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
     );
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 overflow-x-hidden">
       {/* Hero */}
       <ShowHero title={title} tmdb={tmdb} country={country} />
 
-      {/* Metadata strip */}
-      <div className="dark-section -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-white/[0.06]">
+      {/* Metadata strip — mobile only; desktop ShowHero already renders these fields inline */}
+      <div className="sm:hidden dark-section -mx-4 px-6 py-5 flex flex-wrap gap-x-8 gap-y-3 border-b border-white/[0.06]">
         {[
           { label: "TYPE", value: "TV Show" },
           tmdb?.status ? { label: "STATUS", value: tmdb.status } : null,
