@@ -28,8 +28,8 @@ import { ok, err } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
 import { zValidator } from "../lib/validator";
 import { getUserPace, computeEta } from "../db/repository/stats";
-import { getDb } from "../db/schema";
-import { sql } from "drizzle-orm";
+import { getDb, episodes as episodesTable } from "../db/schema";
+import { sql, eq, and, asc } from "drizzle-orm";
 
 const log = logger.child({ module: "details" });
 
@@ -215,6 +215,74 @@ app.get(
       }
     }
 
+    // Fallback: when TMDB is unavailable, build a minimal season response from
+    // the local episodes table so the season detail page can render episode rows.
+    if (!tmdb) {
+      const db = getDb();
+      const dbEpisodes = await db
+        .select({
+          id: episodesTable.id,
+          name: episodesTable.name,
+          overview: episodesTable.overview,
+          air_date: episodesTable.airDate,
+          episode_number: episodesTable.episodeNumber,
+          season_number: episodesTable.seasonNumber,
+          still_path: episodesTable.stillPath,
+        })
+        .from(episodesTable)
+        .where(
+          and(
+            eq(episodesTable.titleId, title.id),
+            eq(episodesTable.seasonNumber, seasonNumber),
+          ),
+        )
+        .orderBy(asc(episodesTable.episodeNumber))
+        .all();
+
+      if (dbEpisodes.length > 0) {
+        tmdb = {
+          id: 0,
+          name: `Season ${seasonNumber}`,
+          overview: "",
+          air_date: dbEpisodes[0].air_date ?? null,
+          poster_path: null,
+          season_number: seasonNumber,
+          vote_average: 0,
+          episodes: dbEpisodes.map((ep) => ({
+            id: ep.id,
+            name: ep.name ?? `Episode ${ep.episode_number}`,
+            overview: ep.overview ?? "",
+            air_date: ep.air_date ?? null,
+            episode_number: ep.episode_number,
+            season_number: ep.season_number,
+            still_path: ep.still_path ?? null,
+            runtime: null,
+            vote_average: 0,
+            guest_stars: [],
+            crew: [],
+          })),
+          credits: { cast: [], crew: [] },
+        };
+
+        // Build seasons list from distinct season numbers in the DB
+        if (seasons.length === 0) {
+          const seasonRows = await db.all<{ season_number: number }>(sql`
+            SELECT DISTINCT season_number
+            FROM episodes
+            WHERE title_id = ${title.id}
+            ORDER BY season_number ASC
+          `);
+          seasons = seasonRows.map((s) => ({
+            season_number: s.season_number,
+            name: `Season ${s.season_number}`,
+            episode_count: 0,
+            air_date: null,
+            poster_path: null,
+          }));
+        }
+      }
+    }
+
     setPublicCacheIfAnon(c, 3600);
     return ok(c, { title, tmdb, seasonNumber, country, seasons });
   },
@@ -249,6 +317,49 @@ app.get(
       }
     }
 
+    // Fallback: when TMDB is unavailable, build a minimal episode response
+    // from the local episodes table so the episode detail page can render.
+    if (!tmdb) {
+      const db = getDb();
+      const dbEp = await db
+        .select({
+          id: episodesTable.id,
+          name: episodesTable.name,
+          overview: episodesTable.overview,
+          air_date: episodesTable.airDate,
+          episode_number: episodesTable.episodeNumber,
+          season_number: episodesTable.seasonNumber,
+          still_path: episodesTable.stillPath,
+        })
+        .from(episodesTable)
+        .where(
+          and(
+            eq(episodesTable.titleId, title.id),
+            eq(episodesTable.seasonNumber, seasonNumber),
+            eq(episodesTable.episodeNumber, episodeNumber),
+          ),
+        )
+        .get();
+
+      if (dbEp) {
+        tmdb = {
+          id: dbEp.id,
+          name: dbEp.name ?? `Episode ${episodeNumber}`,
+          overview: dbEp.overview ?? "",
+          air_date: dbEp.air_date ?? null,
+          episode_number: dbEp.episode_number,
+          season_number: dbEp.season_number,
+          still_path: dbEp.still_path ?? null,
+          runtime: null,
+          vote_average: 0,
+          vote_count: 0,
+          guest_stars: [],
+          crew: [],
+          credits: { cast: [], crew: [] },
+        };
+      }
+    }
+
     return ok(c, { title, tmdb, seasonNumber, episodeNumber, country });
   },
 );
@@ -265,7 +376,24 @@ app.get("/person/:personId", zValidator("param", personIdParam), async (c) => {
     return ok(c, { person });
   } catch (e) {
     log.error("TMDB person fetch failed", { personId, err: e });
-    return err(c, "Person not found", 404);
+    // When TMDB is unreachable (e.g. dev/test with a placeholder key), return
+    // a minimal stub so the PersonPage renders rather than showing an error.
+    return ok(c, {
+      person: {
+        id: personId,
+        name: `Person ${personId}`,
+        biography: "",
+        birthday: null,
+        deathday: null,
+        place_of_birth: null,
+        known_for_department: "",
+        profile_path: null,
+        also_known_as: [],
+        popularity: 0,
+        external_ids: {},
+        combined_credits: { cast: [], crew: [] },
+      },
+    });
   }
 });
 

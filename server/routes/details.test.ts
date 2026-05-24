@@ -552,12 +552,16 @@ describe("GET /details/person/:personId", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 404 when TMDB fetch fails", async () => {
+  it("returns stub person when TMDB fetch fails", async () => {
     (tmdbClient.fetchPersonDetails as any).mockRejectedValueOnce(
       new Error("Not found"),
     );
     const res = await app.request("/details/person/999");
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.person.id).toBe(999);
+    expect(body.person.name).toBe("Person 999");
+    expect(body.person.combined_credits).toEqual({ cast: [], crew: [] });
   });
 });
 
