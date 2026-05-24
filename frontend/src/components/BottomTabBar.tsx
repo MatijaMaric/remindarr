@@ -34,7 +34,7 @@ export default function BottomTabBar() {
 
   const tabClass = (isActive: boolean) =>
     `flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-      isActive ? "text-amber-400" : "text-zinc-500"
+      isActive ? "text-amber-400" : "text-zinc-400"
     }`;
 
   return (
