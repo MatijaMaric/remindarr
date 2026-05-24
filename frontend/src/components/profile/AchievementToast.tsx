@@ -55,7 +55,7 @@ interface ToastItemProps {
   onDismiss: () => void;
 }
 
-function ToastItem({ achievement, onDismiss }: ToastItemProps) {
+export function ToastItem({ achievement, onDismiss }: ToastItemProps) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, TOAST_DURATION_MS);
     return () => clearTimeout(timer);
