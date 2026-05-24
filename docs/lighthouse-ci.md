@@ -40,7 +40,7 @@ Public pages are audited logged-out (avoids the mobile authed-Home → `/reels` 
 6. Run `lhci autorun` four times: **mobile/desktop** × **public/auth** page groups, each writing reports to `.lighthouseci/<formFactor>/<group>/`.
 7. Upload the full `.lighthouseci/` tree as a GitHub Actions artifact named `lighthouse-reports`.
 
-The job runs on every PR (`pull_request` targeting `master`) and on every push to `master`. It is **not** a required merge gate in phase 1 — it reports warnings but never blocks (see "Phasing" below).
+The job runs on the **1st and 15th of every month** (approximately every two weeks) via a scheduled cron, plus on-demand via `workflow_dispatch`. It is not a required merge gate in phase 1 — reports threshold warnings but never blocks (see "Phasing" below).
 
 ---
 
@@ -102,4 +102,4 @@ The `lighthouse:ci` script also runs `bun run build` first, so your `frontend/di
 | `scripts/lighthouse-ci.ts`         | Orchestration: boot server, seed DB, login, run lhci 4×                |
 | `scripts/lighthouse-ci.helpers.ts` | Testable helpers: `buildCookieHeader`, page groups, `waitForHealth`    |
 | `scripts/lighthouse-ci.test.ts`    | Unit tests for helpers and config                                      |
-| `.github/workflows/test.yml`       | `lighthouse` CI job                                                    |
+| `.github/workflows/lighthouse.yml` | Scheduled CI job (1st & 15th of month + `workflow_dispatch`)           |
