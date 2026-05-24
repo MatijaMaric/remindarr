@@ -57,6 +57,7 @@ test-results/
 .playwright/
 .playwright-cli/
 .e2e/
+.ux-review/
 
 # Superpowers
 .superpowers/
