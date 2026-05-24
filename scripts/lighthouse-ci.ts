@@ -158,6 +158,9 @@ async function main() {
     console.log("[lhci] Authenticated. Cookie length:", cookie.length, "chars");
 
     // 7. Run lhci for each form-factor × page-group combination.
+    // Resolve the binary directly so this works whether invoked via `bun run`
+    // or `node` and regardless of whether `bunx` is on PATH in the subprocess.
+    const lhciBin = path.resolve("node_modules/.bin/lhci");
     const configPath = path.resolve("lighthouserc.cjs");
     let warnCount = 0;
 
@@ -183,8 +186,8 @@ async function main() {
 
         console.log(`[lhci] ${formFactor}/${group}: ${urls.join(", ")}`);
         const result = spawnSync(
-          "bunx",
-          ["lhci", "autorun", `--config=${configPath}`],
+          lhciBin,
+          ["autorun", `--config=${configPath}`],
           {
             env: runEnv,
             stdio: "inherit",
