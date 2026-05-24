@@ -9,6 +9,7 @@ import {
 } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import * as api from "../api";
 import type { LeaderboardEntry } from "../types";
@@ -42,7 +43,12 @@ mock.module("../context/AuthContext", () => ({
 const { default: LeaderboardPage } = await import("./LeaderboardPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return (
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function makeEntry(

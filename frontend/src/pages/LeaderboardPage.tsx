@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Trophy, Star } from "lucide-react";
+import { Link } from "react-router";
 import * as api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { Avatar } from "../components/profile/atoms/Avatar";
@@ -21,8 +22,9 @@ function PodiumSpot({
   const textColor = rankColors[entry.rank] ?? "text-zinc-400";
 
   return (
-    <div
-      className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl border ${
+    <Link
+      to={`/user/${entry.username}`}
+      className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl border hover:opacity-90 transition-opacity ${
         isMe
           ? "border-amber-400/40 bg-amber-400/[0.06]"
           : "border-white/[0.06] bg-white/[0.02]"
@@ -51,36 +53,24 @@ function PodiumSpot({
           {entry.xp} XP
         </span>
       </div>
-      <div className="font-mono text-xs text-zinc-500">
+      <div className="font-mono text-xs text-zinc-400">
         {entry.badgeCount} badge{entry.badgeCount !== 1 ? "s" : ""}
       </div>
-    </div>
+    </Link>
   );
 }
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
-  const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    api
-      .getLeaderboard(controller.signal)
-      .then((data) => {
-        if (controller.signal.aborted) return;
-        setEntries(data);
-      })
-      .catch((err: unknown) => {
-        if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, []);
+  const {
+    data: entries,
+    isLoading: loading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["leaderboard"],
+    queryFn: ({ signal }) => api.getLeaderboard(signal),
+  });
 
   if (loading) {
     return (
@@ -101,11 +91,11 @@ export default function LeaderboardPage() {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-red-900/40 border border-red-800 text-red-200 px-4 py-3 rounded-lg text-sm">
-          {error}
+          {error instanceof Error ? error.message : String(error)}
         </div>
       </div>
     );
@@ -126,7 +116,7 @@ export default function LeaderboardPage() {
         <div className="text-center py-12">
           <Trophy size={40} className="text-zinc-600 mx-auto mb-3" />
           <p className="text-zinc-400 mb-1">No rankings yet.</p>
-          <p className="text-zinc-500 text-sm">
+          <p className="text-zinc-400 text-sm">
             Track titles and follow people to appear on the leaderboard.
           </p>
         </div>
@@ -170,15 +160,16 @@ export default function LeaderboardPage() {
           {rest.map((entry) => {
             const isMe = entry.userId === user?.id;
             return (
-              <div
+              <Link
                 key={entry.userId}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                to={`/user/${entry.username}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border hover:opacity-90 transition-opacity ${
                   isMe
                     ? "border-amber-400/30 bg-amber-400/[0.05]"
                     : "border-white/[0.05] bg-white/[0.02]"
                 }`}
               >
-                <span className="font-mono text-sm font-bold text-zinc-500 w-6 shrink-0">
+                <span className="font-mono text-sm font-bold text-zinc-400 w-6 shrink-0">
                   #{entry.rank}
                 </span>
                 <Avatar
@@ -191,7 +182,7 @@ export default function LeaderboardPage() {
                   <div className="text-sm font-semibold text-zinc-100 truncate">
                     {entry.name ?? entry.username}
                   </div>
-                  <div className="font-mono text-xs text-zinc-500 truncate">
+                  <div className="font-mono text-xs text-zinc-400 truncate">
                     @{entry.username}
                   </div>
                 </div>
@@ -199,11 +190,11 @@ export default function LeaderboardPage() {
                   <div className="font-mono text-sm font-bold text-amber-400">
                     {entry.xp} XP
                   </div>
-                  <div className="font-mono text-xs text-zinc-500">
+                  <div className="font-mono text-xs text-zinc-400">
                     {entry.badgeCount} badges
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

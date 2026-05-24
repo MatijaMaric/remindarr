@@ -61,7 +61,7 @@ export default function AchievementsPage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="text-zinc-500 text-sm">Loading…</div>
+        <div className="text-zinc-400 text-sm">Loading…</div>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default function AchievementsPage() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="text-zinc-500 text-sm">
+        <div className="text-zinc-400 text-sm">
           Failed to load achievements.
         </div>
       </div>
@@ -82,11 +82,11 @@ export default function AchievementsPage() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
         <div className="flex items-baseline justify-between">
-          <h1 className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 text-zinc-500">
+          <h1 className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 text-zinc-400">
             Achievements
           </h1>
         </div>
-        <div className="text-zinc-500 text-sm">No achievements yet.</div>
+        <div className="text-zinc-400 text-sm">No achievements yet.</div>
       </div>
     );
   }
@@ -120,10 +120,10 @@ export default function AchievementsPage() {
     <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-baseline justify-between">
-        <h1 className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 text-zinc-500">
+        <h1 className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 text-zinc-400">
           Achievements
         </h1>
-        <span className="text-[11px] text-zinc-500 font-mono">
+        <span className="text-[11px] text-zinc-400 font-mono">
           {earned.length}/{achievements.length} earned · {totalXp} XP
         </span>
       </div>
