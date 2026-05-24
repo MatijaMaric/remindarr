@@ -59,5 +59,9 @@ test-results/
 .e2e/
 .ux-review/
 
+# Lighthouse CI
+.lighthouse/
+.lighthouseci/
+
 # Superpowers
 .superpowers/

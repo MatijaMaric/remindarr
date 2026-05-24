@@ -122,6 +122,13 @@ bun run check      # Type check + lint + tests (run before committing)
 
 Requires [Bun](https://bun.sh) v1.0+.
 
+```bash
+# Run Lighthouse CI locally (audits perf/a11y/BP/SEO across 5 pages)
+TMDB_API_KEY=<your-key> bun run lighthouse:ci
+```
+
+See [`docs/lighthouse-ci.md`](docs/lighthouse-ci.md) for thresholds, CI setup, and the warn→block phasing plan.
+
 ## Stack
 
 - **Runtime**: Bun + SQLite

@@ -20,7 +20,7 @@ function getArg(name: string): string {
 const seedUserId = getArg("seed-user-id");
 const friendUserId = getArg("friend-user-id");
 
-process.env.DB_PATH = path.resolve(UX_DB_PATH);
+process.env.DB_PATH ??= path.resolve(UX_DB_PATH);
 process.env.BETTER_AUTH_SECRET = "ux-review-better-auth-secret";
 process.env.TMDB_API_KEY = "ux-review-placeholder";
 process.env.BASE_URL = UX_BASE_URL;
