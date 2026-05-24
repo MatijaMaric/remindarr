@@ -55,7 +55,7 @@ export default function SharedWatchlistPage() {
           {titles.length} title{titles.length !== 1 ? "s" : ""} shared by{" "}
           <span className="text-amber-400">@{username}</span>
         </h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">
           Read-only view — sign in to track these titles
         </p>
       </div>
@@ -81,7 +81,7 @@ export default function SharedWatchlistPage() {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs font-medium px-2 text-center">
+                  <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-medium px-2 text-center">
                     {title.title}
                   </div>
                 )}
@@ -91,7 +91,7 @@ export default function SharedWatchlistPage() {
                   {title.title}
                 </div>
                 {title.release_year && (
-                  <div className="text-[10px] text-zinc-500">
+                  <div className="text-[10px] text-zinc-400">
                     {title.release_year}
                   </div>
                 )}
@@ -101,7 +101,7 @@ export default function SharedWatchlistPage() {
         </div>
       )}
 
-      <footer className="text-center text-xs text-zinc-600 pt-8 pb-4">
+      <footer className="text-center text-xs text-zinc-400 pt-8 pb-4">
         Powered by{" "}
         <a
           href="/"

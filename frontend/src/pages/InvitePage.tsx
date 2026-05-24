@@ -152,7 +152,7 @@ export default function InvitePage() {
           ))}
         </div>
       ) : invitations.length === 0 ? (
-        <p className="text-center py-8 text-zinc-500">{t("invite.empty")}</p>
+        <p className="text-center py-8 text-zinc-400">{t("invite.empty")}</p>
       ) : (
         <div className="space-y-3">
           {invitations.map((inv) => (
@@ -207,7 +207,7 @@ function InvitationCard({
       </div>
 
       {/* Dates */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500 mb-3">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400 mb-3">
         <span>
           {t("invite.created_at")}: {formatDate(invitation.created_at)}
         </span>
@@ -276,7 +276,7 @@ function StatusBadge({
 
   if (status === "expired") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400">
         <XCircle className="size-3.5" />
         {t("invite.statusExpired")}
       </span>

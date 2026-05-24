@@ -126,7 +126,7 @@ export default function AdminUsersPage() {
   }
 
   if (!me?.is_admin) {
-    return <div className="text-zinc-500">{t("admin.accessDenied")}</div>;
+    return <div className="text-zinc-400">{t("admin.accessDenied")}</div>;
   }
 
   return (
@@ -250,7 +250,7 @@ export default function AdminUsersPage() {
 
       {/* User table */}
       {isLoading ? (
-        <div className="text-zinc-500 text-sm py-8 text-center">
+        <div className="text-zinc-400 text-sm py-8 text-center">
           {t("admin.users.loading")}
         </div>
       ) : isError ? (
@@ -258,7 +258,7 @@ export default function AdminUsersPage() {
           {error instanceof Error ? error.message : String(error)}
         </div>
       ) : !data || data.users.length === 0 ? (
-        <div className="text-zinc-500 text-sm py-8 text-center">
+        <div className="text-zinc-400 text-sm py-8 text-center">
           {t("admin.users.empty")}
         </div>
       ) : (
@@ -302,12 +302,12 @@ export default function AdminUsersPage() {
                           </span>
                         </div>
                         {user.name && (
-                          <div className="text-xs text-zinc-500">
+                          <div className="text-xs text-zinc-400">
                             {user.name}
                           </div>
                         )}
                         {user.email && (
-                          <div className="text-xs text-zinc-600">
+                          <div className="text-xs text-zinc-400">
                             {user.email}
                           </div>
                         )}
@@ -320,7 +320,7 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3 hidden md:table-cell text-zinc-400 capitalize">
                     {user.auth_provider}
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-zinc-500">
+                  <td className="px-4 py-3 hidden lg:table-cell text-zinc-400">
                     {formatDate(user.created_at)}
                   </td>
                   <td className="px-4 py-3">
@@ -379,7 +379,7 @@ export default function AdminUsersPage() {
                         </>
                       )}
                       {user.id === me.id && (
-                        <span className="text-xs text-zinc-600 px-2">
+                        <span className="text-xs text-zinc-400 px-2">
                           {t("admin.users.you")}
                         </span>
                       )}
