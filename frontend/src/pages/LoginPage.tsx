@@ -162,7 +162,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setShowLocalLogin(true)}
-            className="mt-4 w-full text-center text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            className="mt-4 w-full text-center text-sm text-zinc-300 underline underline-offset-2 hover:text-white transition-colors cursor-pointer"
           >
             {t("login.signInWithUsername")}
           </button>
@@ -229,11 +229,11 @@ export default function LoginPage() {
           </>
         )}
 
-        <p className="mt-6 text-center text-sm text-zinc-500">
+        <p className="mt-6 text-center text-sm text-zinc-400">
           {t("login.noAccount")}{" "}
           <Link
             to="/signup"
-            className="text-amber-400 hover:text-amber-300 transition-colors"
+            className="text-amber-400 hover:text-amber-300 transition-colors underline underline-offset-2"
           >
             {t("login.signUp")}
           </Link>
