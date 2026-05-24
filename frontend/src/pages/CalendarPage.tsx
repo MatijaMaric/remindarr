@@ -436,12 +436,12 @@ function MobileCalendar({
           {/* Month header */}
           <div className="flex items-baseline justify-between px-5 pt-3 pb-2">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-0.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-0.5">
                 {year} · {dotDates.size} airings
               </div>
-              <div className="text-[32px] font-extrabold tracking-[-1.2px]">
+              <h1 className="text-[32px] font-extrabold tracking-[-1.2px]">
                 {monthLabel}
-              </div>
+              </h1>
             </div>
             <div className="flex gap-2 items-center">
               <button
@@ -478,7 +478,7 @@ function MobileCalendar({
             </button>
           </div>
           {loadingMonth ? (
-            <div className="text-center py-8 text-zinc-500 font-mono text-xs">
+            <div className="text-center py-8 text-zinc-400 font-mono text-xs">
               Loading...
             </div>
           ) : (
@@ -954,7 +954,7 @@ function GridCalendar({
             ? "bg-amber-500 text-zinc-950"
             : "text-zinc-400 hover:text-white hover:bg-zinc-800"
         }`}
-        title={hideWatched ? "Show watched" : "Hide watched"}
+        aria-label={hideWatched ? "Show watched" : "Hide watched"}
       >
         {hideWatched ? (
           <EyeOffIcon className="size-4" />
@@ -991,7 +991,7 @@ function GridCalendar({
             {WEEKDAYS.map((d) => (
               <div
                 key={d}
-                className="px-2 py-2 text-center font-mono text-[11px] text-zinc-500 font-semibold uppercase tracking-[0.15em]"
+                className="px-2 py-2 text-center font-mono text-[11px] text-zinc-400 font-semibold uppercase tracking-[0.15em]"
               >
                 {d}
               </div>
@@ -1105,7 +1105,7 @@ function GridCalendar({
                             );
                           })}
                           {itemCap < dayItems.length && (
-                            <div className="text-[10px] text-zinc-500 pl-1.5">
+                            <div className="text-[10px] text-zinc-400 pl-1.5">
                               +{dayItems.length - itemCap} more
                             </div>
                           )}
@@ -1122,7 +1122,7 @@ function GridCalendar({
 
       {/* Legend */}
       {!loading && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-zinc-500 pt-1">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-zinc-400 pt-1">
           <div className="flex items-center gap-1.5">
             <span className="text-amber-400">●</span>
             <span>Tracked · airing</span>
@@ -1319,6 +1319,7 @@ function WeekCalendar({
     <div className="flex flex-wrap items-center gap-2 justify-end">
       <button
         onClick={prevWeek}
+        aria-label="Previous week"
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronLeftIcon className="size-5" />
@@ -1331,6 +1332,7 @@ function WeekCalendar({
       </button>
       <button
         onClick={nextWeek}
+        aria-label="Next week"
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronRightIcon className="size-5" />
@@ -1356,7 +1358,7 @@ function WeekCalendar({
             ? "bg-amber-500 text-zinc-950"
             : "text-zinc-400 hover:text-white hover:bg-zinc-800"
         }`}
-        title={hideWatched ? "Show watched" : "Hide watched"}
+        aria-label={hideWatched ? "Show watched" : "Hide watched"}
       >
         {hideWatched ? (
           <EyeOffIcon className="size-4" />
@@ -1390,7 +1392,7 @@ function WeekCalendar({
                 <div
                   key={dateKey}
                   className={`px-2 py-2 text-center ${
-                    isToday ? "text-amber-400" : "text-zinc-500"
+                    isToday ? "text-amber-400" : "text-zinc-400"
                   }`}
                 >
                   <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em]">

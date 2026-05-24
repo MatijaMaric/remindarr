@@ -87,9 +87,9 @@ export default function SettingsPage() {
       </div>
 
       {/* Breadcrumb */}
-      <div className="pb-4 font-mono text-xs text-zinc-500 tracking-wide">
-        <span className="opacity-60">/settings</span>
-        <span className="mx-2 opacity-40">›</span>
+      <div className="pb-4 font-mono text-xs text-zinc-400 tracking-wide">
+        <span>/settings</span>
+        <span className="mx-2 text-zinc-600">›</span>
         <span className="text-amber-400">{breadcrumbLabel}</span>
       </div>
 
@@ -101,7 +101,7 @@ export default function SettingsPage() {
           buildInfo={
             <div className="space-y-0.5">
               <div>Remindarr · self-hosted</div>
-              <div className="text-zinc-500">
+              <div className="text-zinc-400">
                 TMDB · {navigator.language || "en"}
               </div>
             </div>
