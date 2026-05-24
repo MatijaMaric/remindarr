@@ -459,7 +459,7 @@ export default function BrowsePage() {
     "bg-transparent text-zinc-300 border-zinc-600 hover:border-zinc-400";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0 overflow-x-hidden">
       <PageHeader
         kicker={
           searchResults !== null
