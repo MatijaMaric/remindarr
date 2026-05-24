@@ -23,6 +23,7 @@
     "test:server": "bun test server/",
     "test:frontend": "cd frontend && bun test src/",
     "test:e2e": "playwright test",
+    "ux:capture": "bun run build && playwright test -c playwright.ux.config.ts",
     "eval": "bun test evals/",
     "eval:notifications": "bun test evals/notifications/",
     "eval:tmdb": "bun test evals/tmdb-parser/",
@@ -57,6 +58,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@cloudflare/workers-types": "^4.20260509.1",
     "@happy-dom/global-registrator": "^20.8.4",
     "@playwright/test": "^1.54.0",
