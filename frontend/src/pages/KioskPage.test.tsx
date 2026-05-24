@@ -274,11 +274,12 @@ describe("KioskPage", () => {
     await waitFor(() => {
       expect(screen.getByText(/cast to tv/i)).toBeTruthy();
     });
-    // The cast element must not be a <button> (it's a decorative div per design note 3)
-    const buttons = Array.from(document.querySelectorAll("button")).filter(
-      (b) => b.textContent?.toLowerCase().includes("cast"),
+    // Cast to TV is a disabled button with aria-label (a11y fix: interactive controls must be buttons)
+    const castButton = document.querySelector(
+      "button[aria-label*='Cast to TV']",
     );
-    expect(buttons.length).toBe(0);
+    expect(castButton).not.toBeNull();
+    expect(castButton?.hasAttribute("disabled")).toBe(true);
   });
 
   it("shows error state when fetch fails", async () => {
