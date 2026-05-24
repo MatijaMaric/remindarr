@@ -104,16 +104,16 @@ function loadConfig(env: Record<string, string | undefined>): LhciConfig {
 
 describe("lighthouserc.cjs", () => {
   const baseEnv = {
-    LHCI_URLS: `${LIGHTHOUSE_BASE_URL}/`,
-    LHCI_PRESET: "mobile",
-    LHCI_OUTPUT_DIR: "/tmp/lhci-test",
-    LHCI_COOKIE: undefined,
+    LH_URLS: `${LIGHTHOUSE_BASE_URL}/`,
+    LH_PRESET: "mobile",
+    LH_OUTPUT_DIR: "/tmp/lhci-test",
+    LH_COOKIE: undefined,
   };
 
-  it("splits LHCI_URLS on commas to produce the url array", () => {
+  it("splits LH_URLS on commas to produce the url array", () => {
     const cfg = loadConfig({
       ...baseEnv,
-      LHCI_URLS: `${LIGHTHOUSE_BASE_URL}/,${LIGHTHOUSE_BASE_URL}/browse`,
+      LH_URLS: `${LIGHTHOUSE_BASE_URL}/,${LIGHTHOUSE_BASE_URL}/browse`,
     });
     expect(cfg.ci.collect.url).toEqual([
       `${LIGHTHOUSE_BASE_URL}/`,
@@ -122,24 +122,24 @@ describe("lighthouserc.cjs", () => {
   });
 
   it("mobile preset: no preset key in settings", () => {
-    const cfg = loadConfig({ ...baseEnv, LHCI_PRESET: "mobile" });
+    const cfg = loadConfig({ ...baseEnv, LH_PRESET: "mobile" });
     expect(cfg.ci.collect.settings.preset).toBeUndefined();
   });
 
   it("desktop preset: settings.preset is 'desktop'", () => {
-    const cfg = loadConfig({ ...baseEnv, LHCI_PRESET: "desktop" });
+    const cfg = loadConfig({ ...baseEnv, LH_PRESET: "desktop" });
     expect(cfg.ci.collect.settings.preset).toBe("desktop");
   });
 
-  it("no extraHeaders when LHCI_COOKIE is unset", () => {
-    const cfg = loadConfig({ ...baseEnv, LHCI_COOKIE: undefined });
+  it("no extraHeaders when LH_COOKIE is unset", () => {
+    const cfg = loadConfig({ ...baseEnv, LH_COOKIE: undefined });
     expect(cfg.ci.collect.settings.extraHeaders).toBeUndefined();
   });
 
-  it("includes Cookie in extraHeaders when LHCI_COOKIE is set", () => {
+  it("includes Cookie in extraHeaders when LH_COOKIE is set", () => {
     const cfg = loadConfig({
       ...baseEnv,
-      LHCI_COOKIE: "better-auth.session_token=tok",
+      LH_COOKIE: "better-auth.session_token=tok",
     });
     expect(cfg.ci.collect.settings.extraHeaders).toEqual({
       Cookie: "better-auth.session_token=tok",
