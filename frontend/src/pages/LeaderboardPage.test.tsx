@@ -114,7 +114,9 @@ describe("LeaderboardPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Follow people to see them on the leaderboard/),
+        screen.getByText(
+          /Track titles and follow people to appear on the leaderboard/,
+        ),
       ).toBeDefined();
     });
   });
@@ -176,7 +178,9 @@ describe("LeaderboardPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Follow people to see them on the leaderboard/),
+        screen.getByText(
+          /Track titles and follow people to appear on the leaderboard/,
+        ),
       ).toBeDefined();
     });
   });
