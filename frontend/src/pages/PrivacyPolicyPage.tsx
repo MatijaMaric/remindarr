@@ -27,20 +27,26 @@ export default function PrivacyPolicyPage() {
       <div className="space-y-8 text-sm text-zinc-300 leading-relaxed">
         <p className="text-zinc-400">Last updated: May 25, 2026</p>
 
-        <p className="rounded-lg border border-white/[0.08] bg-zinc-900/50 p-4 text-zinc-400 italic">
-          Remindarr is open-source software that anyone can self-host. This
-          document is a template provided for the operator of this instance. It
-          should be reviewed and customized — including the bracketed
-          placeholders below and a review with a legal professional — before
-          being relied upon for a public deployment.
+        <p className="rounded-lg border border-white/[0.08] bg-zinc-900/50 p-4 text-zinc-400">
+          Remindarr is open-source software. This policy applies to the official
+          instance hosted at{" "}
+          <a
+            href="https://remindarr.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+          >
+            remindarr.app
+          </a>
+          . If you use a self-hosted instance operated by someone else, that
+          operator is the data controller and their own privacy policy applies.
         </p>
 
         <p>
-          This Privacy Policy describes how <strong>[Operator Name]</strong>{" "}
-          (&quot;we&quot;, &quot;us&quot;, the &quot;operator&quot;) handles
-          information when you use this instance of Remindarr (the
-          &quot;Service&quot;). If you do not agree with this policy, please do
-          not use the Service.
+          This Privacy Policy describes how Remindarr (&quot;we&quot;,
+          &quot;us&quot;, the &quot;operator&quot;) handles information when you
+          use the Remindarr service (the &quot;Service&quot;). If you do not
+          agree with this policy, please do not use the Service.
         </p>
 
         <Section title="Information we collect">
@@ -174,8 +180,14 @@ export default function PrivacyPolicyPage() {
 
         <Section title="Contact">
           <p>
-            Questions about this policy can be directed to the operator at{" "}
-            <strong>[contact@example.com]</strong>.
+            Questions about this policy can be directed to us at{" "}
+            <a
+              href="mailto:privacy@remindarr.app"
+              className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+            >
+              privacy@remindarr.app
+            </a>
+            .
           </p>
         </Section>
 

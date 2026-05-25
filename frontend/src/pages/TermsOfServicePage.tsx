@@ -27,20 +27,27 @@ export default function TermsOfServicePage() {
       <div className="space-y-8 text-sm text-zinc-300 leading-relaxed">
         <p className="text-zinc-400">Last updated: May 25, 2026</p>
 
-        <p className="rounded-lg border border-white/[0.08] bg-zinc-900/50 p-4 text-zinc-400 italic">
-          Remindarr is open-source software that anyone can self-host. These
-          Terms are a template provided for the operator of this instance. They
-          should be reviewed and customized — including the bracketed
-          placeholders below and a review with a legal professional — before
-          being relied upon for a public deployment.
+        <p className="rounded-lg border border-white/[0.08] bg-zinc-900/50 p-4 text-zinc-400">
+          Remindarr is open-source software. These Terms apply to the official
+          instance hosted at{" "}
+          <a
+            href="https://remindarr.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+          >
+            remindarr.app
+          </a>
+          . Self-hosted instances are operated by, and governed by the terms of,
+          whoever runs them.
         </p>
 
         <Section title="1. Acceptance of terms">
           <p>
-            By accessing or using this instance of Remindarr (the
-            &quot;Service&quot;), operated by <strong>[Operator Name]</strong>,
-            you agree to be bound by these Terms of Service. If you do not
-            agree, do not use the Service.
+            By accessing or using the Remindarr service (the
+            &quot;Service&quot;), operated by Remindarr, you agree to be bound
+            by these Terms of Service. If you do not agree, do not use the
+            Service.
           </p>
         </Section>
 
@@ -146,16 +153,21 @@ export default function TermsOfServicePage() {
 
         <Section title="11. Governing law">
           <p>
-            These Terms are governed by the laws of{" "}
-            <strong>[Jurisdiction]</strong>, without regard to its conflict of
-            law provisions.
+            These Terms are governed by the laws of the Republic of Croatia,
+            without regard to its conflict of law provisions.
           </p>
         </Section>
 
         <Section title="12. Contact">
           <p>
-            Questions about these Terms can be directed to the operator at{" "}
-            <strong>[contact@example.com]</strong>.
+            Questions about these Terms can be directed to us at{" "}
+            <a
+              href="mailto:legal@remindarr.app"
+              className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+            >
+              legal@remindarr.app
+            </a>
+            .
           </p>
         </Section>
 
