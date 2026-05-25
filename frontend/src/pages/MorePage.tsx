@@ -7,6 +7,8 @@ import {
   User,
   Settings,
   LogOut,
+  Shield,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -155,6 +157,21 @@ export default function MorePage() {
           icon={<Settings size={16} />}
           label="Settings"
           to="/settings"
+          isLast
+        />
+      </MoreGroup>
+
+      {/* Legal */}
+      <MoreGroup label="Legal">
+        <MoreRow
+          icon={<Shield size={16} />}
+          label="Privacy Policy"
+          to="/privacy"
+        />
+        <MoreRow
+          icon={<FileText size={16} />}
+          label="Terms of Service"
+          to="/terms"
           isLast
         />
       </MoreGroup>

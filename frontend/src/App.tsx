@@ -62,6 +62,12 @@ const AchievementsPage = lazyWithRetry(
 const AchievementDetailPage = lazyWithRetry(
   () => import("./pages/AchievementDetailPage"),
 );
+const PrivacyPolicyPage = lazyWithRetry(
+  () => import("./pages/PrivacyPolicyPage"),
+);
+const TermsOfServicePage = lazyWithRetry(
+  () => import("./pages/TermsOfServicePage"),
+);
 
 // Wraps a route element in an inline ErrorBoundary so a single page crash
 // shows a contained fallback instead of taking down the whole shell.
@@ -487,6 +493,22 @@ export default function App() {
               }
             />
             <Route
+              path="/privacy"
+              element={
+                <Page>
+                  <PrivacyPolicyPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/terms"
+              element={
+                <Page>
+                  <TermsOfServicePage />
+                </Page>
+              }
+            />
+            <Route
               path="*"
               element={
                 <Page>
@@ -502,15 +524,29 @@ export default function App() {
       >
         <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-400">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>
-          <a
-            href="https://github.com/MatijaMaric/remindarr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors"
-          >
-            <ExternalLink className="size-4" />
-            GitHub
-          </a>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/privacy"
+              className="text-zinc-400 hover:text-white transition-colors"
+            >
+              {t("legal.privacy")}
+            </Link>
+            <Link
+              to="/terms"
+              className="text-zinc-400 hover:text-white transition-colors"
+            >
+              {t("legal.terms")}
+            </Link>
+            <a
+              href="https://github.com/MatijaMaric/remindarr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors"
+            >
+              <ExternalLink className="size-4" />
+              GitHub
+            </a>
+          </div>
         </div>
       </footer>
       {!isKioskPage && <BottomTabBar />}
