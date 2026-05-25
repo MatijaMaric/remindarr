@@ -18,6 +18,9 @@ async function setupMoreMocks(page: MorePagePO["page"]) {
 }
 
 test.describe("More page", () => {
+  // MorePage redirects to /reels on desktop; use mobile viewport throughout.
+  test.use({ viewport: { width: 390, height: 844 } });
+
   test.skip(
     ({ browserName }) => browserName !== "chromium",
     "Running on chromium only",
@@ -38,7 +41,9 @@ test.describe("More page", () => {
     await expect(page.getByText("@testuser")).toBeVisible();
 
     // Discover group
-    await expect(page.getByText("Discover").first()).toBeVisible();
+    await expect(
+      page.getByText("Discover", { exact: true }).first(),
+    ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /discovery/i }).first(),
     ).toBeVisible();
