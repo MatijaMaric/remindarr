@@ -47,6 +47,17 @@
       }
     }
   },
+  "legal": {
+    "kicker": "Legal",
+    "privacy": "Privacy",
+    "terms": "Terms"
+  },
+  "privacy": {
+    "title": "Privacy Policy"
+  },
+  "terms": {
+    "title": "Terms of Service"
+  },
   "nav": {
     "skipToMain": "Skip to main content",
     "home": "Home",

@@ -238,6 +238,16 @@ export default function LoginPage() {
             {t("login.signUp")}
           </Link>
         </p>
+
+        <p className="mt-6 text-center text-xs text-zinc-500">
+          <Link to="/privacy" className="hover:text-zinc-300 transition-colors">
+            {t("privacy.title")}
+          </Link>
+          <span className="mx-2">·</span>
+          <Link to="/terms" className="hover:text-zinc-300 transition-colors">
+            {t("terms.title")}
+          </Link>
+        </p>
       </div>
     </div>
   );
