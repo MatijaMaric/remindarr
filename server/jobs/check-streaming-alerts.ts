@@ -53,6 +53,12 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
 
     const providerIds = streamingProviders.map((p) => p.id);
 
+    // Fetch title once per titleId, not once per (titleId, userId) pair
+    const titleRow = await getTitleById(titleId);
+    if (!titleRow) continue;
+
+    const today = new Date().toISOString().slice(0, 10);
+
     for (const userId of userIds) {
       // 4. Find providers not yet alerted for this (user, title)
       const newProviderIds = await getUnalertedProviders(
@@ -65,12 +71,6 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
 
       // 5. Get enabled streaming-alert notifiers for this user
       const userNotifiers = await getStreamingAlertNotifiersForUser(userId);
-
-      // 6. Fetch title info for the notification message
-      const titleRow = await getTitleById(titleId);
-      if (!titleRow) continue;
-
-      const today = new Date().toISOString().slice(0, 10);
 
       for (const pid of newProviderIds) {
         const provider = streamingProviders.find((sp) => sp.id === pid);
