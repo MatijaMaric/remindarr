@@ -73,7 +73,7 @@ test.describe("Leaderboard", () => {
 
     // The PodiumSpot div is the first ancestor div with border-amber-400/40
     const podiumCard = usernameEl
-      .locator("xpath=ancestor::div[contains(@class,'border-amber')]")
+      .locator("xpath=ancestor::a[contains(@class,'border-amber')]")
       .first();
     await expect(podiumCard).toBeVisible();
     await expect(podiumCard).toHaveClass(/border-amber/);
@@ -81,7 +81,7 @@ test.describe("Leaderboard", () => {
     // Other podium cards (Alice, Bob) do not have amber border
     const aliceCard = page
       .getByText("@alice")
-      .locator("xpath=ancestor::div[contains(@class,'rounded-xl')]")
+      .locator("xpath=ancestor::a[contains(@class,'rounded-xl')]")
       .first();
     await expect(aliceCard).not.toHaveClass(/border-amber/);
   });
@@ -104,7 +104,9 @@ test.describe("Leaderboard", () => {
 
     // Empty state message
     await expect(
-      page.getByText(/follow people to see them on the leaderboard/i),
+      page.getByText(
+        /track titles and follow people to appear on the leaderboard/i,
+      ),
     ).toBeVisible();
 
     // No podium rank labels

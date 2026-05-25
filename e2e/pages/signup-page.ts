@@ -25,7 +25,7 @@ export class SignupPage extends BasePage {
   }
 
   get passwordField(): Locator {
-    return this.page.getByLabel("Password");
+    return this.page.getByLabel("Password", { exact: true });
   }
 
   // ── buttons / links ────────────────────────────────────────────────────────

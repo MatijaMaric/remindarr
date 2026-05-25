@@ -58,11 +58,13 @@ export class CalendarPage extends BasePage {
 
 // ── Calendar API fixtures ─────────────────────────────────────────────────────
 
-/** Build a date string N days from today in YYYY-MM-DD format. */
-export function dateFromToday(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().split("T")[0];
+/** YYYY-MM-DD for day N of the current month using local date components,
+ *  matching the grid's formatDateKey(). N must be 1–28 to stay in-month. */
+export function dayInCurrentMonth(day: number): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}-${String(day).padStart(2, "0")}`;
 }
 
 /** Standard single-episode calendar response. */
@@ -70,7 +72,7 @@ export function mockCalendarSingle(
   titleId = "tv-98765",
   showTitle = "Test Show",
 ) {
-  const tomorrow = dateFromToday(1);
+  const airDate = dayInCurrentMonth(15);
   return {
     titles: [],
     episodes: [
@@ -81,7 +83,7 @@ export function mockCalendarSingle(
         episode_number: 2,
         name: "Second Episode",
         overview: "The second episode",
-        air_date: tomorrow,
+        air_date: airDate,
         still_path: null,
         show_title: showTitle,
         poster_url: null,
@@ -95,8 +97,8 @@ export function mockCalendarSingle(
 
 /** Two-show calendar response for grouping tests. */
 export function mockCalendarMultiShow() {
-  const dateA = dateFromToday(1);
-  const dateB = dateFromToday(8);
+  const dateA = dayInCurrentMonth(10);
+  const dateB = dayInCurrentMonth(20);
   return {
     titles: [],
     episodes: [

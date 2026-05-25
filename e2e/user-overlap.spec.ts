@@ -252,7 +252,9 @@ test.describe("User Overlap page", () => {
     await uop.gotoOverlap("testuser", "alice");
     await page.waitForTimeout(500);
 
-    await expect(page.getByText(/watchlist is private/i)).toBeVisible();
+    await expect(
+      page.getByText(/watchlist overlap unavailable/i),
+    ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /Back to profile/i }),
     ).toBeVisible();
