@@ -24,17 +24,7 @@ import {
   stillUrl as mkStillUrl,
 } from "../lib/tmdb-images";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { formatDate } from "../components/title-detail/utils";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);

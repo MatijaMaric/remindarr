@@ -8,19 +8,9 @@ import ExternalLinks from "../components/ExternalLinks";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useQuery } from "@tanstack/react-query";
 import { profileUrl, posterUrl as mkPosterUrl } from "../lib/tmdb-images";
+import { formatDate } from "../components/title-detail/utils";
 
 const BIO_TRUNCATE_LENGTH = 600;
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function getYear(dateStr?: string): string {
   if (!dateStr) return "";

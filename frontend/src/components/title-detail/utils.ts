@@ -17,15 +17,32 @@ export const MONETIZATION_ORDER = [
 
 export type MonetizationType = (typeof MONETIZATION_ORDER)[number]["type"];
 
-export function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", {
+export interface FormatDateOptions {
+  withTime?: boolean;
+  nullLabel?: string;
+  utcAssumed?: boolean;
+}
+
+export function formatDate(
+  dateStr: string | null | undefined,
+  opts: FormatDateOptions = {},
+): string {
+  const { withTime = false, nullLabel = "—", utcAssumed = false } = opts;
+  if (!dateStr) return nullLabel;
+  let normalized = dateStr.includes("T") ? dateStr : dateStr + "T00:00:00";
+  if (utcAssumed && !/(Z|[+-]\d{2}:?\d{2})$/.test(normalized))
+    normalized += "Z";
+  const d = new Date(normalized);
+  if (isNaN(d.getTime())) return nullLabel;
+  const fmtOpts: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
+    ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+  };
+  return withTime
+    ? d.toLocaleString(undefined, fmtOpts)
+    : d.toLocaleDateString(undefined, fmtOpts);
 }
 
 export function formatRuntime(minutes: number | null | undefined): string {

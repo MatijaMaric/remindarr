@@ -14,6 +14,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import * as api from "../api";
 import type { InvitationItem } from "../types";
 import ShareButton from "../components/ShareButton";
+import { formatDate } from "../components/title-detail/utils";
 
 type RedeemResult =
   | { status: "success"; inviterName: string }
@@ -28,16 +29,6 @@ function getStatus(inv: InvitationItem): "pending" | "used" | "expired" {
   if (inv.used_at) return "used";
   if (new Date(inv.expires_at) < new Date()) return "expired";
   return "pending";
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export default function InvitePage() {
@@ -209,10 +200,12 @@ function InvitationCard({
       {/* Dates */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400 mb-3">
         <span>
-          {t("invite.created_at")}: {formatDate(invitation.created_at)}
+          {t("invite.created_at")}:{" "}
+          {formatDate(invitation.created_at, { withTime: true })}
         </span>
         <span>
-          {t("invite.expires_at")}: {formatDate(invitation.expires_at)}
+          {t("invite.expires_at")}:{" "}
+          {formatDate(invitation.expires_at, { withTime: true })}
         </span>
       </div>
 
