@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useClickOutside } from "../hooks/useClickOutside";
 import { X, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
@@ -51,19 +52,7 @@ export default function UserSearchDropdown({
     query.length >= 1 && debouncedQuery.length >= 1 && results.length > 0;
   const loading = isFetching;
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setQuery("");
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  useClickOutside(containerRef, open, () => setQuery(""));
 
   if (selected) {
     return (
