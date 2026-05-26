@@ -22,12 +22,9 @@ import {
   AlertDialogClose,
 } from "../components/ui/alert-dialog";
 
-type Filter = "all" | "active" | "banned";
+import { formatDate } from "../components/title-detail/utils";
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString();
-}
+type Filter = "all" | "active" | "banned";
 
 function RoleBadge({ user }: { user: AdminUser }) {
   const isAdmin = user.role === "admin" || user.is_admin === 1;

@@ -12,18 +12,13 @@ import {
   SLabel,
   SMessage,
 } from "../../components/settings/kit";
+import { formatDate } from "../../components/title-detail/utils";
 
 function formatJobName(name: string): string {
   return name
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
-}
-
-function formatDate(date: string | null): string {
-  if (!date) return "Never";
-  const d = new Date(date + (date.endsWith("Z") ? "" : "Z"));
-  return d.toLocaleString();
 }
 
 function JobStatusBadge({ status }: { status: string }) {
@@ -126,9 +121,21 @@ function BackgroundJobsSection() {
                       {cron.cron}
                     </code>
                     <div className="text-[11px] text-zinc-400 font-mono">
-                      <div>Last: {formatDate(cron.last_run)}</div>
+                      <div>
+                        Last:{" "}
+                        {formatDate(cron.last_run, {
+                          withTime: true,
+                          nullLabel: "Never",
+                          utcAssumed: true,
+                        })}
+                      </div>
                       <div className="text-zinc-500">
-                        Next: {formatDate(cron.next_run)}
+                        Next:{" "}
+                        {formatDate(cron.next_run, {
+                          withTime: true,
+                          nullLabel: "Never",
+                          utcAssumed: true,
+                        })}
                       </div>
                       {stats &&
                         (stats.pending > 0 ||
@@ -210,10 +217,18 @@ function BackgroundJobsSection() {
                         <JobStatusBadge status={job.status} />
                       </td>
                       <td className="py-2 px-2 text-zinc-400 text-xs font-mono">
-                        {formatDate(job.started_at)}
+                        {formatDate(job.started_at, {
+                          withTime: true,
+                          nullLabel: "Never",
+                          utcAssumed: true,
+                        })}
                       </td>
                       <td className="py-2 px-2 text-zinc-400 text-xs font-mono">
-                        {formatDate(job.completed_at)}
+                        {formatDate(job.completed_at, {
+                          withTime: true,
+                          nullLabel: "Never",
+                          utcAssumed: true,
+                        })}
                       </td>
                     </tr>
                   ))}
