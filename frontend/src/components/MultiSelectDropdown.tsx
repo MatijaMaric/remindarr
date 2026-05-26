@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useClickOutside } from "../hooks/useClickOutside";
 import { useTranslation } from "react-i18next";
 
 export interface Option {
@@ -32,28 +33,10 @@ export default function MultiSelectDropdown({
   const searchRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
-    }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setOpen(false);
-        setQuery("");
-      }
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClick);
-      document.addEventListener("keydown", handleKeyDown);
-      return () => {
-        document.removeEventListener("mousedown", handleClick);
-        document.removeEventListener("keydown", handleKeyDown);
-      };
-    }
-  }, [open]);
+  useClickOutside(ref, open, () => {
+    setOpen(false);
+    setQuery("");
+  });
 
   useEffect(() => {
     if (open && searchRef.current) {
