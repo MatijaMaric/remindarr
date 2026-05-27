@@ -309,6 +309,7 @@ describe("scheduled() bootstrap KV timestamp", () => {
     const fakeEnv = {
       DB: {} as D1Database,
       CACHE_KV: fakeKv,
+      TMDB_COUNTRY: "HR",
     } as unknown as Parameters<typeof handler.scheduled>[1];
 
     const fakeCtx = {
@@ -336,6 +337,7 @@ describe("scheduled() bootstrap KV timestamp", () => {
     const fakeEnv = {
       DB: {} as D1Database,
       CACHE_KV: undefined,
+      TMDB_COUNTRY: "HR",
     } as unknown as Parameters<typeof handler.scheduled>[1];
 
     const fakeCtx = {
