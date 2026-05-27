@@ -4,9 +4,11 @@ import { createUser } from "../db/repository";
 import * as achievementsRepo from "../db/repository/achievements";
 import * as streaksRepo from "../db/repository/streaks";
 import * as settingsRepo from "../db/repository/settings";
+import { getSetting } from "../db/repository/settings";
 import * as queue from "../jobs/queue";
 import * as evaluate from "../achievements/evaluate";
 import { runBackfillAchievements } from "./backfill-achievements";
+import { BACKFILL_DONE_KEY } from "../achievements/sync";
 
 beforeEach(async () => {
   setupTestDb();
@@ -175,10 +177,7 @@ describe("backfill-achievements job", () => {
     await runBackfillAchievements(null);
 
     // Last batch (< 50): sets done flag and does NOT re-enqueue
-    expect(setSettingSpy).toHaveBeenCalledWith(
-      "achievements_backfill_done",
-      "1",
-    );
+    expect(setSettingSpy).toHaveBeenCalledWith(BACKFILL_DONE_KEY, "1");
     const backfillEnqueues = enqueueSpy.mock.calls.filter(
       (c) => c[0] === "backfill-achievements",
     );
@@ -271,5 +270,11 @@ describe("backfill-achievements job", () => {
     evalCompSpy.mockRestore();
     evalFollowSpy.mockRestore();
     evalRecSpy.mockRestore();
+  });
+
+  it("writer/reader key parity: BACKFILL_DONE_KEY is written when zero users exist", async () => {
+    await runBackfillAchievements(null);
+    const value = await getSetting(BACKFILL_DONE_KEY);
+    expect(value).toBe("1");
   });
 });
