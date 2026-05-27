@@ -152,4 +152,53 @@ describe("httpFetch", () => {
       fetchSpy.mockRestore();
     }
   });
+
+  it("abort signal short-circuits retry loop — fetch called exactly once", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const abortError = new DOMException(
+      "The operation was aborted.",
+      "AbortError",
+    );
+    const fetchSpy = spyOn(globalThis, "fetch").mockRejectedValue(abortError);
+    try {
+      const { httpFetch } = await import("./http");
+
+      await expect(
+        httpFetch(
+          "https://example.com",
+          { signal: controller.signal },
+          { maxRetries: 3, baseDelayMs: 0 },
+        ),
+      ).rejects.toThrow("The operation was aborted.");
+
+      // Must not retry — signal is already aborted after the first throw
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("normal network errors still retry without a signal", async () => {
+    let callCount = 0;
+    const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((() => {
+      callCount++;
+      if (callCount < 3) return Promise.reject(new Error("network error"));
+      return Promise.resolve(makeResponse(200));
+    }) as any);
+    try {
+      const { httpFetch } = await import("./http");
+
+      const res = await httpFetch("https://example.com", undefined, {
+        maxRetries: 3,
+        baseDelayMs: 0,
+      });
+      expect(res.status).toBe(200);
+      // fetch was called more than once — retries happened
+      expect(callCount).toBeGreaterThan(1);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });

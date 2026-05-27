@@ -41,6 +41,7 @@ export async function httpFetch(
       await sleep(delay);
     } catch (err) {
       lastError = err;
+      if (init?.signal?.aborted) break;
       if (attempt === maxRetries) break;
       const delay = jitteredDelay(baseDelayMs, attempt, maxDelayMs);
       log.warn("HTTP fetch error, retrying", {
