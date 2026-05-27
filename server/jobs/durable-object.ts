@@ -204,7 +204,14 @@ export class JobQueueDO {
 
   async alarm(): Promise<void> {
     this.initSchema();
-    await this.alarms.alarm();
+    try {
+      await this.alarms.alarm();
+    } finally {
+      await this.ctx.storage.put(
+        "alarm_last_completed_at",
+        new Date().toISOString(),
+      );
+    }
   }
 
   // ─── Job execution: invoked by Alarms when a cron or delayed schedule fires
@@ -556,6 +563,7 @@ export class JobQueueDO {
     cron: string | null;
     nextRun: string | null;
     lastRun: string | null;
+    alarmLastCompletedAt: string | null;
   }> {
     this.initSchema();
     const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
@@ -571,7 +579,14 @@ export class JobQueueDO {
         "SELECT completed_at FROM jobs WHERE status IN ('completed', 'failed') ORDER BY id DESC LIMIT 1",
       )
       .toArray() as Array<{ completed_at: string | null }>;
-    return { cron, nextRun, lastRun: lastRows[0]?.completed_at ?? null };
+    const alarmLastCompletedAt =
+      (await this.ctx.storage.get<string>("alarm_last_completed_at")) ?? null;
+    return {
+      cron,
+      nextRun,
+      lastRun: lastRows[0]?.completed_at ?? null,
+      alarmLastCompletedAt,
+    };
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────

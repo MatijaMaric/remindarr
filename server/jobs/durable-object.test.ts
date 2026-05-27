@@ -464,6 +464,68 @@ describe("JobQueueDO", () => {
     expect(newAlarm).toBeGreaterThan(Date.now());
   });
 
+  it("alarm() writes alarm_last_completed_at to storage after successful run", async () => {
+    processorModule.handlers["sync-titles"] = async () => {};
+    await do_.armCron("sync-titles", "0 3 * * *");
+    state.rawDb
+      .prepare("UPDATE _actor_alarms SET time = 0 WHERE callback = 'runJob'")
+      .run();
+
+    const before = Date.now();
+    await do_.alarm();
+
+    const stored = await state.storage.get<string>("alarm_last_completed_at");
+    expect(typeof stored).toBe("string");
+    const storedTime = new Date(stored!).getTime();
+    expect(storedTime).toBeGreaterThanOrEqual(before);
+  });
+
+  it("alarm() still writes alarm_last_completed_at even when the job handler fails", async () => {
+    // The @cloudflare/actors Alarms framework catches and swallows handler errors
+    // internally (scheduling a retry), so alarm() itself does NOT throw. The finally
+    // block in our alarm() method still fires in both success and failure paths.
+    processorModule.handlers["sync-titles"] = async () => {
+      throw new Error("alarm handler failure");
+    };
+    await do_.armCron("sync-titles", "0 3 * * *");
+    state.rawDb
+      .prepare("UPDATE _actor_alarms SET time = 0 WHERE callback = 'runJob'")
+      .run();
+
+    const before = Date.now();
+    // Does NOT throw — framework swallows the job error
+    await do_.alarm();
+
+    // The finally block fires regardless — timestamp is recorded
+    const stored = await state.storage.get<string>("alarm_last_completed_at");
+    expect(typeof stored).toBe("string");
+    expect(new Date(stored!).getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it("getCronInfo() returns alarmLastCompletedAt as null on a fresh DO", async () => {
+    await do_.armCron("sync-titles", "0 3 * * *");
+    const info = await do_.getCronInfo();
+    expect(
+      Object.prototype.hasOwnProperty.call(info, "alarmLastCompletedAt"),
+    ).toBe(true);
+    expect(info.alarmLastCompletedAt).toBeNull();
+  });
+
+  it("getCronInfo() returns alarmLastCompletedAt after alarm fires", async () => {
+    processorModule.handlers["sync-titles"] = async () => {};
+    await do_.armCron("sync-titles", "0 3 * * *");
+    state.rawDb
+      .prepare("UPDATE _actor_alarms SET time = 0 WHERE callback = 'runJob'")
+      .run();
+
+    await do_.alarm();
+
+    const info = await do_.getCronInfo();
+    expect(typeof info.alarmLastCompletedAt).toBe("string");
+    const t = new Date(info.alarmLastCompletedAt!).getTime();
+    expect(t).toBeGreaterThan(0);
+  });
+
   it("ad-hoc DO (no cron) does NOT auto-create when no pending rows exist", async () => {
     const { do_: adHocDo, state: adHocState } = makeDO("sync-show-episodes:99");
     // Enqueue then manually mark it completed, so the DO has a "name" but no pending rows

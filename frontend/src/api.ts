@@ -727,6 +727,7 @@ export interface CronJobInfo {
   last_run: string | null;
   next_run: string;
   enabled: number;
+  alarmLastCompletedAt: string | null;
 }
 
 export interface RecentJob {
@@ -746,6 +747,7 @@ export interface JobsResponse {
   >;
   crons: CronJobInfo[];
   recentJobs: RecentJob[];
+  bootstrap: { lastSeenAt: string | null };
 }
 
 export async function getJobs(signal?: AbortSignal): Promise<JobsResponse> {
