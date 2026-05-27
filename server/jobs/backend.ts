@@ -269,6 +269,7 @@ type CronEntry = {
   last_run: string | null;
   next_run: string;
   enabled: number;
+  alarmLastCompletedAt: string | null;
 };
 type RecentJob = {
   id: number;
@@ -289,6 +290,7 @@ export async function getJobsOverview(env: CFEnv): Promise<{
   stats: Record<string, JobStats>;
   crons: CronEntry[];
   recentJobs: RecentJob[];
+  bootstrap: { lastSeenAt: string | null };
 }> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     return getJobsOverviewDO(env);
@@ -300,6 +302,7 @@ async function getJobsOverviewD1(): Promise<{
   stats: Record<string, JobStats>;
   crons: CronEntry[];
   recentJobs: RecentJob[];
+  bootstrap: { lastSeenAt: string | null };
 }> {
   const { eq, desc, sql, inArray } = await import("drizzle-orm");
   const db = getDb();
@@ -349,6 +352,7 @@ async function getJobsOverviewD1(): Promise<{
         last_run: lastJob?.completedAt ?? null,
         next_run,
         enabled: 1,
+        alarmLastCompletedAt: null,
       };
     }),
   );
@@ -370,16 +374,27 @@ async function getJobsOverviewD1(): Promise<{
     created_at: r.createdAt,
   }));
 
-  return { stats, crons: cronEntries, recentJobs };
+  return {
+    stats,
+    crons: cronEntries,
+    recentJobs,
+    bootstrap: { lastSeenAt: null },
+  };
 }
 
 async function getJobsOverviewDO(env: CFEnv): Promise<{
   stats: Record<string, JobStats>;
   crons: CronEntry[];
   recentJobs: RecentJob[];
+  bootstrap: { lastSeenAt: string | null };
 }> {
   if (!env.JOB_QUEUE_DO) {
-    return { stats: {}, crons: [], recentJobs: [] };
+    return {
+      stats: {},
+      crons: [],
+      recentJobs: [],
+      bootstrap: { lastSeenAt: null },
+    };
   }
 
   const doNames = [...CRON_JOB_NAMES, "cleanup"] as string[];
@@ -389,7 +404,12 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
     completed: 0,
     failed: 0,
   };
-  const emptyCronInfo = { cron: null, nextRun: null, lastRun: null };
+  const emptyCronInfo = {
+    cron: null,
+    nextRun: null,
+    lastRun: null,
+    alarmLastCompletedAt: null,
+  };
 
   const [statsResults, cronInfoResults, recentResults] = await Promise.all([
     Promise.all(
@@ -408,6 +428,7 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
           cron: string | null;
           nextRun: string | null;
           lastRun: string | null;
+          alarmLastCompletedAt: string | null;
         }>(env, name, "/cron-info", "GET")
           .then((info) => ({ name, info }))
           .catch((err) => {
@@ -428,6 +449,10 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
     ),
   ]);
 
+  const lastSeenAt = env.CACHE_KV
+    ? await env.CACHE_KV.get("cron_bootstrap_last_seen_at", "text")
+    : null;
+
   const stats: Record<string, JobStats> = {};
   for (const { name, stats: s } of statsResults) {
     stats[name] = s;
@@ -441,6 +466,7 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
       last_run: info.lastRun,
       next_run: info.nextRun ?? "",
       enabled: 1,
+      alarmLastCompletedAt: info.alarmLastCompletedAt,
     };
   });
 
@@ -456,7 +482,7 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
     created_at: r.created_at,
   }));
 
-  return { stats, crons, recentJobs };
+  return { stats, crons, recentJobs, bootstrap: { lastSeenAt } };
 }
 
 /**

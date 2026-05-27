@@ -4,8 +4,14 @@ import { HTTPException } from "hono/http-exception";
 import Sentry from "./sentry";
 import { classifyError } from "./lib/error-classifier";
 import { errorsByCategory } from "./metrics";
-import { maybeDeferRegistrySync, resetAchievementRegistrySync } from "./worker";
+import {
+  maybeDeferRegistrySync,
+  resetAchievementRegistrySync,
+  handler,
+} from "./worker";
 import { logger } from "./logger";
+import * as backendModule from "./jobs/backend";
+import * as schema from "./db/schema";
 
 // ─── Scheduled handler cron-branching tests ───────────────────────────────────
 
@@ -258,5 +264,91 @@ describe("maybeDeferRegistrySync (#799 deferral contract)", () => {
     const { ctx: ctx2, captured: captured2 } = makeCtx();
     maybeDeferRegistrySync(ctx2, () => Promise.resolve());
     expect(captured2).toHaveLength(1);
+  });
+});
+
+// ─── scheduled() writes cron_bootstrap_last_seen_at to CACHE_KV ──────────────
+
+describe("scheduled() bootstrap KV timestamp", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let spies: ReturnType<typeof spyOn<any, any>>[] = [];
+
+  beforeEach(() => {
+    // Stub out all heavy backend functions so scheduled() completes without a
+    // real D1 DB or job infrastructure.
+    spies = [
+      spyOn(backendModule, "armCron").mockResolvedValue(undefined as any),
+      spyOn(backendModule, "recoverStale").mockResolvedValue(0),
+      spyOn(backendModule, "processPending").mockResolvedValue(0),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      spyOn(backendModule, "runWithEnv").mockImplementation(
+        (_env: any, fn: any) => fn(),
+      ),
+      // runWithDb and runWithCache are from other modules — stub via schema/cache
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      spyOn(schema, "runWithDb").mockImplementation((_db: any, fn: any) =>
+        fn(),
+      ),
+    ];
+  });
+
+  afterEach(() => {
+    for (const spy of spies) spy.mockRestore();
+    spies = [];
+  });
+
+  it("puts cron_bootstrap_last_seen_at into CACHE_KV when the scheduled handler runs", async () => {
+    const puts: Array<[string, string]> = [];
+    const fakeKv = {
+      put: async (key: string, value: string) => {
+        puts.push([key, value]);
+      },
+      get: async () => null,
+    } as unknown as KVNamespace;
+
+    const fakeEnv = {
+      DB: {} as D1Database,
+      CACHE_KV: fakeKv,
+    } as unknown as Parameters<typeof handler.scheduled>[1];
+
+    const fakeCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as unknown as ExecutionContext;
+
+    await handler.scheduled(
+      { cron: "*/5 * * * *", type: "scheduled", scheduledTime: Date.now() },
+      fakeEnv,
+      fakeCtx,
+    );
+
+    const bootstrapPut = puts.find(
+      ([k]) => k === "cron_bootstrap_last_seen_at",
+    );
+    expect(bootstrapPut).toBeDefined();
+    // Value should be a valid ISO timestamp
+    expect(new Date(bootstrapPut![1]).getTime()).toBeGreaterThan(0);
+  });
+
+  it("does NOT put to CACHE_KV when CACHE_KV is absent", async () => {
+    const puts: Array<[string, string]> = [];
+
+    const fakeEnv = {
+      DB: {} as D1Database,
+      CACHE_KV: undefined,
+    } as unknown as Parameters<typeof handler.scheduled>[1];
+
+    const fakeCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as unknown as ExecutionContext;
+
+    await handler.scheduled(
+      { cron: "*/5 * * * *", type: "scheduled", scheduledTime: Date.now() },
+      fakeEnv,
+      fakeCtx,
+    );
+
+    expect(puts).toHaveLength(0);
   });
 });

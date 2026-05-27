@@ -33,6 +33,71 @@ function JobStatusBadge({ status }: { status: string }) {
   );
 }
 
+function minutesSince(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+}
+
+function cronIntervalMinutes(cron: string): number {
+  // Handle common patterns: */5 * * * * → 5, 0 * * * * → 60, 0 0 * * * → 1440
+  const everyN = /^\*\/(\d+)\s/.exec(cron);
+  if (everyN) return parseInt(everyN[1], 10);
+  if (/^0 \* \* \* \*/.test(cron)) return 60;
+  if (/^0 0 \* \* \*/.test(cron)) return 1440;
+  return 60;
+}
+
+function BootstrapFreshnessBadge({
+  lastSeenAt,
+}: {
+  lastSeenAt: string | null;
+}) {
+  const mins = minutesSince(lastSeenAt);
+  let kind: "ok" | "amber" | "error" | "neutral";
+  let label: string;
+  if (mins === null) {
+    kind = "error";
+    label = "Bootstrap: Never";
+  } else if (mins <= 10) {
+    kind = "ok";
+    label = `Bootstrap: ${mins}m ago`;
+  } else if (mins <= 30) {
+    kind = "amber";
+    label = `Bootstrap: ${mins}m ago`;
+  } else {
+    kind = "error";
+    label = `Bootstrap: ${mins}m ago`;
+  }
+  return <SStatusPill kind={kind}>{label}</SStatusPill>;
+}
+
+function AlarmFreshnessBadge({
+  alarmLastCompletedAt,
+  cron,
+}: {
+  alarmLastCompletedAt: string | null;
+  cron: string;
+}) {
+  const mins = minutesSince(alarmLastCompletedAt);
+  const interval = cronIntervalMinutes(cron);
+  let kind: "ok" | "amber" | "error" | "neutral";
+  let label: string;
+  if (mins === null) {
+    kind = "neutral";
+    label = "Alarm: Never";
+  } else if (mins <= interval * 2) {
+    kind = "ok";
+    label = `Alarm: ${mins}m ago`;
+  } else if (mins <= interval * 4) {
+    kind = "amber";
+    label = `Alarm: ${mins}m ago`;
+  } else {
+    kind = "error";
+    label = `Alarm: ${mins}m ago`;
+  }
+  return <SStatusPill kind={kind}>{label}</SStatusPill>;
+}
+
 function BackgroundJobsSection() {
   const qc = useQueryClient();
   const [msg, setMsg] = useState("");
@@ -74,6 +139,14 @@ function BackgroundJobsSection() {
 
         {data?.crons.length === 0 && (
           <p className="text-zinc-500 text-sm">No scheduled jobs configured.</p>
+        )}
+
+        {data && (
+          <div className="flex items-center gap-2">
+            <BootstrapFreshnessBadge
+              lastSeenAt={data.bootstrap?.lastSeenAt ?? null}
+            />
+          </div>
         )}
 
         {data && data.crons.length > 0 && (
@@ -160,8 +233,12 @@ function BackgroundJobsSection() {
                           </div>
                         )}
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-1">
                       <SStatusPill kind={pillKind}>{pillText}</SStatusPill>
+                      <AlarmFreshnessBadge
+                        alarmLastCompletedAt={cron.alarmLastCompletedAt}
+                        cron={cron.cron}
+                      />
                     </div>
                     <div>
                       <SButton

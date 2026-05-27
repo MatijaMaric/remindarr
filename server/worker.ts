@@ -737,7 +737,7 @@ function getApp(env: Env): Hono<AppEnv> {
   return app;
 }
 
-const handler = {
+export const handler = {
   async fetch(
     request: Request,
     env: Env,
@@ -824,6 +824,13 @@ const handler = {
         runWithCache(cache, () =>
           runWithDb(db, async () => {
             logger.info("Scheduled bootstrap tick", { cron: event.cron });
+
+            if (env.CACHE_KV) {
+              await env.CACHE_KV.put(
+                "cron_bootstrap_last_seen_at",
+                new Date().toISOString(),
+              );
+            }
 
             // Arm every cron-singleton DO. Idempotent — the DO only schedules its
             // alarm if no `runJob` cron schedule exists. DOs drive their own
