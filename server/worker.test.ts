@@ -12,6 +12,7 @@ import {
 import { logger } from "./logger";
 import * as backendModule from "./jobs/backend";
 import * as schema from "./db/schema";
+import { CONFIG } from "./config";
 
 // ─── Scheduled handler cron-branching tests ───────────────────────────────────
 
@@ -272,8 +273,11 @@ describe("maybeDeferRegistrySync (#799 deferral contract)", () => {
 describe("scheduled() bootstrap KV timestamp", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let spies: ReturnType<typeof spyOn<any, any>>[] = [];
+  let configSnapshot: typeof CONFIG;
 
   beforeEach(() => {
+    // Snapshot CONFIG so patchConfigFromEnv mutations don't leak across files.
+    configSnapshot = { ...CONFIG } as typeof CONFIG;
     // Stub out all heavy backend functions so scheduled() completes without a
     // real D1 DB or job infrastructure.
     spies = [
@@ -295,6 +299,7 @@ describe("scheduled() bootstrap KV timestamp", () => {
   afterEach(() => {
     for (const spy of spies) spy.mockRestore();
     spies = [];
+    Object.assign(CONFIG, configSnapshot);
   });
 
   it("puts cron_bootstrap_last_seen_at into CACHE_KV when the scheduled handler runs", async () => {
@@ -310,6 +315,8 @@ describe("scheduled() bootstrap KV timestamp", () => {
       DB: {} as D1Database,
       CACHE_KV: fakeKv,
       TMDB_COUNTRY: "HR",
+      TMDB_LANGUAGE: "hr-HR",
+      LOG_LEVEL: "info",
     } as unknown as Parameters<typeof handler.scheduled>[1];
 
     const fakeCtx = {
@@ -338,6 +345,8 @@ describe("scheduled() bootstrap KV timestamp", () => {
       DB: {} as D1Database,
       CACHE_KV: undefined,
       TMDB_COUNTRY: "HR",
+      TMDB_LANGUAGE: "hr-HR",
+      LOG_LEVEL: "info",
     } as unknown as Parameters<typeof handler.scheduled>[1];
 
     const fakeCtx = {
