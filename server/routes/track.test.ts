@@ -140,6 +140,45 @@ describe("POST /track/:id", () => {
     CONFIG.TMDB_API_KEY = originalKey;
   });
 
+  it("enqueues sync-show-episodes job when tracking a SHOW without titleData in body", async () => {
+    // Regression: recommendation/discovery surfaces call trackTitle(id) with no
+    // body. The server must look up tmdb_id from the titles table rather than
+    // relying on the client to supply it, otherwise episodes never sync and the
+    // user cannot mark anything watched.
+    const showTitle = makeParsedTitle({
+      id: "tv-good-omens",
+      objectType: "SHOW",
+      tmdbId: "72710",
+      title: "Good Omens",
+    });
+    await upsertTitles([showTitle]);
+
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const res = await app.request("/track/tv-good-omens", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const job = db
+      .prepare(
+        "SELECT * FROM jobs WHERE name = 'sync-show-episodes' AND json_extract(data, '$.titleId') = 'tv-good-omens' LIMIT 1",
+      )
+      .get() as any;
+    expect(job).toBeTruthy();
+    expect(JSON.parse(job.data)).toMatchObject({
+      titleId: "tv-good-omens",
+      tmdbId: "72710",
+      title: "Good Omens",
+    });
+
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
   it("does not enqueue sync-show-episodes job when TMDB_API_KEY is not set", async () => {
     const showTitle = makeParsedTitle({
       id: "tv-789",
