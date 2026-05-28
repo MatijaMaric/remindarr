@@ -1,11 +1,9 @@
-import { describe, it, expect, afterEach, beforeEach, spyOn } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, cleanup, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import * as api from "../api";
 import { AuthContext } from "../context/AuthContext";
-import CategoryBrowse from "./CategoryBrowse";
 
 let intersectionCallback: IntersectionObserverCallback | null = null;
 
@@ -87,6 +85,14 @@ const mockAuthValue = {
   refresh: async () => {},
 };
 
+const mockBrowseTitles = mock(async () => makeBrowseResponse(1, [], 1));
+
+mock.module("../api", () => ({
+  browseTitles: mockBrowseTitles,
+}));
+
+const { default: CategoryBrowse } = await import("./CategoryBrowse");
+
 function newTestClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
@@ -101,34 +107,29 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-let spies: ReturnType<typeof spyOn>[] = [];
-
 beforeEach(() => {
-  spies = [];
   intersectionCallback = null;
+  mockBrowseTitles.mockReset();
 });
 
 afterEach(() => {
   cleanup();
-  for (const spy of spies) spy.mockRestore();
   intersectionCallback = null;
 });
 
 describe("CategoryBrowse pagination", () => {
   it("keeps already-loaded titles visible while a subsequent page is fetching", async () => {
     let resolvePage2: (() => void) | null = null;
-    const browseSpy = spyOn(api, "browseTitles");
-    browseSpy.mockImplementationOnce(() =>
-      Promise.resolve(makeBrowseResponse(1, [makeSearchTitle(1)], 2)),
+    mockBrowseTitles.mockResolvedValueOnce(
+      makeBrowseResponse(1, [makeSearchTitle(1)], 2),
     );
-    browseSpy.mockImplementationOnce(
+    mockBrowseTitles.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           resolvePage2 = () =>
             resolve(makeBrowseResponse(2, [makeSearchTitle(2)], 2));
         }),
     );
-    spies.push(browseSpy);
 
     render(
       <CategoryBrowse
@@ -161,7 +162,7 @@ describe("CategoryBrowse pagination", () => {
     // While page 2 is in flight the existing title must stay rendered —
     // i.e. the entire list must not be replaced with the centered loader.
     await waitFor(() => {
-      expect(browseSpy).toHaveBeenCalledTimes(2);
+      expect(mockBrowseTitles).toHaveBeenCalledTimes(2);
     });
     expect(screen.queryByText("Title 1")).not.toBeNull();
 
@@ -172,11 +173,9 @@ describe("CategoryBrowse pagination", () => {
   });
 
   it("fires exactly one request on initial mount", async () => {
-    const browseSpy = spyOn(api, "browseTitles");
-    browseSpy.mockImplementation(() =>
-      Promise.resolve(makeBrowseResponse(1, [makeSearchTitle(1)], 1)),
+    mockBrowseTitles.mockResolvedValue(
+      makeBrowseResponse(1, [makeSearchTitle(1)], 1),
     );
-    spies.push(browseSpy);
 
     render(
       <CategoryBrowse
@@ -198,18 +197,16 @@ describe("CategoryBrowse pagination", () => {
       expect(screen.getByText("Title 1")).toBeDefined();
     });
 
-    expect(browseSpy).toHaveBeenCalledTimes(1);
+    expect(mockBrowseTitles).toHaveBeenCalledTimes(1);
   });
 
   it("does not auto-chain to page 3 after page 2 resolves without a new intersection", async () => {
-    const browseSpy = spyOn(api, "browseTitles");
-    browseSpy.mockResolvedValueOnce(
+    mockBrowseTitles.mockResolvedValueOnce(
       makeBrowseResponse(1, [makeSearchTitle(1)], 3),
     );
-    browseSpy.mockResolvedValueOnce(
+    mockBrowseTitles.mockResolvedValueOnce(
       makeBrowseResponse(2, [makeSearchTitle(2)], 3),
     );
-    spies.push(browseSpy);
 
     render(
       <CategoryBrowse
@@ -237,20 +234,18 @@ describe("CategoryBrowse pagination", () => {
       );
     });
 
-    await waitFor(() => expect(browseSpy).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockBrowseTitles).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByText("Title 2")).toBeDefined());
 
     // After page 2 resolves, page 3 must NOT auto-load — requires another scroll
     await new Promise<void>((r) => setTimeout(r, 50));
-    expect(browseSpy).toHaveBeenCalledTimes(2);
+    expect(mockBrowseTitles).toHaveBeenCalledTimes(2);
   });
 
   it("does not fire a duplicate request when parent re-renders with identical props", async () => {
-    const browseSpy = spyOn(api, "browseTitles");
-    browseSpy.mockImplementation(() =>
-      Promise.resolve(makeBrowseResponse(1, [makeSearchTitle(1)], 1)),
+    mockBrowseTitles.mockResolvedValue(
+      makeBrowseResponse(1, [makeSearchTitle(1)], 1),
     );
-    spies.push(browseSpy);
 
     function Parent() {
       return (
@@ -275,12 +270,12 @@ describe("CategoryBrowse pagination", () => {
       expect(screen.getByText("Title 1")).toBeDefined();
     });
 
-    const callCountAfterMount = browseSpy.mock.calls.length;
+    const callCountAfterMount = mockBrowseTitles.mock.calls.length;
     rerender(<Parent />);
 
     // Allow any async effects to settle
     await waitFor(() => {
-      expect(browseSpy.mock.calls.length).toBe(callCountAfterMount);
+      expect(mockBrowseTitles.mock.calls.length).toBe(callCountAfterMount);
     });
   });
 });

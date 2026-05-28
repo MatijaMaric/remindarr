@@ -1,12 +1,29 @@
-import { describe, it, expect, afterEach, spyOn } from "bun:test";
+import { describe, it, expect, mock, afterEach } from "bun:test";
 import { render, cleanup, waitFor } from "@testing-library/react";
 import {
   QueryClient,
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import * as api from "../api";
 import { loadFilters } from "./loadFilters";
+
+const mockGetGenres = mock(async () => ({
+  genres: [] as string[],
+}));
+const mockGetProviders = mock(async () => ({
+  providers: [],
+  regionProviderIds: [] as number[],
+}));
+const mockGetLanguages = mock(async () => ({
+  languages: [] as string[],
+  priorityLanguageCodes: [] as string[],
+}));
+
+mock.module("../api", () => ({
+  getGenres: mockGetGenres,
+  getProviders: mockGetProviders,
+  getLanguages: mockGetLanguages,
+}));
 
 // Mirrors the exact useQuery call BrowsePage and NewReleases now share.
 function FiltersConsumer() {
@@ -18,26 +35,24 @@ function FiltersConsumer() {
   return null;
 }
 
-let spies: ReturnType<typeof spyOn>[] = [];
-
 afterEach(() => {
   cleanup();
-  for (const spy of spies) spy.mockRestore();
-  spies = [];
+  mockGetGenres.mockReset();
+  mockGetProviders.mockReset();
+  mockGetLanguages.mockReset();
 });
 
 describe("filters shared-cache dedup", () => {
   it("fetches filters once when two consumers share the ['filters'] key", async () => {
-    const getGenres = spyOn(api, "getGenres").mockResolvedValue({
-      genres: ["Action"],
-    } as any);
-    const getProviders = spyOn(api, "getProviders").mockResolvedValue({
+    mockGetGenres.mockResolvedValue({ genres: ["Action"] });
+    mockGetProviders.mockResolvedValue({
       providers: [],
-    } as any);
-    const getLanguages = spyOn(api, "getLanguages").mockResolvedValue({
+      regionProviderIds: [],
+    });
+    mockGetLanguages.mockResolvedValue({
       languages: ["en"],
-    } as any);
-    spies = [getGenres, getProviders, getLanguages];
+      priorityLanguageCodes: [],
+    });
 
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -50,10 +65,10 @@ describe("filters shared-cache dedup", () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => expect(getGenres).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockGetGenres).toHaveBeenCalledTimes(1));
     // Two simultaneous consumers, one shared key → loadFilters runs once,
     // so each underlying endpoint is hit exactly once (was 2× before the shared cache).
-    expect(getProviders).toHaveBeenCalledTimes(1);
-    expect(getLanguages).toHaveBeenCalledTimes(1);
+    expect(mockGetProviders).toHaveBeenCalledTimes(1);
+    expect(mockGetLanguages).toHaveBeenCalledTimes(1);
   });
 });

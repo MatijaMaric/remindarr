@@ -78,6 +78,15 @@ mock.module("../components/CategoryBrowse", () => ({
   default: () => <div data-testid="category-browse" />,
 }));
 
+// BrowsePage.tsx calls api.getLanguages/searchTitles/resolveImdb directly.
+// This override prevents cross-file mock.module leaks from corrupting those calls.
+mock.module("../api", () => ({
+  getLanguages: () =>
+    Promise.resolve({ languages: [], priorityLanguageCodes: [] }),
+  searchTitles: () => Promise.resolve([]),
+  resolveImdb: () => Promise.resolve(null),
+}));
+
 const { default: BrowsePage } = await import("./BrowsePage");
 
 function makeWrapper(initialPath: string) {
