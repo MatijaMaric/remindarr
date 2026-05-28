@@ -473,16 +473,20 @@ app.post("/:id", async (c) => {
 
   await trackTitle(titleId, user.id, body.notes ?? undefined);
 
-  // Queue episode sync for shows with a TMDB ID
+  // Queue episode sync for shows with a TMDB ID. Resolve from the DB so this
+  // works regardless of whether the caller supplied `titleData` — recommendation
+  // and other surfaces call `trackTitle(id)` with no body, and previously that
+  // silently skipped sync, leaving the show with zero episodes and no way to
+  // mark anything watched.
   if (CONFIG.TMDB_API_KEY) {
-    const titleData = body.titleData;
-    if (titleData?.object_type === "SHOW" && titleData?.tmdb_id) {
+    const title = await getTitleById(titleId);
+    if (title?.object_type === "SHOW" && title.tmdb_id) {
       await enqueueAdhoc("sync-show-episodes", {
         titleId,
-        tmdbId: titleData.tmdb_id,
-        title: titleData.title,
+        tmdbId: title.tmdb_id,
+        title: title.title,
       });
-      log.info("Queued episode sync", { title: titleData.title, titleId });
+      log.info("Queued episode sync", { title: title.title, titleId });
     }
   }
 
