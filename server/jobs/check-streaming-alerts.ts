@@ -9,6 +9,7 @@ import {
   recordDelivery,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
+import { notificationsSentTotal } from "../metrics";
 
 const log = logger.child({ module: "streaming-alerts" });
 
@@ -104,6 +105,11 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
                 latencyMs: Date.now() - alertStart,
                 eventKind: "streaming_arrival",
               });
+              notificationsSentTotal.inc({
+                provider: notifier.provider,
+                kind: "streaming_arrival",
+                outcome: "success",
+              });
               log.info("Sent streaming alert", {
                 userId,
                 titleId,
@@ -118,6 +124,11 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
                 latencyMs: Date.now() - alertStart,
                 errorMessage: message,
                 eventKind: "streaming_arrival",
+              });
+              notificationsSentTotal.inc({
+                provider: notifier.provider,
+                kind: "streaming_arrival",
+                outcome: "failure",
               });
               log.error("Failed to send streaming alert", {
                 notifierId: notifier.id,
