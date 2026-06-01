@@ -5,21 +5,20 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
+import {
+  apiMockStubs,
+  mockGetGenres,
+  mockGetProviders,
+  mockGetLanguages,
+  resetFilterMocks,
+} from "../test-utils/mockApi";
 import { loadFilters } from "./loadFilters";
 
-const mockGetGenres = mock(async () => ({
-  genres: [] as string[],
-}));
-const mockGetProviders = mock(async () => ({
-  providers: [],
-  regionProviderIds: [] as number[],
-}));
-const mockGetLanguages = mock(async () => ({
-  languages: [] as string[],
-  priorityLanguageCodes: [] as string[],
-}));
-
+// Spread the complete stub surface (guards against cross-file leaks) and share
+// the filter mock instances so the cached `loadFilters` binding calls the same
+// functions this file asserts on regardless of test file execution order.
 mock.module("../api", () => ({
+  ...apiMockStubs,
   getGenres: mockGetGenres,
   getProviders: mockGetProviders,
   getLanguages: mockGetLanguages,
@@ -37,9 +36,7 @@ function FiltersConsumer() {
 
 afterEach(() => {
   cleanup();
-  mockGetGenres.mockReset();
-  mockGetProviders.mockReset();
-  mockGetLanguages.mockReset();
+  resetFilterMocks();
 });
 
 describe("filters shared-cache dedup", () => {

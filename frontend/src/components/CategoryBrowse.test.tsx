@@ -3,6 +3,7 @@ import { render, screen, cleanup, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { apiMockStubs } from "../test-utils/mockApi";
 import { AuthContext } from "../context/AuthContext";
 
 let intersectionCallback: IntersectionObserverCallback | null = null;
@@ -87,7 +88,10 @@ const mockAuthValue = {
 
 const mockBrowseTitles = mock(async () => makeBrowseResponse(1, [], 1));
 
+// Spread the complete stub surface (then override browseTitles) so cross-file
+// mock.module leaks can't leave any api function undefined.
 mock.module("../api", () => ({
+  ...apiMockStubs,
   browseTitles: mockBrowseTitles,
 }));
 

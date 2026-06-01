@@ -11,6 +11,7 @@ import { MemoryRouter, useSearchParams } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { apiMockStubs } from "../test-utils/mockApi";
 import "../i18n";
 
 // Fresh client per test — never the app singleton — so cache never leaks across tests
@@ -79,8 +80,10 @@ mock.module("../components/CategoryBrowse", () => ({
 }));
 
 // BrowsePage.tsx calls api.getLanguages/searchTitles/resolveImdb directly.
-// This override prevents cross-file mock.module leaks from corrupting those calls.
+// Spread the complete stub surface (then override the few this page exercises)
+// so cross-file mock.module leaks can't leave any api function undefined.
 mock.module("../api", () => ({
+  ...apiMockStubs,
   getLanguages: () =>
     Promise.resolve({ languages: [], priorityLanguageCodes: [] }),
   searchTitles: () => Promise.resolve([]),
