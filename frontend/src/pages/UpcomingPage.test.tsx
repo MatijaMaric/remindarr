@@ -1,4 +1,5 @@
 import { describe, it, expect, mock, afterEach, spyOn } from "bun:test";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import {
   render,
   screen,
@@ -13,62 +14,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 import * as sonner from "sonner";
 
-const mockGetUpcomingEpisodes = mock(() =>
-  Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
-);
-const mockWatchEpisode = mock(() => Promise.resolve());
-const mockUnwatchEpisode = mock(() => Promise.resolve());
-
-mock.module("../api", () => ({
-  getUpcomingEpisodes: mockGetUpcomingEpisodes,
-  watchEpisode: mockWatchEpisode,
-  unwatchEpisode: mockUnwatchEpisode,
-  getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-  hideActivityEvent: mock(() => Promise.resolve()),
-  getCollection: mock(() => Promise.resolve({ collection: null, parts: [] })),
-  getTitleSuggestions: mock(() => Promise.resolve({ suggestions: [] })),
-  getMyProfile: mock(() =>
-    Promise.resolve({
-      display_name: null,
-      bio: null,
-      country_code: null,
-      locale: null,
-    }),
-  ),
-  getTrackedTitles: mock(() =>
-    Promise.resolve({ titles: [], count: 0, profile_public: false }),
-  ),
-  getActivitySettings: mock(() =>
-    Promise.resolve({ enabled: true, kind_visibility: {} }),
-  ),
-  getJobs: mock(() =>
-    Promise.resolve({ crons: [], stats: {}, recentJobs: [] }),
-  ),
-  getAdminSettings: mock(() =>
-    Promise.resolve({ oidc_configured: false, oidc: {} }),
-  ),
-  getAdminConfig: mock(() => Promise.resolve({ safe: [], secrets: [] })),
-  getAdminLogs: mock(() => Promise.resolve({ entries: [], count: 0 })),
-  getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
-  getFeedToken: mock(() => Promise.resolve({ token: null })),
-  getKioskToken: mock(() => Promise.resolve({ token: null })),
-  getWatchlistShareToken: mock(() => Promise.resolve({ token: null })),
-  getNotifiers: mock(() => Promise.resolve({ notifiers: [] })),
-  getNotifierProviders: mock(() => Promise.resolve({ providers: [] })),
-  getDepartureAlertSettings: mock(() => Promise.resolve({})),
-  getProviders: mock(() =>
-    Promise.resolve({ providers: [], regionProviderIds: [] }),
-  ),
-  updateSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
-  updateOnlyMine: mock(() => Promise.resolve({ onlyMine: false })),
-}));
-
 mock.module("../hooks/useIsMobile", () => ({
   useIsMobile: () => false,
+}));
+
+// Provide a self-contained AuthContext so rendered WatchButtonGroup can read
+// `subscriptions` without relying on an AuthProvider wrapper (or a leaked mock
+// from another test file).
+mock.module("../context/AuthContext", () => ({
+  useAuth: () => ({ subscriptions: { providerIds: [], onlyMine: false } }),
 }));
 
 const { default: UpcomingPage } = await import("./UpcomingPage");
@@ -89,21 +43,19 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   cleanup();
-  mockGetUpcomingEpisodes.mockReset();
-  mockWatchEpisode.mockReset();
-  mockUnwatchEpisode.mockReset();
+  resetApiMock();
 });
 
 describe("UpcomingPage", () => {
   it("shows loading state initially", () => {
-    mockGetUpcomingEpisodes.mockImplementation(() => new Promise(() => {}));
+    apiMock.getUpcomingEpisodes.mockImplementation(() => new Promise(() => {}));
     const { container } = render(<UpcomingPage />, { wrapper: Wrapper });
     // Skeleton loading UI uses animate-pulse divs instead of text
     expect(container.querySelector(".animate-pulse")).toBeDefined();
   });
 
   it("shows error UI when initial fetch fails", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    apiMock.getUpcomingEpisodes.mockImplementation(() =>
       Promise.reject(new Error("Network error")),
     );
     render(<UpcomingPage />, { wrapper: Wrapper });
@@ -113,7 +65,7 @@ describe("UpcomingPage", () => {
   });
 
   it("renders today and upcoming sections on success", async () => {
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    apiMock.getUpcomingEpisodes.mockImplementation(() =>
       Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
     );
     render(<UpcomingPage />, { wrapper: Wrapper });
@@ -139,10 +91,10 @@ describe("UpcomingPage", () => {
       is_watched: false,
       offers: [],
     };
-    mockGetUpcomingEpisodes.mockImplementation(() =>
+    apiMock.getUpcomingEpisodes.mockImplementation(() =>
       Promise.resolve({ today: [episode], upcoming: [], unwatched: [] }),
     );
-    mockWatchEpisode.mockImplementation(() =>
+    apiMock.watchEpisode.mockImplementation(() =>
       Promise.reject(new Error("Failed to update")),
     );
 

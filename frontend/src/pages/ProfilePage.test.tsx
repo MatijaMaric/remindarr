@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import "../i18n";
 
 // Mock browser Notification API
@@ -40,66 +41,6 @@ mock.module("../lib/push", () => ({
   ),
   unsubscribeFromPush: mockUnsubscribeFromPush,
   getExistingSubscription: mockGetExistingSubscription,
-}));
-
-// Mock API
-const mockGetNotifiers = mock(() =>
-  Promise.resolve({ notifiers: [] as any[] }),
-);
-const mockDeleteNotifier = mock(() => Promise.resolve());
-const mockTestNotifier = mock(() =>
-  Promise.resolve({ success: true, message: "Test notification sent" }),
-);
-
-mock.module("../api", () => ({
-  getNotifiers: mockGetNotifiers,
-  getNotifierProviders: mock(() => Promise.resolve({ providers: ["discord"] })),
-  getVapidPublicKey: mock(() => Promise.resolve({ publicKey: "test-key" })),
-  createNotifier: mock(() => Promise.resolve({ notifier: { id: "n-new" } })),
-  updateNotifier: mock(() => Promise.resolve({ notifier: {} })),
-  deleteNotifier: mockDeleteNotifier,
-  testNotifier: mockTestNotifier,
-  getJobs: mock(() =>
-    Promise.resolve({ crons: [], stats: {}, recentJobs: [] }),
-  ),
-  getAdminSettings: mock(() =>
-    Promise.resolve({
-      oidc_configured: false,
-      oidc: {
-        issuer_url: { value: "", source: "unset" },
-        client_id: { value: "", source: "unset" },
-        client_secret: { value: "", source: "unset" },
-        redirect_uri: { value: "", source: "unset" },
-      },
-    }),
-  ),
-  changePassword: mock(() => Promise.resolve()),
-  getTrackedTitles: mock(() =>
-    Promise.resolve({ titles: [], count: 0, profile_public: false }),
-  ),
-  updateProfileVisibility: mock(() => Promise.resolve()),
-  updateTitleVisibility: mock(() => Promise.resolve()),
-  updateAllTitleVisibility: mock(() => Promise.resolve()),
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-  getUpcomingEpisodes: mock(() =>
-    Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
-  ),
-  watchEpisode: mock(() => Promise.resolve()),
-  unwatchEpisode: mock(() => Promise.resolve()),
-  watchEpisodesBulk: mock(() => Promise.resolve()),
-  browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
-  getRecommendations: mock(() =>
-    Promise.resolve({ recommendations: [], suggestions: [], hasMore: false }),
-  ),
-  fetchFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
-  watchMovie: mock(() => Promise.resolve()),
-  unwatchMovie: mock(() => Promise.resolve()),
-  getMovieTracking: mock(() => Promise.resolve(null)),
-  rateEpisode: mock(() => Promise.resolve()),
-  unrateEpisode: mock(() => Promise.resolve()),
 }));
 
 // Mock AuthContext
@@ -138,9 +79,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   cleanup();
-  mockGetNotifiers.mockReset();
-  mockDeleteNotifier.mockReset();
-  mockTestNotifier.mockReset();
+  resetApiMock();
   mockUnsubscribeFromPush.mockReset();
   mockGetExistingSubscription.mockReset();
   mockIsPushSupported = true;
@@ -148,13 +87,25 @@ afterEach(() => {
 
 beforeEach(() => {
   // Default: no notifiers, no subscription
-  mockGetNotifiers.mockImplementation(() => Promise.resolve({ notifiers: [] }));
-  mockDeleteNotifier.mockImplementation(() => Promise.resolve());
-  mockUnsubscribeFromPush.mockImplementation(() => Promise.resolve());
-  mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
-  mockTestNotifier.mockImplementation(() =>
+  apiMock.getNotifiers.mockImplementation(() =>
+    Promise.resolve({ notifiers: [] }),
+  );
+  apiMock.deleteNotifier.mockImplementation(() => Promise.resolve());
+  apiMock.testNotifier.mockImplementation(() =>
     Promise.resolve({ success: true, message: "Test notification sent" }),
   );
+  // Overrides the shared apiMock defaults that these tests depend on.
+  apiMock.getNotifierProviders.mockImplementation(() =>
+    Promise.resolve({ providers: ["discord"] }),
+  );
+  apiMock.getVapidPublicKey.mockImplementation(() =>
+    Promise.resolve({ publicKey: "test-key" }),
+  );
+  apiMock.createNotifier.mockImplementation(() =>
+    Promise.resolve({ notifier: { id: "n-new" } }),
+  );
+  mockUnsubscribeFromPush.mockImplementation(() => Promise.resolve());
+  mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
 });
 
 const FAKE_SUBSCRIPTION = {
@@ -185,7 +136,7 @@ function makeWebpushNotifier(overrides: Record<string, any> = {}) {
 describe("PushNotificationsSection", () => {
   it("auto-cleans up disabled webpush notifier on page load", async () => {
     // Notifier exists but is disabled (background job disabled it)
-    mockGetNotifiers.mockImplementation(() =>
+    apiMock.getNotifiers.mockImplementation(() =>
       Promise.resolve({ notifiers: [makeWebpushNotifier({ enabled: false })] }),
     );
     mockGetExistingSubscription.mockImplementation(() =>
@@ -200,7 +151,7 @@ describe("PushNotificationsSection", () => {
 
     // Should have cleaned up
     expect(mockUnsubscribeFromPush).toHaveBeenCalled();
-    expect(mockDeleteNotifier).toHaveBeenCalledWith("n1");
+    expect(apiMock.deleteNotifier).toHaveBeenCalledWith("n1");
 
     // Should show Enable button (not enabled state)
     expect(screen.getByText("Enable")).toBeDefined();
@@ -208,7 +159,7 @@ describe("PushNotificationsSection", () => {
 
   it("auto-cleans up stale DB notifier when browser has no subscription", async () => {
     // Notifier exists in DB but no browser subscription
-    mockGetNotifiers.mockImplementation(() =>
+    apiMock.getNotifiers.mockImplementation(() =>
       Promise.resolve({ notifiers: [makeWebpushNotifier({ enabled: true })] }),
     );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
@@ -216,7 +167,7 @@ describe("PushNotificationsSection", () => {
     render(<SettingsPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(mockDeleteNotifier).toHaveBeenCalledWith("n1");
+      expect(apiMock.deleteNotifier).toHaveBeenCalledWith("n1");
     });
 
     // Should show Enable button
@@ -225,7 +176,7 @@ describe("PushNotificationsSection", () => {
 
   it("auto-recovers when test reveals expired subscription", async () => {
     // Push is enabled and active
-    mockGetNotifiers.mockImplementation(() =>
+    apiMock.getNotifiers.mockImplementation(() =>
       Promise.resolve({ notifiers: [makeWebpushNotifier()] }),
     );
     mockGetExistingSubscription.mockImplementation(() =>
@@ -233,7 +184,7 @@ describe("PushNotificationsSection", () => {
     );
 
     // Test will return expired
-    mockTestNotifier.mockImplementation(() =>
+    apiMock.testNotifier.mockImplementation(() =>
       Promise.resolve({
         success: false,
         message: "Push subscription expired: https://fcm.example.com/send/abc",
@@ -256,20 +207,20 @@ describe("PushNotificationsSection", () => {
 
     // Should have cleaned up
     expect(mockUnsubscribeFromPush).toHaveBeenCalled();
-    expect(mockDeleteNotifier).toHaveBeenCalledWith("n1");
+    expect(apiMock.deleteNotifier).toHaveBeenCalledWith("n1");
 
     // Should now show Enable button
     expect(screen.getByText("Enable")).toBeDefined();
   });
 
   it("shows normal error for non-expired test failures", async () => {
-    mockGetNotifiers.mockImplementation(() =>
+    apiMock.getNotifiers.mockImplementation(() =>
       Promise.resolve({ notifiers: [makeWebpushNotifier()] }),
     );
     mockGetExistingSubscription.mockImplementation(() =>
       Promise.resolve(FAKE_SUBSCRIPTION),
     );
-    mockTestNotifier.mockImplementation(() =>
+    apiMock.testNotifier.mockImplementation(() =>
       Promise.resolve({
         success: false,
         message: "Web push failed (500): Internal error",
@@ -289,18 +240,18 @@ describe("PushNotificationsSection", () => {
     });
 
     // Should NOT have cleaned up
-    expect(mockDeleteNotifier).not.toHaveBeenCalled();
+    expect(apiMock.deleteNotifier).not.toHaveBeenCalled();
   });
 
   it("cleans up when fresh subscription fails verification after enable", async () => {
     // Start with no notifiers (user sees Enable button)
-    mockGetNotifiers.mockImplementation(() =>
+    apiMock.getNotifiers.mockImplementation(() =>
       Promise.resolve({ notifiers: [] }),
     );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
 
     // Test notification will report expired subscription
-    mockTestNotifier.mockImplementation(() =>
+    apiMock.testNotifier.mockImplementation(() =>
       Promise.resolve({
         success: false,
         message: "Push subscription expired: https://fcm.example.com/send/new",
@@ -320,12 +271,12 @@ describe("PushNotificationsSection", () => {
     });
 
     // Should have cleaned up the just-created notifier
-    expect(mockDeleteNotifier).toHaveBeenCalledWith("n-new");
+    expect(apiMock.deleteNotifier).toHaveBeenCalledWith("n-new");
     expect(mockUnsubscribeFromPush).toHaveBeenCalled();
   });
 
   it("renders normally when push is enabled and healthy", async () => {
-    mockGetNotifiers.mockImplementation(() =>
+    apiMock.getNotifiers.mockImplementation(() =>
       Promise.resolve({ notifiers: [makeWebpushNotifier()] }),
     );
     mockGetExistingSubscription.mockImplementation(() =>

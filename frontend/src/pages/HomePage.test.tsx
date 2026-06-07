@@ -1,8 +1,9 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import "../i18n";
 
 function newTestClient() {
@@ -107,62 +108,49 @@ function makeRecommendation(
   };
 }
 
-const mockBrowseTitles = mock(() =>
-  Promise.resolve({
-    titles: Array.from({ length: 20 }, (_, i) => makeSearchTitle(i + 1)),
-    count: 20,
-    page: 1,
-    totalPages: 1,
-  }),
-);
+// File-wide default impls that differ from the shared apiMock defaults.
+function applyHomeDefaults() {
+  apiMock.browseTitles.mockImplementation(() =>
+    Promise.resolve({
+      titles: Array.from({ length: 20 }, (_, i) => makeSearchTitle(i + 1)),
+      count: 20,
+      page: 1,
+      totalPages: 1,
+    }),
+  );
+  apiMock.getUpcomingEpisodes.mockImplementation(() =>
+    Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
+  );
+  apiMock.getRecommendations.mockImplementation(() =>
+    Promise.resolve({ recommendations: [], count: 0 }),
+  );
+  apiMock.getHomepageLayout.mockImplementation(() =>
+    Promise.resolve({
+      homepage_layout: [
+        { id: "today", enabled: true },
+        { id: "upcoming", enabled: true },
+        { id: "unwatched", enabled: true },
+        { id: "recommendations", enabled: true },
+        { id: "friends_loved", enabled: true },
+      ],
+    }),
+  );
+  apiMock.getUpNext.mockImplementation(() => Promise.resolve({ items: [] }));
+  apiMock.getFriendsLoved.mockImplementation(() =>
+    Promise.resolve({ items: [] }),
+  );
+  apiMock.getMovieTracking.mockImplementation(() =>
+    Promise.resolve({ to_watch: [], upcoming: [] }),
+  );
+  apiMock.getMyStreak.mockImplementation(() => Promise.resolve(null));
+  apiMock.getSuggestionsAggregate.mockImplementation(() =>
+    Promise.resolve({ flat: [] }),
+  );
+}
 
-const mockGetUpcomingEpisodes = mock(() =>
-  Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
-);
-
-const mockGetRecommendations = mock(() =>
-  Promise.resolve({ recommendations: [], count: 0 }),
-);
-
-const mockGetHomepageLayout = mock(() =>
-  Promise.resolve({
-    homepage_layout: [
-      { id: "today", enabled: true },
-      { id: "upcoming", enabled: true },
-      { id: "unwatched", enabled: true },
-      { id: "recommendations", enabled: true },
-      { id: "friends_loved", enabled: true },
-    ],
-  }),
-);
-
-const mockGetUpNext = mock(() => Promise.resolve({ items: [] }));
-
-const mockGetFriendsLoved = mock(() => Promise.resolve({ items: [] }));
-
-const mockGetMovieTracking = mock(() =>
-  Promise.resolve({ to_watch: [], upcoming: [] }),
-);
-
-const mockGetMyStreak = mock(() => Promise.resolve(null));
-
-const mockGetSuggestionsAggregate = mock(() => Promise.resolve({ flat: [] }));
-
-mock.module("../api", () => ({
-  browseTitles: mockBrowseTitles,
-  getUpcomingEpisodes: mockGetUpcomingEpisodes,
-  getRecommendations: mockGetRecommendations,
-  getHomepageLayout: mockGetHomepageLayout,
-  getUpNext: mockGetUpNext,
-  getFriendsLoved: mockGetFriendsLoved,
-  getMovieTracking: mockGetMovieTracking,
-  getMyStreak: mockGetMyStreak,
-  getSuggestionsAggregate: mockGetSuggestionsAggregate,
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-}));
+beforeEach(() => {
+  applyHomeDefaults();
+});
 
 const { default: HomePage } = await import("./HomePage");
 
@@ -178,24 +166,7 @@ afterEach(() => {
   cleanup();
   mockUser = null;
   mockAuthLoading = false;
-  mockBrowseTitles.mockClear();
-  mockGetUpcomingEpisodes.mockClear();
-  mockGetRecommendations.mockClear();
-  mockGetUpNext.mockClear();
-  mockGetFriendsLoved.mockClear();
-  mockGetMovieTracking.mockClear();
-  mockGetMyStreak.mockClear();
-  mockGetSuggestionsAggregate.mockClear();
-
-  // Reset defaults
-  mockGetUpcomingEpisodes.mockImplementation(() =>
-    Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
-  );
-  mockGetRecommendations.mockImplementation(() =>
-    Promise.resolve({ recommendations: [], count: 0 }),
-  );
-  mockGetUpNext.mockImplementation(() => Promise.resolve({ items: [] }));
-  mockGetFriendsLoved.mockImplementation(() => Promise.resolve({ items: [] }));
+  resetApiMock();
 });
 
 describe("HomePage — unauthenticated landing", () => {
@@ -228,7 +199,7 @@ describe("HomePage — unauthenticated landing", () => {
       expect(screen.getByText("Title 1")).toBeDefined();
     });
 
-    expect(mockBrowseTitles).toHaveBeenCalledWith(
+    expect(apiMock.browseTitles).toHaveBeenCalledWith(
       { category: "popular", page: 1 },
       expect.any(AbortSignal),
     );
@@ -247,7 +218,7 @@ describe("HomePage — unauthenticated landing", () => {
   });
 
   it("renders hero even when API fails", async () => {
-    mockBrowseTitles.mockImplementationOnce(() =>
+    apiMock.browseTitles.mockImplementationOnce(() =>
       Promise.reject(new Error("fail")),
     );
 
@@ -284,7 +255,7 @@ describe("HomePage — unauthenticated landing", () => {
     });
 
     expect(screen.queryByText("Recommended for You")).toBeNull();
-    expect(mockGetRecommendations).not.toHaveBeenCalled();
+    expect(apiMock.getRecommendations).not.toHaveBeenCalled();
   });
 });
 
@@ -315,7 +286,7 @@ describe("HomePage — authenticated recommendations", () => {
         },
       }),
     ];
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: recs, count: 2 }),
     );
 
@@ -339,7 +310,7 @@ describe("HomePage — authenticated recommendations", () => {
       auth_provider: "local",
       is_admin: false,
     };
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [], count: 0 }),
     );
 
@@ -364,7 +335,7 @@ describe("HomePage — authenticated recommendations", () => {
     render(<HomePage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(mockGetRecommendations).toHaveBeenCalledWith(
+      expect(apiMock.getRecommendations).toHaveBeenCalledWith(
         6,
         undefined,
         expect.any(AbortSignal),
@@ -381,7 +352,7 @@ describe("HomePage — authenticated recommendations", () => {
       is_admin: false,
     };
     const recs = [makeRecommendation("r1")];
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: recs, count: 1 }),
     );
 
@@ -411,7 +382,7 @@ describe("HomePage — authenticated recommendations", () => {
       is_admin: false,
     };
     const recs = [makeRecommendation("r1")];
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: recs, count: 1 }),
     );
 
@@ -434,7 +405,7 @@ describe("HomePage — authenticated recommendations", () => {
       auth_provider: "local",
       is_admin: false,
     };
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.reject(new Error("network error")),
     );
 
@@ -458,7 +429,7 @@ describe("HomePage — friends loved this week", () => {
       auth_provider: "local",
       is_admin: false,
     };
-    mockGetFriendsLoved.mockImplementation(() =>
+    apiMock.getFriendsLoved.mockImplementation(() =>
       Promise.resolve({
         items: [
           {
@@ -490,7 +461,7 @@ describe("HomePage — friends loved this week", () => {
       auth_provider: "local",
       is_admin: false,
     };
-    mockGetFriendsLoved.mockImplementation(() =>
+    apiMock.getFriendsLoved.mockImplementation(() =>
       Promise.resolve({ items: [] }),
     );
 
@@ -511,7 +482,7 @@ describe("HomePage — friends loved this week", () => {
       auth_provider: "local",
       is_admin: false,
     };
-    mockGetFriendsLoved.mockImplementation(() =>
+    apiMock.getFriendsLoved.mockImplementation(() =>
       Promise.reject(new Error("network error")),
     );
 

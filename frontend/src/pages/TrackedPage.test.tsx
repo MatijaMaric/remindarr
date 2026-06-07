@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import {
   render,
   screen,
@@ -9,6 +9,7 @@ import {
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 
 function newTestClient() {
   return new QueryClient({
@@ -42,21 +43,19 @@ mock.module("../context/AuthContext", () => ({
   },
 }));
 
-const mockGetTrackedTitles = mock(() =>
-  Promise.resolve({ titles: [], count: 0, profile_public: false }),
-);
-const mockBulkTrackAction = mock(() => Promise.resolve({ updated: 0 }));
+// File-wide default impls that differ from the shared apiMock defaults.
+function applyTrackedDefaults() {
+  apiMock.getTrackedTitles.mockImplementation(() =>
+    Promise.resolve({ titles: [], count: 0, profile_public: false }),
+  );
+  apiMock.bulkTrackAction.mockImplementation(() =>
+    Promise.resolve({ updated: 0 }),
+  );
+}
 
-mock.module("../api", () => ({
-  getTrackedTitles: mockGetTrackedTitles,
-  trackTitle: mock(() => Promise.resolve()),
-  untrackTitle: mock(() => Promise.resolve()),
-  bulkTrackAction: mockBulkTrackAction,
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-}));
+beforeEach(() => {
+  applyTrackedDefaults();
+});
 
 const { default: TrackedPage } = await import("./TrackedPage");
 
@@ -70,8 +69,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   cleanup();
-  mockGetTrackedTitles.mockReset();
-  mockBulkTrackAction.mockReset();
+  resetApiMock();
 });
 
 function makeShow(id: string, status: string | null, overrides = {}) {
@@ -130,13 +128,13 @@ function makeMovie(id: string) {
 
 describe("TrackedPage", () => {
   it("shows loading state initially", () => {
-    mockGetTrackedTitles.mockImplementation(() => new Promise(() => {}));
+    apiMock.getTrackedTitles.mockImplementation(() => new Promise(() => {}));
     const { container } = render(<TrackedPage />, { wrapper: Wrapper });
     expect(container.querySelector(".animate-pulse")).toBeDefined();
   });
 
   it("shows empty message when no tracked titles", async () => {
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles: [], count: 0, profile_public: false }),
     );
     render(<TrackedPage />, { wrapper: Wrapper });
@@ -153,7 +151,7 @@ describe("TrackedPage", () => {
       makeShow("s4", "completed"),
       makeMovie("m1"),
     ];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
@@ -174,7 +172,7 @@ describe("TrackedPage", () => {
 
   it("does not render empty groups", async () => {
     const titles = [makeShow("s1", "watching"), makeMovie("m1")];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
@@ -206,7 +204,7 @@ describe("TrackedPage", () => {
       makeMovie("m1"),
       makeMovie("m2"),
     ];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
@@ -226,7 +224,7 @@ describe("TrackedPage", () => {
       makeShow("s2", "completed"),
       makeMovie("m1"),
     ];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
@@ -240,7 +238,7 @@ describe("TrackedPage", () => {
 
   it("renders unreleased section when shows have unreleased status", async () => {
     const titles = [makeShow("s1", "unreleased")];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
@@ -256,7 +254,7 @@ describe("TrackedPage", () => {
 
   it("does not show movies section when there are no movies", async () => {
     const titles = [makeShow("s1", "watching")];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
@@ -275,7 +273,7 @@ describe("TrackedPage", () => {
 
 describe("TrackedPage select mode", () => {
   it("shows Select toggle button", async () => {
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({
         titles: [makeMovie("m1"), makeMovie("m2")],
         count: 2,
@@ -288,7 +286,7 @@ describe("TrackedPage select mode", () => {
 
   it("enters select mode and shows the bulk action bar when a title is selected", async () => {
     const titles = [makeMovie("m1"), makeMovie("m2")];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 
@@ -310,7 +308,7 @@ describe("TrackedPage select mode", () => {
 
   it("exits select mode when Cancel is clicked", async () => {
     const titles = [makeMovie("m1")];
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles, count: titles.length, profile_public: false }),
     );
 

@@ -17,6 +17,7 @@ function newTestClient() {
   });
 }
 import * as sonner from "sonner";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import "../i18n";
 
 let mockUser: any = {
@@ -59,7 +60,7 @@ const defaultSeasons = [
   },
 ];
 
-const mockGetSeasonDetails = mock(() =>
+const defaultSeasonDetails = () =>
   Promise.resolve({
     title: { id: "tv-100", title: "Test Show", is_tracked: true },
     tmdb: {
@@ -116,38 +117,19 @@ const mockGetSeasonDetails = mock(() =>
     seasonNumber: 1,
     country: "US",
     seasons: defaultSeasons,
-  }),
-);
+  });
 
-const mockGetSeasonEpisodeStatus = mock(() =>
+const defaultSeasonEpisodeStatus = () =>
   Promise.resolve({
     episodes: [
       { episode_number: 1, id: 10, is_watched: false },
       { episode_number: 2, id: 11, is_watched: true },
       { episode_number: 3, id: 12, is_watched: false },
     ],
-  }),
-);
+  });
 
-const mockWatchEpisode = mock(() => Promise.resolve());
-const mockUnwatchEpisode = mock(() => Promise.resolve());
-const mockWatchEpisodesBulk = mock(() => Promise.resolve());
-
-const mockGetEpisodeDetails = mock(() => Promise.resolve({}));
-
-mock.module("../api", () => ({
-  getSeasonDetails: mockGetSeasonDetails,
-  getEpisodeDetails: mockGetEpisodeDetails,
-  getSeasonEpisodeStatus: mockGetSeasonEpisodeStatus,
-  getSeasonEpisodeRatings: mock(() => Promise.resolve({ ratings: {} })),
-  watchEpisode: mockWatchEpisode,
-  unwatchEpisode: mockUnwatchEpisode,
-  watchEpisodesBulk: mockWatchEpisodesBulk,
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-}));
+apiMock.getSeasonDetails.mockImplementation(defaultSeasonDetails);
+apiMock.getSeasonEpisodeStatus.mockImplementation(defaultSeasonEpisodeStatus);
 
 const { default: SeasonDetailPage } = await import("./SeasonDetailPage");
 
@@ -165,11 +147,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   cleanup();
-  mockGetSeasonDetails.mockReset();
-  mockGetSeasonEpisodeStatus.mockReset();
-  mockWatchEpisode.mockReset();
-  mockUnwatchEpisode.mockReset();
-  mockWatchEpisodesBulk.mockReset();
+  resetApiMock();
   mockUser = {
     id: "user1",
     username: "test",
@@ -178,76 +156,9 @@ afterEach(() => {
     is_admin: false,
   };
 
-  // Re-set default implementations
-  mockGetSeasonDetails.mockImplementation(() =>
-    Promise.resolve({
-      title: { id: "tv-100", title: "Test Show", is_tracked: true },
-      tmdb: {
-        id: 1,
-        name: "Season 1",
-        overview: "Overview",
-        air_date: "2024-01-01",
-        poster_path: null,
-        season_number: 1,
-        vote_average: 8.0,
-        episodes: [
-          {
-            id: 101,
-            name: "Pilot",
-            overview: "First",
-            air_date: "2024-01-01",
-            episode_number: 1,
-            season_number: 1,
-            still_path: null,
-            runtime: 45,
-            vote_average: 8.5,
-            guest_stars: [],
-            crew: [],
-          },
-          {
-            id: 102,
-            name: "Second",
-            overview: "The second one",
-            air_date: "2024-01-08",
-            episode_number: 2,
-            season_number: 1,
-            still_path: null,
-            runtime: 42,
-            vote_average: 7.9,
-            guest_stars: [],
-            crew: [],
-          },
-          {
-            id: 103,
-            name: "Future",
-            overview: "Unreleased",
-            air_date: "2099-12-31",
-            episode_number: 3,
-            season_number: 1,
-            still_path: null,
-            runtime: null,
-            vote_average: 0,
-            guest_stars: [],
-            crew: [],
-          },
-        ],
-        credits: { cast: [], crew: [] },
-      },
-      seasonNumber: 1,
-      country: "US",
-      seasons: defaultSeasons,
-    }),
-  );
-
-  mockGetSeasonEpisodeStatus.mockImplementation(() =>
-    Promise.resolve({
-      episodes: [
-        { episode_number: 1, id: 10, is_watched: false },
-        { episode_number: 2, id: 11, is_watched: true },
-        { episode_number: 3, id: 12, is_watched: false },
-      ],
-    }),
-  );
+  // Re-set default implementations that differ from the shared empty defaults
+  apiMock.getSeasonDetails.mockImplementation(defaultSeasonDetails);
+  apiMock.getSeasonEpisodeStatus.mockImplementation(defaultSeasonEpisodeStatus);
 });
 
 describe("SeasonDetailPage", () => {
@@ -263,7 +174,7 @@ describe("SeasonDetailPage", () => {
 
   it("does not render watched icons when not authenticated", async () => {
     mockUser = null;
-    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+    apiMock.getSeasonEpisodeStatus.mockImplementation(() =>
       Promise.resolve({ episodes: [] }),
     );
 
@@ -277,7 +188,7 @@ describe("SeasonDetailPage", () => {
   });
 
   it("does not render watched icons when status is empty", async () => {
-    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+    apiMock.getSeasonEpisodeStatus.mockImplementation(() =>
       Promise.resolve({ episodes: [] }),
     );
 
@@ -313,12 +224,12 @@ describe("SeasonDetailPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockWatchEpisode).toHaveBeenCalledWith(10);
+      expect(apiMock.watchEpisode).toHaveBeenCalledWith(10);
     });
   });
 
   it("calls unwatchEpisode API when toggling watched episode", async () => {
-    mockGetSeasonEpisodeStatus.mockImplementation(() =>
+    apiMock.getSeasonEpisodeStatus.mockImplementation(() =>
       Promise.resolve({
         episodes: [
           { episode_number: 1, id: 10, is_watched: false },
@@ -347,7 +258,7 @@ describe("SeasonDetailPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockUnwatchEpisode).toHaveBeenCalledWith(11);
+      expect(apiMock.unwatchEpisode).toHaveBeenCalledWith(11);
     });
   });
 
@@ -355,7 +266,7 @@ describe("SeasonDetailPage", () => {
     const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(
       () => "1" as any,
     );
-    mockWatchEpisode.mockImplementation(() =>
+    apiMock.watchEpisode.mockImplementation(() =>
       Promise.reject(new Error("fail")),
     );
 
@@ -389,7 +300,7 @@ describe("SeasonDetailPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith(
+      expect(apiMock.watchEpisodesBulk).toHaveBeenCalledWith(
         [10, 11],
         true,
         undefined,
@@ -417,7 +328,7 @@ describe("SeasonDetailPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockWatchEpisodesBulk).toHaveBeenCalledWith([10, 11], true, {
+      expect(apiMock.watchEpisodesBulk).toHaveBeenCalledWith([10, 11], true, {
         useAirDate: true,
       });
     });
@@ -436,7 +347,7 @@ describe("SeasonDetailPage", () => {
 
   it("shows AIRING NOW indicator for episodes airing today", async () => {
     const today = new Date().toISOString().slice(0, 10);
-    mockGetSeasonDetails.mockImplementation(() =>
+    apiMock.getSeasonDetails.mockImplementation(() =>
       Promise.resolve({
         title: { id: "tv-100", title: "Test Show", is_tracked: true },
         tmdb: {
@@ -513,7 +424,7 @@ describe("SeasonDetailPage", () => {
   });
 
   it("does not render season pill tabs when only one season", async () => {
-    mockGetSeasonDetails.mockImplementation(() =>
+    apiMock.getSeasonDetails.mockImplementation(() =>
       Promise.resolve({
         title: { id: "tv-100", title: "Test Show", is_tracked: true },
         tmdb: {
