@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import {
   render,
   screen,
@@ -9,6 +9,7 @@ import {
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import type {
   SearchTitle,
   SuggestionsAggregateResponse,
@@ -57,47 +58,22 @@ Object.defineProperty(globalThis, "IntersectionObserver", {
   configurable: true,
 });
 
-const mockGetRecommendations = mock(() =>
-  Promise.resolve({ recommendations: [], count: 0 }),
-);
-const mockGetUnreadCount = mock(() => Promise.resolve({ count: 0 }));
-const mockTrackTitle = mock(() => Promise.resolve());
-const mockMarkRecommendationRead = mock(() => Promise.resolve());
-const mockDeleteRecommendation = mock(() => Promise.resolve());
-const mockGetSuggestionsAggregate = mock<
-  () => Promise<SuggestionsAggregateResponse>
->(() => Promise.resolve({ flat: [], groups: [] }));
-const mockDismissSuggestion = mock(() => Promise.resolve());
-const mockUndismissSuggestion = mock(() => Promise.resolve());
+// File-wide default impls that differ from the shared apiMock defaults.
+function applyDiscoveryDefaults() {
+  apiMock.getRecommendations.mockImplementation(() =>
+    Promise.resolve({ recommendations: [], count: 0 }),
+  );
+  apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+    Promise.resolve({ count: 0 }),
+  );
+  apiMock.getSuggestionsAggregate.mockImplementation(() =>
+    Promise.resolve({ flat: [], groups: [] }),
+  );
+}
 
-mock.module("../api", () => ({
-  getRecommendations: mockGetRecommendations,
-  getUnreadRecommendationCount: mockGetUnreadCount,
-  trackTitle: mockTrackTitle,
-  markRecommendationRead: mockMarkRecommendationRead,
-  deleteRecommendation: mockDeleteRecommendation,
-  getSuggestionsAggregate: mockGetSuggestionsAggregate,
-  dismissSuggestion: mockDismissSuggestion,
-  undismissSuggestion: mockUndismissSuggestion,
-  // stubs to prevent mock-leak breakage in downstream test files
-  getSharedWatchlist: mock(() => Promise.resolve({ username: "", titles: [] })),
-  getSeasonDetails: mock(() => Promise.resolve({})),
-  getSeasonEpisodeStatus: mock(() => Promise.resolve([])),
-  getSeasonEpisodeRatings: mock(() => Promise.resolve({ ratings: {} })),
-  watchEpisode: mock(() => Promise.resolve()),
-  unwatchEpisode: mock(() => Promise.resolve()),
-  watchEpisodesBulk: mock(() => Promise.resolve()),
-  browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
-  getUpcomingEpisodes: mock(() => Promise.resolve({ today: [], upcoming: [] })),
-  getHomepageLayout: mock(() => Promise.resolve({ layout: [] })),
-  getUpNext: mock(() => Promise.resolve({ items: [] })),
-  getFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
-  getMovieTracking: mock(() => Promise.resolve(null)),
-  getMyStreak: mock(() => Promise.resolve(null)),
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-}));
+beforeEach(() => {
+  applyDiscoveryDefaults();
+});
 
 const { default: DiscoveryPage } = await import("./DiscoveryPage");
 
@@ -175,33 +151,17 @@ function makeAggregate(
 
 afterEach(() => {
   cleanup();
-  mockGetRecommendations.mockReset();
-  mockGetUnreadCount.mockReset();
-  mockTrackTitle.mockReset();
-  mockMarkRecommendationRead.mockReset();
-  mockDeleteRecommendation.mockReset();
-  mockGetSuggestionsAggregate.mockReset();
-  mockDismissSuggestion.mockReset();
-  mockUndismissSuggestion.mockReset();
-
-  // Reset defaults
-  mockGetRecommendations.mockImplementation(() =>
-    Promise.resolve({ recommendations: [], count: 0 }),
-  );
-  mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
-  mockGetSuggestionsAggregate.mockImplementation(() =>
-    Promise.resolve({ flat: [], groups: [] }),
-  );
-  mockDismissSuggestion.mockImplementation(() => Promise.resolve());
-  mockUndismissSuggestion.mockImplementation(() => Promise.resolve());
+  resetApiMock();
 });
 
 describe("DiscoveryPage", () => {
   it("shows empty state when no recommendations", async () => {
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [], count: 0 }),
     );
-    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
+    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -230,10 +190,12 @@ describe("DiscoveryPage", () => {
         message: "You should watch this!",
       }),
     ];
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: recs, count: 2 }),
     );
-    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 2 }));
+    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+      Promise.resolve({ count: 2 }),
+    );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -251,10 +213,12 @@ describe("DiscoveryPage", () => {
   });
 
   it("shows unread count badge", async () => {
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [], count: 0 }),
     );
-    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 5 }));
+    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+      Promise.resolve({ count: 5 }),
+    );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -265,12 +229,14 @@ describe("DiscoveryPage", () => {
 
   it("track button on Activity tab calls trackTitle and removes the card", async () => {
     const rec = makeRecommendation("r1");
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [rec], count: 1 }),
     );
-    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 1 }));
-    mockTrackTitle.mockImplementation(() => Promise.resolve());
-    mockMarkRecommendationRead.mockImplementation(() => Promise.resolve());
+    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+      Promise.resolve({ count: 1 }),
+    );
+    apiMock.trackTitle.mockImplementation(() => Promise.resolve());
+    apiMock.markRecommendationRead.mockImplementation(() => Promise.resolve());
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -288,7 +254,7 @@ describe("DiscoveryPage", () => {
     fireEvent.click(trackButtons[0]);
 
     await waitFor(() => {
-      expect(mockTrackTitle).toHaveBeenCalledWith("title-r1");
+      expect(apiMock.trackTitle).toHaveBeenCalledWith("title-r1");
     });
 
     await waitFor(() => {
@@ -298,11 +264,13 @@ describe("DiscoveryPage", () => {
 
   it("dismiss button calls deleteRecommendation and removes the card", async () => {
     const rec = makeRecommendation("r1");
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [rec], count: 1 }),
     );
-    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
-    mockDeleteRecommendation.mockImplementation(() => Promise.resolve());
+    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
+    apiMock.deleteRecommendation.mockImplementation(() => Promise.resolve());
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -320,7 +288,7 @@ describe("DiscoveryPage", () => {
     fireEvent.click(dismissButtons[0]);
 
     await waitFor(() => {
-      expect(mockDeleteRecommendation).toHaveBeenCalledWith("r1");
+      expect(apiMock.deleteRecommendation).toHaveBeenCalledWith("r1");
     });
 
     await waitFor(() => {
@@ -339,10 +307,12 @@ describe("DiscoveryPage", () => {
       },
       message: "Great film!",
     });
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [rec], count: 1 }),
     );
-    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
+    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -377,10 +347,12 @@ describe("DiscoveryPage", () => {
         },
       }),
     ];
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: recs, count: 2 }),
     );
-    mockGetUnreadCount.mockImplementation(() => Promise.resolve({ count: 0 }));
+    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -406,7 +378,7 @@ describe("DiscoveryPage", () => {
 describe("For you tab — suggestions", () => {
   it("hero renders the top untracked/undismissed suggestion from aggregate", async () => {
     const title1 = makeSearchTitle("movie-1");
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title1], groups: [] })),
     );
 
@@ -420,7 +392,7 @@ describe("For you tab — suggestions", () => {
 
   it("hero shows 'None of your friends have recommended this yet' when no recs match the hero", async () => {
     const title1 = makeSearchTitle("movie-1");
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title1], groups: [] })),
     );
     // default: no recommendations
@@ -436,7 +408,7 @@ describe("For you tab — suggestions", () => {
 
   it("hero shows friend recommendation signal when a rec matches the hero title", async () => {
     const heroTitle = makeSearchTitle("movie-1");
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [heroTitle], groups: [] })),
     );
     const rec = makeRecommendation("r1", {
@@ -455,7 +427,7 @@ describe("For you tab — suggestions", () => {
       },
       message: "You should watch this",
     });
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [rec], count: 1 }),
     );
 
@@ -471,10 +443,10 @@ describe("For you tab — suggestions", () => {
 
   it("session counter reflects tracked and dismissed counts after actions", async () => {
     const title1 = makeSearchTitle("movie-1");
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title1], groups: [] })),
     );
-    mockTrackTitle.mockImplementation(() => Promise.resolve());
+    apiMock.trackTitle.mockImplementation(() => Promise.resolve());
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -494,7 +466,7 @@ describe("For you tab — suggestions", () => {
   it("clicking 'Not interested' on hero calls dismissSuggestion and shifts to next suggestion", async () => {
     const title1 = makeSearchTitle("movie-1");
     const title2 = makeSearchTitle("movie-2");
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] })),
     );
 
@@ -507,7 +479,7 @@ describe("For you tab — suggestions", () => {
     fireEvent.click(screen.getByText("Not interested"));
 
     await waitFor(() => {
-      expect(mockDismissSuggestion).toHaveBeenCalledWith("movie-1");
+      expect(apiMock.dismissSuggestion).toHaveBeenCalledWith("movie-1");
     });
 
     // Hero shifts to the second title
@@ -518,7 +490,7 @@ describe("For you tab — suggestions", () => {
 
   it("clicking Undo on a dismissed friend rec calls undismissSuggestion", async () => {
     const rec = makeRecommendation("r1");
-    mockGetRecommendations.mockImplementation(() =>
+    apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: [rec], count: 1 }),
     );
 
@@ -533,7 +505,7 @@ describe("For you tab — suggestions", () => {
     fireEvent.click(screen.getByText("Dismiss"));
 
     await waitFor(() => {
-      expect(mockDismissSuggestion).toHaveBeenCalledWith("title-r1");
+      expect(apiMock.dismissSuggestion).toHaveBeenCalledWith("title-r1");
       // Dismiss swaps to Undo
       expect(screen.getByText("Undo")).toBeDefined();
     });
@@ -542,7 +514,7 @@ describe("For you tab — suggestions", () => {
     fireEvent.click(screen.getByText("Undo"));
 
     await waitFor(() => {
-      expect(mockUndismissSuggestion).toHaveBeenCalledWith("title-r1");
+      expect(apiMock.undismissSuggestion).toHaveBeenCalledWith("title-r1");
     });
   });
 
@@ -558,7 +530,7 @@ describe("For you tab — suggestions", () => {
       suggestions: [suggestion],
       hiddenCount: 2,
     };
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve({
         flat: [suggestion],
         groups: [group],
@@ -579,7 +551,7 @@ describe("For you tab — suggestions", () => {
     const title2 = makeSearchTitle("movie-2", {
       posterUrl: "https://image.tmdb.org/t/p/w342/p2.jpg",
     });
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] })),
     );
 
@@ -603,10 +575,10 @@ describe("For you tab — suggestions", () => {
   it("Track button in More for you rail calls trackTitle with the suggestion id", async () => {
     const title1 = makeSearchTitle("movie-1");
     const title2 = makeSearchTitle("movie-2");
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title1, title2], groups: [] })),
     );
-    mockTrackTitle.mockImplementation(() => Promise.resolve());
+    apiMock.trackTitle.mockImplementation(() => Promise.resolve());
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
@@ -624,13 +596,13 @@ describe("For you tab — suggestions", () => {
 
     await waitFor(() => {
       // First argument should be the title id
-      expect(mockTrackTitle.mock.calls[0]?.[0]).toBe("movie-2");
+      expect(apiMock.trackTitle.mock.calls[0]?.[0]).toBe("movie-2");
     });
   });
 
   it("hero renders an amber match-score chip when matchScore is present", async () => {
     const title = makeSearchTitle("movie-1", { matchScore: 94 });
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title], groups: [] })),
     );
 
@@ -645,7 +617,7 @@ describe("For you tab — suggestions", () => {
 
   it("hero omits the match-score chip when matchScore is absent", async () => {
     const title = makeSearchTitle("movie-1");
-    mockGetSuggestionsAggregate.mockImplementation(() =>
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title], groups: [] })),
     );
 

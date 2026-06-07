@@ -10,6 +10,7 @@ import {
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 
 // Initialize i18n before anything else
 import "../i18n";
@@ -55,50 +56,40 @@ mock.module("../lib/push", () => ({
   getExistingSubscription: mock(() => Promise.resolve(null)),
 }));
 
-// Mock api module with tracked titles response
-const mockGetTrackedTitles = mock(() =>
-  Promise.resolve({
-    titles: [
-      {
-        id: "movie-1",
-        title: "Test Movie",
-        object_type: "movie",
-        poster_url: "https://example.com/poster.jpg",
-        public: true,
-      },
-      {
-        id: "show-2",
-        title: "Test Show",
-        object_type: "show",
-        poster_url: null,
-        public: false,
-      },
-    ],
-    count: 2,
-    profile_public: true,
-    profile_visibility: "public",
-  }),
-);
+// Tracked-titles response used by the ProfileVisibilitySection tests.
+const TRACKED_TITLES_DEFAULT = {
+  titles: [
+    {
+      id: "movie-1",
+      title: "Test Movie",
+      object_type: "movie",
+      poster_url: "https://example.com/poster.jpg",
+      public: true,
+    },
+    {
+      id: "show-2",
+      title: "Test Show",
+      object_type: "show",
+      poster_url: null,
+      public: false,
+    },
+  ],
+  count: 2,
+  profile_public: true,
+  profile_visibility: "public",
+};
 
-mock.module("../api", () => ({
-  getTrackedTitles: mockGetTrackedTitles,
-  updateProfileVisibility: mock(() => Promise.resolve()),
-  updateTitleVisibility: mock(() => Promise.resolve()),
-  updateAllTitleVisibility: mock(() => Promise.resolve()),
-  exportWatchlist: mock(() => Promise.resolve([])),
-  importWatchlist: mock(() => Promise.resolve({ imported: 0 })),
-  getNotifiers: mock(() => Promise.resolve({ notifiers: [] })),
-  getNotifierProviders: mock(() => Promise.resolve({ providers: [] })),
-  createNotifier: mock(() => Promise.resolve({ notifier: {} })),
-  updateNotifier: mock(() => Promise.resolve()),
-  deleteNotifier: mock(() => Promise.resolve()),
-  testNotifier: mock(() => Promise.resolve({ success: true })),
-  getVapidPublicKey: mock(() => Promise.resolve({ publicKey: "" })),
-  getJobs: mock(() =>
+// Configure the shared apiMock with the non-default shapes SettingsPage reads.
+// These mirror the per-fn shapes the file previously declared in its own
+// `mock.module("../api", …)` factory, ported so render parity is preserved.
+function applySettingsApiDefaults() {
+  apiMock.getTrackedTitles.mockImplementation(() =>
+    Promise.resolve(TRACKED_TITLES_DEFAULT),
+  );
+  apiMock.getJobs.mockImplementation(() =>
     Promise.resolve({ stats: {}, crons: [], recentJobs: [] }),
-  ),
-  triggerJob: mock(() => Promise.resolve({ success: true, jobId: 1 })),
-  getAdminSettings: mock(() =>
+  );
+  apiMock.getAdminSettings.mockImplementation(() =>
     Promise.resolve({
       oidc: {
         issuer_url: { value: "", source: "unset" },
@@ -110,14 +101,14 @@ mock.module("../api", () => ({
       },
       oidc_configured: false,
     }),
-  ),
-  updateAdminSettings: mock(() => Promise.resolve({})),
-  getAdminConfig: mock(() => Promise.resolve({ safe: [], secrets: [] })),
-  getAdminLogs: mock(() => Promise.resolve({ entries: [], count: 0 })),
-  flushCache: mock(() => Promise.resolve({ flushed: true })),
-  runAllJobs: mock(() => Promise.resolve({ queued: [] })),
-  triggerBackup: mock(() => Promise.resolve({ queued: true })),
-  getHomepageLayout: mock(() =>
+  );
+  apiMock.getAdminConfig.mockImplementation(() =>
+    Promise.resolve({ safe: [], secrets: [] }),
+  );
+  apiMock.getAdminLogs.mockImplementation(() =>
+    Promise.resolve({ entries: [], count: 0 }),
+  );
+  apiMock.getHomepageLayout.mockImplementation(() =>
     Promise.resolve({
       homepage_layout: [
         { id: "unwatched", enabled: true },
@@ -126,8 +117,8 @@ mock.module("../api", () => ({
         { id: "upcoming", enabled: true },
       ],
     }),
-  ),
-  updateHomepageLayout: mock(() =>
+  );
+  apiMock.updateHomepageLayout.mockImplementation(() =>
     Promise.resolve({
       homepage_layout: [
         { id: "unwatched", enabled: true },
@@ -136,86 +127,39 @@ mock.module("../api", () => ({
         { id: "upcoming", enabled: true },
       ],
     }),
-  ),
-  getIntegrations: mock(() => Promise.resolve({ integrations: [] })),
-  createPlexPin: mock(() => Promise.resolve({ pinId: 0, authUrl: "" })),
-  checkPlexPin: mock(() => Promise.resolve({ status: "pending" })),
-  refreshPlexServers: mock(() => Promise.resolve({ servers: [] })),
-  createIntegration: mock(() => Promise.resolve({ integration: {} })),
-  updateIntegration: mock(() => Promise.resolve()),
-  deleteIntegration: mock(() => Promise.resolve()),
-  triggerPlexSync: mock(() => Promise.resolve({ success: true })),
-  getFeedToken: mock(() => Promise.resolve({ token: "test-token" })),
-  regenerateFeedToken: mock(() => Promise.resolve({ token: "new-token" })),
-  getKioskToken: mock(() => Promise.resolve({ token: null })),
-  regenerateKioskToken: mock(() =>
-    Promise.resolve({ token: "kiosk-token-123" }),
-  ),
-  revokeKioskToken: mock(() => Promise.resolve()),
-  getMyProfile: mock(() =>
+  );
+  apiMock.getMyProfile.mockImplementation(() =>
     Promise.resolve({
       display_name: null,
       bio: null,
       country_code: null,
       locale: null,
     }),
-  ),
-  updateMyProfile: mock(() =>
+  );
+  apiMock.updateMyProfile.mockImplementation(() =>
     Promise.resolve({
       display_name: null,
       bio: null,
       country_code: null,
       locale: null,
     }),
-  ),
-  previewNotifier: mock(() =>
+  );
+  apiMock.previewNotifier.mockImplementation(() =>
     Promise.resolve({ date: "2026-05-01", episodes: [], movies: [] }),
-  ),
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-  getSharedWatchlist: mock(() => Promise.resolve({ username: "", titles: [] })),
-  getStats: mock(() => Promise.resolve({})),
-  getMovieDetails: mock(() => Promise.resolve({})),
-  getShowDetails: mock(() => Promise.resolve({})),
-  bulkTrackAction: mock(() => Promise.resolve({ updated: 0 })),
-  trackTitle: mock(() => Promise.resolve()),
-  untrackTitle: mock(() => Promise.resolve()),
-  getCalendarTitles: mock(() => Promise.resolve({ titles: [], episodes: [] })),
-  getUpcomingEpisodes: mock(() =>
-    Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
-  ),
-  watchEpisode: mock(() => Promise.resolve()),
-  unwatchEpisode: mock(() => Promise.resolve()),
-  watchEpisodesBulk: mock(() => Promise.resolve()),
-  watchMovie: mock(() => Promise.resolve()),
-  unwatchMovie: mock(() => Promise.resolve()),
-  getMovieTracking: mock(() => Promise.resolve(null)),
-  browseTitles: mock(() => Promise.resolve({ titles: [], total: 0 })),
-  getRecommendations: mock(() =>
-    Promise.resolve({ recommendations: [], suggestions: [], hasMore: false }),
-  ),
-  fetchFriendsLoved: mock(() => Promise.resolve({ titles: [] })),
-  hideActivityEvent: mock(() => Promise.resolve()),
-  getCollection: mock(() => Promise.resolve({ collection: null, parts: [] })),
-  getTitleSuggestions: mock(() => Promise.resolve({ suggestions: [] })),
-  getActivitySettings: mock(() =>
+  );
+  apiMock.getActivitySettings.mockImplementation(() =>
     Promise.resolve({ enabled: true, kind_visibility: {} }),
-  ),
-  getNotifierHistory: mock(() =>
+  );
+  apiMock.getNotifierHistory.mockImplementation(() =>
     Promise.resolve({ rows: [], successRate: 100 }),
-  ),
-  getDepartureAlertSettings: mock(() => Promise.resolve({})),
-  getProviders: mock(() =>
-    Promise.resolve({ providers: [], regionProviderIds: [] }),
-  ),
-  updateSubscriptions: mock(() => Promise.resolve({ providerIds: [] })),
-  updateOnlyMine: mock(() => Promise.resolve({ onlyMine: false })),
-  getWatchlistShareToken: mock(() => Promise.resolve({ token: null })),
-  rateEpisode: mock(() => Promise.resolve()),
-  unrateEpisode: mock(() => Promise.resolve()),
-}));
+  );
+  apiMock.getFeedToken.mockImplementation(() =>
+    Promise.resolve({ token: "test-token" }),
+  );
+  apiMock.getKioskToken.mockImplementation(() =>
+    Promise.resolve({ token: null }),
+  );
+}
 
 // Import after mocks
 const { default: SettingsPage } = await import("./SettingsPage");
@@ -244,8 +188,13 @@ function WrapperWithPath(path: string) {
   };
 }
 
+beforeEach(() => {
+  applySettingsApiDefaults();
+});
+
 afterEach(() => {
   cleanup();
+  resetApiMock();
 });
 
 describe("ProfileVisibilitySection", () => {
@@ -277,7 +226,7 @@ describe("ProfileVisibilitySection", () => {
   });
 
   it("shows empty state when no tracked titles", async () => {
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({
         titles: [],
         count: 0,
@@ -301,7 +250,7 @@ describe("ProfileVisibilitySection", () => {
   });
 
   it("selects the correct radio button based on profile_visibility", async () => {
-    mockGetTrackedTitles.mockImplementation(() =>
+    apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({
         titles: [
           {

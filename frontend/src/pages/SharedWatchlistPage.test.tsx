@@ -1,9 +1,10 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "../i18n";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 
 import type { Title } from "../types";
 
@@ -33,18 +34,6 @@ function makeTitle(overrides: Partial<Title> = {}): Title {
   };
 }
 
-const mockGetSharedWatchlist = mock(() =>
-  Promise.resolve({ username: "testuser", titles: [makeTitle()] }),
-);
-
-mock.module("../api", () => ({
-  getSharedWatchlist: mockGetSharedWatchlist,
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-}));
-
 const { default: SharedWatchlistPage } = await import("./SharedWatchlistPage");
 
 function newTestClient() {
@@ -69,14 +58,14 @@ function Wrapper({ token = "abc123" }: { token?: string }) {
 }
 
 beforeEach(() => {
-  mockGetSharedWatchlist.mockImplementation(() =>
+  apiMock.getSharedWatchlist.mockImplementation(() =>
     Promise.resolve({ username: "testuser", titles: [makeTitle()] }),
   );
 });
 
 afterEach(() => {
   cleanup();
-  mockGetSharedWatchlist.mockReset();
+  resetApiMock();
 });
 
 describe("SharedWatchlistPage", () => {
@@ -96,7 +85,7 @@ describe("SharedWatchlistPage", () => {
   });
 
   it("shows 'This watchlist is empty' when titles array is empty", async () => {
-    mockGetSharedWatchlist.mockImplementation(() =>
+    apiMock.getSharedWatchlist.mockImplementation(() =>
       Promise.resolve({ username: "emptyuser", titles: [] }),
     );
     render(<Wrapper />);
@@ -106,7 +95,7 @@ describe("SharedWatchlistPage", () => {
   });
 
   it("shows error state when fetch throws", async () => {
-    mockGetSharedWatchlist.mockImplementation(() =>
+    apiMock.getSharedWatchlist.mockImplementation(() =>
       Promise.reject(new Error("Not found")),
     );
     render(<Wrapper />);
@@ -116,7 +105,7 @@ describe("SharedWatchlistPage", () => {
   });
 
   it("shows plural titles count correctly", async () => {
-    mockGetSharedWatchlist.mockImplementation(() =>
+    apiMock.getSharedWatchlist.mockImplementation(() =>
       Promise.resolve({
         username: "multiuser",
         titles: [

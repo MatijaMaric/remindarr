@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
 import {
   render,
   screen,
@@ -11,6 +11,7 @@ import { MemoryRouter, useSearchParams } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import "../i18n";
 
 // Fresh client per test — never the app singleton — so cache never leaks across tests
@@ -54,38 +55,69 @@ mock.module("../hooks/useGridNavigation", () => ({
   useGridNavigation: () => undefined,
 }));
 
-mock.module("../components/loadFilters", () => ({
-  loadFilters: () =>
-    Promise.resolve({
-      genres: [],
-      providers: [],
-      languages: [],
-      regionProviderIds: [],
-      priorityLanguageCodes: [],
-    }),
-}));
+// IMPORTANT: do NOT mock.module() the child component modules (SearchBar,
+// NewReleases, CategoryBrowse, loadFilters). Bun leaks mock.module() globally
+// across test files on Linux CI with no way to un-mock, so stubbing those
+// modules here corrupted their own dedicated tests. Instead we render the REAL
+// children and feed them benign data through the ../api mock below.
 
-mock.module("../components/SearchBar", () => ({
-  default: ({ onSearch }: any) => (
-    <input
-      data-testid="search-bar"
-      onChange={(e) => onSearch(e.target.value)}
-    />
-  ),
-}));
-mock.module("../components/NewReleases", () => ({ default: () => null }));
-mock.module("../components/CategoryBrowse", () => ({
-  default: () => <div data-testid="category-browse" />,
-}));
+// CategoryBrowse uses IntersectionObserver for infinite-scroll; provide a no-op.
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(globalThis, "IntersectionObserver", {
+  value: MockIntersectionObserver,
+  writable: true,
+  configurable: true,
+});
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(globalThis, "ResizeObserver", {
+  value: MockResizeObserver,
+  writable: true,
+  configurable: true,
+});
 
-// BrowsePage.tsx calls api.getLanguages/searchTitles/resolveImdb directly.
-// This override prevents cross-file mock.module leaks from corrupting those calls.
-mock.module("../api", () => ({
-  getLanguages: () =>
-    Promise.resolve({ languages: [], priorityLanguageCodes: [] }),
-  searchTitles: () => Promise.resolve([]),
-  resolveImdb: () => Promise.resolve(null),
-}));
+const BROWSE_TITLE = "Browse Result Title";
+function makeBrowseResponse() {
+  return {
+    titles: [
+      {
+        id: "browse-1",
+        objectType: "MOVIE" as const,
+        title: BROWSE_TITLE,
+        originalTitle: null,
+        releaseYear: 2026,
+        releaseDate: "2026-01-01",
+        runtimeMinutes: 120,
+        shortDescription: null,
+        genres: [],
+        imdbId: null,
+        tmdbId: null,
+        posterUrl: null,
+        ageCertification: null,
+        originalLanguage: "en",
+        tmdbUrl: null,
+        offers: [],
+        scores: { imdbScore: null, imdbVotes: null, tmdbScore: 7 },
+        isTracked: false,
+      },
+    ],
+    page: 1,
+    totalPages: 1,
+    totalResults: 1,
+    availableGenres: [],
+    availableProviders: [],
+    availableLanguages: [],
+    regionProviderIds: [],
+    priorityLanguageCodes: [],
+  };
+}
 
 const { default: BrowsePage } = await import("./BrowsePage");
 
@@ -100,8 +132,16 @@ function makeWrapper(initialPath: string) {
   };
 }
 
+beforeEach(() => {
+  // BrowsePage renders the real CategoryBrowse; feed it a known title so the
+  // mount-gate tests can assert CategoryBrowse actually rendered. Other api fns
+  // use the shared apiMock defaults.
+  apiMock.browseTitles.mockImplementation(async () => makeBrowseResponse());
+});
+
 afterEach(() => {
   cleanup();
+  resetApiMock();
   mockSubscriptions = null;
   mockUser = null;
   mockAuthLoading = false;
@@ -284,9 +324,10 @@ describe("BrowsePage CategoryBrowse mount gate", () => {
       });
     });
 
-    // With no user, subscriptionsReady flips true immediately
+    // With no user, subscriptionsReady flips true immediately → CategoryBrowse
+    // mounts and renders its (mocked) results.
     await waitFor(() => {
-      expect(screen.getByTestId("category-browse")).toBeDefined();
+      expect(screen.getByText(BROWSE_TITLE)).toBeDefined();
     });
   });
 
@@ -307,8 +348,9 @@ describe("BrowsePage CategoryBrowse mount gate", () => {
       });
     });
 
-    // subscriptions is null + user is set → subscriptionsReady stays false
-    expect(screen.queryByTestId("category-browse")).toBeNull();
+    // subscriptions is null + user is set → subscriptionsReady stays false, so
+    // CategoryBrowse never mounts and its results never appear.
+    expect(screen.queryByText(BROWSE_TITLE)).toBeNull();
   });
 
   it("renders CategoryBrowse once subscriptions settle for authenticated user", async () => {
@@ -329,7 +371,7 @@ describe("BrowsePage CategoryBrowse mount gate", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("category-browse")).toBeDefined();
+      expect(screen.getByText(BROWSE_TITLE)).toBeDefined();
     });
   });
 });

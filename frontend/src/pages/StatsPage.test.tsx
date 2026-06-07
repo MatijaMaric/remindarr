@@ -1,8 +1,9 @@
-import { describe, it, expect, mock, afterEach } from "bun:test";
+import { describe, it, expect, afterEach } from "bun:test";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import type { StatsResponse } from "../types";
 
 function newTestClient() {
@@ -36,17 +37,7 @@ const baseStats: StatsResponse = {
   },
 };
 
-const mockGetStats = mock(() => Promise.resolve(baseStats));
-
-mock.module("../api", () => ({
-  getStats: mockGetStats,
-  // stubs to prevent cross-file mock leakage — bun leaks mock.module globally
-  getSubscriptions: mock(() =>
-    Promise.resolve({ providerIds: [], onlyMine: false }),
-  ),
-  getMovieDetails: mock(() => Promise.resolve({})),
-  getShowDetails: mock(() => Promise.resolve({})),
-}));
+apiMock.getStats.mockImplementation(() => Promise.resolve(baseStats));
 
 const { default: StatsPage, formatEta } = await import("./StatsPage");
 
@@ -60,8 +51,8 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   cleanup();
-  mockGetStats.mockReset();
-  mockGetStats.mockImplementation(() => Promise.resolve(baseStats));
+  resetApiMock();
+  apiMock.getStats.mockImplementation(() => Promise.resolve(baseStats));
 });
 
 describe("StatsPage", () => {
@@ -74,7 +65,7 @@ describe("StatsPage", () => {
   });
 
   it("renders the Watchlist ETA tile with dash when pace.watchlistEtaDays is null", async () => {
-    mockGetStats.mockImplementation(() =>
+    apiMock.getStats.mockImplementation(() =>
       Promise.resolve({
         ...baseStats,
         pace: { minutesPerDay: null, watchlistEtaDays: null },
@@ -88,7 +79,7 @@ describe("StatsPage", () => {
   });
 
   it("renders the Watchlist ETA tile with days value when pace is set", async () => {
-    mockGetStats.mockImplementation(() =>
+    apiMock.getStats.mockImplementation(() =>
       Promise.resolve({
         ...baseStats,
         pace: { minutesPerDay: 60, watchlistEtaDays: 5 },
