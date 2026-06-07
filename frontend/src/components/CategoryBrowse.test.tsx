@@ -86,9 +86,31 @@ const mockAuthValue = {
 };
 
 const mockBrowseTitles = mock(async () => makeBrowseResponse(1, [], 1));
+// Leak-safe superset: bun does not reset mock.module() between files on Linux CI,
+// so whichever ../api mock wins globally must define every fn the filters cluster
+// (loadFilters + CategoryBrowse + NewReleases) calls. See HomePage.test.tsx.
+const mockGetGenres = mock(async () => ({ genres: [] as string[] }));
+const mockGetProviders = mock(async () => ({
+  providers: [],
+  regionProviderIds: [] as number[],
+}));
+const mockGetLanguages = mock(async () => ({
+  languages: [] as string[],
+  priorityLanguageCodes: [] as string[],
+}));
+const mockGetTitles = mock(async () => ({
+  titles: [],
+  page: 1,
+  totalPages: 1,
+  totalResults: 0,
+}));
 
 mock.module("../api", () => ({
   browseTitles: mockBrowseTitles,
+  getGenres: mockGetGenres,
+  getProviders: mockGetProviders,
+  getLanguages: mockGetLanguages,
+  getTitles: mockGetTitles,
 }));
 
 const { default: CategoryBrowse } = await import("./CategoryBrowse");

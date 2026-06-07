@@ -1,19 +1,12 @@
-import {
-  describe,
-  test,
-  expect,
-  spyOn,
-  afterEach,
-  beforeEach,
-  mock,
-} from "bun:test";
+import { describe, test, expect, spyOn, afterEach, beforeEach } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../../api";
-
-mock.module("../../i18n", () => ({}));
+// Initialize the real i18n instance instead of mocking it to {} — an empty
+// mock.module leaks globally on Linux CI and blanks i18n for SearchBar/i18n tests.
+import "../../i18n";
 
 const { default: SuggestionsRow } = await import("./SuggestionsRow");
 
