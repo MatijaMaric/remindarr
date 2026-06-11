@@ -1,12 +1,6 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterAll,
-  afterEach,
-} from "bun:test";
+import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { withConfigGuard } from "../test-utils/config";
 import { getDb, passkey as passkeyTable, users } from "../db/schema";
 import { sql } from "drizzle-orm";
 import { createAuth, getPasskeyRpId, buildPasskeyOrigins } from "./better-auth";
@@ -151,21 +145,7 @@ describe("passkey support", () => {
   });
 
   describe("passkey RP ID derivation from BASE_URL", () => {
-    let originalBaseUrl: string;
-    let originalRpId: string;
-    let originalOrigin: string;
-
-    beforeEach(() => {
-      originalBaseUrl = CONFIG.BASE_URL;
-      originalRpId = CONFIG.PASSKEY_RP_ID;
-      originalOrigin = CONFIG.PASSKEY_ORIGIN;
-    });
-
-    afterEach(() => {
-      CONFIG.BASE_URL = originalBaseUrl;
-      CONFIG.PASSKEY_RP_ID = originalRpId;
-      CONFIG.PASSKEY_ORIGIN = originalOrigin;
-    });
+    withConfigGuard();
 
     it("derives rpID from BASE_URL when PASSKEY_RP_ID is not set", () => {
       CONFIG.BASE_URL = "https://remindarr.app";
