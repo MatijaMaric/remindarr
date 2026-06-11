@@ -644,7 +644,30 @@ describe("GET /user/search", () => {
     const res = await app.request("/user/search", { headers: authHeaders() });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Query parameter 'q' is required");
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  describe("validation", () => {
+    it("rejects missing q — returns 400 with issues array", async () => {
+      const res = await app.request("/user/search", {
+        headers: authHeaders(),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(body.issues).toBeInstanceOf(Array);
+    });
+
+    it("rejects empty q — returns 400", async () => {
+      const res = await app.request("/user/search?q=", {
+        headers: authHeaders(),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(body.issues).toBeInstanceOf(Array);
+    });
   });
 
   it("excludes banned users from results", async () => {
