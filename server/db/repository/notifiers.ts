@@ -1,4 +1,4 @@
-import { eq, and, sql, asc } from "drizzle-orm";
+import { eq, and, sql, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { notifiers } from "../schema";
 import { logger } from "../../logger";
@@ -406,5 +406,76 @@ export async function getStreamingAlertNotifiersForUser(userId: string) {
       }
       return { ...row, config };
     });
+  });
+}
+
+// D1 caps bound parameters per statement at 100.
+// Chunk at 50 IDs to stay safely under the cap.
+const STREAMING_NOTIFIERS_CHUNK_SIZE = 50;
+
+/**
+ * Bulk variant of getStreamingAlertNotifiersForUser for many users at once.
+ * Returns a Map from userId to that user's enabled streaming-alert notifiers;
+ * EVERY input userId is present as a key (empty array when none).
+ */
+export async function getStreamingAlertNotifiersForUsers(
+  userIds: string[],
+): Promise<
+  Map<
+    string,
+    Array<{
+      id: string;
+      user_id: string;
+      provider: string;
+      config: Record<string, string>;
+    }>
+  >
+> {
+  return traceDbQuery("getStreamingAlertNotifiersForUsers", async () => {
+    const result = new Map<
+      string,
+      Array<{
+        id: string;
+        user_id: string;
+        provider: string;
+        config: Record<string, string>;
+      }>
+    >();
+    for (const userId of userIds) {
+      result.set(userId, []);
+    }
+    if (userIds.length === 0) return result;
+
+    const db = getDb();
+    for (let i = 0; i < userIds.length; i += STREAMING_NOTIFIERS_CHUNK_SIZE) {
+      const chunk = userIds.slice(i, i + STREAMING_NOTIFIERS_CHUNK_SIZE);
+      const rows = await db
+        .select({
+          id: notifiers.id,
+          user_id: notifiers.userId,
+          provider: notifiers.provider,
+          config: notifiers.config,
+        })
+        .from(notifiers)
+        .where(
+          and(
+            inArray(notifiers.userId, chunk),
+            eq(notifiers.enabled, 1),
+            eq(notifiers.streamingAlertsEnabled, 1),
+          ),
+        )
+        .all();
+      for (const row of rows) {
+        let config: Record<string, string>;
+        try {
+          config = JSON.parse(row.config);
+        } catch {
+          log.warn("Failed to parse notifier config", { id: row.id });
+          config = {};
+        }
+        result.get(row.user_id)?.push({ ...row, config });
+      }
+    }
+    return result;
   });
 }

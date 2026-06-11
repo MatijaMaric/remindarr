@@ -15,6 +15,7 @@ import {
   trackTitle,
   createNotifier,
   getUnalertedProviders,
+  markAlerted,
 } from "../db/repository";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 
@@ -96,6 +97,85 @@ describe("getStreamingAlertNotifiersForUser", () => {
   });
 });
 
+describe("getStreamingAlertNotifiersForUsers", () => {
+  it("groups notifiers by user and maps missing users to an empty array", async () => {
+    const { getStreamingAlertNotifiersForUsers } =
+      await import("../db/repository/notifiers");
+    const userId2 = await createUser("bulknotifuser2", "hash");
+    const userId3 = await createUser("bulknotifuser3", "hash");
+    await createNotifier(
+      userId,
+      "discord",
+      "Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
+    await createNotifier(
+      userId,
+      "telegram",
+      "Telegram",
+      { botToken: "t", chatId: "1" },
+      "09:00",
+      "UTC",
+    );
+    await createNotifier(
+      userId2,
+      "discord",
+      "Discord 2",
+      { webhookUrl: "https://discord.com/api/webhooks/2/b" },
+      "09:00",
+      "UTC",
+    );
+
+    const result = await getStreamingAlertNotifiersForUsers([
+      userId,
+      userId2,
+      userId3,
+    ]);
+    expect(result.size).toBe(3);
+    expect(result.get(userId)).toHaveLength(2);
+    expect(result.get(userId2)).toHaveLength(1);
+    expect(result.get(userId2)![0].provider).toBe("discord");
+    expect(result.get(userId2)![0].user_id).toBe(userId2);
+    // userId3 has no notifiers but must still be present as a key
+    expect(result.get(userId3)).toEqual([]);
+  });
+
+  it("excludes disabled notifiers and notifiers with streaming alerts off", async () => {
+    const { getStreamingAlertNotifiersForUsers, updateNotifier } =
+      await import("../db/repository/notifiers");
+    const disabledId = await createNotifier(
+      userId,
+      "discord",
+      "Disabled",
+      { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+      "09:00",
+      "UTC",
+    );
+    await updateNotifier(disabledId, userId, { enabled: false });
+    const noAlertsId = await createNotifier(
+      userId,
+      "discord",
+      "No alerts",
+      { webhookUrl: "https://discord.com/api/webhooks/1/b" },
+      "09:00",
+      "UTC",
+    );
+    await updateNotifier(noAlertsId, userId, { streamingAlertsEnabled: false });
+
+    const result = await getStreamingAlertNotifiersForUsers([userId]);
+    expect(result.get(userId)).toEqual([]);
+  });
+
+  it("returns an empty map for empty input", async () => {
+    const { getStreamingAlertNotifiersForUsers } =
+      await import("../db/repository/notifiers");
+    const result = await getStreamingAlertNotifiersForUsers([]);
+    expect(result.size).toBe(0);
+  });
+});
+
 describe("streaming alert flow via sync", () => {
   it("marks providers as alerted after sync and does not re-alert on next sync", async () => {
     // Set up a title with a flatrate offer
@@ -157,6 +237,106 @@ describe("streaming alert flow via sync", () => {
     sendFn.mockClear();
     await checkStreamingAlerts([TITLE_ID]);
     expect(sendFn).toHaveBeenCalledTimes(0);
+  });
+
+  it("sends one alert per user when multiple users track the same title", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: TITLE_ID,
+        title: "New on Netflix",
+        offers: [
+          makeParsedOffer({
+            titleId: TITLE_ID,
+            providerId: PROVIDER_ID,
+            providerName: PROVIDER_NAME,
+            monetizationType: "FLATRATE",
+          }),
+        ],
+      }),
+    ]);
+
+    const userId2 = await createUser("streamalertuser2", "hash");
+    const userId3 = await createUser("streamalertuser3", "hash");
+
+    const sendFn = mock(async () => {});
+    spies.push(
+      spyOn(registry, "getProvider").mockReturnValue({
+        name: "discord",
+        send: sendFn,
+        validateConfig: () => ({ valid: true }),
+      } as any),
+    );
+
+    for (const uid of [userId, userId2, userId3]) {
+      await trackTitle(TITLE_ID, uid);
+      await createNotifier(
+        uid,
+        "discord",
+        "Discord",
+        { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+        "09:00",
+        "UTC",
+      );
+    }
+
+    const { checkStreamingAlerts } = await import("./check-streaming-alerts");
+    await checkStreamingAlerts([TITLE_ID]);
+
+    expect(sendFn).toHaveBeenCalledTimes(3);
+
+    // Second run sends nothing — all users are now marked as alerted
+    sendFn.mockClear();
+    await checkStreamingAlerts([TITLE_ID]);
+    expect(sendFn).toHaveBeenCalledTimes(0);
+  });
+
+  it("skips users already alerted while still alerting the others", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: TITLE_ID,
+        title: "New on Netflix",
+        offers: [
+          makeParsedOffer({
+            titleId: TITLE_ID,
+            providerId: PROVIDER_ID,
+            providerName: PROVIDER_NAME,
+            monetizationType: "FLATRATE",
+          }),
+        ],
+      }),
+    ]);
+
+    const userId2 = await createUser("streamalertuser2", "hash");
+    const userId3 = await createUser("streamalertuser3", "hash");
+
+    const sendFn = mock(async () => {});
+    spies.push(
+      spyOn(registry, "getProvider").mockReturnValue({
+        name: "discord",
+        send: sendFn,
+        validateConfig: () => ({ valid: true }),
+      } as any),
+    );
+
+    for (const uid of [userId, userId2, userId3]) {
+      await trackTitle(TITLE_ID, uid);
+      await createNotifier(
+        uid,
+        "discord",
+        "Discord",
+        { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+        "09:00",
+        "UTC",
+      );
+    }
+
+    // userId2 was already alerted for this provider
+    await markAlerted(userId2, TITLE_ID, PROVIDER_ID, PROVIDER_NAME);
+
+    const { checkStreamingAlerts } = await import("./check-streaming-alerts");
+    await checkStreamingAlerts([TITLE_ID]);
+
+    expect(sendFn).toHaveBeenCalledTimes(2);
   });
 
   it("does not alert when title has no flatrate/free offers", async () => {

@@ -34,6 +34,65 @@ export async function getUnalertedProviders(
 }
 
 /**
+ * Bulk variant of getUnalertedProviders for many users at once. Returns, for
+ * EVERY input userId (each is present as a key even when fully alerted), the
+ * providerIds NOT yet alerted for the given (titleId, kind).
+ */
+export async function getUnalertedProvidersBulk(
+  userIds: string[],
+  titleId: string,
+  providerIds: number[],
+  kind: "arrival" | "departure" = "arrival",
+): Promise<Map<string, number[]>> {
+  return traceDbQuery("getUnalertedProvidersBulk", async () => {
+    // Seed every user with the full provider list; alerted pairs are
+    // subtracted below, so users with no alert rows keep all providers.
+    const pending = new Map<string, Set<number>>();
+    for (const userId of userIds) {
+      pending.set(userId, new Set(providerIds));
+    }
+
+    if (userIds.length > 0 && providerIds.length > 0) {
+      const db = getDb();
+      // D1 caps bound parameters at 100 per statement; titleId + kind take 2
+      // slots and providerIds take providerIds.length, so chunk the userIds
+      // to stay under the cap.
+      const chunkSize = Math.max(1, 97 - providerIds.length);
+      for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        const alreadyAlerted = await db
+          .select({
+            userId: streamingAlerts.userId,
+            providerId: streamingAlerts.providerId,
+          })
+          .from(streamingAlerts)
+          .where(
+            and(
+              eq(streamingAlerts.titleId, titleId),
+              eq(streamingAlerts.kind, kind),
+              inArray(streamingAlerts.userId, chunk),
+              inArray(streamingAlerts.providerId, providerIds),
+            ),
+          )
+          .all();
+        for (const row of alreadyAlerted) {
+          pending.get(row.userId)?.delete(row.providerId);
+        }
+      }
+    }
+
+    const result = new Map<string, number[]>();
+    for (const [userId, unalerted] of pending) {
+      result.set(
+        userId,
+        providerIds.filter((id) => unalerted.has(id)),
+      );
+    }
+    return result;
+  });
+}
+
+/**
  * Marks a (userId, titleId, providerId, kind) quadruple as alerted so we don't
  * send duplicate notifications.
  */
