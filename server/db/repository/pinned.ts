@@ -1,4 +1,4 @@
-import { eq, and, asc, sql, max } from "drizzle-orm";
+import { eq, and, asc, gt, notInArray, sql, max } from "drizzle-orm";
 import { getDb, pinnedTitles, titles } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
@@ -93,6 +93,16 @@ export async function unpinTitle(
   return traceDbQuery("unpinTitle", async () => {
     const db = getDb();
 
+    const pinned = await db
+      .select({ position: pinnedTitles.position })
+      .from(pinnedTitles)
+      .where(
+        and(eq(pinnedTitles.userId, userId), eq(pinnedTitles.titleId, titleId)),
+      )
+      .get();
+
+    if (!pinned) return;
+
     await db
       .delete(pinnedTitles)
       .where(
@@ -100,26 +110,17 @@ export async function unpinTitle(
       )
       .run();
 
-    // Renumber remaining rows
-    const remaining = await db
-      .select({ titleId: pinnedTitles.titleId })
-      .from(pinnedTitles)
-      .where(eq(pinnedTitles.userId, userId))
-      .orderBy(asc(pinnedTitles.position))
-      .all();
-
-    for (let i = 0; i < remaining.length; i++) {
-      await db
-        .update(pinnedTitles)
-        .set({ position: i })
-        .where(
-          and(
-            eq(pinnedTitles.userId, userId),
-            eq(pinnedTitles.titleId, remaining[i].titleId),
-          ),
-        )
-        .run();
-    }
+    // Close the gap: shift everything after the removed position down by one
+    await db
+      .update(pinnedTitles)
+      .set({ position: sql`${pinnedTitles.position} - 1` })
+      .where(
+        and(
+          eq(pinnedTitles.userId, userId),
+          gt(pinnedTitles.position, pinned.position),
+        ),
+      )
+      .run();
   });
 }
 
@@ -138,39 +139,35 @@ export async function reorderPinnedTitles(
     // Clamp to MAX_PINNED
     const ordered = titleIds.slice(0, MAX_PINNED);
 
-    // Delete any existing pinned rows not in the new ordered list
-    const existing = await db
-      .select({ titleId: pinnedTitles.titleId })
-      .from(pinnedTitles)
-      .where(eq(pinnedTitles.userId, userId))
-      .all();
-
-    const orderedSet = new Set(ordered);
-    for (const row of existing) {
-      if (!orderedSet.has(row.titleId)) {
-        await db
-          .delete(pinnedTitles)
-          .where(
-            and(
-              eq(pinnedTitles.userId, userId),
-              eq(pinnedTitles.titleId, row.titleId),
-            ),
-          )
-          .run();
-      }
-    }
-
-    // Upsert each title with its new position
-    for (let i = 0; i < ordered.length; i++) {
+    if (ordered.length === 0) {
       await db
-        .insert(pinnedTitles)
-        .values({ userId, titleId: ordered[i], position: i })
-        .onConflictDoUpdate({
-          target: [pinnedTitles.userId, pinnedTitles.titleId],
-          set: { position: i },
-        })
+        .delete(pinnedTitles)
+        .where(eq(pinnedTitles.userId, userId))
         .run();
+      return;
     }
+
+    // Delete any existing pinned rows not in the new ordered list
+    await db
+      .delete(pinnedTitles)
+      .where(
+        and(
+          eq(pinnedTitles.userId, userId),
+          notInArray(pinnedTitles.titleId, ordered),
+        ),
+      )
+      .run();
+
+    // Upsert all titles with their new positions in one statement.
+    // MAX_PINNED is 8, so this binds at most ~24 params — far below D1's 100 cap.
+    await db
+      .insert(pinnedTitles)
+      .values(ordered.map((titleId, i) => ({ userId, titleId, position: i })))
+      .onConflictDoUpdate({
+        target: [pinnedTitles.userId, pinnedTitles.titleId],
+        set: { position: sql`excluded.position` },
+      })
+      .run();
   });
 }
 
