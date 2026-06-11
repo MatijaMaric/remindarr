@@ -39,6 +39,7 @@ import type {
   StreakData,
   CollectionDetails,
 } from "./types";
+import { ApiError } from "./lib/api-error";
 
 const BASE = "/api";
 
@@ -51,11 +52,14 @@ async function doFetch(url: string, options: RequestInit): Promise<Response> {
   const res = await fetch(`${BASE}${url}`, options);
   if (res.status === 401) {
     window.dispatchEvent(new CustomEvent("auth:unauthorized"));
-    throw new Error("Authentication required");
+    throw new ApiError("Authentication required", 401);
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `Request failed: ${res.status}`);
+    throw new ApiError(
+      err.error || `Request failed: ${res.status}`,
+      res.status,
+    );
   }
   return res;
 }

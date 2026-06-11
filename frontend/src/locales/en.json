@@ -359,6 +359,7 @@
     "tvShows": "TV Shows",
     "noTitles": "No titles tracked yet.",
     "userNotFound": "User not found",
+    "loadFailed": "Failed to load profile",
     "watchlist": "Watchlist",
     "watchlistHidden": "This user's watchlist is private.",
     "watchlistFriendsOnly": "This watchlist is only visible to mutual followers.",
@@ -618,7 +619,8 @@
     "save": "Save",
     "saving": "Saving...",
     "cancel": "Cancel",
-    "optional": "optional"
+    "optional": "optional",
+    "retry": "Retry"
   },
   "feed": {
     "title": "Calendar Feed",

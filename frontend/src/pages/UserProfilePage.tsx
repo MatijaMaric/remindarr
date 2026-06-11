@@ -3,6 +3,7 @@ import { Card } from "../components/ui/card";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
+import { ApiError } from "../lib/api-error";
 import type { PinnedTitle } from "../types";
 import { useAuth } from "../context/AuthContext";
 import ProfileHero from "../components/profile/ProfileHero";
@@ -32,11 +33,16 @@ export default function UserProfilePage() {
   const {
     data,
     isLoading: loading,
-    isError: error,
+    isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ["user-profile", username],
     queryFn: ({ signal }) => api.getUserProfile(username!, signal),
     enabled: !!username,
+    // A 404 is definitive — retrying won't make the user exist.
+    retry: (failureCount, err) =>
+      !(err instanceof ApiError && err.status === 404) && failureCount < 1,
   });
 
   const isOwnProfileQuery = currentUser?.username === username;
@@ -86,10 +92,24 @@ export default function UserProfilePage() {
     );
   }
 
-  if (error || !data) {
+  if (isError || !data) {
+    const notFound = error instanceof ApiError && error.status === 404;
     return (
       <div className="max-w-7xl mx-auto py-12 text-center">
-        <p className="text-zinc-400 text-lg">{t("userProfile.userNotFound")}</p>
+        <p className="text-zinc-400 text-lg">
+          {notFound
+            ? t("userProfile.userNotFound")
+            : t("userProfile.loadFailed")}
+        </p>
+        {!notFound && (
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="inline-block mt-4 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-colors cursor-pointer"
+          >
+            {t("common.retry")}
+          </button>
+        )}
       </div>
     );
   }
