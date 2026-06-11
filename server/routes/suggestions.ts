@@ -75,13 +75,16 @@ app.delete(
   },
 );
 
-app.get("/", async (c) => {
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(40),
+});
+
+app.get("/", zValidator("query", listQuerySchema), async (c) => {
   const user = c.get("user");
   if (!user) return err(c, "Authentication required", 401);
   if (!CONFIG.TMDB_API_KEY) return err(c, "TMDB not configured", 503);
 
-  const rawLimit = Number(c.req.query("limit") ?? "40");
-  const limit = isNaN(rawLimit) || rawLimit < 1 ? 40 : Math.min(rawLimit, 100);
+  const { limit } = c.req.valid("query");
 
   try {
     const [sourceTitles, trackedIds, watchedIds, dismissedIds] =

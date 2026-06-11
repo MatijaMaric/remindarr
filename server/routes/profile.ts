@@ -182,18 +182,16 @@ app.delete("/me/activity/hide/:event_kind/:event_key", async (c) => {
   return ok(c, { hidden: false });
 });
 
-app.get("/search", async (c) => {
+const searchQuerySchema = z.object({ q: z.string().min(1) });
+
+app.get("/search", zValidator("query", searchQuerySchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const query = c.req.query("q");
-  if (!query || query.length < 1) {
-    return err(c, "Query parameter 'q' is required");
-  }
-
-  const users = await searchUsers(query, 10);
+  const { q } = c.req.valid("query");
+  const users = await searchUsers(q, 10);
   return ok(c, { users });
 });
 

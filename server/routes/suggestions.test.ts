@@ -545,28 +545,64 @@ describe("POST /suggestions/dismiss/:titleId", () => {
 });
 
 describe("validation", () => {
-  it("rejects invalid limit — returns 400 with issues array when limit is not a number", async () => {
-    // The handler falls back gracefully for non-numeric limit (NaN → 40),
-    // so an alphabetic limit still returns 200. The limit param is not
-    // validated via zValidator — it coerces. This test documents the
-    // current behaviour (200 with default limit).
+  it("rejects non-numeric limit — returns 400 with issues array", async () => {
+    const res = await app.request("/suggestions?limit=abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("rejects limit=0 — returns 400 with issues array", async () => {
+    const res = await app.request("/suggestions?limit=0");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("happy path — no limit param defaults to 40 and returns 200", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("movie-100", mockUserId);
+
+    // 20 suggestions, capped to 12 per group — well under the default of 40,
+    // so nothing is truncated by the limit.
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
+      results: Array.from({ length: 20 }, (_, i) =>
+        makeTmdbDiscoverMovie({ id: 4000 + i, title: `Default Limit ${i}` }),
+      ),
+      page: 1,
+      total_pages: 1,
+      total_results: 20,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.flat).toHaveLength(12);
+  });
+
+  it("happy path — ?limit=10 returns 200 and truncates flat to 10", async () => {
     await upsertTitles([
       makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
     ]);
     await trackTitle("movie-100", mockUserId);
 
     (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
-      results: [],
+      results: Array.from({ length: 20 }, (_, i) =>
+        makeTmdbDiscoverMovie({ id: 5000 + i, title: `Limit Ten ${i}` }),
+      ),
       page: 1,
-      total_pages: 0,
-      total_results: 0,
+      total_pages: 1,
+      total_results: 20,
     });
 
-    const res = await app.request("/suggestions?limit=abc");
-    // NaN → coerces to default 40; handler still returns 200
+    const res = await app.request("/suggestions?limit=10");
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toHaveProperty("flat");
+    expect(body.flat).toHaveLength(10);
   });
 });
 
