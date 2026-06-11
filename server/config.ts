@@ -99,6 +99,7 @@ export const CONFIG = {
   CACHE_TTL_SEARCH: Number(process.env.CACHE_TTL_SEARCH) || 300,
   CACHE_TTL_DETAILS: Number(process.env.CACHE_TTL_DETAILS) || 86400,
   CACHE_TTL_BROWSE: Number(process.env.CACHE_TTL_BROWSE) || 900,
+  CACHE_TTL_FEED_ICS: Number(process.env.CACHE_TTL_FEED_ICS) || 300,
   CACHE_TTL_STREAMING: Number(process.env.CACHE_TTL_STREAMING) || 86400,
   CACHE_MAX_MEMORY_ENTRIES:
     Number(process.env.CACHE_MAX_MEMORY_ENTRIES) || 1000,

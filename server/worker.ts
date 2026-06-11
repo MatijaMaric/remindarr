@@ -100,6 +100,7 @@ import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig, CONFIG } from "./config";
 import { classifyError } from "./lib/error-classifier";
+import { isFileLikePath } from "./lib/spa-fallback";
 import { errorsByCategory } from "./metrics";
 import Sentry from "./sentry";
 import {
@@ -699,6 +700,11 @@ function createApp(env: Env) {
     // Skip API paths that weren't matched by any route
     if (c.req.path.startsWith("/api/")) {
       return c.json({ error: "Not found" }, 404);
+    }
+    // File-like paths (scanner probes) are guaranteed 404s here — real assets
+    // never reach the worker. Skip the index.html fetch (saves a KV round-trip).
+    if (isFileLikePath(c.req.path)) {
+      return c.text("Not Found", 404);
     }
     try {
       const assets = (c.env as unknown as Env).ASSETS;
