@@ -779,11 +779,7 @@ const KIND_VIS_OPTIONS: Array<{
 ];
 
 function ActivityStreamSection() {
-  const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<ActivitySettings>({
-    enabled: false,
-    kind_visibility: {},
-  });
+  const qc = useQueryClient();
   const [err, setErr] = useState("");
 
   const { data, isLoading: loading } = useQuery({
@@ -791,26 +787,40 @@ function ActivityStreamSection() {
     queryFn: ({ signal }) => api.getActivitySettings(signal),
   });
 
-  useEffect(() => {
-    if (data) {
-      setSettings(data);
-    }
-  }, [data]);
+  const settings: ActivitySettings = data ?? {
+    enabled: false,
+    kind_visibility: {},
+  };
 
-  async function handleToggle(next: boolean) {
-    setSaving(true);
-    setErr("");
-    try {
-      const updated = await api.updateActivitySettings({ enabled: next });
-      setSettings(updated);
-    } catch (e: unknown) {
+  const updateSettingsMutation = useMutation({
+    mutationFn: (patch: Partial<ActivitySettings>) =>
+      api.updateActivitySettings(patch),
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ["activity-settings"] });
+      const snapshot = qc.getQueryData<ActivitySettings>(["activity-settings"]);
+      qc.setQueryData<ActivitySettings>(["activity-settings"], (prev) =>
+        prev ? { ...prev, ...patch } : prev,
+      );
+      return { snapshot };
+    },
+    onError: (e: unknown, _vars, context) => {
+      if (context?.snapshot)
+        qc.setQueryData(["activity-settings"], context.snapshot);
       setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
+      toast.error("Failed to update activity settings");
+    },
+    onSettled: () =>
+      void qc.invalidateQueries({ queryKey: ["activity-settings"] }),
+  });
+
+  const saving = updateSettingsMutation.isPending;
+
+  function handleToggle(next: boolean) {
+    setErr("");
+    updateSettingsMutation.mutate({ enabled: next });
   }
 
-  async function handleKindChange(
+  function handleKindChange(
     kind: ActivityType,
     value: "public" | "friends_only" | "private",
   ) {
@@ -818,19 +828,8 @@ function ActivityStreamSection() {
       ...settings.kind_visibility,
       [kind]: value,
     };
-    setSettings((prev) => ({ ...prev, kind_visibility: next }));
-    setSaving(true);
     setErr("");
-    try {
-      const updated = await api.updateActivitySettings({
-        kind_visibility: next,
-      });
-      setSettings(updated);
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
+    updateSettingsMutation.mutate({ kind_visibility: next });
   }
 
   if (loading) {
