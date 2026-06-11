@@ -54,6 +54,7 @@ import type { AppEnv } from "./types";
 import Sentry from "./sentry";
 import { logger, requestLogger } from "./logger";
 import { classifyError } from "./lib/error-classifier";
+import { isFileLikePath } from "./lib/spa-fallback";
 import { errorsByCategory } from "./metrics";
 import { registerSyncJobs } from "./jobs/sync";
 import { registerNotificationJobs } from "./jobs/notifications";
@@ -510,6 +511,12 @@ app.get("/share/watchlist/:token", async (c) => {
 
 // Serve frontend static files in production
 app.use("/*", serveStatic({ root: "./frontend/dist" }));
+// After the real-file serveStatic above, a file-like path (scanner probe) can
+// only be a 404 — fail fast instead of falling through to index.html below.
+app.use("/*", async (c, next) => {
+  if (isFileLikePath(c.req.path)) return c.text("Not Found", 404);
+  await next();
+});
 app.use("/*", serveStatic({ root: "./frontend/dist", path: "/index.html" }));
 
 // Start background job queue

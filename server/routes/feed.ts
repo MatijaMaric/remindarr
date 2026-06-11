@@ -8,6 +8,8 @@ import {
 } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import type { AppEnv } from "../types";
+import { getCache } from "../cache";
+import { CONFIG } from "../config";
 
 const app = new Hono<AppEnv>();
 
@@ -97,19 +99,21 @@ function buildMovieVEvents(
   return lines;
 }
 
+// Shared by fresh and cached responses — Cache-Control stays "no-cache,
+// no-store" because the feed cache is a server-side compute cache; client
+// caching semantics are unchanged.
+const ICS_HEADERS: Record<string, string> = {
+  "Content-Type": "text/calendar; charset=utf-8",
+  "Content-Disposition": 'attachment; filename="remindarr.ics"',
+  "Cache-Control": "no-cache, no-store",
+};
+
 function buildIcsResponse(lines: string[]): {
   body: string;
   headers: Record<string, string>;
 } {
   const body = lines.join("\r\n") + "\r\n";
-  return {
-    body,
-    headers: {
-      "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="remindarr.ics"',
-      "Cache-Control": "no-cache, no-store",
-    },
-  };
+  return { body, headers: ICS_HEADERS };
 }
 
 // GET /api/feed/calendar.ics?token=<token>  (public, token-authenticated)
@@ -119,6 +123,13 @@ app.get("/calendar.ics", async (c) => {
 
   const user = await getUserByFeedToken(token);
   if (!user) return c.json({ error: "Invalid token" }, 401);
+
+  // Keyed by user id (not the raw token) so token regeneration keeps the entry
+  const cacheKey = `feed:ics:calendar:${user.id}`;
+  const cached = await getCache().get<string>(cacheKey);
+  if (cached !== null) {
+    return c.body(cached, 200, ICS_HEADERS);
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const endDate = addDays(today, 90);
@@ -136,6 +147,7 @@ app.get("/calendar.ics", async (c) => {
   ];
 
   const { body, headers } = buildIcsResponse(lines);
+  await getCache().set(cacheKey, body, CONFIG.CACHE_TTL_FEED_ICS);
   return c.body(body, 200, headers);
 });
 

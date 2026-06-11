@@ -10,6 +10,8 @@ import {
   trackTitle,
 } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
+import { initCache } from "../cache";
+import { MemoryCache } from "../cache/memory";
 import feedApp from "./feed";
 import type { AppEnv } from "../types";
 
@@ -43,6 +45,7 @@ let userId: string;
 
 beforeEach(async () => {
   setupTestDb();
+  initCache(new MemoryCache(1000));
 
   userId = await createUser("feeduser", "hash");
   userToken = await createSession(userId);
@@ -124,6 +127,99 @@ describe("GET /feed/calendar.ics", () => {
     const body = await feedRes.text();
     expect(body).toContain("Future Movie");
     expect(body).toContain(`remindarr-movie-movie-future@remindarr`);
+  });
+
+  it("serves the cached body on repeat requests within the TTL", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await tokenRes.json()) as { token: string };
+
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    const releaseDate = futureDate.toISOString().slice(0, 10);
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-cache-1",
+        objectType: "MOVIE",
+        title: "Cached Movie One",
+        releaseDate,
+      }),
+    ]);
+    await trackTitle("movie-cache-1", userId);
+
+    const firstRes = await app.request(`/feed/calendar.ics?token=${token}`);
+    expect(firstRes.status).toBe(200);
+    const firstBody = await firstRes.text();
+    expect(firstBody).toContain("Cached Movie One");
+
+    // Track another title — a fresh build would include it, the cache won't
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-cache-2",
+        objectType: "MOVIE",
+        title: "Cached Movie Two",
+        releaseDate,
+      }),
+    ]);
+    await trackTitle("movie-cache-2", userId);
+
+    const secondRes = await app.request(`/feed/calendar.ics?token=${token}`);
+    expect(secondRes.status).toBe(200);
+    expect(secondRes.headers.get("Content-Type")).toContain("text/calendar");
+    const secondBody = await secondRes.text();
+    expect(secondBody).toBe(firstBody);
+    expect(secondBody).not.toContain("Cached Movie Two");
+  });
+
+  it("isolates cached feeds between different users", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token: tokenA } = (await tokenRes.json()) as { token: string };
+
+    const otherUserId = await createUser("otherfeeduser", "hash");
+    const otherSession = await createSession(otherUserId);
+    const tokenResB = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: { Cookie: `better-auth.session_token=${otherSession}` },
+    });
+    const { token: tokenB } = (await tokenResB.json()) as { token: string };
+
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    const releaseDate = futureDate.toISOString().slice(0, 10);
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-user-a",
+        objectType: "MOVIE",
+        title: "User A Movie",
+        releaseDate,
+      }),
+      makeParsedTitle({
+        id: "movie-user-b",
+        objectType: "MOVIE",
+        title: "User B Movie",
+        releaseDate,
+      }),
+    ]);
+    await trackTitle("movie-user-a", userId);
+    await trackTitle("movie-user-b", otherUserId);
+
+    const resA = await app.request(`/feed/calendar.ics?token=${tokenA}`);
+    const bodyA = await resA.text();
+    const resB = await app.request(`/feed/calendar.ics?token=${tokenB}`);
+    const bodyB = await resB.text();
+
+    expect(bodyA).toContain("User A Movie");
+    expect(bodyA).not.toContain("User B Movie");
+    expect(bodyB).toContain("User B Movie");
+    expect(bodyB).not.toContain("User A Movie");
+    expect(bodyA).not.toBe(bodyB);
   });
 });
 
