@@ -185,6 +185,7 @@ export {
   getDistinctNotifierTimezones,
   getEnabledNotifierSchedules,
   getStreamingAlertNotifiersForUser,
+  getStreamingAlertNotifiersForUsers,
 } from "./notifiers";
 
 export {
@@ -281,6 +282,7 @@ export type { IntegrationConfig, PlexConfig } from "./integrations";
 
 export {
   getUnalertedProviders,
+  getUnalertedProvidersBulk,
   markAlerted,
   getArrivalAlertedProviders,
 } from "./streaming-alerts";

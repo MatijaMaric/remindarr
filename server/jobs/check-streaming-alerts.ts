@@ -2,9 +2,9 @@ import { logger } from "../logger";
 import {
   getOffersForTitles,
   getUsersTrackingTitles,
-  getUnalertedProviders,
+  getUnalertedProvidersBulk,
   markAlerted,
-  getStreamingAlertNotifiersForUser,
+  getStreamingAlertNotifiersForUsers,
   getTitleById,
   recordDelivery,
 } from "../db/repository";
@@ -40,6 +40,11 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
   );
   if (trackersByTitle.size === 0) return;
 
+  // Fetch notifiers once for the union of all tracking users instead of
+  // once per (title, user) pair
+  const allUserIds = [...new Set([...trackersByTitle.values()].flat())];
+  const notifiersByUser = await getStreamingAlertNotifiersForUsers(allUserIds);
+
   for (const [titleId, userIds] of trackersByTitle) {
     const titleOffers = offersByTitle.get(titleId) ?? [];
     const streamingProviders = titleOffers
@@ -60,18 +65,20 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
 
     const today = new Date().toISOString().slice(0, 10);
 
+    // 4. Find providers not yet alerted per user, in one query per title
+    const unalertedByUser = await getUnalertedProvidersBulk(
+      userIds,
+      titleId,
+      providerIds,
+      "arrival",
+    );
+
     for (const userId of userIds) {
-      // 4. Find providers not yet alerted for this (user, title)
-      const newProviderIds = await getUnalertedProviders(
-        userId,
-        titleId,
-        providerIds,
-        "arrival",
-      );
+      const newProviderIds = unalertedByUser.get(userId) ?? [];
       if (newProviderIds.length === 0) continue;
 
-      // 5. Get enabled streaming-alert notifiers for this user
-      const userNotifiers = await getStreamingAlertNotifiersForUser(userId);
+      // 5. Enabled streaming-alert notifiers for this user (prefetched above)
+      const userNotifiers = notifiersByUser.get(userId) ?? [];
 
       for (const pid of newProviderIds) {
         const provider = streamingProviders.find((sp) => sp.id === pid);
