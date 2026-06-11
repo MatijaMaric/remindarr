@@ -2,9 +2,16 @@ import { eq, and, sql, desc, gte, lt, lte, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, scores, tracked, watchedTitles, ratings } from "../schema";
 import { traceDbQuery } from "../../tracing";
+import { logger } from "../../logger";
 import { getOffersWithPlex } from "./offers";
 import { getGenresForTitles } from "./titles";
 import { getTagsForUser } from "./tags";
+
+const log = logger.child({ module: "tracked-repo" });
+
+// Soft cap on rows loaded by getTrackedTitles — a safety net against unbounded
+// result sets, not pagination. Keeps the most recently tracked titles.
+export const MAX_TRACKED_LOAD = 1000;
 
 type ShowStatus =
   | "watching"
@@ -79,8 +86,12 @@ export async function getTrackedTitleIds(userId: string): Promise<Set<string>> {
   });
 }
 
-export async function getTrackedTitles(userId: string) {
+export async function getTrackedTitles(
+  userId: string,
+  opts: { limit?: number } = {},
+) {
   return traceDbQuery("getTrackedTitles", async () => {
+    const limit = opts.limit ?? MAX_TRACKED_LOAD;
     const db = getDb();
     const rows = await db
       .select({
@@ -138,7 +149,15 @@ export async function getTrackedTitles(userId: string) {
       .leftJoin(scores, eq(scores.titleId, titles.id))
       .where(eq(tracked.userId, userId))
       .orderBy(desc(tracked.trackedAt))
+      .limit(limit)
       .all();
+
+    if (rows.length >= limit) {
+      log.warn("getTrackedTitles hit soft cap; result truncated", {
+        userId,
+        limit,
+      });
+    }
 
     const titleIds = rows.map((r) => r.id);
     const [offersByTitle, genresByTitle, tagsByTitle] = await Promise.all([

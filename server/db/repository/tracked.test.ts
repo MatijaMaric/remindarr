@@ -15,6 +15,7 @@ import {
   getTrackedTitles,
   getReleasedUnwatchedTrackedMovies,
   getUpcomingTrackedMoviesOpen,
+  MAX_TRACKED_LOAD,
 } from "./tracked";
 import { getWatchedTitleIds } from "./watched-titles";
 import { getRawDb } from "../bun-db";
@@ -228,6 +229,49 @@ describe("getTrackedTitles show_status", () => {
     expect(show!.show_status).toBe("unreleased");
     expect(show!.released_episodes_count).toBe(0);
     expect(show!.total_episodes).toBe(0);
+  });
+});
+
+describe("getTrackedTitles soft cap", () => {
+  // Seed 5 tracked titles with distinct tracked_at values (cap-1 oldest .. cap-5 newest)
+  async function seedFiveTracked() {
+    const ids = ["cap-1", "cap-2", "cap-3", "cap-4", "cap-5"];
+    await upsertTitles(
+      ids.map((id) =>
+        makeParsedTitle({ id, objectType: "MOVIE", title: `Cap ${id}` }),
+      ),
+    );
+    const db = getRawDb();
+    for (const [i, id] of ids.entries()) {
+      await trackTitle(id, userId);
+      db.prepare(
+        `UPDATE tracked SET tracked_at = ? WHERE title_id = ? AND user_id = ?`,
+      ).run(`2024-01-0${i + 1} 00:00:00`, id, userId);
+    }
+    return ids;
+  }
+
+  it("returns at most opts.limit rows, keeping the most recently tracked", async () => {
+    await seedFiveTracked();
+
+    const results = await getTrackedTitles(userId, { limit: 3 });
+    expect(results).toHaveLength(3);
+    expect(results.map((r) => r.id)).toEqual(["cap-5", "cap-4", "cap-3"]);
+  });
+
+  it("returns all rows by default when under MAX_TRACKED_LOAD", async () => {
+    await seedFiveTracked();
+
+    const results = await getTrackedTitles(userId);
+    expect(MAX_TRACKED_LOAD).toBeGreaterThan(5);
+    expect(results).toHaveLength(5);
+    expect(results.map((r) => r.id)).toEqual([
+      "cap-5",
+      "cap-4",
+      "cap-3",
+      "cap-2",
+      "cap-1",
+    ]);
   });
 });
 
