@@ -50,7 +50,7 @@ Server-cache state lives in `@tanstack/react-query`. The `QueryClient` singleton
 - Auth/session flow owned by `AuthContext` / better-auth
 - The call is _inside_ a `queryFn` or `mutationFn` — that is the correct home for `api.ts`
 
-**Deferred — do NOT migrate yet**: Settings-tab **form-value submit** handlers (`updateMyProfile`, `updateAdminSettings`, `updateAppearanceSettings`, `updateActivitySettings`, `updateHomepageLayout`, `updateCrowdedWeekSettings`, `updateDepartureAlertSettings`) wait for the planned react-hook-form work. Their reads and action writes (delete/test/trigger/regenerate) are fair game now.
+**Deferred — do NOT migrate yet**: Settings-tab **form-value submit** handlers (`updateMyProfile`, `updateAdminSettings`, `updateAppearanceSettings`, `updateHomepageLayout`, `updateCrowdedWeekSettings`, `updateDepartureAlertSettings`) wait for the planned react-hook-form work. Their reads and action writes (delete/test/trigger/regenerate) are fair game now.
 
 **Tests**: Every migrated component's colocated test must wrap in a fresh `new QueryClient({ defaultOptions: { queries: { retry: false } } })` provider (see any existing `*.test.tsx` for the pattern).
 

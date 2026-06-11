@@ -7,7 +7,13 @@ import {
   afterEach,
   spyOn,
 } from "bun:test";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
@@ -119,6 +125,92 @@ describe("AccountTab", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Activity stream")).toBeDefined();
+    });
+  });
+
+  it("toggles activity stream optimistically and calls updateActivitySettings", async () => {
+    let resolveUpdate!: (v: unknown) => void;
+    const updateSpy = spyOn(api, "updateActivitySettings").mockImplementation(
+      () =>
+        new Promise((res) => {
+          resolveUpdate = res;
+        }) as any,
+    );
+    spies.push(updateSpy);
+
+    const client = newTestClient();
+    render(<AccountTab />, { wrapper: wrapper(client) });
+
+    const toggle = await screen.findByRole("switch", {
+      name: "Show activity on profile",
+    });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(toggle);
+
+    // Optimistic: the switch flips before the API call resolves
+    await waitFor(() => {
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+    expect(updateSpy).toHaveBeenCalledWith({ enabled: true });
+
+    // Server confirms; onSettled refetch keeps the switch on
+    (api.getActivitySettings as any).mockResolvedValue({
+      enabled: true,
+      kind_visibility: {},
+    });
+    resolveUpdate({ enabled: true, kind_visibility: {} });
+
+    await waitFor(() => {
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+  });
+
+  it("rolls back the switch and shows an error when updateActivitySettings rejects", async () => {
+    const updateSpy = spyOn(api, "updateActivitySettings").mockRejectedValue(
+      new Error("activity update failed"),
+    );
+    spies.push(updateSpy);
+
+    const client = newTestClient();
+    render(<AccountTab />, { wrapper: wrapper(client) });
+
+    const toggle = await screen.findByRole("switch", {
+      name: "Show activity on profile",
+    });
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(screen.getByText("activity update failed")).toBeDefined();
+    });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("sends the full kind_visibility map when changing a per-kind option", async () => {
+    (api.getActivitySettings as any).mockResolvedValue({
+      enabled: true,
+      kind_visibility: { tracked: "private" },
+    });
+    const updateSpy = spyOn(api, "updateActivitySettings").mockResolvedValue({
+      enabled: true,
+      kind_visibility: { tracked: "private", rating_title: "friends_only" },
+    } as any);
+    spies.push(updateSpy);
+
+    const client = newTestClient();
+    render(<AccountTab />, { wrapper: wrapper(client) });
+
+    await waitFor(() => {
+      expect(screen.getByText("Movie/show ratings")).toBeDefined();
+    });
+
+    // First row is rating_title; pick its "Friends only" option
+    fireEvent.click(screen.getAllByRole("button", { name: "Friends only" })[0]);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith({
+        kind_visibility: { tracked: "private", rating_title: "friends_only" },
+      });
     });
   });
 });
