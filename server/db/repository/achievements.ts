@@ -233,6 +233,9 @@ export async function sumXpForUser(userId: string): Promise<number> {
   });
 }
 
+// D1 caps bound parameters at 100 per statement; 4 params per row -> 80 per chunk.
+const EARN_INSERT_CHUNK_SIZE = 20;
+
 /**
  * Insert new earn audit rows and bump earned_count + last_earned_at in user_achievements.
  */
@@ -249,15 +252,18 @@ export async function appendUserAchievementEarns(
       earns[0].earnedAt,
     );
 
-    for (const earn of earns) {
+    for (let i = 0; i < earns.length; i += EARN_INSERT_CHUNK_SIZE) {
+      const chunk = earns.slice(i, i + EARN_INSERT_CHUNK_SIZE);
       await db
         .insert(userAchievementEarns)
-        .values({
-          userId,
-          achievementKey: key,
-          earnedAt: earn.earnedAt,
-          context: earn.context ? JSON.stringify(earn.context) : null,
-        })
+        .values(
+          chunk.map((earn) => ({
+            userId,
+            achievementKey: key,
+            earnedAt: earn.earnedAt,
+            context: earn.context ? JSON.stringify(earn.context) : null,
+          })),
+        )
         .run();
     }
 
