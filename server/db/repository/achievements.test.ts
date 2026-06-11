@@ -314,6 +314,27 @@ describe("appendUserAchievementEarns", () => {
     expect(row?.lastEarnedAt).toBe("2024-02-01T00:00:00.000Z");
   });
 
+  it("inserts all rows when earns exceed the insert chunk size", async () => {
+    const userId = await createUser("append-earns-chunk", "hash");
+    await upsertAchievementDef(makeAchievementDef("repeatable_key_chunk"));
+    await upsertUserAchievement(userId, "repeatable_key_chunk", 0, null);
+
+    // 45 earns spans 3 chunks of 20 (20 + 20 + 5)
+    const earns = Array.from({ length: 45 }, (_, i) => ({
+      earnedAt: `2024-01-01T00:00:${String(i).padStart(2, "0")}.000Z`,
+      context: { index: i },
+    }));
+    await appendUserAchievementEarns(userId, "repeatable_key_chunk", earns);
+
+    const history = await getEarnHistory(userId, "repeatable_key_chunk", 100);
+    expect(history).toHaveLength(45);
+
+    const rows = await getUserAchievements(userId);
+    const row = rows.find((r) => r.achievementKey === "repeatable_key_chunk");
+    expect(row?.earnedCount).toBe(45);
+    expect(row?.lastEarnedAt).toBe("2024-01-01T00:00:44.000Z");
+  });
+
   it("is a no-op when earns array is empty", async () => {
     const userId = await createUser("append-earns-2", "hash");
     await upsertAchievementDef(makeAchievementDef("repeatable_key_2"));
