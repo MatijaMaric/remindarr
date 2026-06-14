@@ -25,6 +25,8 @@ import { runWithDb } from "../db/schema";
 import * as processorModule from "./processor";
 import {
   armCron,
+  tickCron,
+  triggerCron,
   cleanupOld,
   enqueueAdhoc,
   enqueueOnce,
@@ -240,6 +242,87 @@ describe("armCron (DO mode)", () => {
   });
 });
 
+describe("tickCron", () => {
+  it("sends POST /tick to the named DO in DO mode", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace();
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    await tickCron(env, "sync-episodes");
+
+    expect(ns.calls).toHaveLength(1);
+    expect(ns.calls[0].path).toBe("/tick");
+    expect(ns.calls[0].method).toBe("POST");
+  });
+
+  it("is a no-op in D1 mode", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "d1";
+    const ns = makeFakeDoNamespace();
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    await tickCron(env, "sync-episodes");
+
+    expect(ns.calls).toHaveLength(0);
+  });
+
+  it("swallows a failing DO so the watchdog loop continues", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const throwingNs = {
+      idFromName: (name: string) => ({ toString: () => name }),
+      get: () => ({
+        fetch: async () => {
+          throw new Error("DO unavailable");
+        },
+      }),
+    };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: throwingNs as unknown as DurableObjectNamespace,
+    };
+
+    // Must not throw
+    await tickCron(env, "sync-episodes");
+  });
+});
+
+describe("triggerCron (DO mode)", () => {
+  it("arms AND ticks the named DO so 'Run now' actually executes", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace();
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    const result = await triggerCron(env, "sync-episodes");
+
+    expect(result.jobId).toBeNull();
+    const paths = ns.calls.map((c) => c.path);
+    expect(paths).toContain("/arm");
+    expect(paths).toContain("/tick");
+  });
+
+  it("returns jobId null for an unknown job without dispatching", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace();
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    const result = await triggerCron(env, "not-a-real-job");
+
+    expect(result.jobId).toBeNull();
+    expect(ns.calls).toHaveLength(0);
+  });
+});
+
 describe("processPending (DO mode)", () => {
   it("returns 0 without calling processPendingJobs", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
@@ -266,8 +349,10 @@ describe("enqueueAdhoc (DO mode)", () => {
       });
     });
 
-    expect(ns.calls).toHaveLength(1);
+    // enqueue then immediately drive the partition via /tick (#795)
+    expect(ns.calls).toHaveLength(2);
     expect(ns.calls[0].path).toBe("/enqueue");
+    expect(ns.calls[1].path).toBe("/tick");
     // idFromName should have been called with "sync-show-episodes:42"
     // (we can't directly check idFromName, but the stub body contains the name)
     const body = ns.calls[0].body as { name: string };
@@ -289,7 +374,9 @@ describe("enqueueAdhoc (DO mode)", () => {
       });
     });
 
-    expect(ns.calls).toHaveLength(1);
+    expect(ns.calls).toHaveLength(2);
+    expect(ns.calls[0].path).toBe("/enqueue");
+    expect(ns.calls[1].path).toBe("/tick");
     const body = ns.calls[0].body as { name: string };
     expect(body.name).toBe("backfill-title-offers");
   });
@@ -306,8 +393,9 @@ describe("enqueueAdhoc (DO mode)", () => {
       await enqueueAdhoc("sync-plex-library");
     });
 
-    expect(ns.calls).toHaveLength(1);
+    expect(ns.calls).toHaveLength(2);
     expect(ns.calls[0].path).toBe("/enqueue");
+    expect(ns.calls[1].path).toBe("/tick");
   });
 });
 
@@ -379,7 +467,8 @@ describe("runWithEnv", () => {
     await runWithEnv(env, async () => {
       await enqueueAdhoc("sync-plex-library");
     });
-    expect(ns.calls).toHaveLength(1);
+    // /enqueue + /tick
+    expect(ns.calls).toHaveLength(2);
   });
 });
 

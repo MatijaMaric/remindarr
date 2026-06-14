@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
+import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
   createUser,
@@ -205,5 +206,36 @@ describe("POST /jobs/:name (CF)", () => {
   it("returns 401 without auth", async () => {
     const res = await app.request("/jobs/sync-titles", { method: "POST" });
     expect(res.status).toBe(401);
+  });
+
+  it("arms AND ticks the DO in durable-object mode so 'Run now' executes (#795)", async () => {
+    const original = CONFIG.JOB_QUEUE_BACKEND;
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const calls: { path: string; method: string }[] = [];
+    const fakeNs = {
+      idFromName: (name: string) => ({ toString: () => name }),
+      get: () => ({
+        fetch: async (req: Request) => {
+          calls.push({ path: new URL(req.url).pathname, method: req.method });
+          return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        },
+      }),
+    };
+    try {
+      const res = await app.request(
+        "/jobs/sync-episodes",
+        { method: "POST", headers: { Cookie: adminCookie } },
+        { JOB_QUEUE_DO: fakeNs, DB: {} } as unknown as Record<string, unknown>,
+      );
+      expect(res.status).toBe(200);
+      const paths = calls.map((c) => c.path);
+      expect(paths).toContain("/arm");
+      expect(paths).toContain("/tick");
+    } finally {
+      CONFIG.JOB_QUEUE_BACKEND = original;
+    }
   });
 });

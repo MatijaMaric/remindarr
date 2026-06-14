@@ -936,6 +936,128 @@ describe("JobQueueDO", () => {
     deleteExpiredSessionsSpy.mockRestore();
     cleanupState.close();
   });
+
+  // ── tick(): watchdog-driven execution without alarm() (#795) ──────────────
+
+  it("tick() runs a due cron job and completes it without calling alarm()", async () => {
+    let called = false;
+    processorModule.handlers["sync-titles"] = async () => {
+      called = true;
+    };
+    await do_.armCron("sync-titles", "0 3 * * *"); // never run before → due
+
+    const result = await do_.tick();
+
+    expect(called).toBe(true);
+    expect(result.ran).toBe(true);
+    const rows = do_.getRecentJobs();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("completed");
+  });
+
+  it("tick() does NOT run a daily cron that already ran today (cron timing honored)", async () => {
+    let called = false;
+    const { do_: epDo, state: epState } = makeDO("sync-episodes");
+    processorModule.handlers["sync-episodes"] = async () => {
+      called = true;
+    };
+    await epDo.armCron("sync-episodes", "30 3 * * *");
+    // A completed run timestamped now → the daily cron is not due again
+    epState.rawDb
+      .prepare(
+        "INSERT INTO jobs (name, status, run_at, completed_at) VALUES ('sync-episodes','completed',?,?)",
+      )
+      .run(new Date().toISOString(), new Date().toISOString());
+
+    const result = await epDo.tick();
+
+    expect(called).toBe(false);
+    expect(result.ran).toBe(false);
+    // No tick job fabricated — only the pre-existing completed row remains
+    expect(
+      epDo.getRecentJobs().filter((r) => r.status === "pending"),
+    ).toHaveLength(0);
+    epState.close();
+  });
+
+  it("tick() drains a pending ad-hoc job without calling alarm()", async () => {
+    const calledWith: (string | null)[] = [];
+    processorModule.handlers["sync-show-episodes"] = async (data) => {
+      calledWith.push(data);
+    };
+    const { do_: adHocDo, state: adHocState } = makeDO("sync-show-episodes:42");
+    const payload = JSON.stringify({ titleId: 42, tmdbId: 999, title: "X" });
+    await adHocDo.enqueue("sync-show-episodes", payload);
+
+    const result = await adHocDo.tick();
+
+    expect(calledWith[0]).toBe(payload);
+    expect(result.ran).toBe(true);
+    expect(adHocDo.getRecentJobs()[0].status).toBe("completed");
+    adHocState.close();
+  });
+
+  it("tick() runs at most one job per call (30s DO limit)", async () => {
+    processorModule.handlers["sync-show-episodes"] = async () => {};
+    const { do_: adHocDo, state: adHocState } = makeDO("sync-show-episodes:7");
+    await adHocDo.enqueue("sync-show-episodes", null);
+    await adHocDo.enqueue("sync-show-episodes", null);
+
+    await adHocDo.tick();
+
+    const rows = adHocDo.getRecentJobs();
+    expect(rows.filter((r) => r.status === "completed")).toHaveLength(1);
+    expect(rows.filter((r) => r.status === "pending")).toHaveLength(1);
+    // Remaining pending row re-arms a delayed alarm so the next tick drains it
+    expect(
+      adHocDo.alarms
+        .getSchedules({ type: "delayed" })
+        .some((s) => s.callback === "runJob"),
+    ).toBe(true);
+    adHocState.close();
+  });
+
+  it("POST /tick drains due work and returns { ran }", async () => {
+    processorModule.handlers["sync-titles"] = async () => {};
+    await do_.armCron("sync-titles", "0 3 * * *");
+
+    const resp = await do_.fetch(
+      new Request("https://do/tick", { method: "POST" }),
+    );
+    expect(resp.status).toBe(200);
+    const body = (await resp.json()) as { ran: boolean };
+    expect(body.ran).toBe(true);
+    expect(do_.getRecentJobs()[0].status).toBe("completed");
+  });
+
+  // ── armCron: recover a dropped alarm handle (#795 defense-in-depth) ────────
+
+  it("armCron force-sets the alarm when the cron schedule row exists but getAlarm() is null", async () => {
+    await do_.armCron("sync-titles", "0 3 * * *");
+    expect(await state.storage.getAlarm()).not.toBeNull();
+
+    // Simulate a dropped CF alarm handle: the _actor_alarms cron row persists
+    // (so getSchedules still reports it) but the underlying alarm is gone.
+    state.storage.scheduledAlarm = null;
+    expect(
+      do_.alarms
+        .getSchedules({ type: "cron" })
+        .some((s) => s.callback === "runJob"),
+    ).toBe(true);
+
+    addBreadcrumbSpy.mockClear();
+    await do_.armCron("sync-titles", "0 3 * * *");
+
+    const recovered = await state.storage.getAlarm();
+    expect(recovered).not.toBeNull();
+    expect(recovered!).toBeGreaterThan(Date.now());
+    const recoveryBreadcrumb = addBreadcrumbSpy.mock.calls.find(
+      (args) =>
+        (args[0] as { message?: string }).message ===
+        "Recovered dropped cron alarm",
+    );
+    expect(recoveryBreadcrumb).toBeDefined();
+  });
 });
 
 // Restore module-level spies after all tests so they don't leak into later test files on Linux CI.

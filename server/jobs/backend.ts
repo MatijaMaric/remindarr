@@ -129,6 +129,25 @@ export async function armCron(
 }
 
 /**
+ * Drive due work in a cron-singleton DO via the /tick RPC. This is the primary
+ * execution path in DO mode: the every-5-min Worker watchdog (worker.ts scheduled())
+ * calls this for each cron job because the DO alarm() callback is unreliable under
+ * the Sentry-wrapped entrypoint (#795). No-op in D1 mode (D1 drains via processPending).
+ */
+export async function tickCron(env: CFEnv, name: string): Promise<void> {
+  if (CONFIG.JOB_QUEUE_BACKEND !== "durable-object") return;
+  if (!env.JOB_QUEUE_DO) return;
+  try {
+    await doFetch(env, name, "/tick", "POST", {});
+  } catch (err) {
+    log.warn("DO tick failed", {
+      name,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
  * Enqueue an ad-hoc job. Partition key is inferred from data for known names.
  * Used by routes (track, integrations) that need to queue per-item work.
  */
@@ -152,6 +171,10 @@ export async function enqueueAdhoc(
       },
       partitionKey,
     );
+    // Drive execution immediately via the working fetch path — ad-hoc DOs cannot
+    // rely on alarm() delivery (#795), so without this the job would never run.
+    // A single ad-hoc job (e.g. one show's episode sync) fits the 30s DO limit.
+    await doFetch(env, name, "/tick", "POST", {}, partitionKey);
   } else {
     const db = getDb();
     await db.insert(jobs).values({
@@ -498,6 +521,9 @@ export async function triggerCron(
     const jobDef = CRON_JOBS.find((j) => j.name === name);
     if (!jobDef || !env.JOB_QUEUE_DO) return { jobId: null };
     await doFetch(env, name, "/arm", "POST", { name, cron: jobDef.cron });
+    // Arming only (re)schedules an alarm, which is unreliable (#795). Drive the
+    // job immediately via the working fetch path so "Run now" actually executes.
+    await doFetch(env, name, "/tick", "POST", {});
     return { jobId: null };
   }
   const jobId = await enqueueJobReturningId(name);
