@@ -113,3 +113,70 @@ export const CONFIG = {
 export function patchConfig(overrides: Partial<typeof CONFIG>): void {
   Object.assign(CONFIG, overrides);
 }
+
+/** CF Workers env bindings (secrets + vars) that map onto CONFIG. */
+export interface CfConfigEnv {
+  TMDB_API_KEY?: string;
+  TMDB_COUNTRY?: string;
+  TMDB_LANGUAGE?: string;
+  LOG_LEVEL?: string;
+  CORS_ORIGIN?: string;
+  SENTRY_DSN?: string;
+  OIDC_ISSUER_URL?: string;
+  OIDC_CLIENT_ID?: string;
+  OIDC_CLIENT_SECRET?: string;
+  OIDC_REDIRECT_URI?: string;
+  OIDC_ADMIN_CLAIM?: string;
+  OIDC_ADMIN_VALUE?: string;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
+  BETTER_AUTH_SECRET?: string;
+  BASE_URL?: string;
+  PASSKEY_RP_ID?: string;
+  PASSKEY_RP_NAME?: string;
+  PASSKEY_ORIGIN?: string;
+  STREAMING_AVAILABILITY_API_KEY?: string;
+  JOB_QUEUE_BACKEND?: string;
+}
+
+/**
+ * Map CF Workers env bindings to a CONFIG override object. Pure — apply the
+ * result with patchConfig().
+ *
+ * Shared by the Worker entry (server/worker.ts) AND the job Durable Object
+ * (server/jobs/durable-object.ts). The DO runs in its own isolate where CONFIG
+ * was never patched, so it must call this independently — otherwise job handlers
+ * see empty secrets (e.g. TMDB_API_KEY) and skip all work (episodes/titles never
+ * sync). Keep both call sites using this one function so the lists can't drift.
+ */
+export function cfEnvToConfigOverrides(
+  env: CfConfigEnv,
+): Partial<typeof CONFIG> {
+  return {
+    TMDB_API_KEY: env.TMDB_API_KEY || "",
+    COUNTRY: env.TMDB_COUNTRY || undefined,
+    LANGUAGE: env.TMDB_LANGUAGE || undefined,
+    LOG_LEVEL:
+      (env.LOG_LEVEL as "debug" | "info" | "warn" | "error") || undefined,
+    CORS_ORIGIN: env.CORS_ORIGIN || undefined,
+    SENTRY_DSN: env.SENTRY_DSN || "",
+    OIDC_ISSUER_URL: env.OIDC_ISSUER_URL || "",
+    OIDC_CLIENT_ID: env.OIDC_CLIENT_ID || "",
+    OIDC_CLIENT_SECRET: env.OIDC_CLIENT_SECRET || "",
+    OIDC_REDIRECT_URI: env.OIDC_REDIRECT_URI || "",
+    OIDC_ADMIN_CLAIM: env.OIDC_ADMIN_CLAIM || "",
+    OIDC_ADMIN_VALUE: env.OIDC_ADMIN_VALUE || "",
+    VAPID_PUBLIC_KEY: env.VAPID_PUBLIC_KEY || "",
+    VAPID_PRIVATE_KEY: env.VAPID_PRIVATE_KEY || "",
+    VAPID_SUBJECT: env.VAPID_SUBJECT || "",
+    BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET || "",
+    BASE_URL: env.BASE_URL || undefined,
+    PASSKEY_RP_ID: env.PASSKEY_RP_ID || undefined,
+    PASSKEY_RP_NAME: env.PASSKEY_RP_NAME || undefined,
+    PASSKEY_ORIGIN: env.PASSKEY_ORIGIN || undefined,
+    STREAMING_AVAILABILITY_API_KEY: env.STREAMING_AVAILABILITY_API_KEY || "",
+    JOB_QUEUE_BACKEND:
+      (env.JOB_QUEUE_BACKEND as "d1" | "durable-object") || "d1",
+  };
+}

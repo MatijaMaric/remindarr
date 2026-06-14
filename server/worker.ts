@@ -98,7 +98,7 @@ import achievementsRoutes, {
 } from "./routes/achievements";
 import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
-import { patchConfig, CONFIG } from "./config";
+import { patchConfig, CONFIG, cfEnvToConfigOverrides } from "./config";
 import { classifyError } from "./lib/error-classifier";
 import { isFileLikePath } from "./lib/spa-fallback";
 import { errorsByCategory } from "./metrics";
@@ -178,32 +178,7 @@ function patchConfigFromEnv(env: Env): void {
   if (configPatched) return;
   configPatched = true;
 
-  patchConfig({
-    TMDB_API_KEY: env.TMDB_API_KEY || "",
-    COUNTRY: env.TMDB_COUNTRY || undefined,
-    LANGUAGE: env.TMDB_LANGUAGE || undefined,
-    LOG_LEVEL:
-      (env.LOG_LEVEL as "debug" | "info" | "warn" | "error") || undefined,
-    CORS_ORIGIN: env.CORS_ORIGIN || undefined,
-    SENTRY_DSN: env.SENTRY_DSN || "",
-    OIDC_ISSUER_URL: env.OIDC_ISSUER_URL || "",
-    OIDC_CLIENT_ID: env.OIDC_CLIENT_ID || "",
-    OIDC_CLIENT_SECRET: env.OIDC_CLIENT_SECRET || "",
-    OIDC_REDIRECT_URI: env.OIDC_REDIRECT_URI || "",
-    OIDC_ADMIN_CLAIM: env.OIDC_ADMIN_CLAIM || "",
-    OIDC_ADMIN_VALUE: env.OIDC_ADMIN_VALUE || "",
-    VAPID_PUBLIC_KEY: env.VAPID_PUBLIC_KEY || "",
-    VAPID_PRIVATE_KEY: env.VAPID_PRIVATE_KEY || "",
-    VAPID_SUBJECT: env.VAPID_SUBJECT || "",
-    BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET || "",
-    BASE_URL: env.BASE_URL || undefined,
-    PASSKEY_RP_ID: env.PASSKEY_RP_ID || undefined,
-    PASSKEY_RP_NAME: env.PASSKEY_RP_NAME || undefined,
-    PASSKEY_ORIGIN: env.PASSKEY_ORIGIN || undefined,
-    STREAMING_AVAILABILITY_API_KEY: env.STREAMING_AVAILABILITY_API_KEY || "",
-    JOB_QUEUE_BACKEND:
-      (env.JOB_QUEUE_BACKEND as "d1" | "durable-object") || "d1",
-  });
+  patchConfig(cfEnvToConfigOverrides(env));
 
   // Reinitialize logger in case LOG_LEVEL changed
   if (env.LOG_LEVEL) {
