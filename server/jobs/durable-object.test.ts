@@ -25,6 +25,8 @@ import * as processorModule from "./processor";
 import * as repository from "../db/repository";
 import Sentry from "../sentry";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { withConfigGuard } from "../test-utils/config";
+import { CONFIG } from "../config";
 
 // ─── Fake CF storage ──────────────────────────────────────────────────────────
 
@@ -173,6 +175,10 @@ describe("JobQueueDO", () => {
   let state: FakeDurableObjectState;
   let do_: JobQueueDO;
 
+  // The DO constructor patches the global CONFIG from its env; guard so those
+  // mutations (e.g. TMDB_API_KEY -> "") never leak across tests or files.
+  withConfigGuard();
+
   beforeEach(() => {
     setupTestDb(); // keep the shared DB fresh for processor imports
     ({ do_, state } = makeDO("sync-titles"));
@@ -192,6 +198,25 @@ describe("JobQueueDO", () => {
     for (const key of Object.keys(originalHandlers)) {
       (processorModule.handlers as any)[key] = originalHandlers[key];
     }
+  });
+
+  // ── config patching (#795 follow-up: jobs ran but skipped, no secrets) ─────
+
+  it("patches global CONFIG from its env on construction so handlers see secrets", () => {
+    // Regression: the DO runs in its own isolate where CONFIG is never patched.
+    // Without this, sync handlers see CONFIG.TMDB_API_KEY === "" and skip all work.
+    const envState = new FakeDurableObjectState("sync-titles");
+    new JobQueueDO(
+      envState as any,
+      {
+        DB: {} as D1Database,
+        TMDB_API_KEY: "do-isolate-key",
+        STREAMING_AVAILABILITY_API_KEY: "do-sa-key",
+      } as any,
+    );
+    expect(CONFIG.TMDB_API_KEY).toBe("do-isolate-key");
+    expect(CONFIG.STREAMING_AVAILABILITY_API_KEY).toBe("do-sa-key");
+    envState.close();
   });
 
   // ── enqueue ──────────────────────────────────────────────────────────────
