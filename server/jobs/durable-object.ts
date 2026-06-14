@@ -7,6 +7,7 @@
  * The Bun runtime never imports this file.
  */
 import { Alarms } from "@cloudflare/actors/alarms";
+import { CronExpressionParser } from "cron-parser";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql } from "drizzle-orm";
 import { runWithDb, schemaExports, titles, settings } from "../db/schema";
@@ -180,6 +181,9 @@ export class JobQueueDO {
         );
         return Response.json({ id });
       }
+      if (request.method === "POST" && path === "/tick") {
+        return Response.json(await this.tick());
+      }
       if (request.method === "POST" && path === "/recover") {
         const body = (await request.json()) as { staleMinutes?: number };
         const count = this.recover(body.staleMinutes ?? 15);
@@ -216,7 +220,10 @@ export class JobQueueDO {
 
   // ─── Job execution: invoked by Alarms when a cron or delayed schedule fires
 
-  async runJob(_payload: unknown = null): Promise<void> {
+  async runJob(
+    _payload: unknown = null,
+    opts: { skipCronAutoCreate?: boolean } = {},
+  ): Promise<void> {
     const name = await this.ctx.storage.get<string>("name");
     if (!name) return;
     const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
@@ -233,7 +240,7 @@ export class JobQueueDO {
     >[];
 
     if (rows.length === 0) {
-      if (cron) {
+      if (cron && !opts.skipCronAutoCreate) {
         // Cron singleton: alarm fires at each scheduled tick. Auto-create the job for
         // this tick if no pending rows exist (including future-scheduled ones).
         const anyPending =
@@ -429,6 +436,68 @@ export class JobQueueDO {
     await this.rearmIfPending(cron);
   }
 
+  /**
+   * Drive due work WITHOUT depending on CF alarm delivery. Invoked via the /tick
+   * RPC by the every-5-min Worker watchdog (server/worker.ts scheduled()), which is
+   * proven to fire reliably in production. The DO alarm() callback has been observed
+   * to never fire under the Sentry-wrapped entrypoint (#795), so this fetch-driven
+   * path is the load-bearing execution mechanism.
+   *
+   * Runs at most one job per call (runJob does LIMIT 1) to respect the 30-second DO
+   * alarm/CPU limit (#726); remaining pending rows re-arm and drain on the next tick.
+   * Cron timing is honored: a cron DO only fabricates a tick job when actually due,
+   * but pending retry/extra rows always drain.
+   */
+  async tick(): Promise<{ ran: boolean }> {
+    this.initSchema();
+    const name = await this.ctx.storage.get<string>("name");
+    if (!name) return { ran: false };
+    const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
+
+    let skipCronAutoCreate = false;
+    if (cron) {
+      const lastRows = this.ctx.storage.sql
+        .exec(
+          "SELECT completed_at FROM jobs WHERE status IN ('completed', 'failed') ORDER BY id DESC LIMIT 1",
+        )
+        .toArray() as Array<{ completed_at: string | null }>;
+      const lastRun = lastRows[0]?.completed_at ?? null;
+      skipCronAutoCreate = !this.isCronDue(cron, lastRun, new Date());
+    }
+
+    const terminalBefore = this.terminalCount();
+    await this.runJob(null, { skipCronAutoCreate });
+    return { ran: this.terminalCount() > terminalBefore };
+  }
+
+  /** Count of rows that have reached a terminal state (used to detect tick execution). */
+  private terminalCount(): number {
+    const rows = this.ctx.storage.sql
+      .exec(
+        "SELECT COUNT(*) as count FROM jobs WHERE status IN ('completed', 'failed')",
+      )
+      .toArray() as Array<{ count: number }>;
+    return rows[0]?.count ?? 0;
+  }
+
+  /** Whether a cron's most recent scheduled fire time is newer than the last run. */
+  private isCronDue(
+    cron: string,
+    lastRunIso: string | null,
+    now: Date,
+  ): boolean {
+    let lastScheduled: Date;
+    try {
+      lastScheduled = CronExpressionParser.parse(cron, { currentDate: now })
+        .prev()
+        .toDate();
+    } catch {
+      return false;
+    }
+    if (!lastRunIso) return true;
+    return new Date(lastRunIso).getTime() < lastScheduled.getTime();
+  }
+
   // ─── Internal methods (also used by tests via subclass) ──────────────────
 
   /** Arm this DO as a cron singleton. Idempotent — only schedules if no cron alarm exists. */
@@ -445,6 +514,34 @@ export class JobQueueDO {
         level: "info",
         data: { name, cron, priorScheduleCount: String(existing.length) },
       });
+      return;
+    }
+
+    // Defense-in-depth: a cron schedule row persists in DO SQL storage across
+    // evictions, but the underlying CF storage alarm handle can be dropped (DO
+    // eviction, or a wrapped entrypoint interfering with @cloudflare/actors/alarms,
+    // #795). When that happens getSchedules() still reports the schedule, so the
+    // guard above skips re-scheduling and the native alarm never fires again.
+    // Detect a missing alarm handle and force-set it to the next cron fire time so
+    // the alarm path self-recovers (the watchdog /tick is the primary driver).
+    const pendingAlarm = await this.ctx.storage.getAlarm();
+    if (pendingAlarm === null) {
+      try {
+        const next = CronExpressionParser.parse(cron, {
+          currentDate: new Date(),
+        })
+          .next()
+          .toDate();
+        await this.ctx.storage.setAlarm(next);
+        Sentry.addBreadcrumb({
+          category: "jobs",
+          message: "Recovered dropped cron alarm",
+          level: "warning",
+          data: { name, cron, nextRun: next.toISOString() },
+        });
+      } catch {
+        // Invalid cron expression — nothing to recover.
+      }
     }
   }
 

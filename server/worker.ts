@@ -110,6 +110,7 @@ import {
 import { CloudflarePlatform } from "./platform/cloudflare";
 import {
   armCron,
+  tickCron,
   cleanupOld,
   enqueueOnce,
   processPending,
@@ -838,12 +839,16 @@ export const handler = {
               );
             }
 
-            // Arm every cron-singleton DO. Idempotent — the DO only schedules its
-            // alarm if no `runJob` cron schedule exists. DOs drive their own
-            // sub-daily execution via @cloudflare/actors/alarms. Running on every
-            // 5-min watchdog tick ensures a dropped alarm self-heals within 5 min (#795).
+            // Arm every cron-singleton DO, then drive it via /tick. armCron keeps
+            // the native alarm schedule (and recovers a dropped alarm handle, #795),
+            // but CF alarm() delivery has proven unreliable under the Sentry-wrapped
+            // entrypoint, so tickCron is the load-bearing execution path: this
+            // watchdog fires reliably every 5 min and drains due work over the
+            // proven-working DO fetch RPC. Cron timing is honored inside the DO —
+            // daily jobs only run once/day while send-notifications runs each tick.
             for (const { name, cron } of CRON_JOBS) {
               await armCron(cfEnv, name, cron);
+              await tickCron(cfEnv, name);
             }
 
             // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
