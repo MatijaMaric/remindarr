@@ -14,9 +14,11 @@ import { runWithDb, schemaExports, titles, settings } from "../db/schema";
 import { runWithCache } from "../cache";
 import { CloudflareKvCache } from "../cache/cloudflare-kv";
 import { MemoryCache } from "../cache/memory";
-import { logger } from "../logger";
+import { logger, resetLogLevel } from "../logger";
 import Sentry from "../sentry";
 import { handlers } from "./processor";
+import { patchConfig, cfEnvToConfigOverrides } from "../config";
+import type { CfConfigEnv } from "../config";
 import type { DrizzleDb } from "../platform/types";
 
 // ─── Inline CF type declarations ───────────────────────────────────────────
@@ -67,7 +69,9 @@ declare global {
 }
 
 // ─── Minimal CF env shape needed by the DO ─────────────────────────────────
-export interface DOEnv {
+// Extends CfConfigEnv: at runtime CF passes the full env (secrets + vars) to the
+// DO constructor, and the DO must patch CONFIG from it (see constructor).
+export interface DOEnv extends CfConfigEnv {
   DB: D1Database;
   CACHE_KV?: KVNamespace;
   JOB_QUEUE_DO?: DurableObjectNamespace;
@@ -109,6 +113,14 @@ export class JobQueueDO {
   constructor(ctx: DurableObjectState, env: DOEnv) {
     this.ctx = ctx;
     this.env = env;
+    // The DO runs in its own isolate where the global CONFIG was never patched —
+    // worker.ts patchConfigFromEnv() only runs in the Worker fetch/scheduled
+    // handlers, not here. Without this, job handlers read empty secrets (e.g.
+    // CONFIG.TMDB_API_KEY) and skip all work, so episodes/titles never sync.
+    patchConfig(cfEnvToConfigOverrides(env));
+    if (env.LOG_LEVEL) {
+      resetLogLevel(env.LOG_LEVEL as "debug" | "info" | "warn" | "error");
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.alarms = new Alarms(ctx, this as any);
   }
