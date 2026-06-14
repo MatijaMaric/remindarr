@@ -521,8 +521,14 @@ export async function triggerCron(
     const jobDef = CRON_JOBS.find((j) => j.name === name);
     if (!jobDef || !env.JOB_QUEUE_DO) return { jobId: null };
     await doFetch(env, name, "/arm", "POST", { name, cron: jobDef.cron });
-    // Arming only (re)schedules an alarm, which is unreliable (#795). Drive the
-    // job immediately via the working fetch path so "Run now" actually executes.
+    // "Run now" must execute regardless of cron schedule. tick() honors cron timing
+    // and won't auto-create a job when the cron isn't due, so force a real pending
+    // row first; runJob then claims and runs it on the tick below (#795-followup).
+    await doFetch(env, name, "/enqueue", "POST", {
+      name,
+      data: null,
+      idempotent: true,
+    });
     await doFetch(env, name, "/tick", "POST", {});
     return { jobId: null };
   }

@@ -305,7 +305,11 @@ describe("triggerCron (DO mode)", () => {
     expect(result.jobId).toBeNull();
     const paths = ns.calls.map((c) => c.path);
     expect(paths).toContain("/arm");
+    expect(paths).toContain("/enqueue");
     expect(paths).toContain("/tick");
+    // The forced job row must be enqueued before the tick that drains it,
+    // otherwise tick() finds nothing to run when the cron isn't due.
+    expect(paths.indexOf("/enqueue")).toBeLessThan(paths.indexOf("/tick"));
   });
 
   it("returns jobId null for an unknown job without dispatching", async () => {

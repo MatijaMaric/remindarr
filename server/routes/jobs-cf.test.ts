@@ -208,7 +208,7 @@ describe("POST /jobs/:name (CF)", () => {
     expect(res.status).toBe(401);
   });
 
-  it("arms AND ticks the DO in durable-object mode so 'Run now' executes (#795)", async () => {
+  it("arms, enqueues, AND ticks the DO in durable-object mode so 'Run now' executes (#795)", async () => {
     const original = CONFIG.JOB_QUEUE_BACKEND;
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const calls: { path: string; method: string }[] = [];
@@ -233,7 +233,10 @@ describe("POST /jobs/:name (CF)", () => {
       expect(res.status).toBe(200);
       const paths = calls.map((c) => c.path);
       expect(paths).toContain("/arm");
+      expect(paths).toContain("/enqueue");
       expect(paths).toContain("/tick");
+      // The forced job row must be enqueued before the draining tick.
+      expect(paths.indexOf("/enqueue")).toBeLessThan(paths.indexOf("/tick"));
     } finally {
       CONFIG.JOB_QUEUE_BACKEND = original;
     }

@@ -980,6 +980,36 @@ describe("JobQueueDO", () => {
     epState.close();
   });
 
+  it("tick() runs a pre-enqueued job even when the cron is NOT due ('Run now' path)", async () => {
+    // Regression for triggerCron: "Run now" enqueues a real job row first, then ticks.
+    // tick() honors cron timing and won't auto-create a job, but runJob still claims
+    // any existing pending row regardless of schedule — so the forced run executes.
+    let called = false;
+    const { do_: epDo, state: epState } = makeDO("sync-episodes");
+    processorModule.handlers["sync-episodes"] = async () => {
+      called = true;
+    };
+    await epDo.armCron("sync-episodes", "30 3 * * *");
+    // A completed run timestamped now → the daily cron is NOT due again
+    epState.rawDb
+      .prepare(
+        "INSERT INTO jobs (name, status, run_at, completed_at) VALUES ('sync-episodes','completed',?,?)",
+      )
+      .run(new Date().toISOString(), new Date().toISOString());
+
+    // triggerCron forces a pending row before ticking
+    await epDo.enqueue("sync-episodes", null, undefined, undefined, true);
+    const result = await epDo.tick();
+
+    expect(called).toBe(true);
+    expect(result.ran).toBe(true);
+    const completed = epDo
+      .getRecentJobs()
+      .filter((r) => r.status === "completed");
+    expect(completed.length).toBe(2); // the seeded run + the forced "Run now" run
+    epState.close();
+  });
+
   it("tick() drains a pending ad-hoc job without calling alarm()", async () => {
     const calledWith: (string | null)[] = [];
     processorModule.handlers["sync-show-episodes"] = async (data) => {
