@@ -39,17 +39,25 @@ export async function getOffersForTitle(titleId: string) {
   });
 }
 
+// D1 caps bound parameters at 100 per statement; this query binds only titleIds.
+const OFFERS_TITLEIDS_CHUNK_SIZE = 100;
+
 export async function getOffersForTitles(titleIds: string[]) {
   return traceDbQuery("getOffersForTitles", async () => {
     if (titleIds.length === 0)
       return new Map<string, Awaited<ReturnType<typeof getOffersForTitle>>>();
     const db = getDb();
-    const allOffers = await db
-      .select(offerColumns)
-      .from(offers)
-      .innerJoin(providers, eq(offers.providerId, providers.id))
-      .where(inArray(offers.titleId, titleIds))
-      .all();
+    const allOffers: Awaited<ReturnType<typeof getOffersForTitle>> = [];
+    for (let i = 0; i < titleIds.length; i += OFFERS_TITLEIDS_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + OFFERS_TITLEIDS_CHUNK_SIZE);
+      const rows = await db
+        .select(offerColumns)
+        .from(offers)
+        .innerJoin(providers, eq(offers.providerId, providers.id))
+        .where(inArray(offers.titleId, chunk))
+        .all();
+      allOffers.push(...rows);
+    }
     return Map.groupBy(allOffers, (o) => o.title_id);
   });
 }
