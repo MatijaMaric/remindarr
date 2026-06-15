@@ -146,7 +146,16 @@ const TitleCard = memo(function TitleCard({
           <>
             {showProgressBar &&
             (title.released_episodes_count ?? title.total_episodes ?? 0) > 0 ? (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700">
+              <div
+                className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700"
+                role="progressbar"
+                aria-label={`${title.watched_episodes_count ?? 0} of ${title.released_episodes_count ?? title.total_episodes ?? 1} episodes watched`}
+                aria-valuenow={title.watched_episodes_count ?? 0}
+                aria-valuemin={0}
+                aria-valuemax={
+                  title.released_episodes_count ?? title.total_episodes ?? 1
+                }
+              >
                 <div
                   className="h-full bg-amber-500 transition-all duration-300"
                   style={{
@@ -196,7 +205,16 @@ const TitleCard = memo(function TitleCard({
           title.object_type === "SHOW" &&
           title.total_episodes != null &&
           title.total_episodes > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700">
+            <div
+              className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700"
+              role="progressbar"
+              aria-label={`${title.watched_episodes_count ?? 0} of ${title.released_episodes_count ?? title.total_episodes} episodes watched`}
+              aria-valuenow={title.watched_episodes_count ?? 0}
+              aria-valuemin={0}
+              aria-valuemax={
+                title.released_episodes_count ?? title.total_episodes
+              }
+            >
               <div
                 className="h-full bg-amber-500 transition-all duration-300"
                 style={{
