@@ -88,6 +88,10 @@ function getDoId(
   return doNamespace.idFromName(key);
 }
 
+/** Per-RPC deadline for the read fan-out in getJobsData, so a DO busy running a job
+ *  can't stall the admin page (the .catch falls back to empty after this elapses). */
+const READ_RPC_TIMEOUT_MS = 3000;
+
 async function doFetch<T>(
   env: CFEnv,
   name: string,
@@ -95,19 +99,34 @@ async function doFetch<T>(
   method: "GET" | "POST",
   body?: unknown,
   partitionKey?: string | number | null,
+  timeoutMs?: number,
 ): Promise<T> {
   const id = getDoId(env, name, partitionKey);
   const stub = env.JOB_QUEUE_DO!.get(id);
-  const resp = await stub.fetch(
-    new Request(`https://do${path}`, {
-      method,
-      headers: body ? { "content-type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    }),
-  );
-  if (!resp.ok)
-    throw new Error(`DO fetch failed: ${resp.status} ${await resp.text()}`);
-  return resp.json() as Promise<T>;
+  // Optional timeout: a DO is single-threaded, so while it runs a long job body its
+  // read RPCs (/stats, /cron-info, /recent-jobs) would otherwise hang until the platform
+  // timeout and stall the admin page. AbortController lets the caller's .catch fall back
+  // to empty quickly. Write RPCs pass no timeout — they must reach the DO.
+  const controller = timeoutMs != null ? new AbortController() : undefined;
+  const timer =
+    controller != null
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : undefined;
+  try {
+    const resp = await stub.fetch(
+      new Request(`https://do${path}`, {
+        method,
+        headers: body ? { "content-type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller?.signal,
+      }),
+    );
+    if (!resp.ok)
+      throw new Error(`DO fetch failed: ${resp.status} ${await resp.text()}`);
+    return resp.json() as Promise<T>;
+  } finally {
+    if (timer != null) clearTimeout(timer);
+  }
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -437,7 +456,15 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
   const [statsResults, cronInfoResults, recentResults] = await Promise.all([
     Promise.all(
       doNames.map((name) =>
-        doFetch<JobStats>(env, name, "/stats", "GET")
+        doFetch<JobStats>(
+          env,
+          name,
+          "/stats",
+          "GET",
+          undefined,
+          null,
+          READ_RPC_TIMEOUT_MS,
+        )
           .then((s) => ({ name, stats: s }))
           .catch((err) => {
             log.warn("DO stats unavailable", { name, err });
@@ -452,7 +479,7 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
           nextRun: string | null;
           lastRun: string | null;
           alarmLastCompletedAt: string | null;
-        }>(env, name, "/cron-info", "GET")
+        }>(env, name, "/cron-info", "GET", undefined, null, READ_RPC_TIMEOUT_MS)
           .then((info) => ({ name, info }))
           .catch((err) => {
             log.warn("DO cron-info unavailable", { name, err });
@@ -462,7 +489,15 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
     ),
     Promise.all(
       doNames.map((name) =>
-        doFetch<DOJobRow[]>(env, name, "/recent-jobs?limit=5", "GET")
+        doFetch<DOJobRow[]>(
+          env,
+          name,
+          "/recent-jobs?limit=5",
+          "GET",
+          undefined,
+          null,
+          READ_RPC_TIMEOUT_MS,
+        )
           .then((rows) => rows.map((r) => ({ ...r, name })))
           .catch((err) => {
             log.warn("DO recent-jobs unavailable", { name, err });
@@ -516,6 +551,7 @@ async function getJobsOverviewDO(env: CFEnv): Promise<{
 export async function triggerCron(
   env: CFEnv,
   name: string,
+  waitUntil?: (promise: Promise<unknown>) => void,
 ): Promise<{ jobId: number | null }> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     const jobDef = CRON_JOBS.find((j) => j.name === name);
@@ -523,13 +559,25 @@ export async function triggerCron(
     await doFetch(env, name, "/arm", "POST", { name, cron: jobDef.cron });
     // "Run now" must execute regardless of cron schedule. tick() honors cron timing
     // and won't auto-create a job when the cron isn't due, so force a real pending
-    // row first; runJob then claims and runs it on the tick below (#795-followup).
+    // row first; runJob then claims and runs it on the tick (#795-followup).
     await doFetch(env, name, "/enqueue", "POST", {
       name,
       data: null,
       idempotent: true,
     });
-    await doFetch(env, name, "/tick", "POST", {});
+    // Drive the job via /tick WITHOUT blocking the HTTP response: running a full sync
+    // body inline made the POST take 140s+. Defer it to waitUntil so the request returns
+    // immediately while the job runs promptly (not waiting on unreliable alarm delivery).
+    // runJob's due/in-flight guards ensure this tick + the enqueue's 1s alarm can't
+    // double-run. When no executionCtx is available (e.g. tests), fall back to detached.
+    const tick = doFetch(env, name, "/tick", "POST", {}).catch((err) => {
+      log.warn("DO tick failed", {
+        name,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+    if (waitUntil) waitUntil(tick);
+    else void tick;
     return { jobId: null };
   }
   const jobId = await enqueueJobReturningId(name);

@@ -32,6 +32,7 @@ import {
   enqueueOnce,
   processPending,
   recoverStale,
+  getJobsOverview,
   CRON_JOBS,
   CRON_BY_EXPRESSION,
   runWithEnv,
@@ -292,15 +293,21 @@ describe("tickCron", () => {
 });
 
 describe("triggerCron (DO mode)", () => {
-  it("arms AND ticks the named DO so 'Run now' actually executes", async () => {
+  it("arms, enqueues, AND ticks the named DO so 'Run now' actually executes", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace();
     const env = {
       ...d1Env,
       JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
     };
+    const deferred: Promise<unknown>[] = [];
 
-    const result = await triggerCron(env, "sync-episodes");
+    const result = await triggerCron(env, "sync-episodes", (p) =>
+      deferred.push(p),
+    );
+    // The tick is deferred to waitUntil so the caller can respond immediately;
+    // await it here to assert the full dispatch happened.
+    await Promise.all(deferred);
 
     expect(result.jobId).toBeNull();
     const paths = ns.calls.map((c) => c.path);
@@ -310,6 +317,24 @@ describe("triggerCron (DO mode)", () => {
     // The forced job row must be enqueued before the tick that drains it,
     // otherwise tick() finds nothing to run when the cron isn't due.
     expect(paths.indexOf("/enqueue")).toBeLessThan(paths.indexOf("/tick"));
+  });
+
+  it("defers /tick to waitUntil instead of awaiting it inline (non-blocking 'Run now')", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace();
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+    const deferred: Promise<unknown>[] = [];
+
+    // /arm and /enqueue are awaited; /tick is handed to waitUntil.
+    await triggerCron(env, "sync-episodes", (p) => deferred.push(p));
+
+    expect(deferred).toHaveLength(1);
+    const armEnqueue = ns.calls.map((c) => c.path);
+    expect(armEnqueue).toContain("/arm");
+    expect(armEnqueue).toContain("/enqueue");
   });
 
   it("returns jobId null for an unknown job without dispatching", async () => {
@@ -325,6 +350,43 @@ describe("triggerCron (DO mode)", () => {
     expect(result.jobId).toBeNull();
     expect(ns.calls).toHaveLength(0);
   });
+});
+
+describe("getJobsOverview (DO mode) read-RPC timeout", () => {
+  it("returns promptly with empty stats when a DO's read RPCs hang", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    // A DO blocked running a long job never responds to its read RPCs. The stub honors
+    // the abort signal doFetch attaches, so each read aborts after READ_RPC_TIMEOUT_MS
+    // and the .catch falls back to empty — the overview must not hang.
+    const stub = {
+      fetch: (req: Request) =>
+        new Promise<Response>((_resolve, reject) => {
+          req.signal?.addEventListener("abort", () =>
+            reject(new Error("aborted")),
+          );
+          // never resolve otherwise
+        }),
+    };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: {
+        idFromName: (name: string) => ({ toString: () => name }),
+        get: () => stub,
+      } as unknown as DurableObjectNamespace,
+    };
+
+    const start = Date.now();
+    const overview = await getJobsOverview(env);
+    const elapsed = Date.now() - start;
+
+    // Resolves around the 3s timeout, well short of the platform's ~30s hang.
+    expect(elapsed).toBeLessThan(10_000);
+    // Every cron DO degraded to empty stats rather than blocking the page.
+    for (const s of Object.values(overview.stats)) {
+      expect(s).toEqual({ pending: 0, running: 0, completed: 0, failed: 0 });
+    }
+    expect(overview.crons.every((c) => c.last_run === null)).toBe(true);
+  }, 15_000);
 });
 
 describe("processPending (DO mode)", () => {
