@@ -290,6 +290,76 @@ describe("JobQueueDO", () => {
     expect(rows[0].status).toBe("completed");
   });
 
+  it("runJob (alarm path) does NOT auto-create a duplicate when the cron just ran (not due)", async () => {
+    // Regression for the "Run now queues twice" bug: triggerCron's /enqueue schedules a
+    // 1-second delayed alarm; after /tick runs the job, that leftover alarm fires and
+    // invokes runJob via the alarm path with NO opts. Without an intrinsic due-check it
+    // fabricated a fresh cron run → "2 running". Here a completed row timestamped now makes
+    // the daily cron not due, so the alarm-path runJob must create nothing.
+    let calls = 0;
+    processorModule.handlers["sync-titles"] = async () => {
+      calls++;
+    };
+    await do_.armCron("sync-titles", "0 3 * * *");
+    const now = new Date().toISOString();
+    state.rawDb
+      .prepare(
+        "INSERT INTO jobs (name, status, run_at, completed_at) VALUES ('sync-titles','completed',?,?)",
+      )
+      .run(now, now);
+
+    await do_.runJob(null); // alarm-path invocation (no opts)
+
+    expect(calls).toBe(0);
+    expect(do_.getRecentJobs()).toHaveLength(1); // only the seeded completed row
+  });
+
+  it("runJob does NOT fabricate a duplicate while a run is already in flight", async () => {
+    // A concurrent /tick may have claimed the row (status='running') with no terminal row
+    // yet, so the cron still looks due. The 'running' guard must still block a second run.
+    let calls = 0;
+    processorModule.handlers["sync-titles"] = async () => {
+      calls++;
+    };
+    await do_.armCron("sync-titles", "0 3 * * *");
+    const now = new Date().toISOString();
+    state.rawDb
+      .prepare(
+        "INSERT INTO jobs (name, status, run_at, started_at) VALUES ('sync-titles','running',?,?)",
+      )
+      .run(now, now);
+
+    await do_.runJob(null);
+
+    expect(calls).toBe(0);
+    const rows = do_.getRecentJobs();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("running"); // untouched
+  });
+
+  it("tick() reclaims a stale 'running' row (DO-reset orphan) and drains it", async () => {
+    // A deploy ("Durable Object reset because its code was updated") can kill an in-flight
+    // runJob, orphaning a row in 'running'. tick() runs on the reliable watchdog path and
+    // must reclaim it (recover) before draining so it doesn't stay stuck forever.
+    let calls = 0;
+    processorModule.handlers["sync-titles"] = async () => {
+      calls++;
+    };
+    await do_.armCron("sync-titles", "0 3 * * *");
+    const stale = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    state.rawDb
+      .prepare(
+        "INSERT INTO jobs (name, status, run_at, started_at) VALUES ('sync-titles','running',?,?)",
+      )
+      .run(stale, stale);
+
+    const result = await do_.tick();
+
+    expect(result.ran).toBe(true);
+    expect(calls).toBe(1);
+    expect(do_.getRecentJobs()[0].status).toBe("completed");
+  });
+
   it("runJob skips jobs not yet ready (future run_at)", async () => {
     let called = false;
     processorModule.handlers["sync-show-episodes"] = async () => {

@@ -32,7 +32,18 @@ app.post("/:name", zValidator("param", jobNameParamSchema), async (c) => {
   if (!VALID_JOB_NAMES.has(name as (typeof CRON_JOBS)[number]["name"])) {
     return err(c, `Unknown job: ${name}`, 400);
   }
-  const result = await triggerCron(c.env as unknown as CFEnv, name);
+  // Pass executionCtx.waitUntil so triggerCron can run the job in the background
+  // instead of blocking this response until the (potentially multi-minute) job finishes.
+  // c.executionCtx throws when no ExecutionContext is bound (e.g. some test harnesses);
+  // fall back to undefined so triggerCron detaches the tick instead.
+  let waitUntil: ((p: Promise<unknown>) => void) | undefined;
+  try {
+    const ctx = c.executionCtx;
+    waitUntil = (p) => ctx.waitUntil(p);
+  } catch {
+    waitUntil = undefined;
+  }
+  const result = await triggerCron(c.env as unknown as CFEnv, name, waitUntil);
   return ok(c, { jobId: result.jobId, success: true });
 });
 

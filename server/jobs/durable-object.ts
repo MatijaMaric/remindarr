@@ -252,14 +252,28 @@ export class JobQueueDO {
     >[];
 
     if (rows.length === 0) {
-      if (cron && !opts.skipCronAutoCreate) {
-        // Cron singleton: alarm fires at each scheduled tick. Auto-create the job for
-        // this tick if no pending rows exist (including future-scheduled ones).
-        const anyPending =
+      // Cron singleton: alarm fires at each scheduled tick. Auto-create the job for
+      // this tick only when the cron is genuinely DUE and no pending/running row exists.
+      //
+      // The native cron alarm and the 1-second "drain" alarm (scheduled by enqueue/
+      // rearmIfPending) share this runJob callback and are indistinguishable here. Without
+      // an intrinsic due-check, a drain alarm that fires right after a manual "Run now"
+      // (the enqueued row already claimed by /tick) would fabricate a duplicate run — the
+      // cause of "2 running" after a single click. tick() also passes skipCronAutoCreate as
+      // belt-and-suspenders, but the alarm path never receives opts, so the load-bearing
+      // guard is this internal isCronDue() check. The 'running' guard additionally stops a
+      // second fabrication while a run is still in flight.
+      const due =
+        cron != null &&
+        this.isCronDue(cron, this.lastTerminalRun(), new Date());
+      if (cron && due && !opts.skipCronAutoCreate) {
+        const anyActive =
           this.ctx.storage.sql
-            .exec("SELECT 1 FROM jobs WHERE status = 'pending' LIMIT 1")
+            .exec(
+              "SELECT 1 FROM jobs WHERE status IN ('pending', 'running') LIMIT 1",
+            )
             .toArray().length > 0;
-        if (!anyPending) {
+        if (!anyActive) {
           this.ctx.storage.sql.exec(
             "INSERT INTO jobs (name, run_at, max_attempts) VALUES (?, ?, 3)",
             name,
@@ -466,20 +480,34 @@ export class JobQueueDO {
     if (!name) return { ran: false };
     const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
 
+    // Reclaim rows orphaned in 'running' (e.g. a DO reset "because its code was updated"
+    // killed an in-flight runJob callback). This runs on the watchdog-driven /tick path,
+    // which fires reliably every 5 min, so orphans recover even when the separate
+    // /recover RPC is starved by a busy DO.
+    this.recover();
+
     let skipCronAutoCreate = false;
     if (cron) {
-      const lastRows = this.ctx.storage.sql
-        .exec(
-          "SELECT completed_at FROM jobs WHERE status IN ('completed', 'failed') ORDER BY id DESC LIMIT 1",
-        )
-        .toArray() as Array<{ completed_at: string | null }>;
-      const lastRun = lastRows[0]?.completed_at ?? null;
-      skipCronAutoCreate = !this.isCronDue(cron, lastRun, new Date());
+      skipCronAutoCreate = !this.isCronDue(
+        cron,
+        this.lastTerminalRun(),
+        new Date(),
+      );
     }
 
     const terminalBefore = this.terminalCount();
     await this.runJob(null, { skipCronAutoCreate });
     return { ran: this.terminalCount() > terminalBefore };
+  }
+
+  /** completed_at of the most recent terminal (completed/failed) row, or null if none. */
+  private lastTerminalRun(): string | null {
+    const rows = this.ctx.storage.sql
+      .exec(
+        "SELECT completed_at FROM jobs WHERE status IN ('completed', 'failed') ORDER BY id DESC LIMIT 1",
+      )
+      .toArray() as Array<{ completed_at: string | null }>;
+    return rows[0]?.completed_at ?? null;
   }
 
   /** Count of rows that have reached a terminal state (used to detect tick execution). */
@@ -683,17 +711,12 @@ export class JobQueueDO {
       const schedule = cronSchedules[0] as { time: number };
       nextRun = new Date(schedule.time * 1000).toISOString();
     }
-    const lastRows = this.ctx.storage.sql
-      .exec(
-        "SELECT completed_at FROM jobs WHERE status IN ('completed', 'failed') ORDER BY id DESC LIMIT 1",
-      )
-      .toArray() as Array<{ completed_at: string | null }>;
     const alarmLastCompletedAt =
       (await this.ctx.storage.get<string>("alarm_last_completed_at")) ?? null;
     return {
       cron,
       nextRun,
-      lastRun: lastRows[0]?.completed_at ?? null,
+      lastRun: this.lastTerminalRun(),
       alarmLastCompletedAt,
     };
   }

@@ -224,13 +224,23 @@ describe("POST /jobs/:name (CF)", () => {
         },
       }),
     };
+    const deferred: Promise<unknown>[] = [];
+    const executionCtx = {
+      waitUntil: (p: Promise<unknown>) => deferred.push(p),
+      passThroughOnException: () => {},
+    };
     try {
       const res = await app.request(
         "/jobs/sync-episodes",
         { method: "POST", headers: { Cookie: adminCookie } },
         { JOB_QUEUE_DO: fakeNs, DB: {} } as unknown as Record<string, unknown>,
+        executionCtx as unknown as Parameters<typeof app.request>[3],
       );
       expect(res.status).toBe(200);
+      // The tick is deferred to executionCtx.waitUntil so the response returns
+      // immediately instead of blocking on the (potentially multi-minute) job.
+      expect(deferred).toHaveLength(1);
+      await Promise.all(deferred);
       const paths = calls.map((c) => c.path);
       expect(paths).toContain("/arm");
       expect(paths).toContain("/enqueue");
