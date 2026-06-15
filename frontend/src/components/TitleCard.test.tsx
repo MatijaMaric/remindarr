@@ -347,8 +347,14 @@ describe("TitleCard", () => {
       wrapper: NoUserWrapper,
     });
 
-    const progressTrack = container.querySelector(".bg-zinc-700");
+    const progressTrack = container.querySelector(
+      ".bg-zinc-700",
+    ) as HTMLElement;
     expect(progressTrack).not.toBeNull();
+    expect(progressTrack.getAttribute("role")).toBe("progressbar");
+    expect(progressTrack.getAttribute("aria-valuenow")).toBe("6");
+    expect(progressTrack.getAttribute("aria-valuemin")).toBe("0");
+    expect(progressTrack.getAttribute("aria-valuemax")).toBe("12");
     const progressFill = progressTrack!.querySelector(
       ".bg-amber-500",
     ) as HTMLElement;
@@ -415,8 +421,14 @@ describe("TitleCard", () => {
       wrapper: NoUserWrapper,
     });
 
-    const progressTrack = container.querySelector(".bg-zinc-700");
+    const progressTrack = container.querySelector(
+      ".bg-zinc-700",
+    ) as HTMLElement;
     expect(progressTrack).not.toBeNull();
+    expect(progressTrack.getAttribute("role")).toBe("progressbar");
+    expect(progressTrack.getAttribute("aria-valuenow")).toBe("3");
+    expect(progressTrack.getAttribute("aria-valuemin")).toBe("0");
+    expect(progressTrack.getAttribute("aria-valuemax")).toBe("10");
     const progressFill = progressTrack!.querySelector(".bg-amber-500");
     expect(progressFill).not.toBeNull();
   });
