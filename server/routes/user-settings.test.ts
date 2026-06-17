@@ -162,8 +162,8 @@ describe("PUT /user/settings/homepage-layout", () => {
 
     const res = await app.request("/user/settings/homepage-layout");
     const body = await res.json();
-    // All 10 sections returned; the 8 missing ones are appended from DEFAULT_HOMEPAGE_LAYOUT
-    expect(body.homepage_layout).toHaveLength(10);
+    // All 11 sections returned; the 9 missing ones are appended from DEFAULT_HOMEPAGE_LAYOUT
+    expect(body.homepage_layout).toHaveLength(11);
     expect(body.homepage_layout[0].id).toBe("today");
     expect(body.homepage_layout[1].id).toBe("unwatched");
   });
@@ -266,13 +266,14 @@ describe("validation", () => {
 // so parseLayout() doesn't strip them. See frontend/src/types.ts for canonical list.
 
 describe("homepage-layout — new section IDs (regression #803)", () => {
-  it("HOMEPAGE_SECTION_IDS contains all 10 sections including movies_to_watch, upcoming_movies, streak, friends_loved", () => {
+  it("HOMEPAGE_SECTION_IDS contains all 11 sections including trending, movies_to_watch, upcoming_movies, streak, friends_loved", () => {
     const ids = [...HOMEPAGE_SECTION_IDS];
+    expect(ids).toContain("trending");
     expect(ids).toContain("movies_to_watch");
     expect(ids).toContain("upcoming_movies");
     expect(ids).toContain("streak");
     expect(ids).toContain("friends_loved");
-    expect(ids).toHaveLength(10);
+    expect(ids).toHaveLength(11);
   });
 
   it("default layout for new user includes movies_to_watch and upcoming_movies", async () => {
@@ -281,11 +282,12 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     const ids = body.homepage_layout.map((s: { id: string }) => s.id);
+    expect(ids).toContain("trending");
     expect(ids).toContain("movies_to_watch");
     expect(ids).toContain("upcoming_movies");
     expect(ids).toContain("streak");
     expect(ids).toContain("friends_loved");
-    expect(body.homepage_layout).toHaveLength(10);
+    expect(body.homepage_layout).toHaveLength(11);
   });
 
   it("parseLayout preserves movies_to_watch, upcoming_movies, streak, friends_loved from stored layout", async () => {
@@ -347,7 +349,7 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.homepage_layout).toHaveLength(10);
+    expect(body.homepage_layout).toHaveLength(11);
     for (const id of HOMEPAGE_SECTION_IDS) {
       expect(
         body.homepage_layout.some((s: { id: string }) => s.id === id),

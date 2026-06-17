@@ -805,7 +805,36 @@ export interface AppearanceSettings {
   autoplayTrailers: number;
 }
 
+// ─── Trending (home screen) ───────────────────────────────────────────────────
+
+/** A trending movie or TV show. `posterUrl` is a full image URL (or null). */
+export interface TrendingTitle {
+  id: string;
+  objectType: "MOVIE" | "SHOW";
+  title: string;
+  posterUrl: string | null;
+  releaseDate: string | null;
+  isTracked: boolean;
+}
+
+/** A trending person. `profileUrl` is a full image URL (or null). Not trackable. */
+export interface TrendingPerson {
+  id: number;
+  name: string;
+  profileUrl: string | null;
+  knownForDepartment: string | null;
+}
+
+/** The trending snapshot returned by GET /api/trending. Any group may be empty. */
+export interface TrendingSnapshot {
+  movies: TrendingTitle[];
+  shows: TrendingTitle[];
+  people: TrendingPerson[];
+  refreshedAt: string;
+}
+
 export type HomepageSectionId =
+  | "trending"
   | "up_next"
   | "unwatched"
   | "recommendations"
@@ -824,6 +853,7 @@ export interface HomepageSection {
 
 export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "streak", enabled: true },
+  { id: "trending", enabled: true },
   { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
   { id: "movies_to_watch", enabled: true },

@@ -8,6 +8,7 @@ import type {
   TmdbDiscoverMovieResult,
   TmdbDiscoverTvResult,
   TmdbSearchMultiResult,
+  TmdbTrendingPersonResult,
 } from "./types";
 
 // ─── Shared types (previously in justwatch/parser.ts) ───────────────────────
@@ -59,6 +60,14 @@ export interface ParsedProvider {
   name: string;
   technicalName: string;
   iconUrl: string;
+}
+
+/** A trending person (home discovery row). Not trackable, no DB persistence. */
+export interface TrendingPerson {
+  id: number;
+  name: string;
+  profileUrl: string | null;
+  knownForDepartment: string | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -344,6 +353,24 @@ export function parseSearchResult(
       imdbVotes: null,
       tmdbScore: result.vote_average || null,
     },
+  };
+}
+
+// ─── Parse trending people (lightweight, no DB persistence) ─────────────────
+
+function profileImageUrl(path: string | null): string | null {
+  if (!path) return null;
+  return `${CONFIG.TMDB_IMAGE_BASE_URL}/w185${path}`;
+}
+
+export function parseTrendingPerson(
+  person: TmdbTrendingPersonResult,
+): TrendingPerson {
+  return {
+    id: person.id,
+    name: person.name,
+    profileUrl: profileImageUrl(person.profile_path),
+    knownForDepartment: person.known_for_department || null,
   };
 }
 

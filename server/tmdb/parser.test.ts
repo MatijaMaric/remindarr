@@ -6,6 +6,7 @@ import {
   parseDiscoverMovie,
   parseDiscoverTv,
   parseSearchResult,
+  parseTrendingPerson,
   extractProviders,
 } from "./parser";
 import {
@@ -15,9 +16,43 @@ import {
   makeTmdbDiscoverTv,
   makeTmdbSearchMultiMovie,
   makeTmdbSearchMultiTv,
+  makeTmdbTrendingPerson,
   makeParsedTitle,
   makeParsedOffer,
 } from "../test-utils/fixtures";
+
+describe("parseTrendingPerson", () => {
+  it("maps id, name, knownForDepartment and builds a full profile URL", () => {
+    const result = parseTrendingPerson(
+      makeTmdbTrendingPerson({
+        id: 7,
+        name: "Jane Doe",
+        profile_path: "/jane.jpg",
+        known_for_department: "Directing",
+      }),
+    );
+    expect(result.id).toBe(7);
+    expect(result.name).toBe("Jane Doe");
+    expect(result.knownForDepartment).toBe("Directing");
+    expect(result.profileUrl).toBe(
+      `${CONFIG.TMDB_IMAGE_BASE_URL}/w185/jane.jpg`,
+    );
+  });
+
+  it("returns null profileUrl when the person has no profile photo", () => {
+    const result = parseTrendingPerson(
+      makeTmdbTrendingPerson({ profile_path: null }),
+    );
+    expect(result.profileUrl).toBeNull();
+  });
+
+  it("returns null knownForDepartment when absent", () => {
+    const result = parseTrendingPerson(
+      makeTmdbTrendingPerson({ known_for_department: null }),
+    );
+    expect(result.knownForDepartment).toBeNull();
+  });
+});
 
 describe("parseMovieDetails", () => {
   it("parses movie with correct fields", () => {

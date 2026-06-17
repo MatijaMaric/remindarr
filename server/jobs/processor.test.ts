@@ -37,12 +37,41 @@ const mockSyncEpisodesForShow = spyOn(
   "syncEpisodesForShow",
 ).mockResolvedValue(0);
 
+import * as tmdbClientModule from "../tmdb/client";
+const emptyTrendingPage = {
+  results: [],
+  total_pages: 1,
+  total_results: 0,
+  page: 1,
+};
+const mockFetchTrendingMovies = spyOn(
+  tmdbClientModule,
+  "fetchTrendingMovies",
+).mockResolvedValue(emptyTrendingPage as any);
+const mockFetchTrendingTv = spyOn(
+  tmdbClientModule,
+  "fetchTrendingTv",
+).mockResolvedValue(emptyTrendingPage as any);
+const mockFetchTrendingPeople = spyOn(
+  tmdbClientModule,
+  "fetchTrendingPeople",
+).mockResolvedValue(emptyTrendingPage as any);
+
 import { CONFIG } from "../config";
+import { initCache, getCache } from "../cache";
+import { MemoryCache } from "../cache/memory";
+import { CRON_JOBS } from "./backend";
+import { trendingCacheKey } from "../routes/trending";
+import { makeTmdbDiscoverMovie } from "../test-utils/fixtures";
+
+// Trending sync writes to the distributed cache — initialize an in-memory one.
+initCache(new MemoryCache(100));
 
 import {
   processPendingJobs,
   enqueueCronJob,
   cleanupOldJobs,
+  handlers,
 } from "./processor";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
@@ -57,6 +86,10 @@ beforeEach(() => {
   mockSyncEpisodes.mockClear();
   mockSyncEpisodesForShow.mockClear();
   mockDeleteExpiredSessions.mockClear();
+  mockFetchTrendingMovies.mockClear();
+  mockFetchTrendingTv.mockClear();
+  mockFetchTrendingPeople.mockClear();
+  initCache(new MemoryCache(100));
 });
 
 afterAll(() => {
@@ -67,6 +100,9 @@ afterAll(() => {
   mockSyncEpisodes.mockRestore();
   mockSyncEpisodesForShow.mockRestore();
   mockDeleteExpiredSessions.mockRestore();
+  mockFetchTrendingMovies.mockRestore();
+  mockFetchTrendingTv.mockRestore();
+  mockFetchTrendingPeople.mockRestore();
 });
 
 async function insertJob(
@@ -617,5 +653,55 @@ describe("processor Sentry capture on permanent failure", () => {
     expect(typeof permanentLog!.runAt).toBe("string");
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+// ─── CF handler parity ───────────────────────────────────────────────────────
+// The CF runtime dispatches every job through the `handlers` record (D1 mode via
+// processPendingJobs, DO mode via durable-object runJob). A cron in CRON_JOBS
+// with no handler here fails with "Unknown job type" on every tick — this guard
+// catches that class of dual-runtime parity gap.
+
+describe("CF handler parity", () => {
+  it("every cron job in CRON_JOBS has a CF processor handler", () => {
+    for (const { name } of CRON_JOBS) {
+      expect(handlers[name]).toBeDefined();
+    }
+  });
+
+  it("includes a sync-trending handler", () => {
+    expect(handlers["sync-trending"]).toBeDefined();
+  });
+});
+
+// ─── sync-trending (CF path) ─────────────────────────────────────────────────
+
+describe("sync-trending handler (CF path)", () => {
+  it("builds the snapshot and writes the cache via processPendingJobs", async () => {
+    mockFetchTrendingMovies.mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 1 })],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
+    } as any);
+
+    await insertJob("sync-trending");
+    await processPendingJobs();
+
+    expect(mockFetchTrendingMovies).toHaveBeenCalledTimes(1);
+    const cached = (await getCache().get(trendingCacheKey("week"))) as any;
+    expect(cached).not.toBeNull();
+    expect(cached.movies).toHaveLength(1);
+    expect(cached.movies[0].id).toBe("movie-1");
+  });
+
+  it("skips and writes nothing when TMDB_API_KEY is unset", async () => {
+    CONFIG.TMDB_API_KEY = "";
+    await insertJob("sync-trending");
+    await processPendingJobs();
+
+    expect(mockFetchTrendingMovies).not.toHaveBeenCalled();
+    expect(await getCache().get(trendingCacheKey("week"))).toBeNull();
+    CONFIG.TMDB_API_KEY = "test-key";
   });
 });

@@ -72,6 +72,7 @@ import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
 // jobsRoutes excluded: uses Bun-only in-memory job queue (bun:sqlite).
 // CF Workers uses cron triggers instead (see scheduled handler below).
 import browseRoutes from "./routes/browse";
+import trendingRoutes from "./routes/trending";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import integrationRoutes from "./routes/integrations";
@@ -442,6 +443,11 @@ function createApp(env: Env) {
   app.use("/api/browse/*", browseRateLimiter, optionalAuth);
   app.use("/api/browse", browseRateLimiter, optionalAuth);
   app.route("/api/browse", browseRoutes);
+
+  // Trending (home screen) — optionalAuth for per-user isTracked overlay
+  app.use("/api/trending/*", optionalAuth);
+  app.use("/api/trending", optionalAuth);
+  app.route("/api/trending", trendingRoutes);
 
   app.use("/api/calendar/*", optionalAuth);
   app.use("/api/calendar", optionalAuth);

@@ -15,6 +15,7 @@ import type {
   HomepageSection,
   FriendsLovedItem,
   StreakData,
+  TrendingSnapshot,
 } from "../types";
 import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import StreakCounter from "../components/profile/StreakCounter";
@@ -36,6 +37,7 @@ import UpNextRow from "../components/UpNextRow";
 import FriendsLovedRow from "../components/FriendsLovedRow";
 import SuggestedForYouRow from "../components/SuggestedForYouRow";
 import MovieRow from "../components/MovieRow";
+import TrendingSection from "../components/TrendingSection";
 import { MediaCard } from "../components/MediaCard";
 import type { UpNextItem, MovieTrackResponse } from "../api";
 
@@ -101,12 +103,16 @@ function MobileFeedHome({
   upcoming,
   unwatched,
   streak,
+  trending,
+  trendingLoading,
 }: {
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
   today: Episode[];
   upcoming: Episode[];
   unwatched: Episode[];
   streak: StreakData | null;
+  trending: TrendingSnapshot;
+  trendingLoading: boolean;
 }) {
   const tonightEp = today[0] ?? null;
   const alsoAiring = today.slice(1);
@@ -391,6 +397,16 @@ function MobileFeedHome({
           </div>
         </>
       )}
+
+      {/* Trending — discovery row (movies, TV, people) */}
+      <div className="px-5 pt-5">
+        <TrendingSection
+          movies={trending.movies}
+          shows={trending.shows}
+          people={trending.people}
+          isLoading={trendingLoading}
+        />
+      </div>
     </div>
   );
 }
@@ -414,6 +430,20 @@ export default function HomePage() {
         .then((res) => res.titles.map(normalizeSearchTitle))
         .catch(() => [] as Title[]),
   });
+
+  // Trending snapshot — shared by the signed-in and signed-out home paths
+  // (FR-011). Fails soft: a rejected fetch yields an empty section, never an
+  // error that blocks the rest of home (FR-008).
+  const { data: trendingData, isLoading: trendingLoading } = useQuery({
+    queryKey: ["trending"],
+    queryFn: ({ signal }) => api.getTrending(signal),
+  });
+  const trending = trendingData ?? {
+    movies: [],
+    shows: [],
+    people: [],
+    refreshedAt: "",
+  };
 
   const {
     data: authData,
@@ -698,6 +728,14 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Trending (movies, TV, people) — available to signed-out visitors */}
+        <TrendingSection
+          movies={trending.movies}
+          shows={trending.shows}
+          people={trending.people}
+          isLoading={trendingLoading}
+        />
+
         {/* Popular titles */}
         <section>
           <div className="flex items-baseline justify-between mb-4">
@@ -736,6 +774,8 @@ export default function HomePage() {
         upcoming={upcoming}
         unwatched={unwatched}
         streak={streakData}
+        trending={trending}
+        trendingLoading={trendingLoading}
       />
     );
   }
@@ -1072,6 +1112,17 @@ export default function HomePage() {
             <StreakCounter variant="home" streak={streakData} />
           </section>
         ) : null;
+
+      case "trending":
+        return (
+          <TrendingSection
+            key="trending"
+            movies={trending.movies}
+            shows={trending.shows}
+            people={trending.people}
+            isLoading={trendingLoading}
+          />
+        );
 
       default:
         return null;

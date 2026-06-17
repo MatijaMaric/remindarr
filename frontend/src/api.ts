@@ -38,6 +38,7 @@ import type {
   LeaderboardEntry,
   StreakData,
   CollectionDetails,
+  TrendingSnapshot,
 } from "./types";
 import { ApiError } from "./lib/api-error";
 
@@ -168,6 +169,12 @@ export async function browseTitles(
   if (params.minRating != null) qs.set("min_rating", String(params.minRating));
   if (params.onlyMine) qs.set("onlyMine", "true");
   return fetchJson(`/browse?${qs}`, { signal });
+}
+
+export async function getTrending(
+  signal?: AbortSignal,
+): Promise<TrendingSnapshot> {
+  return fetchJson("/trending", { signal });
 }
 
 export async function syncReleases(

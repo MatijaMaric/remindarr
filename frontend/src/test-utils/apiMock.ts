@@ -51,6 +51,12 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   getTitles: async () => emptyPage(),
   searchTitles: async () => ({ titles: [] }),
   browseTitles: async () => emptyBrowse(),
+  getTrending: async () => ({
+    movies: [],
+    shows: [],
+    people: [],
+    refreshedAt: "",
+  }),
   syncReleases: async () => ({}),
   resolveImdb: async () => null,
   getProviders: async () => ({ providers: [], regionProviderIds: [] }),

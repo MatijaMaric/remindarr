@@ -28,6 +28,8 @@ import { BreakerOpenError } from "../lib/circuit-breaker";
 import { getTitlesNeedingSaEnrichment } from "../db/repository";
 import { syncEachWithDelay } from "../tmdb/sync-utils";
 import { handleReleaseReminder } from "./release-reminders";
+import { getCache } from "../cache";
+import { buildTrendingSnapshot, trendingCacheKey } from "../routes/trending";
 
 export function registerSyncJobs() {
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -78,6 +80,29 @@ export function registerSyncJobs() {
     }
     const result = await syncEpisodes();
     log.info("Synced episodes", { synced: result.synced, shows: result.shows });
+  });
+
+  registerHandler("sync-trending", async () => {
+    if (!CONFIG.TMDB_API_KEY) {
+      log.info("Skipping trending sync", {
+        reason: "TMDB_API_KEY not configured",
+      });
+      return;
+    }
+    const timeWindow = CONFIG.TRENDING_TIME_WINDOW;
+    // buildTrendingSnapshot throws on upstream failure, so the cache write below
+    // is skipped — the previously cached (stale) snapshot survives the outage.
+    const snapshot = await buildTrendingSnapshot(timeWindow);
+    await getCache().set(
+      trendingCacheKey(timeWindow),
+      snapshot,
+      CONFIG.CACHE_TTL_TRENDING,
+    );
+    log.info("Refreshed trending snapshot", {
+      movies: snapshot.movies.length,
+      shows: snapshot.shows.length,
+      people: snapshot.people.length,
+    });
   });
 
   registerHandler("sync-show-episodes", async (job) => {
@@ -268,6 +293,7 @@ export function registerSyncJobs() {
 
   registerCron("sync-titles", CONFIG.SYNC_TITLES_CRON);
   registerCron("sync-episodes", CONFIG.SYNC_EPISODES_CRON);
+  registerCron("sync-trending", CONFIG.SYNC_TRENDING_CRON);
   registerCron("sync-plex-watched", CONFIG.SYNC_PLEX_CRON);
   registerCron("sync-plex-library", CONFIG.SYNC_PLEX_LIBRARY_CRON);
 

@@ -48,6 +48,7 @@ function getEnvOrNull(): CFEnv | null {
 export const CRON_JOBS = [
   { name: "sync-titles", cron: "0 3 * * *" },
   { name: "sync-episodes", cron: "30 3 * * *" },
+  { name: "sync-trending", cron: "0 5 * * *" },
   { name: "sync-deep-links", cron: "0 4 * * *" },
   { name: "send-notifications", cron: "*/5 * * * *" },
   { name: "cleanup", cron: "0 0 * * *" },

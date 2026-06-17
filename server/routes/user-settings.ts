@@ -25,6 +25,7 @@ const log = logger.child({ module: "user-settings" });
 
 // Keep in sync with frontend/src/types.ts HomepageSectionId / DEFAULT_HOMEPAGE_LAYOUT.
 export const HOMEPAGE_SECTION_IDS = [
+  "trending",
   "streak",
   "up_next",
   "unwatched",
@@ -45,6 +46,7 @@ export interface HomepageSection {
 
 export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "streak", enabled: true },
+  { id: "trending", enabled: true },
   { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
   { id: "movies_to_watch", enabled: true },

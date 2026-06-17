@@ -93,6 +93,13 @@ export const browseCacheTotal = new Counter(
   "Browse response cache hit/miss",
 );
 
+// ─── Trending Cache Metrics ───────────────────────────────────────────────────
+
+export const trendingCacheTotal = new Counter(
+  "trending_cache_total",
+  "Trending response cache hit/miss",
+);
+
 // ─── TMDB Timeout Metrics ─────────────────────────────────────────────────────
 
 export const tmdbTimeoutsTotal = new Counter(
@@ -117,6 +124,7 @@ const allMetrics = [
   circuitBreakerStateChangesTotal,
   notificationsSentTotal,
   browseCacheTotal,
+  trendingCacheTotal,
   tmdbTimeoutsTotal,
 ];
 

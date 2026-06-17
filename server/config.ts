@@ -26,6 +26,12 @@ export const CONFIG = {
   SYNC_TITLES_CRON: process.env.SYNC_TITLES_CRON || "0 3 * * *",
   SYNC_EPISODES_CRON: process.env.SYNC_EPISODES_CRON || "30 3 * * *",
 
+  // Trending (home screen)
+  SYNC_TRENDING_CRON: process.env.SYNC_TRENDING_CRON || "0 5 * * *",
+  TRENDING_TIME_WINDOW: (process.env.TRENDING_TIME_WINDOW || "week") as
+    | "day"
+    | "week",
+
   // Backup
   BACKUP_DIR: process.env.BACKUP_DIR || "",
   BACKUP_CRON: process.env.BACKUP_CRON || "0 2 * * *",
@@ -101,6 +107,7 @@ export const CONFIG = {
   CACHE_TTL_BROWSE: Number(process.env.CACHE_TTL_BROWSE) || 900,
   CACHE_TTL_FEED_ICS: Number(process.env.CACHE_TTL_FEED_ICS) || 300,
   CACHE_TTL_STREAMING: Number(process.env.CACHE_TTL_STREAMING) || 86400,
+  CACHE_TTL_TRENDING: Number(process.env.CACHE_TTL_TRENDING) || 86400,
   CACHE_MAX_MEMORY_ENTRIES:
     Number(process.env.CACHE_MAX_MEMORY_ENTRIES) || 1000,
 };

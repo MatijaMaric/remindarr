@@ -21,6 +21,8 @@ import { fetchNewReleases } from "../tmdb/sync-titles";
 import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
+import { getCache } from "../cache";
+import { buildTrendingSnapshot, trendingCacheKey } from "../routes/trending";
 import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
@@ -75,6 +77,29 @@ async function handleSyncEpisodes(): Promise<void> {
   }
   const result = await syncEpisodes();
   log.info("Synced episodes", { synced: result.synced, shows: result.shows });
+}
+
+async function handleSyncTrending(): Promise<void> {
+  if (!CONFIG.TMDB_API_KEY) {
+    log.info("Skipping trending sync", {
+      reason: "TMDB_API_KEY not configured",
+    });
+    return;
+  }
+  const timeWindow = CONFIG.TRENDING_TIME_WINDOW;
+  // buildTrendingSnapshot throws on upstream failure, so the cache write below
+  // is skipped — the previously cached (stale) snapshot survives the outage.
+  const snapshot = await buildTrendingSnapshot(timeWindow);
+  await getCache().set(
+    trendingCacheKey(timeWindow),
+    snapshot,
+    CONFIG.CACHE_TTL_TRENDING,
+  );
+  log.info("Refreshed trending snapshot", {
+    movies: snapshot.movies.length,
+    shows: snapshot.shows.length,
+    people: snapshot.people.length,
+  });
 }
 
 async function handleSyncShowEpisodes(data: string | null): Promise<void> {
@@ -551,6 +576,7 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> =
   {
     "sync-titles": () => handleSyncTitles(),
     "sync-episodes": () => handleSyncEpisodes(),
+    "sync-trending": () => handleSyncTrending(),
     "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
     "send-notifications": () => handleSendNotifications(),
     "backfill-title-offers": (data) => handleBackfillTitleOffers(data),

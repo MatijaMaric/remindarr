@@ -68,7 +68,7 @@ afterAll(() => {
 });
 
 describe("GET /jobs (CF)", () => {
-  it("returns stats, crons (4 entries), and recentJobs with snake_case fields", async () => {
+  it("returns stats, crons (6 entries), and recentJobs with snake_case fields", async () => {
     const res = await app.request("/jobs", {
       headers: { Cookie: adminCookie },
     });
@@ -77,11 +77,12 @@ describe("GET /jobs (CF)", () => {
     const body = await res.json();
     expect(body.stats).toBeDefined();
     expect(body.crons).toBeArray();
-    expect(body.crons).toHaveLength(5);
+    expect(body.crons).toHaveLength(6);
 
     const names = body.crons.map((c: any) => c.name);
     expect(names).toContain("sync-titles");
     expect(names).toContain("sync-episodes");
+    expect(names).toContain("sync-trending");
     expect(names).toContain("sync-deep-links");
     expect(names).toContain("send-notifications");
 
