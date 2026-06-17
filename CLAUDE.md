@@ -99,6 +99,6 @@ To bypass: `git push --no-verify`
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/001-trending-home/plan.md`
+`specs/002-person-known-for/plan.md`
 
 <!-- SPECKIT END -->
