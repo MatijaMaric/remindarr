@@ -35,17 +35,43 @@ function creditSubtitle(credit: PersonCastCredit | PersonCrewCredit): string {
 export const KNOWN_FOR_LIMIT = 10;
 
 /**
+ * True for non-narrative "Self" appearances (talk-show guest/host spots, award
+ * shows, etc.). These inherit the high `popularity` of long-running shows but
+ * are not roles a person is "known for", so they are excluded — mirroring how
+ * TMDB's own Known For omits them. Only cast credits carry `character`; crew
+ * credits (which have `job`) are never treated as self-appearances.
+ */
+function isSelfAppearance(
+  credit: PersonCastCredit | PersonCrewCredit,
+): boolean {
+  if (!("character" in credit)) return false;
+  const role = credit.character.trim().toLowerCase();
+  return (
+    role === "self" ||
+    role === "himself" ||
+    role === "herself" ||
+    role === "themselves" ||
+    role.startsWith("self ") ||
+    role.startsWith("self-")
+  );
+}
+
+/**
  * Selects a person's most notable titles for the "Known For" row: merges the
- * already-combined cast + crew credits, ranks by `popularity` descending,
+ * already-combined cast + crew credits, drops non-narrative "Self" appearances,
+ * ranks by `vote_count` descending (rating volume is TMDB's notability signal —
+ * `popularity` is trending velocity, which lets daily talk shows dominate),
  * de-duplicates by the `${media_type}-${id}` title key (keeping the
- * highest-popularity occurrence so a title held in multiple roles appears
- * once), and caps the result at `limit`. Pure — no padding, no fabrication.
+ * highest-ranked occurrence so a title held in multiple roles appears once),
+ * and caps the result at `limit`. Pure — no padding, no fabrication.
  */
 export function selectKnownFor(
   credits: (PersonCastCredit | PersonCrewCredit)[],
   limit = KNOWN_FOR_LIMIT,
 ): (PersonCastCredit | PersonCrewCredit)[] {
-  const sorted = [...credits].sort((a, b) => b.popularity - a.popularity);
+  const sorted = credits
+    .filter((credit) => !isSelfAppearance(credit))
+    .sort((a, b) => b.vote_count - a.vote_count || b.popularity - a.popularity);
   const seen = new Set<string>();
   const result: (PersonCastCredit | PersonCrewCredit)[] = [];
   for (const credit of sorted) {

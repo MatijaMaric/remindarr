@@ -47,28 +47,109 @@ describe("PersonPage", () => {
 });
 
 describe("selectKnownFor", () => {
-  it("ranks by popularity descending", () => {
+  it("ranks by vote_count descending (rating volume, not trending popularity)", () => {
     const result = selectKnownFor([
-      castCredit({ id: 1, media_type: "movie", popularity: 10 }),
-      castCredit({ id: 2, media_type: "movie", popularity: 50 }),
-      castCredit({ id: 3, media_type: "movie", popularity: 30 }),
+      castCredit({
+        id: 1,
+        media_type: "movie",
+        vote_count: 10,
+        popularity: 999,
+      }),
+      castCredit({ id: 2, media_type: "movie", vote_count: 50, popularity: 1 }),
+      castCredit({ id: 3, media_type: "movie", vote_count: 30, popularity: 1 }),
     ]);
     expect(result.map((c) => c.id)).toEqual([2, 3, 1]);
   });
 
-  it("de-duplicates across roles by media_type-id, keeping the highest-popularity occurrence", () => {
+  it("breaks vote_count ties by popularity descending", () => {
     const result = selectKnownFor([
-      castCredit({ id: 7, media_type: "movie", popularity: 20 }),
-      crewCredit({ id: 7, media_type: "movie", popularity: 90 }),
+      castCredit({
+        id: 1,
+        media_type: "movie",
+        vote_count: 100,
+        popularity: 5,
+      }),
+      castCredit({
+        id: 2,
+        media_type: "movie",
+        vote_count: 100,
+        popularity: 9,
+      }),
+    ]);
+    expect(result.map((c) => c.id)).toEqual([2, 1]);
+  });
+
+  it("excludes non-narrative Self appearances (talk-show guest/host spots)", () => {
+    const result = selectKnownFor([
+      castCredit({
+        id: 1,
+        media_type: "movie",
+        character: "Evelyn",
+        vote_count: 100,
+      }),
+      castCredit({
+        id: 2,
+        media_type: "tv",
+        character: "Self",
+        vote_count: 9000,
+      }),
+      castCredit({
+        id: 3,
+        media_type: "tv",
+        character: "Self - Guest",
+        vote_count: 9000,
+      }),
+      castCredit({
+        id: 4,
+        media_type: "tv",
+        character: "Self - Host",
+        vote_count: 9000,
+      }),
+      castCredit({
+        id: 5,
+        media_type: "tv",
+        character: "Herself",
+        vote_count: 9000,
+      }),
+    ]);
+    expect(result.map((c) => c.id)).toEqual([1]);
+  });
+
+  it("keeps crew credits (no character field) even though they lack a role to self-match", () => {
+    const result = selectKnownFor([
+      crewCredit({
+        id: 9,
+        media_type: "movie",
+        job: "Director",
+        vote_count: 500,
+      }),
+    ]);
+    expect(result.map((c) => c.id)).toEqual([9]);
+  });
+
+  it("de-duplicates across roles by media_type-id, keeping the highest-ranked occurrence", () => {
+    const result = selectKnownFor([
+      castCredit({
+        id: 7,
+        media_type: "movie",
+        vote_count: 20,
+        popularity: 90,
+      }),
+      crewCredit({
+        id: 7,
+        media_type: "movie",
+        vote_count: 90,
+        popularity: 20,
+      }),
     ]);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe(7);
-    expect(result[0].popularity).toBe(90);
+    expect(result[0].vote_count).toBe(90);
   });
 
   it("caps at KNOWN_FOR_LIMIT (10)", () => {
     const many = Array.from({ length: 25 }, (_, i) =>
-      castCredit({ id: i + 1, media_type: "movie", popularity: i }),
+      castCredit({ id: i + 1, media_type: "movie", vote_count: i }),
     );
     const result = selectKnownFor(many);
     expect(result).toHaveLength(KNOWN_FOR_LIMIT);
@@ -77,8 +158,8 @@ describe("selectKnownFor", () => {
 
   it("returns fewer-than-limit verbatim with no padding", () => {
     const result = selectKnownFor([
-      castCredit({ id: 1, media_type: "movie", popularity: 5 }),
-      castCredit({ id: 2, media_type: "tv", popularity: 9 }),
+      castCredit({ id: 1, media_type: "movie", vote_count: 5 }),
+      castCredit({ id: 2, media_type: "tv", vote_count: 9 }),
     ]);
     expect(result).toHaveLength(2);
   });
@@ -89,8 +170,8 @@ describe("selectKnownFor", () => {
 
   it("does NOT collapse a movie and a TV title that share the same numeric id", () => {
     const result = selectKnownFor([
-      castCredit({ id: 42, media_type: "movie", popularity: 10 }),
-      castCredit({ id: 42, media_type: "tv", popularity: 8 }),
+      castCredit({ id: 42, media_type: "movie", vote_count: 10 }),
+      castCredit({ id: 42, media_type: "tv", vote_count: 8 }),
     ]);
     expect(result).toHaveLength(2);
     expect(result.map((c) => c.media_type).sort()).toEqual(["movie", "tv"]);

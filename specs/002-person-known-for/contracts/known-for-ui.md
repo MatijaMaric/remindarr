@@ -33,14 +33,15 @@ Each card:
 
 ## Content rules
 
-| Rule                                                                          | Requirement    |
-| ----------------------------------------------------------------------------- | -------------- |
-| Entries ranked by `popularity` descending (most notable first)                | FR-003         |
-| At most 10 entries (default `KNOWN_FOR_LIMIT`)                                | FR-004, SC-002 |
-| Fewer than 10 shown verbatim when the person has fewer credits (no padding)   | FR-004         |
-| Each title appears at most once even across acting + crew roles               | FR-005, SC-002 |
-| Section hidden entirely (no heading) when the person has no credits           | FR-008         |
-| Behavior identical to Acting/Crew rows: card style, scroll, click-to-navigate | FR-009, SC-005 |
+| Rule                                                                                       | Requirement    |
+| ------------------------------------------------------------------------------------------ | -------------- |
+| Entries ranked by `vote_count` descending, tie-broken by `popularity` (most notable first) | FR-003         |
+| Non-narrative "Self" appearances (talk/award-show guest & host spots) excluded             | FR-003         |
+| At most 10 entries (default `KNOWN_FOR_LIMIT`)                                             | FR-004, SC-002 |
+| Fewer than 10 shown verbatim when the person has fewer credits (no padding)                | FR-004         |
+| Each title appears at most once even across acting + crew roles                            | FR-005, SC-002 |
+| Section hidden entirely (no heading) when the person has no credits                        | FR-008         |
+| Behavior identical to Acting/Crew rows: card style, scroll, click-to-navigate              | FR-009, SC-005 |
 
 ## Error / empty behavior
 
