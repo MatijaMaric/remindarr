@@ -94,3 +94,10 @@ To bypass: `git push --no-verify`
 - `server/notifications/CLAUDE.md` — provider pattern, streamingAlerts guard, test requirements
 - `frontend/CLAUDE.md` — React stack, pages, components, API client patterns
 - `e2e/CLAUDE.md` — Playwright config, fixtures, spec status
+
+<!-- SPECKIT START -->
+
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+
+<!-- SPECKIT END -->
