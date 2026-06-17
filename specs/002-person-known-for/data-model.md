@@ -19,8 +19,8 @@ the inputs and the derived output.
 | `first_air_date?` | `string`          | TV date                                      |
 | `poster_path`     | `string \| null`  | `null` → text fallback in the card           |
 | `vote_average`    | `number`          | Not used for ranking                         |
-| `vote_count`      | `number`          | Not used for ranking                         |
-| `popularity`      | `number`          | **Ranking signal**                           |
+| `vote_count`      | `number`          | **Primary ranking signal** (rating volume)   |
+| `popularity`      | `number`          | Tie-breaker only (trending velocity)         |
 
 ### `PersonCrewCredit` (`types.ts:407`)
 
@@ -46,19 +46,26 @@ No new type is strictly required; the helper returns `KnownForCredit[]`.
 Input: `cast: PersonCastCredit[]`, `crew: PersonCrewCredit[]`, `limit = 10`.
 
 1. **Merge** cast and crew into one list.
-2. **Sort** by `popularity` descending. (Stable enough for our purpose; ties keep
-   input order.)
-3. **De-duplicate** by title key `` `${media_type}-${id}` `` — keep the first
-   (highest-popularity) occurrence. Guarantees a title held in multiple roles
+2. **Exclude** non-narrative "Self" appearances — cast credits whose
+   `character` is `"Self"`, `"Himself"`, `"Herself"`, `"Themselves"`, or begins
+   with `"Self "` / `"Self-"` (talk-show/award-show guest & host spots). Crew
+   credits (no `character`) are never excluded here.
+3. **Sort** by `vote_count` descending, tie-broken by `popularity` descending.
+   Rating volume approximates notability far better than raw `popularity`, which
+   is a trending-velocity signal that lets daily talk shows dominate. (Stable
+   enough for our purpose; remaining ties keep input order.)
+4. **De-duplicate** by title key `` `${media_type}-${id}` `` — keep the first
+   (highest-ranked) occurrence. Guarantees a title held in multiple roles
    appears once (FR-005, SC-002).
-4. **Cap** to at most `limit` entries (default 10). Never pad (FR-004).
-5. Result may be empty → the section is hidden (FR-008).
+5. **Cap** to at most `limit` entries (default 10). Never pad (FR-004).
+6. Result may be empty → the section is hidden (FR-008).
 
 ### Validation / invariants
 
 - Output length ≤ `limit`.
 - No two output entries share the same `` `${media_type}-${id}` `` key.
-- Output is ordered by descending `popularity` (most notable first) — FR-003.
+- Output contains no "Self" appearances.
+- Output is ordered by descending `vote_count` (most notable first) — FR-003.
 - Output ⊆ the person's existing credits (no fabricated titles).
 - Each entry exposes a poster (or `null` for fallback), a display title
   (`title` ‖ `name` ‖ "Untitled"), and a year derived from
