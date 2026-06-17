@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router";
 import { ChevronLeft } from "lucide-react";
 import * as api from "../api";
@@ -25,6 +25,37 @@ function creditTitleId(credit: PersonCastCredit | PersonCrewCredit): string {
   return credit.media_type === "movie"
     ? `movie-${credit.id}`
     : `tv-${credit.id}`;
+}
+
+function creditSubtitle(credit: PersonCastCredit | PersonCrewCredit): string {
+  return "character" in credit ? credit.character : credit.job;
+}
+
+/** Max number of titles shown in the "Known For" row. */
+export const KNOWN_FOR_LIMIT = 10;
+
+/**
+ * Selects a person's most notable titles for the "Known For" row: merges the
+ * already-combined cast + crew credits, ranks by `popularity` descending,
+ * de-duplicates by the `${media_type}-${id}` title key (keeping the
+ * highest-popularity occurrence so a title held in multiple roles appears
+ * once), and caps the result at `limit`. Pure — no padding, no fabrication.
+ */
+export function selectKnownFor(
+  credits: (PersonCastCredit | PersonCrewCredit)[],
+  limit = KNOWN_FOR_LIMIT,
+): (PersonCastCredit | PersonCrewCredit)[] {
+  const sorted = [...credits].sort((a, b) => b.popularity - a.popularity);
+  const seen = new Set<string>();
+  const result: (PersonCastCredit | PersonCrewCredit)[] = [];
+  for (const credit of sorted) {
+    const key = creditTitleId(credit);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(credit);
+    if (result.length >= limit) break;
+  }
+  return result;
 }
 
 function deduplicateCast(credits: PersonCastCredit[]): PersonCastCredit[] {
@@ -100,6 +131,13 @@ export default function PersonPage() {
     queryFn: ({ signal }) => api.getPersonDetails(Number(personId), signal),
     enabled: !!personId,
   });
+
+  const cast = data?.person.combined_credits.cast;
+  const crew = data?.person.combined_credits.crew;
+  const knownForCredits = useMemo(
+    () => selectKnownFor([...(cast ?? []), ...(crew ?? [])]),
+    [cast, crew],
+  );
 
   if (loading) {
     return <DetailPageSkeleton />;
@@ -218,6 +256,22 @@ export default function PersonPage() {
               {bioExpanded ? "Show less" : "Show more"}
             </button>
           )}
+        </section>
+      )}
+
+      {/* Known For */}
+      {knownForCredits.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-white">Known For</h2>
+          <ScrollableRow className="gap-4 pb-2">
+            {knownForCredits.map((c) => (
+              <CreditCard
+                key={creditTitleId(c)}
+                credit={c}
+                subtitle={creditSubtitle(c)}
+              />
+            ))}
+          </ScrollableRow>
         </section>
       )}
 
