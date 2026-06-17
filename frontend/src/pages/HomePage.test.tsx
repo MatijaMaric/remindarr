@@ -54,9 +54,10 @@ Object.defineProperty(globalThis, "ResizeObserver", {
   configurable: true,
 });
 
-// Ensure useIsMobile returns false so desktop layout renders in tests
+// useIsMobile is controllable per-test; defaults to false (desktop layout).
+let mockIsMobile = false;
 mock.module("../hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
+  useIsMobile: () => mockIsMobile,
 }));
 
 function makeSearchTitle(i: number) {
@@ -127,6 +128,7 @@ function applyHomeDefaults() {
   apiMock.getHomepageLayout.mockImplementation(() =>
     Promise.resolve({
       homepage_layout: [
+        { id: "trending", enabled: true },
         { id: "today", enabled: true },
         { id: "upcoming", enabled: true },
         { id: "unwatched", enabled: true },
@@ -134,6 +136,9 @@ function applyHomeDefaults() {
         { id: "friends_loved", enabled: true },
       ],
     }),
+  );
+  apiMock.getTrending.mockImplementation(() =>
+    Promise.resolve({ movies: [], shows: [], people: [], refreshedAt: "" }),
   );
   apiMock.getUpNext.mockImplementation(() => Promise.resolve({ items: [] }));
   apiMock.getFriendsLoved.mockImplementation(() =>
@@ -166,6 +171,7 @@ afterEach(() => {
   cleanup();
   mockUser = null;
   mockAuthLoading = false;
+  mockIsMobile = false;
   resetApiMock();
 });
 
@@ -256,6 +262,97 @@ describe("HomePage — unauthenticated landing", () => {
 
     expect(screen.queryByText("Recommended for You")).toBeNull();
     expect(apiMock.getRecommendations).not.toHaveBeenCalled();
+  });
+});
+
+describe("HomePage — trending section", () => {
+  function trendingMovie() {
+    return {
+      id: "movie-99",
+      objectType: "MOVIE" as const,
+      title: "Trending Pick",
+      posterUrl: null,
+      releaseDate: "2026-02-02",
+      isTracked: false,
+    };
+  }
+
+  it("shows the trending section to signed-out visitors", async () => {
+    apiMock.getTrending.mockImplementation(() =>
+      Promise.resolve({
+        movies: [trendingMovie()],
+        shows: [],
+        people: [],
+        refreshedAt: "2026-06-17T05:00:00.000Z",
+      }),
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Trending Now")).toBeDefined();
+    });
+    expect(screen.getByText("Trending Pick")).toBeDefined();
+  });
+
+  it("shows the trending section to authenticated users via the home layout", async () => {
+    mockUser = {
+      id: "u1",
+      username: "testuser",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    };
+    apiMock.getTrending.mockImplementation(() =>
+      Promise.resolve({
+        movies: [],
+        shows: [
+          {
+            id: "tv-77",
+            objectType: "SHOW" as const,
+            title: "Trending Series",
+            posterUrl: null,
+            releaseDate: null,
+            isTracked: false,
+          },
+        ],
+        people: [],
+        refreshedAt: "2026-06-17T05:00:00.000Z",
+      }),
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Trending Now")).toBeDefined();
+    });
+    expect(screen.getByText("Trending Series")).toBeDefined();
+  });
+
+  it("shows the trending section to authenticated users on a mobile viewport", async () => {
+    mockUser = {
+      id: "u1",
+      username: "testuser",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    };
+    mockIsMobile = true;
+    apiMock.getTrending.mockImplementation(() =>
+      Promise.resolve({
+        movies: [trendingMovie()],
+        shows: [],
+        people: [],
+        refreshedAt: "2026-06-17T05:00:00.000Z",
+      }),
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Trending Now")).toBeDefined();
+    });
+    expect(screen.getByText("Trending Pick")).toBeDefined();
   });
 });
 

@@ -23,7 +23,12 @@ import type {
   TmdbEpisodeDetails,
   TmdbPersonDetails,
   TmdbCollectionDetails,
+  TmdbTrendingMovieResult,
+  TmdbTrendingTvResult,
+  TmdbTrendingPersonResult,
 } from "./types";
+
+export type TrendingTimeWindow = "day" | "week";
 
 async function tmdbRequest<T>(
   path: string,
@@ -346,6 +351,35 @@ export async function fetchTopRatedTv(
       language: tmdbLanguage(),
       page: String(page),
     },
+  );
+}
+
+// ─── Trending endpoints (movies, TV, people) ───────────────────────────────
+
+export async function fetchTrendingMovies(
+  timeWindow: TrendingTimeWindow = "week",
+): Promise<TmdbDiscoverResponse<TmdbTrendingMovieResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbTrendingMovieResult>>(
+    `/trending/movie/${timeWindow}`,
+    { language: tmdbLanguage() },
+  );
+}
+
+export async function fetchTrendingTv(
+  timeWindow: TrendingTimeWindow = "week",
+): Promise<TmdbDiscoverResponse<TmdbTrendingTvResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbTrendingTvResult>>(
+    `/trending/tv/${timeWindow}`,
+    { language: tmdbLanguage() },
+  );
+}
+
+export async function fetchTrendingPeople(
+  timeWindow: TrendingTimeWindow = "week",
+): Promise<TmdbDiscoverResponse<TmdbTrendingPersonResult>> {
+  return tmdbRequest<TmdbDiscoverResponse<TmdbTrendingPersonResult>>(
+    `/trending/person/${timeWindow}`,
+    { language: tmdbLanguage() },
   );
 }
 

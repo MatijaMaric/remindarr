@@ -26,6 +26,7 @@ import adminRoutes, { setOnOidcSettingsChanged } from "./routes/admin";
 import adminMaintenanceRoutes from "./routes/admin-maintenance";
 import jobsRoutes from "./routes/jobs";
 import browseRoutes from "./routes/browse";
+import trendingRoutes from "./routes/trending";
 import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import integrationRoutes from "./routes/integrations";
@@ -292,6 +293,11 @@ const browseRateLimiter = rateLimiter({
 app.use("/api/browse/*", browseRateLimiter, optionalAuth);
 app.use("/api/browse", browseRateLimiter, optionalAuth);
 app.route("/api/browse", browseRoutes);
+
+// Trending (home screen) — optionalAuth for per-user isTracked overlay
+app.use("/api/trending/*", optionalAuth);
+app.use("/api/trending", optionalAuth);
+app.route("/api/trending", trendingRoutes);
 
 app.use("/api/calendar/*", optionalAuth);
 app.use("/api/calendar", optionalAuth);

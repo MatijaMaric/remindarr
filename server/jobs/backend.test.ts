@@ -550,7 +550,7 @@ describe("cleanupOld (D1 mode)", () => {
 });
 
 describe("cleanupOld (DO mode)", () => {
-  it("fans out POST /cleanup to all 5 cron DOs and sums counts", async () => {
+  it("fans out POST /cleanup to all 6 cron DOs and sums counts", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => ({ count: 2 }));
     const env = {
@@ -560,15 +560,15 @@ describe("cleanupOld (DO mode)", () => {
 
     const total = await cleanupOld(env, 30);
 
-    // 4 CRON_JOB_NAMES + "cleanup" = 5 DOs
-    expect(ns.calls).toHaveLength(5);
+    // 5 CRON_JOB_NAMES + "cleanup" = 6 DOs
+    expect(ns.calls).toHaveLength(6);
     expect(
       ns.calls.every((c) => c.path === "/cleanup" && c.method === "POST"),
     ).toBe(true);
     expect(ns.calls.every((c) => (c.body as any).retentionDays === 30)).toBe(
       true,
     );
-    expect(total).toBe(10); // 5 × 2
+    expect(total).toBe(12); // 6 × 2
     expect(mockCleanupOldJobs).not.toHaveBeenCalled();
   });
 
@@ -597,10 +597,10 @@ describe("cleanupOld (DO mode)", () => {
 
     const total = await cleanupOld(env, 30);
 
-    // All 5 DOs were attempted despite one failure
-    expect(attempted).toHaveLength(5);
+    // All 6 DOs were attempted despite one failure
+    expect(attempted).toHaveLength(6);
     expect(attempted).toContain("send-notifications");
-    // Only 4 fulfilled × 3 = 12 (send-notifications rejected, excluded)
-    expect(total).toBe(12);
+    // Only 5 fulfilled × 3 = 15 (send-notifications rejected, excluded)
+    expect(total).toBe(15);
   });
 });

@@ -62,6 +62,26 @@ const mockFetchTvDetails = spyOn(
   "fetchTvDetails",
 ).mockResolvedValue({} as any);
 
+// Mock TMDB trending fetchers for the sync-trending handler
+const emptyTrendingPage = {
+  results: [],
+  total_pages: 1,
+  total_results: 0,
+  page: 1,
+};
+const mockFetchTrendingMovies = spyOn(
+  tmdbClient,
+  "fetchTrendingMovies",
+).mockResolvedValue(emptyTrendingPage as any);
+const mockFetchTrendingTv = spyOn(
+  tmdbClient,
+  "fetchTrendingTv",
+).mockResolvedValue(emptyTrendingPage as any);
+const mockFetchTrendingPeople = spyOn(
+  tmdbClient,
+  "fetchTrendingPeople",
+).mockResolvedValue(emptyTrendingPage as any);
+
 // Mock parser
 import * as parser from "../tmdb/parser";
 const mockParseMovieDetails = spyOn(
@@ -130,6 +150,13 @@ const mockGetEnabledIntegrations = spyOn(
 );
 
 import { CONFIG } from "../config";
+import { initCache, getCache } from "../cache";
+import { MemoryCache } from "../cache/memory";
+import { trendingCacheKey } from "../routes/trending";
+import { makeTmdbDiscoverMovie } from "../test-utils/fixtures";
+
+// Trending sync writes to the distributed cache — initialize an in-memory one.
+initCache(new MemoryCache(100));
 
 // Import after mocks are set up
 import { registerSyncJobs } from "./sync";
@@ -148,6 +175,9 @@ beforeEach(() => {
   mockMigrateOffers.mockClear();
   mockFetchMovieDetails.mockClear();
   mockFetchTvDetails.mockClear();
+  mockFetchTrendingMovies.mockClear();
+  mockFetchTrendingTv.mockClear();
+  mockFetchTrendingPeople.mockClear();
   mockParseMovieDetails.mockClear();
   mockParseTvDetails.mockClear();
   captureExceptionSpy.mockClear();
@@ -172,6 +202,9 @@ afterAll(() => {
   mockMigrateOffers.mockRestore();
   mockFetchMovieDetails.mockRestore();
   mockFetchTvDetails.mockRestore();
+  mockFetchTrendingMovies.mockRestore();
+  mockFetchTrendingTv.mockRestore();
+  mockFetchTrendingPeople.mockRestore();
   mockParseMovieDetails.mockRestore();
   mockParseTvDetails.mockRestore();
   mockSyncPlexWatched.mockRestore();
@@ -192,17 +225,20 @@ describe("registerSyncJobs", () => {
 
     expect(names).toContain("sync-titles");
     expect(names).toContain("sync-episodes");
+    expect(names).toContain("sync-trending");
   });
 
-  it("uses CONFIG cron expressions for sync-titles and sync-episodes", () => {
+  it("uses CONFIG cron expressions for sync-titles, sync-episodes, and sync-trending", () => {
     registerSyncJobs();
 
     const crons = getCronJobs();
     const syncTitles = crons.find((c) => c.name === "sync-titles");
     const syncEpisodes = crons.find((c) => c.name === "sync-episodes");
+    const syncTrending = crons.find((c) => c.name === "sync-trending");
 
     expect(syncTitles?.cron).toBe(CONFIG.SYNC_TITLES_CRON);
     expect(syncEpisodes?.cron).toBe(CONFIG.SYNC_EPISODES_CRON);
+    expect(syncTrending?.cron).toBe(CONFIG.SYNC_TRENDING_CRON);
   });
 
   it("enqueues a one-time migrate-titles job on registration", () => {
@@ -411,6 +447,79 @@ describe("sync-episodes handler", () => {
     await processJobs();
 
     expect(captureExceptionSpy).toHaveBeenCalledWith(error);
+  });
+});
+
+// ─── sync-trending handler ───────────────────────────────────────────────────
+
+describe("sync-trending handler", () => {
+  const originalApiKey = CONFIG.TMDB_API_KEY;
+
+  beforeEach(() => {
+    // Fresh cache per test so pre-seeded snapshots don't leak between cases.
+    initCache(new MemoryCache(100));
+    CONFIG.TMDB_API_KEY = "test-key";
+    registerSyncJobs();
+    claimNextJob("migrate-titles");
+    claimNextJob("migrate-backdrops");
+    claimNextJob("migrate-offers");
+  });
+
+  afterAll(() => {
+    CONFIG.TMDB_API_KEY = originalApiKey;
+  });
+
+  it("builds the snapshot and populates the cache", async () => {
+    mockFetchTrendingMovies.mockResolvedValueOnce({
+      results: [makeTmdbDiscoverMovie({ id: 1 })],
+      total_pages: 1,
+      total_results: 1,
+      page: 1,
+    } as any);
+
+    enqueueJob("sync-trending");
+    await processJobs();
+
+    expect(mockFetchTrendingMovies).toHaveBeenCalledTimes(1);
+    const cached = (await getCache().get(trendingCacheKey("week"))) as any;
+    expect(cached).not.toBeNull();
+    expect(cached.movies).toHaveLength(1);
+    expect(cached.movies[0].id).toBe("movie-1");
+  });
+
+  it("skips when TMDB_API_KEY is not set", async () => {
+    CONFIG.TMDB_API_KEY = "";
+
+    enqueueJob("sync-trending");
+    await processJobs();
+
+    expect(mockFetchTrendingMovies).not.toHaveBeenCalled();
+    expect(await getCache().get(trendingCacheKey("week"))).toBeNull();
+  });
+
+  it("does not overwrite a warm cache when the TMDB build fails (stale survives)", async () => {
+    const stale = {
+      movies: [
+        {
+          id: "movie-9",
+          objectType: "MOVIE",
+          title: "Stale",
+          posterUrl: null,
+          releaseDate: null,
+        },
+      ],
+      shows: [],
+      people: [],
+      refreshedAt: "2026-01-01T00:00:00.000Z",
+    };
+    await getCache().set(trendingCacheKey("week"), stale, 86400);
+    mockFetchTrendingMovies.mockRejectedValueOnce(new Error("TMDB down"));
+
+    enqueueJob("sync-trending");
+    await processJobs();
+
+    const cached = await getCache().get(trendingCacheKey("week"));
+    expect(cached).toEqual(stale);
   });
 });
 

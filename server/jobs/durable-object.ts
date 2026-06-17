@@ -81,6 +81,7 @@ export interface DOEnv extends CfConfigEnv {
 export const CRON_JOB_NAMES = [
   "sync-titles",
   "sync-episodes",
+  "sync-trending",
   "sync-deep-links",
   "send-notifications",
 ] as const;

@@ -140,6 +140,23 @@ export interface TmdbDiscoverResponse<T> {
   results: T[];
 }
 
+// ─── Trending types ─────────────────────────────────────────────────────────
+// The /trending/{movie,tv}/{window} endpoints return discover-shaped results
+// (plus a `media_type` field we don't consume), so they reuse the discover
+// result types. /trending/person/{window} returns the person shape below.
+
+export type TmdbTrendingMovieResult = TmdbDiscoverMovieResult;
+export type TmdbTrendingTvResult = TmdbDiscoverTvResult;
+
+export interface TmdbTrendingPersonResult {
+  id: number;
+  name: string;
+  media_type: "person";
+  profile_path: string | null;
+  known_for_department: string | null;
+  popularity: number;
+}
+
 export interface TmdbSearchMultiResult {
   id: number;
   media_type: "movie" | "tv" | "person";

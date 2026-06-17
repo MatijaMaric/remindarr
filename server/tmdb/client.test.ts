@@ -63,6 +63,9 @@ import {
   fetchOnTheAirTv,
   fetchTopRatedMovies,
   fetchTopRatedTv,
+  fetchTrendingMovies,
+  fetchTrendingTv,
+  fetchTrendingPeople,
   searchMulti,
   findByImdbId,
   getMovieGenres,
@@ -531,6 +534,94 @@ describe("category endpoints", () => {
     await fetchTopRatedTv();
     const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
     expect(url.pathname).toBe("/3/tv/top_rated");
+  });
+});
+
+// ─── Trending endpoints ─────────────────────────────────────────────────────
+
+describe("trending endpoints", () => {
+  const emptyPage = { page: 1, total_pages: 1, total_results: 0, results: [] };
+
+  it("fetchTrendingMovies calls /trending/movie/week by default", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(emptyPage));
+    await fetchTrendingMovies();
+    const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
+    expect(url.pathname).toBe("/3/trending/movie/week");
+    expect(url.searchParams.get("language")).toBeTruthy();
+  });
+
+  it("fetchTrendingMovies honors the time window argument", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(emptyPage));
+    await fetchTrendingMovies("day");
+    const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
+    expect(url.pathname).toBe("/3/trending/movie/day");
+  });
+
+  it("fetchTrendingTv calls /trending/tv/week by default", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(emptyPage));
+    await fetchTrendingTv();
+    const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
+    expect(url.pathname).toBe("/3/trending/tv/week");
+  });
+
+  it("fetchTrendingPeople calls /trending/person/week by default", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(emptyPage));
+    await fetchTrendingPeople();
+    const url = new URL((fetchSpy.mock.calls[0] as [string])[0]);
+    expect(url.pathname).toBe("/3/trending/person/week");
+  });
+
+  it("parses trending movie results from the response", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        page: 1,
+        total_pages: 1,
+        total_results: 1,
+        results: [
+          {
+            id: 42,
+            title: "Trending Movie",
+            original_title: "Trending Movie",
+            overview: null,
+            release_date: "2026-01-01",
+            poster_path: "/p.jpg",
+            genre_ids: [],
+            vote_average: 8,
+            vote_count: 100,
+            popularity: 90,
+            adult: false,
+            original_language: "en",
+            media_type: "movie",
+          },
+        ],
+      }),
+    );
+    const result = await fetchTrendingMovies();
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].title).toBe("Trending Movie");
+  });
+
+  it("parses trending person results from the response", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        page: 1,
+        total_pages: 1,
+        total_results: 1,
+        results: [
+          {
+            id: 7,
+            name: "Trending Actor",
+            media_type: "person",
+            profile_path: "/a.jpg",
+            known_for_department: "Acting",
+            popularity: 99,
+          },
+        ],
+      }),
+    );
+    const result = await fetchTrendingPeople();
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].name).toBe("Trending Actor");
   });
 });
 

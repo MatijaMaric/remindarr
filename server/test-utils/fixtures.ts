@@ -5,6 +5,7 @@ import type {
   TmdbDiscoverMovieResult,
   TmdbDiscoverTvResult,
   TmdbSearchMultiResult,
+  TmdbTrendingPersonResult,
 } from "../tmdb/types";
 
 export function makeParsedTitle(overrides?: Partial<ParsedTitle>): ParsedTitle {
@@ -128,6 +129,20 @@ export function makeTmdbDiscoverTv(
     vote_count: 800,
     popularity: 40,
     original_language: "en",
+    ...overrides,
+  };
+}
+
+export function makeTmdbTrendingPerson(
+  overrides?: Partial<TmdbTrendingPersonResult>,
+): TmdbTrendingPersonResult {
+  return {
+    id: 555,
+    name: "Trending Actor",
+    media_type: "person",
+    profile_path: "/actor.jpg",
+    known_for_department: "Acting",
+    popularity: 99,
     ...overrides,
   };
 }
