@@ -28,7 +28,7 @@ Web application; this feature touches only `frontend/`. The only source file mod
 
 **Purpose**: Confirm the workspace is ready. No new dependencies, no scaffolding — the data and components already exist.
 
-- [ ] T001 Confirm working on branch `002-person-known-for` and that frontend deps are installed (`bun install` at root and in `frontend/`); confirm `frontend/src/pages/PersonPage.tsx` and `frontend/src/pages/PersonPage.test.ts` exist and that `bun test frontend/src/pages/PersonPage.test.ts` runs green before changes.
+- [x] T001 Confirm working on branch `002-person-known-for` and that frontend deps are installed (`bun install` at root and in `frontend/`); confirm `frontend/src/pages/PersonPage.tsx` and `frontend/src/pages/PersonPage.test.ts` exist and that `bun test frontend/src/pages/PersonPage.test.ts` runs green before changes.
 
 **Checkpoint**: Build/test baseline is green; ready for foundational work.
 
@@ -40,8 +40,8 @@ Web application; this feature touches only `frontend/`. The only source file mod
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 [P] Write failing `bun:test` unit tests for `selectKnownFor` in `frontend/src/pages/PersonPage.test.ts` covering, with `PersonCastCredit`/`PersonCrewCredit` fixtures: (a) ranking by `popularity` descending, (b) cross-role de-duplication by `${media_type}-${id}` keeping the highest-popularity occurrence, (c) cap at `KNOWN_FOR_LIMIT` (10), (d) fewer-than-limit returned verbatim with no padding, (e) empty input → empty array, (f) a movie and a TV title sharing the same numeric `id` are NOT collapsed. Tests must FAIL (helper not yet implemented/exported).
-- [ ] T003 Implement and export the pure helper `selectKnownFor(credits, limit = KNOWN_FOR_LIMIT)` and the named constant `KNOWN_FOR_LIMIT = 10` in `frontend/src/pages/PersonPage.tsx`: merge cast + crew, sort by `popularity` descending, de-duplicate by `${media_type}-${id}` (reuse the `creditTitleId` key shape), slice to `limit`; typed against the existing `PersonCastCredit | PersonCrewCredit` union (no `any`). Make the T002 tests pass.
+- [x] T002 [P] Write failing `bun:test` unit tests for `selectKnownFor` in `frontend/src/pages/PersonPage.test.ts` covering, with `PersonCastCredit`/`PersonCrewCredit` fixtures: (a) ranking by `popularity` descending, (b) cross-role de-duplication by `${media_type}-${id}` keeping the highest-popularity occurrence, (c) cap at `KNOWN_FOR_LIMIT` (10), (d) fewer-than-limit returned verbatim with no padding, (e) empty input → empty array, (f) a movie and a TV title sharing the same numeric `id` are NOT collapsed. Tests must FAIL (helper not yet implemented/exported).
+- [x] T003 Implement and export the pure helper `selectKnownFor(credits, limit = KNOWN_FOR_LIMIT)` and the named constant `KNOWN_FOR_LIMIT = 10` in `frontend/src/pages/PersonPage.tsx`: merge cast + crew, sort by `popularity` descending, de-duplicate by `${media_type}-${id}` (reuse the `creditTitleId` key shape), slice to `limit`; typed against the existing `PersonCastCredit | PersonCrewCredit` union (no `any`). Make the T002 tests pass.
 
 **Checkpoint**: `selectKnownFor` is implemented, exported, and unit-tested green. Rendering can now begin.
 
@@ -55,9 +55,9 @@ Web application; this feature touches only `frontend/`. The only source file mod
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] In `frontend/src/pages/PersonPage.tsx`, derive the Known For list with `useMemo` from `person.combined_credits.cast`/`crew` via `selectKnownFor(...)`, recomputed only when the credits change (read from the existing `["person", personId]` query — no new fetch).
-- [ ] T005 [US1] In `frontend/src/pages/PersonPage.tsx`, render the "Known For" `<section>` with an `<h2>Known For</h2>` heading and a `ScrollableRow` of `CreditCard`s, placed **above** the Acting section and below the Biography (per contracts/known-for-ui.md placement); compute each card's `subtitle` from the credit's role — `character` for an acting credit, `job` for a crew credit — without using `any` (narrow on the union); use a stable React `key` based on the `${media_type}-${id}` title key.
-- [ ] T006 [US1] In `frontend/src/pages/PersonPage.tsx`, guard the section so it renders nothing (no heading, no row) when `selectKnownFor(...)` returns an empty array (FR-008), mirroring the existing `castCredits.length > 0` / `crewCredits.length > 0` guards; verify the existing "Person not found"/error path (`error || !data`) is untouched so no broken section renders when data fails to load.
+- [x] T004 [US1] In `frontend/src/pages/PersonPage.tsx`, derive the Known For list with `useMemo` from `person.combined_credits.cast`/`crew` via `selectKnownFor(...)`, recomputed only when the credits change (read from the existing `["person", personId]` query — no new fetch).
+- [x] T005 [US1] In `frontend/src/pages/PersonPage.tsx`, render the "Known For" `<section>` with an `<h2>Known For</h2>` heading and a `ScrollableRow` of `CreditCard`s, placed **above** the Acting section and below the Biography (per contracts/known-for-ui.md placement); compute each card's `subtitle` from the credit's role — `character` for an acting credit, `job` for a crew credit — without using `any` (narrow on the union); use a stable React `key` based on the `${media_type}-${id}` title key.
+- [x] T006 [US1] In `frontend/src/pages/PersonPage.tsx`, guard the section so it renders nothing (no heading, no row) when `selectKnownFor(...)` returns an empty array (FR-008), mirroring the existing `castCredits.length > 0` / `crewCredits.length > 0` guards; verify the existing "Person not found"/error path (`error || !data`) is untouched so no broken section renders when data fails to load.
 
 **Checkpoint**: User Story 1 is fully functional — the MVP. A person with credits shows a ranked, deduplicated, capped Known For row above Acting/Crew; a person with none shows no section.
 
@@ -71,11 +71,11 @@ Web application; this feature touches only `frontend/`. The only source file mod
 
 ### Tests for User Story 2
 
-- [ ] T007 [P] [US2] Add a component-level test in `frontend/src/pages/PersonPage.test.ts` (using `@testing-library/react` + happy-dom, wrapping in a fresh `new QueryClient({ defaultOptions: { queries: { retry: false } } })` provider per frontend test convention) that renders `PersonPage` with a mocked person payload and asserts: the "Known For" heading appears above the "Acting" heading in DOM order; Known For cards link to `/title/${media_type}-${id}`; and the Acting and Crew sections are still rendered (no regression, SC-005). Mock `api.getPersonDetails` — no real HTTP.
+- [x] T007 [P] [US2] Add a component-level test in `frontend/src/pages/PersonPage.test.ts` (using `@testing-library/react` + happy-dom, wrapping in a fresh `new QueryClient({ defaultOptions: { queries: { retry: false } } })` provider per frontend test convention) that renders `PersonPage` with a mocked person payload and asserts: the "Known For" heading appears above the "Acting" heading in DOM order; Known For cards link to `/title/${media_type}-${id}`; and the Acting and Crew sections are still rendered (no regression, SC-005). Mock `api.getPersonDetails` — no real HTTP.
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] In `frontend/src/pages/PersonPage.tsx`, confirm the Known For section reuses the exact `CreditCard` (poster `w342` + text fallback, year omitted when no date) and `ScrollableRow` (`className="gap-4 pb-2"`) markup used by Acting/Crew so card style, horizontal scroll, and navigation match (FR-009); make the T007 parity test pass and ensure the existing Acting/Crew rendering is unchanged (FR-010).
+- [x] T008 [US2] In `frontend/src/pages/PersonPage.tsx`, confirm the Known For section reuses the exact `CreditCard` (poster `w342` + text fallback, year omitted when no date) and `ScrollableRow` (`className="gap-4 pb-2"`) markup used by Acting/Crew so card style, horizontal scroll, and navigation match (FR-009); make the T007 parity test pass and ensure the existing Acting/Crew rendering is unchanged (FR-010).
 
 **Checkpoint**: Both stories work; Known For is visually and behaviorally indistinguishable from the existing rows, and the existing rows are unregressed.
 
@@ -85,8 +85,8 @@ Web application; this feature touches only `frontend/`. The only source file mod
 
 **Purpose**: Final validation and gate.
 
-- [ ] T009 Run the quickstart.md manual validation scenarios against a live person page (`bun run dev`, open a prolific person): section placement/visibility (SC-001), ranked/capped/deduped (SC-002), card content + navigation (SC-003), parity (SC-005), and edge cases (no credits, few credits, missing poster, missing date).
-- [ ] T010 Run `bun run check` from repo root (server tsc + frontend tsc + ESLint zero-warnings + all tests + frontend build + wrangler dry-run) and confirm it passes before opening the PR.
+- [x] T009 Run the quickstart.md manual validation scenarios against a live person page (`bun run dev`, open a prolific person): section placement/visibility (SC-001), ranked/capped/deduped (SC-002), card content + navigation (SC-003), parity (SC-005), and edge cases (no credits, few credits, missing poster, missing date).
+- [x] T010 Run `bun run check` from repo root (server tsc + frontend tsc + ESLint zero-warnings + all tests + frontend build + wrangler dry-run) and confirm it passes before opening the PR.
 
 ---
 
