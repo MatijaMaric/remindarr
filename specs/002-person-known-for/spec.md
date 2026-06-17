@@ -46,6 +46,7 @@ A user browsing the "Known For" section experiences the same look, navigation, a
 - **Person with no credits**: When a person has no acting or crew credits, the "Known For" section is hidden entirely (no empty header).
 - **Person with very few credits**: When a person has only one or two credits, "Known For" shows just those titles rather than padding to a fixed count.
 - **Duplicate titles across roles**: When the same title appears in both acting and crew credits (or multiple times), it appears at most once in "Known For".
+- **Non-narrative self-appearances**: Talk-show, award-show, and similar guest/host appearances where the person plays themselves ("Self") are excluded from "Known For" — they are not titles a person is recognized for, even when the show is very popular.
 - **Missing poster art**: When a notable title has no poster image, the card falls back to a readable text placeholder, matching existing credit cards.
 - **Missing release date**: When a title has no release/air date, the year is simply omitted from the card.
 - **Data unavailable**: When the person's credit data cannot be loaded, the page behaves as it does today (existing not-found / error handling) and no broken "Known For" section is rendered.
@@ -83,7 +84,7 @@ A user browsing the "Known For" section experiences the same look, navigation, a
 
 ## Assumptions
 
-- "Most notable" is determined by the same popularity/notability signal already used to order the existing Acting and Crew credit rows; no new external data source is required.
+- "Most notable" is determined by each title's rating volume (the number of ratings a title has accumulated), which approximates how recognized a title is. This is preferred over the raw popularity/trending signal used to order the existing Acting and Crew rows, because trending popularity lets perennially-airing shows (e.g. daily talk shows) outrank a person's defining films. No new external data source is required — both signals already arrive with the existing credit data.
 - The default maximum of 10 "Known For" titles is a reasonable, adjustable default; the exact number is not business-critical.
 - "Known For" is derived from the person's existing credit data already available to the detail page; no additional data collection from users is needed.
 - The feature is presentation-only for end users (read-only browsing); no permissions, settings, or per-user configuration are involved.
