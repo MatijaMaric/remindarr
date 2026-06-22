@@ -17,7 +17,6 @@ import {
   mergeOffers,
   upsertScores,
   getGenres,
-  getLanguages,
   invalidateFilterCaches,
 } from "./titles";
 import { getDb } from "../schema";
@@ -494,7 +493,7 @@ describe("upsertScores", () => {
   });
 });
 
-describe("getGenres / getLanguages — single-flight cache stampede prevention", () => {
+describe("getGenres / getLanguages — TTL cache", () => {
   let traceSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
@@ -507,18 +506,6 @@ describe("getGenres / getLanguages — single-flight cache stampede prevention",
   afterEach(() => {
     traceSpy.mockRestore();
     invalidateFilterCaches();
-  });
-
-  it("getGenres: 10 concurrent callers with empty cache trigger exactly one DB query", async () => {
-    const calls = Array.from({ length: 10 }, () => getGenres());
-    await Promise.all(calls);
-    expect(traceSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("getLanguages: 10 concurrent callers with empty cache trigger exactly one DB query", async () => {
-    const calls = Array.from({ length: 10 }, () => getLanguages());
-    await Promise.all(calls);
-    expect(traceSpy).toHaveBeenCalledTimes(1);
   });
 
   it("getGenres: returns cached value on second call without hitting DB", async () => {

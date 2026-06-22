@@ -499,11 +499,7 @@ app.patch(
   async (c) => {
     const user = c.get("user")!;
     const body = c.req.valid("json");
-    if (body.visibility) {
-      await updateProfilePublic(user.id, body.visibility);
-    } else if (body.public !== undefined) {
-      await updateProfilePublic(user.id, body.public);
-    }
+    await updateProfilePublic(user.id, body.visibility ?? body.public!);
     return ok(c, { message: "Profile visibility updated" });
   },
 );

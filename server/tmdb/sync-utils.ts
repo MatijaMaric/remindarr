@@ -28,12 +28,6 @@ export interface SyncEachOptions<T, R> {
    */
   log: Logger;
   /**
-   * Number of items to process in parallel. Defaults to 1 (sequential).
-   * When > 1, items are scheduled across a fixed-size worker pool and the
-   * delay is observed before each item dispatch.
-   */
-  concurrency?: number;
-  /**
    * Optional error handler. Return value controls loop behavior; see
    * {@link SyncEachErrorAction}. If omitted, the helper logs an error
    * and pushes the item into `failures`.
@@ -52,25 +46,17 @@ export interface SyncEachResult<T, R> {
  * "iterate → delay → try/catch → log → continue" pattern used across
  * the various TMDB / Plex / streaming-availability sync paths.
  *
- * Sequential semantics (concurrency = 1, the default):
+ * Sequential semantics:
  *   for each item:
  *     try onItem(item)
  *     handle error via onError or default (log + push to failures)
  *     await sleep(delayMs) before next item
- *
- * Parallel semantics (concurrency > 1):
- *   A simple worker pool drains the items array. Each worker calls
- *   onItem then awaits the delay before picking the next item, matching
- *   the "rate limit between requests" intent of the original loops. If
- *   any worker observes an `onError` returning `"stop"`, the shared
- *   stop flag halts further dispatch.
  */
 export async function syncEachWithDelay<T, R>(
   items: T[],
   opts: SyncEachOptions<T, R>,
 ): Promise<SyncEachResult<T, R>> {
   const { delayMs, onItem, label, log, onError } = opts;
-  const concurrency = Math.max(1, opts.concurrency ?? 1);
 
   const results: R[] = [];
   const failures: Array<{ item: T; error: unknown }> = [];
@@ -98,30 +84,11 @@ export async function syncEachWithDelay<T, R>(
     }
   };
 
-  if (concurrency === 1) {
-    for (const item of items) {
-      if (stopped) break;
-      await handleItem(item);
-      if (stopped) break;
-      if (delayMs > 0) await sleep(delayMs);
-    }
-    return { results, failures };
+  for (const item of items) {
+    if (stopped) break;
+    await handleItem(item);
+    if (stopped) break;
+    if (delayMs > 0) await sleep(delayMs);
   }
-
-  // Worker-pool: shared queue index, each worker pulls items until exhausted.
-  let nextIndex = 0;
-  const worker = async (): Promise<void> => {
-    while (!stopped) {
-      const i = nextIndex++;
-      if (i >= items.length) return;
-      await handleItem(items[i]);
-      if (stopped) return;
-      if (delayMs > 0) await sleep(delayMs);
-    }
-  };
-  const workers: Promise<void>[] = [];
-  for (let i = 0; i < concurrency; i++) workers.push(worker());
-  await Promise.all(workers);
-
   return { results, failures };
 }

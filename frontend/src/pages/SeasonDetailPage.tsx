@@ -273,6 +273,9 @@ export default function SeasonDetailPage() {
   const releasedWithStatus = episodes.filter(
     (ep) => isReleased(ep.air_date) && statusMap.has(ep.episode_number),
   );
+  const watchedCount = releasedWithStatus.filter(
+    (ep) => statusMap.get(ep.episode_number)?.is_watched,
+  ).length;
   const allReleasedWatched =
     hasStatus &&
     releasedWithStatus.length > 0 &&
@@ -390,17 +393,8 @@ export default function SeasonDetailPage() {
             <div className="flex items-center gap-4">
               {hasStatus && releasedWithStatus.length > 0 && (
                 <span className="text-[11px] font-mono text-zinc-500 tracking-wide whitespace-nowrap">
-                  {
-                    releasedWithStatus.filter(
-                      (ep) => statusMap.get(ep.episode_number)?.is_watched,
-                    ).length
-                  }{" "}
-                  of {episodes.length} watched ·{" "}
-                  {episodes.length -
-                    releasedWithStatus.filter(
-                      (ep) => statusMap.get(ep.episode_number)?.is_watched,
-                    ).length}{" "}
-                  remaining
+                  {watchedCount} of {episodes.length} watched ·{" "}
+                  {episodes.length - watchedCount} remaining
                 </span>
               )}
               {hasStatus &&

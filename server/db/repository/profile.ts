@@ -77,26 +77,6 @@ export async function getUserPublicProfile(
       showWatchlist = false;
     }
 
-    const emptyStatsOverview: StatsOverview = {
-      tracked_movies: 0,
-      tracked_shows: 0,
-      watched_movies: 0,
-      watched_episodes: 0,
-      watch_time_minutes: 0,
-      watch_time_minutes_movies: 0,
-      watch_time_minutes_shows: 0,
-    };
-    const emptyShowsByStatus: ShowsByStatus = {
-      watching: 0,
-      caught_up: 0,
-      completed: 0,
-      not_started: 0,
-      unreleased: 0,
-      on_hold: 0,
-      dropped: 0,
-      plan_to_watch: 0,
-    };
-
     const [
       trackedCount,
       watchedMoviesRow,
@@ -142,7 +122,15 @@ export async function getUserPublicProfile(
         : Promise.resolve(false),
       showWatchlist
         ? getStatsOverview(user.id)
-        : Promise.resolve(emptyStatsOverview),
+        : Promise.resolve<StatsOverview>({
+            tracked_movies: 0,
+            tracked_shows: 0,
+            watched_movies: 0,
+            watched_episodes: 0,
+            watch_time_minutes: 0,
+            watch_time_minutes_movies: 0,
+            watch_time_minutes_shows: 0,
+          }),
       showWatchlist
         ? getUserGenreBreakdown(user.id, 6)
         : Promise.resolve([] as GenreCount[]),
@@ -151,7 +139,16 @@ export async function getUserPublicProfile(
         : Promise.resolve([] as MonthlyActivity[]),
       showWatchlist
         ? getShowsByStatus(user.id)
-        : Promise.resolve(emptyShowsByStatus),
+        : Promise.resolve<ShowsByStatus>({
+            watching: 0,
+            caught_up: 0,
+            completed: 0,
+            not_started: 0,
+            unreleased: 0,
+            on_hold: 0,
+            dropped: 0,
+            plan_to_watch: 0,
+          }),
       showWatchlist
         ? getMutualFollowers(user.id, 4)
         : Promise.resolve([] as MutualFollower[]),

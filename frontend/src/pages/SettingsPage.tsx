@@ -60,16 +60,9 @@ export default function SettingsPage() {
     );
   }
 
-  const TABS = [
-    { value: "account", label: t("settings.tabs.account") },
-    { value: "appearance", label: t("settings.tabs.appearance") },
-    { value: "subscriptions", label: t("settings.tabs.subscriptions") },
-    { value: "notifications", label: t("settings.tabs.notifications") },
-    { value: "integrations", label: t("settings.tabs.integrations") },
-    ...(user.is_admin
-      ? [{ value: "admin", label: t("settings.tabs.admin") }]
-      : []),
-  ];
+  const TABS = VALID_TABS.filter(
+    (value) => value !== "admin" || user.is_admin,
+  ).map((value) => ({ value, label: t(`settings.tabs.${value}`) }));
 
   const breadcrumbLabel =
     TABS.find((x) => x.value === activeTab)?.label ?? activeTab;

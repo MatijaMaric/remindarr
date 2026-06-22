@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -314,97 +314,62 @@ interface PasskeyItem {
   createdAt: string | Date | null;
 }
 
-type PasskeyState = {
-  status: "loading" | "idle" | "adding" | "deleting";
-  passkeys: PasskeyItem[];
-  message: string;
-  error: string;
-  pendingId: string | null;
-};
-
-type PasskeyAction =
-  | { type: "LOAD_SUCCESS"; passkeys: PasskeyItem[] }
-  | { type: "LOAD_DONE" }
-  | { type: "ADD_START" }
-  | { type: "DELETE_START"; id: string }
-  | { type: "OP_DONE"; passkeys: PasskeyItem[]; message: string }
-  | { type: "OP_ERROR"; error: string };
-
-function passkeyReducer(
-  state: PasskeyState,
-  action: PasskeyAction,
-): PasskeyState {
-  switch (action.type) {
-    case "LOAD_SUCCESS":
-      return { ...state, status: "idle", passkeys: action.passkeys };
-    case "LOAD_DONE":
-      return { ...state, status: "idle" };
-    case "ADD_START":
-      return { ...state, status: "adding", message: "", error: "" };
-    case "DELETE_START":
-      return {
-        ...state,
-        status: "deleting",
-        message: "",
-        error: "",
-        pendingId: action.id,
-      };
-    case "OP_DONE":
-      return {
-        status: "idle",
-        passkeys: action.passkeys,
-        message: action.message,
-        error: "",
-        pendingId: null,
-      };
-    case "OP_ERROR":
-      return { ...state, status: "idle", error: action.error, pendingId: null };
-    default:
-      return state;
-  }
-}
-
 function PasskeySection() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [pkState, dispatch] = useReducer(passkeyReducer, {
-    status: "loading",
-    passkeys: [],
-    message: "",
-    error: "",
-    pendingId: null,
-  });
+  const [status, setStatus] = useState<
+    "loading" | "idle" | "adding" | "deleting"
+  >("loading");
+  const [passkeys, setPasskeys] = useState<PasskeyItem[]>([]);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [passkeyName, setPasskeyName] = useState("");
 
-  const { status, passkeys, message: msg, error: err, pendingId } = pkState;
   const loading = status === "loading";
   const adding = status === "adding";
+
+  // Mirror the prior reducer's OP_DONE / OP_ERROR transitions so multi-field
+  // updates stay atomic (React batches these setState calls into one render).
+  function opDone(nextPasskeys: PasskeyItem[], message: string) {
+    setStatus("idle");
+    setPasskeys(nextPasskeys);
+    setMsg(message);
+    setErr("");
+    setPendingId(null);
+  }
+
+  function opError(error: string) {
+    setStatus("idle");
+    setErr(error);
+    setPendingId(null);
+  }
 
   const webauthnSupported =
     typeof window !== "undefined" && !!window.PublicKeyCredential;
 
   useEffect(() => {
     if (!webauthnSupported) {
-      dispatch({ type: "LOAD_DONE" });
+      setStatus("idle");
       return;
     }
     authClient.passkey
       .listUserPasskeys()
       .then((result) => {
-        if (result.data)
-          dispatch({
-            type: "LOAD_SUCCESS",
-            passkeys: result.data as PasskeyItem[],
-          });
-        else dispatch({ type: "LOAD_DONE" });
+        if (result.data) {
+          setStatus("idle");
+          setPasskeys(result.data as PasskeyItem[]);
+        } else setStatus("idle");
       })
-      .catch(() => dispatch({ type: "LOAD_DONE" }));
+      .catch(() => setStatus("idle"));
   }, [webauthnSupported]);
 
   async function handleAddPasskey() {
-    dispatch({ type: "ADD_START" });
+    setStatus("adding");
+    setMsg("");
+    setErr("");
     try {
       const result = await authClient.passkey.addPasskey({
         name: passkeyName || user?.username || undefined,
@@ -415,26 +380,25 @@ function PasskeySection() {
         );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
-      dispatch({
-        type: "OP_DONE",
-        passkeys: (listResult.data as PasskeyItem[]) ?? [],
-        message: t("profile.passkeyAdded"),
-      });
+      opDone(
+        (listResult.data as PasskeyItem[]) ?? [],
+        t("profile.passkeyAdded"),
+      );
       setPasskeyName("");
     } catch (e: unknown) {
       if (!(e instanceof Error) || e.name !== "NotAllowedError") {
-        dispatch({
-          type: "OP_ERROR",
-          error: e instanceof Error ? e.message : String(e),
-        });
+        opError(e instanceof Error ? e.message : String(e));
       } else {
-        dispatch({ type: "OP_ERROR", error: "" });
+        opError("");
       }
     }
   }
 
   async function handleDeletePasskey(id: string) {
-    dispatch({ type: "DELETE_START", id });
+    setStatus("deleting");
+    setMsg("");
+    setErr("");
+    setPendingId(id);
     try {
       const result = await authClient.passkey.deletePasskey({ id });
       if (result?.error) {
@@ -443,16 +407,12 @@ function PasskeySection() {
         );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
-      dispatch({
-        type: "OP_DONE",
-        passkeys: (listResult.data as PasskeyItem[]) ?? [],
-        message: t("profile.passkeyDeleted"),
-      });
+      opDone(
+        (listResult.data as PasskeyItem[]) ?? [],
+        t("profile.passkeyDeleted"),
+      );
     } catch (e: unknown) {
-      dispatch({
-        type: "OP_ERROR",
-        error: e instanceof Error ? e.message : String(e),
-      });
+      opError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -469,18 +429,14 @@ function PasskeySection() {
         );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
-      dispatch({
-        type: "OP_DONE",
-        passkeys: (listResult.data as PasskeyItem[]) ?? [],
-        message: t("profile.passkeyRenamed"),
-      });
+      opDone(
+        (listResult.data as PasskeyItem[]) ?? [],
+        t("profile.passkeyRenamed"),
+      );
       setEditing(null);
       setEditName("");
     } catch (e: unknown) {
-      dispatch({
-        type: "OP_ERROR",
-        error: e instanceof Error ? e.message : String(e),
-      });
+      opError(e instanceof Error ? e.message : String(e));
     }
   }
 

@@ -41,6 +41,13 @@ import TrendingSection from "../components/TrendingSection";
 import { MediaCard } from "../components/MediaCard";
 import type { UpNextItem, MovieTrackResponse } from "../api";
 
+// Module-scope stable empty defaults so downstream memo/effect deps don't see
+// a fresh [] each render when authData is absent.
+const EMPTY_EPISODES: Episode[] = [];
+const EMPTY_RECOMMENDATIONS: Recommendation[] = [];
+const EMPTY_UP_NEXT_ITEMS: UpNextItem[] = [];
+const EMPTY_FRIENDS_LOVED_ITEMS: FriendsLovedItem[] = [];
+
 export interface UnwatchedCardEntry {
   episode: Episode;
   totalEpisodeCount: number;
@@ -604,36 +611,14 @@ export default function HomePage() {
     [confirmingTitleId, markAllWatchedMutation],
   );
 
-  const {
-    today,
-    upcoming,
-    unwatched,
-    recommendations,
-    layout,
-    upNextItems,
-    friendsLovedItems,
-  } = useMemo(() => {
-    if (authData) {
-      return {
-        today: authData.today,
-        upcoming: authData.upcoming,
-        unwatched: authData.unwatched,
-        recommendations: authData.recommendations,
-        layout: authData.layout,
-        upNextItems: authData.upNextItems,
-        friendsLovedItems: authData.friendsLovedItems,
-      };
-    }
-    return {
-      today: [] as Episode[],
-      upcoming: [] as Episode[],
-      unwatched: [] as Episode[],
-      recommendations: [] as Recommendation[],
-      layout: DEFAULT_HOMEPAGE_LAYOUT,
-      upNextItems: [] as UpNextItem[],
-      friendsLovedItems: [] as FriendsLovedItem[],
-    };
-  }, [authData]);
+  const today = authData?.today ?? EMPTY_EPISODES;
+  const upcoming = authData?.upcoming ?? EMPTY_EPISODES;
+  const unwatched = authData?.unwatched ?? EMPTY_EPISODES;
+  const recommendations = authData?.recommendations ?? EMPTY_RECOMMENDATIONS;
+  const layout = authData?.layout ?? DEFAULT_HOMEPAGE_LAYOUT;
+  const upNextItems = authData?.upNextItems ?? EMPTY_UP_NEXT_ITEMS;
+  const friendsLovedItems =
+    authData?.friendsLovedItems ?? EMPTY_FRIENDS_LOVED_ITEMS;
 
   const streakData = authData?.streakData ?? null;
   const movieData = authData?.movieData ?? { to_watch: [], upcoming: [] };

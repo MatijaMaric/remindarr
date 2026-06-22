@@ -111,13 +111,6 @@ export async function buildTrendingSnapshot(
   };
 }
 
-const EMPTY_SNAPSHOT = (): TrendingSnapshot => ({
-  movies: [],
-  shows: [],
-  people: [],
-  refreshedAt: new Date().toISOString(),
-});
-
 const app = new Hono<AppEnv>();
 
 app.get("/", zValidator("query", trendingQuerySchema), async (c) => {
@@ -145,7 +138,12 @@ app.get("/", zValidator("query", trendingQuerySchema), async (c) => {
         timeWindow,
       });
       syncFailureTotal.inc({ source: "tmdb" });
-      snapshot = EMPTY_SNAPSHOT();
+      snapshot = {
+        movies: [],
+        shows: [],
+        people: [],
+        refreshedAt: new Date().toISOString(),
+      };
       failedSoft = true;
     }
   }
