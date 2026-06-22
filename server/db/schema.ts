@@ -54,6 +54,7 @@ export const titles = sqliteTable(
   (table) => [
     index("idx_titles_release_date").on(table.releaseDate),
     index("idx_titles_object_type").on(table.objectType),
+    index("idx_titles_type_release").on(table.objectType, table.releaseDate),
   ],
 );
 
