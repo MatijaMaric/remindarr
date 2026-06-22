@@ -604,15 +604,6 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> =
     "backfill-achievements": (data) => handleBackfillAchievements(data),
   };
 
-export interface JobRow {
-  id: number;
-  name: string;
-  data: string | null;
-  status: string;
-  attempts: number;
-  maxAttempts: number;
-}
-
 /**
  * Process all pending jobs from the `jobs` table.
  * Each job is claimed (set to running), executed, then marked completed or failed.

@@ -132,10 +132,8 @@ export async function syncEpisodes(): Promise<{
         show.tmdb_id,
         show.title,
       );
-      if (synced >= 0) {
-        totalSynced += synced;
-        showsProcessed++;
-      }
+      totalSynced += synced;
+      showsProcessed++;
     },
     onError: (err, show) => {
       log.error("Failed to sync show", {

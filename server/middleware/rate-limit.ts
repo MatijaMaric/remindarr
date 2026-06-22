@@ -70,11 +70,6 @@ export class MemoryRateLimitStore implements RateLimitStore {
     return { allowed: true, retryAfterMs: 0 };
   }
 
-  /** Exposed for testing — allows direct inspection of the cleanup callback. */
-  getCleanupTimer(): ReturnType<typeof setInterval> {
-    return this.cleanupTimer;
-  }
-
   /** For testing: expose bucket map to allow simulating stale entries. */
   getBuckets(): Map<string, TokenBucket> {
     return this.buckets;
