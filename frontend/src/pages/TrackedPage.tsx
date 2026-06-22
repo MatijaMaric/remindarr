@@ -184,10 +184,10 @@ export default function TrackedPage() {
   const toggleSelectMode = useCallback(() => {
     if (selectMode) {
       exitSelectMode();
-    } else {
-      setSelectMode(true);
-      setSelectedIds(new Set());
+      return;
     }
+    setSelectMode(true);
+    setSelectedIds(new Set());
   }, [selectMode, exitSelectMode]);
 
   // Ctrl/Cmd+A selects all visible titles when in select mode

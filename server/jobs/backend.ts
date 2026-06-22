@@ -39,10 +39,6 @@ export function runWithEnv<T>(env: CFEnv, fn: () => T): T {
   return envStorage.run(env, fn);
 }
 
-function getEnvOrNull(): CFEnv | null {
-  return envStorage.getStore() ?? null;
-}
-
 // ─── Cron job catalogue (single source of truth) ─────────────────────────────
 
 export const CRON_JOBS = [
@@ -176,7 +172,7 @@ export async function enqueueAdhoc(
   data?: Record<string, unknown>,
 ): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
-    const env = getEnvOrNull();
+    const env = envStorage.getStore() ?? null;
     if (!env?.JOB_QUEUE_DO)
       throw new Error("JOB_QUEUE_DO binding not available");
     const partitionKey = getPartitionKey(name, data);
@@ -212,7 +208,7 @@ export async function enqueueAdhoc(
  */
 export async function enqueueOnce(name: string): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
-    const env = getEnvOrNull();
+    const env = envStorage.getStore() ?? null;
     if (env?.JOB_QUEUE_DO) {
       await doFetch(env, name, "/enqueue", "POST", {
         name,

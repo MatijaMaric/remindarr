@@ -85,12 +85,6 @@ export function pickFeaturedItem(items: CalendarItem[]): CalendarItem | null {
   return items[0];
 }
 
-/** Get poster URL for a calendar item (show poster for episodes, title poster for movies) */
-export function getItemPosterUrl(item: CalendarItem): string | null {
-  if (item.type === "episode") return item.data.poster_url;
-  return item.data.poster_url;
-}
-
 /** Determine cell border color based on item types */
 export function getCellBorderColor(items: CalendarItem[]): string {
   const hasEpisodes = items.some((i) => i.type === "episode");
@@ -243,7 +237,7 @@ const DayHeader = memo(function DayHeader({
   isToday: boolean;
 }) {
   const featured = pickFeaturedItem(items);
-  const posterUrl = featured ? getItemPosterUrl(featured) : null;
+  const posterUrl = featured ? featured.data.poster_url : null;
 
   return (
     <div

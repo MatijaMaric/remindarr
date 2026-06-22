@@ -273,11 +273,7 @@ function sanitize(row: Awaited<ReturnType<typeof getIntegrationById>>) {
   if (!row) return row;
   // Strip the Plex token from API responses
   const { config, ...rest } = row;
-  const safeConfig = { ...config };
-  if ("plexToken" in safeConfig) {
-    (safeConfig as any).plexToken = undefined;
-    delete (safeConfig as any).plexToken;
-  }
+  const { plexToken: _plexToken, ...safeConfig } = config;
   return { ...rest, config: safeConfig };
 }
 

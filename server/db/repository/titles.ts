@@ -48,11 +48,6 @@ interface FilterCache<T> {
 let genresCache: FilterCache<string[]> | null = null;
 let languagesCache: FilterCache<string[]> | null = null;
 
-// In-flight promise refs prevent thundering-herd: concurrent callers that
-// arrive while the cache is expired all await the same refresh promise.
-let genresInflight: Promise<string[]> | null = null;
-let languagesInflight: Promise<string[]> | null = null;
-
 export function invalidateFilterCaches(): void {
   genresCache = null;
   languagesCache = null;
@@ -888,9 +883,8 @@ export function getGenres(): Promise<string[]> {
   if (genresCache && now < genresCache.expiresAt) {
     return Promise.resolve(genresCache.value);
   }
-  if (genresInflight) return genresInflight;
 
-  genresInflight = traceDbQuery("getGenres", async () => {
+  return traceDbQuery("getGenres", async () => {
     const db = getDb();
     const rows = await db
       .selectDistinct({ genre: titleGenres.genre })
@@ -899,16 +893,10 @@ export function getGenres(): Promise<string[]> {
       .all();
     const rawGenres = rows.map((r) => r.genre);
     return [...new Set(rawGenres.map(toCanonicalGenre))].sort();
-  })
-    .then((result) => {
-      genresCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
-      return result;
-    })
-    .finally(() => {
-      genresInflight = null;
-    });
-
-  return genresInflight;
+  }).then((result) => {
+    genresCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
+    return result;
+  });
 }
 
 export function getLanguages(): Promise<string[]> {
@@ -916,9 +904,8 @@ export function getLanguages(): Promise<string[]> {
   if (languagesCache && now < languagesCache.expiresAt) {
     return Promise.resolve(languagesCache.value);
   }
-  if (languagesInflight) return languagesInflight;
 
-  languagesInflight = traceDbQuery("getLanguages", async () => {
+  return traceDbQuery("getLanguages", async () => {
     const db = getDb();
     const rows = await db
       .selectDistinct({ original_language: titles.originalLanguage })
@@ -927,14 +914,8 @@ export function getLanguages(): Promise<string[]> {
       .orderBy(asc(titles.originalLanguage))
       .all();
     return rows.map((r) => r.original_language!);
-  })
-    .then((result) => {
-      languagesCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
-      return result;
-    })
-    .finally(() => {
-      languagesInflight = null;
-    });
-
-  return languagesInflight;
+  }).then((result) => {
+    languagesCache = { value: result, expiresAt: Date.now() + CACHE_TTL_MS };
+    return result;
+  });
 }

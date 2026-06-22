@@ -19,10 +19,9 @@ const VALID_THEMES: Theme[] = [
   "plum",
   "auto",
 ];
-const BASE_THEMES: Theme[] = [...VALID_THEMES];
 
 export function isValidTheme(value: string | null): value is Theme {
-  return BASE_THEMES.includes(value as Theme);
+  return VALID_THEMES.includes(value as Theme);
 }
 
 /** Resolves "auto" to dark or light based on prefers-color-scheme. */

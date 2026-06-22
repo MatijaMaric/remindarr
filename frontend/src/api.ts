@@ -82,12 +82,6 @@ async function fetchBlob(
   return doFetch(url, { credentials: "include", ...options });
 }
 
-/** Posts multipart form data and parses the JSON response. */
-async function fetchForm<T>(url: string, form: FormData): Promise<T> {
-  const res = await doFetch(url, { method: "POST", body: form });
-  return res.json();
-}
-
 export async function getTitles(
   params: {
     daysBack?: number;
@@ -255,7 +249,8 @@ export async function importCsv(file: File): Promise<{
 }> {
   const form = new FormData();
   form.append("file", file);
-  return fetchForm("/import/csv", form);
+  const res = await doFetch("/import/csv", { method: "POST", body: form });
+  return res.json();
 }
 
 // ─── User Profile ──────────────────────────────────────────────────────────
