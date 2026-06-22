@@ -91,6 +91,47 @@ describe("migrations FK-cascade regression", () => {
   });
 });
 
+/**
+ * Regression guard for issue #1025: better-auth writes `impersonated_by` to the
+ * sessions table on every session update. The column is defined in schema.ts and
+ * in the CREATE TABLE in drizzle/0000, so any DB built from the migrations must
+ * have it.
+ *
+ * Production failed because prod D1 was created from an OLDER 0000 that predated
+ * the column; since 0000 is already marked applied, `db:migrate:cf` won't re-add
+ * it (the prod fix is a one-time manual ALTER). This test guards the code path:
+ * a fresh DB built from all `drizzle/` migrations must expose `impersonated_by`.
+ */
+describe("sessions.impersonated_by column (issue #1025)", () => {
+  it("exists on the sessions table after applying all migrations", () => {
+    const db = new Database(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+
+    const sqlFiles = fs
+      .readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
+
+    for (const file of sqlFiles) {
+      const content = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
+      const statements = content
+        .split("--> statement-breakpoint")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((s) => !/^PRAGMA\s+foreign_keys\s*=/i.test(s));
+      for (const stmt of statements) db.exec(stmt);
+    }
+
+    const columns = (
+      db.prepare("PRAGMA table_info(sessions)").all() as { name: string }[]
+    ).map((c) => c.name);
+
+    expect(columns).toContain("impersonated_by");
+
+    db.close();
+  });
+});
+
 describe("0043 consolidate duplicate providers", () => {
   it("merges offers/user_subscribed_providers and deletes duplicate provider rows", () => {
     const db = new Database(":memory:");
