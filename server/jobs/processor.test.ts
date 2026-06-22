@@ -36,6 +36,17 @@ const mockSyncEpisodesForShow = spyOn(
   syncModule,
   "syncEpisodesForShow",
 ).mockResolvedValue(0);
+const mockListTrackedShows = spyOn(
+  syncModule,
+  "listTrackedShowsForEpisodeSync",
+).mockResolvedValue([]);
+
+// Mock enqueueAdhoc so the sync-episodes fan-out can be asserted without
+// inserting real sync-show-episodes rows back into the jobs table.
+import * as backendModule from "./backend";
+const mockEnqueueAdhoc = spyOn(backendModule, "enqueueAdhoc").mockResolvedValue(
+  undefined,
+);
 
 import * as tmdbClientModule from "../tmdb/client";
 const emptyTrendingPage = {
@@ -85,6 +96,8 @@ beforeEach(() => {
   mockUpsertTitles.mockClear();
   mockSyncEpisodes.mockClear();
   mockSyncEpisodesForShow.mockClear();
+  mockListTrackedShows.mockClear();
+  mockEnqueueAdhoc.mockClear();
   mockDeleteExpiredSessions.mockClear();
   mockFetchTrendingMovies.mockClear();
   mockFetchTrendingTv.mockClear();
@@ -99,6 +112,8 @@ afterAll(() => {
   mockUpsertTitles.mockRestore();
   mockSyncEpisodes.mockRestore();
   mockSyncEpisodesForShow.mockRestore();
+  mockListTrackedShows.mockRestore();
+  mockEnqueueAdhoc.mockRestore();
   mockDeleteExpiredSessions.mockRestore();
   mockFetchTrendingMovies.mockRestore();
   mockFetchTrendingTv.mockRestore();
@@ -176,14 +191,30 @@ describe("processPendingJobs", () => {
     expect(allJobs[0].status).toBe("completed");
   });
 
-  it("processes sync-episodes job", async () => {
-    mockSyncEpisodes.mockResolvedValueOnce({ synced: 10, shows: 3 });
+  it("fans out one sync-show-episodes adhoc job per tracked show", async () => {
+    mockListTrackedShows.mockResolvedValueOnce([
+      { id: "tv-1", tmdb_id: "1", title: "Show One" },
+      { id: "tv-2", tmdb_id: "2", title: "Show Two" },
+    ]);
 
     await insertJob("sync-episodes");
     const count = await processPendingJobs();
 
     expect(count).toBe(1);
-    expect(mockSyncEpisodes).toHaveBeenCalledTimes(1);
+    expect(mockEnqueueAdhoc).toHaveBeenCalledTimes(2);
+    expect(mockEnqueueAdhoc).toHaveBeenCalledWith("sync-show-episodes", {
+      titleId: "tv-1",
+      tmdbId: "1",
+      title: "Show One",
+    });
+    expect(mockEnqueueAdhoc).toHaveBeenCalledWith("sync-show-episodes", {
+      titleId: "tv-2",
+      tmdbId: "2",
+      title: "Show Two",
+    });
+    // Fan-out only — no inline per-show sync in the cron handler.
+    expect(mockSyncEpisodesForShow).not.toHaveBeenCalled();
+    expect(mockSyncEpisodes).not.toHaveBeenCalled();
   });
 
   it("processes sync-show-episodes job with data", async () => {
@@ -322,7 +353,7 @@ describe("processPendingJobs", () => {
   it("processes multiple jobs in order", async () => {
     mockFetchNewReleases.mockResolvedValue([]);
     mockUpsertTitles.mockResolvedValue(0);
-    mockSyncEpisodes.mockResolvedValue({ synced: 0, shows: 0 });
+    mockListTrackedShows.mockResolvedValue([]);
 
     await insertJob("sync-titles");
     await insertJob("sync-episodes");
@@ -330,7 +361,7 @@ describe("processPendingJobs", () => {
     const count = await processPendingJobs();
     expect(count).toBe(2);
     expect(mockFetchNewReleases).toHaveBeenCalledTimes(1);
-    expect(mockSyncEpisodes).toHaveBeenCalledTimes(1);
+    expect(mockListTrackedShows).toHaveBeenCalledTimes(1);
   });
 
   it("skips episode sync when TMDB_API_KEY is not set", async () => {
@@ -340,7 +371,8 @@ describe("processPendingJobs", () => {
     const count = await processPendingJobs();
 
     expect(count).toBe(1); // Still completes, just skips the actual sync
-    expect(mockSyncEpisodes).not.toHaveBeenCalled();
+    expect(mockListTrackedShows).not.toHaveBeenCalled();
+    expect(mockEnqueueAdhoc).not.toHaveBeenCalled();
   });
 
   it("claims jobs atomically — handler runs at most once if two invocations race on the same pending job", async () => {

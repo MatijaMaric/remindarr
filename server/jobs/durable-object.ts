@@ -459,7 +459,31 @@ export class JobQueueDO {
     // Self-heal: re-register the cron schedule after every execution so a dropped
     // schedule (e.g. due to DO eviction or a wrapped entrypoint interfering with
     // @cloudflare/actors/alarms) recovers within the next alarm cycle (#795).
-    if (cron) await this.armCron(name, cron);
+    // Best-effort: armCron() calls blockConcurrencyWhile(), which can exceed the
+    // 30s CF limit after a long job and reset the DO before job state is durably
+    // written, crash-looping (#1020). The */5 watchdog re-arms independently, so
+    // swallow failures here rather than abort runJob or leave state inconsistent.
+    if (cron) {
+      try {
+        await this.armCron(name, cron);
+      } catch (err) {
+        Sentry.addBreadcrumb({
+          category: "jobs",
+          message: "Self-heal armCron failed (best-effort)",
+          level: "warning",
+          data: {
+            name,
+            cron,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
+        log.warn("Self-heal armCron failed, relying on watchdog", {
+          name,
+          cron,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
     await this.rearmIfPending(cron);
   }
 

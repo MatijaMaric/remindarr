@@ -18,7 +18,11 @@ import {
   recordDelivery,
 } from "../db/repository";
 import { fetchNewReleases } from "../tmdb/sync-titles";
-import { syncEpisodes, syncEpisodesForShow } from "../tmdb/sync";
+import {
+  syncEpisodesForShow,
+  listTrackedShowsForEpisodeSync,
+} from "../tmdb/sync";
+import { enqueueAdhoc } from "./backend";
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { getCache } from "../cache";
@@ -75,8 +79,21 @@ async function handleSyncEpisodes(): Promise<void> {
     });
     return;
   }
-  const result = await syncEpisodes();
-  log.info("Synced episodes", { synced: result.synced, shows: result.shows });
+  // ponytail: fan out one sync-show-episodes job per tracked show instead of
+  // syncing all shows inline. The old inline path took ~79s, which blew the 30s
+  // CF Durable Object alarm/CPU budget and crash-looped the JobQueueDO (#1020).
+  // Per-show is the established safe unit (see track.ts) and the partitioned DOs
+  // drain via the */5 watchdog; this replaces the sequential EPISODE_SYNC_DELAY_MS
+  // pacing. Revisit if TMDB starts rate-limiting the fan-out.
+  const shows = await listTrackedShowsForEpisodeSync();
+  for (const show of shows) {
+    await enqueueAdhoc("sync-show-episodes", {
+      titleId: show.id,
+      tmdbId: show.tmdb_id,
+      title: show.title,
+    });
+  }
+  log.info("Dispatched per-show episode sync jobs", { shows: shows.length });
 }
 
 async function handleSyncTrending(): Promise<void> {

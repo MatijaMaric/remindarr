@@ -50,6 +50,17 @@ const mockSyncEpisodesForShow = spyOn(
   syncModule,
   "syncEpisodesForShow",
 ).mockResolvedValue(0);
+const mockListTrackedShows = spyOn(
+  syncModule,
+  "listTrackedShowsForEpisodeSync",
+).mockResolvedValue([]);
+
+// Mock enqueueAdhoc so the sync-episodes fan-out can be asserted without
+// touching the DO/jobs backend.
+import * as backendModule from "./backend";
+const mockEnqueueAdhoc = spyOn(backendModule, "enqueueAdhoc").mockResolvedValue(
+  undefined,
+);
 
 // Mock TMDB client for backfill-title-offers
 import * as tmdbClient from "../tmdb/client";
@@ -169,6 +180,8 @@ beforeEach(() => {
   mockUpsertTitles.mockClear();
   mockSyncEpisodes.mockClear();
   mockSyncEpisodesForShow.mockClear();
+  mockListTrackedShows.mockClear();
+  mockEnqueueAdhoc.mockClear();
   mockGetEpisodeIdsBySE.mockClear();
   mockWatchEpisodesBulk.mockClear();
   mockMigrateTitles.mockClear();
@@ -196,6 +209,8 @@ afterAll(() => {
   mockUpsertTitles.mockRestore();
   mockSyncEpisodes.mockRestore();
   mockSyncEpisodesForShow.mockRestore();
+  mockListTrackedShows.mockRestore();
+  mockEnqueueAdhoc.mockRestore();
   mockGetEpisodeIdsBySE.mockRestore();
   mockWatchEpisodesBulk.mockRestore();
   mockMigrateTitles.mockRestore();
@@ -419,14 +434,30 @@ describe("sync-episodes handler", () => {
     CONFIG.TMDB_API_KEY = originalApiKey;
   });
 
-  it("calls syncEpisodes when TMDB_API_KEY is configured", async () => {
+  it("fans out one sync-show-episodes adhoc job per tracked show", async () => {
     CONFIG.TMDB_API_KEY = "test-api-key";
-    mockSyncEpisodes.mockResolvedValueOnce({ synced: 5, shows: 2 });
+    mockListTrackedShows.mockResolvedValueOnce([
+      { id: "tv-1", tmdb_id: "1", title: "Show One" },
+      { id: "tv-2", tmdb_id: "2", title: "Show Two" },
+    ]);
 
     enqueueJob("sync-episodes");
     await processJobs();
 
-    expect(mockSyncEpisodes).toHaveBeenCalledTimes(1);
+    expect(mockEnqueueAdhoc).toHaveBeenCalledTimes(2);
+    expect(mockEnqueueAdhoc).toHaveBeenCalledWith("sync-show-episodes", {
+      titleId: "tv-1",
+      tmdbId: "1",
+      title: "Show One",
+    });
+    expect(mockEnqueueAdhoc).toHaveBeenCalledWith("sync-show-episodes", {
+      titleId: "tv-2",
+      tmdbId: "2",
+      title: "Show Two",
+    });
+    // Fan-out only — no inline per-show sync in the cron handler.
+    expect(mockSyncEpisodesForShow).not.toHaveBeenCalled();
+    expect(mockSyncEpisodes).not.toHaveBeenCalled();
   });
 
   it("skips episode sync when TMDB_API_KEY is not set", async () => {
@@ -435,13 +466,14 @@ describe("sync-episodes handler", () => {
     enqueueJob("sync-episodes");
     await processJobs();
 
-    expect(mockSyncEpisodes).not.toHaveBeenCalled();
+    expect(mockListTrackedShows).not.toHaveBeenCalled();
+    expect(mockEnqueueAdhoc).not.toHaveBeenCalled();
   });
 
-  it("handles syncEpisodes failure gracefully (job fails)", async () => {
+  it("handles fan-out failure gracefully (job fails)", async () => {
     CONFIG.TMDB_API_KEY = "test-api-key";
-    const error = new Error("Episode sync failed");
-    mockSyncEpisodes.mockRejectedValueOnce(error);
+    const error = new Error("Episode fan-out failed");
+    mockListTrackedShows.mockRejectedValueOnce(error);
 
     enqueueJob("sync-episodes");
     await processJobs();
