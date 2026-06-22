@@ -1,0 +1,1 @@
+CREATE INDEX `idx_titles_type_release` ON `titles` (`object_type`,`release_date`);
