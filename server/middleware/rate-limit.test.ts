@@ -4,6 +4,7 @@ import {
   rateLimiter,
   MemoryRateLimitStore,
   KvRateLimitStore,
+  type RateLimitStore,
 } from "./rate-limit";
 import type { AppEnv } from "../types";
 
@@ -371,5 +372,61 @@ describe("KvRateLimitStore", () => {
     // IP B is unaffected
     const allowedB = await store.consume("search:2.2.2.2", 1, 60_000, now);
     expect(allowedB.allowed).toBe(true);
+  });
+});
+
+// ─── Fail-open behavior on store errors (#1026) ─────────────────────────────
+
+describe("rateLimiter fail-open on store error", () => {
+  class ThrowingStore implements RateLimitStore {
+    async consume(): Promise<{ allowed: boolean; retryAfterMs: number }> {
+      throw new Error("KV unavailable");
+    }
+  }
+
+  it("calls next() and allows the request when store.consume throws", async () => {
+    // The rate-limit logger is a child logger; warn-level output goes to
+    // console.error. Spy there to observe the fail-open warning.
+    const errSpy = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const store = new ThrowingStore();
+      const app = new Hono<AppEnv>();
+      let nextCalled = false;
+      app.use("/test/*", rateLimiter({ store, limit: 1, windowMs: 60_000 }));
+      app.get("/test/hello", (c) => {
+        nextCalled = true;
+        return c.json({ ok: true });
+      });
+
+      const res = await app.request("/test/hello");
+
+      // Request reached the route (next was called) and succeeded — no 500/429.
+      expect(nextCalled).toBe(true);
+      expect(res.status).toBe(200);
+      // A warning was logged for the failed store.
+      const logged = errSpy.mock.calls
+        .map((args: unknown[]) => String(args[0]))
+        .join("\n");
+      expect(logged).toContain("Rate limit store error — failing open");
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it("falls through to the 404 fallback for unmatched paths when store throws", async () => {
+    const errSpy = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const store = new ThrowingStore();
+      const app = new Hono<AppEnv>();
+      app.use("/api/*", rateLimiter({ store, limit: 1, windowMs: 60_000 }));
+      app.get("*", (c) => c.json({ error: "Not found" }, 404));
+
+      const res = await app.request("/api/phpinfo.php");
+
+      // Store failure must NOT become a 500 — request reaches the 404 fallback.
+      expect(res.status).toBe(404);
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 });

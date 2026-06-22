@@ -197,14 +197,17 @@ app.onError((err, c) => {
   });
   Sentry.captureException(err);
 
-  log.error("Unhandled error", {
-    category,
-    requestId,
-    path: c.req.path,
-    method: c.req.method,
-    error: err.message,
-    stack: err.stack,
-  });
+  log.error(
+    `Unhandled ${err instanceof Error ? err.constructor.name : "error"}: ${err instanceof Error ? err.message : String(err)}`,
+    {
+      category,
+      requestId,
+      path: c.req.path,
+      method: c.req.method,
+      error: err.message,
+      stack: err.stack,
+    },
+  );
 
   return c.json({ error: "Internal server error" }, 500, {
     "X-Request-Id": requestId,

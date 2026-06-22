@@ -10,6 +10,7 @@ import {
   handler,
 } from "./worker";
 import { logger } from "./logger";
+import { rateLimiter, type RateLimitStore } from "./middleware/rate-limit";
 import * as backendModule from "./jobs/backend";
 import * as schema from "./db/schema";
 import { withConfigGuard } from "./test-utils/config";
@@ -38,7 +39,7 @@ describe("scheduled() cron-branching logic", () => {
   });
 });
 
-function makeTestApp() {
+function makeTestApp(rateLimitStore?: RateLimitStore) {
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -63,7 +64,9 @@ function makeTestApp() {
     console.error(
       JSON.stringify({
         level: "error",
-        msg: "Unhandled error",
+        // Mirrors worker.ts: embed the error class + message so CF Observability
+        // (which only surfaces `msg`) shows the actual failure (#1014).
+        msg: `Unhandled ${err instanceof Error ? err.constructor.name : "error"}: ${err instanceof Error ? err.message : String(err)}`,
         category,
         requestId,
         path: c.req.path,
@@ -78,8 +81,21 @@ function makeTestApp() {
     });
   });
 
+  // Mirror production /api/* rate limiter so a throwing store is exercised the
+  // same way it would be in worker.ts (#1026).
+  if (rateLimitStore) {
+    app.use(
+      "/api/*",
+      rateLimiter({ store: rateLimitStore, limit: 100, windowMs: 60_000 }),
+    );
+  }
+
   app.get("/boom", () => {
     throw new Error("test explosion");
+  });
+
+  app.get("/type-error", () => {
+    throw new TypeError("cannot read property of undefined");
   });
 
   app.get("/sqlite-error", () => {
@@ -90,6 +106,14 @@ function makeTestApp() {
 
   app.get("/forbidden", () => {
     throw new HTTPException(403, { message: "Forbidden" });
+  });
+
+  // SPA fallback — mirrors worker.ts app.get("*"): unmatched /api/* paths 404.
+  app.get("*", (c) => {
+    if (c.req.path.startsWith("/api/")) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    return c.text("Not Found", 404);
   });
 
   return app;
@@ -164,7 +188,7 @@ describe("CF worker onError handler", () => {
       })
       .filter(
         (obj: Record<string, unknown> | null): obj is Record<string, unknown> =>
-          obj !== null && obj.msg === "Unhandled error",
+          obj !== null && typeof obj.msg === "string" && obj.path === "/boom",
       );
 
     expect(logLines.length).toBe(1);
@@ -182,6 +206,77 @@ describe("CF worker onError handler", () => {
     const res = await app.request("/forbidden");
 
     expect(res.status).toBe(403);
+    expect(captureSpy).not.toHaveBeenCalled();
+  });
+
+  it("embeds the error class name in the log message (#1014)", async () => {
+    const app = makeTestApp();
+    await app.request("/type-error");
+
+    const messages = consoleSpy.mock.calls
+      .map((args: unknown[]) => {
+        try {
+          return JSON.parse(args[0] as string) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (obj: Record<string, unknown> | null): obj is Record<string, unknown> =>
+          obj !== null && obj.path === "/type-error",
+      )
+      .map((obj: Record<string, unknown>) => obj.msg as string);
+
+    expect(messages.length).toBe(1);
+    expect(messages[0]).toContain("TypeError");
+    expect(messages[0]).toContain("cannot read property of undefined");
+  });
+});
+
+// ─── Unknown /api/* probes return 404, never 500 (#1026) ─────────────────────
+
+describe("unknown /api/* paths fall through to 404", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let captureSpy: ReturnType<typeof spyOn<typeof Sentry, "captureException">>;
+  let consoleSpy: ReturnType<typeof spyOn>;
+  let warnSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    captureSpy = spyOn(Sentry, "captureException").mockReturnValue(
+      "test-event-id" as any,
+    );
+    consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+    warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+    errorsByCategory.reset();
+  });
+
+  afterEach(() => {
+    captureSpy.mockRestore();
+    consoleSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("returns 404 for unknown /api/* probe paths", async () => {
+    const app = makeTestApp();
+
+    for (const path of ["/api/phpinfo.php", "/api/v1/credentials"]) {
+      const res = await app.request(path);
+      expect(res.status).toBe(404);
+    }
+  });
+
+  it("returns 404 (not 500) even when the rate-limit store throws", async () => {
+    const throwingStore: RateLimitStore = {
+      async consume() {
+        throw new Error("KV unavailable");
+      },
+    };
+    const app = makeTestApp(throwingStore);
+
+    const res = await app.request("/api/phpinfo.php");
+
+    expect(res.status).toBe(404);
+    // Store failure must never reach onError → Sentry.
     expect(captureSpy).not.toHaveBeenCalled();
   });
 });
