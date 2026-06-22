@@ -118,11 +118,7 @@ function MobileFeedHome({
   const alsoAiring = today.slice(1);
 
   // Group unwatched by show, take up to 8 shows
-  const cwByShow = new Map<string, Episode[]>();
-  for (const ep of unwatched) {
-    if (!cwByShow.has(ep.title_id)) cwByShow.set(ep.title_id, []);
-    cwByShow.get(ep.title_id)!.push(ep);
-  }
+  const cwByShow = groupByShow(unwatched);
   const cwEntries = Array.from(cwByShow.entries()).slice(0, 8);
 
   const today7 = upcoming.slice(0, 18);

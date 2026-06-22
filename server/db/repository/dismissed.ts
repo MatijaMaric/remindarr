@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { getDb, dismissedSuggestions } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
@@ -51,11 +51,11 @@ export async function getDismissedTitleIds(
 export async function getDismissedCount(userId: string): Promise<number> {
   return traceDbQuery("getDismissedCount", async () => {
     const db = getDb();
-    const rows = await db
-      .select({ titleId: dismissedSuggestions.titleId })
+    const row = await db
+      .select({ count: count() })
       .from(dismissedSuggestions)
       .where(eq(dismissedSuggestions.userId, userId))
-      .all();
-    return rows.length;
+      .get();
+    return row?.count ?? 0;
   });
 }

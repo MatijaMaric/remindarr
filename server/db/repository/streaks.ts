@@ -287,11 +287,7 @@ export async function recomputeStreakFromHistory(
 
 /** Convert an ISO datetime string to a UTC date string (YYYY-MM-DD). */
 function toUtcDateString(isoString: string): string {
-  const d = new Date(isoString);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return new Date(isoString).toISOString().slice(0, 10);
 }
 
 /** Compute the signed difference in days between two UTC date strings (b - a). */

@@ -52,7 +52,7 @@ export async function fetchNewReleases(options: {
   // Fetch movies
   if (!objectType || objectType === "MOVIE") {
     try {
-      const [movieGenres] = await Promise.all([getMovieGenres()]);
+      const movieGenres = await getMovieGenres();
 
       for (let page = 1; page <= maxPages; page++) {
         const result = await discoverMovies({
@@ -95,7 +95,7 @@ export async function fetchNewReleases(options: {
   // Fetch TV shows
   if (!objectType || objectType === "SHOW") {
     try {
-      const [tvGenres] = await Promise.all([getTvGenres()]);
+      const tvGenres = await getTvGenres();
 
       for (let page = 1; page <= maxPages; page++) {
         const result = await discoverTv({
