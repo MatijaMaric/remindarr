@@ -155,12 +155,27 @@ export function rateLimiter(options: RateLimitOptions) {
     const key = `${scope}:${ip}`;
     const now = Date.now();
 
-    const { allowed, retryAfterMs } = await store.consume(
-      key,
-      limit,
-      windowMs,
-      now,
-    );
+    let allowed: boolean;
+    let retryAfterMs: number;
+    try {
+      ({ allowed, retryAfterMs } = await store.consume(
+        key,
+        limit,
+        windowMs,
+        now,
+      ));
+    } catch (err) {
+      // Fail open: a transient store failure (e.g. KV I/O error) must never turn
+      // a request — matched route OR unmatched scanner probe — into a 500. Allow
+      // the request through so it reaches its route or the 404 fallback.
+      log.warn("Rate limit store error — failing open", {
+        scope,
+        ip,
+        path: c.req.path,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return next();
+    }
 
     if (!allowed) {
       log.info("Rate limit exceeded", { scope, ip, path: c.req.path });
