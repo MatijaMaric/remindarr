@@ -249,3 +249,15 @@ describe("GET /overlap/:friendUsername — auth", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("GET /overlap/:friendUsername — validation", () => {
+  it("rejects an over-long username (>50 chars) with 400", async () => {
+    const res = await app.request(`/overlap/${"a".repeat(51)}`, {
+      headers: authHeaders(aliceToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});
