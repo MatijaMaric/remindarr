@@ -1,6 +1,7 @@
 import { CronExpressionParser } from "cron-parser";
 import { getRawDb } from "../db/bun-db";
 import { logger } from "../logger";
+import { nextRetryDelaySec } from "./time-utils";
 
 const log = logger.child({ module: "jobs" });
 
@@ -99,7 +100,7 @@ export function failJob(id: number, error: string) {
 
   if (job && job.attempts < job.max_attempts) {
     // Re-queue with exponential backoff: 2^attempts * 30 seconds
-    const delaySec = Math.pow(2, job.attempts) * 30;
+    const delaySec = nextRetryDelaySec(job.attempts);
     db.prepare(
       `UPDATE jobs SET status = 'pending', error = ?,
        run_at = datetime('now', '+' || ? || ' seconds')

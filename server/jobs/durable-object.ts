@@ -17,6 +17,7 @@ import { MemoryCache } from "../cache/memory";
 import { logger, resetLogLevel } from "../logger";
 import Sentry from "../sentry";
 import { handlers } from "./processor";
+import { nextRetryAt } from "./time-utils";
 import { patchConfig, cfEnvToConfigOverrides } from "../config";
 import type { CfConfigEnv } from "../config";
 import type { DrizzleDb } from "../platform/types";
@@ -392,8 +393,7 @@ export class JobQueueDO {
 
       if (newAttempts < job.max_attempts) {
         // Exponential backoff: 2^attempts × 30 s — mirrors processor.ts
-        const delaySec = Math.pow(2, newAttempts) * 30;
-        const retryAt = new Date(Date.now() + delaySec * 1000).toISOString();
+        const retryAt = nextRetryAt(newAttempts);
         this.ctx.storage.sql.exec(
           "UPDATE jobs SET status = 'pending', error = ?, run_at = ? WHERE id = ?",
           message,

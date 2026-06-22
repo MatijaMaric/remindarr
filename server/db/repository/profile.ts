@@ -354,28 +354,14 @@ export async function getActivitySettings(userId: string): Promise<{
 }> {
   return traceDbQuery("getActivitySettings", async () => {
     const db = getDb();
-    const [userRow, kindRows] = await Promise.all([
+    const [userRow, kind_visibility] = await Promise.all([
       db
         .select({ activity_stream_enabled: users.activityStreamEnabled })
         .from(users)
         .where(eq(users.id, userId))
         .get(),
-      db
-        .select({
-          kind: activityKindVisibility.kind,
-          visibility: activityKindVisibility.visibility,
-        })
-        .from(activityKindVisibility)
-        .where(eq(activityKindVisibility.userId, userId))
-        .all(),
+      getActivityKindVisibilityMap(userId),
     ]);
-    const kind_visibility: ActivityKindVisibilityMap = {};
-    for (const row of kindRows) {
-      kind_visibility[row.kind as ActivityType] = row.visibility as
-        | "public"
-        | "friends_only"
-        | "private";
-    }
     return {
       enabled: Boolean(userRow?.activity_stream_enabled),
       kind_visibility,

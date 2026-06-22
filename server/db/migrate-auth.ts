@@ -98,18 +98,11 @@ export async function migrateAuthData(): Promise<void> {
       }
     }
 
-    // Set role from is_admin
+    // Set role from is_admin; populate name from username if missing
     const role = user.isAdmin ? "admin" : "user";
-    if (!user.name && user.username) {
-      // Populate name from username if missing
-      await db
-        .update(users)
-        .set({ role, name: user.username })
-        .where(eq(users.id, user.id))
-        .run();
-    } else {
-      await db.update(users).set({ role }).where(eq(users.id, user.id)).run();
-    }
+    const set =
+      !user.name && user.username ? { role, name: user.username } : { role };
+    await db.update(users).set(set).where(eq(users.id, user.id)).run();
     rolesSet++;
   }
 

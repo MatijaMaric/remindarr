@@ -101,18 +101,20 @@ export default function LeaderboardPage() {
     );
   }
 
+  const header = (
+    <div>
+      <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-400 font-semibold mb-1">
+        Leaderboard
+      </div>
+      <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
+      <p className="text-zinc-400 text-sm mt-1">Among people you follow</p>
+    </div>
+  );
+
   if (!entries || entries.length <= 1) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6">
-        <div>
-          <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-400 font-semibold mb-1">
-            Leaderboard
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            Leaderboard
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">Among people you follow</p>
-        </div>
+        {header}
         <div className="text-center py-12">
           <Trophy size={40} className="text-zinc-600 mx-auto mb-3" />
           <p className="text-zinc-400 mb-1">No rankings yet.</p>
@@ -133,13 +135,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
-      <div>
-        <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-400 font-semibold mb-1">
-          Leaderboard
-        </div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
-        <p className="text-zinc-400 text-sm mt-1">Among people you follow</p>
-      </div>
+      {header}
 
       {/* Podium */}
       <div

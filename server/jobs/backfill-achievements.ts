@@ -106,12 +106,8 @@ export async function runBackfillAchievements(
                   windowHours,
                   c.title_id,
                 );
-                if (r.earned) {
-                  anyEarned = true;
-                  maxProgress = Math.max(maxProgress, r.progress);
-                } else {
-                  maxProgress = Math.max(maxProgress, r.progress);
-                }
+                if (r.earned) anyEarned = true;
+                maxProgress = Math.max(maxProgress, r.progress);
               }
 
               result = { progress: maxProgress, earned: anyEarned };

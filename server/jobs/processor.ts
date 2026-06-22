@@ -30,7 +30,7 @@ import { buildTrendingSnapshot, trendingCacheKey } from "../routes/trending";
 import { getProvider } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
-import { getCurrentTimeInTimezone } from "./time-utils";
+import { getCurrentTimeInTimezone, nextRetryAt } from "./time-utils";
 import {
   listEarnedSince,
   markAchievementsNotified,
@@ -675,8 +675,7 @@ export async function processPendingJobs(): Promise<number> {
 
       if (newAttempts < job.maxAttempts) {
         // Re-queue with exponential backoff: 2^attempts * 30 seconds
-        const delaySec = Math.pow(2, newAttempts) * 30;
-        const retryAt = new Date(Date.now() + delaySec * 1000).toISOString();
+        const retryAt = nextRetryAt(newAttempts);
         await db
           .update(jobs)
           .set({ status: "pending", error: message, runAt: retryAt })

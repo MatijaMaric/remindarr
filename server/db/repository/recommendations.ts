@@ -1,4 +1,5 @@
 import { eq, and, sql, desc, count, inArray, isNull, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { getDb } from "../schema";
 import {
   recommendations,
@@ -8,6 +9,35 @@ import {
   follows,
 } from "../schema";
 import { traceDbQuery } from "../../tracing";
+
+/**
+ * Builds the visibility filter for a user's discovery feed.
+ *
+ * A recommendation is visible if:
+ *   a) it is directly targeted at this user, OR
+ *   b) it is a broadcast (no target) from someone the user follows
+ */
+async function buildVisibilityCondition(userId: string): Promise<SQL> {
+  const db = getDb();
+  // Get IDs of users the current user follows
+  const followedUsers = await db
+    .select({ id: follows.followingId })
+    .from(follows)
+    .where(eq(follows.followerId, userId))
+    .all();
+
+  const followedIds = followedUsers.map((u) => u.id);
+
+  return followedIds.length === 0
+    ? eq(recommendations.targetUserId, userId)
+    : or(
+        eq(recommendations.targetUserId, userId),
+        and(
+          isNull(recommendations.targetUserId),
+          inArray(recommendations.fromUserId, followedIds),
+        ),
+      )!;
+}
 
 export async function createRecommendation(
   fromUserId: string,
@@ -60,28 +90,7 @@ export async function getUserRecommendation(
 export async function getDiscoveryFeed(userId: string, limit = 20, offset = 0) {
   return traceDbQuery("getDiscoveryFeed", async () => {
     const db = getDb();
-    // Get IDs of users the current user follows
-    const followedUsers = await db
-      .select({ id: follows.followingId })
-      .from(follows)
-      .where(eq(follows.followerId, userId))
-      .all();
-
-    const followedIds = followedUsers.map((u) => u.id);
-
-    // A recommendation is visible if:
-    //   a) it is directly targeted at this user, OR
-    //   b) it is a broadcast (no target) from someone the user follows
-    const visibilityCondition =
-      followedIds.length === 0
-        ? eq(recommendations.targetUserId, userId)
-        : or(
-            eq(recommendations.targetUserId, userId),
-            and(
-              isNull(recommendations.targetUserId),
-              inArray(recommendations.fromUserId, followedIds),
-            ),
-          );
+    const visibilityCondition = await buildVisibilityCondition(userId);
 
     return await db
       .select({
@@ -120,24 +129,7 @@ export async function getDiscoveryFeed(userId: string, limit = 20, offset = 0) {
 export async function getDiscoveryFeedCount(userId: string): Promise<number> {
   return traceDbQuery("getDiscoveryFeedCount", async () => {
     const db = getDb();
-    const followedUsers = await db
-      .select({ id: follows.followingId })
-      .from(follows)
-      .where(eq(follows.followerId, userId))
-      .all();
-
-    const followedIds = followedUsers.map((u) => u.id);
-
-    const visibilityCondition =
-      followedIds.length === 0
-        ? eq(recommendations.targetUserId, userId)
-        : or(
-            eq(recommendations.targetUserId, userId),
-            and(
-              isNull(recommendations.targetUserId),
-              inArray(recommendations.fromUserId, followedIds),
-            ),
-          );
+    const visibilityCondition = await buildVisibilityCondition(userId);
 
     const row = await db
       .select({ count: count() })
@@ -215,25 +207,7 @@ export async function deleteRecommendation(id: string, userId: string) {
 export async function getUnreadCount(userId: string): Promise<number> {
   return traceDbQuery("getUnreadRecommendationCount", async () => {
     const db = getDb();
-    // Get IDs of users the current user follows
-    const followedUsers = await db
-      .select({ id: follows.followingId })
-      .from(follows)
-      .where(eq(follows.followerId, userId))
-      .all();
-
-    const followedIds = followedUsers.map((u) => u.id);
-
-    const visibilityCondition =
-      followedIds.length === 0
-        ? eq(recommendations.targetUserId, userId)
-        : or(
-            eq(recommendations.targetUserId, userId),
-            and(
-              isNull(recommendations.targetUserId),
-              inArray(recommendations.fromUserId, followedIds),
-            ),
-          );
+    const visibilityCondition = await buildVisibilityCondition(userId);
 
     const row = await db
       .select({ count: count() })

@@ -1,21 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { PageHeader } from "../components/design";
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
-      {children}
-    </section>
-  );
-}
+import { LegalSection } from "../components/LegalSection";
 
 export default function PrivacyPolicyPage() {
   const { t } = useTranslation();
@@ -49,7 +35,7 @@ export default function PrivacyPolicyPage() {
           agree with this policy, please do not use the Service.
         </p>
 
-        <Section title="Information we collect">
+        <LegalSection title="Information we collect">
           <p>We collect the information needed to operate the Service:</p>
           <ul className="list-disc space-y-1 pl-5 marker:text-zinc-600">
             <li>
@@ -84,9 +70,9 @@ export default function PrivacyPolicyPage() {
               part of normal operation and used for security and debugging.
             </li>
           </ul>
-        </Section>
+        </LegalSection>
 
-        <Section title="Third-party data and services">
+        <LegalSection title="Third-party data and services">
           <p>
             Title, season, episode, and person metadata shown in the Service is
             sourced from{" "}
@@ -108,9 +94,9 @@ export default function PrivacyPolicyPage() {
             transmitted to those third-party services only when you enable them,
             and is then governed by their respective policies.
           </p>
-        </Section>
+        </LegalSection>
 
-        <Section title="How we use information">
+        <LegalSection title="How we use information">
           <p>We use the information we collect to:</p>
           <ul className="list-disc space-y-1 pl-5 marker:text-zinc-600">
             <li>provide, maintain, and secure the Service;</li>
@@ -121,9 +107,9 @@ export default function PrivacyPolicyPage() {
             <li>personalize discovery, recommendations, and statistics;</li>
             <li>diagnose problems and prevent abuse.</li>
           </ul>
-        </Section>
+        </LegalSection>
 
-        <Section title="How information is shared">
+        <LegalSection title="How information is shared">
           <p>
             We do not sell your personal information. Information is only
             exposed to others in the ways you choose:
@@ -142,43 +128,43 @@ export default function PrivacyPolicyPage() {
               protect the rights, safety, and integrity of the Service.
             </li>
           </ul>
-        </Section>
+        </LegalSection>
 
-        <Section title="Data retention and deletion">
+        <LegalSection title="Data retention and deletion">
           <p>
             We retain your information for as long as your account exists. You
             can delete your account, which removes your associated data, subject
             to backups and legal obligations. For deletion requests or
             questions, contact the operator using the details below.
           </p>
-        </Section>
+        </LegalSection>
 
-        <Section title="Security">
+        <LegalSection title="Security">
           <p>
             Authentication is handled with industry-standard libraries, and
             credentials are stored in hashed or tokenized form. No method of
             transmission or storage is completely secure, but we take reasonable
             measures to protect your information.
           </p>
-        </Section>
+        </LegalSection>
 
-        <Section title="Children">
+        <LegalSection title="Children">
           <p>
             The Service is not directed to children under the age required by
             applicable law in your jurisdiction, and we do not knowingly collect
             information from them.
           </p>
-        </Section>
+        </LegalSection>
 
-        <Section title="Changes to this policy">
+        <LegalSection title="Changes to this policy">
           <p>
             We may update this Privacy Policy from time to time. Material
             changes will be reflected by updating the &quot;last updated&quot;
             date above.
           </p>
-        </Section>
+        </LegalSection>
 
-        <Section title="Contact">
+        <LegalSection title="Contact">
           <p>
             Questions about this policy can be directed to us at{" "}
             <a
@@ -189,7 +175,7 @@ export default function PrivacyPolicyPage() {
             </a>
             .
           </p>
-        </Section>
+        </LegalSection>
 
         <p className="text-zinc-400">
           See also our{" "}
