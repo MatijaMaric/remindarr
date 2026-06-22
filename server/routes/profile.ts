@@ -30,14 +30,14 @@ import { logger } from "../logger";
 
 const log = logger.child({ module: "profile" });
 
-const ACTIVITY_KINDS: ActivityType[] = [
+const ACTIVITY_KINDS = [
   "rating_title",
   "rating_episode",
   "watched_title",
   "watched_episode",
   "tracked",
   "recommendation",
-];
+] as const satisfies readonly ActivityType[];
 
 const app = new Hono<AppEnv>();
 
@@ -116,14 +116,7 @@ app.patch("/me/profile", zValidator("json", profileSchema), async (c) => {
   );
 });
 
-const activityKindEnum = z.enum([
-  "rating_title",
-  "rating_episode",
-  "watched_title",
-  "watched_episode",
-  "tracked",
-  "recommendation",
-]);
+const activityKindEnum = z.enum(ACTIVITY_KINDS);
 const visibilityEnum = z.enum(["public", "friends_only", "private"]);
 
 const activitySettingsSchema = z.object({
@@ -333,5 +326,4 @@ app.put(
   },
 );
 
-export { ACTIVITY_KINDS };
 export default app;

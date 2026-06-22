@@ -70,6 +70,6 @@ function parseRetryAfter(header: string): number {
   return Math.max(diff, 1000);
 }
 
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }

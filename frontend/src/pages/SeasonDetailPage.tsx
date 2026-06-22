@@ -24,20 +24,11 @@ import {
   stillUrl as mkStillUrl,
 } from "../lib/tmdb-images";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
-import { formatDate } from "../components/title-detail/utils";
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isReleased(airDate: string | null | undefined): boolean {
-  if (!airDate) return false;
-  return airDate <= todayISO();
-}
-
-function isAiringToday(airDate: string | null | undefined): boolean {
-  return !!airDate && airDate === todayISO();
-}
+import {
+  formatDate,
+  isReleased,
+  isAiringToday,
+} from "../components/title-detail/utils";
 
 type EpisodeStatus = { id: number; is_watched: boolean };
 

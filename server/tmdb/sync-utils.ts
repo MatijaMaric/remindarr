@@ -1,4 +1,5 @@
 import { Logger } from "../logger";
+import { sleep } from "../lib/http";
 
 /**
  * Directive returned from {@link SyncEachOptions.onError} to control how
@@ -45,10 +46,6 @@ export interface SyncEachResult<T, R> {
   failures: Array<{ item: T; error: unknown }>;
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Run `onItem` for each entry in `items` with an inter-item delay and
  * per-item error isolation. Centralizes the
@@ -59,7 +56,7 @@ function delay(ms: number): Promise<void> {
  *   for each item:
  *     try onItem(item)
  *     handle error via onError or default (log + push to failures)
- *     await delay(delayMs) before next item
+ *     await sleep(delayMs) before next item
  *
  * Parallel semantics (concurrency > 1):
  *   A simple worker pool drains the items array. Each worker calls
@@ -106,7 +103,7 @@ export async function syncEachWithDelay<T, R>(
       if (stopped) break;
       await handleItem(item);
       if (stopped) break;
-      if (delayMs > 0) await delay(delayMs);
+      if (delayMs > 0) await sleep(delayMs);
     }
     return { results, failures };
   }
@@ -119,7 +116,7 @@ export async function syncEachWithDelay<T, R>(
       if (i >= items.length) return;
       await handleItem(items[i]);
       if (stopped) return;
-      if (delayMs > 0) await delay(delayMs);
+      if (delayMs > 0) await sleep(delayMs);
     }
   };
   const workers: Promise<void>[] = [];

@@ -5,6 +5,7 @@ import { upsertTitles, trackTitle } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { logger } from "../logger";
+import { sleep } from "../lib/http";
 
 const log = logger.child({ module: "import" });
 
@@ -185,10 +186,6 @@ export function extractImdbIdFromRow(
     default:
       return null;
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const app = new Hono<AppEnv>();

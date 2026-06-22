@@ -10,14 +10,9 @@ import { requireAuth } from "../middleware/auth";
 import type { AppEnv } from "../types";
 import { getCache } from "../cache";
 import { CONFIG } from "../config";
+import { addDays } from "../utils/timezone";
 
 const app = new Hono<AppEnv>();
-
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 function escapeIcal(str: string): string {
   return str

@@ -4,12 +4,9 @@ import { logger } from "../logger";
 const log = logger.child({ module: "migrate-titles" });
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { CONFIG } from "../config";
+import { sleep } from "../lib/http";
 
 const DELAY_MS = 500;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * One-time migration: fetches English titles and original titles from TMDB
@@ -65,7 +62,7 @@ export async function migrateTitles(): Promise<{
       failed++;
     }
 
-    await delay(DELAY_MS);
+    await sleep(DELAY_MS);
   }
 
   log.info("Migration complete", { updated, failed });
