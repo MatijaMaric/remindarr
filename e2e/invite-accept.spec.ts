@@ -4,11 +4,15 @@ import { InvitePage } from "./pages/invite-page";
 
 test.describe.configure({ mode: "serial" });
 
+// Relative dates so the fixtures never rot — getStatus() in InvitePage compares
+// expires_at against `now`, so a hardcoded date eventually flips Pending → Expired.
+const FUTURE = new Date(Date.now() + 7 * 86400000).toISOString(); // +7 days
+
 const MOCK_INVITATION_PENDING = {
   id: "inv-001",
   code: "ABCD1234",
   created_at: "2026-05-20T10:00:00Z",
-  expires_at: "2026-06-20T10:00:00Z",
+  expires_at: FUTURE,
   used_at: null,
   used_by: null,
 };
@@ -92,7 +96,7 @@ test.describe("Invite / Accept flow", () => {
           json: {
             id: "inv-001",
             code: "ABCD1234",
-            expires_at: "2026-06-20T10:00:00Z",
+            expires_at: FUTURE,
           },
         });
       } else {
