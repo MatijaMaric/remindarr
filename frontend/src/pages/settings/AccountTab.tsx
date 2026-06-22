@@ -760,14 +760,7 @@ const ACTIVITY_KIND_LABELS: Record<ActivityType, string> = {
   recommendation: "Recommendations sent",
 };
 
-const ACTIVITY_KINDS: ActivityType[] = [
-  "rating_title",
-  "rating_episode",
-  "watched_title",
-  "watched_episode",
-  "tracked",
-  "recommendation",
-];
+const ACTIVITY_KINDS = Object.keys(ACTIVITY_KIND_LABELS) as ActivityType[];
 
 const KIND_VIS_OPTIONS: Array<{
   value: "public" | "friends_only" | "private";

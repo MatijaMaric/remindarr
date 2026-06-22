@@ -72,6 +72,17 @@ export function isToday(dateStr: string | null | undefined): boolean {
   );
 }
 
+/** Whether an air date (YYYY-MM-DD) is on or before today, compared in UTC. */
+export function isReleased(airDate: string | null | undefined): boolean {
+  if (!airDate) return false;
+  return airDate <= new Date().toISOString().slice(0, 10);
+}
+
+/** Whether an air date (YYYY-MM-DD) equals today's UTC date. */
+export function isAiringToday(airDate: string | null | undefined): boolean {
+  return !!airDate && airDate === new Date().toISOString().slice(0, 10);
+}
+
 export function getCertification(
   results: { iso_3166_1: string; rating: string }[] | undefined,
   country: string,

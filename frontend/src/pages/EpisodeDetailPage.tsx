@@ -16,13 +16,7 @@ import EpisodeRatingButtons from "../components/EpisodeRatingButtons";
 import { stillUrl as mkStillUrl } from "../lib/tmdb-images";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import EditWatchedAtDialog from "../components/EditWatchedAtDialog";
-import { formatDate } from "../components/title-detail/utils";
-
-function isReleased(airDate: string | null | undefined): boolean {
-  if (!airDate) return false;
-  const today = new Date().toISOString().slice(0, 10);
-  return airDate <= today;
-}
+import { formatDate, isReleased } from "../components/title-detail/utils";
 
 export default function EpisodeDetailPage() {
   const { id, season, episode } = useParams<{

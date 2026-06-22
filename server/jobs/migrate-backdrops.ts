@@ -6,12 +6,9 @@ import { logger } from "../logger";
 const log = logger.child({ module: "migrate-backdrops" });
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { CONFIG } from "../config";
+import { sleep } from "../lib/http";
 
 const DELAY_MS = 500;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * One-time migration: fetches backdrop_path from TMDB for all existing
@@ -79,7 +76,7 @@ export async function migrateBackdrops(): Promise<{
       failed++;
     }
 
-    await delay(DELAY_MS);
+    await sleep(DELAY_MS);
   }
 
   log.info("Backdrop migration complete", { updated, skipped, failed });

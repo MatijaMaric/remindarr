@@ -28,53 +28,46 @@ const LABEL_KEYS: Record<string, string> = {
   completed: "tracked.sections.completed",
 };
 
-function compareDatesDesc(
+function compareDates(
   a: string | null | undefined,
   b: string | null | undefined,
+  dir: "asc" | "desc" = "asc",
 ): number {
   if (!a && !b) return 0;
   if (!a) return 1;
   if (!b) return -1;
-  return b.localeCompare(a);
-}
-
-function compareDatesAsc(
-  a: string | null | undefined,
-  b: string | null | undefined,
-): number {
-  if (!a && !b) return 0;
-  if (!a) return 1;
-  if (!b) return -1;
-  return a.localeCompare(b);
+  return dir === "asc" ? a.localeCompare(b) : b.localeCompare(a);
 }
 
 function sortByTrackedAtDesc(a: Title, b: Title): number {
-  return compareDatesDesc(a.tracked_at, b.tracked_at);
+  return compareDates(a.tracked_at, b.tracked_at, "desc");
 }
 
 function sortGroup(key: string, titles: Title[]): Title[] {
   switch (key) {
     case "watching":
       return [...titles].sort((a, b) =>
-        compareDatesDesc(
+        compareDates(
           a.latest_released_air_date,
           b.latest_released_air_date,
+          "desc",
         ),
       );
     case "caught_up":
       return [...titles].sort((a, b) =>
-        compareDatesAsc(a.next_episode_air_date, b.next_episode_air_date),
+        compareDates(a.next_episode_air_date, b.next_episode_air_date, "asc"),
       );
     case "not_started":
       return [...titles].sort((a, b) =>
-        compareDatesDesc(
+        compareDates(
           a.latest_released_air_date,
           b.latest_released_air_date,
+          "desc",
         ),
       );
     case "unreleased":
       return [...titles].sort((a, b) =>
-        compareDatesAsc(a.release_date, b.release_date),
+        compareDates(a.release_date, b.release_date, "asc"),
       );
     case "completed":
     case "on_hold":

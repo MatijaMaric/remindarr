@@ -8,10 +8,7 @@ import { upsertEpisodes } from "../db/repository";
 import { fetchShowDetails, fetchSeasonEpisodes } from "./client";
 import { eq, and, count, isNotNull } from "drizzle-orm";
 import { syncEachWithDelay } from "./sync-utils";
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { sleep } from "../lib/http";
 
 /** Extract the numeric TMDB ID from our internal title ID format "tv-12345" or the tmdb_id field */
 function extractTmdbId(titleId: string, tmdbIdField: string | null): string {
@@ -56,7 +53,7 @@ export async function syncEpisodesForShow(
   const allEpisodes: EpisodeRow[] = [];
 
   for (let season = 1; season <= details.number_of_seasons; season++) {
-    if (season > 1) await delay(CONFIG.EPISODE_SYNC_DELAY_MS);
+    if (season > 1) await sleep(CONFIG.EPISODE_SYNC_DELAY_MS);
 
     try {
       const seasonData = await fetchSeasonEpisodes(resolvedTmdbId, season);

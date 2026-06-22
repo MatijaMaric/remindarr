@@ -5,15 +5,12 @@ import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { upsertTitles } from "../db/repository";
 import { CONFIG } from "../config";
+import { sleep } from "../lib/http";
 
 const log = logger.child({ module: "migrate-offers" });
 
 const DELAY_MS = 500;
 const DEFAULT_BATCH_SIZE = 20;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * One-time migration: fetches watch provider offers from TMDB
@@ -88,7 +85,7 @@ export async function migrateOffers(batchSize = DEFAULT_BATCH_SIZE): Promise<{
       .set({ offersChecked: 1 })
       .where(eq(titles.id, row.id));
 
-    await delay(DELAY_MS);
+    await sleep(DELAY_MS);
   }
 
   log.info("Offers migration batch complete", {
