@@ -53,22 +53,12 @@ function BootstrapFreshnessBadge({
   lastSeenAt: string | null;
 }) {
   const mins = minutesSince(lastSeenAt);
-  let kind: "ok" | "amber" | "error" | "neutral";
-  let label: string;
   if (mins === null) {
-    kind = "error";
-    label = "Bootstrap: Never";
-  } else if (mins <= 10) {
-    kind = "ok";
-    label = `Bootstrap: ${mins}m ago`;
-  } else if (mins <= 30) {
-    kind = "amber";
-    label = `Bootstrap: ${mins}m ago`;
-  } else {
-    kind = "error";
-    label = `Bootstrap: ${mins}m ago`;
+    return <SStatusPill kind="error">Bootstrap: Never</SStatusPill>;
   }
-  return <SStatusPill kind={kind}>{label}</SStatusPill>;
+  const kind: "ok" | "amber" | "error" | "neutral" =
+    mins <= 10 ? "ok" : mins <= 30 ? "amber" : "error";
+  return <SStatusPill kind={kind}>{`Bootstrap: ${mins}m ago`}</SStatusPill>;
 }
 
 function AlarmFreshnessBadge({
@@ -79,23 +69,13 @@ function AlarmFreshnessBadge({
   cron: string;
 }) {
   const mins = minutesSince(alarmLastCompletedAt);
-  const interval = cronIntervalMinutes(cron);
-  let kind: "ok" | "amber" | "error" | "neutral";
-  let label: string;
   if (mins === null) {
-    kind = "neutral";
-    label = "Alarm: Never";
-  } else if (mins <= interval * 2) {
-    kind = "ok";
-    label = `Alarm: ${mins}m ago`;
-  } else if (mins <= interval * 4) {
-    kind = "amber";
-    label = `Alarm: ${mins}m ago`;
-  } else {
-    kind = "error";
-    label = `Alarm: ${mins}m ago`;
+    return <SStatusPill kind="neutral">Alarm: Never</SStatusPill>;
   }
-  return <SStatusPill kind={kind}>{label}</SStatusPill>;
+  const interval = cronIntervalMinutes(cron);
+  const kind: "ok" | "amber" | "error" | "neutral" =
+    mins <= interval * 2 ? "ok" : mins <= interval * 4 ? "amber" : "error";
+  return <SStatusPill kind={kind}>{`Alarm: ${mins}m ago`}</SStatusPill>;
 }
 
 function BackgroundJobsSection() {

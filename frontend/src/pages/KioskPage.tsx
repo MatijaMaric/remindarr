@@ -14,6 +14,10 @@ import {
 
 const FIDELITY_VALUES: KioskFidelity[] = ["rich", "lite", "epaper"];
 
+const Mono: React.CSSProperties = {
+  fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
+};
+
 type KioskPalette = {
   bg: string;
   surface: string;
@@ -28,33 +32,25 @@ type KioskPalette = {
   chip: string;
 };
 
+// `rich` and `lite` share the same dark palette; the visual difference between
+// them lives in animation flags at the render site (e.g. `breathe`), not colors.
+const DARK_PALETTE: KioskPalette = {
+  bg: "#09090b",
+  surface: "#18181b",
+  surfaceAlt: "#27272a",
+  text: "#fafafa",
+  dim: "#a1a1aa",
+  veryDim: "#8c8c99",
+  border: "rgba(255,255,255,0.06)",
+  borderSoft: "rgba(255,255,255,0.06)",
+  accent: "#fbbf24",
+  accentInk: "#000",
+  chip: "rgba(255,255,255,0.06)",
+};
+
 const PALETTE: Record<KioskFidelity, KioskPalette> = {
-  rich: {
-    bg: "#09090b",
-    surface: "#18181b",
-    surfaceAlt: "#27272a",
-    text: "#fafafa",
-    dim: "#a1a1aa",
-    veryDim: "#8c8c99",
-    border: "rgba(255,255,255,0.06)",
-    borderSoft: "rgba(255,255,255,0.06)",
-    accent: "#fbbf24",
-    accentInk: "#000",
-    chip: "rgba(255,255,255,0.06)",
-  },
-  lite: {
-    bg: "#09090b",
-    surface: "#18181b",
-    surfaceAlt: "#27272a",
-    text: "#fafafa",
-    dim: "#a1a1aa",
-    veryDim: "#8c8c99",
-    border: "rgba(255,255,255,0.06)",
-    borderSoft: "rgba(255,255,255,0.06)",
-    accent: "#fbbf24",
-    accentInk: "#000",
-    chip: "rgba(255,255,255,0.06)",
-  },
+  rich: DARK_PALETTE,
+  lite: DARK_PALETTE,
   epaper: {
     bg: "#f6f3e8",
     surface: "#f6f3e8",
@@ -242,9 +238,6 @@ function KioskHeader({
   date: string;
   clock: string;
 }) {
-  const Mono: React.CSSProperties = {
-    fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-  };
   return (
     <div
       style={{
@@ -348,9 +341,6 @@ function HeroCard({
   breathe: boolean;
   slot: KioskAiringSlot;
 }) {
-  const Mono: React.CSSProperties = {
-    fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-  };
   const backdropUrl = kioskImageUrl(
     slot.backdrop_url ?? slot.poster_url,
     "w780",
@@ -530,9 +520,6 @@ function HeroFeatured({
   item: FeaturedItem;
   kicker: string;
 }) {
-  const Mono: React.CSSProperties = {
-    fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-  };
   const backdropSrc = kioskImageUrl(
     item.backdrop_url ?? item.poster_url,
     "w780",
@@ -749,9 +736,6 @@ function PanelHeader({
   kicker: string;
   right: string;
 }) {
-  const Mono: React.CSSProperties = {
-    fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-  };
   return (
     <div
       style={{
@@ -795,10 +779,6 @@ function ReleasingTodayPanel({
   releases: KioskRelease[];
   nowMs: number;
 }) {
-  const Mono: React.CSSProperties = {
-    fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-  };
-
   return (
     <Panel C={C} epaper={epaper}>
       <PanelHeader
@@ -960,10 +940,6 @@ function UnwatchedQueuePanel({
   queue: KioskQueueItem[];
   nowMs: number;
 }) {
-  const Mono: React.CSSProperties = {
-    fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-  };
-
   return (
     <Panel C={C} epaper={epaper}>
       <PanelHeader
@@ -1237,9 +1213,6 @@ export default function KioskPage() {
   const C = PALETTE[fidelity];
   const epaper = fidelity === "epaper";
   const breathe = fidelity === "rich";
-  const Mono: React.CSSProperties = {
-    fontFamily: "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-  };
 
   const household = data?.meta.household ?? "";
   const refreshSec =

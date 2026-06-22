@@ -21,41 +21,48 @@ export function getCurrentTimeInTimezone(
     return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
   }
 
+  // Validate the timezone once; fall back to UTC if it is invalid so that
+  // time, date, and dayOfWeek all use the same (valid) zone.
+  let zone = "UTC";
   try {
-    const timeFormatter = new Intl.DateTimeFormat("en-GB", {
-      timeZone: tz,
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const dateFormatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: tz,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    return {
-      time: timeFormatter.format(now),
-      date: dateFormatter.format(now),
-      dayOfWeek: dayOfWeekInTz(tz),
-    };
+    new Intl.DateTimeFormat("en-GB", { timeZone: tz });
+    zone = tz;
   } catch {
-    const timeFormatter = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "UTC",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const dateFormatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "UTC",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    return {
-      time: timeFormatter.format(now),
-      date: dateFormatter.format(now),
-      dayOfWeek: dayOfWeekInTz("UTC"),
-    };
+    zone = "UTC";
   }
+
+  const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: zone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return {
+    time: timeFormatter.format(now),
+    date: dateFormatter.format(now),
+    dayOfWeek: dayOfWeekInTz(zone),
+  };
+}
+
+/**
+ * Exponential-backoff retry delay in seconds: `2^attempts × 30`.
+ * Shared by the Bun queue, the portable processor, and the CF Durable Object.
+ */
+export function nextRetryDelaySec(attempts: number): number {
+  return Math.pow(2, attempts) * 30;
+}
+
+/**
+ * ISO-8601 timestamp `nextRetryDelaySec(attempts)` seconds from now.
+ */
+export function nextRetryAt(attempts: number): string {
+  return new Date(
+    Date.now() + nextRetryDelaySec(attempts) * 1000,
+  ).toISOString();
 }

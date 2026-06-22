@@ -22,6 +22,34 @@ interface Props {
   showRating?: boolean;
 }
 
+/** Thin amber progress bar overlay showing watched/total episode progress. */
+function ProgressBar({ watched, max }: { watched: number; max: number }) {
+  return (
+    <div
+      className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700"
+      role="progressbar"
+      aria-label={`${watched} of ${max} episodes watched`}
+      aria-valuenow={watched}
+      aria-valuemin={0}
+      aria-valuemax={max}
+    >
+      <div
+        className="h-full bg-amber-500 transition-all duration-300"
+        style={{ width: `${(watched / max) * 100}%` }}
+      />
+    </div>
+  );
+}
+
+/** "X/Y ep" count pill overlay. */
+function EpCount({ watched, total }: { watched: number; total: number }) {
+  return (
+    <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+      {watched}/{total} ep
+    </span>
+  );
+}
+
 const TitleCard = memo(function TitleCard({
   title,
   onTrackToggle,
@@ -146,28 +174,17 @@ const TitleCard = memo(function TitleCard({
           <>
             {showProgressBar &&
             (title.released_episodes_count ?? title.total_episodes ?? 0) > 0 ? (
-              <div
-                className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700"
-                role="progressbar"
-                aria-label={`${title.watched_episodes_count ?? 0} of ${title.released_episodes_count ?? title.total_episodes ?? 1} episodes watched`}
-                aria-valuenow={title.watched_episodes_count ?? 0}
-                aria-valuemin={0}
-                aria-valuemax={
-                  title.released_episodes_count ?? title.total_episodes ?? 1
-                }
-              >
-                <div
-                  className="h-full bg-amber-500 transition-all duration-300"
-                  style={{
-                    width: `${((title.watched_episodes_count ?? 0) / (title.released_episodes_count ?? title.total_episodes ?? 1)) * 100}%`,
-                  }}
-                />
-              </div>
+              <ProgressBar
+                watched={title.watched_episodes_count ?? 0}
+                max={title.released_episodes_count ?? title.total_episodes ?? 1}
+              />
             ) : (
-              <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                {title.watched_episodes_count ?? 0}/
-                {title.released_episodes_count ?? title.total_episodes ?? 0} ep
-              </span>
+              <EpCount
+                watched={title.watched_episodes_count ?? 0}
+                total={
+                  title.released_episodes_count ?? title.total_episodes ?? 0
+                }
+              />
             )}
           </>
         )}
@@ -194,10 +211,10 @@ const TitleCard = memo(function TitleCard({
           title.object_type === "SHOW" &&
           title.total_episodes != null &&
           title.total_episodes > 0 && (
-            <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-              {title.watched_episodes_count ?? 0}/
-              {title.released_episodes_count ?? title.total_episodes} ep
-            </span>
+            <EpCount
+              watched={title.watched_episodes_count ?? 0}
+              total={title.released_episodes_count ?? title.total_episodes}
+            />
           )}
         {!title.show_status &&
           !title.is_watched &&
@@ -205,23 +222,10 @@ const TitleCard = memo(function TitleCard({
           title.object_type === "SHOW" &&
           title.total_episodes != null &&
           title.total_episodes > 0 && (
-            <div
-              className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700"
-              role="progressbar"
-              aria-label={`${title.watched_episodes_count ?? 0} of ${title.released_episodes_count ?? title.total_episodes} episodes watched`}
-              aria-valuenow={title.watched_episodes_count ?? 0}
-              aria-valuemin={0}
-              aria-valuemax={
-                title.released_episodes_count ?? title.total_episodes
-              }
-            >
-              <div
-                className="h-full bg-amber-500 transition-all duration-300"
-                style={{
-                  width: `${((title.watched_episodes_count ?? 0) / (title.released_episodes_count ?? title.total_episodes)) * 100}%`,
-                }}
-              />
-            </div>
+            <ProgressBar
+              watched={title.watched_episodes_count ?? 0}
+              max={title.released_episodes_count ?? title.total_episodes}
+            />
           )}
         {title.imdb_score && !showVisibilityToggle && !showRating && (
           <span className="absolute top-2 right-2 bg-yellow-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded">

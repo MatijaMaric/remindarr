@@ -32,11 +32,15 @@ function formatRelativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+function becausePrefix(reason: SuggestionSeedReason): string {
+  if (reason === "loved") return "Because you loved";
+  if (reason === "liked") return "Because you liked";
+  if (reason === "watched") return "Because you watched";
+  return "Because you tracked";
+}
+
 function becauseLabel(reason: SuggestionSeedReason, title: string): string {
-  if (reason === "loved") return `Because you loved ${title}`;
-  if (reason === "liked") return `Because you liked ${title}`;
-  if (reason === "watched") return `Because you watched ${title}`;
-  return `Because you tracked ${title}`;
+  return `${becausePrefix(reason)} ${title}`;
 }
 
 // ─── Small primitives ─────────────────────────────────────────────────────────
@@ -356,13 +360,7 @@ function DiscoveryHero({
                 )}
                 <div className="min-w-0">
                   <p className="font-mono text-[9px] uppercase tracking-wider text-zinc-500 mb-0.5">
-                    {algoGroup.source.reason === "loved"
-                      ? "Because you loved"
-                      : algoGroup.source.reason === "liked"
-                        ? "Because you liked"
-                        : algoGroup.source.reason === "watched"
-                          ? "Because you watched"
-                          : "Because you tracked"}
+                    {becausePrefix(algoGroup.source.reason)}
                   </p>
                   <p className="text-[13px] text-zinc-200 font-semibold truncate">
                     {algoGroup.source.title}

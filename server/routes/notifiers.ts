@@ -14,6 +14,7 @@ import {
 } from "../db/repository";
 import { getProvider, getAvailableProviders } from "../notifications/registry";
 import { buildNotificationContent } from "../notifications/content";
+import type { NotificationContent } from "../notifications/types";
 import { refreshNotificationSchedule } from "../jobs/schedule";
 import { getVapidPublicKey } from "../notifications/vapid";
 import { SubscriptionExpiredError } from "../notifications/webpush";
@@ -30,6 +31,38 @@ function isValidTimezone(tz: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Builds today's digest content for a notifier preview / test.
+ * Falls back to a single sample episode when nothing is releasing today,
+ * so the test/preview always renders something meaningful.
+ */
+async function buildPreviewContent(
+  userId: string,
+  today: string,
+): Promise<NotificationContent> {
+  const content = await buildNotificationContent(userId, today);
+
+  // If nothing is releasing today, send sample content
+  if (content.episodes.length === 0 && content.movies.length === 0) {
+    return {
+      date: today,
+      episodes: [
+        {
+          showTitle: "Sample Show",
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: "Pilot",
+          posterUrl: null,
+          offers: [{ providerName: "Netflix", providerIconUrl: null }],
+        },
+      ],
+      movies: [],
+    };
+  }
+
+  return content;
 }
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -319,25 +352,7 @@ app.post("/:id/test", async (c) => {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  let content = await buildNotificationContent(user.id, today);
-
-  // If nothing is releasing today, send sample content
-  if (content.episodes.length === 0 && content.movies.length === 0) {
-    content = {
-      date: today,
-      episodes: [
-        {
-          showTitle: "Sample Show",
-          seasonNumber: 1,
-          episodeNumber: 1,
-          episodeName: "Pilot",
-          posterUrl: null,
-          offers: [{ providerName: "Netflix", providerIconUrl: null }],
-        },
-      ],
-      movies: [],
-    };
-  }
+  const content = await buildPreviewContent(user.id, today);
 
   const start = Date.now();
   try {
@@ -376,24 +391,7 @@ app.get("/:id/preview", requireAuth, async (c) => {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  let content = await buildNotificationContent(user.id, today);
-
-  if (content.episodes.length === 0 && content.movies.length === 0) {
-    content = {
-      date: today,
-      episodes: [
-        {
-          showTitle: "Sample Show",
-          seasonNumber: 1,
-          episodeNumber: 1,
-          episodeName: "Pilot",
-          posterUrl: null,
-          offers: [{ providerName: "Netflix", providerIconUrl: null }],
-        },
-      ],
-      movies: [],
-    };
-  }
+  const content = await buildPreviewContent(user.id, today);
 
   return c.json(content);
 });
