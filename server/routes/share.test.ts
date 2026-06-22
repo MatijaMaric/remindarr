@@ -170,8 +170,10 @@ describe("DELETE /share/token (auth)", () => {
 });
 
 describe("GET /share/watchlist/:token (public)", () => {
-  it("returns 404 for unknown token", async () => {
-    const res = await app.request("/share/watchlist/unknowntoken12345");
+  it("returns 404 for a well-formed but unknown token", async () => {
+    const res = await app.request(
+      "/share/watchlist/0123456789abcdef0123456789abcdef",
+    );
     expect(res.status).toBe(404);
   });
 
@@ -191,10 +193,11 @@ describe("GET /share/watchlist/:token (public)", () => {
 });
 
 describe("validation", () => {
-  it("unknown token returns 404", async () => {
-    const res = await app.request("/share/watchlist/notarealtoken");
-    expect(res.status).toBe(404);
+  it("rejects a malformed token (not 32-char hex) with 400", async () => {
+    const res = await app.request("/share/watchlist/not-a-valid-token");
+    expect(res.status).toBe(400);
     const body = (await res.json()) as any;
-    expect(body.error).toBeDefined();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });
