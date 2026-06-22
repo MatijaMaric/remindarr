@@ -635,8 +635,6 @@ function GridCalendar({
     return new Date(y, m - 1, 1);
   }, [monthParam]);
 
-  const [crowdedWeekThreshold, setCrowdedWeekThreshold] = useState(5);
-  const [crowdedWeekBadgeEnabled, setCrowdedWeekBadgeEnabled] = useState(true);
   const qc = useQueryClient();
   const calendarMonthKey = formatMonth(currentMonth);
   const calendarTypeKey = typeFilter || undefined;
@@ -648,25 +646,18 @@ function GridCalendar({
         signal,
       ),
   });
+  const { data: crowdedWeekData } = useQuery({
+    queryKey: ["crowded-week-settings"],
+    queryFn: ({ signal }) => getCrowdedWeekSettings(signal),
+  });
+  const crowdedWeekThreshold = crowdedWeekData?.crowdedWeekThreshold ?? 5;
+  const crowdedWeekBadgeEnabled =
+    (crowdedWeekData?.crowdedWeekBadgeEnabled ?? 1) !== 0;
   const titles = useMemo(() => calendarData?.titles ?? [], [calendarData]);
   const episodes = useMemo(() => calendarData?.episodes ?? [], [calendarData]);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
-
-  // Load crowded week settings once on mount
-  useEffect(() => {
-    const controller = new AbortController();
-    getCrowdedWeekSettings(controller.signal)
-      .then((s) => {
-        if (!controller.signal.aborted) {
-          setCrowdedWeekThreshold(s.crowdedWeekThreshold);
-          setCrowdedWeekBadgeEnabled(s.crowdedWeekBadgeEnabled !== 0);
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
