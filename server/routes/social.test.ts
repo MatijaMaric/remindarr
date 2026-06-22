@@ -97,13 +97,27 @@ describe("POST /social/follow/:userId", () => {
   });
 
   it("returns 404 when target user does not exist", async () => {
-    const res = await app.request("/social/follow/nonexistent-id", {
-      method: "POST",
-      headers: authHeaders(userAToken),
-    });
+    const res = await app.request(
+      "/social/follow/00000000-0000-4000-8000-000000000000",
+      {
+        method: "POST",
+        headers: authHeaders(userAToken),
+      },
+    );
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe("User not found");
+  });
+
+  it("rejects a non-UUID :userId with 400", async () => {
+    const res = await app.request("/social/follow/not-a-uuid", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 
   it("is idempotent — following twice returns 200", async () => {
