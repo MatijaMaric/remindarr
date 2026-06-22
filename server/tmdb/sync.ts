@@ -88,14 +88,16 @@ export async function syncEpisodesForShow(
   return allEpisodes.length;
 }
 
-export async function syncEpisodes(): Promise<{
-  synced: number;
-  shows: number;
-}> {
+/**
+ * List all tracked shows that have a TMDB id, for per-show episode sync fan-out.
+ * Shared by syncEpisodes() (inline manual sync) and the sync-episodes cron
+ * handlers, which fan out one sync-show-episodes adhoc job per row.
+ */
+export async function listTrackedShowsForEpisodeSync(): Promise<
+  { id: string; tmdb_id: string; title: string }[]
+> {
   const db = getDb();
-
-  // Get all tracked shows with tmdb_id
-  const trackedShows = (await db
+  return (await db
     .select({
       id: titles.id,
       tmdb_id: titles.tmdbId,
@@ -105,6 +107,13 @@ export async function syncEpisodes(): Promise<{
     .innerJoin(titles, eq(titles.id, tracked.titleId))
     .where(and(eq(titles.objectType, "SHOW"), isNotNull(titles.tmdbId)))
     .all()) as { id: string; tmdb_id: string; title: string }[];
+}
+
+export async function syncEpisodes(): Promise<{
+  synced: number;
+  shows: number;
+}> {
+  const trackedShows = await listTrackedShowsForEpisodeSync();
 
   if (trackedShows.length === 0) {
     return { synced: 0, shows: 0 };

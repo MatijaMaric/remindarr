@@ -276,6 +276,39 @@ describe("JobQueueDO", () => {
     expect(rows[0].completed_at).not.toBeNull();
   });
 
+  it("runJob still completes the job and writes state when self-heal armCron throws (#1020)", async () => {
+    // Regression: a long sync-episodes run made armCron()'s blockConcurrencyWhile()
+    // exceed the 30s CF limit, resetting the DO before job state was written and
+    // crash-looping. The self-heal re-arm is now best-effort: a throwing armCron
+    // must not abort runJob or leave the job stuck in 'running'.
+    let called = false;
+    processorModule.handlers["sync-titles"] = async () => {
+      called = true;
+    };
+    await do_.armCron("sync-titles", "0 3 * * *");
+    spyOn(do_, "armCron").mockRejectedValue(
+      new Error("blockConcurrencyWhile timeout"),
+    );
+
+    await do_.enqueue("sync-titles", null);
+    await do_.runJob(null);
+
+    expect(called).toBe(true);
+    const rows = do_.getRecentJobs();
+    expect(rows[0].status).toBe("completed");
+    expect(rows[0].completed_at).not.toBeNull();
+
+    // Failure is recorded as a best-effort breadcrumb, not a captured exception.
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
+    expect(
+      addBreadcrumbSpy.mock.calls.some(
+        ([crumb]) =>
+          (crumb as { message?: string })?.message ===
+          "Self-heal armCron failed (best-effort)",
+      ),
+    ).toBe(true);
+  });
+
   it("runJob auto-creates and runs a job for cron DOs when no pending rows exist", async () => {
     let called = false;
     processorModule.handlers["sync-titles"] = async () => {
