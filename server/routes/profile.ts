@@ -289,14 +289,6 @@ const reorderSchema = z.object({
   titleIds: z.array(z.string().min(1)).min(0).max(8),
 });
 
-/** Helper: resolve a username to its user id via the profile, checking ownership. */
-async function resolveProfileOwner(username: string, viewerUserId: string) {
-  const profile = await getUserPublicProfile(username, false, null);
-  if (!profile) return { profile: null, owned: false };
-  const owned = profile.user.id === viewerUserId;
-  return { profile, owned };
-}
-
 // POST /me/pinned/:titleId — pin a title (auth required)
 app.post("/me/pinned/:titleId", requireAuth, async (c) => {
   const user = c.get("user")!;

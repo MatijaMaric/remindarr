@@ -62,10 +62,7 @@ export class DiscordProvider implements NotificationProvider {
     });
   }
 
-  private buildEmbeds(
-    content: NotificationContent,
-    _config?: Record<string, string>,
-  ) {
+  private buildEmbeds(content: NotificationContent) {
     const embeds: DiscordEmbed[] = [];
     const {
       episodes,

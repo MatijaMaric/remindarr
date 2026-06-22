@@ -21,8 +21,6 @@ export default function ReelsSeasonPanel({
   onBulkWatch,
   onToggleWatched,
 }: ReelsSeasonPanelProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-
   // Close on swipe right or tap outside
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -73,7 +71,6 @@ export default function ReelsSeasonPanel({
 
       {/* Panel */}
       <div
-        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={`${showTitle} — Season ${seasonNumber}`}

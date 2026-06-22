@@ -292,7 +292,7 @@ export class JobQueueDO {
         }
       }
       if (rows.length === 0) {
-        await this.rearmIfPending(cron);
+        await this.rearmIfPending();
         return;
       }
     }
@@ -331,7 +331,7 @@ export class JobQueueDO {
             new Date().toISOString(),
             job.id,
           );
-          await this.rearmIfPending(cron);
+          await this.rearmIfPending();
           return;
         }
         log.info("Running job", { name: job.name, jobId: job.id });
@@ -484,7 +484,7 @@ export class JobQueueDO {
         });
       }
     }
-    await this.rearmIfPending(cron);
+    await this.rearmIfPending();
   }
 
   /**
@@ -754,7 +754,7 @@ export class JobQueueDO {
    * (e.g. once per day), so extra pending rows inserted via enqueue() must still
    * drain promptly via a delayed alarm.
    */
-  private async rearmIfPending(_cron: string | null): Promise<void> {
+  private async rearmIfPending(): Promise<void> {
     const rows = this.ctx.storage.sql
       .exec("SELECT COUNT(*) as count FROM jobs WHERE status = 'pending'")
       .toArray() as Array<{ count: number }>;

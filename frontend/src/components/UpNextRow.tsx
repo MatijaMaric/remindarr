@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { Link } from "react-router";
 import { CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -171,22 +171,5 @@ export const UpNextRow = memo(function UpNextRow({
     </FullBleedCarousel>
   );
 });
-
-/**
- * Hook for handling mark-watched from UpNextRow cards. Returns a stable
- * callback that can be passed to UpNextRow and internally delegates to the
- * watchEpisode API + calls the provided refresh function.
- */
-export function useUpNextMarkWatched(
-  onWatched: (episodeId: number) => void,
-): (episodeId: number) => void {
-  const { t: _t } = useTranslation();
-  return useCallback(
-    (episodeId: number) => {
-      onWatched(episodeId);
-    },
-    [onWatched],
-  );
-}
 
 export default UpNextRow;

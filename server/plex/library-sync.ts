@@ -11,10 +11,7 @@ import {
   upsertPlexLibraryItems,
   deleteStaleLibraryItems,
 } from "../db/repository/plex-library";
-import {
-  updateIntegrationSyncStatus,
-  disableIntegration,
-} from "../db/repository";
+import { disableIntegration } from "../db/repository";
 import type { PlexConfig } from "../db/repository/integrations";
 
 const log = logger.child({ module: "plex-library-sync" });
