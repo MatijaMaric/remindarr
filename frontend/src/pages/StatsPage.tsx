@@ -2,21 +2,6 @@ import * as api from "../api";
 import { useQuery } from "@tanstack/react-query";
 import type { StatsResponse } from "../types";
 
-const MONTH_NAMES = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
 export function formatEta(days: number | null): string {
   if (days === null) return "—";
   if (days === 0) return "< 1 day";
@@ -26,8 +11,14 @@ export function formatEta(days: number | null): string {
 }
 
 function formatMonth(ym: string): string {
-  const [, m] = ym.split("-");
-  return MONTH_NAMES[parseInt(m, 10) - 1] ?? ym;
+  const d = new Date(`${ym}-01`);
+  if (Number.isNaN(d.getTime())) return ym;
+  // ym is "YYYY-MM"; new Date parses it as UTC midnight, so format in UTC to
+  // avoid rolling back a day (and thus a month) in negative-offset timezones.
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    timeZone: "UTC",
+  }).format(d);
 }
 
 function formatTime(minutes: number): string {
@@ -172,28 +163,18 @@ function ShowStatusGrid({
   );
 }
 
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: "English",
-  ja: "Japanese",
-  ko: "Korean",
-  fr: "French",
-  de: "German",
-  es: "Spanish",
-  it: "Italian",
-  pt: "Portuguese",
-  zh: "Chinese",
-  hi: "Hindi",
-  ar: "Arabic",
-  ru: "Russian",
-  tr: "Turkish",
-  nl: "Dutch",
-  sv: "Swedish",
-  da: "Danish",
-  fi: "Finnish",
-  no: "Norwegian",
-  pl: "Polish",
-  th: "Thai",
-};
+function languageLabel(code: string): string {
+  try {
+    return (
+      new Intl.DisplayNames(["en"], {
+        type: "language",
+        fallback: "none",
+      }).of(code) ?? code.toUpperCase()
+    );
+  } catch {
+    return code.toUpperCase();
+  }
+}
 
 export function StatsView() {
   const { data, isLoading: loading } = useQuery({
@@ -300,7 +281,7 @@ export function StatsView() {
               {languages.map((l) => (
                 <HorizontalBar
                   key={l.language}
-                  label={LANGUAGE_NAMES[l.language] ?? l.language.toUpperCase()}
+                  label={languageLabel(l.language)}
                   count={l.count}
                   max={maxLang}
                 />

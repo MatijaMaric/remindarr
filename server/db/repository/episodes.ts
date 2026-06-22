@@ -488,10 +488,7 @@ export async function getReleasedEpisodeIds(
       .from(episodes)
       .where(
         and(
-          sql`${episodes.id} IN (${sql.join(
-            episodeIds.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
+          inArray(episodes.id, episodeIds),
           sql`${episodes.airDate} IS NOT NULL`,
           sql`${episodes.airDate} <= ${today}`,
         ),
