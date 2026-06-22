@@ -56,6 +56,9 @@ const banUserSchema = z.object({
   reason: z.string().nullish(),
 });
 
+// User IDs are crypto.randomUUID() (see repository/users.ts).
+const userIdParam = z.object({ id: z.string().uuid() });
+
 /**
  * Callback to recreate the auth instance after OIDC settings change.
  * Registered by the entry point (index.ts on Bun, no-op on CF Workers).
@@ -197,8 +200,8 @@ app.get("/users", zValidator("query", usersQuerySchema), async (c) => {
 });
 
 // GET /api/admin/users/:id
-app.get("/users/:id", async (c) => {
-  const id = c.req.param("id");
+app.get("/users/:id", zValidator("param", userIdParam), async (c) => {
+  const { id } = c.req.valid("param");
   const user = await getUserById(id);
   if (!user) return c.json({ error: "User not found" }, 404);
 
@@ -207,35 +210,40 @@ app.get("/users/:id", async (c) => {
 });
 
 // PUT /api/admin/users/:id/role  { role: "admin" | "user" }
-app.put("/users/:id/role", zValidator("json", updateRoleSchema), async (c) => {
-  const id = c.req.param("id");
-  const actingUser = c.get("user")!;
+app.put(
+  "/users/:id/role",
+  zValidator("param", userIdParam),
+  zValidator("json", updateRoleSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const actingUser = c.get("user")!;
 
-  if (id === actingUser.id) {
-    return c.json({ error: "Cannot change your own role" }, 400);
-  }
+    if (id === actingUser.id) {
+      return c.json({ error: "Cannot change your own role" }, 400);
+    }
 
-  const { role } = c.req.valid("json");
+    const { role } = c.req.valid("json");
 
-  const target = await getUserById(id);
-  if (!target) return c.json({ error: "User not found" }, 404);
+    const target = await getUserById(id);
+    if (!target) return c.json({ error: "User not found" }, 404);
 
-  await updateUserAdmin(id, role === "admin");
-  log.info("Admin role changed", {
-    targetUserId: id,
-    newRole: role,
-    by: actingUser.id,
-  });
-  return ok(c, { message: `User role updated to ${role}` });
-});
+    await updateUserAdmin(id, role === "admin");
+    log.info("Admin role changed", {
+      targetUserId: id,
+      newRole: role,
+      by: actingUser.id,
+    });
+    return ok(c, { message: `User role updated to ${role}` });
+  },
+);
 
 // PUT /api/admin/users/:id/ban  { reason?: string }
 //
 // `reason` is optional and can be omitted entirely (no body), so we safe-parse
 // against an empty-object fallback rather than wiring `zValidator` as
 // middleware (which would 400 on missing Content-Length).
-app.put("/users/:id/ban", async (c) => {
-  const id = c.req.param("id");
+app.put("/users/:id/ban", zValidator("param", userIdParam), async (c) => {
+  const { id } = c.req.valid("param");
   const actingUser = c.get("user")!;
 
   if (id === actingUser.id) {
@@ -260,8 +268,8 @@ app.put("/users/:id/ban", async (c) => {
 });
 
 // PUT /api/admin/users/:id/unban
-app.put("/users/:id/unban", async (c) => {
-  const id = c.req.param("id");
+app.put("/users/:id/unban", zValidator("param", userIdParam), async (c) => {
+  const { id } = c.req.valid("param");
   const target = await getUserById(id);
   if (!target) return c.json({ error: "User not found" }, 404);
 
@@ -452,8 +460,8 @@ app.get("/logs", zValidator("query", logsQuerySchema), async (c) => {
 });
 
 // DELETE /api/admin/users/:id
-app.delete("/users/:id", async (c) => {
-  const id = c.req.param("id");
+app.delete("/users/:id", zValidator("param", userIdParam), async (c) => {
+  const { id } = c.req.valid("param");
   const actingUser = c.get("user")!;
 
   if (id === actingUser.id) {

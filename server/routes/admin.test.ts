@@ -285,9 +285,12 @@ describe("GET /admin/users/:id", () => {
   });
 
   it("returns 404 for non-existent user", async () => {
-    const res = await app.request("/admin/users/nonexistent-id", {
-      headers: { Cookie: adminCookie },
-    });
+    const res = await app.request(
+      "/admin/users/00000000-0000-4000-8000-000000000000",
+      {
+        headers: { Cookie: adminCookie },
+      },
+    );
     expect(res.status).toBe(404);
   });
 });
@@ -362,6 +365,32 @@ describe("validation", () => {
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects a non-UUID :id on the user routes", async () => {
+    for (const path of [
+      "/admin/users/not-a-uuid",
+      "/admin/users/not-a-uuid/role",
+      "/admin/users/not-a-uuid/ban",
+      "/admin/users/not-a-uuid/unban",
+    ]) {
+      const res = await app.request(path, {
+        method: path === "/admin/users/not-a-uuid" ? "GET" : "PUT",
+        headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+        body:
+          path === "/admin/users/not-a-uuid" ? undefined : JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    }
+
+    const del = await app.request("/admin/users/not-a-uuid", {
+      method: "DELETE",
+      headers: { Cookie: adminCookie },
+    });
+    expect(del.status).toBe(400);
   });
 });
 
@@ -471,10 +500,13 @@ describe("DELETE /admin/users/:id", () => {
   });
 
   it("returns 404 for non-existent user", async () => {
-    const res = await app.request("/admin/users/nonexistent", {
-      method: "DELETE",
-      headers: { Cookie: adminCookie },
-    });
+    const res = await app.request(
+      "/admin/users/00000000-0000-4000-8000-000000000000",
+      {
+        method: "DELETE",
+        headers: { Cookie: adminCookie },
+      },
+    );
     expect(res.status).toBe(404);
   });
 
