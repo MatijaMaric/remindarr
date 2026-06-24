@@ -432,6 +432,56 @@ describe("scheduled() bootstrap KV timestamp", () => {
     expect(new Date(bootstrapPut![1]).getTime()).toBeGreaterThan(0);
   });
 
+  it("isolates a failing armCron so remaining cron jobs still tick (#1055)", async () => {
+    // sync-episodes' /arm hits a blockConcurrencyWhile() timeout; the loop must
+    // not abort the remaining jobs.
+    const armed: string[] = [];
+    const ticked: string[] = [];
+    const armSpy = spyOn(backendModule, "armCron").mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async (_env: any, name: string) => {
+        armed.push(name);
+        if (name === "sync-episodes")
+          throw new Error("blockConcurrencyWhile() waited for too long");
+      },
+    );
+    const tickSpy = spyOn(backendModule, "tickCron").mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async (_env: any, name: string) => {
+        ticked.push(name);
+      },
+    );
+    spies.push(armSpy, tickSpy);
+
+    const fakeEnv = {
+      DB: {} as D1Database,
+      CACHE_KV: {
+        put: async () => {},
+        get: async () => null,
+      } as unknown as KVNamespace,
+      TMDB_COUNTRY: "HR",
+      TMDB_LANGUAGE: "hr-HR",
+      LOG_LEVEL: "info",
+    } as unknown as Parameters<typeof handler.scheduled>[1];
+
+    const fakeCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as unknown as ExecutionContext;
+
+    await handler.scheduled(
+      { cron: "*/5 * * * *", type: "scheduled", scheduledTime: Date.now() },
+      fakeEnv,
+      fakeCtx,
+    );
+
+    // Every job was armed (loop never aborted), only the failing one skipped tick.
+    expect(armed).toHaveLength(6);
+    expect(ticked).not.toContain("sync-episodes");
+    expect(ticked).toContain("send-notifications");
+    expect(ticked).toContain("cleanup");
+  });
+
   it("does NOT put to CACHE_KV when CACHE_KV is absent", async () => {
     const puts: Array<[string, string]> = [];
 

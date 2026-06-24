@@ -831,7 +831,18 @@ export const handler = {
             // proven-working DO fetch RPC. Cron timing is honored inside the DO —
             // daily jobs only run once/day while send-notifications runs each tick.
             for (const { name, cron } of CRON_JOBS) {
-              await armCron(cfEnv, name, cron);
+              // Isolate each job: a blockConcurrencyWhile() timeout on /arm when
+              // the DO is mid-execution of a long job (#1055) must not abort
+              // ticks for the remaining cron jobs. tickCron has its own catch.
+              try {
+                await armCron(cfEnv, name, cron);
+              } catch (err) {
+                logger.warn("armCron failed, skipping tick", {
+                  name,
+                  error: err instanceof Error ? err.message : String(err),
+                });
+                continue;
+              }
               await tickCron(cfEnv, name);
             }
 
