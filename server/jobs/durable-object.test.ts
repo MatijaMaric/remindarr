@@ -276,17 +276,18 @@ describe("JobQueueDO", () => {
     expect(rows[0].completed_at).not.toBeNull();
   });
 
-  it("runJob still completes the job and writes state when self-heal armCron throws (#1020)", async () => {
-    // Regression: a long sync-episodes run made armCron()'s blockConcurrencyWhile()
-    // exceed the 30s CF limit, resetting the DO before job state was written and
-    // crash-looping. The self-heal re-arm is now best-effort: a throwing armCron
-    // must not abort runJob or leave the job stuck in 'running'.
+  it("runJob does not re-arm the cron itself — re-arm is watchdog-owned (#1058)", async () => {
+    // Regression: the post-run self-heal armCron() (added for #795, made
+    // best-effort for #1020) was removed entirely in #1058. Cron schedules
+    // persist in _actor_alarms, the */5 watchdog re-arms idempotently, and
+    // armCron() recovers dropped alarm handles — so runJob must complete the
+    // job WITHOUT calling armCron and risking a blockConcurrencyWhile reset.
     let called = false;
     processorModule.handlers["sync-titles"] = async () => {
       called = true;
     };
     await do_.armCron("sync-titles", "0 3 * * *");
-    spyOn(do_, "armCron").mockRejectedValue(
+    const armCronSpy = spyOn(do_, "armCron").mockRejectedValue(
       new Error("blockConcurrencyWhile timeout"),
     );
 
@@ -297,16 +298,8 @@ describe("JobQueueDO", () => {
     const rows = do_.getRecentJobs();
     expect(rows[0].status).toBe("completed");
     expect(rows[0].completed_at).not.toBeNull();
-
-    // Failure is recorded as a best-effort breadcrumb, not a captured exception.
+    expect(armCronSpy).not.toHaveBeenCalled();
     expect(captureExceptionSpy).not.toHaveBeenCalled();
-    expect(
-      addBreadcrumbSpy.mock.calls.some(
-        ([crumb]) =>
-          (crumb as { message?: string })?.message ===
-          "Self-heal armCron failed (best-effort)",
-      ),
-    ).toBe(true);
   });
 
   it("runJob auto-creates and runs a job for cron DOs when no pending rows exist", async () => {
@@ -901,9 +894,9 @@ describe("JobQueueDO", () => {
     expect(resp.status).toBe(404);
   });
 
-  // ── self-heal: runJob re-arms cron schedule (#795) ───────────────────────
+  // ── dropped cron schedule recovery is watchdog-owned (#795 → #1058) ──────
 
-  it("runJob re-arms cron schedule on success so a dropped schedule self-heals", async () => {
+  it("a dropped cron schedule is recovered by the next watchdog armCron, not by runJob", async () => {
     processorModule.handlers["sync-titles"] = async () => {};
     await do_.armCron("sync-titles", "0 3 * * *");
 
@@ -919,22 +912,22 @@ describe("JobQueueDO", () => {
         .some((s) => s.callback === "runJob"),
     ).toBe(false);
 
-    addBreadcrumbSpy.mockClear();
+    // runJob no longer self-heals the schedule (#1058) …
     await do_.enqueue("sync-titles", null);
     await do_.runJob(null);
+    expect(
+      do_.alarms
+        .getSchedules({ type: "cron" })
+        .some((s) => s.callback === "runJob"),
+    ).toBe(false);
 
-    // armCron call inside runJob should have re-registered the cron schedule
+    // … the */5 watchdog's idempotent armCron does.
+    await do_.armCron("sync-titles", "0 3 * * *");
     expect(
       do_.alarms
         .getSchedules({ type: "cron" })
         .some((s) => s.callback === "runJob"),
     ).toBe(true);
-    // And emitted the Re-armed breadcrumb
-    const rearmBreadcrumb = addBreadcrumbSpy.mock.calls.find(
-      (args) =>
-        (args[0] as { message?: string }).message === "Re-armed cron schedule",
-    );
-    expect(rearmBreadcrumb).toBeDefined();
   });
 
   it("runJob does NOT call armCron for ad-hoc DOs (no cron set)", async () => {

@@ -170,6 +170,7 @@ export async function tickCron(env: CFEnv, name: string): Promise<void> {
 export async function enqueueAdhoc(
   name: string,
   data?: Record<string, unknown>,
+  opts?: { detachTick?: boolean },
 ): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     const env = envStorage.getStore() ?? null;
@@ -190,7 +191,22 @@ export async function enqueueAdhoc(
     // Drive execution immediately via the working fetch path — ad-hoc DOs cannot
     // rely on alarm() delivery (#795), so without this the job would never run.
     // A single ad-hoc job (e.g. one show's episode sync) fits the 30s DO limit.
-    await doFetch(env, name, "/tick", "POST", {}, partitionKey);
+    // detachTick: fan-out callers (sync-episodes) must NOT await the target DO's
+    // full run — awaited ticks made the dispatcher's runJob take sum-of-all-shows
+    // wall time inside blockConcurrencyWhile and reset the DO (#1058). Pending
+    // I/O keeps the caller DO alive until detached ticks land; a dropped tick
+    // drains on the next daily run.
+    const tick = doFetch(env, name, "/tick", "POST", {}, partitionKey);
+    if (opts?.detachTick) {
+      void tick.catch((err) =>
+        log.warn("Detached DO tick failed", {
+          name,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    } else {
+      await tick;
+    }
   } else {
     const db = getDb();
     await db.insert(jobs).values({

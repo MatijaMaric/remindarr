@@ -86,13 +86,19 @@ async function handleSyncEpisodes(): Promise<void> {
   // Per-show is the established safe unit (see track.ts) and the partitioned DOs
   // drain via the */5 watchdog; this replaces the sequential EPISODE_SYNC_DELAY_MS
   // pacing. Revisit if TMDB starts rate-limiting the fan-out.
+  // Ticks are detached so this dispatcher's runJob stays under the 30s DO
+  // budget instead of awaiting every show's sync serially (#1058).
   const shows = await listTrackedShowsForEpisodeSync();
   for (const show of shows) {
-    await enqueueAdhoc("sync-show-episodes", {
-      titleId: show.id,
-      tmdbId: show.tmdb_id,
-      title: show.title,
-    });
+    await enqueueAdhoc(
+      "sync-show-episodes",
+      {
+        titleId: show.id,
+        tmdbId: show.tmdb_id,
+        title: show.title,
+      },
+      { detachTick: true },
+    );
   }
   log.info("Dispatched per-show episode sync jobs", { shows: shows.length });
 }

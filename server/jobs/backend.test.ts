@@ -463,6 +463,81 @@ describe("enqueueAdhoc (DO mode)", () => {
     expect(ns.calls[0].path).toBe("/enqueue");
     expect(ns.calls[1].path).toBe("/tick");
   });
+
+  it("detachTick: resolves while /tick is still pending (#1058)", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const calls: string[] = [];
+    let resolveTick: ((r: Response) => void) | undefined;
+    const stub = {
+      fetch: (req: Request) => {
+        const path = new URL(req.url).pathname;
+        calls.push(path);
+        if (path === "/tick") {
+          // Simulate the partition DO running its full show sync — never
+          // resolves until the test releases it.
+          return new Promise<Response>((resolve) => {
+            resolveTick = resolve;
+          });
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), { status: 200 }),
+        );
+      },
+    };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: {
+        idFromName: (name: string) => ({ toString: () => name }),
+        get: () => stub,
+      } as unknown as DurableObjectNamespace,
+    };
+
+    // enqueueAdhoc must return while the tick is still in flight.
+    await runWithEnv(env, async () => {
+      await enqueueAdhoc(
+        "sync-show-episodes",
+        { titleId: 42, tmdbId: 999, title: "Test" },
+        { detachTick: true },
+      );
+    });
+
+    expect(calls).toEqual(["/enqueue", "/tick"]);
+    expect(resolveTick).toBeDefined();
+    resolveTick!(new Response("{}", { status: 200 }));
+  });
+
+  it("detachTick: a rejecting /tick does not throw", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const stub = {
+      fetch: (req: Request) => {
+        const path = new URL(req.url).pathname;
+        if (path === "/tick") {
+          return Promise.reject(new Error("DO reset mid-tick"));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), { status: 200 }),
+        );
+      },
+    };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: {
+        idFromName: (name: string) => ({ toString: () => name }),
+        get: () => stub,
+      } as unknown as DurableObjectNamespace,
+    };
+
+    // Resolves despite the tick rejection (logged, not thrown); flush the
+    // detached promise so the rejection is handled inside this test.
+    await runWithEnv(env, async () => {
+      await enqueueAdhoc(
+        "sync-show-episodes",
+        { titleId: 42, tmdbId: 999, title: "Test" },
+        { detachTick: true },
+      );
+    });
+    await Bun.sleep(0);
+  });
 });
 
 // ─── scheduled() bootstrap pattern — arm all CRON_JOBS ───────────────────────
