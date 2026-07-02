@@ -161,7 +161,10 @@ export default function EpisodeDetailPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap">
+      <nav
+        aria-label="breadcrumb"
+        className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap"
+      >
         <Link
           to={`/title/${title.id}`}
           className="hover:text-white transition-colors"
@@ -176,8 +179,10 @@ export default function EpisodeDetailPage() {
           Season {seasonNumber}
         </Link>
         <span className="text-zinc-600">/</span>
-        <span className="text-white">Episode {episodeNumber}</span>
-      </div>
+        <span className="text-white" aria-current="page">
+          Episode {episodeNumber}
+        </span>
+      </nav>
 
       {/* Still image */}
       <div className="rounded-xl overflow-hidden">
@@ -249,12 +254,8 @@ export default function EpisodeDetailPage() {
             className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors underline-offset-2 hover:underline cursor-pointer"
           >
             Watched{" "}
-            {new Date(
-              watchHistoryEntries[0].watchedAt.replace(" ", "T") + "Z",
-            ).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
+            {formatDate(watchHistoryEntries[0].watchedAt.replace(" ", "T"), {
+              utcAssumed: true,
             })}
           </button>
         )}
