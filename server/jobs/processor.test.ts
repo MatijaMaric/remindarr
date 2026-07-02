@@ -69,6 +69,8 @@ const mockFetchTrendingPeople = spyOn(
 ).mockResolvedValue(emptyTrendingPage as any);
 
 import { CONFIG } from "../config";
+import { getSetting } from "../db/repository/settings";
+import { BACKFILL_DONE_KEY } from "../achievements/sync";
 import { initCache, getCache } from "../cache";
 import { MemoryCache } from "../cache/memory";
 import { CRON_JOBS } from "./backend";
@@ -735,5 +737,28 @@ describe("sync-trending handler (CF path)", () => {
     expect(mockFetchTrendingMovies).not.toHaveBeenCalled();
     expect(await getCache().get(trendingCacheKey("week"))).toBeNull();
     CONFIG.TMDB_API_KEY = "test-key";
+  });
+});
+
+// ─── backfill-achievements sentinel parity (#1062, recurrence of #980) ───────
+// The #980 fix introduced BACKFILL_DONE_KEY but only updated the Bun writer;
+// the CF writer (this file's handler) and the DO re-enqueue guard kept the old
+// literal, so the registry guard never saw "done" and re-enqueued on every
+// cold isolate. These tests pin writer/reader key parity on the CF path.
+
+describe("backfill-achievements handler (CF path)", () => {
+  it("writes BACKFILL_DONE_KEY so the registry guard finds it (#1062)", async () => {
+    // Zero users in the test DB → handler marks the backfill done immediately.
+    await handlers["backfill-achievements"](null);
+    expect(await getSetting(BACKFILL_DONE_KEY)).toBe("1");
+  });
+
+  it("no stale hardcoded sentinel literal remains in the jobs source", async () => {
+    // ponytail: grep-level guard — cheaper than a DO harness test and catches
+    // any future writer/reader drift in either runtime's code path.
+    for (const file of ["processor.ts", "durable-object.ts"]) {
+      const src = await Bun.file(new URL(file, import.meta.url)).text();
+      expect(src).not.toInclude('"achievements_backfill_done"');
+    }
   });
 });
