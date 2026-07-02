@@ -42,6 +42,7 @@ import {
   ACHIEVEMENTS,
   type AchievementKind,
 } from "../achievements/definitions";
+import { BACKFILL_DONE_KEY } from "../achievements/sync";
 import {
   evaluateCountMovies,
   evaluateCountEpisodes,
@@ -475,7 +476,7 @@ async function handleBackfillAchievements(
   `);
 
   if (rows.length === 0) {
-    await setSetting("achievements_backfill_done", "1");
+    await setSetting(BACKFILL_DONE_KEY, "1");
     log.info("Backfill complete — no more users");
     return;
   }
@@ -584,7 +585,7 @@ async function handleBackfillAchievements(
     }
     log.info("Backfill: enqueued next batch", { nextCursor: lastUserId });
   } else {
-    await setSetting("achievements_backfill_done", "1");
+    await setSetting(BACKFILL_DONE_KEY, "1");
     log.info("Backfill: complete", { totalProcessed: rows.length });
   }
 }

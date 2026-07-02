@@ -16,6 +16,7 @@ import { CloudflareKvCache } from "../cache/cloudflare-kv";
 import { MemoryCache } from "../cache/memory";
 import { logger, resetLogLevel } from "../logger";
 import Sentry from "../sentry";
+import { BACKFILL_DONE_KEY } from "../achievements/sync";
 import { handlers } from "./processor";
 import { nextRetryAt } from "./time-utils";
 import { patchConfig, cfEnvToConfigOverrides } from "../config";
@@ -369,13 +370,13 @@ export class JobQueueDO {
       }
 
       // backfill-achievements: re-enqueue next page unless the handler marked it done.
-      // The handler writes achievements_backfill_done=1 to D1 settings on last page;
+      // The handler writes BACKFILL_DONE_KEY=1 to D1 settings on last page;
       // processor.ts skips the D1 re-enqueue in DO mode, so we do it here instead.
       if (job.name === "backfill-achievements") {
         const doneSetting = await db
           .select({ value: settings.value })
           .from(settings)
-          .where(eq(settings.key, "achievements_backfill_done"))
+          .where(eq(settings.key, BACKFILL_DONE_KEY))
           .get();
         if (!doneSetting) {
           this.ctx.storage.sql.exec(
