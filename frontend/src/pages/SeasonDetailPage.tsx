@@ -286,7 +286,10 @@ export default function SeasonDetailPage() {
   return (
     <div className="space-y-8 pb-12 overflow-x-hidden">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-zinc-400">
+      <nav
+        aria-label="breadcrumb"
+        className="flex items-center gap-2 text-sm text-zinc-400"
+      >
         <Link
           to={`/title/${title.id}`}
           className="hover:text-white transition-colors"
@@ -294,10 +297,10 @@ export default function SeasonDetailPage() {
           {title.title}
         </Link>
         <span className="text-zinc-600">/</span>
-        <span className="text-white">
+        <span className="text-white" aria-current="page">
           {tmdb?.name || `Season ${seasonNumber}`}
         </span>
-      </div>
+      </nav>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-6">

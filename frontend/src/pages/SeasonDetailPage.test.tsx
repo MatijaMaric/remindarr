@@ -6,6 +6,7 @@ import {
   waitFor,
   cleanup,
   act,
+  within,
 } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -162,6 +163,16 @@ afterEach(() => {
 });
 
 describe("SeasonDetailPage", () => {
+  it("renders breadcrumb as a nav landmark with aria-current on the last crumb (#1060)", async () => {
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const nav = screen.getByRole("navigation", { name: "breadcrumb" });
+    const current = within(nav).getByText("Season 1");
+    expect(current.getAttribute("aria-current")).toBe("page");
+  });
+
   it("renders episodes with watched icons when authenticated", async () => {
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 

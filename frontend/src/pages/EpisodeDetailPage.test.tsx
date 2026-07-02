@@ -249,6 +249,43 @@ describe("EpisodeDetailPage", () => {
     });
   });
 
+  it("renders breadcrumb as a nav landmark with aria-current on the last crumb (#1060)", async () => {
+    render(<EpisodeDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const nav = screen.getByRole("navigation", { name: "breadcrumb" });
+    expect(nav).toBeDefined();
+    const current = screen.getByText("Episode 1");
+    expect(current.getAttribute("aria-current")).toBe("page");
+  });
+
+  it("renders watched date in the browser locale, not hardcoded en-US (#1061)", async () => {
+    apiMock.getSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({
+        episodes: [{ episode_number: 1, id: 10, is_watched: true }],
+      }),
+    );
+    apiMock.getWatchHistory.mockImplementation(() =>
+      Promise.resolve({
+        history: [{ id: "wh1", watchedAt: "2026-06-28 14:30:00" }],
+        playCount: 1,
+      }),
+    );
+
+    render(<EpisodeDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const expected = new Date("2026-06-28T14:30:00Z").toLocaleDateString(
+      undefined,
+      { year: "numeric", month: "short", day: "numeric" },
+    );
+    await waitFor(() =>
+      expect(screen.getByText(`Watched ${expected}`)).toBeDefined(),
+    );
+  });
+
   it("shows toast on toggle error and reverts", async () => {
     const toastErrorSpy = spyOn(sonner.toast, "error").mockImplementation(
       () => "1" as any,
