@@ -177,10 +177,22 @@ function languageLabel(code: string): string {
 }
 
 export function StatsView() {
-  const { data, isLoading: loading } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError,
+  } = useQuery({
     queryKey: ["stats"],
     queryFn: ({ signal }) => api.getStats(signal),
   });
+
+  if (isError) {
+    return (
+      <p className="text-zinc-400 text-sm py-12 text-center">
+        Failed to load stats. Please try again.
+      </p>
+    );
+  }
 
   if (loading || !data) {
     return (

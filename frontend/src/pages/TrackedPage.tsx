@@ -126,7 +126,11 @@ function sortTitles(titles: Title[], sort: SortKey): Title[] {
 
 export default function TrackedPage() {
   const qc = useQueryClient();
-  const { data, isLoading: loading } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    isError,
+  } = useQuery({
     queryKey: ["tracked"],
     queryFn: ({ signal }) => api.getTrackedTitles(signal),
   });
@@ -299,6 +303,10 @@ export default function TrackedPage() {
         >
           {loading ? (
             <TitleGridSkeleton />
+          ) : isError ? (
+            <p className="text-zinc-400 text-sm py-12 text-center">
+              {t("common.error")}
+            </p>
           ) : filteredTitles.length === 0 ? (
             <TitleList
               titles={EMPTY_TITLES}
