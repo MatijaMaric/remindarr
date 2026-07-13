@@ -133,6 +133,16 @@ describe("TrackedPage", () => {
     expect(container.querySelector(".animate-pulse")).toBeDefined();
   });
 
+  it("shows error message when fetch fails", async () => {
+    apiMock.getTrackedTitles.mockImplementation(() =>
+      Promise.reject(new Error("Network error")),
+    );
+    render(<TrackedPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByText("An error occurred")).toBeDefined(),
+    );
+  });
+
   it("shows empty message when no tracked titles", async () => {
     apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({ titles: [], count: 0, profile_public: false }),

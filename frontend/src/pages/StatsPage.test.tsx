@@ -56,6 +56,18 @@ afterEach(() => {
 });
 
 describe("StatsPage", () => {
+  it("shows error message when stats fetch fails", async () => {
+    apiMock.getStats.mockImplementation(() =>
+      Promise.reject(new Error("Server error")),
+    );
+    render(<StatsPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(
+        screen.getByText("Failed to load stats. Please try again."),
+      ).toBeDefined(),
+    );
+  });
+
   it("renders the Watchlist ETA tile with dash when pace is undefined", async () => {
     render(<StatsPage />, { wrapper: Wrapper });
     await waitFor(() => {
