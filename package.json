@@ -54,7 +54,7 @@
     "cron-schedule": "^6.0.0",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.4.0",
-    "nanoid": "^5.1.9",
+    "nanoid": "^6.0.0",
     "web-push": "^3.6.7",
     "zod": "^4.3.6"
   },
