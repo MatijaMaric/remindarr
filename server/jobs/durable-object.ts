@@ -109,9 +109,10 @@ export class JobQueueDO {
   private ctx: DurableObjectState;
   private env: DOEnv;
   private initialized = false;
-  // Cast to any: Alarms<P> requires P extends DurableObject, but P only needs
-  // callable methods by name at runtime. The constraint is TS-only.
-  alarms: Alarms<JobQueueDO>;
+  // Lazy: Alarms' constructor runs due callbacks inside blockConcurrencyWhile.
+  // Constructing it on every DO wake made POST /arm wait on long runJob and
+  // hit CF's BCW wall-time limit (#1073). Created on first schedule/alarm use.
+  private _alarms: Alarms<JobQueueDO> | null = null;
 
   constructor(ctx: DurableObjectState, env: DOEnv) {
     this.ctx = ctx;
@@ -124,12 +125,89 @@ export class JobQueueDO {
     if (env.LOG_LEVEL) {
       resetLogLevel(env.LOG_LEVEL as "debug" | "info" | "warn" | "error");
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.alarms = new Alarms(ctx, this as any);
   }
 
   /** Required stub — Alarms calls setName() on the parent before each callback. */
   setName(_name: string): void {}
+
+  /** Lazy Alarms accessor (tests + internal). Safe after catch-up in ensureAlarms. */
+  get alarms(): Alarms<JobQueueDO> {
+    return this.ensureAlarms();
+  }
+
+  /**
+   * Lazily construct Alarms after advancing past-due cron rows so its
+   * constructor blockConcurrencyWhile is a cheap schema/no-op pass (#1073).
+   * Watchdog /tick remains the load-bearing runner via isCronDue().
+   */
+  private ensureAlarms(): Alarms<JobQueueDO> {
+    if (!this._alarms) {
+      this.catchUpDueCronSchedules();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this._alarms = new Alarms(this.ctx, this as any);
+    }
+    return this._alarms;
+  }
+
+  /** Create `_actor_alarms` without constructing Alarms (avoids BCW due-dispatch). */
+  private ensureActorAlarmsTable(): void {
+    this.ctx.storage.sql.exec(`
+      CREATE TABLE IF NOT EXISTS _actor_alarms (
+        id TEXT PRIMARY KEY NOT NULL DEFAULT (randomblob(9)),
+        callback TEXT,
+        payload TEXT,
+        type TEXT NOT NULL CHECK(type IN ('scheduled', 'delayed', 'cron')),
+        time INTEGER,
+        delayInSeconds INTEGER,
+        cron TEXT,
+        created_at INTEGER DEFAULT (unixepoch())
+      )
+    `);
+    try {
+      this.ctx.storage.sql.exec(`SELECT identifier FROM _actor_alarms LIMIT 1`);
+    } catch {
+      try {
+        this.ctx.storage.sql.exec(
+          `ALTER TABLE _actor_alarms ADD COLUMN identifier TEXT DEFAULT 'default'`,
+        );
+      } catch {
+        // Column add raced or unsupported — ignore; Alarms will retry.
+      }
+    }
+  }
+
+  /**
+   * Move past-due cron schedule rows to their next fire time without running
+   * callbacks. Prevents Alarms constructor BCW from dispatching long jobs when
+   * ensureAlarms() is first called after a hibernation (#1073).
+   */
+  private catchUpDueCronSchedules(): void {
+    this.ensureActorAlarmsTable();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const due = this.ctx.storage.sql
+      .exec(
+        `SELECT id, cron FROM _actor_alarms WHERE type = 'cron' AND time <= ?`,
+        nowSec,
+      )
+      .toArray() as Array<{ id: string; cron: string | null }>;
+    for (const row of due) {
+      if (!row.cron) continue;
+      try {
+        const next = CronExpressionParser.parse(row.cron, {
+          currentDate: new Date(),
+        })
+          .next()
+          .toDate();
+        this.ctx.storage.sql.exec(
+          `UPDATE _actor_alarms SET time = ? WHERE id = ?`,
+          Math.floor(next.getTime() / 1000),
+          row.id,
+        );
+      } catch {
+        // Invalid cron — leave row alone.
+      }
+    }
+  }
 
   // ─── Schema bootstrap ────────────────────────────────────────────────────
 
@@ -176,6 +254,16 @@ export class JobQueueDO {
       }
       if (request.method === "POST" && path === "/arm") {
         const body = (await request.json()) as { name: string; cron: string };
+        // Non-blocking when a job is in flight: queueing /arm behind a long
+        // runJob (or Alarms BCW) is what produced exceededWallTime (#1073).
+        // Watchdog retries on the next */5 tick; cron rows persist meanwhile.
+        const busy =
+          this.ctx.storage.sql
+            .exec("SELECT 1 FROM jobs WHERE status = 'running' LIMIT 1")
+            .toArray().length > 0;
+        if (busy) {
+          return Response.json({ ok: true, skipped: "busy" });
+        }
         await this.armCron(body.name, body.cron);
         return Response.json({ ok: true });
       }
@@ -224,7 +312,7 @@ export class JobQueueDO {
   async alarm(): Promise<void> {
     this.initSchema();
     try {
-      await this.alarms.alarm();
+      await this.ensureAlarms().alarm();
     } finally {
       await this.ctx.storage.put(
         "alarm_last_completed_at",
@@ -542,19 +630,49 @@ export class JobQueueDO {
 
   // ─── Internal methods (also used by tests via subclass) ──────────────────
 
-  /** Arm this DO as a cron singleton. Idempotent — only schedules if no cron alarm exists. */
+  /**
+   * Arm this DO as a cron singleton. Idempotent — only schedules if no cron alarm exists.
+   *
+   * Does NOT construct Alarms: that library's constructor dispatches due alarms
+   * inside blockConcurrencyWhile, so a due long job on cold wake would reset the
+   * DO before /arm returns (#1073). Writes `_actor_alarms` + setAlarm directly;
+   * /tick is the load-bearing execution path.
+   */
   async armCron(name: string, cron: string): Promise<void> {
     this.initSchema();
     await this.ctx.storage.put("name", name);
     await this.ctx.storage.put("cron", cron);
-    const existing = this.alarms.getSchedules({ type: "cron" });
-    if (!existing.some((s) => s.callback === "runJob")) {
-      await this.alarms.schedule(cron, "runJob" as keyof JobQueueDO, null);
+    this.ensureActorAlarmsTable();
+
+    const existing = this.ctx.storage.sql
+      .exec(
+        `SELECT id FROM _actor_alarms WHERE type = 'cron' AND callback = 'runJob' LIMIT 1`,
+      )
+      .toArray();
+    if (existing.length === 0) {
+      let next: Date;
+      try {
+        next = CronExpressionParser.parse(cron, { currentDate: new Date() })
+          .next()
+          .toDate();
+      } catch {
+        return;
+      }
+      const id = crypto.randomUUID().replace(/-/g, "").slice(0, 9);
+      const nextTs = Math.floor(next.getTime() / 1000);
+      this.ctx.storage.sql.exec(
+        `INSERT INTO _actor_alarms (id, callback, payload, type, time, cron, identifier)
+         VALUES (?, 'runJob', 'null', 'cron', ?, ?, 'default')`,
+        id,
+        nextTs,
+        cron,
+      );
+      await this.ctx.storage.setAlarm(next);
       Sentry.addBreadcrumb({
         category: "jobs",
         message: "Re-armed cron schedule",
         level: "info",
-        data: { name, cron, priorScheduleCount: String(existing.length) },
+        data: { name, cron, priorScheduleCount: "0" },
       });
       return;
     }
@@ -562,10 +680,8 @@ export class JobQueueDO {
     // Defense-in-depth: a cron schedule row persists in DO SQL storage across
     // evictions, but the underlying CF storage alarm handle can be dropped (DO
     // eviction, or a wrapped entrypoint interfering with @cloudflare/actors/alarms,
-    // #795). When that happens getSchedules() still reports the schedule, so the
-    // guard above skips re-scheduling and the native alarm never fires again.
-    // Detect a missing alarm handle and force-set it to the next cron fire time so
-    // the alarm path self-recovers (the watchdog /tick is the primary driver).
+    // #795). Detect a missing alarm handle and force-set it to the next cron fire
+    // time so the alarm path self-recovers (the watchdog /tick is the primary driver).
     const pendingAlarm = await this.ctx.storage.getAlarm();
     if (pendingAlarm === null) {
       try {
@@ -621,9 +737,10 @@ export class JobQueueDO {
       .toArray() as Array<{ id: number }>;
 
     // Only schedule if no delayed runJob alarm is already pending
-    const existingAlarms = this.alarms.getSchedules({ type: "delayed" });
+    const alarms = this.ensureAlarms();
+    const existingAlarms = alarms.getSchedules({ type: "delayed" });
     if (!existingAlarms.some((s) => s.callback === "runJob")) {
-      await this.alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
+      await alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
     }
     return rows[0].id;
   }
@@ -708,7 +825,7 @@ export class JobQueueDO {
     const cron = (await this.ctx.storage.get<string>("cron")) ?? null;
     // nextRun is read from the Alarms table (authoritative next execution time)
     let nextRun: string | null = null;
-    const cronSchedules = this.alarms.getSchedules({ type: "cron" });
+    const cronSchedules = this.ensureAlarms().getSchedules({ type: "cron" });
     if (cronSchedules.length > 0) {
       const schedule = cronSchedules[0] as { time: number };
       nextRun = new Date(schedule.time * 1000).toISOString();
@@ -736,9 +853,10 @@ export class JobQueueDO {
       .exec("SELECT COUNT(*) as count FROM jobs WHERE status = 'pending'")
       .toArray() as Array<{ count: number }>;
     if ((rows[0]?.count ?? 0) > 0) {
-      const existing = this.alarms.getSchedules({ type: "delayed" });
+      const alarms = this.ensureAlarms();
+      const existing = alarms.getSchedules({ type: "delayed" });
       if (!existing.some((s) => s.callback === "runJob")) {
-        await this.alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
+        await alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
       }
     }
   }

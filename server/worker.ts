@@ -201,25 +201,27 @@ function invalidateOidcConfig(): void {
 }
 
 /**
- * Defer achievement registry sync via ctx.waitUntil so it never blocks a
- * response. The per-isolate flag prevents stampedes; on error the flag resets
- * so the next request retries (#799).
+ * Sync the achievement registry once per isolate. Called from scheduled()
+ * (CF) and at process startup (Bun) — never from the fetch path.
+ *
+ * ctx.waitUntil on fetch still counts toward CF wallTimeMs, so deferring the
+ * UPSERT loop from the first request inflated p95 (#1067 / #799 recurrence).
+ * On error the flag resets so the next cron tick retries.
  */
-export function maybeDeferRegistrySync(
-  ctx: ExecutionContext,
+export async function maybeSyncAchievementRegistry(
   run: () => Promise<void>,
-): void {
+): Promise<void> {
   if (achievementRegistrySynced) return;
   achievementRegistrySynced = true;
-  ctx.waitUntil(
-    run().catch((err) => {
-      achievementRegistrySynced = false;
-      logger.error("Achievement registry sync failed", {
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-    }),
-  );
+  try {
+    await run();
+  } catch (err) {
+    achievementRegistrySynced = false;
+    logger.error("Achievement registry sync failed", {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+  }
 }
 
 /** Reset the per-isolate achievement sync flag — test seam only. */
@@ -767,17 +769,6 @@ export const handler = {
         );
       }
 
-      // Sync achievement registry once per isolate, deferred so it never blocks
-      // the response — the first request to a cold isolate must not pay the ~4s
-      // UPSERT loop cost (#799). Runs in both DO and D1 modes.
-      maybeDeferRegistrySync(ctx, () =>
-        runWithEnv(cfEnv, () =>
-          runWithCache(cache, () =>
-            runWithDb(db, () => syncAchievementRegistry()),
-          ),
-        ),
-      );
-
       return response;
     } catch (err) {
       Sentry.captureException(err);
@@ -822,6 +813,11 @@ export const handler = {
                 new Date().toISOString(),
               );
             }
+
+            // Once per isolate — cron/startup only so fetch wallTimeMs stays
+            // clean (#1067). Bun still syncs at process boot in index.ts.
+            // BACKFILL_DONE_KEY sentinel (#1064) is unchanged inside sync.
+            await maybeSyncAchievementRegistry(() => syncAchievementRegistry());
 
             // Arm every cron-singleton DO, then drive it via /tick. armCron keeps
             // the native alarm schedule (and recovers a dropped alarm handle, #795),
