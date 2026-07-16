@@ -9,7 +9,13 @@ import {
 } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { makeParsedTitle } from "../test-utils/fixtures";
+import {
+  makeParsedTitle,
+  makeTmdbMovieDetails,
+  makeTmdbTvDetails,
+  makeTmdbSearchMultiMovie,
+  makeTmdbSearchMultiTv,
+} from "../test-utils/fixtures";
 import {
   createUser,
   createSession,
@@ -18,11 +24,14 @@ import {
 import { requireAuth } from "../middleware/auth";
 import * as resolver from "../imdb/resolver";
 import * as repository from "../db/repository";
+import * as tmdbClient from "../tmdb/client";
 import type { AppEnv } from "../types";
 import {
   parseCsv,
   detectCsvFormat,
   extractImdbIdFromRow,
+  extractTvTimeTitleFromRow,
+  collectTvTimeQueries,
   type CsvFormat,
 } from "./import";
 
@@ -107,6 +116,23 @@ describe("detectCsvFormat", () => {
     expect(detectCsvFormat(headers)).toBe("trakt");
   });
 
+  it("detects TV Time movies format", () => {
+    const headers = ["movie_name", "Date", "type"];
+    expect(detectCsvFormat(headers)).toBe("tvtime");
+  });
+
+  it("detects TV Time series format", () => {
+    const headers = [
+      "Series Name",
+      "Season Number",
+      "Episode Number",
+      "Season Name",
+      "Episode Name",
+      "Date",
+    ];
+    expect(detectCsvFormat(headers)).toBe("tvtime");
+  });
+
   it("returns unknown for unrecognized headers", () => {
     expect(detectCsvFormat(["foo", "bar", "baz"])).toBe("unknown");
   });
@@ -169,6 +195,95 @@ describe("extractImdbIdFromRow", () => {
   it("returns null for unknown format", () => {
     const row = { foo: "bar" };
     expect(extractImdbIdFromRow(row, "unknown" as CsvFormat)).toBeNull();
+  });
+
+  it("returns null for TV Time format (no IMDB IDs in export)", () => {
+    const row = {
+      movie_name: "Inception",
+      Date: "2024-01-01",
+      type: "completed",
+    };
+    expect(extractImdbIdFromRow(row, "tvtime")).toBeNull();
+  });
+});
+
+describe("extractTvTimeTitleFromRow", () => {
+  it("extracts movie name from movies_history row", () => {
+    const row = {
+      movie_name: "Inception",
+      Date: "2024-01-01",
+      type: "completed",
+    };
+    expect(extractTvTimeTitleFromRow(row)).toEqual({
+      name: "Inception",
+      mediaType: "movie",
+    });
+  });
+
+  it("extracts series name from tracking-prod-records-series row", () => {
+    const row = {
+      "Series Name": "Breaking Bad",
+      "Season Number": "1",
+      "Episode Number": "1",
+      Date: "2024-01-01",
+    };
+    expect(extractTvTimeTitleFromRow(row)).toEqual({
+      name: "Breaking Bad",
+      mediaType: "tv",
+    });
+  });
+
+  it("returns null when title columns are empty", () => {
+    expect(
+      extractTvTimeTitleFromRow({
+        movie_name: "",
+        Date: "2024-01-01",
+        type: "started",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("collectTvTimeQueries", () => {
+  it("deduplicates series episode rows by show name", () => {
+    const rows = [
+      {
+        "Series Name": "Breaking Bad",
+        "Season Number": "1",
+        "Episode Number": "1",
+      },
+      {
+        "Series Name": "Breaking Bad",
+        "Season Number": "1",
+        "Episode Number": "2",
+      },
+      {
+        "Series Name": "The Wire",
+        "Season Number": "1",
+        "Episode Number": "1",
+      },
+    ];
+    const { queries, skippedEmpty, skippedOverflow } =
+      collectTvTimeQueries(rows);
+    expect(queries).toEqual([
+      { name: "Breaking Bad", mediaType: "tv" },
+      { name: "The Wire", mediaType: "tv" },
+    ]);
+    expect(skippedEmpty).toBe(0);
+    expect(skippedOverflow).toBe(0);
+  });
+
+  it("deduplicates movie rows by name", () => {
+    const rows = [
+      { movie_name: "Dune", Date: "2024-01-01", type: "started" },
+      { movie_name: "Dune", Date: "2024-01-02", type: "completed" },
+      { movie_name: "Parasite", Date: "2024-01-03", type: "completed" },
+    ];
+    const { queries } = collectTvTimeQueries(rows);
+    expect(queries).toEqual([
+      { name: "Dune", mediaType: "movie" },
+      { name: "Parasite", mediaType: "movie" },
+    ]);
   });
 });
 
@@ -374,5 +489,86 @@ describe("POST /import/csv", () => {
     const body = await res.json();
     expect(body.failed).toBe(1);
     expect(body.errors[0]).toContain("TMDB timeout");
+  });
+
+  it("imports a valid TV Time movies CSV via TMDB search", async () => {
+    const searchSpy = spyOn(tmdbClient, "searchMulti").mockResolvedValue({
+      page: 1,
+      results: [makeTmdbSearchMultiMovie({ id: 27205, title: "Inception" })],
+      total_pages: 1,
+      total_results: 1,
+    });
+    const detailsSpy = spyOn(tmdbClient, "fetchMovieDetails").mockResolvedValue(
+      makeTmdbMovieDetails({ id: 27205, title: "Inception" }),
+    );
+    spies.push(searchSpy, detailsSpy);
+
+    const csv = "movie_name,Date,type\nInception,2024-01-01,completed";
+    const form = makeFormData(csv);
+    const res = await app.request("/import/csv", {
+      method: "POST",
+      headers: { Cookie: userCookie },
+      body: form,
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.imported).toBe(1);
+    expect(body.failed).toBe(0);
+    expect(searchSpy).toHaveBeenCalledWith("Inception");
+    expect(detailsSpy).toHaveBeenCalledWith(27205);
+  });
+
+  it("imports unique shows from a TV Time series CSV", async () => {
+    const searchSpy = spyOn(tmdbClient, "searchMulti").mockResolvedValue({
+      page: 1,
+      results: [makeTmdbSearchMultiTv({ id: 1396, name: "Breaking Bad" })],
+      total_pages: 1,
+      total_results: 1,
+    });
+    const detailsSpy = spyOn(tmdbClient, "fetchTvDetails").mockResolvedValue(
+      makeTmdbTvDetails({ id: 1396, name: "Breaking Bad" }),
+    );
+    spies.push(searchSpy, detailsSpy);
+
+    const csv =
+      "Series Name,Season Number,Episode Number,Season Name,Episode Name,Date\n" +
+      "Breaking Bad,1,1,Season 1,Pilot,2024-01-01\n" +
+      "Breaking Bad,1,2,Season 1,Cat's in the Bag...,2024-01-02";
+    const form = makeFormData(csv);
+    const res = await app.request("/import/csv", {
+      method: "POST",
+      headers: { Cookie: userCookie },
+      body: form,
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.imported).toBe(1);
+    expect(body.failed).toBe(0);
+    expect(searchSpy).toHaveBeenCalledTimes(1);
+    expect(searchSpy).toHaveBeenCalledWith("Breaking Bad");
+    expect(detailsSpy).toHaveBeenCalledWith(1396);
+  });
+
+  it("counts unresolved TV Time titles as failed", async () => {
+    const searchSpy = spyOn(tmdbClient, "searchMulti").mockResolvedValue({
+      page: 1,
+      results: [],
+      total_pages: 0,
+      total_results: 0,
+    });
+    spies.push(searchSpy);
+
+    const csv = "movie_name,Date,type\nUnknown Film,2024-01-01,completed";
+    const form = makeFormData(csv);
+    const res = await app.request("/import/csv", {
+      method: "POST",
+      headers: { Cookie: userCookie },
+      body: form,
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.failed).toBe(1);
+    expect(body.imported).toBe(0);
+    expect(body.errors[0]).toContain("Unknown Film");
   });
 });

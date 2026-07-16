@@ -2,6 +2,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { resolveImdbUrl } from "../imdb/resolver";
 import { upsertTitles, trackTitle } from "../db/repository";
+import { searchMulti, fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
+import {
+  parseMovieDetails,
+  parseTvDetails,
+  type ParsedTitle,
+} from "../tmdb/parser";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { logger } from "../logger";
@@ -40,7 +46,12 @@ const uploadSchema = z.object({
   file: uploadedFileSchema,
 });
 
-export type CsvFormat = "letterboxd" | "imdb" | "trakt" | "unknown";
+export type CsvFormat = "letterboxd" | "imdb" | "trakt" | "tvtime" | "unknown";
+
+export type TvTimeTitleQuery = {
+  name: string;
+  mediaType: "movie" | "tv";
+};
 
 /**
  * Parse a CSV string into an array of objects keyed by header row.
@@ -142,6 +153,18 @@ export function detectCsvFormat(headers: string[]): CsvFormat {
   ) {
     return "trakt";
   }
+  // TV Time movies_history.csv: movie_name, Date, type
+  if (set.has("movie_name") && set.has("Date")) {
+    return "tvtime";
+  }
+  // TV Time tracking-prod-records-series.csv
+  if (
+    set.has("Series Name") &&
+    set.has("Season Number") &&
+    set.has("Episode Number")
+  ) {
+    return "tvtime";
+  }
   return "unknown";
 }
 
@@ -183,9 +206,70 @@ export function extractImdbIdFromRow(
       if (/^tt\d+$/.test(imdbId)) return imdbId;
       return null;
     }
+    case "tvtime":
+      // TV Time exports have no IMDB/TMDB IDs — resolve via title search.
+      return null;
     default:
       return null;
   }
+}
+
+/** Extract a title query from a TV Time CSV row (movies or series export). */
+export function extractTvTimeTitleFromRow(
+  row: Record<string, string>,
+): TvTimeTitleQuery | null {
+  const movieName = (row["movie_name"] ?? "").trim();
+  if (movieName) return { name: movieName, mediaType: "movie" };
+  const seriesName = (row["Series Name"] ?? "").trim();
+  if (seriesName) return { name: seriesName, mediaType: "tv" };
+  return null;
+}
+
+/**
+ * Deduplicate TV Time rows by title name and cap unique titles at MAX_ROWS.
+ * Series CSVs are episode-level; we only track each show once.
+ */
+export function collectTvTimeQueries(rows: Record<string, string>[]): {
+  queries: TvTimeTitleQuery[];
+  skippedEmpty: number;
+  skippedOverflow: number;
+} {
+  const seen = new Set<string>();
+  const queries: TvTimeTitleQuery[] = [];
+  let skippedEmpty = 0;
+  let skippedOverflow = 0;
+
+  for (const row of rows) {
+    const q = extractTvTimeTitleFromRow(row);
+    if (!q) {
+      skippedEmpty++;
+      continue;
+    }
+    const key = `${q.mediaType}:${q.name.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (queries.length < MAX_ROWS) {
+      queries.push(q);
+    } else {
+      skippedOverflow++;
+    }
+  }
+
+  return { queries, skippedEmpty, skippedOverflow };
+}
+
+/** Resolve a title via TMDB search (used when CSV has no IMDB/TMDB IDs). */
+export async function resolveTitleByName(
+  name: string,
+  mediaType: "movie" | "tv",
+): Promise<ParsedTitle | null> {
+  const result = await searchMulti(name);
+  const match = result.results.find((r) => r.media_type === mediaType);
+  if (!match) return null;
+  if (mediaType === "movie") {
+    return parseMovieDetails(await fetchMovieDetails(match.id));
+  }
+  return parseTvDetails(await fetchTvDetails(match.id));
 }
 
 const app = new Hono<AppEnv>();
@@ -226,7 +310,7 @@ app.post("/csv", async (c) => {
   if (format === "unknown") {
     return err(
       c,
-      "Unrecognized CSV format. Supported formats: Letterboxd, IMDB, Trakt",
+      "Unrecognized CSV format. Supported formats: Letterboxd, IMDB, Trakt, TV Time",
     );
   }
 
@@ -236,57 +320,106 @@ app.post("/csv", async (c) => {
     userId: user.id,
   });
 
-  const limitedRows = rows.slice(0, MAX_ROWS);
   let imported = 0;
   let failed = 0;
   let skipped = 0;
   const errors: string[] = [];
 
-  for (
-    let batchStart = 0;
-    batchStart < limitedRows.length;
-    batchStart += BATCH_SIZE
-  ) {
-    if (batchStart > 0) {
-      await sleep(BATCH_DELAY_MS);
-    }
+  if (format === "tvtime") {
+    const { queries, skippedEmpty, skippedOverflow } =
+      collectTvTimeQueries(rows);
+    skipped = skippedEmpty + skippedOverflow;
 
-    const batch = limitedRows.slice(batchStart, batchStart + BATCH_SIZE);
-
-    for (const row of batch) {
-      const imdbId = extractImdbIdFromRow(row, format);
-      if (!imdbId) {
-        skipped++;
-        continue;
+    for (
+      let batchStart = 0;
+      batchStart < queries.length;
+      batchStart += BATCH_SIZE
+    ) {
+      if (batchStart > 0) {
+        await sleep(BATCH_DELAY_MS);
       }
 
-      try {
-        const title = await resolveImdbUrl(imdbId);
-        if (!title) {
+      const batch = queries.slice(batchStart, batchStart + BATCH_SIZE);
+
+      for (const query of batch) {
+        try {
+          const title = await resolveTitleByName(query.name, query.mediaType);
+          if (!title) {
+            failed++;
+            errors.push(`Could not resolve title: ${query.name}`);
+            continue;
+          }
+
+          await upsertTitles([title]);
+          await trackTitle(title.id, user.id);
+          imported++;
+          log.info("Imported title from CSV", {
+            query: query.name,
+            mediaType: query.mediaType,
+            titleId: title.id,
+            title: title.title,
+          });
+        } catch (e: unknown) {
           failed++;
-          errors.push(`Could not resolve IMDB ID: ${imdbId}`);
+          const msg = e instanceof Error ? e.message : String(e);
+          errors.push(`Failed to import ${query.name}: ${msg}`);
+          log.warn("Failed to import CSV row", {
+            query: query.name,
+            err: msg,
+          });
+        }
+      }
+    }
+  } else {
+    const limitedRows = rows.slice(0, MAX_ROWS);
+
+    for (
+      let batchStart = 0;
+      batchStart < limitedRows.length;
+      batchStart += BATCH_SIZE
+    ) {
+      if (batchStart > 0) {
+        await sleep(BATCH_DELAY_MS);
+      }
+
+      const batch = limitedRows.slice(batchStart, batchStart + BATCH_SIZE);
+
+      for (const row of batch) {
+        const imdbId = extractImdbIdFromRow(row, format);
+        if (!imdbId) {
+          skipped++;
           continue;
         }
 
-        await upsertTitles([title]);
-        await trackTitle(title.id, user.id);
-        imported++;
-        log.info("Imported title from CSV", {
-          imdbId,
-          titleId: title.id,
-          title: title.title,
-        });
-      } catch (e: unknown) {
-        failed++;
-        const msg = e instanceof Error ? e.message : String(e);
-        errors.push(`Failed to import ${imdbId}: ${msg}`);
-        log.warn("Failed to import CSV row", { imdbId, err: msg });
+        try {
+          const title = await resolveImdbUrl(imdbId);
+          if (!title) {
+            failed++;
+            errors.push(`Could not resolve IMDB ID: ${imdbId}`);
+            continue;
+          }
+
+          await upsertTitles([title]);
+          await trackTitle(title.id, user.id);
+          imported++;
+          log.info("Imported title from CSV", {
+            imdbId,
+            titleId: title.id,
+            title: title.title,
+          });
+        } catch (e: unknown) {
+          failed++;
+          const msg = e instanceof Error ? e.message : String(e);
+          errors.push(`Failed to import ${imdbId}: ${msg}`);
+          log.warn("Failed to import CSV row", { imdbId, err: msg });
+        }
       }
     }
-  }
 
-  const totalSkippedRows = rows.length > MAX_ROWS ? rows.length - MAX_ROWS : 0;
-  skipped += totalSkippedRows;
+    const totalSkippedRows =
+      rows.length > MAX_ROWS ? rows.length - MAX_ROWS : 0;
+    skipped += totalSkippedRows;
+  }
 
   log.info("CSV import complete", {
     format,
