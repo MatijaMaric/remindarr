@@ -302,9 +302,68 @@ describe("DELETE /invitations/:id", () => {
   });
 
   it("returns 401 without auth", async () => {
-    const res = await app.request("/invitations/some-id", {
-      method: "DELETE",
-    });
+    const res = await app.request(
+      "/invitations/00000000-0000-4000-8000-000000000000",
+      {
+        method: "DELETE",
+      },
+    );
     expect(res.status).toBe(401);
+  });
+});
+
+describe("validation", () => {
+  it("rejects POST /redeem/:code with oversized code", async () => {
+    const res = await app.request(`/invitations/redeem/${"x".repeat(65)}`, {
+      method: "POST",
+      headers: authHeaders(userBToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects DELETE /:id with non-UUID id", async () => {
+    const res = await app.request("/invitations/not-a-uuid", {
+      method: "DELETE",
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy path — redeem valid code", async () => {
+    const createRes = await app.request("/invitations", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    const { code } = await createRes.json();
+
+    const res = await app.request(`/invitations/redeem/${code}`, {
+      method: "POST",
+      headers: authHeaders(userBToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
+  it("happy path — revoke valid UUID", async () => {
+    const createRes = await app.request("/invitations", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    const { id } = await createRes.json();
+
+    const res = await app.request(`/invitations/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
   });
 });

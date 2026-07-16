@@ -214,11 +214,14 @@ describe("PUT /integrations/:id", () => {
   });
 
   it("returns 404 for non-existent integration", async () => {
-    const res = await app.request("/integrations/nonexistent", {
-      method: "PUT",
-      headers: jsonHeaders(),
-      body: JSON.stringify({ enabled: false }),
-    });
+    const res = await app.request(
+      "/integrations/00000000-0000-4000-8000-000000000000",
+      {
+        method: "PUT",
+        headers: jsonHeaders(),
+        body: JSON.stringify({ enabled: false }),
+      },
+    );
     expect(res.status).toBe(404);
   });
 });
@@ -244,15 +247,87 @@ describe("DELETE /integrations/:id", () => {
   });
 
   it("returns 404 for non-existent integration", async () => {
-    const res = await app.request("/integrations/nonexistent", {
-      method: "DELETE",
-      headers: headers(),
-    });
+    const res = await app.request(
+      "/integrations/00000000-0000-4000-8000-000000000000",
+      {
+        method: "DELETE",
+        headers: headers(),
+      },
+    );
     expect(res.status).toBe(404);
   });
 });
 
+describe("GET /integrations/:id/status", () => {
+  it("returns sync status for own integration", async () => {
+    const createRes = await app.request("/integrations", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validPlexIntegration),
+    });
+    const { integration } = (await createRes.json()) as any;
+
+    const res = await app.request(`/integrations/${integration.id}/status`, {
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body).toHaveProperty("last_sync_at");
+    expect(body).toHaveProperty("last_sync_error");
+    expect(body.enabled).toBe(true);
+  });
+});
+
+describe("POST /integrations/:id/sync", () => {
+  it("triggers sync for a plex integration", async () => {
+    const createRes = await app.request("/integrations", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validPlexIntegration),
+    });
+    const { integration } = (await createRes.json()) as any;
+
+    const syncWatched = await import("../plex/sync");
+    const syncLibrary = await import("../plex/library-sync");
+    spies.push(
+      spyOn(syncWatched, "syncPlexWatched").mockResolvedValue({
+        synced: 0,
+      } as any),
+      spyOn(syncLibrary, "syncPlexLibrary").mockResolvedValue({
+        synced: 0,
+      } as any),
+    );
+
+    const res = await app.request(`/integrations/${integration.id}/sync`, {
+      method: "POST",
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.success).toBe(true);
+  });
+});
+
 describe("validation", () => {
+  it("rejects :id path params that are not UUIDs", async () => {
+    for (const [method, path] of [
+      ["DELETE", "/integrations/not-a-uuid"],
+      ["POST", "/integrations/not-a-uuid/sync"],
+      ["GET", "/integrations/not-a-uuid/status"],
+      ["PUT", "/integrations/not-a-uuid"],
+    ] as const) {
+      const res = await app.request(path, {
+        method,
+        headers: jsonHeaders(),
+        body: method === "PUT" ? JSON.stringify({ enabled: false }) : undefined,
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as any;
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    }
+  });
+
   it("rejects POST /integrations with missing config", async () => {
     const res = await app.request("/integrations", {
       method: "POST",

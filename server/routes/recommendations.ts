@@ -30,6 +30,11 @@ const discoveryFeedQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+const titleIdParamSchema = z.object({
+  titleId: z.string().min(1).max(128),
+});
+const idParamSchema = z.object({ id: z.string().uuid() });
+
 const app = new Hono<AppEnv>();
 
 // POST / — Send a recommendation (broadcast to all followers, or targeted to one user)
@@ -129,16 +134,20 @@ app.get("/sent", async (c) => {
 });
 
 // GET /check/:titleId — Check if user already recommended a title
-app.get("/check/:titleId", async (c) => {
-  const user = c.get("user");
-  if (!user) {
-    return err(c, "Authentication required", 401);
-  }
+app.get(
+  "/check/:titleId",
+  zValidator("param", titleIdParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) {
+      return err(c, "Authentication required", 401);
+    }
 
-  const titleId = c.req.param("titleId");
-  const existing = await getUserRecommendation(user.id, titleId);
-  return ok(c, { recommended: !!existing, id: existing?.id ?? null });
-});
+    const { titleId } = c.req.valid("param");
+    const existing = await getUserRecommendation(user.id, titleId);
+    return ok(c, { recommended: !!existing, id: existing?.id ?? null });
+  },
+);
 
 // GET / — Discovery feed (recommendations from followed users)
 app.get("/", zValidator("query", discoveryFeedQuerySchema), async (c) => {
@@ -178,25 +187,25 @@ app.get("/", zValidator("query", discoveryFeedQuerySchema), async (c) => {
 });
 
 // POST /:id/read — Mark as read (per-user tracking)
-app.post("/:id/read", async (c) => {
+app.post("/:id/read", zValidator("param", idParamSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
   await markAsRead(id, user.id);
   return ok(c, { success: true });
 });
 
 // DELETE /:id — Delete a recommendation (only creator can delete)
-app.delete("/:id", async (c) => {
+app.delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
   await deleteRecommendation(id, user.id);
   log.info("Recommendation deleted", { id, userId: user.id });
   return ok(c, { success: true });

@@ -152,6 +152,15 @@ const hideEventSchema = z.object({
   event_key: z.string().min(1).max(200),
 });
 
+const hideEventParamSchema = z.object({
+  event_kind: activityKindEnum,
+  event_key: z.string().min(1).max(200),
+});
+
+const pinnedTitleParamSchema = z.object({
+  titleId: z.string().min(1).max(128),
+});
+
 app.post(
   "/me/activity/hide",
   zValidator("json", hideEventSchema),
@@ -164,16 +173,17 @@ app.post(
   },
 );
 
-app.delete("/me/activity/hide/:event_kind/:event_key", async (c) => {
-  const user = c.get("user");
-  if (!user) return err(c, "Authentication required", 401);
-  const rawKind = c.req.param("event_kind");
-  const eventKey = c.req.param("event_key");
-  const parsed = activityKindEnum.safeParse(rawKind);
-  if (!parsed.success) return err(c, "Invalid event_kind", 400);
-  await unhideActivityEvent(user.id, parsed.data, eventKey);
-  return ok(c, { hidden: false });
-});
+app.delete(
+  "/me/activity/hide/:event_kind/:event_key",
+  zValidator("param", hideEventParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) return err(c, "Authentication required", 401);
+    const { event_kind, event_key } = c.req.valid("param");
+    await unhideActivityEvent(user.id, event_kind, event_key);
+    return ok(c, { hidden: false });
+  },
+);
 
 const searchQuerySchema = z.object({ q: z.string().min(1) });
 
@@ -283,29 +293,39 @@ const reorderSchema = z.object({
 });
 
 // POST /me/pinned/:titleId — pin a title (auth required)
-app.post("/me/pinned/:titleId", requireAuth, async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("titleId");
+app.post(
+  "/me/pinned/:titleId",
+  requireAuth,
+  zValidator("param", pinnedTitleParamSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { titleId } = c.req.valid("param");
 
-  const result = await pinTitle(user.id, titleId);
-  if (!result.ok) {
-    return err(c, result.error, 400);
-  }
+    const result = await pinTitle(user.id, titleId);
+    if (!result.ok) {
+      return err(c, result.error, 400);
+    }
 
-  log.info("Title pinned", { userId: user.id, titleId });
-  return ok(c, { pinned: true });
-});
+    log.info("Title pinned", { userId: user.id, titleId });
+    return ok(c, { pinned: true });
+  },
+);
 
 // DELETE /me/pinned/:titleId — unpin a title (auth required)
-app.delete("/me/pinned/:titleId", requireAuth, async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("titleId");
+app.delete(
+  "/me/pinned/:titleId",
+  requireAuth,
+  zValidator("param", pinnedTitleParamSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { titleId } = c.req.valid("param");
 
-  await unpinTitle(user.id, titleId);
+    await unpinTitle(user.id, titleId);
 
-  log.info("Title unpinned", { userId: user.id, titleId });
-  return ok(c, { pinned: false });
-});
+    log.info("Title unpinned", { userId: user.id, titleId });
+    return ok(c, { pinned: false });
+  },
+);
 
 // PUT /me/pinned/order — reorder pinned titles (auth required)
 app.put(

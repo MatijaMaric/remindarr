@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import {
   createInvitation,
   getInvitation,
@@ -11,8 +12,12 @@ import {
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 
 const log = logger.child({ module: "invitations" });
+
+const redeemParamSchema = z.object({ code: z.string().min(1).max(64) });
+const revokeParamSchema = z.object({ id: z.string().uuid() });
 
 const app = new Hono<AppEnv>();
 
@@ -82,13 +87,13 @@ app.get("/", async (c) => {
 });
 
 // POST /redeem/:code — Redeem an invitation
-app.post("/redeem/:code", async (c) => {
+app.post("/redeem/:code", zValidator("param", redeemParamSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const code = c.req.param("code");
+  const { code } = c.req.valid("param");
   const invitation = await getInvitation(code);
 
   if (!invitation) {
@@ -132,13 +137,13 @@ app.post("/redeem/:code", async (c) => {
 });
 
 // DELETE /:id — Revoke an invitation
-app.delete("/:id", async (c) => {
+app.delete("/:id", zValidator("param", revokeParamSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
   await revokeInvitation(id, user.id);
   log.info("Invitation revoked", { invitationId: id, userId: user.id });
   return ok(c, { success: true });

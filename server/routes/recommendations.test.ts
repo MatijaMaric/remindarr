@@ -362,9 +362,12 @@ describe("POST /recommendations/:id/read", () => {
   });
 
   it("returns 401 without auth", async () => {
-    const res = await app.request("/recommendations/some-id/read", {
-      method: "POST",
-    });
+    const res = await app.request(
+      "/recommendations/00000000-0000-4000-8000-000000000000/read",
+      {
+        method: "POST",
+      },
+    );
     expect(res.status).toBe(401);
   });
 });
@@ -424,14 +427,58 @@ describe("DELETE /recommendations/:id", () => {
   });
 
   it("returns 401 without auth", async () => {
-    const res = await app.request("/recommendations/some-id", {
-      method: "DELETE",
-    });
+    const res = await app.request(
+      "/recommendations/00000000-0000-4000-8000-000000000000",
+      {
+        method: "DELETE",
+      },
+    );
     expect(res.status).toBe(401);
   });
 });
 
 describe("validation", () => {
+  it("rejects GET /check/:titleId with oversized titleId", async () => {
+    const res = await app.request(`/recommendations/check/${"x".repeat(129)}`, {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects POST /:id/read with non-UUID id", async () => {
+    const res = await app.request("/recommendations/not-a-uuid/read", {
+      method: "POST",
+      headers: authHeaders(userBToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects DELETE /:id with non-UUID id", async () => {
+    const res = await app.request("/recommendations/not-a-uuid", {
+      method: "DELETE",
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy path — GET /check/:titleId with valid titleId", async () => {
+    const res = await app.request("/recommendations/check/movie-123", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("recommended");
+  });
+
   it("rejects POST / with empty titleId via zod", async () => {
     const res = await app.request("/recommendations", {
       method: "POST",

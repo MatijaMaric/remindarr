@@ -580,3 +580,31 @@ describe("PATCH /user/me/activity-settings", () => {
     });
   });
 });
+
+describe("DELETE /user/me/activity/hide/:event_kind/:event_key", () => {
+  it("rejects invalid event_kind", async () => {
+    const res = await app.request("/user/me/activity/hide/not_a_kind/rt:m1", {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("unhides an event (happy path)", async () => {
+    await hideActivityEvent(userId, "rating_title", "rt:m1");
+
+    const res = await app.request(
+      "/user/me/activity/hide/rating_title/rt%3Am1",
+      {
+        method: "DELETE",
+        headers: authHeaders(),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.hidden).toBe(false);
+  });
+});

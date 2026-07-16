@@ -1092,6 +1092,41 @@ describe("PATCH /user/me/profile", () => {
   });
 });
 
+describe("validation — path params", () => {
+  it("rejects POST /me/pinned/:titleId with oversized titleId", async () => {
+    const res = await app.request(`/user/me/pinned/${"x".repeat(129)}`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as AnyRecord;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects DELETE /me/pinned/:titleId with oversized titleId", async () => {
+    const res = await app.request(`/user/me/pinned/${"x".repeat(129)}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as AnyRecord;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy path — POST /me/pinned/:titleId with valid titleId", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-123" })]);
+    const res = await app.request("/user/me/pinned/movie-123", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as AnyRecord;
+    expect(body.pinned).toBe(true);
+  });
+});
+
 describe("validation — profile extras", () => {
   it("returns 400 for invalid country_code (lowercase)", async () => {
     const res = await app.request("/user/me/profile", {

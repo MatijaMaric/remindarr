@@ -72,6 +72,8 @@ const VALID_USER_STATUSES = [
 ] as const;
 const VALID_NOTIFICATION_MODES = ["all", "premieres_only", "none"] as const;
 
+const titleIdParamSchema = z.object({ id: z.string().min(1).max(128) });
+
 const frontendOfferSchema = z.object({
   provider_id: z.number(),
   provider_name: z.string(),
@@ -453,9 +455,9 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
 // `trackPostBodySchema` is `.optional()` per-field, so an empty body `{}` is
 // valid. We safe-parse against an empty-object fallback so a totally absent
 // body (no Content-Type, no payload) is still accepted.
-app.post("/:id", async (c) => {
+app.post("/:id", zValidator("param", titleIdParamSchema), async (c) => {
   const user = c.get("user")!;
-  const titleId = c.req.param("id");
+  const { id: titleId } = c.req.valid("param");
   const raw = await c.req.json().catch(() => ({}));
   const parsed = trackPostBodySchema.safeParse(raw);
   if (!parsed.success) {
@@ -553,9 +555,9 @@ app.patch("/:id/tags", zValidator("json", tagsSchema), async (c) => {
   return ok(c, { message: "Tags updated" });
 });
 
-app.delete("/:id", async (c) => {
+app.delete("/:id", zValidator("param", titleIdParamSchema), async (c) => {
   const user = c.get("user")!;
-  const titleId = c.req.param("id");
+  const { id: titleId } = c.req.valid("param");
   await untrackTitle(titleId, user.id);
   return ok(c, { message: `Untracked ${titleId}` });
 });
