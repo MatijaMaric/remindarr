@@ -234,7 +234,11 @@ export default function TrackedPage() {
 
       {view !== "stats" && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-white/[0.06] mb-4">
-          <div className="flex items-center gap-0 overflow-x-auto scrollbar-none -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-1">
+          <div
+            role="tablist"
+            aria-label={t("tracked.filterTabs")}
+            className="flex items-center gap-0 overflow-x-auto scrollbar-none -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-1"
+          >
             {STATUS_TABS.map((tab) => {
               const count =
                 tab.key === "all"
@@ -247,12 +251,18 @@ export default function TrackedPage() {
                         (tab.key === "completed" &&
                           t.show_status === "completed"),
                     ).length;
+              const isActive = statusFilter === tab.key;
               return (
                 <button
                   key={tab.key}
+                  type="button"
+                  role="tab"
+                  id={`tracked-status-tab-${tab.key}`}
+                  aria-selected={isActive}
+                  aria-controls="tracked-status-panel"
                   onClick={() => setStatusFilter(tab.key)}
                   className={`shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                    statusFilter === tab.key
+                    isActive
                       ? "text-zinc-100 border-amber-400 font-semibold"
                       : "text-zinc-400 border-transparent hover:text-zinc-100"
                   }`}
@@ -281,61 +291,69 @@ export default function TrackedPage() {
 
       {view === "stats" ? (
         <StatsView />
-      ) : loading ? (
-        <TitleGridSkeleton />
-      ) : filteredTitles.length === 0 ? (
-        <TitleList
-          titles={EMPTY_TITLES}
-          onTrackToggle={refetch}
-          emptyMessage={t("tracked.empty")}
-        />
-      ) : view === "list" ? (
-        <TrackedTable
-          titles={sortedFilteredTitles}
-          onRefetch={refetch}
-          selectMode={selectMode}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-        />
-      ) : statusFilter !== "all" ? (
-        <TitleList
-          titles={sortedFilteredTitles}
-          onTrackToggle={refetch}
-          hideTypeBadge
-          showProgressBar
-          showStatusPicker
-          showNotificationPicker
-          showTags
-        />
       ) : (
-        <div className="space-y-6">
-          {showGroups.map((group) => (
-            <div key={group.key}>
-              <h3 className="text-sm font-semibold text-zinc-400 mb-3">
-                {t(group.labelKey)} ({group.titles.length})
-              </h3>
-              <TitleList
-                titles={group.titles}
-                onTrackToggle={refetch}
-                hideTypeBadge
-                showProgressBar
-                showStatusPicker
-                showNotificationPicker
-                showTags
-              />
-            </div>
-          ))}
-          {movies.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-zinc-400 mb-3">
-                {t("tracked.sections.movies")} ({movies.length})
-              </h3>
-              <TitleList
-                titles={movies}
-                onTrackToggle={refetch}
-                showStatusPicker
-                showTags
-              />
+        <div
+          role="tabpanel"
+          id="tracked-status-panel"
+          aria-labelledby={`tracked-status-tab-${statusFilter}`}
+        >
+          {loading ? (
+            <TitleGridSkeleton />
+          ) : filteredTitles.length === 0 ? (
+            <TitleList
+              titles={EMPTY_TITLES}
+              onTrackToggle={refetch}
+              emptyMessage={t("tracked.empty")}
+            />
+          ) : view === "list" ? (
+            <TrackedTable
+              titles={sortedFilteredTitles}
+              onRefetch={refetch}
+              selectMode={selectMode}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+            />
+          ) : statusFilter !== "all" ? (
+            <TitleList
+              titles={sortedFilteredTitles}
+              onTrackToggle={refetch}
+              hideTypeBadge
+              showProgressBar
+              showStatusPicker
+              showNotificationPicker
+              showTags
+            />
+          ) : (
+            <div className="space-y-6">
+              {showGroups.map((group) => (
+                <div key={group.key}>
+                  <h3 className="text-sm font-semibold text-zinc-400 mb-3">
+                    {t(group.labelKey)} ({group.titles.length})
+                  </h3>
+                  <TitleList
+                    titles={group.titles}
+                    onTrackToggle={refetch}
+                    hideTypeBadge
+                    showProgressBar
+                    showStatusPicker
+                    showNotificationPicker
+                    showTags
+                  />
+                </div>
+              ))}
+              {movies.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-400 mb-3">
+                    {t("tracked.sections.movies")} ({movies.length})
+                  </h3>
+                  <TitleList
+                    titles={movies}
+                    onTrackToggle={refetch}
+                    showStatusPicker
+                    showTags
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

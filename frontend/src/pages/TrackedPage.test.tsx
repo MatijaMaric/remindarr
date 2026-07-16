@@ -236,6 +236,44 @@ describe("TrackedPage", () => {
     });
   });
 
+  it("exposes status filters as an ARIA tablist with selected state", async () => {
+    apiMock.getTrackedTitles.mockImplementation(() =>
+      Promise.resolve({
+        titles: [makeShow("s1", "watching")],
+        count: 1,
+        profile_public: false,
+      }),
+    );
+
+    render(<TrackedPage />, { wrapper: Wrapper });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("tablist", { name: "Filter by status" }),
+      ).toBeDefined(),
+    );
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.length).toBe(6);
+
+    const allTab = screen.getByRole("tab", { name: /All/ });
+    expect(allTab.getAttribute("aria-selected")).toBe("true");
+    expect(allTab.getAttribute("aria-controls")).toBe("tracked-status-panel");
+
+    const watchingTab = screen.getByRole("tab", { name: /Watching/ });
+    expect(watchingTab.getAttribute("aria-selected")).toBe("false");
+
+    fireEvent.click(watchingTab);
+    expect(watchingTab.getAttribute("aria-selected")).toBe("true");
+    expect(allTab.getAttribute("aria-selected")).toBe("false");
+
+    const panel = screen.getByRole("tabpanel");
+    expect(panel.getAttribute("id")).toBe("tracked-status-panel");
+    expect(panel.getAttribute("aria-labelledby")).toBe(
+      "tracked-status-tab-watching",
+    );
+  });
+
   it("renders unreleased section when shows have unreleased status", async () => {
     const titles = [makeShow("s1", "unreleased")];
     apiMock.getTrackedTitles.mockImplementation(() =>

@@ -138,6 +138,7 @@
     "title": "Tracked Titles ({{count}})",
     "empty": "No tracked titles yet. Search for titles and click 'Track' to add them here.",
     "sortBy": "Sort titles by",
+    "filterTabs": "Filter by status",
     "sections": {
       "watching": "Currently Watching",
       "caughtUp": "Caught Up",
