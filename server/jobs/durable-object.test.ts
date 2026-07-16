@@ -1188,13 +1188,16 @@ describe("JobQueueDO", () => {
     expect(await state.storage.getAlarm()).not.toBeNull();
 
     // Simulate a dropped CF alarm handle: the _actor_alarms cron row persists
-    // (so getSchedules still reports it) but the underlying alarm is gone.
+    // but the underlying alarm is gone. Query SQL directly — touching
+    // do_.alarms would construct Alarms and re-set the alarm handle via
+    // _scheduleNextAlarm (#1073 lazy-init).
     state.storage.scheduledAlarm = null;
-    expect(
-      do_.alarms
-        .getSchedules({ type: "cron" })
-        .some((s) => s.callback === "runJob"),
-    ).toBe(true);
+    const cronRows = state.rawDb
+      .prepare(
+        `SELECT id FROM _actor_alarms WHERE type = 'cron' AND callback = 'runJob'`,
+      )
+      .all();
+    expect(cronRows.length).toBeGreaterThan(0);
 
     addBreadcrumbSpy.mockClear();
     await do_.armCron("sync-titles", "0 3 * * *");
@@ -1208,6 +1211,64 @@ describe("JobQueueDO", () => {
         "Recovered dropped cron alarm",
     );
     expect(recoveryBreadcrumb).toBeDefined();
+  });
+
+  // ── /arm non-blocking w.r.t. in-flight work (#1073) ───────────────────────
+
+  it("POST /arm returns skipped:busy when a job is running (#1073)", async () => {
+    await do_.armCron("sync-titles", "0 3 * * *");
+    state.rawDb
+      .prepare(
+        `INSERT INTO jobs (name, status, run_at, started_at, attempts, max_attempts)
+         VALUES ('sync-titles', 'running', datetime('now'), datetime('now'), 1, 3)`,
+      )
+      .run();
+
+    const res = await do_.fetch(
+      new Request("https://do/arm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "sync-titles", cron: "0 3 * * *" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; skipped?: string };
+    expect(body.ok).toBe(true);
+    expect(body.skipped).toBe("busy");
+  });
+
+  it("armCron on a cold DO does not dispatch a due runJob via Alarms BCW (#1073)", async () => {
+    let handlerRuns = 0;
+    processorModule.handlers["sync-titles"] = async () => {
+      handlerRuns++;
+    };
+
+    await do_.armCron("sync-titles", "0 3 * * *");
+    // Make the cron schedule row due (as after hibernation across a fire time).
+    state.rawDb
+      .prepare("UPDATE _actor_alarms SET time = 0 WHERE callback = 'runJob'")
+      .run();
+
+    // Fresh DO on the same storage — simulates cold wake on POST /arm.
+    const cold = new JobQueueDO(state as any, fakeEnv as any);
+    const res = await cold.fetch(
+      new Request("https://do/arm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "sync-titles", cron: "0 3 * * *" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    // Must not have run the job inside Alarms constructor blockConcurrencyWhile.
+    expect(handlerRuns).toBe(0);
+
+    // /tick remains the load-bearing path and still runs due work.
+    const tickRes = await cold.fetch(
+      new Request("https://do/tick", { method: "POST", body: "{}" }),
+    );
+    expect(tickRes.status).toBe(200);
+    expect(handlerRuns).toBe(1);
   });
 });
 

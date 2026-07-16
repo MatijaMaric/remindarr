@@ -5,13 +5,14 @@ import Sentry from "./sentry";
 import { classifyError } from "./lib/error-classifier";
 import { errorsByCategory } from "./metrics";
 import {
-  maybeDeferRegistrySync,
+  maybeSyncAchievementRegistry,
   resetAchievementRegistrySync,
   handler,
 } from "./worker";
 import { logger } from "./logger";
 import { rateLimiter, type RateLimitStore } from "./middleware/rate-limit";
 import * as backendModule from "./jobs/backend";
+import * as achievementsModule from "./achievements";
 import * as schema from "./db/schema";
 import { withConfigGuard } from "./test-utils/config";
 
@@ -281,21 +282,9 @@ describe("unknown /api/* paths fall through to 404", () => {
   });
 });
 
-// ─── maybeDeferRegistrySync — deferral contract (#799) ───────────────────────
+// ─── maybeSyncAchievementRegistry — once-per-isolate cron/startup (#1067) ───
 
-describe("maybeDeferRegistrySync (#799 deferral contract)", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function makeCtx(): { ctx: any; captured: Promise<unknown>[] } {
-    const captured: Promise<unknown>[] = [];
-    const ctx = {
-      waitUntil: (p: Promise<unknown>) => {
-        captured.push(p);
-      },
-      passThroughOnException: () => {},
-    };
-    return { ctx, captured };
-  }
-
+describe("maybeSyncAchievementRegistry (#1067 cron/startup contract)", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let logSpy: ReturnType<typeof spyOn<any, any>>;
 
@@ -309,57 +298,34 @@ describe("maybeDeferRegistrySync (#799 deferral contract)", () => {
     logSpy.mockRestore();
   });
 
-  it("returns synchronously without awaiting run", () => {
-    const { ctx, captured } = makeCtx();
-    let runStarted = false;
-    let resolveRun!: () => void;
-    const run = () =>
-      new Promise<void>((resolve) => {
-        runStarted = true;
-        resolveRun = resolve;
-      });
+  it("awaits run and sets the stampede guard", async () => {
+    let ran = 0;
+    await maybeSyncAchievementRegistry(async () => {
+      ran++;
+    });
+    expect(ran).toBe(1);
 
-    maybeDeferRegistrySync(ctx, run);
-
-    // run was invoked synchronously (promise created) but not yet resolved
-    expect(runStarted).toBe(true);
-    // ctx.waitUntil received exactly one promise
-    expect(captured).toHaveLength(1);
-    // function itself returned without awaiting — resolveRun still pending
-    resolveRun();
+    await maybeSyncAchievementRegistry(async () => {
+      ran++;
+    });
+    expect(ran).toBe(1);
   });
 
-  it("passes a promise to ctx.waitUntil, not void", () => {
-    const { ctx, captured } = makeCtx();
-    maybeDeferRegistrySync(ctx, () => Promise.resolve());
-    expect(captured[0]).toBeInstanceOf(Promise);
-  });
+  it("resets the flag on error so a later call retries", async () => {
+    await maybeSyncAchievementRegistry(() =>
+      Promise.reject(new Error("sync failed")),
+    );
 
-  it("does not call ctx.waitUntil a second time (stampede guard)", () => {
-    const { ctx, captured } = makeCtx();
-    maybeDeferRegistrySync(ctx, () => Promise.resolve());
-    maybeDeferRegistrySync(ctx, () => Promise.resolve());
-
-    expect(captured).toHaveLength(1);
-  });
-
-  it("resets the flag on error so a later request retries", async () => {
-    const { ctx, captured } = makeCtx();
-    maybeDeferRegistrySync(ctx, () => Promise.reject(new Error("sync failed")));
-
-    // Await the captured waitUntil promise (the .catch wrapper)
-    await captured[0];
-
-    // Error was logged
     expect(logSpy).toHaveBeenCalledWith(
       "Achievement registry sync failed",
       expect.objectContaining({ error: "sync failed" }),
     );
 
-    // Flag was reset — a subsequent call fires again
-    const { ctx: ctx2, captured: captured2 } = makeCtx();
-    maybeDeferRegistrySync(ctx2, () => Promise.resolve());
-    expect(captured2).toHaveLength(1);
+    let ran = false;
+    await maybeSyncAchievementRegistry(async () => {
+      ran = true;
+    });
+    expect(ran).toBe(true);
   });
 });
 
@@ -371,12 +337,21 @@ describe("scheduled() bootstrap KV timestamp", () => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let spies: ReturnType<typeof spyOn<any, any>>[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let syncSpy: ReturnType<typeof spyOn<any, any>>;
 
   beforeEach(() => {
+    resetAchievementRegistrySync();
     // Stub out all heavy backend functions so scheduled() completes without a
     // real D1 DB or job infrastructure.
+    syncSpy = spyOn(
+      achievementsModule,
+      "syncAchievementRegistry",
+    ).mockResolvedValue(undefined);
     spies = [
+      syncSpy,
       spyOn(backendModule, "armCron").mockResolvedValue(undefined as any),
+      spyOn(backendModule, "tickCron").mockResolvedValue(undefined),
       spyOn(backendModule, "recoverStale").mockResolvedValue(0),
       spyOn(backendModule, "processPending").mockResolvedValue(0),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -394,6 +369,7 @@ describe("scheduled() bootstrap KV timestamp", () => {
   afterEach(() => {
     for (const spy of spies) spy.mockRestore();
     spies = [];
+    resetAchievementRegistrySync();
   });
 
   it("puts cron_bootstrap_last_seen_at into CACHE_KV when the scheduled handler runs", async () => {
@@ -430,6 +406,39 @@ describe("scheduled() bootstrap KV timestamp", () => {
     expect(bootstrapPut).toBeDefined();
     // Value should be a valid ISO timestamp
     expect(new Date(bootstrapPut![1]).getTime()).toBeGreaterThan(0);
+  });
+
+  it("syncs achievement registry on scheduled, not via fetch waitUntil (#1067)", async () => {
+    const fakeEnv = {
+      DB: {} as D1Database,
+      CACHE_KV: {
+        put: async () => {},
+        get: async () => null,
+      } as unknown as KVNamespace,
+      TMDB_COUNTRY: "HR",
+      TMDB_LANGUAGE: "hr-HR",
+      LOG_LEVEL: "info",
+    } as unknown as Parameters<typeof handler.scheduled>[1];
+
+    const fakeCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as unknown as ExecutionContext;
+
+    await handler.scheduled(
+      { cron: "*/5 * * * *", type: "scheduled", scheduledTime: Date.now() },
+      fakeEnv,
+      fakeCtx,
+    );
+    expect(syncSpy).toHaveBeenCalledTimes(1);
+
+    // Stampede guard — second tick in the same isolate does not re-sync.
+    await handler.scheduled(
+      { cron: "*/5 * * * *", type: "scheduled", scheduledTime: Date.now() },
+      fakeEnv,
+      fakeCtx,
+    );
+    expect(syncSpy).toHaveBeenCalledTimes(1);
   });
 
   it("isolates a failing armCron so remaining cron jobs still tick (#1055)", async () => {
