@@ -22,6 +22,8 @@ import Sentry from "../sentry";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 
+const idParamSchema = z.object({ id: z.string().uuid() });
+
 const app = new Hono<AppEnv>();
 
 function isValidTimezone(tz: string): boolean {
@@ -252,79 +254,89 @@ app.post(
 );
 
 // PUT /:id — update notifier
-app.put("/:id", zValidator("json", updateNotifierSchema), async (c) => {
-  const user = c.get("user")!;
-  const id = c.req.param("id");
-  const body = c.req.valid("json");
+app.put(
+  "/:id",
+  zValidator("param", idParamSchema),
+  zValidator("json", updateNotifierSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id } = c.req.valid("param");
+    const body = c.req.valid("json");
 
-  const existing = await getNotifierById(id, user.id);
-  if (!existing) {
-    return err(c, "Notifier not found", 404);
-  }
+    const existing = await getNotifierById(id, user.id);
+    if (!existing) {
+      return err(c, "Notifier not found", 404);
+    }
 
-  // Validate config if provided (provider-specific)
-  if (body.config) {
-    const provider = getProvider(body.provider || existing.provider);
-    if (provider) {
-      const validation = provider.validateConfig(body.config);
-      if (!validation.valid) {
-        return err(c, validation.error ?? "Invalid config");
+    // Validate config if provided (provider-specific)
+    if (body.config) {
+      const provider = getProvider(body.provider || existing.provider);
+      if (provider) {
+        const validation = provider.validateConfig(body.config);
+        if (!validation.valid) {
+          return err(c, validation.error ?? "Invalid config");
+        }
       }
     }
-  }
 
-  const digestMode = "digest_mode" in body ? body.digest_mode : undefined;
-  const digestDay = "digest_day" in body ? body.digest_day : undefined;
+    const digestMode = "digest_mode" in body ? body.digest_mode : undefined;
+    const digestDay = "digest_day" in body ? body.digest_day : undefined;
 
-  if (
-    digestMode === "weekly" &&
-    (digestDay === null || digestDay === undefined)
-  ) {
-    // Check if existing notifier already has a digest_day set
-    if (existing.digest_day === null || existing.digest_day === undefined) {
-      return err(c, "digest_day is required when digest_mode is 'weekly'");
+    if (
+      digestMode === "weekly" &&
+      (digestDay === null || digestDay === undefined)
+    ) {
+      // Check if existing notifier already has a digest_day set
+      if (existing.digest_day === null || existing.digest_day === undefined) {
+        return err(c, "digest_day is required when digest_mode is 'weekly'");
+      }
     }
-  }
 
-  await updateNotifier(id, user.id, {
-    config: body.config,
-    notifyTime: body.notify_time,
-    timezone: body.timezone,
-    enabled: body.enabled,
-    ...("digest_mode" in body ? { digestMode: body.digest_mode ?? null } : {}),
-    ...("digest_day" in body ? { digestDay: body.digest_day ?? null } : {}),
-    ...("streaming_alerts_enabled" in body
-      ? { streamingAlertsEnabled: body.streaming_alerts_enabled !== false }
-      : {}),
-    ...("quiet_hours_start" in body
-      ? { quietHoursStart: body.quiet_hours_start ?? null }
-      : {}),
-    ...("quiet_hours_end" in body
-      ? { quietHoursEnd: body.quiet_hours_end ?? null }
-      : {}),
-    ...(body.quiet_hours_days !== undefined
-      ? { quietHoursDays: body.quiet_hours_days }
-      : {}),
-    ...(body.leaving_soon_alerts_enabled !== undefined
-      ? { leavingSoonAlertsEnabled: body.leaving_soon_alerts_enabled !== false }
-      : {}),
-    ...(body.friend_activity_alerts_enabled !== undefined
-      ? {
-          friendActivityAlertsEnabled:
-            body.friend_activity_alerts_enabled === true,
-        }
-      : {}),
-  });
-  await refreshNotificationSchedule();
+    await updateNotifier(id, user.id, {
+      config: body.config,
+      notifyTime: body.notify_time,
+      timezone: body.timezone,
+      enabled: body.enabled,
+      ...("digest_mode" in body
+        ? { digestMode: body.digest_mode ?? null }
+        : {}),
+      ...("digest_day" in body ? { digestDay: body.digest_day ?? null } : {}),
+      ...("streaming_alerts_enabled" in body
+        ? { streamingAlertsEnabled: body.streaming_alerts_enabled !== false }
+        : {}),
+      ...("quiet_hours_start" in body
+        ? { quietHoursStart: body.quiet_hours_start ?? null }
+        : {}),
+      ...("quiet_hours_end" in body
+        ? { quietHoursEnd: body.quiet_hours_end ?? null }
+        : {}),
+      ...(body.quiet_hours_days !== undefined
+        ? { quietHoursDays: body.quiet_hours_days }
+        : {}),
+      ...(body.leaving_soon_alerts_enabled !== undefined
+        ? {
+            leavingSoonAlertsEnabled:
+              body.leaving_soon_alerts_enabled !== false,
+          }
+        : {}),
+      ...(body.friend_activity_alerts_enabled !== undefined
+        ? {
+            friendActivityAlertsEnabled:
+              body.friend_activity_alerts_enabled === true,
+          }
+        : {}),
+    });
+    await refreshNotificationSchedule();
 
-  const notifier = await getNotifierById(id, user.id);
-  return ok(c, { notifier });
-});
+    const notifier = await getNotifierById(id, user.id);
+    return ok(c, { notifier });
+  },
+);
 
 // DELETE /:id — delete notifier
-app.delete("/:id", async (c) => {
+app.delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const user = c.get("user")!;
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
 
   const existing = await getNotifierById(id, user.id);
   if (!existing) {
@@ -337,9 +349,9 @@ app.delete("/:id", async (c) => {
 });
 
 // POST /:id/test — send test notification
-app.post("/:id/test", async (c) => {
+app.post("/:id/test", zValidator("param", idParamSchema), async (c) => {
   const user = c.get("user")!;
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
 
   const notifier = await getNotifierById(id, user.id);
   if (!notifier) {
@@ -381,34 +393,44 @@ app.post("/:id/test", async (c) => {
 });
 
 // GET /:id/preview — preview today's digest content (not dispatched)
-app.get("/:id/preview", requireAuth, async (c) => {
-  const user = c.get("user")!;
-  const id = c.req.param("id");
+app.get(
+  "/:id/preview",
+  requireAuth,
+  zValidator("param", idParamSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id } = c.req.valid("param");
 
-  const notifier = await getNotifierById(id, user.id);
-  if (!notifier) {
-    return err(c, "Notifier not found", 404);
-  }
+    const notifier = await getNotifierById(id, user.id);
+    if (!notifier) {
+      return err(c, "Notifier not found", 404);
+    }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const content = await buildPreviewContent(user.id, today);
+    const today = new Date().toISOString().slice(0, 10);
+    const content = await buildPreviewContent(user.id, today);
 
-  return c.json(content);
-});
+    return c.json(content);
+  },
+);
 
 // GET /:id/history — delivery history for a notifier (owner only)
-app.get("/:id/history", requireAuth, async (c) => {
-  const user = c.get("user")!;
-  const id = c.req.param("id");
+app.get(
+  "/:id/history",
+  requireAuth,
+  zValidator("param", idParamSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id } = c.req.valid("param");
 
-  const notifier = await getNotifierById(id, user.id);
-  if (!notifier) {
-    return err(c, "Notifier not found", 404);
-  }
+    const notifier = await getNotifierById(id, user.id);
+    if (!notifier) {
+      return err(c, "Notifier not found", 404);
+    }
 
-  const rows = await getRecentForNotifier(id, 5);
-  const successRate = await getSuccessRateForNotifier(id, 7);
-  return ok(c, { rows, successRate });
-});
+    const rows = await getRecentForNotifier(id, 5);
+    const successRate = await getSuccessRateForNotifier(id, 7);
+    return ok(c, { rows, successRate });
+  },
+);
 
 export default app;

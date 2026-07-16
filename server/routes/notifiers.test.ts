@@ -203,11 +203,14 @@ describe("PUT /notifiers/:id", () => {
   });
 
   it("returns 404 for non-existent notifier", async () => {
-    const res = await app.request("/notifiers/nonexistent", {
-      method: "PUT",
-      headers: jsonHeaders(),
-      body: JSON.stringify({ notify_time: "10:00" }),
-    });
+    const res = await app.request(
+      "/notifiers/00000000-0000-4000-8000-000000000000",
+      {
+        method: "PUT",
+        headers: jsonHeaders(),
+        body: JSON.stringify({ notify_time: "10:00" }),
+      },
+    );
     expect(res.status).toBe(404);
   });
 });
@@ -246,10 +249,13 @@ describe("POST /notifiers/:id/test", () => {
   }
 
   it("returns 404 for non-existent notifier", async () => {
-    const res = await app.request("/notifiers/nonexistent/test", {
-      method: "POST",
-      headers: headers(),
-    });
+    const res = await app.request(
+      "/notifiers/00000000-0000-4000-8000-000000000000/test",
+      {
+        method: "POST",
+        headers: headers(),
+      },
+    );
     expect(res.status).toBe(404);
   });
 
@@ -600,6 +606,44 @@ describe("digest_mode", () => {
 });
 
 describe("validation", () => {
+  it("rejects :id path params that are not UUIDs", async () => {
+    for (const [method, path] of [
+      ["DELETE", "/notifiers/not-a-uuid"],
+      ["POST", "/notifiers/not-a-uuid/test"],
+      ["GET", "/notifiers/not-a-uuid/preview"],
+      ["GET", "/notifiers/not-a-uuid/history"],
+      ["PUT", "/notifiers/not-a-uuid"],
+    ] as const) {
+      const res = await app.request(path, {
+        method,
+        headers: jsonHeaders(),
+        body:
+          method === "PUT"
+            ? JSON.stringify({ notify_time: "10:00" })
+            : undefined,
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    }
+  });
+
+  it("happy path — DELETE /:id with valid UUID", async () => {
+    const createRes = await app.request("/notifiers", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(validNotifier),
+    });
+    const { notifier } = await createRes.json();
+
+    const res = await app.request(`/notifiers/${notifier.id}`, {
+      method: "DELETE",
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+  });
+
   it("rejects POST / when provider is missing", async () => {
     const res = await app.request("/notifiers", {
       method: "POST",
@@ -697,9 +741,12 @@ describe("GET /notifiers/:id/history", () => {
   });
 
   it("returns 404 for a non-existent notifier", async () => {
-    const res = await app.request("/notifiers/nonexistent-id/history", {
-      headers: headers(),
-    });
+    const res = await app.request(
+      "/notifiers/00000000-0000-4000-8000-000000000000/history",
+      {
+        headers: headers(),
+      },
+    );
     expect(res.status).toBe(404);
   });
 });
@@ -842,9 +889,12 @@ describe("GET /notifiers/:id/preview", () => {
   });
 
   it("returns 404 for non-existent notifier", async () => {
-    const res = await app.request("/notifiers/nonexistent/preview", {
-      headers: headers(),
-    });
+    const res = await app.request(
+      "/notifiers/00000000-0000-4000-8000-000000000000/preview",
+      {
+        headers: headers(),
+      },
+    );
     expect(res.status).toBe(404);
   });
 

@@ -21,6 +21,8 @@ import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 import Sentry from "../sentry";
 
+const idParamSchema = z.object({ id: z.string().uuid() });
+
 const plexServersSchema = z.object({
   authToken: z.string().min(1),
 });
@@ -165,38 +167,43 @@ app.post("/", zValidator("json", createIntegrationSchema), async (c) => {
 });
 
 // PUT /:id — update integration
-app.put("/:id", zValidator("json", updateIntegrationSchema), async (c) => {
-  const user = c.get("user")!;
-  const id = c.req.param("id");
-  const body = c.req.valid("json");
+app.put(
+  "/:id",
+  zValidator("param", idParamSchema),
+  zValidator("json", updateIntegrationSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id } = c.req.valid("param");
+    const body = c.req.valid("json");
 
-  const existing = await getIntegrationById(id, user.id);
-  if (!existing) return err(c, "Integration not found", 404);
+    const existing = await getIntegrationById(id, user.id);
+    if (!existing) return err(c, "Integration not found", 404);
 
-  const updates: Parameters<typeof updateIntegration>[2] = {};
-  if (body.name !== undefined) updates.name = body.name;
-  if (body.enabled !== undefined) updates.enabled = body.enabled;
-  if (body.config !== undefined) {
-    const merged = {
-      ...existing.config,
-      ...body.config,
-      serverUrl: (body.config.serverUrl ?? existing.config.serverUrl).replace(
-        /\/$/,
-        "",
-      ),
-    };
-    updates.config = merged;
-  }
+    const updates: Parameters<typeof updateIntegration>[2] = {};
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.enabled !== undefined) updates.enabled = body.enabled;
+    if (body.config !== undefined) {
+      const merged = {
+        ...existing.config,
+        ...body.config,
+        serverUrl: (body.config.serverUrl ?? existing.config.serverUrl).replace(
+          /\/$/,
+          "",
+        ),
+      };
+      updates.config = merged;
+    }
 
-  await updateIntegration(id, user.id, updates);
-  const integration = await getIntegrationById(id, user.id);
-  return ok(c, { integration: sanitize(integration!) });
-});
+    await updateIntegration(id, user.id, updates);
+    const integration = await getIntegrationById(id, user.id);
+    return ok(c, { integration: sanitize(integration!) });
+  },
+);
 
 // DELETE /:id — delete integration
-app.delete("/:id", async (c) => {
+app.delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const user = c.get("user")!;
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
 
   const existing = await getIntegrationById(id, user.id);
   if (!existing) return err(c, "Integration not found", 404);
@@ -206,9 +213,9 @@ app.delete("/:id", async (c) => {
 });
 
 // POST /:id/sync — trigger manual Plex sync
-app.post("/:id/sync", async (c) => {
+app.post("/:id/sync", zValidator("param", idParamSchema), async (c) => {
   const user = c.get("user")!;
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
 
   const integration = await getIntegrationById(id, user.id);
   if (!integration) return err(c, "Integration not found", 404);
@@ -255,9 +262,9 @@ app.post("/:id/sync", async (c) => {
 });
 
 // GET /:id/status — get last sync status
-app.get("/:id/status", async (c) => {
+app.get("/:id/status", zValidator("param", idParamSchema), async (c) => {
   const user = c.get("user")!;
-  const id = c.req.param("id");
+  const { id } = c.req.valid("param");
 
   const integration = await getIntegrationById(id, user.id);
   if (!integration) return err(c, "Integration not found", 404);
