@@ -855,11 +855,12 @@ function CsvImportSection() {
         {msg && <SMessage kind="success">{msg}</SMessage>}
         {err && <SMessage kind="error">{err}</SMessage>}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {[
             { n: "Letterboxd", hint: t("import.letterboxdHint") },
             { n: "IMDB", hint: t("import.imdbHint") },
             { n: "Trakt", hint: t("import.traktHint") },
+            { n: "TV Time", hint: t("import.tvtimeHint") },
           ].map((s) => (
             <div
               key={s.n}
