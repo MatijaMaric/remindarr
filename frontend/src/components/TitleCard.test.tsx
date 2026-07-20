@@ -7,7 +7,7 @@ import {
   beforeEach,
   spyOn,
 } from "bun:test";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -126,6 +126,17 @@ describe("TitleCard", () => {
     render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
 
     expect(screen.getByText("No poster")).toBeDefined();
+  });
+
+  it("falls back to 'No poster' when the poster image fails to load", () => {
+    const title = makeTitle({ poster_url: "https://example.com/poster.jpg" });
+    render(<TitleCard title={title} />, { wrapper: NoUserWrapper });
+
+    const img = screen.getByAltText("Test Movie");
+    fireEvent.error(img);
+
+    expect(screen.getByText("No poster")).toBeDefined();
+    expect(screen.queryByAltText("Test Movie")).toBeNull();
   });
 
   it("shows TV badge for shows", () => {

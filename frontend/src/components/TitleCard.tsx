@@ -73,6 +73,7 @@ const TitleCard = memo(function TitleCard({
     title.remind_on_release ?? false,
   );
   const [tags, setTags] = useState<string[]>(title.tags ?? []);
+  const [posterError, setPosterError] = useState(false);
 
   // Re-sync local state when the card is reused for a different title.
   // Pattern from https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
@@ -83,6 +84,7 @@ const TitleCard = memo(function TitleCard({
     setSnoozeUntil(title.snooze_until);
     setRemindOnRelease(title.remind_on_release ?? false);
     setTags(title.tags ?? []);
+    setPosterError(false);
   }
 
   const isSnoozed = snoozeUntil != null && new Date(snoozeUntil) > new Date();
@@ -99,7 +101,7 @@ const TitleCard = memo(function TitleCard({
           data-title-link
           className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/70 focus-visible:ring-inset"
         >
-          {title.poster_url ? (
+          {title.poster_url && !posterError ? (
             <img
               src={title.poster_url}
               alt={title.title}
@@ -107,6 +109,7 @@ const TitleCard = memo(function TitleCard({
               loading="lazy"
               width={342}
               height={513}
+              onError={() => setPosterError(true)}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
