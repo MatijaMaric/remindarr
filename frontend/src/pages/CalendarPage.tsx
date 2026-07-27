@@ -429,6 +429,8 @@ function MobileCalendar({
     setMonthParam(formatMonth(d));
   }
 
+  const mobileMonthActive = mobileView === "month";
+
   return (
     <div className="space-y-0">
       {mobileView === "month" && (
@@ -464,14 +466,14 @@ function MobileCalendar({
           <div className="flex gap-2 px-5 pb-4">
             <button
               onClick={() => setMobileView("month")}
-              aria-pressed={true}
+              aria-pressed={mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
             >
               Month
             </button>
             <button
               onClick={() => setMobileView("agenda")}
-              aria-pressed={false}
+              aria-pressed={!mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
             >
               Agenda
@@ -493,14 +495,14 @@ function MobileCalendar({
           <div className="flex gap-2 px-4 pt-2 pb-2">
             <button
               onClick={() => setMobileView("month")}
-              aria-pressed={false}
+              aria-pressed={mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
             >
               Month
             </button>
             <button
               onClick={() => setMobileView("agenda")}
-              aria-pressed={true}
+              aria-pressed={!mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
             >
               Agenda
