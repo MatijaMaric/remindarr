@@ -152,8 +152,8 @@ export async function upsertUserAchievement(
         target: [userAchievements.userId, userAchievements.achievementKey],
         set: {
           progress,
-          // Keep the first earn time. Re-eval and backfill used to restamp
-          // earnedAt to now, which made every PWA launch toast all badges.
+          // Keep the first earn time. Re-eval/backfill must not restamp to now
+          // or already-earned badges look newly unlocked to the toast poller.
           earnedAt: existing?.earnedAt ?? earnedAt,
           // Only force earnedNotified=1 when explicitly requested (backfill path)
           ...(opts?.earnedNotified === 1 ? { earnedNotified: 1 } : {}),
