@@ -1,0 +1,12 @@
+{
+  "name": "Remindarr",
+  "install": "curl -fsSL https://bun.sh/install | BUN_INSTALL=\"$HOME/.bun\" bash -s bun-v1.3.9 && export PATH=\"$HOME/.bun/bin:$PATH\" && bun install --frozen-lockfile --ignore-scripts && bun run build",
+  "terminals": [
+    {
+      "name": "remindarr",
+      "description": "Remindarr server on http://localhost:3000 (serves the built frontend + API). Uses a placeholder TMDB_API_KEY unless the TMDB_API_KEY secret is set — live browse/search need a real key from https://www.themoviedb.org/settings/api.",
+      "command": "export PATH=\"$HOME/.bun/bin:$PATH\"; mkdir -p data; export TMDB_API_KEY=\"${TMDB_API_KEY:-placeholder-dev-key}\"; export BETTER_AUTH_SECRET=\"${BETTER_AUTH_SECRET:-$(openssl rand -hex 32)}\"; export BASE_URL=\"${BASE_URL:-http://localhost:3000}\"; export DB_PATH=\"${DB_PATH:-data/remindarr.db}\"; bun run start"
+    }
+  ],
+  "ports": [{ "name": "remindarr", "port": 3000 }]
+}
