@@ -19,11 +19,16 @@ export function useNewAchievements(): UserAchievement[] {
         if (controller.signal.aborted) return;
 
         const lastSeen = localStorage.getItem(STORAGE_KEY);
-        const lastSeenDate = lastSeen ? new Date(lastSeen) : null;
+        if (!lastSeen) {
+          // First launch or storage eviction (common after iOS/Android PWA updates).
+          // Watermark now so historical earns are not replayed as "new".
+          localStorage.setItem(STORAGE_KEY, new Date().toISOString());
+          return;
+        }
+        const lastSeenDate = new Date(lastSeen);
 
         const fresh = all.filter((a) => {
           if (!a.earned || !a.earnedAt) return false;
-          if (!lastSeenDate) return true;
           return new Date(a.earnedAt) > lastSeenDate;
         });
 

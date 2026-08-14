@@ -92,16 +92,18 @@ describe("useNewAchievements", () => {
     cleanup();
   });
 
-  it("surfaces all earned achievements when localStorage has no lastSeenAchievementAt", async () => {
+  it("does not replay historical achievements when lastSeenAchievementAt is missing", async () => {
+    // PWA updates / iOS storage eviction can wipe lastSeen; treat current earns as already seen.
     const achievement = makeAchievement();
     spy.mockResolvedValue([achievement]);
-    // localStorage is cleared — no lastSeenAchievementAt stored
 
     const { result } = renderHook(() => useNewAchievements());
     await flushHookTimers();
 
-    expect(result.current).toHaveLength(1);
-    expect(result.current[0].key).toBe("movies_10");
+    expect(result.current).toHaveLength(0);
+    const stored = localStorageMock.getItem("lastSeenAchievementAt");
+    expect(stored).not.toBeNull();
+    expect(new Date(stored!).toString()).not.toBe("Invalid Date");
   });
 
   it("surfaces only achievements earned after lastSeenAchievementAt", async () => {
@@ -140,19 +142,21 @@ describe("useNewAchievements", () => {
     expect(result.current).toHaveLength(0);
   });
 
-  it("updates localStorage.lastSeenAchievementAt after surfacing new achievements", async () => {
-    const achievement = makeAchievement();
+  it("updates lastSeenAchievementAt after surfacing a genuinely new achievement", async () => {
+    const achievement = makeAchievement({
+      earnedAt: "2026-06-01T00:00:00Z",
+    });
     spy.mockResolvedValue([achievement]);
-    // No lastSeenAchievementAt stored
+    localStorageMock.setItem("lastSeenAchievementAt", "2026-01-01T00:00:00Z");
 
     renderHook(() => useNewAchievements());
     await flushHookTimers();
 
     const stored = localStorageMock.getItem("lastSeenAchievementAt");
     expect(stored).not.toBeNull();
-    expect(typeof stored).toBe("string");
-    // Should be a valid ISO date
-    expect(new Date(stored!).toString()).not.toBe("Invalid Date");
+    expect(new Date(stored!).getTime()).toBeGreaterThan(
+      new Date("2026-01-01T00:00:00Z").getTime(),
+    );
   });
 
   it("does not update localStorage when no new achievements are found", async () => {
@@ -188,9 +192,18 @@ describe("AchievementToast", () => {
   });
 
   it("renders a toast for each new achievement", async () => {
-    const a1 = makeAchievement({ key: "movies_10", title: "Cinephile I" });
-    const a2 = makeAchievement({ key: "movies_50", title: "Cinephile II" });
+    const a1 = makeAchievement({
+      key: "movies_10",
+      title: "Cinephile I",
+      earnedAt: "2026-06-01T00:00:00Z",
+    });
+    const a2 = makeAchievement({
+      key: "movies_50",
+      title: "Cinephile II",
+      earnedAt: "2026-06-02T00:00:00Z",
+    });
     spy.mockResolvedValue([a1, a2]);
+    localStorageMock.setItem("lastSeenAchievementAt", "2026-01-01T00:00:00Z");
 
     render(<AchievementToast />);
     await flushHookTimers();
@@ -200,8 +213,12 @@ describe("AchievementToast", () => {
   });
 
   it("shows 'Achievement unlocked' label in each toast", async () => {
-    const achievement = makeAchievement({ title: "Cinephile I" });
+    const achievement = makeAchievement({
+      title: "Cinephile I",
+      earnedAt: "2026-06-01T00:00:00Z",
+    });
     spy.mockResolvedValue([achievement]);
+    localStorageMock.setItem("lastSeenAchievementAt", "2026-01-01T00:00:00Z");
 
     render(<AchievementToast />);
     await flushHookTimers();
@@ -214,8 +231,10 @@ describe("AchievementToast", () => {
     const achievement = makeAchievement({
       key: "movies_10",
       title: "Cinephile I",
+      earnedAt: "2026-06-01T00:00:00Z",
     });
     spy.mockResolvedValue([achievement]);
+    localStorageMock.setItem("lastSeenAchievementAt", "2026-01-01T00:00:00Z");
 
     render(<AchievementToast />);
     await flushHookTimers();
@@ -234,14 +253,32 @@ describe("AchievementToast", () => {
   });
 
   it("renders alert roles for accessibility", async () => {
-    const achievement = makeAchievement({ title: "Cinephile I" });
+    const achievement = makeAchievement({
+      title: "Cinephile I",
+      earnedAt: "2026-06-01T00:00:00Z",
+    });
     spy.mockResolvedValue([achievement]);
+    localStorageMock.setItem("lastSeenAchievementAt", "2026-01-01T00:00:00Z");
 
     render(<AchievementToast />);
     await flushHookTimers();
 
     const alerts = screen.getAllByRole("alert");
     expect(alerts.length).toBeGreaterThan(0);
+  });
+
+  it("renders nothing on first launch when lastSeenAchievementAt is missing", async () => {
+    spy.mockResolvedValue([
+      makeAchievement({ key: "movies_10", title: "Cinephile I" }),
+      makeAchievement({ key: "movies_50", title: "Cinephile II" }),
+    ]);
+
+    const { container } = render(<AchievementToast />);
+    await flushHookTimers();
+
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByText("Cinephile I")).toBeNull();
+    expect(screen.queryByText("Cinephile II")).toBeNull();
   });
 });
 
