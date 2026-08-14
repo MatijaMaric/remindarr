@@ -151,6 +151,25 @@ describe("upsertUserAchievement newlyEarned detection", () => {
     );
     expect(result.newlyEarned).toBe(false);
   });
+
+  it("does not restamp earnedAt on re-evaluation of an already-earned achievement", async () => {
+    const userId = await createUser("newly-earned-4", "hash");
+    await upsertAchievementDef(makeAchievementDef("ne_key_4"));
+    await upsertUserAchievement(
+      userId,
+      "ne_key_4",
+      10,
+      "2024-01-01T00:00:00.000Z",
+    );
+    await upsertUserAchievement(
+      userId,
+      "ne_key_4",
+      15,
+      "2024-06-01T00:00:00.000Z",
+    );
+    const rows = await getUserAchievements(userId);
+    expect(rows[0].earnedAt).toBe("2024-01-01T00:00:00.000Z");
+  });
 });
 
 describe("listEarnedSince", () => {
