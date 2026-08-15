@@ -138,7 +138,18 @@ export async function armCron(
   cron: string,
 ): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
-    await doFetch(env, name, "/arm", "POST", { name, cron });
+    try {
+      await doFetch(env, name, "/arm", "POST", { name, cron });
+    } catch (err) {
+      // Platform-level DO init can throw with cpuTimeMs=0 before JS runs
+      // (#1066). One retry covers a transient reset without delaying the
+      // watchdog loop on a persistent failure.
+      log.warn("armCron failed, retrying once", {
+        name,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await doFetch(env, name, "/arm", "POST", { name, cron });
+    }
   } else {
     await enqueueCronJob(name);
   }

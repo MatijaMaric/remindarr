@@ -241,6 +241,41 @@ describe("armCron (DO mode)", () => {
     });
     expect(mockEnqueueCronJob).not.toHaveBeenCalled();
   });
+
+  it("retries POST /arm once after a transient failure (#1066)", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    let attempts = 0;
+    const ns = makeFakeDoNamespace(() => {
+      attempts++;
+      if (attempts === 1) throw new Error("POST https://do/arm");
+      return { ok: true };
+    });
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    await armCron(env, "sync-titles", "0 3 * * *");
+
+    expect(ns.calls).toHaveLength(2);
+    expect(ns.calls.every((c) => c.path === "/arm")).toBe(true);
+  });
+
+  it("rethrows when the retry also fails", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace(() => {
+      throw new Error("POST https://do/arm");
+    });
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    await expect(armCron(env, "sync-titles", "0 3 * * *")).rejects.toThrow(
+      "POST https://do/arm",
+    );
+    expect(ns.calls).toHaveLength(2);
+  });
 });
 
 describe("tickCron", () => {
