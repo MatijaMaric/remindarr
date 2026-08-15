@@ -97,7 +97,9 @@ export async function getTrackedStatusForIds(
     const rows = await db
       .select({ titleId: tracked.titleId })
       .from(tracked)
-      .where(and(eq(tracked.userId, userId), inArray(tracked.titleId, titleIds)))
+      .where(
+        and(eq(tracked.userId, userId), inArray(tracked.titleId, titleIds)),
+      )
       .all();
     return new Set(rows.map((r) => r.titleId));
   });
