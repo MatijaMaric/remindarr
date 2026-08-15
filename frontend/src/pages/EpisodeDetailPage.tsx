@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
 import type { CastMember, CrewMember } from "../types";
@@ -14,6 +15,11 @@ import { WatchedIcon } from "../components/EpisodeComponents";
 import ShareButton from "../components/ShareButton";
 import EpisodeRatingButtons from "../components/EpisodeRatingButtons";
 import { stillUrl as mkStillUrl } from "../lib/tmdb-images";
+import {
+  formatEpisodeCode,
+  getAdjacentEpisodes,
+} from "../lib/adjacentEpisodes";
+import { useKeyboardShortcut } from "../hooks/useKeyboardShortcut";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import EditWatchedAtDialog from "../components/EditWatchedAtDialog";
 import { formatDate, isReleased } from "../components/title-detail/utils";
@@ -26,6 +32,9 @@ export default function EpisodeDetailPage() {
   }>();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const seasonNumberParam = Number(season);
+  const episodeNumberParam = Number(episode);
 
   const {
     data,
@@ -36,6 +45,34 @@ export default function EpisodeDetailPage() {
     queryFn: ({ signal }) =>
       api.getEpisodeDetails(id!, Number(season), Number(episode), signal),
     enabled: !!id && !!season && !!episode,
+  });
+
+  const { data: seasonData } = useQuery({
+    queryKey: ["season-detail", id, season],
+    queryFn: ({ signal }) => api.getSeasonDetails(id!, Number(season), signal),
+    enabled: !!id && !!season,
+  });
+
+  const adjacent = useMemo(() => {
+    if (!seasonData) return null;
+    return getAdjacentEpisodes(
+      { season: seasonNumberParam, episode: episodeNumberParam },
+      seasonData.tmdb?.episodes ?? [],
+      seasonData.seasons ?? [],
+    );
+  }, [seasonData, seasonNumberParam, episodeNumberParam]);
+
+  useKeyboardShortcut("ArrowLeft", () => {
+    if (!id || !adjacent?.prev) return;
+    navigate(
+      `/title/${id}/season/${adjacent.prev.season}/episode/${adjacent.prev.episode}`,
+    );
+  });
+  useKeyboardShortcut("ArrowRight", () => {
+    if (!id || !adjacent?.next) return;
+    navigate(
+      `/title/${id}/season/${adjacent.next.season}/episode/${adjacent.next.episode}`,
+    );
   });
 
   const [editHistoryEntry, setEditHistoryEntry] = useState<string | null>(null);
@@ -201,6 +238,58 @@ export default function EpisodeDetailPage() {
           </div>
         )}
       </div>
+
+      {seasonData && adjacent && (adjacent.prev || adjacent.next) && (
+        <nav
+          aria-label={t("episodes.episodeNav", "Episode navigation")}
+          className="flex items-center justify-between"
+        >
+          {adjacent.prev ? (
+            <Link
+              to={`/title/${title.id}/season/${adjacent.prev.season}/episode/${adjacent.prev.episode}`}
+              className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
+              aria-label={t(
+                "episodes.previousEpisode",
+                "Previous episode, {{code}}",
+                {
+                  code: formatEpisodeCode(
+                    adjacent.prev.season,
+                    adjacent.prev.episode,
+                  ),
+                },
+              )}
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+              {t("episodes.previous", "Previous")}
+              <span className="text-zinc-500">
+                {formatEpisodeCode(adjacent.prev.season, adjacent.prev.episode)}
+              </span>
+            </Link>
+          ) : (
+            <span />
+          )}
+          {adjacent.next ? (
+            <Link
+              to={`/title/${title.id}/season/${adjacent.next.season}/episode/${adjacent.next.episode}`}
+              className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
+              aria-label={t("episodes.nextEpisode", "Next episode, {{code}}", {
+                code: formatEpisodeCode(
+                  adjacent.next.season,
+                  adjacent.next.episode,
+                ),
+              })}
+            >
+              <span className="text-zinc-500">
+                {formatEpisodeCode(adjacent.next.season, adjacent.next.episode)}
+              </span>
+              {t("episodes.next", "Next")}
+              <ChevronRight size={16} aria-hidden="true" />
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      )}
 
       {/* Episode header */}
       <div className="space-y-3">

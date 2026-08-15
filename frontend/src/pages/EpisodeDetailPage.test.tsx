@@ -69,6 +69,20 @@ const EPISODE_DETAILS_DEFAULT = {
   country: "US",
 };
 
+const SEASON_DETAILS_TWO_SEASONS = {
+  tmdb: {
+    episodes: [
+      { episode_number: 1 },
+      { episode_number: 2 },
+      { episode_number: 3 },
+    ],
+  },
+  seasons: [
+    { season_number: 1, episode_count: 3 },
+    { season_number: 2, episode_count: 5 },
+  ],
+};
+
 function applyEpisodeApiDefaults() {
   apiMock.getEpisodeDetails.mockImplementation(() =>
     Promise.resolve(EPISODE_DETAILS_DEFAULT),
@@ -81,24 +95,31 @@ function applyEpisodeApiDefaults() {
   apiMock.getWatchHistory.mockImplementation(() =>
     Promise.resolve({ history: [], playCount: 0 }),
   );
+  apiMock.getSeasonDetails.mockImplementation(() =>
+    Promise.resolve(SEASON_DETAILS_TWO_SEASONS),
+  );
 }
 
 const { default: EpisodeDetailPage } = await import("./EpisodeDetailPage");
 
-function Wrapper({ children }: { children: ReactNode }) {
-  return (
-    <QueryClientProvider client={newTestClient()}>
-      <MemoryRouter initialEntries={["/title/tv-100/season/1/episode/1"]}>
-        <Routes>
-          <Route
-            path="/title/:id/season/:season/episode/:episode"
-            element={children}
-          />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>
-  );
+function wrapperAt(path: string) {
+  return function AtPath({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route
+              path="/title/:id/season/:season/episode/:episode"
+              element={children}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
 }
+
+const Wrapper = wrapperAt("/title/tv-100/season/1/episode/1");
 
 beforeEach(() => {
   applyEpisodeApiDefaults();
@@ -313,5 +334,56 @@ describe("EpisodeDetailPage", () => {
     });
 
     toastErrorSpy.mockRestore();
+  });
+
+  it("renders next episode link and omits previous on the first episode", async () => {
+    render(<EpisodeDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+
+    const nav = await waitFor(() =>
+      screen.getByRole("navigation", { name: "Episode navigation" }),
+    );
+    const next = screen.getByRole("link", { name: "Next episode, S01E02" });
+    expect(next.getAttribute("href")).toBe("/title/tv-100/season/1/episode/2");
+    expect(nav.contains(next)).toBe(true);
+    expect(
+      screen.queryByRole("link", { name: /previous episode/i }),
+    ).toBeNull();
+  });
+
+  it("points next at the first episode of the following season", async () => {
+    apiMock.getEpisodeDetails.mockImplementation(() =>
+      Promise.resolve({
+        ...EPISODE_DETAILS_DEFAULT,
+        tmdb: {
+          ...EPISODE_DETAILS_DEFAULT.tmdb,
+          id: 103,
+          name: "Finale",
+          episode_number: 3,
+        },
+        episodeNumber: 3,
+      }),
+    );
+    apiMock.getSeasonEpisodeStatus.mockImplementation(() =>
+      Promise.resolve({
+        episodes: [{ episode_number: 3, id: 12, is_watched: false }],
+      }),
+    );
+
+    render(<EpisodeDetailPage />, {
+      wrapper: wrapperAt("/title/tv-100/season/1/episode/3"),
+    });
+
+    await waitFor(() => expect(screen.getByText("Finale")).toBeDefined());
+
+    const next = await waitFor(() =>
+      screen.getByRole("link", { name: "Next episode, S02E01" }),
+    );
+    expect(next.getAttribute("href")).toBe("/title/tv-100/season/2/episode/1");
+    const prev = screen.getByRole("link", {
+      name: "Previous episode, S01E02",
+    });
+    expect(prev.getAttribute("href")).toBe("/title/tv-100/season/1/episode/2");
   });
 });

@@ -323,7 +323,12 @@
     "backdateSuccess_one": "Backdated {{count}} episode to air date",
     "backdateSuccess_other": "Backdated {{count}} episodes to air dates",
     "backdateNoChanges": "No watched episodes to backdate",
-    "backdateError": "Failed to backdate watched episodes"
+    "backdateError": "Failed to backdate watched episodes",
+    "episodeNav": "Episode navigation",
+    "previous": "Previous",
+    "next": "Next",
+    "previousEpisode": "Previous episode, {{code}}",
+    "nextEpisode": "Next episode, {{code}}"
   },
   "calendar": {
     "all": "All",
