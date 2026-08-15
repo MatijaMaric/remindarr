@@ -89,18 +89,33 @@ async function handleSyncEpisodes(): Promise<void> {
   // Ticks are detached so this dispatcher's runJob stays under the 30s DO
   // budget instead of awaiting every show's sync serially (#1058).
   const shows = await listTrackedShowsForEpisodeSync();
+  let dispatched = 0;
   for (const show of shows) {
-    await enqueueAdhoc(
-      "sync-show-episodes",
-      {
+    try {
+      await enqueueAdhoc(
+        "sync-show-episodes",
+        {
+          titleId: show.id,
+          tmdbId: show.tmdb_id,
+          title: show.title,
+        },
+        { detachTick: true },
+      );
+      dispatched++;
+    } catch (err) {
+      log.warn("Failed to enqueue show episode sync", {
         titleId: show.id,
-        tmdbId: show.tmdb_id,
-        title: show.title,
-      },
-      { detachTick: true },
-    );
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
-  log.info("Dispatched per-show episode sync jobs", { shows: shows.length });
+  if (shows.length > 0 && dispatched === 0) {
+    throw new Error("Failed to enqueue any sync-show-episodes jobs");
+  }
+  log.info("Dispatched per-show episode sync jobs", {
+    shows: shows.length,
+    dispatched,
+  });
 }
 
 async function handleSyncTrending(): Promise<void> {

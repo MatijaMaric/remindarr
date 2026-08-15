@@ -227,6 +227,38 @@ describe("processPendingJobs", () => {
     expect(mockSyncEpisodes).not.toHaveBeenCalled();
   });
 
+  it("continues fan-out when one enqueue fails", async () => {
+    mockListTrackedShows.mockResolvedValueOnce([
+      { id: "tv-1", tmdb_id: "1", title: "Show One" },
+      { id: "tv-2", tmdb_id: "2", title: "Show Two" },
+    ]);
+    mockEnqueueAdhoc
+      .mockRejectedValueOnce(new Error("DO unavailable"))
+      .mockResolvedValueOnce(undefined);
+
+    await insertJob("sync-episodes");
+    const count = await processPendingJobs();
+
+    expect(count).toBe(1);
+    expect(mockEnqueueAdhoc).toHaveBeenCalledTimes(2);
+    const allJobs = await getAllJobs();
+    expect(allJobs[0].status).toBe("completed");
+  });
+
+  it("fails the job when every enqueue fails", async () => {
+    mockListTrackedShows.mockResolvedValueOnce([
+      { id: "tv-1", tmdb_id: "1", title: "Show One" },
+    ]);
+    mockEnqueueAdhoc.mockRejectedValueOnce(new Error("DO unavailable"));
+
+    await insertJob("sync-episodes");
+    await processPendingJobs();
+
+    const allJobs = await getAllJobs();
+    expect(allJobs[0].status).toBe("pending");
+    expect(allJobs[0].error).toContain("Failed to enqueue any");
+  });
+
   it("processes sync-show-episodes job with data", async () => {
     mockSyncEpisodesForShow.mockResolvedValueOnce(8);
 
