@@ -86,6 +86,23 @@ export async function getTrackedTitleIds(userId: string): Promise<Set<string>> {
   });
 }
 
+/** Membership check for a bounded ID set — avoids loading the user's full library. */
+export async function getTrackedStatusForIds(
+  userId: string,
+  titleIds: string[],
+): Promise<Set<string>> {
+  return traceDbQuery("getTrackedStatusForIds", async () => {
+    if (titleIds.length === 0) return new Set();
+    const db = getDb();
+    const rows = await db
+      .select({ titleId: tracked.titleId })
+      .from(tracked)
+      .where(and(eq(tracked.userId, userId), inArray(tracked.titleId, titleIds)))
+      .all();
+    return new Set(rows.map((r) => r.titleId));
+  });
+}
+
 export async function getTrackedTitles(
   userId: string,
   opts: { limit?: number } = {},

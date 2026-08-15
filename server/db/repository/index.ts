@@ -69,6 +69,7 @@ export {
   trackTitle,
   untrackTitle,
   getTrackedTitleIds,
+  getTrackedStatusForIds,
   getTrackedTitles,
   getPublicTrackedTitles,
   getPublicTrackedCount,

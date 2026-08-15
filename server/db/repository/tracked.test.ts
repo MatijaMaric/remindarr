@@ -15,6 +15,7 @@ import {
   getTrackedTitles,
   getReleasedUnwatchedTrackedMovies,
   getUpcomingTrackedMoviesOpen,
+  getTrackedStatusForIds,
   MAX_TRACKED_LOAD,
 } from "./tracked";
 import { getWatchedTitleIds } from "./watched-titles";
@@ -520,5 +521,31 @@ describe("getUpcomingTrackedMoviesOpen", () => {
       .map((r) => r.id);
     expect(ids[0]).toBe("upc-5b");
     expect(ids[1]).toBe("upc-5a");
+  });
+});
+
+describe("getTrackedStatusForIds", () => {
+  it("returns only the requested IDs that the user tracks", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-a" }),
+      makeParsedTitle({ id: "movie-b" }),
+      makeParsedTitle({ id: "movie-c" }),
+    ]);
+    await trackTitle("movie-a", userId);
+    await trackTitle("movie-b", userId);
+    await trackTitle("movie-c", userId);
+
+    const ids = await getTrackedStatusForIds(userId, ["movie-a", "movie-z"]);
+    expect(ids).toEqual(new Set(["movie-a"]));
+    expect(ids.has("movie-b")).toBe(false);
+    expect(ids.has("movie-c")).toBe(false);
+  });
+
+  it("returns an empty set when titleIds is empty without querying", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-empty-check" })]);
+    await trackTitle("movie-empty-check", userId);
+
+    const ids = await getTrackedStatusForIds(userId, []);
+    expect(ids.size).toBe(0);
   });
 });
