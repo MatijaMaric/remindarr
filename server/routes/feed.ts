@@ -154,6 +154,12 @@ app.get("/episodes.ics", async (c) => {
   const user = await getUserByFeedToken(token);
   if (!user) return c.json({ error: "Invalid token" }, 401);
 
+  const cacheKey = `feed:ics:episodes:${user.id}`;
+  const cached = await getCache().get<string>(cacheKey);
+  if (cached !== null) {
+    return c.body(cached, 200, ICS_HEADERS);
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const endDate = addDays(today, 90);
 
@@ -166,6 +172,7 @@ app.get("/episodes.ics", async (c) => {
   ];
 
   const { body, headers } = buildIcsResponse(lines);
+  await getCache().set(cacheKey, body, CONFIG.CACHE_TTL_FEED_ICS);
   return c.body(body, 200, headers);
 });
 
@@ -176,6 +183,12 @@ app.get("/releases.ics", async (c) => {
 
   const user = await getUserByFeedToken(token);
   if (!user) return c.json({ error: "Invalid token" }, 401);
+
+  const cacheKey = `feed:ics:releases:${user.id}`;
+  const cached = await getCache().get<string>(cacheKey);
+  if (cached !== null) {
+    return c.body(cached, 200, ICS_HEADERS);
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const endDate = addDays(today, 90);
@@ -189,6 +202,7 @@ app.get("/releases.ics", async (c) => {
   ];
 
   const { body, headers } = buildIcsResponse(lines);
+  await getCache().set(cacheKey, body, CONFIG.CACHE_TTL_FEED_ICS);
   return c.body(body, 200, headers);
 });
 
@@ -202,6 +216,12 @@ app.get("/streaming.ics", async (c) => {
   const user = await getUserByFeedToken(token);
   if (!user) return c.json({ error: "Invalid token" }, 401);
 
+  const cacheKey = `feed:ics:streaming:${user.id}`;
+  const cached = await getCache().get<string>(cacheKey);
+  if (cached !== null) {
+    return c.body(cached, 200, ICS_HEADERS);
+  }
+
   const lines: string[] = [
     ...buildIcalHeader("Remindarr – Streaming Alerts"),
     // No VEVENT entries — streaming alerts track arrival/departure history and
@@ -210,6 +230,7 @@ app.get("/streaming.ics", async (c) => {
   ];
 
   const { body, headers } = buildIcsResponse(lines);
+  await getCache().set(cacheKey, body, CONFIG.CACHE_TTL_FEED_ICS);
   return c.body(body, 200, headers);
 });
 

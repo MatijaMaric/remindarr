@@ -331,6 +331,22 @@ describe("GET /feed/episodes.ics", () => {
     expect(body).toContain("END:VCALENDAR");
     expect(body).not.toContain("remindarr-movie-");
   });
+
+  it("serves the cached body on repeat requests within the TTL", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await tokenRes.json()) as { token: string };
+
+    const firstRes = await app.request(`/feed/episodes.ics?token=${token}`);
+    expect(firstRes.status).toBe(200);
+    const firstBody = await firstRes.text();
+
+    const secondRes = await app.request(`/feed/episodes.ics?token=${token}`);
+    expect(secondRes.status).toBe(200);
+    expect(await secondRes.text()).toBe(firstBody);
+  });
 });
 
 describe("GET /feed/releases.ics", () => {
@@ -375,6 +391,48 @@ describe("GET /feed/releases.ics", () => {
     expect(body).toContain("remindarr-movie-movie-releases-test@remindarr");
     expect(body).not.toContain("remindarr-episode-");
   });
+
+  it("serves the cached body on repeat requests within the TTL", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await tokenRes.json()) as { token: string };
+
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    const releaseDate = futureDate.toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-releases-cache-1",
+        objectType: "MOVIE",
+        title: "Cached Release One",
+        releaseDate,
+      }),
+    ]);
+    await trackTitle("movie-releases-cache-1", userId);
+
+    const firstRes = await app.request(`/feed/releases.ics?token=${token}`);
+    expect(firstRes.status).toBe(200);
+    const firstBody = await firstRes.text();
+    expect(firstBody).toContain("Cached Release One");
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-releases-cache-2",
+        objectType: "MOVIE",
+        title: "Cached Release Two",
+        releaseDate,
+      }),
+    ]);
+    await trackTitle("movie-releases-cache-2", userId);
+
+    const secondRes = await app.request(`/feed/releases.ics?token=${token}`);
+    expect(secondRes.status).toBe(200);
+    const secondBody = await secondRes.text();
+    expect(secondBody).toBe(firstBody);
+    expect(secondBody).not.toContain("Cached Release Two");
+  });
 });
 
 describe("GET /feed/streaming.ics", () => {
@@ -402,5 +460,21 @@ describe("GET /feed/streaming.ics", () => {
     const body = await feedRes.text();
     expect(body).toContain("BEGIN:VCALENDAR");
     expect(body).toContain("END:VCALENDAR");
+  });
+
+  it("serves the cached body on repeat requests within the TTL", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await tokenRes.json()) as { token: string };
+
+    const firstRes = await app.request(`/feed/streaming.ics?token=${token}`);
+    expect(firstRes.status).toBe(200);
+    const firstBody = await firstRes.text();
+
+    const secondRes = await app.request(`/feed/streaming.ics?token=${token}`);
+    expect(secondRes.status).toBe(200);
+    expect(await secondRes.text()).toBe(firstBody);
   });
 });
