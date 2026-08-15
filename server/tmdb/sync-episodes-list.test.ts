@@ -63,8 +63,6 @@ describe("listTrackedShowsForEpisodeSync", () => {
     await trackTitle("tv-2", userId);
 
     const shows = await listTrackedShowsForEpisodeSync();
-    expect(shows).toEqual([
-      { id: "tv-2", tmdb_id: "2", title: "Real Show" },
-    ]);
+    expect(shows).toEqual([{ id: "tv-2", tmdb_id: "2", title: "Real Show" }]);
   });
 });
