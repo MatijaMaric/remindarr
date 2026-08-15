@@ -89,14 +89,33 @@ export function registerSyncJobs() {
     // drain via the */5 watchdog; this replaces the sequential EPISODE_SYNC_DELAY_MS
     // pacing. Revisit if TMDB starts rate-limiting the fan-out.
     const shows = await listTrackedShowsForEpisodeSync();
+    let dispatched = 0;
     for (const show of shows) {
-      await enqueueAdhoc("sync-show-episodes", {
-        titleId: show.id,
-        tmdbId: show.tmdb_id,
-        title: show.title,
-      });
+      try {
+        await enqueueAdhoc(
+          "sync-show-episodes",
+          {
+            titleId: show.id,
+            tmdbId: show.tmdb_id,
+            title: show.title,
+          },
+          { detachTick: true },
+        );
+        dispatched++;
+      } catch (err) {
+        log.warn("Failed to enqueue show episode sync", {
+          titleId: show.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
-    log.info("Dispatched per-show episode sync jobs", { shows: shows.length });
+    if (shows.length > 0 && dispatched === 0) {
+      throw new Error("Failed to enqueue any sync-show-episodes jobs");
+    }
+    log.info("Dispatched per-show episode sync jobs", {
+      shows: shows.length,
+      dispatched,
+    });
   });
 
   registerHandler("sync-trending", async () => {

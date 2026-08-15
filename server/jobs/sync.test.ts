@@ -445,16 +445,24 @@ describe("sync-episodes handler", () => {
     await processJobs();
 
     expect(mockEnqueueAdhoc).toHaveBeenCalledTimes(2);
-    expect(mockEnqueueAdhoc).toHaveBeenCalledWith("sync-show-episodes", {
-      titleId: "tv-1",
-      tmdbId: "1",
-      title: "Show One",
-    });
-    expect(mockEnqueueAdhoc).toHaveBeenCalledWith("sync-show-episodes", {
-      titleId: "tv-2",
-      tmdbId: "2",
-      title: "Show Two",
-    });
+    expect(mockEnqueueAdhoc).toHaveBeenCalledWith(
+      "sync-show-episodes",
+      {
+        titleId: "tv-1",
+        tmdbId: "1",
+        title: "Show One",
+      },
+      { detachTick: true },
+    );
+    expect(mockEnqueueAdhoc).toHaveBeenCalledWith(
+      "sync-show-episodes",
+      {
+        titleId: "tv-2",
+        tmdbId: "2",
+        title: "Show Two",
+      },
+      { detachTick: true },
+    );
     // Fan-out only — no inline per-show sync in the cron handler.
     expect(mockSyncEpisodesForShow).not.toHaveBeenCalled();
     expect(mockSyncEpisodes).not.toHaveBeenCalled();

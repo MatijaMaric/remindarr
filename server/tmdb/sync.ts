@@ -94,8 +94,10 @@ export async function listTrackedShowsForEpisodeSync(): Promise<
   { id: string; tmdb_id: string; title: string }[]
 > {
   const db = getDb();
+  // Distinct by title — many users tracking the same show must not fan out
+  // duplicate sync-show-episodes jobs (#1096/#1098/#1099).
   return (await db
-    .select({
+    .selectDistinct({
       id: titles.id,
       tmdb_id: titles.tmdbId,
       title: titles.title,
