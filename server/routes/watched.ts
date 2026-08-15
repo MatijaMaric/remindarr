@@ -236,26 +236,30 @@ app.patch(
   },
 );
 
-app.post("/:episodeId", zValidator("param", episodeIdParamSchema), async (c) => {
-  const user = c.get("user")!;
-  const timezone = c.req.header("X-Timezone") || "UTC";
-  const { episodeId } = c.req.valid("param");
-  const airDate = await getEpisodeAirDate(episodeId);
-  if (!isReleased(airDate, timezone)) {
-    return err(c, "Cannot mark an unreleased episode as watched");
-  }
-  await watchEpisode(episodeId, user.id);
+app.post(
+  "/:episodeId",
+  zValidator("param", episodeIdParamSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const timezone = c.req.header("X-Timezone") || "UTC";
+    const { episodeId } = c.req.valid("param");
+    const airDate = await getEpisodeAirDate(episodeId);
+    if (!isReleased(airDate, timezone)) {
+      return err(c, "Cannot mark an unreleased episode as watched");
+    }
+    await watchEpisode(episodeId, user.id);
 
-  // Log to watch history
-  const titleId = await getEpisodeTitleId(episodeId);
-  if (titleId) {
-    await logWatch(user.id, titleId, episodeId);
-  }
+    // Log to watch history
+    const titleId = await getEpisodeTitleId(episodeId);
+    if (titleId) {
+      await logWatch(user.id, titleId, episodeId);
+    }
 
-  await onWatchedEpisode(user.id, String(episodeId));
+    await onWatchedEpisode(user.id, String(episodeId));
 
-  return ok(c, {});
-});
+    return ok(c, {});
+  },
+);
 
 app.delete(
   "/:episodeId",
