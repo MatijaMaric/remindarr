@@ -296,3 +296,36 @@ describe("GET /stats", () => {
     expect([200, 401, 500]).toContain(res.status);
   });
 });
+
+describe("GET /stats/year/:year", () => {
+  describe("validation", () => {
+    it("rejects a non-numeric year", async () => {
+      const app = makeAuthedApp();
+      const res = await app.request("/stats/year/nope");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.issues).toBeInstanceOf(Array);
+    });
+  });
+
+  it("happy path — empty year returns zeros", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/stats/year/2025");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.year).toBe(2025);
+    expect(body.movies_watched).toBe(0);
+    expect(body.episodes_watched).toBe(0);
+    expect(body.watch_time_minutes).toBe(0);
+    expect(body.top_genres).toEqual([]);
+    expect(body.years).toEqual([]);
+  });
+
+  it("rejects a future year", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/stats/year/2099");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Year cannot be in the future");
+  });
+});

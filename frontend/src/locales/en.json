@@ -69,6 +69,7 @@
     "settings": "Settings",
     "discovery": "Discovery",
     "stats": "Stats",
+    "wrapped": "Year in Review",
     "search": "Search"
   },
   "bottomNav": {
@@ -694,5 +695,29 @@
       "title": "No suggestions yet",
       "cta": "Watch, rate, or track a title to get personalized picks"
     }
+  },
+  "wrapped": {
+    "kicker": "Year in Review",
+    "title": "{{year}} Wrapped",
+    "sharedBy": "{{year}} Wrapped · @{{username}}",
+    "loadError": "Failed to load Year in Review. Please try again.",
+    "invalidLink": "This link is invalid or has been revoked",
+    "invalidLinkHint": "The Year in Review you are looking for is no longer available.",
+    "goHome": "Go to Remindarr",
+    "empty": "No watches logged in {{year}}.",
+    "hours": "Hours watched",
+    "movies": "Movies",
+    "episodes": "Episodes",
+    "topGenres": "Top genres",
+    "topProviders": "Top providers",
+    "topShows": "Top shows",
+    "longestBinge": "Longest binge",
+    "bingeMeta": "{{days}} days · {{episodes}} episodes",
+    "mostRewatched": "Most rewatched",
+    "plays": "{{count}} plays",
+    "firstWatch": "First watch",
+    "lastWatch": "Last watch",
+    "share": "Share",
+    "yearLabel": "Year"
   }
 }

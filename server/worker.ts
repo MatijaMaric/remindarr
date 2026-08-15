@@ -51,8 +51,14 @@ import {
   getOidcConfig,
   getUserByWatchlistShareToken,
   getTrackedTitles,
+  getYearInReview,
   deleteExpiredSessions,
 } from "./db/repository";
+import {
+  buildOgTags,
+  wrappedOgDescription,
+  wrappedOgImage,
+} from "./lib/og-tags";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import {
   rateLimiter,
@@ -674,6 +680,52 @@ function createApp(env: Env) {
       }
     } catch (err) {
       logger.error("Share OG fallback error", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return c.html(
+      "<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>",
+    );
+  });
+
+  // OG meta tags for shared Year in Review — before the generic SPA fallback
+  app.get("/share/wrapped/:token/:year", async (c) => {
+    const token = c.req.param("token");
+    const year = Number(c.req.param("year"));
+    let ogTags = "";
+    if (/^[a-f0-9]{32}$/.test(token) && Number.isInteger(year)) {
+      const user = await getUserByWatchlistShareToken(token);
+      if (user) {
+        const review = await getYearInReview(user.id, year);
+        const username = user.displayUsername ?? user.username;
+        ogTags = buildOgTags({
+          title: `${username}'s ${year} Wrapped — Remindarr`,
+          description: wrappedOgDescription(review),
+          image: wrappedOgImage(review),
+        });
+      }
+    }
+    try {
+      const assets = (c.env as unknown as Env).ASSETS;
+      if (assets?.fetch) {
+        const url = new URL("/index.html", c.req.url);
+        const resp = await assets.fetch(url.toString());
+        if (resp.ok) {
+          const html = await resp.text();
+          const injected = ogTags
+            ? html.replace("</head>", `${ogTags}\n  </head>`)
+            : html;
+          return new Response(injected, {
+            status: 200,
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "no-cache, must-revalidate",
+            },
+          });
+        }
+      }
+    } catch (err) {
+      logger.error("Wrapped OG fallback error", {
         error: err instanceof Error ? err.message : String(err),
       });
     }

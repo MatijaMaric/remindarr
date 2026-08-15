@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import { useQuery } from "@tanstack/react-query";
 import type { StatsResponse } from "../types";
@@ -177,6 +179,7 @@ function languageLabel(code: string): string {
 }
 
 export function StatsView() {
+  const { t } = useTranslation();
   const {
     data,
     isLoading: loading,
@@ -215,6 +218,14 @@ export function StatsView() {
 
   return (
     <div className="space-y-8 pb-8">
+      <div className="flex justify-end">
+        <Link
+          to="/wrapped"
+          className="text-sm text-amber-400 hover:text-amber-300"
+        >
+          {t("nav.wrapped")} →
+        </Link>
+      </div>
       {/* Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <OverviewCard label="Movies Watched" value={overview.watched_movies} />

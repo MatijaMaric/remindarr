@@ -4,6 +4,8 @@ import type {
   Provider,
   Episode,
   StatsResponse,
+  YearInReview,
+  SharedYearInReview,
   MovieDetailsResponse,
   ShowDetailsResponse,
   SeasonDetailsResponse,
@@ -1186,6 +1188,13 @@ export async function getStats(signal?: AbortSignal): Promise<StatsResponse> {
   return fetchJson("/stats", { signal });
 }
 
+export async function getYearInReview(
+  year: number,
+  signal?: AbortSignal,
+): Promise<YearInReview> {
+  return fetchJson(`/stats/year/${year}`, { signal });
+}
+
 // ─── User settings ────────────────────────────────────────────────────────────
 
 export async function getHomepageLayout(
@@ -1451,6 +1460,16 @@ export async function getSharedWatchlist(
   signal?: AbortSignal,
 ): Promise<{ username: string; titles: Title[] }> {
   return fetchJson(`/share/watchlist/${encodeURIComponent(token)}`, { signal });
+}
+
+export async function getSharedWrapped(
+  token: string,
+  year: number,
+  signal?: AbortSignal,
+): Promise<SharedYearInReview> {
+  return fetchJson(`/share/wrapped/${encodeURIComponent(token)}/${year}`, {
+    signal,
+  });
 }
 
 // ─── Title Notes & Tags ───────────────────────────────────────────────────────

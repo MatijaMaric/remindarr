@@ -54,6 +54,10 @@ const KioskPage = lazyWithRetry(() => import("./pages/KioskPage"));
 const SharedWatchlistPage = lazyWithRetry(
   () => import("./pages/SharedWatchlistPage"),
 );
+const WrappedPage = lazyWithRetry(() => import("./pages/WrappedPage"));
+const SharedWrappedPage = lazyWithRetry(
+  () => import("./pages/SharedWrappedPage"),
+);
 const UserOverlapPage = lazyWithRetry(() => import("./pages/UserOverlapPage"));
 const LeaderboardPage = lazyWithRetry(() => import("./pages/LeaderboardPage"));
 const AchievementsPage = lazyWithRetry(
@@ -353,6 +357,26 @@ export default function App() {
               element={<Navigate to="/tracked?view=stats" replace />}
             />
             <Route
+              path="/wrapped/:year"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <WrappedPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/wrapped"
+              element={
+                <RequireAuth>
+                  <Page>
+                    <WrappedPage />
+                  </Page>
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/admin/users"
               element={
                 <RequireAuth>
@@ -489,6 +513,14 @@ export default function App() {
               element={
                 <Page>
                   <SharedWatchlistPage />
+                </Page>
+              }
+            />
+            <Route
+              path="/share/wrapped/:token/:year"
+              element={
+                <Page>
+                  <SharedWrappedPage />
                 </Page>
               }
             />

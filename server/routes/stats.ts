@@ -1,6 +1,8 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import type { AppEnv } from "../types";
-import { ok } from "./response";
+import { ok, err } from "./response";
+import { zValidator } from "../lib/validator";
 import {
   getStatsOverview,
   getUserGenreBreakdown,
@@ -11,6 +13,11 @@ import {
   computeEta,
 } from "../db/repository/stats";
 import { getTrackedTitles } from "../db/repository/tracked";
+import { getYearInReview } from "../db/repository/year-in-review";
+
+const yearParam = z.object({
+  year: z.coerce.number().int().min(1970).max(2100),
+});
 
 const app = new Hono<AppEnv>();
 
@@ -47,6 +54,17 @@ app.get("/", async (c) => {
       watchlistEtaDays,
     },
   });
+});
+
+app.get("/year/:year", zValidator("param", yearParam), async (c) => {
+  const { year } = c.req.valid("param");
+  const currentYear = new Date().getUTCFullYear();
+  if (year > currentYear) {
+    return err(c, "Year cannot be in the future", 400);
+  }
+  const user = c.get("user")!;
+  const review = await getYearInReview(user.id, year);
+  return ok(c, { ...review });
 });
 
 export default app;

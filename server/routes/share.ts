@@ -6,15 +6,20 @@ import {
   setWatchlistShareToken,
   getTrackedTitles,
 } from "../db/repository";
+import { getYearInReview } from "../db/repository/year-in-review";
 import { requireAuth } from "../middleware/auth";
 import { zValidator } from "../lib/validator";
 import { logger } from "../logger";
 import type { AppEnv } from "../types";
+import { err } from "./response";
 
 const log = logger.child({ module: "share" });
 
 // Share tokens are 32-char hex (crypto.randomUUID() with dashes stripped).
 const shareTokenParam = z.object({ token: z.string().regex(/^[a-f0-9]{32}$/) });
+const wrappedParam = shareTokenParam.extend({
+  year: z.coerce.number().int().min(1970).max(2100),
+});
 
 const app = new Hono<AppEnv>();
 
@@ -59,6 +64,26 @@ app.get(
       count: titles.length,
     });
     return c.json({ username, titles });
+  },
+);
+
+// GET /api/share/wrapped/:token/:year  (public)
+app.get(
+  "/wrapped/:token/:year",
+  zValidator("param", wrappedParam),
+  async (c) => {
+    const { token, year } = c.req.valid("param");
+    const currentYear = new Date().getUTCFullYear();
+    if (year > currentYear) {
+      return err(c, "Year cannot be in the future", 400);
+    }
+    const user = await getUserByWatchlistShareToken(token);
+    if (!user) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    const username = user.displayUsername ?? user.username;
+    const review = await getYearInReview(user.id, year);
+    return c.json({ username, ...review });
   },
 );
 

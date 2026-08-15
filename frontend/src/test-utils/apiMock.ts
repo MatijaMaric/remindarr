@@ -172,6 +172,7 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   // ── Settings ──────────────────────────────────────────────────────────────
   changePassword: async () => ({}),
   getStats: async () => ({}),
+  getYearInReview: async () => ({}),
   getHomepageLayout: async () => ({ homepage_layout: [] }),
   updateHomepageLayout: async () => ({}),
   getDepartureAlertSettings: async () => ({}),
@@ -212,6 +213,7 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   regenerateWatchlistShareToken: async () => ({ token: "" }),
   revokeWatchlistShareToken: async () => ({}),
   getSharedWatchlist: async () => ({ titles: [] }),
+  getSharedWrapped: async () => ({}),
 
   // ── Import / export ───────────────────────────────────────────────────────
   exportWatchlist: async () => ({}),

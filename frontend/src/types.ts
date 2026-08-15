@@ -474,6 +474,38 @@ export interface StatsResponse {
   };
 }
 
+export interface YearInReviewTitleRef {
+  title_id: string;
+  title: string;
+  poster_url: string | null;
+}
+
+export interface YearInReview {
+  year: number;
+  movies_watched: number;
+  episodes_watched: number;
+  watch_time_minutes: number;
+  watch_time_minutes_movies: number;
+  watch_time_minutes_shows: number;
+  top_genres: { genre: string; count: number }[];
+  top_providers: { provider_id: number; name: string; count: number }[];
+  top_shows: (YearInReviewTitleRef & { count: number })[];
+  longest_binge:
+    | (YearInReviewTitleRef & {
+        days: number;
+        episodes: number;
+      })
+    | null;
+  most_rewatched: (YearInReviewTitleRef & { plays: number }) | null;
+  first_watch: (YearInReviewTitleRef & { watched_at: string }) | null;
+  last_watch: (YearInReviewTitleRef & { watched_at: string }) | null;
+  years: number[];
+}
+
+export interface SharedYearInReview extends YearInReview {
+  username: string;
+}
+
 // ─── Admin Settings Types ────────────────────────────────────────────────────
 
 export interface OidcSettingField {
