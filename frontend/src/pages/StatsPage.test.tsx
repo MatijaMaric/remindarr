@@ -3,6 +3,7 @@ import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import "../i18n";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import type { StatsResponse } from "../types";
 

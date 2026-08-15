@@ -10,7 +10,13 @@ import {
   createUser,
   getUserByWatchlistShareToken,
   getTrackedTitles,
+  getYearInReview,
 } from "./db/repository";
+import {
+  buildOgTags,
+  wrappedOgDescription,
+  wrappedOgImage,
+} from "./lib/og-tags";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter, MemoryRateLimitStore } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -500,6 +506,40 @@ app.get("/share/watchlist/:token", async (c) => {
     <meta name="twitter:title" content="${username}'s Watchlist — Remindarr" />
     <meta name="twitter:description" content="${description}" />
     ${firstPoster ? `<meta name="twitter:image" content="${firstPoster}" />` : ""}`;
+  }
+  try {
+    const indexHtml = await Bun.file("./frontend/dist/index.html").text();
+    const injected = ogTags
+      ? indexHtml.replace("</head>", `${ogTags}\n  </head>`)
+      : indexHtml;
+    return new Response(injected, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  } catch {
+    // Fall through to static serving if dist/index.html doesn't exist (dev mode)
+  }
+  return c.html(
+    "<!DOCTYPE html><html><head><title>Remindarr</title></head><body></body></html>",
+  );
+});
+
+// OG meta tags for shared Year in Review — must be before the SPA static fallback
+app.get("/share/wrapped/:token/:year", async (c) => {
+  const token = c.req.param("token");
+  const year = Number(c.req.param("year"));
+  let ogTags = "";
+  if (/^[a-f0-9]{32}$/.test(token) && Number.isInteger(year)) {
+    const user = await getUserByWatchlistShareToken(token);
+    if (user) {
+      const review = await getYearInReview(user.id, year);
+      const username = user.displayUsername ?? user.username;
+      ogTags = buildOgTags({
+        title: `${username}'s ${year} Wrapped — Remindarr`,
+        description: wrappedOgDescription(review),
+        image: wrappedOgImage(review),
+      });
+    }
   }
   try {
     const indexHtml = await Bun.file("./frontend/dist/index.html").text();

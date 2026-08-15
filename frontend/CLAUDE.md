@@ -64,6 +64,7 @@ Server-cache state lives in `@tanstack/react-query`. The `QueryClient` singleton
 | `DiscoveryPage.tsx`                                                      | Personalized discovery feed                            |
 | `TrackedPage.tsx`                                                        | Watchlist + stats view                                 |
 | `StatsPage.tsx`                                                          | User statistics                                        |
+| `WrappedPage.tsx` / `SharedWrappedPage.tsx`                              | Year in Review (auth + public share)                   |
 | `ReelsPage.tsx`                                                          | Swipeable short-form discovery                         |
 | `TitleDetailPage.tsx` / `SeasonDetailPage.tsx` / `EpisodeDetailPage.tsx` | Content detail pages                                   |
 | `PersonPage.tsx`                                                         | Actor/crew details and filmography                     |

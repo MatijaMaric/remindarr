@@ -218,6 +218,9 @@ export type {
   ShowsByStatus,
 } from "./stats";
 
+export { getYearInReview, computeYearInReview } from "./year-in-review";
+export type { YearInReview } from "./year-in-review";
+
 export {
   rateTitle,
   unrateTitle,

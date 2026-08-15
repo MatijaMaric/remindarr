@@ -201,3 +201,38 @@ describe("validation", () => {
     expect(Array.isArray(body.issues)).toBe(true);
   });
 });
+
+describe("GET /share/wrapped/:token/:year (public)", () => {
+  describe("validation", () => {
+    it("rejects a malformed token", async () => {
+      const res = await app.request("/share/wrapped/not-a-valid-token/2025");
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as any;
+      expect(body.error).toBe("Validation failed");
+      expect(Array.isArray(body.issues)).toBe(true);
+    });
+  });
+
+  it("returns 404 for a well-formed but unknown token", async () => {
+    const res = await app.request(
+      "/share/wrapped/0123456789abcdef0123456789abcdef/2025",
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("happy path — valid token returns username and year stats", async () => {
+    const genRes = await app.request("/share/token", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await genRes.json()) as { token: string };
+
+    const res = await app.request(`/share/wrapped/${token}/2025`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.username).toBe("shareuser");
+    expect(body.year).toBe(2025);
+    expect(body.movies_watched).toBe(0);
+    expect(body.episodes_watched).toBe(0);
+  });
+});

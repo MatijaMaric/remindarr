@@ -3,6 +3,7 @@ import { Card } from "../components/ui/card";
 import {
   ChevronRight,
   Sparkles,
+  PartyPopper,
   BarChart2,
   User,
   Settings,
@@ -142,6 +143,12 @@ export default function MorePage() {
           label="Stats"
           sub="Your watch history"
           to="/tracked?view=stats"
+        />
+        <MoreRow
+          icon={<PartyPopper size={16} />}
+          label="Year in Review"
+          sub="Your annual Wrapped"
+          to="/wrapped"
           isLast
         />
       </MoreGroup>

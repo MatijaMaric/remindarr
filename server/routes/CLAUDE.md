@@ -74,7 +74,7 @@ test("happy path — minimal realistic body", async () => {
 | `recommendations.ts`     | Recommendation broadcast to followers (1-to-N, not 1-to-1)                   |
 | `invitations.ts`         | Signup invite codes                                                          |
 | `feed.ts`                | Public `.ics` calendar feed (token-authenticated) + token management         |
-| `stats.ts`               | User statistics                                                              |
+| `stats.ts`               | User statistics + Year in Review                                             |
 | `user-settings.ts`       | Per-user settings (homepage layout, etc.)                                    |
 | `jobs.ts` / `jobs-cf.ts` | Job stats + manual trigger (Bun / CF variants)                               |
 | `metrics.ts`             | Prometheus metrics                                                           |
@@ -91,6 +91,8 @@ All routes are under `/api` except `/metrics`.
 - `POST|GET /api/auth/*` — better-auth handler
 - `GET /api/auth/custom/providers`
 - `GET /api/feed/calendar.ics?token=<user-feed-token>`
+- `GET /api/share/watchlist/:token`
+- `GET /api/share/wrapped/:token/:year`
 
 ### Optional auth (`is_tracked` depends on session)
 
@@ -113,6 +115,8 @@ All routes are under `/api` except `/metrics`.
 - `GET/POST/PUT/DELETE /api/integrations`
 - `POST /api/import`
 - `GET /api/stats`
+- `GET /api/stats/year/:year`
+- `GET /api/share/wrapped/:token/:year` (public)
 - `GET/PUT /api/user/settings`
 - `POST/DELETE /api/social/follow`
 - `POST/DELETE /api/ratings`

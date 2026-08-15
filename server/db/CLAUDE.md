@@ -13,7 +13,7 @@
 | Config/ops     | `settings`, `notifiers`, `integrations`, `plex_library_items`, `jobs`, `cron_jobs`        |
 
 Repository modules in `server/db/repository/` (domain-specific query modules):
-users, titles, episodes, offers, tracked, watched, notifiers, settings, ratings, recommendations, social, integrations, invitations, plex, stats, sessions.
+users, titles, episodes, offers, tracked, watched, notifiers, settings, ratings, recommendations, social, integrations, invitations, plex, stats, year-in-review, sessions.
 
 ## Migration Safety Rules (Cloudflare D1) ⚠️
 
