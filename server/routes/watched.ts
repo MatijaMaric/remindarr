@@ -62,6 +62,14 @@ function airDateToWatchedAt(airDate: string): string {
   return `${airDate} 00:00:00`;
 }
 
+const episodeIdParamSchema = z.object({
+  episodeId: z.coerce.number().int().positive(),
+});
+const titleIdParamSchema = z.object({
+  titleId: z.string().min(1).max(128),
+});
+const historyIdParamSchema = z.object({ id: z.string().min(1).max(128) });
+
 const bulkWatchedSchema = z.object({
   episodeIds: z
     .array(z.number().int())
@@ -151,10 +159,11 @@ const historyQuerySchema = z.object({
 
 app.get(
   "/history/:titleId",
+  zValidator("param", titleIdParamSchema),
   zValidator("query", historyQuerySchema),
   async (c) => {
     const user = c.get("user")!;
-    const titleId = c.req.param("titleId");
+    const { titleId } = c.req.valid("param");
     const { limit, before, episodeId } = c.req.valid("query");
     const [page, playCount] = await Promise.all([
       getTitleWatchHistory(user.id, titleId, { limit, before, episodeId }),
@@ -169,64 +178,68 @@ app.get(
   },
 );
 
-app.patch("/history/:id", zValidator("json", editHistorySchema), async (c) => {
-  const user = c.get("user")!;
-  const id = c.req.param("id");
-  const { watched_at } = c.req.valid("json");
-  const timezone = c.req.header("X-Timezone") || "UTC";
+app.patch(
+  "/history/:id",
+  zValidator("param", historyIdParamSchema),
+  zValidator("json", editHistorySchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id } = c.req.valid("param");
+    const { watched_at } = c.req.valid("json");
+    const timezone = c.req.header("X-Timezone") || "UTC";
 
-  const { allowed, retryAfterMs } = await getWatchedEditStore().consume(
-    `watched-edit:${user.id}`,
-    50,
-    60 * 60 * 1000,
-    Date.now(),
-  );
-  if (!allowed) {
-    c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
-    return c.json({ error: "Too many requests" }, 429);
-  }
-
-  const row = await getWatchHistoryById(id, user.id);
-  if (!row) return c.json({ error: "Not found" }, 404);
-
-  const todayLocal = localDateForTimezone(timezone);
-  if (watched_at.slice(0, 10) > todayLocal) {
-    return c.json(
-      {
-        error: "Validation failed",
-        issues: [{ message: "Cannot set a future watched date" }],
-      },
-      400,
+    const { allowed, retryAfterMs } = await getWatchedEditStore().consume(
+      `watched-edit:${user.id}`,
+      50,
+      60 * 60 * 1000,
+      Date.now(),
     );
-  }
-
-  const normalised =
-    watched_at.length === 10 ? `${watched_at} 00:00:00` : watched_at;
-
-  await updateWatchHistoryWatchedAt(id, user.id, normalised);
-
-  const latest = await getLatestWatchHistoryFor(
-    user.id,
-    row.titleId,
-    row.episodeId,
-  );
-  if (latest === normalised) {
-    if (row.episodeId === null) {
-      await setWatchedTitleWatchedAt(row.titleId, user.id, normalised);
-    } else {
-      await setWatchedEpisodeWatchedAt(row.episodeId, user.id, normalised);
+    if (!allowed) {
+      c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
+      return c.json({ error: "Too many requests" }, 429);
     }
-  }
 
-  log.info("Watched timestamp edited", { historyId: id, userId: user.id });
-  return ok(c, { id, watchedAt: normalised });
-});
+    const row = await getWatchHistoryById(id, user.id);
+    if (!row) return c.json({ error: "Not found" }, 404);
 
-app.post("/:episodeId", async (c) => {
+    const todayLocal = localDateForTimezone(timezone);
+    if (watched_at.slice(0, 10) > todayLocal) {
+      return c.json(
+        {
+          error: "Validation failed",
+          issues: [{ message: "Cannot set a future watched date" }],
+        },
+        400,
+      );
+    }
+
+    const normalised =
+      watched_at.length === 10 ? `${watched_at} 00:00:00` : watched_at;
+
+    await updateWatchHistoryWatchedAt(id, user.id, normalised);
+
+    const latest = await getLatestWatchHistoryFor(
+      user.id,
+      row.titleId,
+      row.episodeId,
+    );
+    if (latest === normalised) {
+      if (row.episodeId === null) {
+        await setWatchedTitleWatchedAt(row.titleId, user.id, normalised);
+      } else {
+        await setWatchedEpisodeWatchedAt(row.episodeId, user.id, normalised);
+      }
+    }
+
+    log.info("Watched timestamp edited", { historyId: id, userId: user.id });
+    return ok(c, { id, watchedAt: normalised });
+  },
+);
+
+app.post("/:episodeId", zValidator("param", episodeIdParamSchema), async (c) => {
   const user = c.get("user")!;
   const timezone = c.req.header("X-Timezone") || "UTC";
-  const episodeId = Number(c.req.param("episodeId"));
-  if (isNaN(episodeId)) return c.json({ error: "Invalid episodeId" }, 400);
+  const { episodeId } = c.req.valid("param");
   const airDate = await getEpisodeAirDate(episodeId);
   if (!isReleased(airDate, timezone)) {
     return err(c, "Cannot mark an unreleased episode as watched");
@@ -244,32 +257,43 @@ app.post("/:episodeId", async (c) => {
   return ok(c, {});
 });
 
-app.delete("/:episodeId", async (c) => {
-  // Achievements are sticky — deletes do not undo progress or earned badges.
-  const user = c.get("user")!;
-  const episodeId = Number(c.req.param("episodeId"));
-  if (isNaN(episodeId)) return c.json({ error: "Invalid episodeId" }, 400);
-  await unwatchEpisode(episodeId, user.id);
-  return ok(c, {});
-});
+app.delete(
+  "/:episodeId",
+  zValidator("param", episodeIdParamSchema),
+  async (c) => {
+    // Achievements are sticky — deletes do not undo progress or earned badges.
+    const user = c.get("user")!;
+    const { episodeId } = c.req.valid("param");
+    await unwatchEpisode(episodeId, user.id);
+    return ok(c, {});
+  },
+);
 
 // ─── Movie Watched ───────────────────────────────────────────────────────────
 
-app.post("/movies/:titleId", async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("titleId");
-  await watchTitle(titleId, user.id);
-  await logWatch(user.id, titleId);
-  await onWatchedTitle(user.id, titleId, true);
-  return ok(c, {});
-});
+app.post(
+  "/movies/:titleId",
+  zValidator("param", titleIdParamSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { titleId } = c.req.valid("param");
+    await watchTitle(titleId, user.id);
+    await logWatch(user.id, titleId);
+    await onWatchedTitle(user.id, titleId, true);
+    return ok(c, {});
+  },
+);
 
-app.delete("/movies/:titleId", async (c) => {
-  // Achievements are sticky — deletes do not undo progress or earned badges.
-  const user = c.get("user")!;
-  const titleId = c.req.param("titleId");
-  await unwatchTitle(titleId, user.id);
-  return ok(c, {});
-});
+app.delete(
+  "/movies/:titleId",
+  zValidator("param", titleIdParamSchema),
+  async (c) => {
+    // Achievements are sticky — deletes do not undo progress or earned badges.
+    const user = c.get("user")!;
+    const { titleId } = c.req.valid("param");
+    await unwatchTitle(titleId, user.id);
+    return ok(c, {});
+  },
+);
 
 export default app;

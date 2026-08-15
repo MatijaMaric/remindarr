@@ -193,7 +193,8 @@ describe("POST /watched/:episodeId", () => {
     const res = await app.request("/watched/abc", { method: "POST" });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid episodeId");
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
   });
 
   it("returns 400 when episode does not exist", async () => {
@@ -261,7 +262,8 @@ describe("DELETE /watched/:episodeId", () => {
     const res = await app.request("/watched/abc", { method: "DELETE" });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid episodeId");
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
   });
 });
 
@@ -887,6 +889,103 @@ describe("DELETE /watched/movies/:titleId", () => {
     const app = makeAuthedApp();
     const res = await app.request("/watched/movies/movie-w4", {
       method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("validation — path params", () => {
+  it("rejects POST /:episodeId with a non-positive id", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/0", { method: "POST" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("rejects DELETE /:episodeId with a non-numeric id", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/abc", { method: "DELETE" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("rejects POST /movies/:titleId with an oversized titleId", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/movies/${"x".repeat(129)}`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("rejects DELETE /movies/:titleId with an oversized titleId", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/movies/${"x".repeat(129)}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("rejects GET /history/:titleId with an oversized titleId", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/history/${"x".repeat(129)}`);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("rejects PATCH /history/:id with an oversized id", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/history/${"x".repeat(129)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ watched_at: "2024-01-01" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(body.issues).toBeInstanceOf(Array);
+  });
+
+  it("happy path — POST /:episodeId with a valid released episode", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({ id: "show-val-happy", objectType: "SHOW" }),
+    ]);
+    await upsertEpisodes([
+      {
+        title_id: "show-val-happy",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: today,
+        still_path: null,
+      },
+    ]);
+    const episodeId = await getEpisodeId("show-val-happy", 1, 1);
+    const app = makeAuthedApp();
+    const res = await app.request(`/watched/${episodeId}`, { method: "POST" });
+    expect(res.status).toBe(200);
+  });
+
+  it("happy path — POST /movies/:titleId with a valid titleId", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-val-happy", objectType: "MOVIE" }),
+    ]);
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/movies/movie-val-happy", {
+      method: "POST",
     });
     expect(res.status).toBe(200);
   });

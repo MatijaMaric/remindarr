@@ -1092,6 +1092,29 @@ describe("PATCH /user/me/profile", () => {
   });
 });
 
+describe("validation — username path params", () => {
+  it("rejects GET /:username with an oversized username", async () => {
+    const res = await app.request(`/user/${"x".repeat(51)}`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as AnyRecord;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects GET /:username/activity with an oversized username", async () => {
+    const res = await app.request(`/user/${"x".repeat(51)}/activity`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as AnyRecord;
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("happy path — GET /:username with a valid username", async () => {
+    const res = await app.request("/user/testuser");
+    expect(res.status).toBe(200);
+  });
+});
+
 describe("validation — path params", () => {
   it("rejects POST /me/pinned/:titleId with oversized titleId", async () => {
     const res = await app.request(`/user/me/pinned/${"x".repeat(129)}`, {
