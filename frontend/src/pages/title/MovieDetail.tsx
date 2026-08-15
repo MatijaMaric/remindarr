@@ -153,7 +153,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               >
                 {new Date(
                   entry.watchedAt.replace(" ", "T") + "Z",
-                ).toLocaleDateString("en-US", {
+                ).toLocaleDateString(undefined, {
                   year: "numeric",
                   month: "short",
                   day: "numeric",

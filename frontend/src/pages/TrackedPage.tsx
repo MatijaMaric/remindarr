@@ -541,7 +541,7 @@ function TrackedTable({
                   {title.offers[0]?.provider_name ?? ""}
                   {statusKey ? ` · ${statusLabel}` : ""}
                   {title.next_episode_air_date && statusKey !== "completed"
-                    ? ` · ${new Date(title.next_episode_air_date).toLocaleDateString("en", { month: "short", day: "numeric" })}`
+                    ? ` · ${new Date(title.next_episode_air_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
                     : ""}
                 </div>
                 {total > 0 && (
@@ -663,7 +663,7 @@ function TrackedTable({
           const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
           const score = title.imdb_score ?? title.tmdb_score;
           const nextDate = title.next_episode_air_date
-            ? new Date(title.next_episode_air_date).toLocaleDateString("en", {
+            ? new Date(title.next_episode_air_date).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
               })

@@ -898,7 +898,7 @@ function GridCalendar({
     titleToggleMutation.mutate({ titleId, currentlyWatched });
   };
 
-  const monthTitle = currentMonth.toLocaleDateString("en-US", {
+  const monthTitle = currentMonth.toLocaleDateString(undefined, {
     month: "long",
     year: "numeric",
   });
@@ -1289,11 +1289,11 @@ function WeekCalendar({
     setWeekParam(formatDateKey(getWeekStart(new Date())));
 
   const weekLabel = (() => {
-    const start = weekDays[0].toLocaleDateString("en-US", {
+    const start = weekDays[0].toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
     });
-    const end = weekDays[6].toLocaleDateString("en-US", {
+    const end = weekDays[6].toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -1389,7 +1389,7 @@ function WeekCalendar({
                   }`}
                 >
                   <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em]">
-                    {day.toLocaleDateString("en-US", { weekday: "short" })}
+                    {day.toLocaleDateString(undefined, { weekday: "short" })}
                   </div>
                   <div
                     className={`font-mono text-lg font-bold mt-0.5 ${

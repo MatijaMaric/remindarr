@@ -284,6 +284,13 @@ describe("ProfileVisibilitySection", () => {
   });
 });
 
+describe("Settings header i18n", () => {
+  it("renders the translated preferences kicker (#1097)", () => {
+    render(<SettingsPage />, { wrapper: Wrapper });
+    expect(screen.getByText(/Your preferences/)).toBeDefined();
+  });
+});
+
 describe("Settings tabs", () => {
   it("renders tab list with expected tabs for non-admin user", async () => {
     render(<SettingsPage />, { wrapper: Wrapper });

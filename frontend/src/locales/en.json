@@ -454,6 +454,7 @@
   },
   "settings": {
     "title": "Settings",
+    "kicker": "Your preferences",
     "viewProfile": "View Profile",
     "tabs": {
       "account": "Account",
