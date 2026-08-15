@@ -41,6 +41,10 @@ const ACTIVITY_KINDS = [
 
 const app = new Hono<AppEnv>();
 
+const usernameParamSchema = z.object({
+  username: z.string().min(1).max(50),
+});
+
 const bioSchema = z.object({
   bio: z.string().max(280).nullable(),
 });
@@ -198,8 +202,8 @@ app.get("/search", zValidator("query", searchQuerySchema), async (c) => {
   return ok(c, { users });
 });
 
-app.get("/:username", async (c) => {
-  const username = c.req.param("username");
+app.get("/:username", zValidator("param", usernameParamSchema), async (c) => {
+  const { username } = c.req.valid("param");
   const viewer = c.get("user");
   const isOwnProfile =
     viewer?.username?.toLowerCase() === username.toLowerCase();
@@ -227,9 +231,10 @@ const activityQuerySchema = z.object({
 
 app.get(
   "/:username/activity",
+  zValidator("param", usernameParamSchema),
   zValidator("query", activityQuerySchema),
   async (c) => {
-    const username = c.req.param("username");
+    const { username } = c.req.valid("param");
     const viewer = c.get("user");
     const profileUser = await getUserVisibilityByUsername(username);
     if (!profileUser) {
