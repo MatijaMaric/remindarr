@@ -72,7 +72,8 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="pt-4 pb-3">
         <Kicker>
-          Your preferences{user.username ? ` · ${user.username}` : ""}
+          {t("settings.kicker")}
+          {user.username ? ` · ${user.username}` : ""}
         </Kicker>
         <h1 className="text-4xl md:text-[44px] font-extrabold tracking-[-0.03em] leading-none text-zinc-100">
           {t("settings.title")}
