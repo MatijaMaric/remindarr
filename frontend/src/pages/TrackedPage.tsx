@@ -663,10 +663,13 @@ function TrackedTable({
           const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
           const score = title.imdb_score ?? title.tmdb_score;
           const nextDate = title.next_episode_air_date
-            ? new Date(title.next_episode_air_date).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })
+            ? new Date(title.next_episode_air_date).toLocaleDateString(
+                undefined,
+                {
+                  month: "short",
+                  day: "numeric",
+                },
+              )
             : null;
           const isSelected = selectedIds.has(title.id);
 
