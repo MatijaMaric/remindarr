@@ -14,7 +14,7 @@ import {
   type ParsedTitle,
   type TrendingPerson,
 } from "../tmdb/parser";
-import { getTrackedTitleIds } from "../db/repository";
+import { getTrackedStatusForIds } from "../db/repository";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { syncFailureTotal, trendingCacheTotal } from "../metrics";
@@ -149,8 +149,9 @@ app.get("/", zValidator("query", trendingQuerySchema), async (c) => {
   }
 
   // ── Per-request isTracked overlay (snapshot is user-agnostic) ─────────────
+  const snapshotIds = [...snapshot.movies, ...snapshot.shows].map((t) => t.id);
   const trackedIds = user
-    ? await getTrackedTitleIds(user.id)
+    ? await getTrackedStatusForIds(user.id, snapshotIds)
     : new Set<string>();
   const overlay = (t: TrendingTitleSnapshot) => ({
     ...t,
