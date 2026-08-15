@@ -17,12 +17,22 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
+      # Prefer WORKFLOW_PAT so the lockfile commit retriggers CI. Fall back to
+      # GITHUB_TOKEN when the secret is missing or expired (#1088) so the
+      # lockfile still gets regenerated instead of failing the whole job.
       - uses: actions/checkout@v7
+        id: checkout-pat
+        continue-on-error: true
+        if: ${{ secrets.WORKFLOW_PAT != '' }}
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-          # PAT required: GITHUB_TOKEN pushes don't trigger downstream workflow runs,
-          # so all-passed would wait forever on the lockfile commit.
           token: ${{ secrets.WORKFLOW_PAT }}
+
+      - uses: actions/checkout@v7
+        if: ${{ secrets.WORKFLOW_PAT == '' || steps.checkout-pat.outcome == 'failure' }}
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ github.token }}
 
       - uses: oven-sh/setup-bun@v2
         with:
