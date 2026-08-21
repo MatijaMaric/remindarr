@@ -133,6 +133,12 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
         <Cast cast={cast} />
       </SectionErrorBoundary>
 
+      <RatingSparkline
+        points={pacingData?.user_ratings ?? []}
+        heading={t("pacing.label", "Pacing")}
+        label={t("pacing.aria", "Episode rating pacing")}
+      />
+
       {/* Seasons */}
       {seasons.length > 0 && (
         <section className="space-y-4">
@@ -146,11 +152,6 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               variant="ghost"
             />
           </div>
-          <RatingSparkline
-            points={pacingData?.user_ratings ?? []}
-            heading={t("pacing.label", "Pacing")}
-            label={t("pacing.aria", "Episode rating pacing")}
-          />
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {seasons.map((s: SeasonSummary) => {
               const airingToday = isToday(s.air_date);

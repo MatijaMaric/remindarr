@@ -1,10 +1,6 @@
-import type { RatingValue } from "../types";
+import type { RatingValue, EpisodeRatingPoint } from "../types";
 
-export type RatingSparklinePoint = {
-  season: number;
-  episode: number;
-  rating: RatingValue;
-};
+export type RatingSparklinePoint = EpisodeRatingPoint;
 
 /** Higher is hotter. Four-step scale matching HATE→LOVE. */
 export const RATING_SCORE: Record<RatingValue, number> = {

@@ -39,6 +39,7 @@ export default function RatingSparkline({
       ) : null}
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        preserveAspectRatio="none"
         className="w-full h-10 text-zinc-500 overflow-visible"
         role="img"
         aria-label={label}
@@ -47,15 +48,17 @@ export default function RatingSparkline({
           <path d={line} fill="none" stroke="currentColor" strokeWidth="2" />
         ) : null}
         {dots.map((d) => (
-          <circle
-            key={`${d.point.season}-${d.point.episode}`}
-            cx={d.x}
-            cy={d.y}
-            r={3.5}
-            fill={RATING_FILL[d.point.rating]}
-          >
-            <title>{sparklineTooltip(d.point)}</title>
-          </circle>
+          <g key={`${d.point.season}-${d.point.episode}`}>
+            <circle cx={d.x} cy={d.y} r={8} fill="transparent">
+              <title>{sparklineTooltip(d.point)}</title>
+            </circle>
+            <circle
+              cx={d.x}
+              cy={d.y}
+              r={3.5}
+              fill={RATING_FILL[d.point.rating]}
+            />
+          </g>
         ))}
       </svg>
     </div>
