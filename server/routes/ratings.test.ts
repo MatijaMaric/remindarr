@@ -72,11 +72,28 @@ function authHeaders(token: string) {
   return { Cookie: `better-auth.session_token=${token}` };
 }
 
-function insertTitle(id: string) {
+function insertTitle(id: string, objectType = "MOVIE") {
   const db = getRawDb();
   db.prepare(
-    `INSERT INTO titles (id, object_type, title, release_date) VALUES (?, 'MOVIE', ?, '2024-01-01')`,
-  ).run(id, `Title ${id}`);
+    `INSERT INTO titles (id, object_type, title, release_date) VALUES (?, ?, ?, '2024-01-01')`,
+  ).run(id, objectType, `Title ${id}`);
+}
+
+function insertEpisode(
+  titleId: string,
+  season: number,
+  episode: number,
+): number {
+  const db = getRawDb();
+  db.prepare(
+    `INSERT INTO episodes (title_id, season_number, episode_number, name) VALUES (?, ?, ?, ?)`,
+  ).run(titleId, season, episode, `S${season}E${episode}`);
+  const row = db
+    .prepare(
+      `SELECT id FROM episodes WHERE title_id = ? AND season_number = ? AND episode_number = ?`,
+    )
+    .get(titleId, season, episode) as { id: number };
+  return row.id;
 }
 
 describe("POST /ratings/:titleId", () => {
@@ -375,5 +392,129 @@ describe("validation", () => {
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
     expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("rejects GET /season/:titleId/:season when season is not numeric", async () => {
+    const res = await app.request("/ratings/season/show-1/abc");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});
+
+describe("GET /ratings/season/:titleId/:season", () => {
+  it("returns community aggregates plus the viewer's own ratings", async () => {
+    insertTitle("show-pace", "SHOW");
+    const ep1 = insertEpisode("show-pace", 1, 1);
+    const ep2 = insertEpisode("show-pace", 1, 2);
+
+    await app.request(`/ratings/episode/${ep1}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "LOVE" }),
+    });
+    await app.request(`/ratings/episode/${ep2}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "DISLIKE" }),
+    });
+    await app.request(`/ratings/episode/${ep1}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userBToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "LIKE" }),
+    });
+
+    const res = await app.request("/ratings/season/show-pace/1", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ratings["1"].LOVE).toBe(1);
+    expect(body.ratings["1"].LIKE).toBe(1);
+    expect(body.user_ratings).toEqual([
+      { season: 1, episode: 1, rating: "LOVE" },
+      { season: 1, episode: 2, rating: "DISLIKE" },
+    ]);
+  });
+
+  it("omits other users' ratings from user_ratings when unauthenticated", async () => {
+    insertTitle("show-public", "SHOW");
+    const ep1 = insertEpisode("show-public", 1, 1);
+    await app.request(`/ratings/episode/${ep1}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "HATE" }),
+    });
+
+    const res = await app.request("/ratings/season/show-public/1");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ratings["1"].HATE).toBe(1);
+    expect(body.user_ratings).toEqual([]);
+  });
+});
+
+describe("GET /ratings/show/:titleId", () => {
+  it("returns the viewer's ratings across all seasons", async () => {
+    insertTitle("show-all", "SHOW");
+    const s1e1 = insertEpisode("show-all", 1, 1);
+    const s2e1 = insertEpisode("show-all", 2, 1);
+    await app.request(`/ratings/episode/${s2e1}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "LIKE" }),
+    });
+    await app.request(`/ratings/episode/${s1e1}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "LOVE" }),
+    });
+
+    const res = await app.request("/ratings/show/show-all", {
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user_ratings).toEqual([
+      { season: 1, episode: 1, rating: "LOVE" },
+      { season: 2, episode: 1, rating: "LIKE" },
+    ]);
+  });
+
+  it("returns empty user_ratings when unauthenticated", async () => {
+    insertTitle("show-anon", "SHOW");
+    const ep1 = insertEpisode("show-anon", 1, 1);
+    await app.request(`/ratings/episode/${ep1}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "LOVE" }),
+    });
+
+    const res = await app.request("/ratings/show/show-anon");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user_ratings).toEqual([]);
   });
 });

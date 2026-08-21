@@ -24,6 +24,7 @@ import {
   stillUrl as mkStillUrl,
 } from "../lib/tmdb-images";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import RatingSparkline from "../components/RatingSparkline";
 import {
   formatDate,
   isReleased,
@@ -414,6 +415,11 @@ export default function SeasonDetailPage() {
                 ))}
             </div>
           </div>
+          <RatingSparkline
+            points={ratingsData?.user_ratings ?? []}
+            heading={t("pacing.label", "Pacing")}
+            label={t("pacing.aria", "Episode rating pacing")}
+          />
           <div className="flex flex-col gap-1.5">
             {episodes.map((ep) => {
               const status = statusMap.get(ep.episode_number);

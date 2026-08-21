@@ -719,5 +719,9 @@
     "lastWatch": "Last watch",
     "share": "Share",
     "yearLabel": "Year"
+  },
+  "pacing": {
+    "label": "Pacing",
+    "aria": "Episode rating pacing"
   }
 }

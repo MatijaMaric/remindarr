@@ -1,4 +1,6 @@
 import { Link } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type {
   SeasonSummary,
   ShowDetailsResponse,
@@ -10,16 +12,27 @@ import ExternalLinks from "../../components/ExternalLinks";
 import PersonCard from "../../components/PersonCard";
 import ProvidersSection from "../../components/title-detail/ProvidersSection";
 import RatingsSection from "../../components/title-detail/RatingsSection";
+import RatingSparkline from "../../components/RatingSparkline";
 import ShowHero from "../../components/title-detail/ShowHero";
 import { Section } from "../../components/title-detail/Section";
 import { posterUrl as mkPosterUrl } from "../../lib/tmdb-images";
 import { formatDate, isToday } from "../../components/title-detail/utils";
 import SectionErrorBoundary from "../../components/SectionErrorBoundary";
 import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
+import { useAuth } from "../../context/AuthContext";
+import * as api from "../../api";
 
 export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   const { title, tmdb, country } = data;
+  const { user } = useAuth();
+  const { t } = useTranslation();
   const overview = tmdb?.overview || title.short_description;
+
+  const { data: pacingData } = useQuery({
+    queryKey: ["show-episode-ratings", title.id],
+    queryFn: ({ signal }) => api.getShowEpisodeRatings(title.id, signal),
+    enabled: !!user,
+  });
 
   const watchProviders = tmdb?.["watch/providers"]?.results?.[country] as
     | WatchProviderCountry
@@ -133,6 +146,11 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               variant="ghost"
             />
           </div>
+          <RatingSparkline
+            points={pacingData?.user_ratings ?? []}
+            heading={t("pacing.label", "Pacing")}
+            label={t("pacing.aria", "Episode rating pacing")}
+          />
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {seasons.map((s: SeasonSummary) => {
               const airingToday = isToday(s.air_date);

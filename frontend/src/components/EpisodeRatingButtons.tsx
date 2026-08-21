@@ -79,8 +79,11 @@ export default function EpisodeRatingButtons({
       toast.success("Rating saved");
     },
     onError: () => toast.error("Failed to update rating"),
-    onSettled: () =>
-      qc.invalidateQueries({ queryKey: ["episode-rating", episodeId] }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["episode-rating", episodeId] });
+      void qc.invalidateQueries({ queryKey: ["season-ratings"] });
+      void qc.invalidateQueries({ queryKey: ["show-episode-ratings"] });
+    },
   });
 
   const unrateMutation = useMutation({
@@ -91,8 +94,11 @@ export default function EpisodeRatingButtons({
       toast.success("Rating removed");
     },
     onError: () => toast.error("Failed to update rating"),
-    onSettled: () =>
-      qc.invalidateQueries({ queryKey: ["episode-rating", episodeId] }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["episode-rating", episodeId] });
+      void qc.invalidateQueries({ queryKey: ["season-ratings"] });
+      void qc.invalidateQueries({ queryKey: ["show-episode-ratings"] });
+    },
   });
 
   const submitting = rateMutation.isPending || unrateMutation.isPending;

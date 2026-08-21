@@ -12,6 +12,7 @@ import {
   getEpisodeRatings,
   getFriendsEpisodeRatings,
   getSeasonEpisodeRatings,
+  getUserTitleEpisodeRatings,
 } from "../db/repository";
 import type { RatingValue } from "../db/repository";
 import type { AppEnv } from "../types";
@@ -48,6 +49,10 @@ const episodeIdParamSchema = z.object({
 const seasonParamSchema = z.object({
   titleId: z.string().min(1),
   season: z.coerce.number().int(),
+});
+
+const titleIdParamSchema = z.object({
+  titleId: z.string().min(1),
 });
 
 const app = new Hono<AppEnv>();
@@ -177,15 +182,34 @@ app.get(
   },
 );
 
-// GET /season/:titleId/:season — Get aggregate episode ratings for a season
+// GET /season/:titleId/:season — aggregates + the viewer's own ratings
 app.get(
   "/season/:titleId/:season",
   zValidator("param", seasonParamSchema),
   async (c) => {
+    const user = c.get("user");
     const { titleId, season } = c.req.valid("param");
 
     const ratings = await getSeasonEpisodeRatings(titleId, season);
-    return ok(c, { ratings });
+    const user_ratings = user
+      ? await getUserTitleEpisodeRatings(user.id, titleId, season)
+      : [];
+    return ok(c, { ratings, user_ratings });
+  },
+);
+
+// GET /show/:titleId — viewer's episode ratings across all seasons
+app.get(
+  "/show/:titleId",
+  zValidator("param", titleIdParamSchema),
+  async (c) => {
+    const user = c.get("user");
+    const { titleId } = c.req.valid("param");
+
+    const user_ratings = user
+      ? await getUserTitleEpisodeRatings(user.id, titleId)
+      : [];
+    return ok(c, { user_ratings });
   },
 );
 

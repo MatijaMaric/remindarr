@@ -21,7 +21,8 @@ import type {
   UserSummary,
   TitleRatingResponse,
   EpisodeRatingResponse,
-  RatingValue,
+  SeasonEpisodeRatingsResponse,
+  ShowEpisodeRatingsResponse,
   SentRecommendation,
   RecommendationsResponse,
   InvitationItem,
@@ -986,10 +987,17 @@ export async function getSeasonEpisodeRatings(
   titleId: string,
   season: number,
   signal?: AbortSignal,
-): Promise<{ ratings: Record<number, Record<RatingValue, number>> }> {
+): Promise<SeasonEpisodeRatingsResponse> {
   return fetchJson(`/ratings/season/${encodeURIComponent(titleId)}/${season}`, {
     signal,
   });
+}
+
+export async function getShowEpisodeRatings(
+  titleId: string,
+  signal?: AbortSignal,
+): Promise<ShowEpisodeRatingsResponse> {
+  return fetchJson(`/ratings/show/${encodeURIComponent(titleId)}`, { signal });
 }
 
 // ─── Recommendations ──────────────────────────────────────────────────────────

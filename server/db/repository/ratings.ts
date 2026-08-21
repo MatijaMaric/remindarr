@@ -1,4 +1,4 @@
-import { eq, and, sql, inArray, count } from "drizzle-orm";
+import { eq, and, sql, inArray, count, asc } from "drizzle-orm";
 import { getDb } from "../schema";
 import { ratings, episodeRatings, follows, users, episodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -219,6 +219,48 @@ export async function getFriendsEpisodeRatings(
       )
       .where(eq(episodeRatings.episodeId, episodeId))
       .all();
+  });
+}
+
+export type UserEpisodeRatingPoint = {
+  season: number;
+  episode: number;
+  rating: RatingValue;
+};
+
+/** Viewer's own episode ratings for a show, derived from episode_ratings. */
+export async function getUserTitleEpisodeRatings(
+  userId: string,
+  titleId: string,
+  seasonNumber?: number,
+): Promise<UserEpisodeRatingPoint[]> {
+  return traceDbQuery("getUserTitleEpisodeRatings", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        season: episodes.seasonNumber,
+        episode: episodes.episodeNumber,
+        rating: episodeRatings.rating,
+      })
+      .from(episodeRatings)
+      .innerJoin(episodes, eq(episodes.id, episodeRatings.episodeId))
+      .where(
+        and(
+          eq(episodeRatings.userId, userId),
+          eq(episodes.titleId, titleId),
+          seasonNumber !== undefined
+            ? eq(episodes.seasonNumber, seasonNumber)
+            : undefined,
+        ),
+      )
+      .orderBy(asc(episodes.seasonNumber), asc(episodes.episodeNumber))
+      .all();
+
+    return rows.map((row) => ({
+      season: row.season,
+      episode: row.episode,
+      rating: row.rating as RatingValue,
+    }));
   });
 }
 
