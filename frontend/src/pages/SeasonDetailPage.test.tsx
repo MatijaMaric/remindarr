@@ -524,7 +524,10 @@ describe("SeasonDetailPage", () => {
   });
 
   it("hides the sparkline when the viewer has no episode ratings", async () => {
-    mockUser = null;
+    apiMock.getSeasonEpisodeRatings.mockResolvedValue({
+      ratings: {},
+      user_ratings: [],
+    });
     render(<SeasonDetailPage />, { wrapper: Wrapper });
 
     await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
