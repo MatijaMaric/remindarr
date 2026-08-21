@@ -505,4 +505,29 @@ describe("SeasonDetailPage", () => {
     ).toBeDefined();
     expect(screen.getByRole("menuitem", { name: /share/i })).toBeDefined();
   });
+
+  it("renders a pacing sparkline above the episode list from user ratings", async () => {
+    apiMock.getSeasonEpisodeRatings.mockResolvedValue({
+      ratings: {},
+      user_ratings: [
+        { season: 1, episode: 1, rating: "LOVE" },
+        { season: 1, episode: 2, rating: "DISLIKE" },
+      ],
+    });
+
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("S1E1: LOVE")).toBeDefined());
+    expect(screen.getByText("S1E2: DISLIKE")).toBeDefined();
+    expect(screen.getByTestId("rating-sparkline")).toBeDefined();
+    expect(screen.getByText("Pacing")).toBeDefined();
+  });
+
+  it("hides the sparkline when the viewer has no episode ratings", async () => {
+    mockUser = null;
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+    expect(screen.queryByTestId("rating-sparkline")).toBeNull();
+  });
 });

@@ -751,6 +751,21 @@ export interface EpisodeRatingResponse {
   friends_ratings: FriendRating[];
 }
 
+export interface EpisodeRatingPoint {
+  season: number;
+  episode: number;
+  rating: RatingValue;
+}
+
+export interface SeasonEpisodeRatingsResponse {
+  ratings: Record<number, Record<RatingValue, number>>;
+  user_ratings: EpisodeRatingPoint[];
+}
+
+export interface ShowEpisodeRatingsResponse {
+  user_ratings: EpisodeRatingPoint[];
+}
+
 // ─── Recommendation Types ─────────────────────────────────────────────────────
 
 export interface Recommendation {

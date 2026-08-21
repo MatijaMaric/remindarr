@@ -20,6 +20,7 @@ import {
   getEpisodeRatings,
   getFriendsEpisodeRatings,
   getSeasonEpisodeRatings,
+  getUserTitleEpisodeRatings,
   getFriendsLovedThisWeek,
 } from "./ratings";
 import { getDb } from "../schema";
@@ -272,6 +273,51 @@ describe("getSeasonEpisodeRatings", () => {
   it("returns empty object when no ratings exist", async () => {
     const result = await getSeasonEpisodeRatings("show-1", 1);
     expect(Object.keys(result)).toHaveLength(0);
+  });
+});
+
+describe("getUserTitleEpisodeRatings", () => {
+  it("returns the viewer's ratings in season/episode order", async () => {
+    await rateEpisode(userA, episodeId2, "HATE");
+    await rateEpisode(userA, episodeId1, "LOVE");
+    await rateEpisode(userB, episodeId1, "LIKE");
+
+    const result = await getUserTitleEpisodeRatings(userA, "show-1");
+    expect(result).toEqual([
+      { season: 1, episode: 1, rating: "LOVE" },
+      { season: 1, episode: 2, rating: "HATE" },
+    ]);
+  });
+
+  it("filters to a single season when seasonNumber is set", async () => {
+    await upsertEpisodes([
+      {
+        title_id: "show-1",
+        season_number: 2,
+        episode_number: 1,
+        name: "S2E1",
+        overview: null,
+        air_date: "2025-01-01",
+        still_path: null,
+      },
+    ]);
+    const db = getDb();
+    const s2 = (
+      await db
+        .select({ id: episodes.id, seasonNumber: episodes.seasonNumber })
+        .from(episodes)
+        .all()
+    ).find((e) => e.seasonNumber === 2);
+    await rateEpisode(userA, episodeId1, "LIKE");
+    await rateEpisode(userA, s2!.id, "LOVE");
+
+    const season1 = await getUserTitleEpisodeRatings(userA, "show-1", 1);
+    expect(season1).toEqual([{ season: 1, episode: 1, rating: "LIKE" }]);
+  });
+
+  it("returns empty when the viewer has no ratings", async () => {
+    await rateEpisode(userB, episodeId1, "LOVE");
+    expect(await getUserTitleEpisodeRatings(userA, "show-1")).toEqual([]);
   });
 });
 

@@ -99,7 +99,8 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   rateEpisode: async () => ({}),
   unrateEpisode: async () => ({}),
   getEpisodeRating: async () => ({ rating: null }),
-  getSeasonEpisodeRatings: async () => ({ ratings: {} }),
+  getSeasonEpisodeRatings: async () => ({ ratings: {}, user_ratings: [] }),
+  getShowEpisodeRatings: async () => ({ user_ratings: [] }),
 
   // ── Calendar / episodes / details ─────────────────────────────────────────
   getCalendarTitles: async () => ({ titles: [] }),
