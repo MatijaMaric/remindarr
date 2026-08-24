@@ -48,9 +48,6 @@ describe("better-auth signup", () => {
     const response = await auth.handler(request);
     const data = await response.json();
 
-    console.log("Status:", response.status);
-    console.log("Response:", JSON.stringify(data, null, 2));
-
     expect(response.status).toBe(200);
     expect(data.user).toBeDefined();
     expect(data.user.username).toBe("testuser");
