@@ -817,3 +817,113 @@ describe("validation — crowded weeks", () => {
     expect(Array.isArray(body.issues)).toBe(true);
   });
 });
+
+// ─── Content advisory settings ───────────────────────────────────────────────
+
+describe("GET /user/settings/advisory", () => {
+  it("returns defaults for new user", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/advisory");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.level).toBe("none");
+    expect(body.allowlist).toEqual([]);
+  });
+});
+
+describe("PUT /user/settings/advisory", () => {
+  it("happy path: minimal body {} returns 200 with current settings", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/advisory", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.level).toBe("none");
+    expect(body.allowlist).toEqual([]);
+  });
+
+  it("saves advisory level", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/advisory", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ level: "strict" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.level).toBe("strict");
+
+    const getRes = await app.request("/user/settings/advisory");
+    const getBody = await getRes.json();
+    expect(getBody.level).toBe("strict");
+    expect(getBody.allowlist).toEqual([]);
+  });
+});
+
+describe("PUT /user/settings/advisory/allowlist", () => {
+  it("happy path: allowlists a title without changing the level", async () => {
+    const app = makeAuthedApp();
+    await app.request("/user/settings/advisory", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ level: "moderate" }),
+    });
+    const res = await app.request("/user/settings/advisory/allowlist", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ titleId: "movie-42", allowed: true }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.level).toBe("moderate");
+    expect(body.allowlist).toEqual(["movie-42"]);
+  });
+
+  it("removes a title from the allowlist", async () => {
+    const app = makeAuthedApp();
+    await app.request("/user/settings/advisory/allowlist", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ titleId: "tv-9", allowed: true }),
+    });
+    const res = await app.request("/user/settings/advisory/allowlist", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ titleId: "tv-9", allowed: false }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.allowlist).toEqual([]);
+  });
+});
+
+describe("validation — advisory", () => {
+  it("returns 400 + issues for invalid level", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/advisory", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ level: "kids" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 400 + issues for missing titleId on allowlist", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/user/settings/advisory/allowlist", {
+      method: "PUT",
+      headers: jsonHeaders(),
+      body: JSON.stringify({ allowed: true }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
+});

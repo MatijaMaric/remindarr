@@ -20,6 +20,8 @@ interface Props {
   showTags?: boolean;
   showProviderBadge?: boolean;
   showRating?: boolean;
+  /** Blur the poster (mild content advisory). */
+  blurred?: boolean;
 }
 
 /** Thin amber progress bar overlay showing watched/total episode progress. */
@@ -62,6 +64,7 @@ const TitleCard = memo(function TitleCard({
   showTags,
   showProviderBadge,
   showRating,
+  blurred,
 }: Props) {
   const [prevTitleId, setPrevTitleId] = useState(title.id);
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
@@ -105,7 +108,7 @@ const TitleCard = memo(function TitleCard({
             <img
               src={title.poster_url}
               alt={title.title}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover${blurred ? " blur-xl scale-110" : ""}`}
               loading="lazy"
               width={342}
               height={513}
@@ -117,6 +120,16 @@ const TitleCard = memo(function TitleCard({
             </div>
           )}
         </Link>
+        {blurred && (
+          <div
+            data-testid="advisory-blur"
+            className="absolute inset-0 bg-zinc-950/50 flex items-center justify-center pointer-events-none"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-100 bg-black/70 px-2 py-1 rounded">
+              {title.age_certification ?? "Sensitive"}
+            </span>
+          </div>
+        )}
         {showProviderBadge && title.offers?.[0]?.provider_name && (
           <span className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-zinc-100 font-mono text-[10px] font-semibold px-2 py-0.5 rounded">
             {title.offers[0].provider_name}

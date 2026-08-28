@@ -52,8 +52,8 @@ export default function PrivacyPolicyPage() {
             </li>
             <li>
               <strong>Preferences and settings:</strong> appearance, homepage
-              layout, notification preferences, and other configuration you
-              choose.
+              layout, content advisory level, notification preferences, and
+              other configuration you choose.
             </li>
             <li>
               <strong>Notifications:</strong> if you enable browser push

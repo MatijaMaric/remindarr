@@ -83,6 +83,14 @@ beforeEach(() => {
       crowdedWeekBadgeEnabled: 1,
       crowdedWeekThreshold: 5,
     } as any),
+    spyOn(api, "getAdvisorySettings").mockResolvedValue({
+      level: "none",
+      allowlist: [],
+    }),
+    spyOn(api, "updateAdvisorySettings").mockImplementation(async (data) => ({
+      level: data.level,
+      allowlist: [],
+    })),
   ];
 });
 
@@ -122,5 +130,29 @@ describe("AppearanceTab", () => {
         screen.getAllByRole("button", { pressed: true }).length,
       ).toBeGreaterThan(0);
     });
+  });
+
+  it("explains each content advisory level", async () => {
+    const client = newTestClient();
+    render(<AppearanceTab />, { wrapper: wrapper(client) });
+
+    await waitFor(() => {
+      expect(screen.getByText("Content advisory")).toBeDefined();
+    });
+    expect(screen.getByRole("radio", { name: /off/i })).toBeDefined();
+    expect(screen.getByRole("radio", { name: /mild/i })).toBeDefined();
+    expect(screen.getByRole("radio", { name: /moderate/i })).toBeDefined();
+    expect(screen.getByRole("radio", { name: /strict/i })).toBeDefined();
+    expect(
+      screen.getByText(/Hide or blur titles above a maturity threshold/i),
+    ).toBeDefined();
+    expect(
+      screen.getByText(/Blur titles rated R, TV-MA, or NC-17/i),
+    ).toBeDefined();
+    expect(
+      screen.getByText(/Hide titles rated R, TV-MA, or NC-17 from Calendar/i),
+    ).toBeDefined();
+    expect(screen.getByText(/Hide PG-13, TV-14, and above/i)).toBeDefined();
+    expect(screen.getByText(/Nothing is deleted/i)).toBeDefined();
   });
 });

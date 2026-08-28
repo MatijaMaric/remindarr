@@ -9,6 +9,7 @@ import {
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import type { Title } from "../types";
 import TitleCard from "./TitleCard";
+import { useContentAdvisory } from "../hooks/useContentAdvisory";
 
 /** Number of columns at each responsive breakpoint */
 const BREAKPOINT_COLS = { base: 3, sm: 3, md: 4, lg: 5, xl: 7 };
@@ -45,6 +46,8 @@ interface Props {
   /** Optional link shown when maxRows truncates the list */
   viewAllHref?: string;
   viewAllLabel?: string;
+  /** Hide titles above the user's content advisory threshold (Browse). */
+  applyContentAdvisory?: boolean;
 }
 
 function TitleListImpl({
@@ -63,15 +66,24 @@ function TitleListImpl({
   maxRows,
   viewAllHref,
   viewAllLabel,
+  applyContentAdvisory = false,
 }: Props) {
+  const { actionFor } = useContentAdvisory();
+  const visibleTitles = useMemo(() => {
+    if (!applyContentAdvisory) return titles;
+    return titles.filter(
+      (t) => actionFor(t.age_certification, t.id) !== "hide",
+    );
+  }, [titles, applyContentAdvisory, actionFor]);
+
   // Limit items to fill maxRows at the largest breakpoint (xl columns)
   const maxItems = maxRows ? maxRows * BREAKPOINT_COLS.xl : undefined;
   // Memoize the slice so a referentially-stable list doesn't produce a new array each render.
   const displayTitles = useMemo(
-    () => (maxItems ? titles.slice(0, maxItems) : titles),
-    [titles, maxItems],
+    () => (maxItems ? visibleTitles.slice(0, maxItems) : visibleTitles),
+    [visibleTitles, maxItems],
   );
-  const isTruncated = maxItems ? titles.length > maxItems : false;
+  const isTruncated = maxItems ? visibleTitles.length > maxItems : false;
   const shouldVirtualize = !maxRows && displayTitles.length > VIRTUAL_THRESHOLD;
 
   // Virtual scrolling — hooks must be called unconditionally
@@ -150,7 +162,7 @@ function TitleListImpl({
     ],
   );
 
-  if (titles.length === 0) {
+  if (visibleTitles.length === 0) {
     return (
       <div className="text-center py-12 text-zinc-500">{emptyMessage}</div>
     );
@@ -182,7 +194,15 @@ function TitleListImpl({
             >
               <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-4 pb-4">
                 {(rows[virtualRow.index] ?? []).map((title) => (
-                  <TitleCard key={title.id} title={title} {...cardProps} />
+                  <TitleCard
+                    key={title.id}
+                    title={title}
+                    blurred={
+                      applyContentAdvisory &&
+                      actionFor(title.age_certification, title.id) === "blur"
+                    }
+                    {...cardProps}
+                  />
                 ))}
               </div>
             </div>
@@ -194,7 +214,15 @@ function TitleListImpl({
           className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-4"
         >
           {displayTitles.map((title) => (
-            <TitleCard key={title.id} title={title} {...cardProps} />
+            <TitleCard
+              key={title.id}
+              title={title}
+              blurred={
+                applyContentAdvisory &&
+                actionFor(title.age_certification, title.id) === "blur"
+              }
+              {...cardProps}
+            />
           ))}
         </div>
       )}

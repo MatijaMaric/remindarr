@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "../../api";
 import type {
   HomepageSection,
@@ -8,12 +8,14 @@ import type {
   AccentColor,
   Density,
 } from "../../types";
+import { ADVISORY_LEVELS } from "../../lib/contentAdvisory";
+import { ADVISORY_QUERY_KEY } from "../../hooks/useContentAdvisory";
 import { DEFAULT_HOMEPAGE_LAYOUT } from "../../types";
 import { GripVertical, Eye, EyeOff } from "lucide-react";
 import ThemePicker from "../../components/ThemePicker";
 import AccentPicker from "../../components/AccentPicker";
 import DensityPicker from "../../components/DensityPicker";
-import { SCard, SSwitch } from "../../components/settings/kit";
+import { SCard, SSwitch, SRadioCard } from "../../components/settings/kit";
 import { useTheme } from "../../hooks/useTheme";
 import { applyAppearance } from "../../hooks/useAppearance";
 import { cn } from "@/lib/utils";
@@ -409,11 +411,70 @@ function CrowdedWeekSection() {
   );
 }
 
+function AdvisorySection() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [saved, setSaved] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data } = useQuery({
+    queryKey: ADVISORY_QUERY_KEY,
+    queryFn: ({ signal }) => api.getAdvisorySettings(signal),
+  });
+
+  if (!data) return null;
+
+  async function save(level: (typeof ADVISORY_LEVELS)[number]) {
+    try {
+      const next = await api.updateAdvisorySettings({ level });
+      qc.setQueryData(ADVISORY_QUERY_KEY, next);
+      setSaved(true);
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  return (
+    <SCard
+      title={t("settings.advisory.title")}
+      subtitle={t("settings.advisory.subtitle")}
+    >
+      <div
+        role="radiogroup"
+        aria-label={t("settings.advisory.title")}
+        className="flex flex-col gap-2"
+      >
+        {ADVISORY_LEVELS.map((level) => (
+          <SRadioCard
+            key={level}
+            asRadio
+            selected={data.level === level}
+            title={t(`settings.advisory.levels.${level}.label`)}
+            desc={t(`settings.advisory.levels.${level}.desc`)}
+            onClick={() => void save(level)}
+          />
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-zinc-500">
+        {t("settings.advisory.privacy")}
+      </p>
+      <div className="mt-3 min-h-[18px] font-mono text-[11px]">
+        {saved && (
+          <span className="text-emerald-400">{t("settings.saved")}</span>
+        )}
+      </div>
+    </SCard>
+  );
+}
+
 export default function AppearanceTab() {
   return (
     <>
       <ThemeSection />
       <AppearanceSection />
+      <AdvisorySection />
       <HomepageLayoutSection />
       <CrowdedWeekSection />
     </>

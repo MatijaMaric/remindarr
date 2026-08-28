@@ -21,6 +21,7 @@ import SectionErrorBoundary from "../../components/SectionErrorBoundary";
 import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
 import { useAuth } from "../../context/AuthContext";
 import * as api from "../../api";
+import ContentAdvisoryBanner from "../../components/ContentAdvisoryBanner";
 
 export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
   const { title, tmdb, country } = data;
@@ -50,6 +51,10 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
   return (
     <div className="space-y-8 pb-12 overflow-x-hidden">
+      <ContentAdvisoryBanner
+        titleId={title.id}
+        certification={title.age_certification}
+      />
       {/* Hero */}
       <ShowHero title={title} tmdb={tmdb} country={country} />
 

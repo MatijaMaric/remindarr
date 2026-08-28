@@ -238,6 +238,83 @@ export async function updateAppearanceSettings(
   });
 }
 
+export const ADVISORY_LEVELS = ["none", "mild", "moderate", "strict"] as const;
+export type AdvisoryLevel = (typeof ADVISORY_LEVELS)[number];
+
+const TITLE_ID_RE = /^(movie|tv)-\d+$/;
+const MAX_ALLOWLIST = 500;
+
+function parseAllowlist(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (id): id is string => typeof id === "string" && TITLE_ID_RE.test(id),
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function getAdvisorySettings(userId: string): Promise<{
+  level: AdvisoryLevel;
+  allowlist: string[];
+}> {
+  return traceDbQuery("getAdvisorySettings", async () => {
+    const db = getDb();
+    const row = await db
+      .select({
+        advisoryLevel: users.advisoryLevel,
+        advisoryAllowlist: users.advisoryAllowlist,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    const level = ADVISORY_LEVELS.includes(row?.advisoryLevel as AdvisoryLevel)
+      ? (row!.advisoryLevel as AdvisoryLevel)
+      : "none";
+    return { level, allowlist: parseAllowlist(row?.advisoryAllowlist) };
+  });
+}
+
+export async function setAdvisoryLevel(
+  userId: string,
+  level: AdvisoryLevel,
+): Promise<void> {
+  return traceDbQuery("setAdvisoryLevel", async () => {
+    const db = getDb();
+    await db
+      .update(users)
+      .set({ advisoryLevel: level })
+      .where(eq(users.id, userId))
+      .run();
+  });
+}
+
+export async function setAdvisoryAllowlisted(
+  userId: string,
+  titleId: string,
+  allowed: boolean,
+): Promise<void> {
+  return traceDbQuery("setAdvisoryAllowlisted", async () => {
+    const current = await getAdvisorySettings(userId);
+    const set = new Set(current.allowlist);
+    if (allowed) {
+      if (set.size >= MAX_ALLOWLIST && !set.has(titleId)) return;
+      set.add(titleId);
+    } else {
+      set.delete(titleId);
+    }
+    const db = getDb();
+    await db
+      .update(users)
+      .set({ advisoryAllowlist: JSON.stringify([...set]) })
+      .where(eq(users.id, userId))
+      .run();
+  });
+}
+
 export async function getUserByProviderSubject(
   authProvider: string,
   providerSubject: string,

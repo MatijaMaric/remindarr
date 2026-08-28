@@ -865,6 +865,7 @@ export default function BrowsePage() {
           <TitleList
             titles={searchResults}
             emptyMessage={t("browse.noResults")}
+            applyContentAdvisory
           />
         </div>
       ) : (

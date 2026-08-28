@@ -220,4 +220,48 @@ describe("TitleList", () => {
     expect(screen.getByTestId("title-grid")).toBeDefined();
     expect(screen.queryByTestId("virtual-list")).toBeNull();
   });
+
+  it("hides titles above the advisory threshold when applyContentAdvisory is set", () => {
+    const client = newTestClient();
+    client.setQueryData(["advisory-settings"], {
+      level: "moderate",
+      allowlist: ["movie-ok"],
+    });
+    const authed = {
+      ...mockAuthValue,
+      user: { id: "1", username: "test", display_name: null, is_admin: false },
+    };
+    function AuthedWrapper({ children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={client}>
+          <MemoryRouter>
+            <AuthContext value={authed as any}>{children}</AuthContext>
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    }
+    render(
+      <TitleList
+        applyContentAdvisory
+        titles={[
+          makeTitle("movie-pg", {
+            title: "Family Film",
+            age_certification: "PG",
+          }),
+          makeTitle("movie-r", {
+            title: "Brutal Film",
+            age_certification: "R",
+          }),
+          makeTitle("movie-ok", {
+            title: "Allowed R",
+            age_certification: "R",
+          }),
+        ]}
+      />,
+      { wrapper: AuthedWrapper },
+    );
+    expect(screen.getByText("Family Film")).toBeDefined();
+    expect(screen.getByText("Allowed R")).toBeDefined();
+    expect(screen.queryByText("Brutal Film")).toBeNull();
+  });
 });

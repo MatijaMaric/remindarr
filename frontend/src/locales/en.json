@@ -520,6 +520,29 @@
       "autoplayTrailers": "Auto-play trailers",
       "autoplayTrailersDesc": "Plays title trailers in the hero banner automatically."
     },
+    "advisory": {
+      "title": "Content advisory",
+      "subtitle": "Hide or blur titles above a maturity threshold. Nothing is deleted — filtering happens on your device from TMDB certifications.",
+      "privacy": "Per-title exceptions stay in your account and never turn the filter off for other titles.",
+      "levels": {
+        "none": {
+          "label": "Off",
+          "desc": "Show every title. No posters are blurred or hidden."
+        },
+        "mild": {
+          "label": "Mild",
+          "desc": "Blur titles rated R, TV-MA, or NC-17. Click through to view. G, PG, and PG-13 stay clear."
+        },
+        "moderate": {
+          "label": "Moderate",
+          "desc": "Hide titles rated R, TV-MA, or NC-17 from Calendar, Browse, and Reels. PG-13 and below stay visible."
+        },
+        "strict": {
+          "label": "Strict",
+          "desc": "Hide PG-13, TV-14, and above. Only G, PG, TV-Y, TV-G, and TV-PG remain on Calendar, Browse, and Reels."
+        }
+      }
+    },
     "saved": "Saved",
     "homepage": {
       "title": "Homepage Layout",
@@ -723,5 +746,15 @@
   "pacing": {
     "label": "Pacing",
     "aria": "Episode rating pacing"
+  },
+  "advisory": {
+    "unrated": "Unrated",
+    "banner": {
+      "filtered": "This title is rated {{cert}} — above your content advisory level.",
+      "allowed": "Always showing this title. Your content advisory is still on for everything else.",
+      "notRemoved": "Nothing is removed from your library. This only hides or blurs titles on Calendar, Browse, and Reels.",
+      "alwaysShow": "Always show this title",
+      "stopAlwaysShow": "Stop always showing"
+    }
   }
 }

@@ -153,6 +153,9 @@ export {
   updateCrowdedWeekSettings,
   getAppearanceSettings,
   updateAppearanceSettings,
+  getAdvisorySettings,
+  setAdvisoryLevel,
+  setAdvisoryAllowlisted,
 } from "./users";
 
 export {

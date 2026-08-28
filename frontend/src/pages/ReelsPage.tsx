@@ -19,6 +19,7 @@ import ReelsCard from "../components/ReelsCard";
 import type { UndoInfo } from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
 import { ReelsSkeleton } from "../components/SkeletonComponents";
+import { useContentAdvisory } from "../hooks/useContentAdvisory";
 
 // ─── Source types ──────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ export function normalizeMovieToReelItem(movie: {
   release_date: string | null;
   release_year: number | null;
   poster_url: string | null;
+  age_certification?: string | null;
   offers: { url: string; provider_name: string }[];
 }): Episode {
   return {
@@ -67,6 +69,7 @@ export function normalizeMovieToReelItem(movie: {
     still_path: null,
     show_title: movie.title,
     poster_url: movie.poster_url,
+    age_certification: movie.age_certification ?? null,
     offers: movie.offers as Episode["offers"],
   };
 }
@@ -92,6 +95,7 @@ export function normalizeToReelItem(
       still_path: null,
       show_title: rec.title.title,
       poster_url: rec.title.poster_url,
+      age_certification: null,
     };
   }
   // SearchTitle shape
@@ -107,6 +111,7 @@ export function normalizeToReelItem(
     still_path: null,
     show_title: t.title,
     poster_url: t.poster_url,
+    age_certification: t.age_certification,
     offers: t.offers,
   };
 }
@@ -239,6 +244,8 @@ export default function ReelsPage() {
     ? (rawSource as ReelsSource)
     : "coming-soon";
 
+  const { actionFor } = useContentAdvisory();
+
   const qc = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<ShowCard[]>([]);
@@ -291,10 +298,15 @@ export default function ReelsPage() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (reelsData) {
-      setCards(reelsData.cards);
+      setCards(
+        reelsData.cards.filter((c) => {
+          const cert = c.episodes[0]?.age_certification;
+          return actionFor(cert, c.titleId) !== "hide";
+        }),
+      );
       setFriendsLovedEmpty(reelsData.friendsLovedEmpty);
     }
-  }, [reelsData]);
+  }, [reelsData, actionFor]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Track visible card via scroll position
@@ -840,6 +852,12 @@ export default function ReelsPage() {
               total={cards.length}
               undoInfo={getUndoInfo(card.titleId)}
               isMovie={card.isMovie}
+              blurred={
+                actionFor(
+                  card.episodes[card.currentIndex]?.age_certification,
+                  card.titleId,
+                ) === "blur"
+              }
             />
           ))}
 
@@ -860,6 +878,12 @@ export default function ReelsPage() {
               total={cards.length}
               undoInfo={getUndoInfo(cards[0].titleId)}
               isMovie={cards[0].isMovie}
+              blurred={
+                actionFor(
+                  cards[0].episodes[cards[0].currentIndex]?.age_certification,
+                  cards[0].titleId,
+                ) === "blur"
+              }
             />
           )}
         </div>

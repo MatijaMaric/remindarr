@@ -354,6 +354,7 @@ export async function getReleasedUnwatchedTrackedMovies(userId: string) {
         release_date: titles.releaseDate,
         release_year: titles.releaseYear,
         poster_url: titles.posterUrl,
+        age_certification: titles.ageCertification,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))
@@ -390,6 +391,7 @@ export async function getUpcomingTrackedMoviesOpen(userId: string) {
         release_date: titles.releaseDate,
         release_year: titles.releaseYear,
         poster_url: titles.posterUrl,
+        age_certification: titles.ageCertification,
       })
       .from(tracked)
       .innerJoin(titles, eq(titles.id, tracked.titleId))

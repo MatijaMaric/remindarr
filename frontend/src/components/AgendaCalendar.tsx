@@ -25,6 +25,7 @@ import { getISOWeekKey } from "../lib/isoWeek";
 import TitleCard from "../components/TitleCard";
 import { DeckCardWrapper } from "../components/EpisodeShowCard";
 import type { Title, Episode } from "../types";
+import { useContentAdvisory } from "../hooks/useContentAdvisory";
 import { CalendarSkeleton } from "../components/SkeletonComponents";
 import {
   formatEpisodeCode,
@@ -302,6 +303,7 @@ function AgendaCalendarImpl({
   setSearchParams,
 }: AgendaCalendarProps) {
   const { t } = useTranslation();
+  const { actionFor } = useContentAdvisory();
   const [typeFilter, setTypeFilter] = useCalendarParam(
     searchParams,
     setSearchParams,
@@ -548,6 +550,7 @@ function AgendaCalendarImpl({
     for (const m of months) {
       for (const t of m.titles) {
         if (!t.release_date) continue;
+        if (actionFor(t.age_certification, t.id) === "hide") continue;
         const arr = byDate.get(t.release_date);
         if (arr) arr.push({ type: "title", data: t });
         else byDate.set(t.release_date, [{ type: "title", data: t }]);
@@ -555,6 +558,7 @@ function AgendaCalendarImpl({
       for (const ep of m.episodes) {
         if (!ep.air_date) continue;
         if (hideWatched && ep.is_watched) continue;
+        if (actionFor(ep.age_certification, ep.title_id) === "hide") continue;
         const arr = byDate.get(ep.air_date);
         if (arr) arr.push({ type: "episode", data: ep });
         else byDate.set(ep.air_date, [{ type: "episode", data: ep }]);
@@ -564,7 +568,7 @@ function AgendaCalendarImpl({
     return new Map(
       [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)),
     );
-  }, [months, hideWatched]);
+  }, [months, hideWatched, actionFor]);
 
   // All date keys with content (for sidebar)
   const contentDates = useMemo(() => [...agendaItems.keys()], [agendaItems]);
@@ -1032,7 +1036,14 @@ function AgendaCalendarImpl({
                           {dayTitles.length > 0 && (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                               {dayTitles.map((t) => (
-                                <TitleCard key={t.id} title={t} />
+                                <TitleCard
+                                  key={t.id}
+                                  title={t}
+                                  blurred={
+                                    actionFor(t.age_certification, t.id) ===
+                                    "blur"
+                                  }
+                                />
                               ))}
                             </div>
                           )}
