@@ -261,6 +261,7 @@ export default function CategoryBrowse({
             emptyMessage="No titles found."
             showProviderBadge={showProviderBadge}
             showRating={showRating}
+            applyContentAdvisory
           />
           {errorMessage && (
             <div className="text-center py-4 text-red-400">

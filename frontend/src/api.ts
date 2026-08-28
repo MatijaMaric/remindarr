@@ -34,6 +34,7 @@ import type {
   OverlapResponse,
   FriendsLovedItem,
   AppearanceSettings,
+  ContentAdvisorySettings,
   UserSubscriptions,
   SuggestionsAggregateResponse,
   AchievementDef,
@@ -1264,6 +1265,31 @@ export async function updateAppearanceSettings(
   return fetchJson("/user/settings/appearance", {
     method: "PUT",
     body: JSON.stringify(settings),
+  });
+}
+
+export async function getAdvisorySettings(
+  signal?: AbortSignal,
+): Promise<ContentAdvisorySettings> {
+  return fetchJson("/user/settings/advisory", { signal });
+}
+
+export async function updateAdvisorySettings(data: {
+  level: ContentAdvisorySettings["level"];
+}): Promise<ContentAdvisorySettings> {
+  return fetchJson("/user/settings/advisory", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateAdvisoryAllowlist(
+  titleId: string,
+  allowed: boolean,
+): Promise<ContentAdvisorySettings> {
+  return fetchJson("/user/settings/advisory/allowlist", {
+    method: "PUT",
+    body: JSON.stringify({ titleId, allowed }),
   });
 }
 

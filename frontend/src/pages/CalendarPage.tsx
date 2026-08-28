@@ -26,6 +26,7 @@ import {
 } from "../api";
 import { getISOWeekKey } from "../lib/isoWeek";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useContentAdvisory } from "../hooks/useContentAdvisory";
 import TitleCard from "../components/TitleCard";
 import type { Title, Episode } from "../types";
 import { GridCalendarSkeleton } from "../components/SkeletonComponents";
@@ -117,6 +118,7 @@ export function SlideOverPanel({
   onToggleTitleWatched?: (id: string, watched: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const { actionFor } = useContentAdvisory();
   const today = formatDateKey(new Date());
   const dateLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(
     undefined,
@@ -284,7 +286,10 @@ export function SlideOverPanel({
             <div className="grid grid-cols-2 gap-3">
               {titles.map((t) => (
                 <div key={t.id} className="relative">
-                  <TitleCard title={t} />
+                  <TitleCard
+                    title={t}
+                    blurred={actionFor(t.age_certification, t.id) === "blur"}
+                  />
                   {t.object_type === "MOVIE" &&
                     t.is_watched !== undefined &&
                     onToggleTitleWatched && (
@@ -401,10 +406,13 @@ function MobileCalendar({
         getCalendarTitles({ month: formatMonth(currentMonth) }, signal),
       enabled: mobileView === "month",
     });
-  const episodes = useMemo(
-    () => mobileCalData?.episodes ?? [],
-    [mobileCalData],
-  );
+  const { actionFor } = useContentAdvisory();
+  const episodes = useMemo(() => {
+    const raw = mobileCalData?.episodes ?? [];
+    return raw.filter(
+      (ep) => actionFor(ep.age_certification, ep.title_id) !== "hide",
+    );
+  }, [mobileCalData, actionFor]);
 
   const dotDates = useMemo(() => {
     const set = new Set<string>();
@@ -655,8 +663,17 @@ function GridCalendar({
   const crowdedWeekThreshold = crowdedWeekData?.crowdedWeekThreshold ?? 5;
   const crowdedWeekBadgeEnabled =
     (crowdedWeekData?.crowdedWeekBadgeEnabled ?? 1) !== 0;
-  const titles = useMemo(() => calendarData?.titles ?? [], [calendarData]);
-  const episodes = useMemo(() => calendarData?.episodes ?? [], [calendarData]);
+  const { actionFor } = useContentAdvisory();
+  const titles = useMemo(() => {
+    const raw = calendarData?.titles ?? [];
+    return raw.filter((t) => actionFor(t.age_certification, t.id) !== "hide");
+  }, [calendarData, actionFor]);
+  const episodes = useMemo(() => {
+    const raw = calendarData?.episodes ?? [];
+    return raw.filter(
+      (ep) => actionFor(ep.age_certification, ep.title_id) !== "hide",
+    );
+  }, [calendarData, actionFor]);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -1228,6 +1245,7 @@ function WeekCalendar({
 
   const weekQ0Data = weekQueries[0]?.data;
   const weekQ1Data = weekQueries[1]?.data;
+  const { actionFor } = useContentAdvisory();
   const { titles, episodes } = useMemo(() => {
     const allTitles: Title[] = [];
     const allEpisodes: Episode[] = [];
@@ -1243,15 +1261,15 @@ function WeekCalendar({
       titles: allTitles.filter((t) => {
         if (seenTitles.has(t.id)) return false;
         seenTitles.add(t.id);
-        return true;
+        return actionFor(t.age_certification, t.id) !== "hide";
       }),
       episodes: allEpisodes.filter((e) => {
         if (seenEps.has(e.id)) return false;
         seenEps.add(e.id);
-        return true;
+        return actionFor(e.age_certification, e.title_id) !== "hide";
       }),
     };
-  }, [weekQ0Data, weekQ1Data]);
+  }, [weekQ0Data, weekQ1Data, actionFor]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();

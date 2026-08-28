@@ -84,6 +84,7 @@ export interface Episode {
   show_title: string;
   poster_url: string | null;
   backdrop_url?: string | null;
+  age_certification?: string | null;
   is_watched?: boolean;
   offers?: Offer[];
   total_episodes?: number;
@@ -850,6 +851,11 @@ export interface AppearanceSettings {
   highContrast: number;
   hideEpisodeSpoilers: number;
   autoplayTrailers: number;
+}
+
+export interface ContentAdvisorySettings {
+  level: "none" | "mild" | "moderate" | "strict";
+  allowlist: string[];
 }
 
 // ─── Trending (home screen) ───────────────────────────────────────────────────

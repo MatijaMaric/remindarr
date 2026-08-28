@@ -200,6 +200,8 @@ export const users = sqliteTable(
     hideEpisodeSpoilers: integer("hide_episode_spoilers").notNull().default(0),
     autoplayTrailers: integer("autoplay_trailers").notNull().default(0),
     onlyMineFilter: integer("only_mine_filter").notNull().default(0),
+    advisoryLevel: text("advisory_level").notNull().default("none"),
+    advisoryAllowlist: text("advisory_allowlist").notNull().default("[]"),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(

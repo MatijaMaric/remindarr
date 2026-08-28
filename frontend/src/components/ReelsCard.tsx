@@ -90,6 +90,7 @@ interface ReelsCardProps {
   total: number;
   undoInfo?: UndoInfo;
   isMovie?: boolean;
+  blurred?: boolean;
 }
 
 export default function ReelsCard({
@@ -100,6 +101,7 @@ export default function ReelsCard({
   total,
   undoInfo,
   isMovie,
+  blurred,
 }: ReelsCardProps) {
   const bgUrl = getBackgroundImageUrl(episode);
   const airDateFormatted = formatAirDate(episode.air_date);
@@ -121,13 +123,23 @@ export default function ReelsCard({
         <img
           src={bgUrl}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full object-cover${blurred ? " blur-xl scale-110" : ""}`}
           loading="lazy"
           width={1280}
           height={720}
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950" />
+      )}
+      {blurred && (
+        <div
+          data-testid="advisory-blur"
+          className="absolute inset-0 bg-zinc-950/40 flex items-center justify-center pointer-events-none z-[1]"
+        >
+          <span className="text-xs font-bold uppercase tracking-wide text-zinc-100 bg-black/70 px-3 py-1.5 rounded">
+            {episode.age_certification ?? "Sensitive"}
+          </span>
+        </div>
       )}
 
       {/* Gradient overlays */}

@@ -14,6 +14,9 @@ import {
   getOnlyMineFilter,
   setOnlyMineFilter,
   filterValidProviderIds,
+  getAdvisorySettings,
+  setAdvisoryLevel,
+  setAdvisoryAllowlisted,
 } from "../db/repository";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
@@ -326,6 +329,42 @@ app.put(
     const { onlyMine } = c.req.valid("json");
     await setOnlyMineFilter(user.id, onlyMine);
     return ok(c, { onlyMine });
+  },
+);
+
+// ─── Content advisory ─────────────────────────────────────────────────────────
+
+const ADVISORY_LEVELS = ["none", "mild", "moderate", "strict"] as const;
+
+const updateAdvisorySchema = z.object({
+  level: z.enum(ADVISORY_LEVELS).optional(),
+});
+
+const updateAllowlistSchema = z.object({
+  titleId: z.string().regex(/^(movie|tv)-\d+$/),
+  allowed: z.boolean(),
+});
+
+app.get("/advisory", async (c) => {
+  const user = c.get("user")!;
+  return ok(c, await getAdvisorySettings(user.id));
+});
+
+app.put("/advisory", zValidator("json", updateAdvisorySchema), async (c) => {
+  const user = c.get("user")!;
+  const { level } = c.req.valid("json");
+  if (level) await setAdvisoryLevel(user.id, level);
+  return ok(c, await getAdvisorySettings(user.id));
+});
+
+app.put(
+  "/advisory/allowlist",
+  zValidator("json", updateAllowlistSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { titleId, allowed } = c.req.valid("json");
+    await setAdvisoryAllowlisted(user.id, titleId, allowed);
+    return ok(c, await getAdvisorySettings(user.id));
   },
 );
 

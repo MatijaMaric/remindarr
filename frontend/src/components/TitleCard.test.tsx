@@ -491,4 +491,11 @@ describe("TitleCard", () => {
     // Real TrackButton renders a button with text "Tracked" when is_tracked=true
     expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
   });
+
+  it("blurs the poster when the advisory overlay is requested", () => {
+    const title = makeTitle({ age_certification: "R" });
+    render(<TitleCard title={title} blurred />, { wrapper: Wrapper });
+    expect(screen.getByTestId("advisory-blur")).toBeDefined();
+    expect(screen.getByText("R")).toBeDefined();
+  });
 });

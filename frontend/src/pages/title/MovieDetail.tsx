@@ -26,6 +26,7 @@ import SectionErrorBoundary from "../../components/SectionErrorBoundary";
 import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
 import CollectionRow from "../../components/title-detail/CollectionRow";
 import EditWatchedAtDialog from "../../components/EditWatchedAtDialog";
+import ContentAdvisoryBanner from "../../components/ContentAdvisoryBanner";
 
 export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { t } = useTranslation();
@@ -184,6 +185,10 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
 
   return (
     <div className="space-y-8 pb-12 overflow-x-hidden">
+      <ContentAdvisoryBanner
+        titleId={title.id}
+        certification={title.age_certification}
+      />
       {/* Hero */}
       <MovieHero
         title={title}

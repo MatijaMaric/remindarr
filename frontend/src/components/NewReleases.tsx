@@ -138,6 +138,7 @@ export default function NewReleases({
           emptyMessage={t("releases.empty")}
           showProviderBadge={showProviderBadge}
           showRating={showRating}
+          applyContentAdvisory
         />
       )}
     </div>

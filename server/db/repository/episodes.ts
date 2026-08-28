@@ -87,6 +87,7 @@ export async function getEpisodesByMonth(
         show_original_title: titles.originalTitle,
         poster_url: titles.posterUrl,
         backdrop_url: titles.backdropUrl,
+        age_certification: titles.ageCertification,
         is_watched: sql<boolean>`EXISTS(
           SELECT 1 FROM watched_episodes we
           WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
@@ -140,6 +141,7 @@ export async function getEpisodesByDateRange(
         show_original_title: titles.originalTitle,
         poster_url: titles.posterUrl,
         backdrop_url: titles.backdropUrl,
+        age_certification: titles.ageCertification,
         notification_mode: tracked.notificationMode,
         snooze_until: tracked.snoozeUntil,
         is_watched: sql<boolean>`EXISTS(
@@ -205,6 +207,7 @@ export async function getUnwatchedEpisodesWithMeta(
         show_original_title: titles.originalTitle,
         poster_url: titles.posterUrl,
         backdrop_url: titles.backdropUrl,
+        age_certification: titles.ageCertification,
         total_episodes: sql<number>`(
           SELECT COUNT(*) FROM episodes e2
           WHERE e2.title_id = ${episodes.titleId}
