@@ -132,6 +132,31 @@ describe("sessions.impersonated_by column (issue #1025)", () => {
   });
 });
 
+/**
+ * Drizzle's SQLite migrator only applies journal entries whose `when` is
+ * greater than `MAX(created_at)` in `__drizzle_migrations`. A new entry with a
+ * `when` below an already-applied one is silently skipped forever on the
+ * Bun/Docker deploy path, leaving schema.ts and the DB out of sync.
+ *
+ * History already contains non-monotonic entries (see `fixSkippedMigrations`
+ * in bun-db.ts), so this only guards the newest entry — the one a PR adds.
+ */
+describe("journal ordering", () => {
+  it("the newest entry's `when` exceeds every earlier entry's", () => {
+    const journal = JSON.parse(
+      fs.readFileSync(path.join(MIGRATIONS_DIR, "meta/_journal.json"), "utf-8"),
+    ) as { entries: { idx: number; when: number; tag: string }[] };
+
+    const entries = journal.entries;
+    const newest = entries[entries.length - 1]!;
+    const maxEarlier = entries
+      .slice(0, -1)
+      .reduce((max, e) => (e.when > max.when ? e : max));
+
+    expect(newest.when).toBeGreaterThan(maxEarlier.when);
+  });
+});
+
 describe("0043 consolidate duplicate providers", () => {
   it("merges offers/user_subscribed_providers and deletes duplicate provider rows", () => {
     const db = new Database(":memory:");
