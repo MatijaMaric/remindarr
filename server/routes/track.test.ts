@@ -826,6 +826,27 @@ describe("PATCH /track/:id/status", () => {
     });
     expect(res.status).toBe(401);
   });
+
+  it("rejects an oversized :id param (regression: param zValidator was missing)", async () => {
+    const longId = "x".repeat(129);
+    const routes = [
+      { path: `/track/${longId}/visibility`, body: { public: true } },
+      { path: `/track/${longId}/status`, body: { status: "on_hold" } },
+      { path: `/track/${longId}/notes`, body: { notes: "hi" } },
+      { path: `/track/${longId}/tags`, body: { tags: [] } },
+      { path: `/track/${longId}/notification`, body: { mode: "all" } },
+      { path: `/track/${longId}/snooze`, body: { until: null } },
+      { path: `/track/${longId}/remind-on-release`, body: { enabled: false } },
+    ];
+    for (const { path, body } of routes) {
+      const res = await app.request(path, {
+        method: "PATCH",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      expect(res.status).toBe(400);
+    }
+  });
 });
 
 describe("PATCH /track/:id/notification", () => {

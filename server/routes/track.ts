@@ -515,45 +515,61 @@ app.patch("/visibility", zValidator("json", visibilitySchema), async (c) => {
 
 app.patch(
   "/:id/visibility",
+  zValidator("param", titleIdParamSchema),
   zValidator("json", visibilitySchema),
   async (c) => {
     const user = c.get("user")!;
-    const titleId = c.req.param("id");
+    const { id: titleId } = c.req.valid("param");
     const { public: isPublic } = c.req.valid("json");
     await updateTrackedVisibility(titleId, user.id, isPublic);
     return ok(c, { message: "Visibility updated" });
   },
 );
 
-app.patch("/:id/status", zValidator("json", statusSchema), async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("id");
-  const { status } = c.req.valid("json");
-  await updateTrackedStatus(titleId, user.id, status as UserStatus | null);
-  return ok(c, { message: "Status updated" });
-});
+app.patch(
+  "/:id/status",
+  zValidator("param", titleIdParamSchema),
+  zValidator("json", statusSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id: titleId } = c.req.valid("param");
+    const { status } = c.req.valid("json");
+    await updateTrackedStatus(titleId, user.id, status as UserStatus | null);
+    return ok(c, { message: "Status updated" });
+  },
+);
 
-app.patch("/:id/notes", zValidator("json", notesSchema), async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("id");
-  const { notes } = c.req.valid("json");
-  await updateTrackedNotes(titleId, user.id, notes);
-  return ok(c, { message: "Notes updated" });
-});
+app.patch(
+  "/:id/notes",
+  zValidator("param", titleIdParamSchema),
+  zValidator("json", notesSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id: titleId } = c.req.valid("param");
+    const { notes } = c.req.valid("json");
+    await updateTrackedNotes(titleId, user.id, notes);
+    return ok(c, { message: "Notes updated" });
+  },
+);
 
-app.patch("/:id/tags", zValidator("json", tagsSchema), async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("id");
-  const { tags } = c.req.valid("json");
-  // Normalize: trim, lowercase, deduplicate
-  const normalized = [
-    ...new Set(
-      tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0),
-    ),
-  ];
-  await setTags(user.id, titleId, normalized);
-  return ok(c, { message: "Tags updated" });
-});
+app.patch(
+  "/:id/tags",
+  zValidator("param", titleIdParamSchema),
+  zValidator("json", tagsSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id: titleId } = c.req.valid("param");
+    const { tags } = c.req.valid("json");
+    // Normalize: trim, lowercase, deduplicate
+    const normalized = [
+      ...new Set(
+        tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0),
+      ),
+    ];
+    await setTags(user.id, titleId, normalized);
+    return ok(c, { message: "Tags updated" });
+  },
+);
 
 app.delete("/:id", zValidator("param", titleIdParamSchema), async (c) => {
   const user = c.get("user")!;
@@ -564,10 +580,11 @@ app.delete("/:id", zValidator("param", titleIdParamSchema), async (c) => {
 
 app.patch(
   "/:id/notification",
+  zValidator("param", titleIdParamSchema),
   zValidator("json", notificationModeSchema),
   async (c) => {
     const user = c.get("user")!;
-    const titleId = c.req.param("id");
+    const { id: titleId } = c.req.valid("param");
     const { mode } = c.req.valid("json");
     await updateNotificationMode(
       titleId,
@@ -578,21 +595,27 @@ app.patch(
   },
 );
 
-app.patch("/:id/snooze", zValidator("json", snoozeSchema), async (c) => {
-  const user = c.get("user")!;
-  const titleId = c.req.param("id");
-  const { until } = c.req.valid("json");
-  await setSnooze(titleId, user.id, until);
-  log.info("Snooze updated", { titleId, userId: user.id, until });
-  return ok(c, { success: true });
-});
+app.patch(
+  "/:id/snooze",
+  zValidator("param", titleIdParamSchema),
+  zValidator("json", snoozeSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { id: titleId } = c.req.valid("param");
+    const { until } = c.req.valid("json");
+    await setSnooze(titleId, user.id, until);
+    log.info("Snooze updated", { titleId, userId: user.id, until });
+    return ok(c, { success: true });
+  },
+);
 
 app.patch(
   "/:id/remind-on-release",
+  zValidator("param", titleIdParamSchema),
   zValidator("json", remindOnReleaseSchema),
   async (c) => {
     const user = c.get("user")!;
-    const titleId = c.req.param("id");
+    const { id: titleId } = c.req.valid("param");
     const { enabled } = c.req.valid("json");
     await setRemindOnRelease(titleId, user.id, enabled);
 
