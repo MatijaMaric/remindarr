@@ -5,6 +5,7 @@ import {
   waitFor,
   cleanup,
   fireEvent,
+  within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -380,4 +381,109 @@ describe("TrackedPage select mode", () => {
       ).toBeNull(),
     );
   });
+});
+
+const sortCases = [
+  ["last_aired", ["Zulu", "Alpha", "Bravo"]],
+  ["title", ["Alpha", "Bravo", "Zulu"]],
+  ["rating", ["Alpha", "Zulu", "Bravo"]],
+  ["progress", ["Bravo", "Alpha", "Zulu"]],
+] as const;
+
+function sortableShows(status: string) {
+  return [
+    makeShow(`${status}-z`, status, {
+      title: "Zulu",
+      imdb_score: 8,
+      total_episodes: 10,
+      watched_episodes_count: 2,
+      latest_released_air_date: "2026-01-03",
+      next_episode_air_date: "2026-02-03",
+    }),
+    makeShow(`${status}-a`, status, {
+      title: "Alpha",
+      imdb_score: 9,
+      total_episodes: 10,
+      watched_episodes_count: 4,
+      latest_released_air_date: "2026-01-02",
+      next_episode_air_date: "2026-02-02",
+    }),
+    makeShow(`${status}-b`, status, {
+      title: "Bravo",
+      imdb_score: 7,
+      total_episodes: 10,
+      watched_episodes_count: 9,
+      latest_released_air_date: "2026-01-01",
+      next_episode_air_date: "2026-02-01",
+    }),
+  ];
+}
+
+describe("TrackedPage sorting", () => {
+  it.each(sortCases)(
+    "applies %s within every All Grid group",
+    async (sort, order) => {
+      const movies = sortableShows("movie").map((title) => ({
+        ...title,
+        object_type: "MOVIE",
+        show_status: undefined,
+      }));
+      const titles = [
+        ...sortableShows("watching"),
+        ...sortableShows("caught_up"),
+        ...movies,
+      ];
+      apiMock.getTrackedTitles.mockImplementation(() =>
+        Promise.resolve({ titles, count: titles.length }),
+      );
+      render(<TrackedPage />, { wrapper: Wrapper });
+      await screen.findAllByRole("link", { name: "Alpha" });
+      fireEvent.click(screen.getByRole("button", { name: "Grid" }));
+      fireEvent.change(screen.getByRole("combobox"), {
+        target: { value: sort },
+      });
+      for (const name of [
+        "Currently Watching (3)",
+        "Caught Up (3)",
+        "Movies (3)",
+      ]) {
+        const group = screen.getByRole("heading", { name }).parentElement!;
+        expect(
+          within(group)
+            .getAllByRole("article")
+            .map((card) => card.getAttribute("aria-label")),
+        ).toEqual([...order]);
+      }
+    },
+  );
+
+  it.each(sortCases)(
+    "keeps %s ordering when switching between List and filtered/unfiltered Grid",
+    async (sort, order) => {
+      const titles = sortableShows("watching");
+      apiMock.getTrackedTitles.mockImplementation(() =>
+        Promise.resolve({ titles, count: titles.length }),
+      );
+      render(<TrackedPage />, { wrapper: Wrapper });
+      await screen.findAllByRole("link", { name: "Alpha" });
+      fireEvent.change(screen.getByRole("combobox"), {
+        target: { value: sort },
+      });
+      const rowOrder = () =>
+        screen
+          .getAllByRole("link", { name: /^(Zulu|Alpha|Bravo)$/ })
+          .map((link) => link.textContent);
+      expect(rowOrder()).toEqual([...order]);
+      fireEvent.click(screen.getByRole("button", { name: "Grid" }));
+      const cardOrder = () =>
+        screen
+          .getAllByRole("article")
+          .map((card) => card.getAttribute("aria-label"));
+      expect(cardOrder()).toEqual([...order]);
+      fireEvent.click(screen.getByRole("tab", { name: /^Watching/ }));
+      expect(cardOrder()).toEqual([...order]);
+      fireEvent.click(screen.getByRole("button", { name: "List" }));
+      expect(rowOrder()).toEqual([...order]);
+    },
+  );
 });
