@@ -131,6 +131,7 @@ export const episodes = sqliteTable(
     overview: text("overview"),
     airDate: text("air_date"),
     stillPath: text("still_path"),
+    runtimeMinutes: integer("runtime_minutes"),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
   (table) => [

@@ -15,6 +15,7 @@ function emptyReview(overrides: Partial<YearInReview> = {}): YearInReview {
     watch_time_minutes: 0,
     watch_time_minutes_movies: 0,
     watch_time_minutes_shows: 0,
+    watch_time_unknown_episodes: 0,
     top_genres: [],
     top_providers: [],
     top_shows: [],

@@ -1,6 +1,10 @@
 import { sql } from "drizzle-orm";
+import { episodeRuntime } from "./episode-runtime";
+
 import { getDb } from "../schema";
 import { traceDbQuery } from "../../tracing";
+
+const runtime = episodeRuntime(sql`e.runtime_minutes`, sql`ti.runtime_minutes`);
 
 export interface StatsOverview {
   tracked_movies: number;
@@ -10,6 +14,7 @@ export interface StatsOverview {
   watch_time_minutes: number;
   watch_time_minutes_movies: number;
   watch_time_minutes_shows: number;
+  watch_time_unknown_episodes: number;
 }
 
 export interface GenreCount {
@@ -53,10 +58,14 @@ export async function getStatsOverview(userId: string): Promise<StatsOverview> {
         (SELECT COALESCE(SUM(ti.runtime_minutes), 0) FROM watched_titles wt
          INNER JOIN titles ti ON ti.id = wt.title_id
          WHERE wt.user_id = ${userId} AND ti.runtime_minutes IS NOT NULL) AS watch_time_minutes_movies,
-        (SELECT COALESCE(SUM(ti.runtime_minutes), 0) FROM watched_episodes we
+        (SELECT COALESCE(SUM(${runtime}), 0) FROM watched_episodes we
          INNER JOIN episodes e ON e.id = we.episode_id
          INNER JOIN titles ti ON ti.id = e.title_id
-         WHERE we.user_id = ${userId} AND ti.runtime_minutes IS NOT NULL) AS watch_time_minutes_shows
+         WHERE we.user_id = ${userId}) AS watch_time_minutes_shows,
+        (SELECT COUNT(*) FROM watched_episodes we
+         INNER JOIN episodes e ON e.id = we.episode_id
+         INNER JOIN titles ti ON ti.id = e.title_id
+         WHERE we.user_id = ${userId} AND ${runtime} IS NULL) AS watch_time_unknown_episodes
     `);
     const row = rows[0] ?? {
       tracked_movies: 0,
@@ -65,6 +74,7 @@ export async function getStatsOverview(userId: string): Promise<StatsOverview> {
       watched_episodes: 0,
       watch_time_minutes_movies: 0,
       watch_time_minutes_shows: 0,
+      watch_time_unknown_episodes: 0,
     };
     return {
       ...row,
@@ -227,10 +237,8 @@ export interface UserPace {
 export async function getUserPace(userId: string): Promise<UserPace> {
   return traceDbQuery("getUserPace", async () => {
     const db = getDb();
-    // Episodes don't have per-episode runtime; use the parent title's runtime_minutes
-    // as a proxy for each episode's duration (typical for shows).
-    const rows = await db.all<{ total_minutes: number }>(sql`
-      SELECT COALESCE(SUM(ti.runtime_minutes), 0) AS total_minutes
+    const rows = await db.all<{ total_minutes: number | null }>(sql`
+      SELECT CASE WHEN COUNT(*) = COUNT(${runtime}) THEN SUM(${runtime}) END AS total_minutes
       FROM (
         SELECT episode_id FROM watch_history
         WHERE user_id = ${userId} AND watched_at >= datetime('now', '-30 days')
@@ -240,7 +248,6 @@ export async function getUserPace(userId: string): Promise<UserPace> {
       ) watched
       JOIN episodes e ON e.id = watched.episode_id
       JOIN titles ti ON ti.id = e.title_id
-      WHERE ti.runtime_minutes IS NOT NULL
     `);
     const total = rows[0]?.total_minutes ?? 0;
     if (total === 0) return { minutesPerDay: null };
@@ -249,10 +256,11 @@ export async function getUserPace(userId: string): Promise<UserPace> {
 }
 
 export function computeEta(
-  remainingMinutes: number,
+  remainingMinutes: number | null,
   minutesPerDay: number | null,
 ): number | null {
-  if (!minutesPerDay || minutesPerDay <= 0) return null;
+  if (remainingMinutes === null || !minutesPerDay || minutesPerDay <= 0)
+    return null;
   return Math.ceil(remainingMinutes / minutesPerDay);
 }
 

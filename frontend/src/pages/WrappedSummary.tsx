@@ -93,6 +93,14 @@ export function WrappedSummary({ data }: { data: YearInReview }) {
         <StatCard label={t("wrapped.episodes")} value={data.episodes_watched} />
       </div>
 
+      {!!data.watch_time_unknown_episodes && (
+        <p className="text-sm text-zinc-400">
+          {t("watchTime.unknownEpisodes", {
+            count: data.watch_time_unknown_episodes,
+          })}
+        </p>
+      )}
+
       {(data.first_watch || data.last_watch) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {data.first_watch && (
