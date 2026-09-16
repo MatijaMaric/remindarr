@@ -3,10 +3,10 @@ import { logger } from "../logger";
 
 const log = logger.child({ module: "tmdb" });
 import { getDb } from "../db/schema";
-import { titles, episodes, tracked } from "../db/schema";
+import { titles, tracked } from "../db/schema";
 import { upsertEpisodes } from "../db/repository";
 import { fetchShowDetails, fetchSeasonEpisodes } from "./client";
-import { eq, and, count, isNotNull } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { syncEachWithDelay } from "./sync-utils";
 import { sleep } from "../lib/http";
 
@@ -32,22 +32,8 @@ export async function syncEpisodesForShow(
   tmdbId: string,
   title: string,
 ): Promise<number> {
-  const db = getDb();
-
   const resolvedTmdbId = extractTmdbId(titleId, tmdbId);
   const details = await fetchShowDetails(resolvedTmdbId);
-
-  // Skip ended/canceled shows that already have episodes synced
-  if (details.status === "Ended" || details.status === "Canceled") {
-    const existing = await db
-      .select({ count: count() })
-      .from(episodes)
-      .where(eq(episodes.titleId, titleId))
-      .get();
-    if (existing && existing.count > 0) {
-      return 0;
-    }
-  }
 
   // Fetch all seasons (1 through number_of_seasons)
   const allEpisodes: EpisodeRow[] = [];
