@@ -167,3 +167,117 @@ describe("NotificationModePicker", () => {
     });
   });
 });
+
+describe("NotificationModePicker refreshed server state", () => {
+  it("updates same-title mode and reminder props and resets for another title", () => {
+    const props = {
+      titleId: "t-1",
+      currentMode: "all" as const,
+      remindOnRelease: false,
+      releaseDate: "2099-01-01",
+    };
+    const { rerender } = render(<NotificationModePicker {...props} />, {
+      wrapper: Wrapper,
+    });
+    rerender(
+      <NotificationModePicker {...props} currentMode="none" remindOnRelease />,
+    );
+    expect(
+      screen
+        .getByRole("button", { name: /muted/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /remind on release day/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    rerender(<NotificationModePicker {...props} titleId="t-2" />);
+    expect(
+      screen
+        .getByRole("button", { name: /all episodes/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /remind on release day/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("keeps an in-flight mode edit then adopts refreshed props when the mutation settles", async () => {
+    let resolve!: () => void;
+    spies[0].mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          resolve = done;
+        }),
+    );
+    const { rerender } = render(
+      <NotificationModePicker titleId="t-1" currentMode="all" />,
+      { wrapper: Wrapper },
+    );
+    fireEvent.click(screen.getByRole("button", { name: /muted/i }));
+    await waitFor(() => expect(api.setNotificationMode).toHaveBeenCalled());
+    rerender(
+      <NotificationModePicker titleId="t-1" currentMode="premieres_only" />,
+    );
+    expect(
+      screen
+        .getByRole("button", { name: /muted/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    resolve();
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: /premieres only/i })
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+  });
+
+  it("keeps an in-flight reminder edit and accepts the latest props after a failed save", async () => {
+    let reject!: (error: Error) => void;
+    spies[1].mockImplementation(
+      () =>
+        new Promise<void>((_done, fail) => {
+          reject = fail;
+        }),
+    );
+    const props = {
+      titleId: "t-1",
+      currentMode: "all" as const,
+      remindOnRelease: false,
+      releaseDate: "2099-01-01",
+    };
+    const { rerender } = render(<NotificationModePicker {...props} />, {
+      wrapper: Wrapper,
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /remind on release day/i }),
+    );
+    await waitFor(() => expect(api.setRemindOnRelease).toHaveBeenCalled());
+    rerender(<NotificationModePicker {...props} remindOnRelease />);
+    expect(
+      screen
+        .getByRole("button", { name: /remind on release day/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    reject(new Error("save failed"));
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: /remind on release day/i,
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
+    expect(
+      screen
+        .getByRole("button", { name: /remind on release day/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+});

@@ -66,7 +66,7 @@ const TitleCard = memo(function TitleCard({
   showRating,
   blurred,
 }: Props) {
-  const [prevTitleId, setPrevTitleId] = useState(title.id);
+  const [prevTitle, setPrevTitle] = useState(title);
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
   const [notifMode, setNotifMode] = useState(title.notification_mode ?? null);
   const [snoozeUntil, setSnoozeUntil] = useState<string | null | undefined>(
@@ -78,16 +78,36 @@ const TitleCard = memo(function TitleCard({
   const [tags, setTags] = useState<string[]>(title.tags ?? []);
   const [posterError, setPosterError] = useState(false);
 
-  // Re-sync local state when the card is reused for a different title.
-  // Pattern from https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  if (title.id !== prevTitleId) {
-    setPrevTitleId(title.id);
-    setUserStatus(title.user_status ?? null);
-    setNotifMode(title.notification_mode ?? null);
-    setSnoozeUntil(title.snooze_until);
-    setRemindOnRelease(title.remind_on_release ?? false);
-    setTags(title.tags ?? []);
-    setPosterError(false);
+  // Only changed server fields replace local edits; an unrelated refetch must
+  // not reset a successful edit while its updated value is still in flight.
+  if (title !== prevTitle) {
+    setPrevTitle(title);
+    const changedTitle = title.id !== prevTitle.id;
+    if (changedTitle || title.user_status !== prevTitle.user_status) {
+      setUserStatus(title.user_status ?? null);
+    }
+    if (
+      changedTitle ||
+      title.notification_mode !== prevTitle.notification_mode
+    ) {
+      setNotifMode(title.notification_mode ?? null);
+    }
+    if (changedTitle || title.snooze_until !== prevTitle.snooze_until) {
+      setSnoozeUntil(title.snooze_until);
+    }
+    if (
+      changedTitle ||
+      title.remind_on_release !== prevTitle.remind_on_release
+    ) {
+      setRemindOnRelease(title.remind_on_release ?? false);
+    }
+    if (
+      changedTitle ||
+      JSON.stringify(title.tags ?? []) !== JSON.stringify(prevTitle.tags ?? [])
+    ) {
+      setTags(title.tags ?? []);
+    }
+    if (changedTitle) setPosterError(false);
   }
 
   const isSnoozed = snoozeUntil != null && new Date(snoozeUntil) > new Date();

@@ -7,7 +7,13 @@ import {
   beforeEach,
   spyOn,
 } from "bun:test";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -497,5 +503,109 @@ describe("TitleCard", () => {
     render(<TitleCard title={title} blurred />, { wrapper: Wrapper });
     expect(screen.getByTestId("advisory-blur")).toBeDefined();
     expect(screen.getByText("R")).toBeDefined();
+  });
+});
+
+describe("TitleCard refreshed server state", () => {
+  it("updates same-id status, tags, notifications, snooze and reminder after bulk/refetch changes without discarding a tag draft", () => {
+    const title = makeTitle({
+      is_tracked: true,
+      object_type: "SHOW",
+      user_status: "watching",
+      tags: ["old"],
+      notification_mode: "all",
+      snooze_until: null,
+      remind_on_release: false,
+      release_date: "2099-01-01",
+    });
+    const card = (value: Title) => (
+      <TitleCard
+        title={value}
+        showStatusPicker
+        showTags
+        showNotificationPicker
+      />
+    );
+    const { rerender } = render(card(title), { wrapper: Wrapper });
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "draft" },
+    });
+    rerender(
+      card({
+        ...title,
+        user_status: "on_hold",
+        tags: ["bulk"],
+        notification_mode: "none",
+        snooze_until: "2099-01-01T00:00:00Z",
+        remind_on_release: true,
+      }),
+    );
+    expect(screen.getByRole("button", { name: "On Hold" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Remove tag bulk" }),
+    ).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Remove tag old" })).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: /muted/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /snoozed/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /remind on release day/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
+      "draft",
+    );
+    rerender(
+      card({ ...title, user_status: null, tags: [], notification_mode: null }),
+    );
+    expect(screen.getByRole("button", { name: "Auto" })).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: "Remove tag bulk" }),
+    ).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: /all episodes/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(screen.queryByText("Snoozed")).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: /remind on release day/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("does not reset a saved local edit when an unrelated field refetches", async () => {
+    spies.push(spyOn(api, "updateTrackedTags").mockResolvedValue({} as any));
+    const title = makeTitle({ is_tracked: true, tags: ["old"] });
+    const { rerender } = render(<TitleCard title={title} showTags />, {
+      wrapper: Wrapper,
+    });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "new" } });
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+    await screen.findByRole("button", { name: "Remove tag new" });
+    rerender(
+      <TitleCard title={{ ...title, imdb_score: 9, tags: ["old"] }} showTags />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Remove tag new" }),
+    ).toBeDefined();
+    rerender(<TitleCard title={{ ...title, tags: ["server"] }} showTags />);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Remove tag new" }),
+      ).toBeNull(),
+    );
+    expect(
+      screen.getByRole("button", { name: "Remove tag server" }),
+    ).toBeDefined();
   });
 });
