@@ -152,16 +152,17 @@ export default function TrackedPage() {
 
   const { showGroups, movies } = useMemo(() => {
     const shows = allTitles.filter((t) => t.object_type === "SHOW");
-    const movieList = allTitles
-      .filter((t) => t.object_type === "MOVIE")
-      .sort((a, b) => {
-        if (!a.tracked_at && !b.tracked_at) return 0;
-        if (!a.tracked_at) return 1;
-        if (!b.tracked_at) return -1;
-        return b.tracked_at.localeCompare(a.tracked_at);
-      });
-    return { showGroups: groupShowsByStatus(shows), movies: movieList };
-  }, [allTitles]);
+    return {
+      showGroups: groupShowsByStatus(shows).map((group) => ({
+        ...group,
+        titles: sortTitles(group.titles, sort),
+      })),
+      movies: sortTitles(
+        allTitles.filter((t) => t.object_type === "MOVIE"),
+        sort,
+      ),
+    };
+  }, [allTitles, sort]);
 
   const filteredTitles = useMemo(() => {
     if (statusFilter === "all") return allTitles;
