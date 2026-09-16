@@ -68,7 +68,12 @@ const backendEnv: Record<string, string> = {
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: ["**/fixtures/**"],
+  // These security regressions have dedicated configs and isolated production servers.
+  testIgnore: [
+    "**/fixtures/**",
+    "**/share-security.spec.ts",
+    "**/identity-isolation.spec.ts",
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // E2E specs talk to a real backend with rate limiting and persistent
