@@ -6,12 +6,18 @@ interface Props {
   onSearch: (query: string) => void;
   onImdb: (url: string) => void;
   loading?: boolean;
+  initialQuery?: string;
 }
 
 const IMDB_REGEX = /imdb\.com\/title\/tt\d+/i;
 
-export default function SearchBar({ onSearch, onImdb, loading }: Props) {
-  const [value, setValue] = useState("");
+export default function SearchBar({
+  onSearch,
+  onImdb,
+  loading,
+  initialQuery = "",
+}: Props) {
+  const [value, setValue] = useState(initialQuery);
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);

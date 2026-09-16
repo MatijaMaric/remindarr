@@ -167,6 +167,12 @@
     "noEpisodesToday": "No episodes airing today."
   },
   "browse": {
+    "preferencesLoading": "Loading your service preferences...",
+    "preferencesError": "Could not load your service preferences. Retry to browse using your saved filters.",
+    "preferencesRetry": "Retry preferences",
+    "searchLoading": "Searching titles...",
+    "searchError": "Search could not be loaded.",
+    "searchRetry": "Retry search",
     "searchResults": "Search Results ({{count}})",
     "clear": "Clear",
     "noResults": "No results found",

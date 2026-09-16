@@ -41,6 +41,7 @@ interface Props {
   languages: string[] | LanguageOption[];
   priorityLanguageCodes?: string[];
 
+  onlyMine?: boolean;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
 
@@ -88,6 +89,7 @@ export default function BrowseFilterCard(props: Props) {
     onLanguageChange,
     languages,
     priorityLanguageCodes,
+    onlyMine,
     hideTracked,
     onHideTrackedChange,
     onClearFilters,
@@ -95,6 +97,7 @@ export default function BrowseFilterCard(props: Props) {
   const { t } = useTranslation();
 
   const hasActiveFilters =
+    onlyMine ||
     genre.length > 0 ||
     provider.length > 0 ||
     language.length > 0 ||

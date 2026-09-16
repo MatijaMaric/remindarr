@@ -54,6 +54,24 @@ describe("useScrollRestoration", () => {
     expect(scrollToMock.mock.calls.length).toBe(1);
   });
 
+  it("restores a different history entry when its content becomes ready", () => {
+    sessionStorage.setItem(STORAGE_KEY, "100");
+    sessionStorage.setItem("scroll:another-entry", "450");
+    const { rerender } = renderHook(
+      ({ key, ready }) => useScrollRestoration(key, ready),
+      {
+        initialProps: { key: KEY, ready: true },
+      },
+    );
+    rerender({ key: "another-entry", ready: false });
+    expect(scrollToMock).toHaveBeenCalledTimes(1);
+    rerender({ key: "another-entry", ready: true });
+    expect(scrollToMock).toHaveBeenLastCalledWith({
+      top: 450,
+      behavior: "instant",
+    });
+  });
+
   it("does not scroll when no saved position exists", () => {
     renderHook(() => useScrollRestoration(KEY, true));
     expect(scrollToMock).not.toHaveBeenCalled();
