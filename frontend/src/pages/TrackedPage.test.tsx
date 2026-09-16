@@ -7,7 +7,14 @@ import {
   fireEvent,
   within,
 } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import {
+  MemoryRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
@@ -59,6 +66,7 @@ beforeEach(() => {
 });
 
 const { default: TrackedPage } = await import("./TrackedPage");
+const { default: MorePage } = await import("./MorePage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
@@ -317,6 +325,131 @@ describe("TrackedPage", () => {
     });
 
     expect(screen.queryByText(/^Movies/)).toBeNull();
+  });
+});
+
+function ViewHistory() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  return (
+    <>
+      <output aria-label="Current URL">
+        {location.pathname}
+        {location.search}
+      </output>
+      <button onClick={() => navigate(-1)}>Back</button>
+      <button onClick={() => navigate(1)}>Forward</button>
+    </>
+  );
+}
+
+function renderViewRoute(path: string) {
+  apiMock.getStats.mockImplementation(() =>
+    Promise.resolve({
+      overview: {
+        watched_movies: 0,
+        watched_episodes: 0,
+        tracked_shows: 0,
+        tracked_movies: 0,
+        watch_time_minutes: 0,
+        watch_time_minutes_shows: 0,
+        watch_time_minutes_movies: 0,
+      },
+      genres: [],
+      languages: [],
+      monthly: [],
+      shows_by_status: {},
+    }),
+  );
+  return render(
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={[path]}>
+        <ViewHistory />
+        <Routes>
+          <Route
+            path="/stats"
+            element={<Navigate to="/tracked?view=stats" replace />}
+          />
+          <Route path="/tracked" element={<TrackedPage />} />
+          <Route path="/more" element={<MorePage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+describe("TrackedPage URL views", () => {
+  it.each(["/stats", "/tracked?view=stats"])(
+    "opens Stats directly from %s",
+    async (path) => {
+      renderViewRoute(path);
+      await screen.findByText("Movies Watched");
+      expect(screen.queryByRole("tablist")).toBeNull();
+    },
+  );
+
+  it("opens Stats from the mobile More menu", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = (query) => {
+      const result = originalMatchMedia.call(window, query);
+      Object.defineProperty(result, "matches", { value: true });
+      return result;
+    };
+    try {
+      renderViewRoute("/more");
+      fireEvent.click(screen.getByRole("link", { name: /Stats/ }));
+      await screen.findByText("Movies Watched");
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it.each([
+    "/tracked",
+    "/tracked?view=invalid",
+    "/tracked?view=list",
+    "/tracked?view=grid",
+  ])(
+    "restores supported views and defaults invalid views at %s",
+    async (path) => {
+      apiMock.getTrackedTitles.mockImplementation(() =>
+        Promise.resolve({ titles: [makeShow("s1", "watching")], count: 1 }),
+      );
+      renderViewRoute(path);
+      if (path.endsWith("grid")) {
+        await screen.findByText("Currently Watching (1)");
+      } else {
+        await screen.findByText("Show s1");
+        expect(screen.queryByRole("article")).toBeNull();
+      }
+    },
+  );
+
+  it("preserves other parameters and restores view changes through history and remounts", async () => {
+    const result = renderViewRoute("/tracked?keep=1&view=stats");
+    await screen.findByText("Movies Watched");
+    fireEvent.click(screen.getByRole("button", { name: "Grid" }));
+    expect(screen.getByLabelText("Current URL").textContent).toBe(
+      "/tracked?keep=1&view=grid",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    expect(screen.getByLabelText("Current URL").textContent).toBe(
+      "/tracked?keep=1&view=list",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByLabelText("Current URL").textContent).toBe(
+      "/tracked?keep=1&view=grid",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    await screen.findByText("Movies Watched");
+    fireEvent.click(screen.getByRole("button", { name: "Forward" }));
+    expect(screen.queryByText("Movies Watched")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Stats" }));
+    const url = screen.getByLabelText("Current URL").textContent!;
+    expect(url).toBe("/tracked?keep=1&view=stats");
+    result.unmount();
+    renderViewRoute(url);
+    await screen.findByText("Movies Watched");
   });
 });
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { Card } from "../components/ui/card";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import * as api from "../api";
@@ -143,7 +143,18 @@ export default function TrackedPage() {
   useGridNavigation();
 
   const [statusFilter, setStatusFilter] = useState<StatusTab>("all");
-  const [view, setView] = useState<"grid" | "list" | "stats">("list");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedView = searchParams.get("view");
+  const view =
+    requestedView === "grid" || requestedView === "stats"
+      ? requestedView
+      : "list";
+  function setView(nextView: "grid" | "list" | "stats") {
+    setSearchParams((params) => {
+      params.set("view", nextView);
+      return params;
+    });
+  }
   const [sort, setSort] = useState<SortKey>("last_aired");
 
   // Select mode state
