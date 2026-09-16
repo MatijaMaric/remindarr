@@ -777,20 +777,6 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <nav aria-label="Home views" className="flex items-center gap-2">
-        <span
-          aria-current="page"
-          className="px-3 py-1.5 rounded-full bg-white/[0.08] text-sm font-semibold"
-        >
-          {t("nav.home")}
-        </span>
-        <Link
-          to="/reels"
-          className="px-3 py-1.5 rounded-full text-sm font-semibold text-zinc-400 hover:text-amber-400"
-        >
-          {t("home.reels")}
-        </Link>
-      </nav>
       {layout.filter((s) => s.enabled).map((s) => renderSection(s.id))}
       <SuggestedForYouRow />
     </div>
