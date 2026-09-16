@@ -1,4 +1,13 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  setSystemTime,
+} from "bun:test";
+import { getRawDb } from "../db/bun-db";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
   getNextCronDate,
@@ -10,10 +19,16 @@ import {
   getRecentJobs,
   registerCron,
   getCronJobs,
+  cleanupOldJobs,
+  recoverStaleJobs,
 } from "./queue";
 
 beforeEach(() => {
   setupTestDb();
+});
+
+afterEach(() => {
+  setSystemTime();
 });
 
 afterAll(() => {
@@ -190,3 +205,80 @@ describe("cron registration", () => {
     expect(crons[0].cron).toBe("0 5 * * *");
   });
 });
+
+// These clocks exercise both same-day comparisons and the UTC date boundary.
+describe.each(["2026-09-15T10:00:00.000Z", "2026-09-15T23:59:30.000Z"])(
+  "queue timestamps at %s",
+  (clock) => {
+    it("waits until each exponential-backoff deadline before retrying", () => {
+      setSystemTime(new Date(clock));
+      const id = enqueueJob("retry");
+      expect(getRecentJobs()[0].created_at).toBe(clock);
+      for (const delay of [60_000, 120_000]) {
+        expect(claimNextJob("retry")?.id).toBe(id);
+        const failedAt = Date.now();
+        failJob(id, "temporary failure");
+        expect(getRecentJobs()[0].run_at).toBe(
+          new Date(failedAt + delay).toISOString(),
+        );
+        expect(claimNextJob("retry")).toBeNull();
+        setSystemTime(new Date(failedAt + delay - 1));
+        expect(claimNextJob("retry")).toBeNull();
+        setSystemTime(new Date(failedAt + delay));
+      }
+      expect(claimNextJob("retry")?.attempts).toBe(3);
+      failJob(id, "final failure");
+      expect(getRecentJobs()[0].completed_at).toBe(new Date().toISOString());
+    });
+
+    it("honors pending retry deadlines written in the legacy SQLite format", () => {
+      const now = new Date(clock).getTime();
+      setSystemTime(new Date(now));
+      const id = enqueueJob("legacy-retry");
+      getRawDb()
+        .prepare("UPDATE jobs SET run_at = ? WHERE id = ?")
+        .run(
+          new Date(now + 60_000).toISOString().slice(0, 19).replace("T", " "),
+          id,
+        );
+      expect(claimNextJob("legacy-retry")).toBeNull();
+      setSystemTime(new Date(now + 60_000));
+      expect(claimNextJob("legacy-retry")?.id).toBe(id);
+    });
+
+    it("recovers stale jobs but leaves jobs at the timeout boundary running", () => {
+      const startedAt = new Date(clock).getTime();
+      setSystemTime(new Date(startedAt));
+      const staleId = enqueueJob("stale");
+      claimNextJob("stale");
+      setSystemTime(new Date(startedAt + 1));
+      enqueueJob("fresh");
+      claimNextJob("fresh");
+      setSystemTime(new Date(startedAt + 30 * 60_000 + 1));
+      recoverStaleJobs(30);
+      expect(getJobStats().stale.pending).toBe(1);
+      expect(getJobStats().fresh.running).toBe(1);
+      expect(claimNextJob("stale")?.id).toBe(staleId);
+    });
+
+    it("cleans up old ISO and legacy completion times without deleting recent jobs", () => {
+      const completedAt = new Date(clock).getTime();
+      setSystemTime(new Date(completedAt));
+      const oldId = enqueueJob("old");
+      completeJob(oldId);
+      expect(getRecentJobs()[0].completed_at).toBe(clock);
+      const legacyId = enqueueJob("legacy");
+      getRawDb()
+        .prepare(
+          "UPDATE jobs SET status = 'failed', completed_at = ? WHERE id = ?",
+        )
+        .run(clock.slice(0, 19).replace("T", " "), legacyId);
+      setSystemTime(new Date(completedAt + 1));
+      const recentId = enqueueJob("recent");
+      completeJob(recentId);
+      setSystemTime(new Date(completedAt + 86400_000 + 1));
+      expect(cleanupOldJobs(1)).toBe(2);
+      expect(getRecentJobs().map((job) => job.id)).toEqual([recentId]);
+    });
+  },
+);
