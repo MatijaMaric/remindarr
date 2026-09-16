@@ -17,6 +17,9 @@ import {
 import { requireAuth } from "../middleware/auth";
 import integrationApp from "./integrations";
 import type { AppEnv } from "../types";
+import { getDb, verification } from "../db/schema";
+import { eq } from "drizzle-orm";
+import { hasPlexPin, savePlexPin } from "../db/repository/integrations";
 
 // Mock Sentry
 import Sentry from "../sentry";
@@ -402,10 +405,53 @@ describe("POST /integrations/plex/pin", () => {
     const body = (await res.json()) as any;
     expect(body.pinId).toBe(12345);
     expect(body.authUrl).toContain("ABCD");
+    expect(await hasPlexPin(12345, userId)).toBe(true);
   });
 });
 
 describe("POST /integrations/plex/pin/:pinId", () => {
+  beforeEach(async () => {
+    await savePlexPin(1, userId, "2099-01-01T00:00:00Z");
+  });
+
+  it("rejects another user's PIN, unknown IDs and expired state before calling Plex", async () => {
+    const checkSpy = spyOn(plexClient, "checkPin");
+    spies.push(checkSpy);
+    const otherId = await createUser("other-plex-user", "hash");
+    const otherToken = await createSession(otherId);
+    for (const [path, cookie] of [
+      ["1", otherToken],
+      ["999", userToken],
+    ]) {
+      const res = await app.request(`/integrations/plex/pin/${path}`, {
+        method: "POST",
+        headers: { Cookie: `better-auth.session_token=${cookie}` },
+      });
+      expect(res.status).toBe(404);
+    }
+    await getDb()
+      .update(verification)
+      .set({ expiresAt: "2000-01-01T00:00:00Z" })
+      .where(eq(verification.id, "plex-pin:1"))
+      .run();
+    const expired = await app.request("/integrations/plex/pin/1", {
+      method: "POST",
+      headers: headers(),
+    });
+    expect(expired.status).toBe(404);
+    expect(checkSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed PIN IDs instead of accepting a numeric prefix", async () => {
+    for (const id of ["1garbage", "-1", "0", "1.5", "9007199254740992"]) {
+      const res = await app.request(`/integrations/plex/pin/${id}`, {
+        method: "POST",
+        headers: headers(),
+      });
+      expect(res.status).toBe(400);
+    }
+  });
+
   it("returns resolved=false when pin not yet authorized", async () => {
     const checkSpy = spyOn(plexClient, "checkPin").mockResolvedValue({
       id: 1,
@@ -422,6 +468,7 @@ describe("POST /integrations/plex/pin/:pinId", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
     expect(body.resolved).toBe(false);
+    expect(await hasPlexPin(1, userId)).toBe(true);
   });
 
   it("returns resolved=true with servers when pin is authorized", async () => {
@@ -451,5 +498,35 @@ describe("POST /integrations/plex/pin/:pinId", () => {
     expect(body.resolved).toBe(true);
     expect(body.authToken).toBe("my-token");
     expect(body.servers).toHaveLength(1);
+    const replay = await app.request("/integrations/plex/pin/1", {
+      method: "POST",
+      headers: headers(),
+    });
+    expect(replay.status).toBe(404);
+    expect(await hasPlexPin(1, userId)).toBe(false);
+  });
+
+  it("returns the credential only once when completion polls race", async () => {
+    const checkSpy = spyOn(plexClient, "checkPin").mockResolvedValue({
+      id: 1,
+      code: "X",
+      authToken: "synthetic-plex-token",
+      expiresAt: "2099-01-01",
+    });
+    const serversSpy = spyOn(plexClient, "getServers").mockResolvedValue([]);
+    spies.push(checkSpy, serversSpy);
+    const replies = await Promise.all(
+      [1, 2].map(() =>
+        app.request("/integrations/plex/pin/1", {
+          method: "POST",
+          headers: headers(),
+        }),
+      ),
+    );
+    expect(replies.map((r) => r.status).sort()).toEqual([200, 404]);
+    const bodies = await Promise.all(replies.map((r) => r.text()));
+    expect(
+      bodies.filter((body) => body.includes("synthetic-plex-token")),
+    ).toHaveLength(1);
   });
 });
