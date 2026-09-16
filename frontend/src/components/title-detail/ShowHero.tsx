@@ -38,6 +38,32 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
   const displayTitle = tmdb?.name || title.title;
   const originalTitle = tmdb?.original_name || title.original_title;
 
+  const visibilityButton = (
+    <VisibilityButton
+      titleId={title.id}
+      isPublic={title.is_public ?? true}
+      isTracked={title.is_tracked}
+    />
+  );
+  const trailerButton = trailerAvailable && (
+    <button
+      type="button"
+      aria-expanded={showTrailer}
+      onClick={() => setShowTrailer((prev) => !prev)}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
+    >
+      <svg
+        className="w-4 h-4"
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h7A1.5 1.5 0 0 1 13 3.5v9A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-9ZM6 5.5v5l4.5-2.5L6 5.5Z" />
+      </svg>
+      {showTrailer ? "Hide Trailer" : "Watch Trailer"}
+    </button>
+  );
+
   if (isMobile) {
     return (
       <>
@@ -130,6 +156,11 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
           />
           <PinButton titleId={title.id} />
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {visibilityButton}
+          {trailerButton}
+        </div>
+        {showTrailer && trailerAvailable && <TrailerEmbed videos={videos} />}
         {title.is_tracked && title.eta_days != null && (
           <div className="text-xs text-zinc-400 text-center">
             Finish in ~{formatEta(title.eta_days)} at your current pace
@@ -282,33 +313,13 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               titleData={title}
             />
             <PinButton titleId={title.id} />
-            <VisibilityButton
-              titleId={title.id}
-              isPublic={title.is_public ?? true}
-              isTracked={title.is_tracked}
-            />
+            {visibilityButton}
             <WatchButtonGroup
               offers={title.offers}
               variant="inline"
               maxVisible={3}
             />
-            {trailerAvailable && (
-              <button
-                type="button"
-                onClick={() => setShowTrailer((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
-              >
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h7A1.5 1.5 0 0 1 13 3.5v9A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-9ZM6 5.5v5l4.5-2.5L6 5.5Z" />
-                </svg>
-                {showTrailer ? "Hide Trailer" : "Watch Trailer"}
-              </button>
-            )}
+            {trailerButton}
           </div>
           {title.is_tracked && title.eta_days != null && (
             <div className="text-xs text-zinc-400">
