@@ -131,6 +131,12 @@ describe("fixSkippedMigrations", () => {
     const migrations = rawDb
       .prepare("SELECT COUNT(*) as cnt FROM __drizzle_migrations")
       .get() as { cnt: number };
-    expect(migrations.cnt).toBe(55);
+    const journal = JSON.parse(
+      fs.readFileSync(
+        path.join(migrationsFolder, "meta/_journal.json"),
+        "utf-8",
+      ),
+    );
+    expect(migrations.cnt).toBe(journal.entries.length);
   });
 });
