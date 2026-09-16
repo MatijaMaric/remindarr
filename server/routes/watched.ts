@@ -223,11 +223,11 @@ app.patch(
       row.titleId,
       row.episodeId,
     );
-    if (latest === normalised) {
+    if (latest !== null) {
       if (row.episodeId === null) {
-        await setWatchedTitleWatchedAt(row.titleId, user.id, normalised);
+        await setWatchedTitleWatchedAt(row.titleId, user.id, latest);
       } else {
-        await setWatchedEpisodeWatchedAt(row.episodeId, user.id, normalised);
+        await setWatchedEpisodeWatchedAt(row.episodeId, user.id, latest);
       }
     }
 

@@ -1232,6 +1232,109 @@ describe("Watch history logging", () => {
 });
 
 describe("PATCH /watched/history/:id", () => {
+  describe.each(["MOVIE", "SHOW"] as const)(
+    "%s summary after editing history",
+    (objectType) => {
+      it.each([
+        ["latest", "2024-07-01", "2024-08-01 00:00:00"],
+        ["latest", "2024-09-01", "2024-09-01 00:00:00"],
+        ["older", "2024-07-01", "2024-09-14 00:00:00"],
+        ["older", "2024-10-01", "2024-10-01 00:00:00"],
+      ])(
+        "editing %s to %s keeps the summary at %s",
+        async (entry, editedAt, expected) => {
+          const titleId = "summary-edit";
+          await upsertTitles([makeParsedTitle({ id: titleId, objectType })]);
+          let episodeId: number | null = null;
+          if (objectType === "SHOW") {
+            await upsertEpisodes([
+              {
+                title_id: titleId,
+                season_number: 1,
+                episode_number: 1,
+                name: "Episode 1",
+                overview: null,
+                air_date: "2020-01-01",
+                still_path: null,
+              },
+            ]);
+            episodeId = await getEpisodeId(titleId, 1, 1);
+          }
+          const db = getRawDb();
+          const table =
+            episodeId === null ? "watched_titles" : "watched_episodes";
+          const key = episodeId === null ? "title_id" : "episode_id";
+          const value = episodeId ?? titleId;
+          const otherWatchedAt = "2024-12-01 00:00:00";
+          db.prepare(
+            `INSERT INTO ${table} (${key}, user_id, watched_at) VALUES (?, ?, ?)`,
+          ).run(value, userId, "2024-09-14 00:00:00");
+          db.prepare(
+            `INSERT INTO ${table} (${key}, user_id, watched_at) VALUES (?, ?, ?)`,
+          ).run(value, secondUserId, otherWatchedAt);
+          const insertHistory = db.prepare(
+            "INSERT INTO watch_history (id, user_id, title_id, episode_id, watched_at) VALUES (?, ?, ?, ?, ?)",
+          );
+          insertHistory.run(
+            "older",
+            userId,
+            titleId,
+            episodeId,
+            "2024-08-01 00:00:00",
+          );
+          insertHistory.run(
+            "latest",
+            userId,
+            titleId,
+            episodeId,
+            "2024-09-14 00:00:00",
+          );
+          insertHistory.run(
+            "other-user",
+            secondUserId,
+            titleId,
+            episodeId,
+            otherWatchedAt,
+          );
+
+          const res = await makeAuthedApp().request(
+            `/watched/history/${entry}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ watched_at: editedAt }),
+            },
+          );
+          expect(res.status).toBe(200);
+          expect((await res.json()).watchedAt).toBe(`${editedAt} 00:00:00`);
+          const summary = db.prepare(
+            `SELECT watched_at FROM ${table} WHERE ${key} = ? AND user_id = ?`,
+          );
+          expect(summary.get(value, userId)).toEqual({ watched_at: expected });
+          expect(summary.get(value, secondUserId)).toEqual({
+            watched_at: otherWatchedAt,
+          });
+          expect(
+            db
+              .prepare("SELECT watched_at FROM watch_history WHERE id = ?")
+              .get(entry),
+          ).toEqual({
+            watched_at: `${editedAt} 00:00:00`,
+          });
+          expect(
+            db
+              .prepare(
+                "SELECT watched_at FROM watch_history WHERE id = 'other-user'",
+              )
+              .get(),
+          ).toEqual({
+            watched_at: otherWatchedAt,
+          });
+        },
+      );
+    },
+  );
+
   it("returns 400 with issues when watched_at is missing", async () => {
     const app = makeAuthedApp();
     const res = await app.request("/watched/history/some-id", {
