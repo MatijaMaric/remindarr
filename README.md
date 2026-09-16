@@ -122,6 +122,26 @@ bun run check      # Type check + lint + tests (run before committing)
 
 Requires [Bun](https://bun.sh) v1.0+.
 
+### Storybook
+
+Run these commands from the repository root:
+
+```bash
+bun run storybook        # Component explorer at http://localhost:6006
+bun run test-storybook   # Chromium render and interaction tests
+bun run build-storybook  # Static site in frontend/storybook-static
+```
+
+For a fresh checkout, install the test browser once with
+`cd frontend && bunx playwright install chromium`.
+
+Stories are colocated with components as `*.stories.tsx` and tagged
+`ai-generated` for review. The shared preview loads the app's styles,
+translations, router, authentication, and query providers, with MSW serving
+local fixture data. The app server is not needed. Storybook's Vite config
+excludes the production service worker and API proxy. Existing unit tests
+continue to use Bun; Vitest runs only the Storybook project.
+
 ```bash
 # Run Lighthouse CI locally (audits perf/a11y/BP/SEO across 5 pages)
 TMDB_API_KEY=<your-key> bun run lighthouse:ci
