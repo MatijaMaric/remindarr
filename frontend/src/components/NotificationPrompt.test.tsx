@@ -51,6 +51,24 @@ function WrapperNoUser({ children }: { children: ReactNode }) {
   );
 }
 
+const subscription = {
+  endpoint: "https://example.com",
+  p256dh: "key",
+  auth: "auth",
+};
+const browserSubscription = {
+  endpoint: subscription.endpoint,
+  toJSON: () => ({
+    endpoint: subscription.endpoint,
+    keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+  }),
+} as PushSubscription;
+const notifier = {
+  id: "n1",
+  provider: "webpush",
+  enabled: true,
+  config: subscription,
+} as api.Notifier;
 let spies: ReturnType<typeof spyOn>[] = [];
 
 function mockNotificationPermission(value: NotificationPermission) {
@@ -74,6 +92,12 @@ beforeEach(() => {
       endpoint: "https://example.com",
       p256dh: "key",
       auth: "auth",
+    }),
+    spyOn(api, "getNotifiers").mockResolvedValue({ notifiers: [] }),
+    spyOn(api, "updateNotifier").mockResolvedValue({ notifier }),
+    spyOn(api, "testNotifier").mockResolvedValue({
+      success: true,
+      message: "ok",
     }),
     spyOn(api, "getVapidPublicKey").mockResolvedValue({
       publicKey: "test-key",
@@ -126,8 +150,12 @@ describe("NotificationPrompt", () => {
     });
   });
 
-  it("does not show when permission is already granted", async () => {
+  it("does not show when permission and the browser delivery destination are registered", async () => {
     mockNotificationPermission("granted");
+    (push.getExistingSubscription as any).mockResolvedValue(
+      browserSubscription,
+    );
+    (api.getNotifiers as any).mockResolvedValue({ notifiers: [notifier] });
 
     const { container } = render(<NotificationPrompt />, { wrapper: Wrapper });
 
@@ -146,16 +174,22 @@ describe("NotificationPrompt", () => {
     });
   });
 
-  it("does not show when there is an existing subscription", async () => {
-    (push.getExistingSubscription as any).mockResolvedValue({
-      endpoint: "https://example.com",
-    });
-
-    const { container } = render(<NotificationPrompt />, { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(container.innerHTML).toBe("");
-    });
+  it("recovers granted permission with an unregistered browser subscription", async () => {
+    mockNotificationPermission("granted");
+    (push.getExistingSubscription as any).mockResolvedValue(
+      browserSubscription,
+    );
+    render(<NotificationPrompt />, { wrapper: Wrapper });
+    fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+    await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+    expect(Notification.requestPermission).not.toHaveBeenCalled();
+    expect(push.subscribeToPush).not.toHaveBeenCalled();
+    expect(api.getVapidPublicKey).not.toHaveBeenCalled();
+    expect(api.createNotifier).toHaveBeenCalledTimes(1);
+    expect(api.createNotifier).toHaveBeenCalledWith(
+      expect.objectContaining({ config: subscription }),
+    );
+    expect(api.testNotifier).not.toHaveBeenCalled();
   });
 
   it("does not show when dismissed in localStorage", async () => {
@@ -232,4 +266,165 @@ describe("NotificationPrompt", () => {
       expect(screen.queryByRole("banner")).toBeNull();
     });
   });
+});
+
+it("recovers granted permission when the browser subscription is missing", async () => {
+  mockNotificationPermission("granted");
+  render(<NotificationPrompt />, { wrapper: Wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  expect(Notification.requestPermission).not.toHaveBeenCalled();
+  expect(push.subscribeToPush).toHaveBeenCalledTimes(1);
+  expect(api.createNotifier).toHaveBeenCalledTimes(1);
+});
+
+it.each(["permission", "browser", "notifiers", "vapid", "subscribe", "create"])(
+  "keeps %s setup failures visible and retryable",
+  async (stage) => {
+    Object.defineProperty(globalThis, "Notification", {
+      configurable: true,
+      value: {
+        permission: "default",
+        requestPermission: mock(async () => {
+          Object.defineProperty(Notification, "permission", {
+            value: "granted",
+            configurable: true,
+          });
+          return "granted";
+        }),
+      },
+    });
+    render(<NotificationPrompt />, { wrapper: Wrapper });
+    const enable = await screen.findByRole("button", { name: "Enable" });
+    const fail = new Error("Setup unavailable");
+    if (stage === "permission")
+      (Notification.requestPermission as any).mockRejectedValueOnce(fail);
+    if (stage === "browser")
+      (push.getExistingSubscription as any).mockRejectedValueOnce(fail);
+    if (stage === "notifiers")
+      (api.getNotifiers as any).mockRejectedValueOnce(fail);
+    if (stage === "vapid")
+      (api.getVapidPublicKey as any).mockRejectedValueOnce(fail);
+    if (stage === "subscribe")
+      (push.subscribeToPush as any).mockRejectedValueOnce(fail);
+    if (stage === "create")
+      (api.createNotifier as any).mockRejectedValueOnce(fail);
+    fireEvent.click(enable);
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(screen.getByRole("banner")).toBeDefined();
+    expect(localStorage.getItem("notification-prompt-dismissed")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+    expect(api.createNotifier).toHaveBeenCalledTimes(
+      stage === "create" ? 2 : 1,
+    );
+    expect(Notification.requestPermission).toHaveBeenCalledTimes(
+      stage === "permission" ? 2 : 1,
+    );
+    expect(push.subscribeToPush).toHaveBeenCalledTimes(
+      stage === "subscribe" ? 2 : 1,
+    );
+    expect(api.testNotifier).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["browser", "notifiers"])(
+  "offers retry when initial %s registration lookup fails",
+  async (stage) => {
+    mockNotificationPermission("granted");
+    if (stage === "browser")
+      (push.getExistingSubscription as any).mockRejectedValueOnce(
+        new Error("Offline"),
+      );
+    else (api.getNotifiers as any).mockRejectedValueOnce(new Error("Offline"));
+    render(<NotificationPrompt />, { wrapper: Wrapper });
+    expect(await screen.findByRole("alert")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+    expect(api.createNotifier).toHaveBeenCalledTimes(1);
+  },
+);
+
+it("reconciles a successful create whose response was lost without duplicate destinations", async () => {
+  mockNotificationPermission("granted");
+  (api.createNotifier as any).mockImplementationOnce(async () => {
+    (api.getNotifiers as any).mockResolvedValue({ notifiers: [notifier] });
+    throw new Error("Response lost");
+  });
+  render(<NotificationPrompt />, { wrapper: Wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+  await screen.findByRole("alert");
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  expect(api.createNotifier).toHaveBeenCalledTimes(1);
+  expect(push.subscribeToPush).toHaveBeenCalledTimes(1);
+  expect(api.updateNotifier).not.toHaveBeenCalled();
+  expect(api.testNotifier).not.toHaveBeenCalled();
+});
+
+it("retries updating an incomplete matching notifier without creating another", async () => {
+  mockNotificationPermission("granted");
+  (push.getExistingSubscription as any).mockResolvedValue(browserSubscription);
+  (api.getNotifiers as any).mockResolvedValue({
+    notifiers: [
+      {
+        ...notifier,
+        enabled: false,
+        config: { endpoint: subscription.endpoint },
+      },
+    ],
+  });
+  (api.updateNotifier as any).mockRejectedValueOnce(new Error("Offline"));
+  render(<NotificationPrompt />, { wrapper: Wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+  await screen.findByRole("alert");
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  expect(api.updateNotifier).toHaveBeenCalledTimes(2);
+  expect(api.updateNotifier).toHaveBeenLastCalledWith("n1", {
+    config: subscription,
+    enabled: true,
+  });
+  expect(api.createNotifier).not.toHaveBeenCalled();
+  expect(push.subscribeToPush).not.toHaveBeenCalled();
+});
+
+it("does not count another browser's destination as registered or overwrite it", async () => {
+  mockNotificationPermission("granted");
+  (push.getExistingSubscription as any).mockResolvedValue(browserSubscription);
+  (api.getNotifiers as any).mockResolvedValue({
+    notifiers: [
+      {
+        ...notifier,
+        config: { ...subscription, endpoint: "https://other.example.com" },
+      },
+    ],
+  });
+  render(<NotificationPrompt />, { wrapper: Wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  expect(api.createNotifier).toHaveBeenCalledTimes(1);
+  expect(api.updateNotifier).not.toHaveBeenCalled();
+});
+
+it("prevents repeated activation while a registration request is pending", async () => {
+  mockNotificationPermission("granted");
+  let finish!: (value: { notifier: api.Notifier }) => void;
+  (api.createNotifier as any).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<NotificationPrompt />, { wrapper: Wrapper });
+  const enable = (await screen.findByRole("button", {
+    name: "Enable",
+  })) as HTMLButtonElement;
+  fireEvent.click(enable);
+  await waitFor(() => expect(api.createNotifier).toHaveBeenCalledTimes(1));
+  expect(enable.disabled).toBe(true);
+  fireEvent.click(enable);
+  expect(api.createNotifier).toHaveBeenCalledTimes(1);
+  finish({ notifier });
+  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
 });
