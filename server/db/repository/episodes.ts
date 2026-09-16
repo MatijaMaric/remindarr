@@ -15,6 +15,7 @@ export async function upsertEpisodes(
     overview: string | null;
     air_date: string | null;
     still_path: string | null;
+    runtime_minutes?: number | null;
   }[],
 ) {
   return traceDbQuery("upsertEpisodes", async () => {
@@ -31,6 +32,10 @@ export async function upsertEpisodes(
           overview: ep.overview,
           airDate: ep.air_date,
           stillPath: ep.still_path,
+          runtimeMinutes:
+            ep.runtime_minutes && ep.runtime_minutes > 0
+              ? ep.runtime_minutes
+              : null,
           updatedAt: sql`datetime('now')`,
         })
         .onConflictDoUpdate({
@@ -44,6 +49,7 @@ export async function upsertEpisodes(
             overview: sql`excluded.overview`,
             airDate: sql`excluded.air_date`,
             stillPath: sql`excluded.still_path`,
+            runtimeMinutes: sql`COALESCE(excluded.runtime_minutes, episodes.runtime_minutes)`,
             updatedAt: sql`datetime('now')`,
           },
         })

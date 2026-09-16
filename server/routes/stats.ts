@@ -39,7 +39,9 @@ app.get("/", async (c) => {
     0,
   );
   const watchlistEtaDays = computeEta(
-    totalRemainingMinutes,
+    tracked.some((t) => t.remaining_runtime_minutes === null)
+      ? null
+      : totalRemainingMinutes,
     pace.minutesPerDay,
   );
 

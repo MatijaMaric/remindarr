@@ -130,6 +130,7 @@ export async function getUserPublicProfile(
             watch_time_minutes: 0,
             watch_time_minutes_movies: 0,
             watch_time_minutes_shows: 0,
+            watch_time_unknown_episodes: 0,
           }),
       showWatchlist
         ? getUserGenreBreakdown(user.id, 6)
@@ -232,6 +233,7 @@ export async function getUserPublicProfile(
         watch_time_minutes: statsOverview.watch_time_minutes,
         watch_time_minutes_movies: statsOverview.watch_time_minutes_movies,
         watch_time_minutes_shows: statsOverview.watch_time_minutes_shows,
+        watch_time_unknown_episodes: statsOverview.watch_time_unknown_episodes,
         shows_completed: showsCompleted,
         shows_total: showsTotal,
         total_watched_episodes: totalWatchedEpisodes,

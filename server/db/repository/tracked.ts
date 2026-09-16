@@ -1,3 +1,4 @@
+import { episodeRuntime } from "./episode-runtime";
 import { eq, and, sql, desc, gte, lt, lte, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, scores, tracked, watchedTitles, ratings } from "../schema";
@@ -151,16 +152,14 @@ export async function getTrackedTitles(
           string | null
         >`(SELECT MIN(e.air_date) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date > date('now'))`,
         remaining_runtime_minutes: sql<number | null>`(
-          CASE WHEN ${titles.runtimeMinutes} IS NULL THEN NULL
-          ELSE (
-            SELECT COUNT(e2.id) * ${titles.runtimeMinutes}
+          SELECT CASE WHEN COUNT(*) = COUNT(${episodeRuntime(sql`e2.runtime_minutes`, sql`${titles.runtimeMinutes}`)})
+            THEN COALESCE(SUM(${episodeRuntime(sql`e2.runtime_minutes`, sql`${titles.runtimeMinutes}`)}), 0) END
             FROM episodes e2
             WHERE e2.title_id = ${titles.id}
               AND e2.air_date <= date('now')
               AND e2.id NOT IN (
                 SELECT we2.episode_id FROM watched_episodes we2 WHERE we2.user_id = ${userId}
               )
-          ) END
         )`,
       })
       .from(tracked)

@@ -79,6 +79,13 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
             sub={`${overview.watched_movies} ${t("userProfile.movies").toLowerCase()}`}
           />
         </div>
+        {!!overview.watch_time_unknown_episodes && (
+          <p className="text-sm text-zinc-400">
+            {t("watchTime.unknownEpisodes", {
+              count: overview.watch_time_unknown_episodes,
+            })}
+          </p>
+        )}
       </div>
     </DossierCard>
   );

@@ -261,6 +261,14 @@ export function StatsView() {
         />
       </div>
 
+      {!!overview.watch_time_unknown_episodes && (
+        <p className="text-sm text-zinc-400">
+          {t("watchTime.unknownEpisodes", {
+            count: overview.watch_time_unknown_episodes,
+          })}
+        </p>
+      )}
+
       {/* Monthly Activity */}
       <div className="bg-zinc-900 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">

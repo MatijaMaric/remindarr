@@ -87,6 +87,20 @@ afterEach(() => {
 });
 
 describe("WrappedPage", () => {
+  it("explains omitted unknown episode durations", async () => {
+    apiMock.getYearInReview.mockImplementation(() =>
+      Promise.resolve({ ...baseReview, watch_time_unknown_episodes: 2 }),
+    );
+    render(<WrappedPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "2 watched episodes have unknown duration; time totals exclude them.",
+        ),
+      ).toBeDefined(),
+    );
+  });
+
   it("renders headline stats from the year-in-review payload", async () => {
     render(<WrappedPage />, { wrapper: Wrapper });
     await waitFor(() => {

@@ -57,6 +57,23 @@ afterEach(() => {
 });
 
 describe("StatsPage", () => {
+  it("explains omitted unknown episode durations", async () => {
+    apiMock.getStats.mockImplementation(() =>
+      Promise.resolve({
+        ...baseStats,
+        overview: { ...baseStats.overview, watch_time_unknown_episodes: 2 },
+      }),
+    );
+    render(<StatsPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "2 watched episodes have unknown duration; time totals exclude them.",
+        ),
+      ).toBeDefined(),
+    );
+  });
+
   it("shows error message when stats fetch fails", async () => {
     apiMock.getStats.mockImplementation(() =>
       Promise.reject(new Error("Server error")),

@@ -25,6 +25,7 @@ interface EpisodeRow {
   overview: string | null;
   air_date: string | null;
   still_path: string | null;
+  runtime_minutes: number | null;
 }
 
 export async function syncEpisodesForShow(
@@ -66,6 +67,7 @@ export async function syncEpisodesForShow(
           overview: ep.overview || null,
           air_date: ep.air_date,
           still_path: ep.still_path,
+          runtime_minutes: ep.runtime ?? null,
         });
       }
     } catch (err) {

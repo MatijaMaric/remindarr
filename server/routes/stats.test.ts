@@ -47,6 +47,38 @@ afterAll(() => {
 });
 
 describe("GET /stats", () => {
+  it("leaves watchlist ETA unknown when an unwatched episode has no duration", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: "tv-123",
+        objectType: "SHOW",
+        runtimeMinutes: null,
+      }),
+    ]);
+    await trackTitle("tv-123", userId);
+    await upsertEpisodes(
+      [59, null].map((runtime, index) => ({
+        title_id: "tv-123",
+        season_number: 1,
+        episode_number: index + 1,
+        name: null,
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+        runtime_minutes: runtime,
+      })),
+    );
+    const first = getRawDb()
+      .prepare("SELECT id FROM episodes WHERE episode_number = 1")
+      .get() as { id: number };
+    await watchEpisode(first.id, userId);
+    const res = await makeAuthedApp().request("/stats");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pace.minutesPerDay).toBeCloseTo(59 / 30);
+    expect(body.pace.watchlistEtaDays).toBeNull();
+  });
+
   it("returns zeros with no watch history", async () => {
     const app = makeAuthedApp();
     const res = await app.request("/stats");

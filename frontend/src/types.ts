@@ -451,6 +451,7 @@ export interface StatsResponse {
     watch_time_minutes: number;
     watch_time_minutes_movies: number;
     watch_time_minutes_shows: number;
+    watch_time_unknown_episodes?: number;
   };
   genres: { genre: string; count: number }[];
   languages: { language: string; count: number }[];
@@ -488,6 +489,7 @@ export interface YearInReview {
   watch_time_minutes: number;
   watch_time_minutes_movies: number;
   watch_time_minutes_shows: number;
+  watch_time_unknown_episodes?: number;
   top_genres: { genre: string; count: number }[];
   top_providers: { provider_id: number; name: string; count: number }[];
   top_shows: (YearInReviewTitleRef & { count: number })[];
@@ -603,6 +605,7 @@ export interface UserProfileOverview extends UserProfileStats {
   watch_time_minutes: number;
   watch_time_minutes_movies: number;
   watch_time_minutes_shows: number;
+  watch_time_unknown_episodes?: number;
 }
 
 export interface ProfileGenreCount {

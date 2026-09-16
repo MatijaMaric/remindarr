@@ -1,8 +1,12 @@
 import { sql } from "drizzle-orm";
+import { episodeRuntime } from "./episode-runtime";
+
 import { getDb } from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { getCache } from "../../cache";
 import type { Cache } from "../../cache/types";
+
+const runtime = episodeRuntime(sql`e.runtime_minutes`, sql`ti.runtime_minutes`);
 
 export interface YearInReviewTitleRef {
   title_id: string;
@@ -45,6 +49,7 @@ export interface YearInReview {
   watch_time_minutes: number;
   watch_time_minutes_movies: number;
   watch_time_minutes_shows: number;
+  watch_time_unknown_episodes: number;
   top_genres: YearInReviewGenre[];
   top_providers: YearInReviewProvider[];
   top_shows: YearInReviewShow[];
@@ -68,7 +73,7 @@ function tryGetCache(): Cache | null {
 }
 
 function cacheKey(userId: string, year: number): string {
-  return `year-in-review:v1:${userId}:${year}`;
+  return `year-in-review:v2:${userId}:${year}`;
 }
 
 function cacheTtlSeconds(year: number): number {
@@ -126,6 +131,7 @@ export async function computeYearInReview(
       episodes_watched: counts.episodes_watched,
       watch_time_minutes_movies: counts.watch_time_minutes_movies,
       watch_time_minutes_shows: counts.watch_time_minutes_shows,
+      watch_time_unknown_episodes: counts.watch_time_unknown_episodes,
       watch_time_minutes:
         counts.watch_time_minutes_movies + counts.watch_time_minutes_shows,
       top_genres: topGenres,
@@ -149,6 +155,7 @@ async function queryCounts(
   episodes_watched: number;
   watch_time_minutes_movies: number;
   watch_time_minutes_shows: number;
+  watch_time_unknown_episodes: number;
 }> {
   const db = getDb();
   const rows = await db.all<{
@@ -156,6 +163,7 @@ async function queryCounts(
     episodes_watched: number;
     watch_time_minutes_movies: number;
     watch_time_minutes_shows: number;
+    watch_time_unknown_episodes: number;
   }>(sql`
     SELECT
       (SELECT COUNT(*) FROM watched_titles wt
@@ -175,13 +183,18 @@ async function queryCounts(
          AND ti.runtime_minutes IS NOT NULL
          AND wt.watched_at >= ${start}
          AND wt.watched_at < ${end}) AS watch_time_minutes_movies,
-      (SELECT COALESCE(SUM(ti.runtime_minutes), 0) FROM watched_episodes we
+      (SELECT COALESCE(SUM(${runtime}), 0) FROM watched_episodes we
        INNER JOIN episodes e ON e.id = we.episode_id
        INNER JOIN titles ti ON ti.id = e.title_id
        WHERE we.user_id = ${userId}
-         AND ti.runtime_minutes IS NOT NULL
          AND we.watched_at >= ${start}
-         AND we.watched_at < ${end}) AS watch_time_minutes_shows
+         AND we.watched_at < ${end}) AS watch_time_minutes_shows,
+      (SELECT COUNT(*) FROM watched_episodes we
+       INNER JOIN episodes e ON e.id = we.episode_id
+       INNER JOIN titles ti ON ti.id = e.title_id
+       WHERE we.user_id = ${userId} AND ${runtime} IS NULL
+         AND we.watched_at >= ${start}
+         AND we.watched_at < ${end}) AS watch_time_unknown_episodes
   `);
   return (
     rows[0] ?? {
@@ -189,6 +202,7 @@ async function queryCounts(
       episodes_watched: 0,
       watch_time_minutes_movies: 0,
       watch_time_minutes_shows: 0,
+      watch_time_unknown_episodes: 0,
     }
   );
 }

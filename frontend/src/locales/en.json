@@ -756,5 +756,9 @@
       "alwaysShow": "Always show this title",
       "stopAlwaysShow": "Stop always showing"
     }
+  },
+  "watchTime": {
+    "unknownEpisodes_one": "{{count}} watched episode has unknown duration; time totals exclude it.",
+    "unknownEpisodes_other": "{{count}} watched episodes have unknown duration; time totals exclude them."
   }
 }

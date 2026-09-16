@@ -1,6 +1,7 @@
 // ─── Existing episode types ──────────────────────────────────────────────────
 
 export interface TmdbEpisode {
+  runtime?: number | null;
   id: number;
   name: string;
   overview: string;

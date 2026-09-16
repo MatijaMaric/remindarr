@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getTitleById, upsertTitles } from "../db/repository";
+import { getTitleById, upsertTitles, upsertEpisodes } from "../db/repository";
 import { CONFIG } from "../config";
 import {
   fetchMovieDetails,
@@ -27,6 +27,7 @@ import { logger } from "../logger";
 import { ok, err } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
 import { zValidator } from "../lib/validator";
+import { episodeRuntime } from "../db/repository/episode-runtime";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import { getDb, episodes as episodesTable } from "../db/schema";
 import { sql, eq, and, asc } from "drizzle-orm";
@@ -128,18 +129,21 @@ app.get("/show/:id", zValidator("param", titleIdParam), async (c) => {
   if (user && title.is_tracked) {
     try {
       const db = getDb();
-      // Episodes don't store per-episode runtime; use the title's runtime_minutes as proxy
-      const remainingRows = await db.all<{ remaining_minutes: number }>(sql`
-        SELECT COALESCE(
-          (SELECT COUNT(e.id) FROM episodes e
-           WHERE e.title_id = ${titleId}
-             AND e.air_date <= date('now')
-             AND e.id NOT IN (
-               SELECT we.episode_id FROM watched_episodes we WHERE we.user_id = ${user.id}
-             )
-          ) * (SELECT t.runtime_minutes FROM titles t WHERE t.id = ${titleId}),
-          0
-        ) AS remaining_minutes
+      const runtime = episodeRuntime(
+        sql`e.runtime_minutes`,
+        sql`ti.runtime_minutes`,
+      );
+      const remainingRows = await db.all<{
+        remaining_minutes: number | null;
+      }>(sql`
+        SELECT CASE WHEN COUNT(*) = COUNT(${runtime})
+          THEN COALESCE(SUM(${runtime}), 0) END AS remaining_minutes
+        FROM episodes e JOIN titles ti ON ti.id = e.title_id
+        WHERE e.title_id = ${titleId}
+          AND e.air_date <= date('now')
+          AND e.id NOT IN (
+            SELECT we.episode_id FROM watched_episodes we WHERE we.user_id = ${user.id}
+          )
       `);
       const remainingMinutes = remainingRows[0]?.remaining_minutes ?? 0;
       if (remainingMinutes > 0) {
@@ -182,6 +186,27 @@ app.get(
 
       if (seasonResult.status === "fulfilled") {
         tmdb = seasonResult.value;
+        try {
+          if (tmdb)
+            await upsertEpisodes(
+              tmdb.episodes.map((ep) => ({
+                title_id: title.id,
+                season_number: ep.season_number,
+                episode_number: ep.episode_number,
+                name: ep.name,
+                overview: ep.overview,
+                air_date: ep.air_date,
+                still_path: ep.still_path,
+                runtime_minutes: ep.runtime,
+              })),
+            );
+        } catch (err) {
+          log.error("Failed to persist season episodes", {
+            titleId: title.id,
+            season: seasonNumber,
+            err,
+          });
+        }
       } else {
         log.error("TMDB season fetch failed", {
           tmdbId: title.tmdb_id,
@@ -228,6 +253,7 @@ app.get(
           episode_number: episodesTable.episodeNumber,
           season_number: episodesTable.seasonNumber,
           still_path: episodesTable.stillPath,
+          runtime: episodesTable.runtimeMinutes,
         })
         .from(episodesTable)
         .where(
@@ -256,7 +282,7 @@ app.get(
             episode_number: ep.episode_number,
             season_number: ep.season_number,
             still_path: ep.still_path ?? null,
-            runtime: null,
+            runtime: ep.runtime,
             vote_average: 0,
             guest_stars: [],
             crew: [],
@@ -307,6 +333,19 @@ app.get(
           seasonNumber,
           episodeNumber,
         );
+        if (tmdb)
+          await upsertEpisodes([
+            {
+              title_id: title.id,
+              season_number: tmdb.season_number,
+              episode_number: tmdb.episode_number,
+              name: tmdb.name,
+              overview: tmdb.overview,
+              air_date: tmdb.air_date,
+              still_path: tmdb.still_path,
+              runtime_minutes: tmdb.runtime,
+            },
+          ]);
       } catch (e) {
         log.error("TMDB episode fetch failed", {
           tmdbId: title.tmdb_id,
@@ -330,6 +369,7 @@ app.get(
           episode_number: episodesTable.episodeNumber,
           season_number: episodesTable.seasonNumber,
           still_path: episodesTable.stillPath,
+          runtime: episodesTable.runtimeMinutes,
         })
         .from(episodesTable)
         .where(
@@ -350,7 +390,7 @@ app.get(
           episode_number: dbEp.episode_number,
           season_number: dbEp.season_number,
           still_path: dbEp.still_path ?? null,
-          runtime: null,
+          runtime: dbEp.runtime,
           vote_average: 0,
           vote_count: 0,
           guest_stars: [],

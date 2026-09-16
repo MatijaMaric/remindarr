@@ -12,6 +12,8 @@ import type { AppEnv } from "../types";
 import { CONFIG } from "../config";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { upsertTitles } from "../db/repository";
+import * as repository from "../db/repository";
+import { getDb, episodes } from "../db/schema";
 import {
   makeParsedTitle,
   makeTmdbMovieDetails,
@@ -235,6 +237,45 @@ describe("GET /details/show/:id", () => {
 });
 
 describe("GET /details/show/:id/season/:season", () => {
+  it.each([false, true])(
+    "returns season durations when persistence fails: %s",
+    async (persistenceFails) => {
+      await upsertTitles([
+        makeParsedTitle({ id: "tv-555", objectType: "SHOW", tmdbId: "555" }),
+      ]);
+      getSpy("fetchSeasonDetails").mockResolvedValueOnce({
+        id: 1,
+        season_number: 1,
+        episodes: [
+          {
+            id: 1,
+            name: "Pilot",
+            overview: "",
+            season_number: 1,
+            episode_number: 1,
+            runtime: 59,
+            air_date: "2024-01-01",
+            still_path: null,
+          },
+        ],
+      });
+      if (persistenceFails)
+        spies.push(
+          spyOn(repository, "upsertEpisodes").mockRejectedValueOnce(
+            new Error("DB write failed"),
+          ),
+        );
+      const res = await app.request("/details/show/tv-555/season/1");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.tmdb.episodes[0].runtime).toBe(59);
+      if (!persistenceFails)
+        expect(
+          (await getDb().select().from(episodes).get())?.runtimeMinutes,
+        ).toBe(59);
+    },
+  );
+
   it("fetches show from TMDB when not in DB for season endpoint", async () => {
     (tmdbClient.fetchTvDetails as any).mockResolvedValueOnce(
       makeTmdbTvDetails({ id: 555, name: "Season Show" }),

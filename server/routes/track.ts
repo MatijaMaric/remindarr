@@ -49,7 +49,7 @@ app.get("/", async (c) => {
   const titlesWithEta = titles.map((t) => ({
     ...t,
     remaining_minutes: t.remaining_runtime_minutes ?? null,
-    eta_days: computeEta(t.remaining_runtime_minutes ?? 0, pace.minutesPerDay),
+    eta_days: computeEta(t.remaining_runtime_minutes, pace.minutesPerDay),
   }));
   return ok(c, {
     titles: titlesWithEta,
