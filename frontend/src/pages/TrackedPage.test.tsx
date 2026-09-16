@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
 import {
   render,
   screen,
@@ -17,6 +25,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
+import * as useIsMobileModule from "../hooks/useIsMobile";
 
 function newTestClient() {
   return new QueryClient({
@@ -388,18 +397,15 @@ describe("TrackedPage URL views", () => {
   );
 
   it("opens Stats from the mobile More menu", async () => {
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = (query) => {
-      const result = originalMatchMedia.call(window, query);
-      Object.defineProperty(result, "matches", { value: true });
-      return result;
-    };
+    const mobile = spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(
+      true,
+    );
     try {
       renderViewRoute("/more");
       fireEvent.click(screen.getByRole("link", { name: /Stats/ }));
       await screen.findByText("Movies Watched");
     } finally {
-      window.matchMedia = originalMatchMedia;
+      mobile.mockRestore();
     }
   });
 
