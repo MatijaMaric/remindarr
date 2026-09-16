@@ -160,6 +160,13 @@ export default function TrackedPage() {
   // Select mode state
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectButtonRef = useRef<HTMLButtonElement>(null);
+
+  // URL navigation (including browser history) must also leave selection mode.
+  if (selectMode && view !== "list") {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
 
   const { showGroups, movies } = useMemo(() => {
     const shows = allTitles.filter((t) => t.object_type === "SHOW");
@@ -194,6 +201,7 @@ export default function TrackedPage() {
   const exitSelectMode = useCallback(() => {
     setSelectMode(false);
     setSelectedIds(new Set());
+    selectButtonRef.current?.focus();
   }, []);
 
   // Toggle select mode
@@ -230,9 +238,15 @@ export default function TrackedPage() {
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <BackdateWatchedButton scope="all" variant="ghost" />
-            <Pill active={selectMode} onClick={toggleSelectMode}>
-              Select
-            </Pill>
+            {view === "list" && (
+              <Pill
+                ref={selectButtonRef}
+                active={selectMode}
+                onClick={toggleSelectMode}
+              >
+                Select
+              </Pill>
+            )}
             <Pill active={view === "grid"} onClick={() => setView("grid")}>
               Grid
             </Pill>
@@ -473,6 +487,27 @@ function TrackedTable({
   onSelectionChange,
 }: TrackedTableProps) {
   const isMobile = useIsMobile();
+  const allSelected =
+    titles.length > 0 && titles.every((title) => selectedIds.has(title.id));
+  const someSelected = titles.some((title) => selectedIds.has(title.id));
+  const selectAll = (
+    <input
+      type="checkbox"
+      aria-label="Select all titles"
+      checked={allSelected}
+      ref={(input) => {
+        if (input) input.indeterminate = someSelected && !allSelected;
+      }}
+      onChange={(event) =>
+        onSelectionChange?.(
+          event.target.checked
+            ? new Set(titles.map((title) => title.id))
+            : new Set(),
+        )
+      }
+      className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+    />
+  );
 
   function toggleId(id: string) {
     if (!onSelectionChange) return;
@@ -488,6 +523,12 @@ function TrackedTable({
   if (isMobile) {
     return (
       <div className="flex flex-col gap-2">
+        {selectMode && (
+          <label className="flex items-center gap-3 px-3 py-2 text-sm text-zinc-300 cursor-pointer">
+            {selectAll}
+            Select all titles
+          </label>
+        )}
         {titles.map((title) => {
           const statusKey = title.user_status ?? title.show_status ?? null;
           const statusColor = statusKey
@@ -508,25 +549,13 @@ function TrackedTable({
             <>
               {selectMode && (
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                  <div
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? "bg-amber-400 border-amber-400" : "border-zinc-600"}`}
-                  >
-                    {isSelected && (
-                      <svg
-                        className="w-2.5 h-2.5 text-zinc-900"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={3}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    )}
-                  </div>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${title.title}`}
+                    checked={isSelected}
+                    onChange={() => toggleId(title.id)}
+                    className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                  />
                 </div>
               )}
               <div className="w-[48px] h-[68px] rounded-lg overflow-hidden shrink-0 bg-zinc-800">
@@ -580,14 +609,12 @@ function TrackedTable({
 
           if (selectMode) {
             return (
-              <button
+              <label
                 key={title.id}
-                type="button"
-                onClick={() => toggleId(title.id)}
                 className={`flex gap-3 items-center rounded-xl p-2.5 w-full text-left transition-colors ${isSelected ? "bg-amber-500/10 border border-amber-500/30" : "bg-zinc-900 border border-white/[0.05]"}`}
               >
                 {rowContent}
-              </button>
+              </label>
             );
           }
 
@@ -605,6 +632,7 @@ function TrackedTable({
     );
   }
 
+  const Row = selectMode ? "label" : "div";
   return (
     <div>
       {/* Column header */}
@@ -616,39 +644,7 @@ function TrackedTable({
             : "50px 1fr 130px 200px 130px 90px 90px",
         }}
       >
-        {selectMode && (
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                if (!onSelectionChange) return;
-                if (selectedIds.size === titles.length) {
-                  onSelectionChange(new Set());
-                } else {
-                  onSelectionChange(new Set(titles.map((t) => t.id)));
-                }
-              }}
-              className="w-4 h-4 rounded border-2 flex items-center justify-center transition-colors border-zinc-600 hover:border-amber-400"
-              title="Select all"
-            >
-              {selectedIds.size === titles.length && titles.length > 0 && (
-                <svg
-                  className="w-2.5 h-2.5 text-amber-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        )}
+        {selectMode && <div>{selectAll}</div>}
         <div />
         <div>Show</div>
         <div>Status</div>
@@ -686,7 +682,7 @@ function TrackedTable({
           const isSelected = selectedIds.has(title.id);
 
           return (
-            <div
+            <Row
               key={title.id}
               className={`grid gap-4 px-4 py-3 items-center transition-colors ${selectMode ? (isSelected ? "bg-amber-500/10 cursor-pointer" : "bg-zinc-900 hover:bg-zinc-800/60 cursor-pointer") : "bg-zinc-900 hover:bg-zinc-800/60"}`}
               style={{
@@ -694,30 +690,17 @@ function TrackedTable({
                   ? "32px 50px 1fr 130px 200px 130px 90px 90px"
                   : "50px 1fr 130px 200px 130px 90px 90px",
               }}
-              onClick={selectMode ? () => toggleId(title.id) : undefined}
             >
               {/* Checkbox column */}
               {selectMode && (
                 <div className="flex items-center justify-center">
-                  <div
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? "bg-amber-400 border-amber-400" : "border-zinc-600"}`}
-                  >
-                    {isSelected && (
-                      <svg
-                        className="w-2.5 h-2.5 text-zinc-900"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={3}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    )}
-                  </div>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${title.title}`}
+                    checked={isSelected}
+                    onChange={() => toggleId(title.id)}
+                    className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                  />
                 </div>
               )}
               {/* Poster thumbnail */}
@@ -799,10 +782,7 @@ function TrackedTable({
                 {score ? `★ ${score.toFixed(1)}` : "—"}
               </div>
               {/* Actions */}
-              <div
-                className="flex gap-1 justify-end"
-                onClick={(e) => selectMode && e.stopPropagation()}
-              >
+              <div className="flex gap-1 justify-end">
                 {!selectMode && (
                   <>
                     <Link
@@ -815,7 +795,7 @@ function TrackedTable({
                   </>
                 )}
               </div>
-            </div>
+            </Row>
           );
         })}
       </div>
