@@ -193,7 +193,7 @@ it("dismisses with Escape and selects a snooze duration by keyboard", async () =
   expect(trigger.getAttribute("aria-expanded")).toBe("true");
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-  expect(document.activeElement).toBe(trigger);
+  expect(document.activeElement === trigger).toBe(true);
   await user.keyboard(" ");
   await screen.findByRole("menu");
   await user.keyboard("{End}");
@@ -225,11 +225,11 @@ it("restores focus after snooze selection while saving and prevents reopening", 
   await screen.findByRole("menu");
   await user.keyboard("{End}{Enter}");
   await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("true"));
-  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  await waitFor(() => expect(document.activeElement === trigger).toBe(true));
   expect(screen.queryByRole("menu")).toBeNull();
   await user.keyboard("{Enter}");
   expect(screen.queryByRole("menu")).toBeNull();
   finish();
   await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("false"));
-  expect(document.activeElement).toBe(trigger);
+  expect(document.activeElement === trigger).toBe(true);
 });

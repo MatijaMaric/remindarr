@@ -774,7 +774,7 @@ it("supports Escape and keyboard selection in the bulk status menu", async () =>
   await screen.findByRole("menu");
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-  expect(document.activeElement).toBe(trigger);
+  expect(document.activeElement === trigger).toBe(true);
   await user.keyboard("{ArrowDown}");
   await screen.findByRole("menu");
   await user.keyboard("{Home}{ArrowDown}{Enter}");
@@ -786,14 +786,14 @@ it("supports Escape and keyboard selection in the bulk status menu", async () =>
     }),
   );
   await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("true"));
-  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  await waitFor(() => expect(document.activeElement === trigger).toBe(true));
   expect(screen.queryByRole("menu")).toBeNull();
   await user.keyboard("{Enter}");
   expect(screen.queryByRole("menu")).toBeNull();
   finish({ updated: 1 });
   await waitFor(() =>
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Select" }),
-    ),
+    expect(
+      document.activeElement === screen.getByRole("button", { name: "Select" }),
+    ).toBe(true),
   );
 });
