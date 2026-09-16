@@ -494,18 +494,11 @@ app.get("/share/watchlist/:token", async (c) => {
       ? `https://image.tmdb.org/t/p/w342${titles[0].poster_url}`
       : null;
     const description = `${count} title${count !== 1 ? "s" : ""} tracked by @${username}`;
-    const imageTag = firstPoster
-      ? `<meta property="og:image" content="${firstPoster}" />`
-      : "";
-    ogTags = `
-    <meta property="og:title" content="${username}'s Watchlist — Remindarr" />
-    <meta property="og:description" content="${description}" />
-    <meta property="og:type" content="website" />
-    ${imageTag}
-    <meta name="twitter:card" content="${firstPoster ? "summary_large_image" : "summary"}" />
-    <meta name="twitter:title" content="${username}'s Watchlist — Remindarr" />
-    <meta name="twitter:description" content="${description}" />
-    ${firstPoster ? `<meta name="twitter:image" content="${firstPoster}" />` : ""}`;
+    ogTags = buildOgTags({
+      title: `${username}'s Watchlist — Remindarr`,
+      description,
+      image: firstPoster,
+    });
   }
   try {
     const indexHtml = await Bun.file("./frontend/dist/index.html").text();

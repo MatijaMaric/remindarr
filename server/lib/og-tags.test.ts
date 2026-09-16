@@ -36,6 +36,17 @@ describe("escapeOg", () => {
 });
 
 describe("buildOgTags", () => {
+  it("escapes markup-bearing names, descriptions and poster URLs", () => {
+    const payload = '\"><script>window.injected = true</script><meta content="';
+    const html = buildOgTags({
+      title: `${payload}'s Watchlist — Remindarr`,
+      description: `1 title tracked by @${payload}`,
+      image: `https://image.tmdb.org/t/p/w342/${payload}`,
+    });
+    expect(html).not.toContain("<script>");
+    expect(html.match(/&lt;script&gt;/g)).toHaveLength(6);
+  });
+
   it("includes title and description without an image", () => {
     const html = buildOgTags({
       title: "Ada's 2025 Wrapped",
