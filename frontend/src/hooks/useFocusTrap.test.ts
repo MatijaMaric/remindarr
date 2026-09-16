@@ -117,6 +117,21 @@ describe("useFocusTrap", () => {
     unmount();
   });
 
+  it("restores focus to the opener when the open dialog unmounts", () => {
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+    const { container, buttons } = buildContainer(2);
+    const { unmount } = renderHook(() => {
+      const ref = useRef<HTMLDivElement>(container);
+      useFocusTrap(ref, true);
+    });
+
+    expect(document.activeElement).toBe(buttons[0]);
+    unmount();
+    expect(document.activeElement).toBe(opener);
+  });
+
   it("does not wrap Tab when focus is not on the last element", () => {
     const { container, buttons } = buildContainer(3);
 

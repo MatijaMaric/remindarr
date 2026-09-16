@@ -1,4 +1,5 @@
 import { memo, useRef, useState, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ScrollableRowProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ function ScrollableRowImpl({
   focusable = false,
   ariaLabel,
 }: ScrollableRowProps) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -57,8 +59,10 @@ function ScrollableRowImpl({
     <div className="relative group/scroll">
       {canScrollLeft && (
         <button
+          type="button"
+          aria-label={t("common.scrollLeft")}
           onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/scroll:opacity-100 transition-opacity"
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/scroll:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-opacity"
         >
           <svg
             className="w-4 h-4"
@@ -87,8 +91,10 @@ function ScrollableRowImpl({
       </div>
       {canScrollRight && (
         <button
+          type="button"
+          aria-label={t("common.scrollRight")}
           onClick={() => scroll("right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/scroll:opacity-100 transition-opacity"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/scroll:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-opacity"
         >
           <svg
             className="w-4 h-4"
