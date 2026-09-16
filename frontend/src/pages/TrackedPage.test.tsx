@@ -750,3 +750,32 @@ describe("TrackedPage sorting", () => {
     },
   );
 });
+
+it("supports Escape and keyboard selection in the bulk status menu", async () => {
+  const user = userEvent.setup();
+  apiMock.getTrackedTitles.mockResolvedValue({
+    titles: [makeMovie("m1")],
+    count: 1,
+  });
+  render(<TrackedPage />, { wrapper: Wrapper });
+  await screen.findByText("Movie m1");
+  await user.click(screen.getByRole("button", { name: "Select" }));
+  await user.click(screen.getByRole("checkbox", { name: "Select Movie m1" }));
+  const trigger = screen.getByRole("button", { name: /Set Status/ });
+  trigger.focus();
+  await user.keyboard("{Enter}");
+  await screen.findByRole("menu");
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  expect(document.activeElement).toBe(trigger);
+  await user.keyboard("{ArrowDown}");
+  await screen.findByRole("menu");
+  await user.keyboard("{Home}{ArrowDown}{Enter}");
+  await waitFor(() =>
+    expect(apiMock.bulkTrackAction).toHaveBeenCalledWith({
+      titleIds: ["m1"],
+      action: "set_status",
+      payload: { status: "completed" },
+    }),
+  );
+});

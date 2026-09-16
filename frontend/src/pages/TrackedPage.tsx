@@ -1,3 +1,4 @@
+import { Menu } from "@base-ui/react/menu";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { Card } from "../components/ui/card";
@@ -856,7 +857,6 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
   }
 
   async function handleSetStatus(status: string) {
-    setStatusOpen(false);
     await runBulkAction({
       titleIds: Array.from(selectedIds),
       action: "set_status",
@@ -927,36 +927,35 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
             </button>
 
             {/* Set Status */}
-            <div className="relative">
-              <button
-                type="button"
+            <Menu.Root open={statusOpen} onOpenChange={setStatusOpen}>
+              <Menu.Trigger
+                aria-expanded={statusOpen}
                 disabled={loading}
-                onClick={() => setStatusOpen((v) => !v)}
                 className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
               >
                 Set Status ▾
-              </button>
-              {statusOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setStatusOpen(false)}
-                  />
-                  <div className="absolute bottom-full mb-2 left-0 z-20 min-w-[160px] bg-zinc-800 border border-white/[0.08] rounded-xl shadow-2xl py-1">
+              </Menu.Trigger>
+              <Menu.Portal>
+                <Menu.Positioner
+                  side="top"
+                  align="start"
+                  sideOffset={8}
+                  className="z-50"
+                >
+                  <Menu.Popup className="min-w-[160px] bg-zinc-800 border border-white/[0.08] rounded-xl shadow-2xl py-1">
                     {BULK_STATUS_OPTIONS.map((opt) => (
-                      <button
+                      <Menu.Item
                         key={opt.value}
-                        type="button"
                         onClick={() => void handleSetStatus(opt.value)}
-                        className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 text-xs text-zinc-300 outline-none data-[highlighted]:bg-white/[0.06] transition-colors cursor-pointer"
                       >
                         {opt.label}
-                      </button>
+                      </Menu.Item>
                     ))}
-                  </div>
-                </>
-              )}
-            </div>
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.Root>
 
             {/* Add Tag */}
             <div className="relative">
