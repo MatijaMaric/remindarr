@@ -10,6 +10,7 @@ import TitleList from "../components/TitleList";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groupShowsByStatus } from "../lib/groupShows";
+import { getEffectiveStatus } from "../lib/titleStatus";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -30,10 +31,10 @@ const EMPTY_TITLES: Title[] = [];
 
 function TrackedStatsBand({ titles }: { titles: Title[] }) {
   const watching = titles.filter(
-    (t) => t.show_status === "watching" || t.user_status === "watching",
+    (t) => getEffectiveStatus(t) === "watching",
   ).length;
   const completed = titles.filter(
-    (t) => t.show_status === "completed" || t.user_status === "completed",
+    (t) => getEffectiveStatus(t) === "completed",
   ).length;
   const scored = titles.filter((t) => t.imdb_score || t.tmdb_score);
   const avgScore =
@@ -184,12 +185,7 @@ export default function TrackedPage() {
 
   const filteredTitles = useMemo(() => {
     if (statusFilter === "all") return allTitles;
-    return allTitles.filter(
-      (t) =>
-        t.user_status === statusFilter ||
-        (statusFilter === "watching" && t.show_status === "watching") ||
-        (statusFilter === "completed" && t.show_status === "completed"),
-    );
+    return allTitles.filter((t) => getEffectiveStatus(t) === statusFilter);
   }, [allTitles, statusFilter]);
 
   const sortedFilteredTitles = useMemo(
@@ -273,14 +269,8 @@ export default function TrackedPage() {
               const count =
                 tab.key === "all"
                   ? allTitles.length
-                  : allTitles.filter(
-                      (t) =>
-                        t.user_status === tab.key ||
-                        (tab.key === "watching" &&
-                          t.show_status === "watching") ||
-                        (tab.key === "completed" &&
-                          t.show_status === "completed"),
-                    ).length;
+                  : allTitles.filter((t) => getEffectiveStatus(t) === tab.key)
+                      .length;
               const isActive = statusFilter === tab.key;
               return (
                 <button
@@ -530,7 +520,7 @@ function TrackedTable({
           </label>
         )}
         {titles.map((title) => {
-          const statusKey = title.user_status ?? title.show_status ?? null;
+          const statusKey = getEffectiveStatus(title);
           const statusColor = statusKey
             ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS["plan_to_watch"])
             : "#71717a";
@@ -656,7 +646,7 @@ function TrackedTable({
       {/* Rows */}
       <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
         {titles.map((title) => {
-          const statusKey = title.user_status ?? title.show_status ?? null;
+          const statusKey = getEffectiveStatus(title);
           const statusColor = statusKey
             ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS["plan_to_watch"])
             : "#71717a";

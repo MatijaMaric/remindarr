@@ -110,6 +110,41 @@ afterEach(() => {
 });
 
 describe("TitleCard", () => {
+  it.each([
+    ["dropped", "completed", "Dropped"],
+    ["on_hold", "caught_up", "On Hold"],
+    ["completed", "watching", "Completed"],
+    [null, "completed", "Completed"],
+    [null, "caught_up", "Caught Up"],
+  ] as const)(
+    "prefers manual %s over computed %s for card badges",
+    (userStatus, showStatus, badge) => {
+      render(
+        <TitleCard
+          title={makeTitle({
+            object_type: "SHOW",
+            user_status: userStatus,
+            show_status: showStatus,
+            watched_episodes_count: 1,
+            total_episodes: 10,
+          })}
+          showProgressBar
+        />,
+        { wrapper: NoUserWrapper },
+      );
+      for (const label of ["Completed", "Caught Up", "Dropped", "On Hold"]) {
+        expect(screen.queryByText(label) !== null).toBe(label === badge);
+      }
+      expect(screen.queryByTestId("completed-overlay") !== null).toBe(
+        badge === "Completed",
+      );
+      expect(screen.getByRole("article").classList.contains("opacity-75")).toBe(
+        badge === "Completed",
+      );
+      expect(screen.queryByRole("progressbar")).toBeNull();
+    },
+  );
+
   it("renders movie title and year", () => {
     const title = makeTitle({ title: "Inception", release_year: 2010 });
     render(<TitleCard title={title} />, { wrapper: NoUserWrapper });

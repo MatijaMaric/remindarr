@@ -1,6 +1,7 @@
 import { memo, useState } from "react";
 import { Link } from "react-router";
 import type { Title } from "../types";
+import { getEffectiveStatus } from "../lib/titleStatus";
 import TrackButton from "./TrackButton";
 import WatchButtonGroup from "./WatchButtonGroup";
 import VisibilityButton from "./VisibilityButton";
@@ -110,12 +111,16 @@ const TitleCard = memo(function TitleCard({
     if (changedTitle) setPosterError(false);
   }
 
+  const effectiveStatus = getEffectiveStatus({
+    user_status: userStatus,
+    show_status: title.show_status,
+  });
   const isSnoozed = snoozeUntil != null && new Date(snoozeUntil) > new Date();
 
   return (
     <article
       aria-label={title.title}
-      className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${title.show_status === "completed" ? " opacity-75" : ""}`}
+      className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${effectiveStatus === "completed" ? " opacity-75" : ""}`}
     >
       {/* Poster — clickable link to detail page */}
       <div className="aspect-[2/3] bg-zinc-800 relative">
@@ -162,8 +167,7 @@ const TitleCard = memo(function TitleCard({
               TV
             </span>
           )}
-        {(title.show_status === "completed" ||
-          (userStatus === "completed" && title.object_type === "SHOW")) && (
+        {effectiveStatus === "completed" && (
           <>
             <div
               className="absolute inset-0 bg-emerald-900/40 pointer-events-none"
@@ -186,27 +190,27 @@ const TitleCard = memo(function TitleCard({
             </span>
           </>
         )}
-        {title.show_status === "caught_up" && userStatus !== "completed" && (
+        {effectiveStatus === "caught_up" && (
           <span className="absolute bottom-2 left-2 bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
             Caught Up
           </span>
         )}
-        {userStatus === "on_hold" && (
+        {effectiveStatus === "on_hold" && (
           <span className="absolute bottom-2 left-2 bg-yellow-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
             On Hold
           </span>
         )}
-        {userStatus === "dropped" && (
+        {effectiveStatus === "dropped" && (
           <span className="absolute bottom-2 left-2 bg-red-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
             Dropped
           </span>
         )}
-        {userStatus === "plan_to_watch" && (
+        {effectiveStatus === "plan_to_watch" && (
           <span className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
             Plan to Watch
           </span>
         )}
-        {title.show_status === "watching" && title.object_type === "SHOW" && (
+        {effectiveStatus === "watching" && title.object_type === "SHOW" && (
           <>
             {showProgressBar &&
             (title.released_episodes_count ?? title.total_episodes ?? 0) > 0 ? (
@@ -224,7 +228,7 @@ const TitleCard = memo(function TitleCard({
             )}
           </>
         )}
-        {!title.show_status && title.is_watched && (
+        {!effectiveStatus && title.is_watched && (
           <span className="absolute bottom-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
             <svg
               className="w-3 h-3"
@@ -241,7 +245,7 @@ const TitleCard = memo(function TitleCard({
             Watched
           </span>
         )}
-        {!title.show_status &&
+        {!effectiveStatus &&
           !title.is_watched &&
           !showProgressBar &&
           title.object_type === "SHOW" &&
@@ -252,7 +256,7 @@ const TitleCard = memo(function TitleCard({
               total={title.released_episodes_count ?? title.total_episodes}
             />
           )}
-        {!title.show_status &&
+        {!effectiveStatus &&
           !title.is_watched &&
           showProgressBar &&
           title.object_type === "SHOW" &&
