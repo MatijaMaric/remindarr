@@ -280,6 +280,7 @@
     "anyYear": "Any year"
   },
   "search": {
+    "titles": "Search titles…",
     "placeholder": "Search titles or paste IMDB link...",
     "label": "Search titles or paste IMDB link",
     "button": "Search",

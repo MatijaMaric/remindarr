@@ -26,6 +26,7 @@ export function useKeyboardShortcut(key: string, callback: () => void) {
     function handleKeyDown(e: KeyboardEvent) {
       if (isInputFocused()) return;
       if (e.key === key && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
         callbackRef.current();
       }
     }

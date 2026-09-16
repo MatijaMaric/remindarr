@@ -46,6 +46,20 @@ describe("useKeyboardShortcut", () => {
     unmount();
   });
 
+  it("prevents a handled shortcut from typing into its newly focused input", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    const { unmount } = renderHook(() =>
+      useKeyboardShortcut("/", () => input.focus()),
+    );
+    const event = new KeyboardEvent("keydown", { key: "/", cancelable: true });
+    window.dispatchEvent(event);
+    expect(document.activeElement).toBe(input);
+    expect(event.defaultPrevented).toBe(true);
+    unmount();
+    input.remove();
+  });
+
   it("does not fire for a different key", () => {
     const { unmount } = renderHook(() =>
       useKeyboardShortcut("j", () => calls++),
