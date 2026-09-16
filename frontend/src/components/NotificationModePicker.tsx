@@ -49,6 +49,14 @@ export default function NotificationModePicker({
     currentMode ?? null,
   );
   const [remind, setRemind] = useState<boolean>(remindOnRelease ?? false);
+  const [previousMode, setPreviousMode] = useState({
+    titleId,
+    value: currentMode,
+  });
+  const [previousRemind, setPreviousRemind] = useState({
+    titleId,
+    value: remindOnRelease,
+  });
 
   const modeMutation = useMutation({
     mutationFn: ({ value }: { value: NotificationMode | null }) =>
@@ -77,6 +85,22 @@ export default function NotificationModePicker({
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
   });
+
+  // Keep optimistic selections while saving, then accept refreshed server props.
+  if (
+    titleId !== previousMode.titleId ||
+    (!modeMutation.isPending && currentMode !== previousMode.value)
+  ) {
+    setPreviousMode({ titleId, value: currentMode });
+    setMode(currentMode ?? null);
+  }
+  if (
+    titleId !== previousRemind.titleId ||
+    (!remindMutation.isPending && remindOnRelease !== previousRemind.value)
+  ) {
+    setPreviousRemind({ titleId, value: remindOnRelease });
+    setRemind(remindOnRelease ?? false);
+  }
 
   const activeMode = mode ?? "all";
 
