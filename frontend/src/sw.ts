@@ -9,11 +9,7 @@ import {
   NavigationRoute,
   setCatchHandler,
 } from "workbox-routing";
-import {
-  StaleWhileRevalidate,
-  NetworkFirst,
-  NetworkOnly,
-} from "workbox-strategies";
+import { StaleWhileRevalidate, NetworkFirst } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { Queue } from "workbox-background-sync";
 declare let self: ServiceWorkerGlobalScope;
@@ -71,7 +67,7 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"] as const) {
   registerRoute(
     ({ url }) =>
       url.origin === self.location.origin && url.pathname.startsWith("/api/"),
-    new NetworkOnly({ fetchOptions: { cache: "no-store" } }),
+    ({ request }) => fetch(request, { cache: "no-store" }),
     method,
   );
 }
