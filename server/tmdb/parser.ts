@@ -31,6 +31,8 @@ export interface ParsedTitle {
   ageCertification: string | null;
   tmdbUrl: string | null;
   offers: ParsedOffer[];
+  /** True when provider data was fetched successfully, including an empty set. */
+  offersFetched?: boolean;
   scores: ParsedScores;
   matchScore?: number;
 }
@@ -111,7 +113,7 @@ function parseWatchProviders(
   titleId: string,
   tmdbLink: string,
 ): ParsedOffer[] {
-  if (!wpResponse) return [];
+  if (!wpResponse?.results) return [];
   const countries = [CONFIG.COUNTRY, ...CONFIG.FALLBACK_COUNTRIES];
   let countryData: TmdbWatchProviderCountry | undefined;
   for (const country of countries) {
@@ -182,6 +184,7 @@ export function parseMovieDetails(movie: TmdbMovieDetails): ParsedTitle {
     ageCertification: null,
     tmdbUrl,
     offers: parseWatchProviders(movie["watch/providers"], id, tmdbUrl),
+    offersFetched: movie["watch/providers"]?.results != null,
     scores: {
       imdbScore: null,
       imdbVotes: null,
@@ -214,6 +217,7 @@ export function parseTvDetails(tv: TmdbTvDetails): ParsedTitle {
     ageCertification: null,
     tmdbUrl,
     offers: parseWatchProviders(tv["watch/providers"], id, tmdbUrl),
+    offersFetched: tv["watch/providers"]?.results != null,
     scores: {
       imdbScore: null,
       imdbVotes: null,
