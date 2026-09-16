@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { userEvent } from "storybook/test";
 import "../../i18n";
 import * as api from "../../api";
 
@@ -81,7 +82,7 @@ describe("IntegrationsTab", () => {
 });
 
 describe("JSON watchlist import", () => {
-  it("opens the chooser from a focusable button and retains focus on cancellation", () => {
+  it("opens the chooser from a focusable button and retains focus on cancellation", async () => {
     render(<IntegrationsTab />, { wrapper: wrapper(newTestClient()) });
     const button = screen.getByRole("button", { name: "Import" });
     const input = screen.getByLabelText("Import Watchlist") as HTMLInputElement;
@@ -91,8 +92,10 @@ describe("JSON watchlist import", () => {
     button.focus();
     expect(button.tabIndex).toBe(0);
     expect(button.getAttribute("type")).toBe("button");
-    fireEvent.click(button);
-    expect(click).toHaveBeenCalledTimes(1);
+    const user = userEvent.setup();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    expect(click).toHaveBeenCalledTimes(2);
     fireEvent(input, new Event("cancel", { bubbles: true }));
     expect(document.activeElement).toBe(button);
   });
