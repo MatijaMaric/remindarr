@@ -2,6 +2,7 @@ import { Link, Navigate, useNavigate } from "react-router";
 import { Card } from "../components/ui/card";
 import {
   ChevronRight,
+  Clapperboard,
   Sparkles,
   PartyPopper,
   BarChart2,
@@ -132,6 +133,12 @@ export default function MorePage() {
 
       {/* Discover */}
       <MoreGroup label="Discover">
+        <MoreRow
+          icon={<Clapperboard size={16} />}
+          label="Reels"
+          sub="Full-screen episodes and movies"
+          to="/reels"
+        />
         <MoreRow
           icon={<Sparkles size={16} />}
           label="Discovery"

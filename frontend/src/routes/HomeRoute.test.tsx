@@ -24,6 +24,10 @@ mock.module("../context/AuthContext", () => ({
   AuthContext: MockAuthContext,
 }));
 
+mock.module("../pages/HomePage", () => ({
+  default: () => <div data-testid="dashboard">Dashboard</div>,
+}));
+
 const { default: HomeRoute } = await import("./HomeRoute");
 const { AuthContext } = await import("../context/AuthContext");
 
@@ -78,14 +82,15 @@ afterEach(() => {
 });
 
 describe("HomeRoute", () => {
-  it("redirects authenticated mobile users to /reels", async () => {
+  it("opens the dashboard directly for authenticated mobile users", async () => {
     mockIsMobile = true;
     const { getByTestId } = render(
       <Harness authValue={makeAuth({ user: authedUser })} />,
     );
 
     await waitFor(() => {
-      expect(getByTestId("pathname").textContent).toBe("/reels");
+      expect(getByTestId("pathname").textContent).toBe("/");
+      expect(getByTestId("dashboard")).toBeDefined();
     });
   });
 
@@ -95,8 +100,7 @@ describe("HomeRoute", () => {
       <Harness authValue={makeAuth({ user: authedUser })} />,
     );
 
-    // Give React a tick to process any pending effects; pathname should remain "/".
-    await new Promise((r) => setTimeout(r, 10));
+    await waitFor(() => expect(getByTestId("dashboard")).toBeDefined());
     expect(getByTestId("pathname").textContent).toBe("/");
   });
 

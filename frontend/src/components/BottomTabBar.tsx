@@ -46,7 +46,8 @@ export default function BottomTabBar() {
         {user ? (
           <>
             <NavLink
-              to="/reels"
+              to="/"
+              end
               className={({ isActive }) => tabClass(isActive)}
             >
               <Home size={ICON_SIZE} aria-hidden="true" />

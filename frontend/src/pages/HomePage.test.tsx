@@ -592,3 +592,31 @@ describe("HomePage — friends loved this week", () => {
     expect(screen.queryByText("Friends Loved This Week")).toBeNull();
   });
 });
+
+describe("HomePage dashboard modes", () => {
+  for (const mobile of [true, false]) {
+    it(`honors the saved dashboard layout on a ${mobile ? "mobile" : "desktop"} viewport`, async () => {
+      mockUser = { id: "u1", username: "testuser" };
+      mockIsMobile = mobile;
+      apiMock.getHomepageLayout.mockImplementation(() =>
+        Promise.resolve({
+          homepage_layout: [
+            { id: "up_next", enabled: true },
+            { id: "today", enabled: false },
+          ],
+        }),
+      );
+      render(<HomePage />, { wrapper: Wrapper });
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Up Next" })).toBeDefined(),
+      );
+      expect(screen.queryByText("Today")).toBeNull();
+      expect(
+        screen.getByRole("navigation", { name: "Home views" }),
+      ).toBeDefined();
+      expect(
+        screen.getByRole("link", { name: "Reels" }).getAttribute("href"),
+      ).toBe("/reels");
+    });
+  }
+});
