@@ -4,10 +4,15 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import type { ReactNode } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { authClient } from "../lib/auth-client";
-import { queryClient } from "../lib/queryClient";
+import { createQueryClient } from "../lib/queryClient";
+import { AUTH_CHANGE_KEY, cancelIdentityRequests } from "../lib/identity";
+import { clearPrivateData } from "../lib/swControl";
 import { getSubscriptions } from "../api";
 import { resolveSession } from "../lib/sessionBootstrap";
 import type { UserSubscriptions } from "../types";
@@ -73,8 +78,26 @@ function mapSessionToUser(session: BetterAuthSessionData | null): User | null {
   };
 }
 
+function announceIdentity(
+  phase: "changing" | "settled",
+  nonce = crypto.randomUUID(),
+) {
+  try {
+    localStorage.setItem(AUTH_CHANGE_KEY, JSON.stringify({ phase, nonce }));
+  } catch {
+    // Storage-disabled browsers still isolate this tab; focus rechecks the session.
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [identity, setIdentity] = useState(() => ({
+    user: null as User | null,
+    client: createQueryClient(null),
+    epoch: 0,
+  }));
+  const current = useRef(identity);
+  const sessionRequest = useRef(0);
+  const changing = useRef(false);
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("unknown");
@@ -82,139 +105,164 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     null,
   );
 
+  const replaceIdentity = useCallback((user: User | null) => {
+    cancelIdentityRequests();
+    void current.current.client.cancelQueries();
+    current.current.client.clear();
+    const next = {
+      user,
+      client: createQueryClient(user?.id ?? null),
+      epoch: current.current.epoch + 1,
+    };
+    current.current = next;
+    setIdentity(next);
+    setSubscriptions(null);
+    void clearPrivateData();
+    return next.epoch;
+  }, []);
+
   const refreshSubscriptions = useCallback(async () => {
+    const epoch = current.current.epoch;
+    if (!current.current.user) return;
     try {
       const data = await getSubscriptions();
-      setSubscriptions(data);
+      if (epoch === current.current.epoch) setSubscriptions(data);
     } catch {
-      setSubscriptions(null);
+      if (epoch === current.current.epoch) setSubscriptions(null);
     }
   }, []);
 
-  const refresh = useCallback(async () => {
-    const { verdict, data } = await resolveSession(() =>
-      authClient.getSession(),
-    );
-    if (verdict === "authenticated") {
-      setUser(mapSessionToUser(data as BetterAuthSessionData | null));
-      setSessionStatus("authenticated");
-    } else if (verdict === "unauthenticated") {
-      setUser(null);
-      setSessionStatus("unauthenticated");
-    }
-    // indeterminate: leave current state unchanged
+  const refreshSession = useCallback(
+    async (announce = true) => {
+      const request = ++sessionRequest.current;
+      const epoch = current.current.epoch;
+      const { verdict, data } = await resolveSession(() =>
+        authClient.getSession({ query: { disableCookieCache: true } }),
+      );
+      if (request !== sessionRequest.current || epoch !== current.current.epoch)
+        return;
+      if (verdict !== "indeterminate") {
+        const user =
+          verdict === "authenticated"
+            ? mapSessionToUser(data as BetterAuthSessionData | null)
+            : null;
+        if (user?.id !== current.current.user?.id) {
+          if (announce) announceIdentity("settled");
+          replaceIdentity(user);
+        } else {
+          const next = { ...current.current, user };
+          current.current = next;
+          setIdentity(next);
+        }
+        setSessionStatus(user ? "authenticated" : "unauthenticated");
+        void refreshSubscriptions();
+      }
+      setLoading(false);
+    },
+    [replaceIdentity, refreshSubscriptions],
+  );
+
+  const refresh = useCallback(() => refreshSession(), [refreshSession]);
+  const cancelRefresh = useCallback(() => {
+    ++sessionRequest.current;
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function init() {
-      const [sessionOutcome, provData] = await Promise.allSettled([
-        resolveSession(() => authClient.getSession()),
-        fetch("/api/auth/custom/providers").then((r) => r.json()),
-      ]);
-
-      if (!cancelled) {
-        if (sessionOutcome.status === "fulfilled") {
-          const { verdict, data } = sessionOutcome.value;
-          if (verdict === "authenticated") {
-            const resolved = mapSessionToUser(
-              data as BetterAuthSessionData | null,
-            );
-            setUser(resolved);
-            setSessionStatus("authenticated");
-            if (resolved) {
-              getSubscriptions()
-                .then(setSubscriptions)
-                .catch(() => {});
-            }
-          } else if (verdict === "unauthenticated") {
-            setUser(null);
-            setSessionStatus("unauthenticated");
-          } else {
-            // indeterminate: leave user null, signal unknown state
-            setSessionStatus("unknown");
-          }
-        }
-        if (provData.status === "fulfilled") {
-          setProviders(provData.value as AuthProviders);
-        }
-        setLoading(false);
-      }
-    }
-
-    init();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Listen for 401 events from api.ts
-  useEffect(() => {
-    const handler = () => {
-      queryClient.clear();
-      setUser(null);
-      setSessionStatus("unauthenticated");
-    };
-    window.addEventListener("auth:unauthorized", handler);
-    return () => window.removeEventListener("auth:unauthorized", handler);
-  }, []);
-
-  const login = async (username: string, password: string) => {
-    const result = await authClient.signIn.username({
-      username,
-      password,
-    });
-    if (result.error) {
-      throw new Error(result.error.message || "Login failed");
-    }
-    const session = await authClient.getSession();
-    setUser(mapSessionToUser(session.data));
-    setSessionStatus("authenticated");
-    getSubscriptions()
-      .then(setSubscriptions)
-      .catch(() => {});
-
+    void clearPrivateData();
+    void refreshSession(false);
     fetch("/api/auth/custom/providers")
       .then((r) => r.json())
-      .then(setProviders)
+      .then((data) => {
+        if (!cancelled) setProviders(data);
+      })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+      cancelRefresh();
+    };
+  }, [refreshSession, cancelRefresh]);
+
+  useEffect(() => {
+    const unauthorized = () => {
+      replaceIdentity(null);
+      setSessionStatus("unauthenticated");
+      setLoading(false);
+      announceIdentity("settled");
+    };
+    const storage = (event: StorageEvent) => {
+      if (event.key !== AUTH_CHANGE_KEY) return;
+      replaceIdentity(null);
+      setSessionStatus("unknown");
+      setLoading(true);
+      // Clear immediately, then wait for the cookie-changing operation to finish.
+      try {
+        changing.current =
+          JSON.parse(event.newValue ?? "null")?.phase === "changing";
+        if (changing.current) return;
+      } catch {
+        changing.current = false;
+        /* Revalidate malformed/cleared revision markers too. */
+      }
+      void refreshSession(false);
+    };
+    const revalidate = () => {
+      if (!changing.current) void refreshSession();
+    };
+    window.addEventListener("auth:unauthorized", unauthorized);
+    window.addEventListener("storage", storage);
+    window.addEventListener("focus", revalidate);
+    window.addEventListener("pageshow", revalidate);
+    return () => {
+      window.removeEventListener("auth:unauthorized", unauthorized);
+      window.removeEventListener("storage", storage);
+      window.removeEventListener("focus", revalidate);
+      window.removeEventListener("pageshow", revalidate);
+    };
+  }, [replaceIdentity, refreshSession]);
+
+  const changeSession = async (
+    operation: () => Promise<{ error?: { message?: string } | null }>,
+  ) => {
+    const nonce = crypto.randomUUID();
+    changing.current = true;
+    announceIdentity("changing", nonce);
+    // Keep a signed-out form mounted so it can display failed login/signup
+    // errors. A successful identity change remounts the complete private tree.
+    if (current.current.user) {
+      replaceIdentity(null);
+      setLoading(true);
+      setSessionStatus("unknown");
+    }
+    try {
+      await clearPrivateData();
+      const result = await operation();
+      if (result.error)
+        throw new Error(result.error.message || "Authentication failed");
+    } finally {
+      changing.current = false;
+      await refreshSession(false);
+      announceIdentity("settled", nonce);
+    }
   };
 
-  const signup = async (
+  const login = (username: string, password: string) =>
+    changeSession(() => authClient.signIn.username({ username, password }));
+  const signup = (
     username: string,
     email: string,
     password: string,
     name: string,
-  ) => {
-    const result = await authClient.signUp.email({
-      username,
-      email,
-      password,
-      name,
-    });
-    if (result.error) {
-      throw new Error(result.error.message || "Signup failed");
-    }
-    const session = await authClient.getSession();
-    setUser(mapSessionToUser(session.data));
-    setSessionStatus("authenticated");
-    getSubscriptions()
-      .then(setSubscriptions)
-      .catch(() => {});
-  };
-
-  const logout = async () => {
-    await authClient.signOut();
-    setUser(null);
-    setSessionStatus("unauthenticated");
-    setSubscriptions(null);
-  };
+  ) =>
+    changeSession(() =>
+      authClient.signUp.email({ username, email, password, name }),
+    );
+  const logout = () => changeSession(() => authClient.signOut());
 
   return (
     <AuthContext
       value={{
-        user,
+        user: identity.user,
         providers,
         loading,
         sessionStatus,
@@ -226,7 +274,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refresh,
       }}
     >
-      {children}
+      <QueryClientProvider key={identity.epoch} client={identity.client}>
+        {loading ? <div role="status">Loading session...</div> : children}
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
     </AuthContext>
   );
 }
