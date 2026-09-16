@@ -276,14 +276,38 @@ export async function getDueNotifiers(
       .where(eq(notifiers.enabled, 1))
       .all();
 
-    // Filter in JS: match notify_time to current time in their timezone,
-    // ensure we haven't already sent today, and respect quiet hours
+    // Retain the scheduled local date when an overnight quiet window defers
+    // yesterday's notification until this morning.
+    const scheduledDates = new Map<string, string>();
     return allEnabled
       .filter((n) => {
         const tzInfo = timesByTimezone.get(n.timezone);
         if (!tzInfo) return false;
-        if (n.notify_time !== tzInfo.time) return false;
-        if (n.last_sent_date === tzInfo.date) return false;
+        let scheduledDate = tzInfo.date;
+        let scheduledDay = tzInfo.dayOfWeek;
+        if (n.notify_time > tzInfo.time) {
+          const quietDays = parseQuietDays(n.quiet_hours_days ?? "");
+          const previousDay = (tzInfo.dayOfWeek + 6) % 7;
+          if (
+            !(
+              n.quiet_hours_start &&
+              n.quiet_hours_end &&
+              n.quiet_hours_start > n.quiet_hours_end &&
+              n.notify_time >= n.quiet_hours_start &&
+              tzInfo.time >= n.quiet_hours_end &&
+              (quietDays === null || quietDays.has(previousDay))
+            )
+          )
+            return false;
+          const previousDate = new Date(tzInfo.date + "T00:00:00Z");
+          previousDate.setUTCDate(previousDate.getUTCDate() - 1);
+          scheduledDate = previousDate.toISOString().slice(0, 10);
+          scheduledDay = previousDay;
+        }
+        if (n.last_sent_date === scheduledDate) return false;
+        if (n.digest_mode === "off") return false;
+        if (n.digest_mode === "weekly" && n.digest_day !== scheduledDay)
+          return false;
 
         // Quiet hours: skip if configured and current time is within the window
         if (n.quiet_hours_start && n.quiet_hours_end) {
@@ -297,6 +321,7 @@ export async function getDueNotifiers(
           }
         }
 
+        scheduledDates.set(n.id, scheduledDate);
         return true;
       })
       .map((n) => {
@@ -310,7 +335,7 @@ export async function getDueNotifiers(
         return {
           ...n,
           config,
-          todayDate: timesByTimezone.get(n.timezone)!.date,
+          todayDate: scheduledDates.get(n.id)!,
           streaming_alerts_enabled: Boolean(n.streaming_alerts_enabled),
           leaving_soon_alerts_enabled: Boolean(n.leaving_soon_alerts_enabled),
           friend_activity_alerts_enabled: Boolean(

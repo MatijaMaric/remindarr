@@ -287,6 +287,19 @@ export class JobQueueDO {
       if (request.method === "POST" && path === "/tick") {
         return Response.json(await this.tick());
       }
+      if (request.method === "POST" && path === "/cancel-reminder") {
+        const { userId, titleId } = (await request.json()) as {
+          userId: string;
+          titleId: string;
+        };
+        this.ctx.storage.sql.exec(
+          `DELETE FROM jobs WHERE name = 'release-reminder' AND status = 'pending'
+           AND json_extract(data, '$.userId') = ? AND json_extract(data, '$.titleId') = ?`,
+          userId,
+          titleId,
+        );
+        return Response.json({ ok: true });
+      }
       if (request.method === "POST" && path === "/recover") {
         const body = (await request.json()) as { staleMinutes?: number };
         const count = this.recover(body.staleMinutes ?? 15);
@@ -736,12 +749,7 @@ export class JobQueueDO {
       )
       .toArray() as Array<{ id: number }>;
 
-    // Only schedule if no delayed runJob alarm is already pending
-    const alarms = this.ensureAlarms();
-    const existingAlarms = alarms.getSchedules({ type: "delayed" });
-    if (!existingAlarms.some((s) => s.callback === "runJob")) {
-      await alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
-    }
+    await this.rearmIfPending();
     return rows[0].id;
   }
 
@@ -843,20 +851,30 @@ export class JobQueueDO {
   // ─── Private helpers ─────────────────────────────────────────────────────
 
   /**
-   * Re-arm with a 1-second delayed alarm if pending jobs remain.
+   * Re-arm for the earliest pending job, with a one-second minimum delay.
    * Applies to both cron and ad-hoc DOs — cron alarms only fire on their schedule
    * (e.g. once per day), so extra pending rows inserted via enqueue() must still
    * drain promptly via a delayed alarm.
    */
   private async rearmIfPending(): Promise<void> {
     const rows = this.ctx.storage.sql
-      .exec("SELECT COUNT(*) as count FROM jobs WHERE status = 'pending'")
-      .toArray() as Array<{ count: number }>;
-    if ((rows[0]?.count ?? 0) > 0) {
+      .exec("SELECT MIN(run_at) as run_at FROM jobs WHERE status = 'pending'")
+      .toArray() as Array<{ run_at: string | null }>;
+    if (rows[0]?.run_at) {
       const alarms = this.ensureAlarms();
-      const existing = alarms.getSchedules({ type: "delayed" });
-      if (!existing.some((s) => s.callback === "runJob")) {
-        await alarms.schedule(1, "runJob" as keyof JobQueueDO, null);
+      const delay = Math.max(
+        1,
+        Math.ceil((Date.parse(rows[0].run_at) - Date.now()) / 1000),
+      );
+      const existing = alarms
+        .getSchedules({ type: "delayed" })
+        .filter((s) => s.callback === "runJob");
+      if (
+        !existing.some((s) => s.time <= Math.floor(Date.now() / 1000) + delay)
+      ) {
+        for (const scheduled of existing)
+          await alarms.cancelSchedule(scheduled.id);
+        await alarms.schedule(delay, "runJob" as keyof JobQueueDO, null);
       }
     }
   }

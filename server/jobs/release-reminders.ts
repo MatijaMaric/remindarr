@@ -6,6 +6,8 @@ import {
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 import type { NotificationContent } from "../notifications/types";
+import { getDb, tracked } from "../db/schema";
+import { and, eq } from "drizzle-orm";
 
 const log = logger.child({ module: "release-reminder" });
 
@@ -17,6 +19,13 @@ export async function handleReleaseReminder(payload: unknown): Promise<void> {
     log.error("release-reminder job missing required fields", { payload });
     return;
   }
+  const reminder = await getDb()
+    .select({ enabled: tracked.remindOnRelease })
+    .from(tracked)
+    .where(and(eq(tracked.userId, userId), eq(tracked.titleId, titleId)))
+    .get();
+  // Canceled, untracked, or an older duplicate job already completed.
+  if (!reminder?.enabled) return;
 
   log.info("Processing release reminder", { userId, titleId });
 

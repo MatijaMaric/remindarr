@@ -1,7 +1,39 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
-import { streamingAlerts } from "../schema";
+import { streamingAlerts, streamingAlertDeliveries } from "../schema";
 import { traceDbQuery } from "../../tracing";
+
+export async function getDeliveredStreamingNotifiers(
+  titleId: string,
+  providerId: number,
+  kind: "arrival" | "departure",
+): Promise<Set<string>> {
+  const rows = await getDb()
+    .select({ notifierId: streamingAlertDeliveries.notifierId })
+    .from(streamingAlertDeliveries)
+    .where(
+      and(
+        eq(streamingAlertDeliveries.titleId, titleId),
+        eq(streamingAlertDeliveries.providerId, providerId),
+        eq(streamingAlertDeliveries.kind, kind),
+      ),
+    )
+    .all();
+  return new Set(rows.map((row) => row.notifierId));
+}
+
+export async function markStreamingDelivered(
+  notifierId: string,
+  titleId: string,
+  providerId: number,
+  kind: "arrival" | "departure",
+): Promise<void> {
+  await getDb()
+    .insert(streamingAlertDeliveries)
+    .values({ notifierId, titleId, providerId, kind })
+    .onConflictDoNothing()
+    .run();
+}
 
 /**
  * Returns the subset of providerIds that have NOT yet been alerted for

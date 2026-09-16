@@ -242,6 +242,49 @@ describe("JobQueueDO", () => {
     expect(rows[0].data).toBe(data);
   });
 
+  it("delayed reminders honor runAt, preempt later alarms, dispatch and cancel by owner", async () => {
+    const send = spyOn(
+      processorModule.handlers,
+      "release-reminder",
+    ).mockResolvedValue();
+    try {
+      const later = new Date(Date.now() + 86_400_000).toISOString();
+      const sooner = new Date(Date.now() + 3_600_000).toISOString();
+      const data = JSON.stringify({ userId: "alice", titleId: "movie-42" });
+      await do_.enqueue("release-reminder", data, later);
+      expect((await state.storage.getAlarm())!).toBeGreaterThan(
+        Date.now() + 86_390_000,
+      );
+      await do_.enqueue("release-reminder", data, sooner);
+      expect((await state.storage.getAlarm())!).toBeLessThan(
+        Date.now() + 3_610_000,
+      );
+      await do_.tick();
+      expect(send).not.toHaveBeenCalled();
+      const cancel = (userId: string) =>
+        do_.fetch(
+          new Request("https://do/cancel-reminder", {
+            method: "POST",
+            body: JSON.stringify({ userId, titleId: "movie-42" }),
+          }),
+        );
+      await cancel("bob");
+      expect(do_.getRecentJobs()).toHaveLength(2);
+      await cancel("alice");
+      expect(do_.getRecentJobs()).toHaveLength(0);
+      await do_.enqueue(
+        "release-reminder",
+        data,
+        new Date(Date.now() - 1000).toISOString(),
+      );
+      await do_.tick();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(send).toHaveBeenCalledWith(data);
+    } finally {
+      send.mockRestore();
+    }
+  });
+
   it("enqueue with idempotent=true skips insert when a pending row for that name already exists", async () => {
     const id1 = await do_.enqueue("sync-titles", null, undefined, 1, true);
     const id2 = await do_.enqueue("sync-titles", null, undefined, 1, true);

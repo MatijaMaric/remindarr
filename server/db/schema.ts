@@ -714,6 +714,25 @@ export const streamingAlerts = sqliteTable(
   ],
 );
 
+export const streamingAlertDeliveries = sqliteTable(
+  "streaming_alert_deliveries",
+  {
+    notifierId: text("notifier_id")
+      .notNull()
+      .references(() => notifiers.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    providerId: integer("provider_id").notNull(),
+    kind: text("kind").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.notifierId, table.titleId, table.providerId, table.kind],
+    }),
+  ],
+);
+
 export const notificationLog = sqliteTable(
   "notification_log",
   {
@@ -1067,6 +1086,7 @@ export const schemaExports = {
   titleTags,
   watchHistory,
   streamingAlerts,
+  streamingAlertDeliveries,
   activityKindVisibility,
   hiddenActivityEvents,
   notificationLog,

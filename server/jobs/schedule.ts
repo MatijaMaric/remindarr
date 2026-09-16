@@ -65,36 +65,15 @@ export function convertToLocalTime(
 }
 
 /**
- * Compute a cron expression that fires only at times when notifications
- * could be due, based on all enabled notifiers' configured times and timezones.
- * Includes ±1 hour buffer around each computed hour to handle DST transitions.
+ * Check due notifications every minute while any destination is enabled.
+ * This also retries failures and resumes sends deferred by quiet hours.
  */
 export async function computeNotificationCron(): Promise<string | null> {
   const schedules = await getEnabledNotifierSchedules();
   if (schedules.length === 0) return null;
 
-  const hours = new Set<number>();
-  const minutes = new Set<number>();
-
-  for (const { notify_time, timezone } of schedules) {
-    try {
-      const local = convertToLocalTime(notify_time, timezone);
-      // Add ±1 hour buffer for DST transitions
-      hours.add((local.hour - 1 + 24) % 24);
-      hours.add(local.hour);
-      hours.add((local.hour + 1) % 24);
-      minutes.add(local.minute);
-    } catch {
-      // Invalid timezone — skip, will be warned at send time
-    }
-  }
-
-  if (hours.size === 0 || minutes.size === 0) return null;
-
-  const sortedMinutes = [...minutes].sort((a, b) => a - b);
-  const sortedHours = [...hours].sort((a, b) => a - b);
-
-  return `${sortedMinutes.join(",")} ${sortedHours.join(",")} * * *`;
+  // Poll each minute so retries and quiet-hour deferrals stay eligible today.
+  return "* * * * *";
 }
 
 /**

@@ -1781,6 +1781,136 @@ describe("PATCH /track/:id/remind-on-release", () => {
     expect(body.scheduledFor).toBeNull();
   });
 
+  it("schedules a future reminder once and cancels its pending job", async () => {
+    const releaseDate = new Date(Date.now() + 7 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    await upsertTitles([makeParsedTitle({ releaseDate })]);
+    const patch = (enabled: boolean) =>
+      app.request("/track/movie-123/remind-on-release", {
+        method: "PATCH",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+    const res = await patch(true);
+    expect(res.status).toBe(200);
+    expect((await res.json()).scheduledFor).toBe(
+      `${releaseDate}T09:00:00.000Z`,
+    );
+    await patch(true);
+    expect(
+      getRawDb()
+        .query(
+          "SELECT * FROM jobs WHERE name = 'release-reminder' AND status = 'pending'",
+        )
+        .all(),
+    ).toHaveLength(1);
+    expect((await patch(false)).status).toBe(200);
+    expect(
+      getRawDb()
+        .query("SELECT * FROM jobs WHERE name = 'release-reminder'")
+        .all(),
+    ).toHaveLength(0);
+  });
+
+  it("persists the reminder flag before a DO can dispatch during enqueue", async () => {
+    const { runWithEnv } = await import("../jobs/backend");
+    const { handleReleaseReminder } = await import("../jobs/release-reminders");
+    const previousBackend = CONFIG.JOB_QUEUE_BACKEND;
+    const releaseDate = new Date(Date.now() + 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    await upsertTitles([makeParsedTitle({ releaseDate })]);
+    const namespace = {
+      idFromName: (name: string) => name,
+      get: () => ({
+        fetch: async (request: Request) => {
+          const body = (await request.json()) as { data?: string };
+          if (new URL(request.url).pathname === "/enqueue") {
+            const flag = getRawDb()
+              .query(
+                "SELECT remind_on_release AS enabled FROM tracked WHERE title_id = 'movie-123'",
+              )
+              .get() as { enabled: number };
+            expect(flag.enabled).toBe(1);
+            // Simulate the scheduled time passing while the RPC is in flight.
+            await handleReleaseReminder(JSON.parse(body.data!));
+          }
+          return Response.json({ ok: true });
+        },
+      }),
+    } as unknown as DurableObjectNamespace;
+    try {
+      CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+      const res = await runWithEnv(
+        { DB: {} as D1Database, JOB_QUEUE_DO: namespace },
+        () =>
+          app.request("/track/movie-123/remind-on-release", {
+            method: "PATCH",
+            headers: { ...headers(), "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: true }),
+          }),
+      );
+      expect(res.status).toBe(200);
+      const flag = getRawDb()
+        .query(
+          "SELECT remind_on_release AS enabled FROM tracked WHERE title_id = 'movie-123'",
+        )
+        .get() as { enabled: number };
+      expect(flag.enabled).toBe(0); // Completed during enqueue; the route must not re-enable it.
+    } finally {
+      CONFIG.JOB_QUEUE_BACKEND = previousBackend;
+    }
+  });
+
+  it("keeps reminders disabled when queue creation or cancellation fails", async () => {
+    const { runWithEnv } = await import("../jobs/backend");
+    const previousBackend = CONFIG.JOB_QUEUE_BACKEND;
+    const releaseDate = new Date(Date.now() + 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    await upsertTitles([makeParsedTitle({ releaseDate })]);
+    let failingPath = "/enqueue";
+    const namespace = {
+      idFromName: (name: string) => name,
+      get: () => ({
+        fetch: async (request: Request) => {
+          if (new URL(request.url).pathname === failingPath)
+            throw new Error("Queue unavailable");
+          return Response.json({ ok: true });
+        },
+      }),
+    } as unknown as DurableObjectNamespace;
+    try {
+      CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+      app.onError(() => new Response("Queue unavailable", { status: 503 }));
+      for (const enabled of [true, false]) {
+        if (!enabled) {
+          failingPath = "/cancel-reminder";
+          getRawDb().run("UPDATE tracked SET remind_on_release = 1");
+        }
+        const res = await runWithEnv(
+          { DB: {} as D1Database, JOB_QUEUE_DO: namespace },
+          () =>
+            app.request("/track/movie-123/remind-on-release", {
+              method: "PATCH",
+              headers: { ...headers(), "Content-Type": "application/json" },
+              body: JSON.stringify({ enabled }),
+            }),
+        );
+        expect(res.status).toBe(503);
+        const flag = getRawDb()
+          .query(
+            "SELECT remind_on_release AS enabled FROM tracked WHERE title_id = 'movie-123'",
+          )
+          .get() as { enabled: number };
+        expect(flag.enabled).toBe(0);
+      }
+    } finally {
+      CONFIG.JOB_QUEUE_BACKEND = previousBackend;
+    }
+  });
+
   it("returns 401 without auth", async () => {
     const res = await app.request("/track/movie-123/remind-on-release", {
       method: "PATCH",

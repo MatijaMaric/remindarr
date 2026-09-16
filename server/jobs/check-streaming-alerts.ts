@@ -7,6 +7,8 @@ import {
   getStreamingAlertNotifiersForUsers,
   getTitleById,
   recordDelivery,
+  getDeliveredStreamingNotifiers,
+  markStreamingDelivered,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 import { notificationsSentTotal } from "../metrics";
@@ -83,6 +85,12 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
       for (const pid of newProviderIds) {
         const provider = streamingProviders.find((sp) => sp.id === pid);
         if (!provider) continue;
+        const delivered = await getDeliveredStreamingNotifiers(
+          titleId,
+          pid,
+          "arrival",
+        );
+        let allDelivered = true;
 
         if (userNotifiers.length > 0) {
           const content = {
@@ -101,11 +109,21 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
           };
 
           for (const notifier of userNotifiers) {
+            if (delivered.has(notifier.id)) continue;
             const notifierProvider = getProvider(notifier.provider);
-            if (!notifierProvider) continue;
+            if (!notifierProvider) {
+              allDelivered = false;
+              continue;
+            }
             const alertStart = Date.now();
             try {
               await notifierProvider.send(notifier.config, content);
+              await markStreamingDelivered(
+                notifier.id,
+                titleId,
+                pid,
+                "arrival",
+              );
               await recordDelivery({
                 notifierId: notifier.id,
                 status: "success",
@@ -124,6 +142,7 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
                 provider: provider.name,
               });
             } catch (err) {
+              allDelivered = false;
               const message = err instanceof Error ? err.message : String(err);
               await recordDelivery({
                 notifierId: notifier.id,
@@ -147,9 +166,10 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
           }
         }
 
-        // Mark as alerted regardless of whether we had notifiers
-        // (so we don't re-send if user adds a notifier later for already-available titles)
-        await markAlerted(userId, titleId, pid, provider.name, "arrival");
+        // No configured destination deliberately consumes an observed event.
+        // Delivery failures remain pending; successful destinations are skipped on retry.
+        if (allDelivered)
+          await markAlerted(userId, titleId, pid, provider.name, "arrival");
       }
     }
   }

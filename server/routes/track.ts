@@ -25,8 +25,6 @@ import {
   setRemindOnRelease,
   getTitleById,
 } from "../db/repository";
-import { getDb, jobs } from "../db/schema";
-import { and, eq, sql as dsql } from "drizzle-orm";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import type { UserStatus, NotificationMode } from "../db/repository";
 import type { ParsedTitle } from "../tmdb/parser";
@@ -35,7 +33,7 @@ import type { AppEnv } from "../types";
 import { logger } from "../logger";
 import { ok } from "./response";
 import { zValidator } from "../lib/validator";
-import { enqueueAdhoc } from "../jobs/backend";
+import { enqueueAdhoc, cancelReleaseReminder } from "../jobs/backend";
 
 const log = logger.child({ module: "track" });
 
@@ -618,44 +616,39 @@ app.patch(
     const { id: titleId } = c.req.valid("param");
     const { enabled } = c.req.valid("json");
     await setRemindOnRelease(titleId, user.id, enabled);
-
     let scheduledFor: string | null = null;
-
-    if (enabled) {
-      const title = await getTitleById(titleId);
-      const releaseDate = title?.release_date ?? null;
-      if (releaseDate) {
-        const releaseDateTime = new Date(releaseDate + "T09:00:00.000Z");
-        if (releaseDateTime > new Date()) {
-          const db = getDb();
-          await db.insert(jobs).values({
-            name: "release-reminder",
-            data: JSON.stringify({ userId: user.id, titleId }),
-            status: "pending",
-            runAt: releaseDateTime.toISOString(),
-            maxAttempts: 1,
-          });
-          scheduledFor = releaseDateTime.toISOString();
-          log.info("Scheduled release reminder", {
-            titleId,
-            userId: user.id,
-            scheduledFor,
-          });
+    try {
+      await cancelReleaseReminder(user.id, titleId);
+      if (enabled) {
+        const title = await getTitleById(titleId);
+        const releaseDate = title?.release_date ?? null;
+        if (releaseDate) {
+          const releaseDateTime = new Date(releaseDate + "T09:00:00.000Z");
+          if (releaseDateTime > new Date()) {
+            await enqueueAdhoc(
+              "release-reminder",
+              { userId: user.id, titleId },
+              {
+                runAt: releaseDateTime,
+                maxAttempts: 1,
+              },
+            );
+            scheduledFor = releaseDateTime.toISOString();
+            log.info("Scheduled release reminder", {
+              titleId,
+              userId: user.id,
+              scheduledFor,
+            });
+          }
         }
+      } else {
+        log.info("Cancelled release reminder", { titleId, userId: user.id });
       }
-    } else {
-      const db = getDb();
-      await db
-        .delete(jobs)
-        .where(
-          and(
-            eq(jobs.name, "release-reminder"),
-            eq(jobs.status, "pending"),
-            dsql`json_extract(${jobs.data}, '$.userId') = ${user.id}`,
-            dsql`json_extract(${jobs.data}, '$.titleId') = ${titleId}`,
-          ),
-        );
-      log.info("Cancelled release reminder", { titleId, userId: user.id });
+    } catch (err) {
+      // Do not show a reminder as enabled after its queue operation failed.
+      // A delayed job that was accepted before an RPC failure also sees this flag.
+      if (enabled) await setRemindOnRelease(titleId, user.id, false);
+      throw err;
     }
 
     return ok(c, { success: true, scheduledFor });

@@ -893,6 +893,9 @@ export const handler = {
               }
               await tickCron(cfEnv, name);
             }
+            // Delayed reminders share one DO so the watchdog also recovers them
+            // when native alarm delivery is missed.
+            await tickCron(cfEnv, "release-reminder");
 
             // Recover stuck jobs and drain D1 pending jobs (no-ops in DO mode)
             await recoverStale(cfEnv, 15);

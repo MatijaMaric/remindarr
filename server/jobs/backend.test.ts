@@ -40,10 +40,6 @@ import {
 
 // ─── Processor mocks (D1 path) ────────────────────────────────────────────────
 
-const mockEnqueueCronJob = spyOn(
-  processorModule,
-  "enqueueCronJob",
-).mockResolvedValue(undefined);
 const mockProcessPendingJobs = spyOn(
   processorModule,
   "processPendingJobs",
@@ -103,7 +99,7 @@ const originalBackend = CONFIG.JOB_QUEUE_BACKEND;
 beforeEach(() => {
   setupTestDb();
   CONFIG.JOB_QUEUE_BACKEND = "d1";
-  mockEnqueueCronJob.mockClear();
+
   mockProcessPendingJobs.mockClear();
   mockRecoverStaleJobs.mockClear();
   mockEnqueueOneTimeMigration.mockClear();
@@ -113,7 +109,7 @@ beforeEach(() => {
 afterAll(() => {
   teardownTestDb();
   CONFIG.JOB_QUEUE_BACKEND = originalBackend;
-  mockEnqueueCronJob.mockRestore();
+
   mockProcessPendingJobs.mockRestore();
   mockRecoverStaleJobs.mockRestore();
   mockEnqueueOneTimeMigration.mockRestore();
@@ -143,13 +139,6 @@ describe("CRON_BY_EXPRESSION", () => {
 });
 
 // ─── D1 mode ──────────────────────────────────────────────────────────────────
-
-describe("armCron (D1 mode)", () => {
-  it("delegates to enqueueCronJob", async () => {
-    await armCron(d1Env, "sync-titles", "0 3 * * *");
-    expect(mockEnqueueCronJob).toHaveBeenCalledWith("sync-titles");
-  });
-});
 
 describe("processPending (D1 mode)", () => {
   it("delegates to processPendingJobs", async () => {
@@ -239,7 +228,7 @@ describe("armCron (DO mode)", () => {
       name: "sync-titles",
       cron: "0 3 * * *",
     });
-    expect(mockEnqueueCronJob).not.toHaveBeenCalled();
+    expect(await getDb().select().from(jobs).all()).toHaveLength(0);
   });
 
   it("retries POST /arm once after a transient failure (#1066)", async () => {
@@ -624,7 +613,7 @@ describe("scheduled() bootstrap pattern (DO mode)", () => {
       await armCron(env, name, cron);
     }
 
-    expect(mockEnqueueCronJob).not.toHaveBeenCalled();
+    expect(await getDb().select().from(jobs).all()).toHaveLength(0);
   });
 });
 
