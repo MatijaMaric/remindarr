@@ -31,14 +31,13 @@ function getSessionsCount(): number {
 }
 
 // GET /metrics — Prometheus text format metrics
-// Public unless METRICS_TOKEN is set, in which case a bearer token is required.
+// Disabled until the operator configures a bearer token.
 app.get("/", (c) => {
-  if (CONFIG.METRICS_TOKEN) {
-    const header = c.req.header("authorization") ?? "";
-    const expected = `Bearer ${CONFIG.METRICS_TOKEN}`;
-    if (header !== expected) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
+  if (!CONFIG.METRICS_TOKEN) return c.notFound();
+  const header = c.req.header("authorization") ?? "";
+  const expected = `Bearer ${CONFIG.METRICS_TOKEN}`;
+  if (header !== expected) {
+    return c.json({ error: "Unauthorized" }, 401);
   }
 
   activeSessionsGauge.set({}, getSessionsCount());

@@ -1,3 +1,5 @@
+import { routePath } from "hono/route";
+import { redactTelemetry } from "./lib/telemetry-redaction";
 /**
  * Cloudflare Workers entry point for Remindarr.
  *
@@ -132,6 +134,9 @@ export const JobQueueDO = instrumentDurableObjectWithSentry(
     release: env.SENTRY_RELEASE,
     tracesSampleRate: 1.0,
     sendDefaultPii: false,
+    beforeSend: redactTelemetry,
+    beforeSendTransaction: redactTelemetry,
+    beforeSendSpan: redactTelemetry,
   }),
   JobQueueDOBase,
 );
@@ -360,7 +365,12 @@ function createApp(env: Env) {
         | undefined
     )?.({
       message: "Unhandled error",
-      data: { category, requestId, path: c.req.path, method: c.req.method },
+      data: {
+        category,
+        requestId,
+        path: routePath(c) || "<unmatched>",
+        method: c.req.method,
+      },
     });
     Sentry.captureException(err);
 
@@ -369,7 +379,7 @@ function createApp(env: Env) {
       {
         category,
         requestId,
-        path: c.req.path,
+        path: routePath(c) || "<unmatched>",
         method: c.req.method,
         error: err.message,
         stack: err.stack,
@@ -757,7 +767,7 @@ function createApp(env: Env) {
     } catch (err) {
       logger.error("SPA fallback error", {
         error: err instanceof Error ? err.message : String(err),
-        path: c.req.path,
+        path: routePath(c) || "<unmatched>",
       });
     }
     return c.text("Not Found", 404);
@@ -930,6 +940,9 @@ export default withSentry(
     release: env.SENTRY_RELEASE,
     tracesSampleRate: 1.0,
     sendDefaultPii: false,
+    beforeSend: redactTelemetry,
+    beforeSendTransaction: redactTelemetry,
+    beforeSendSpan: redactTelemetry,
   }),
   handler,
 );

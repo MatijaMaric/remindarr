@@ -1,4 +1,5 @@
 import "./instrument";
+import { routePath } from "hono/route";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
@@ -199,7 +200,12 @@ app.onError((err, c) => {
     }) => void
   )?.({
     message: "Unhandled error",
-    data: { category, requestId, path: c.req.path, method: c.req.method },
+    data: {
+      category,
+      requestId,
+      path: routePath(c) || "<unmatched>",
+      method: c.req.method,
+    },
   });
   Sentry.captureException(err);
 
@@ -208,7 +214,7 @@ app.onError((err, c) => {
     {
       category,
       requestId,
-      path: c.req.path,
+      path: routePath(c) || "<unmatched>",
       method: c.req.method,
       error: err.message,
       stack: err.stack,
@@ -253,7 +259,7 @@ app.use(
 // Health check (public — used by Sentry uptime monitoring)
 app.route("/api/health", healthRoutes);
 
-// Prometheus metrics (public — protect via reverse proxy if needed)
+// Prometheus metrics (disabled unless METRICS_TOKEN is configured)
 app.route("/metrics", metricsRoutes);
 
 // Rate limit auth routes to prevent brute-force attacks. Defaults to 20/min,

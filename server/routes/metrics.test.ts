@@ -11,25 +11,37 @@ beforeEach(() => {
   setupTestDb();
   resetMetrics();
   __resetSessionsCountCache();
-  CONFIG.METRICS_TOKEN = "";
+  CONFIG.METRICS_TOKEN = "secret";
   app = new Hono();
   app.route("/metrics", metricsApp);
 });
 
 afterAll(() => {
+  CONFIG.METRICS_TOKEN = "";
   teardownTestDb();
 });
 
 describe("GET /metrics", () => {
-  it("returns 200 with Prometheus content type", async () => {
+  it("is disabled when no metrics token is configured", async () => {
+    CONFIG.METRICS_TOKEN = "";
     const res = await app.request("/metrics");
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain("http_requests_total");
+  });
+
+  it("returns 200 with Prometheus content type", async () => {
+    const res = await app.request("/metrics", {
+      headers: { authorization: "Bearer secret" },
+    });
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("text/plain");
     expect(res.headers.get("Content-Type")).toContain("version=0.0.4");
   });
 
   it("includes all expected metric families", async () => {
-    const res = await app.request("/metrics");
+    const res = await app.request("/metrics", {
+      headers: { authorization: "Bearer secret" },
+    });
     const body = await res.text();
 
     expect(body).toContain("http_requests_total");
@@ -54,7 +66,9 @@ describe("GET /metrics", () => {
       status: "200",
     });
 
-    const res = await app.request("/metrics");
+    const res = await app.request("/metrics", {
+      headers: { authorization: "Bearer secret" },
+    });
     const body = await res.text();
     expect(body).toContain(
       'http_requests_total{method="GET",route="/api/titles",status="200"} 2',
@@ -64,7 +78,9 @@ describe("GET /metrics", () => {
   it("reflects job counters", async () => {
     jobsTotal.inc({ name: "sync-titles", status: "completed" });
 
-    const res = await app.request("/metrics");
+    const res = await app.request("/metrics", {
+      headers: { authorization: "Bearer secret" },
+    });
     const body = await res.text();
     expect(body).toContain(
       'jobs_total{name="sync-titles",status="completed"} 1',
@@ -73,13 +89,17 @@ describe("GET /metrics", () => {
 
   it("includes active sessions gauge from DB", async () => {
     // No sessions in test DB, should be 0
-    const res = await app.request("/metrics");
+    const res = await app.request("/metrics", {
+      headers: { authorization: "Bearer secret" },
+    });
     const body = await res.text();
     expect(body).toContain("active_sessions 0");
   });
 
   it("ends with a newline", async () => {
-    const res = await app.request("/metrics");
+    const res = await app.request("/metrics", {
+      headers: { authorization: "Bearer secret" },
+    });
     const body = await res.text();
     expect(body.endsWith("\n")).toBe(true);
   });
@@ -91,7 +111,7 @@ describe("GET /metrics", () => {
         const res = await app.request("/metrics");
         expect(res.status).toBe(401);
       } finally {
-        CONFIG.METRICS_TOKEN = "";
+        CONFIG.METRICS_TOKEN = "secret";
       }
     });
 
@@ -103,7 +123,7 @@ describe("GET /metrics", () => {
         });
         expect(res.status).toBe(401);
       } finally {
-        CONFIG.METRICS_TOKEN = "";
+        CONFIG.METRICS_TOKEN = "secret";
       }
     });
 
@@ -115,7 +135,7 @@ describe("GET /metrics", () => {
         });
         expect(res.status).toBe(200);
       } finally {
-        CONFIG.METRICS_TOKEN = "";
+        CONFIG.METRICS_TOKEN = "secret";
       }
     });
   });

@@ -102,3 +102,8 @@ Enables direct "Watch on Netflix/Disney+" links. Requires a [RapidAPI](https://r
 | Variable     | Default   | Description                   |
 | ------------ | --------- | ----------------------------- |
 | `SENTRY_DSN` | _(empty)_ | Sentry DSN for error tracking |
+
+`METRICS_TOKEN` enables Bun's `/metrics` endpoint and requires the scraper to
+send `Authorization: Bearer <token>`. The endpoint is disabled (404) when unset.
+For upgrades from versions that logged token-bearing URLs, follow the
+[telemetry token remediation steps](telemetry-token-remediation.md).
