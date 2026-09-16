@@ -8,6 +8,7 @@ import {
   getExistingSubscription,
 } from "../lib/push";
 import * as api from "../api";
+import { runPushSetup } from "../lib/pushSetup";
 
 const DISMISSED_KEY = "notification-prompt-dismissed";
 
@@ -17,11 +18,13 @@ export default function NotificationPrompt() {
   const [visible, setVisible] = useState(false);
   const [enabling, setEnabling] = useState(false);
   const [failed, setFailed] = useState(false);
+  const activeUserId = useRef<string | null>(null);
   const pendingSubscription = useRef<Awaited<
     ReturnType<typeof subscribeToPush>
   > | null>(null);
 
   useEffect(() => {
+    activeUserId.current = user?.id ?? null;
     if (!user) return;
     if (!isPushSupported()) return;
     if (typeof Notification === "undefined") return;
@@ -56,6 +59,7 @@ export default function NotificationPrompt() {
       });
     return () => {
       cancelled = true;
+      activeUserId.current = null;
     };
   }, [user]);
 
@@ -63,6 +67,7 @@ export default function NotificationPrompt() {
 
   async function handleEnable() {
     if (enabling) return;
+    const userId = user?.id;
     setEnabling(true);
     setFailed(false);
     try {
@@ -75,57 +80,61 @@ export default function NotificationPrompt() {
         return;
       }
 
-      const [existing, { notifiers }] = await Promise.all([
-        getExistingSubscription(),
-        api.getNotifiers(),
-      ]);
-      const json = existing?.toJSON();
-      let subscription =
-        json?.endpoint && json.keys?.p256dh && json.keys?.auth
-          ? {
-              endpoint: json.endpoint,
-              p256dh: json.keys.p256dh,
-              auth: json.keys.auth,
-            }
-          : pendingSubscription.current;
-      if (!subscription) {
-        const { publicKey } = await api.getVapidPublicKey();
-        subscription = await subscribeToPush(publicKey);
-      }
-      // Keep the endpoint if a successful POST loses its response; retries reconcile it first.
-      pendingSubscription.current = subscription;
-      const notifier =
-        notifiers.find(
-          (n) =>
-            n.provider === "webpush" &&
-            n.config.endpoint === subscription.endpoint,
-        ) ??
-        notifiers.find(
-          (n) =>
-            n.provider === "webpush" &&
-            existing != null &&
-            n.config.endpoint === existing.endpoint,
-        );
-      if (notifier) {
-        if (
-          !notifier.enabled ||
-          notifier.config.endpoint !== subscription.endpoint ||
-          notifier.config.p256dh !== subscription.p256dh ||
-          notifier.config.auth !== subscription.auth
-        ) {
-          await api.updateNotifier(notifier.id, {
+      await runPushSetup(async () => {
+        if (activeUserId.current !== userId) return;
+        const [existing, { notifiers }] = await Promise.all([
+          getExistingSubscription(),
+          api.getNotifiers(),
+        ]);
+        const json = existing?.toJSON();
+        let subscription =
+          json?.endpoint && json.keys?.p256dh && json.keys?.auth
+            ? {
+                endpoint: json.endpoint,
+                p256dh: json.keys.p256dh,
+                auth: json.keys.auth,
+              }
+            : pendingSubscription.current;
+        if (!subscription) {
+          const { publicKey } = await api.getVapidPublicKey();
+          subscription = await subscribeToPush(publicKey);
+        }
+        // Keep the endpoint if a successful POST loses its response; retries reconcile it first.
+        pendingSubscription.current = subscription;
+        const notifier =
+          notifiers.find(
+            (n) =>
+              n.provider === "webpush" &&
+              n.config.endpoint === subscription.endpoint,
+          ) ??
+          notifiers.find(
+            (n) =>
+              n.provider === "webpush" &&
+              existing != null &&
+              n.config.endpoint === existing.endpoint,
+          );
+        if (activeUserId.current !== userId) return;
+        if (notifier) {
+          if (
+            !notifier.enabled ||
+            notifier.config.endpoint !== subscription.endpoint ||
+            notifier.config.p256dh !== subscription.p256dh ||
+            notifier.config.auth !== subscription.auth
+          ) {
+            await api.updateNotifier(notifier.id, {
+              config: subscription,
+              enabled: true,
+            });
+          }
+        } else {
+          await api.createNotifier({
+            provider: "webpush",
             config: subscription,
-            enabled: true,
+            notify_time: "09:00",
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           });
         }
-      } else {
-        await api.createNotifier({
-          provider: "webpush",
-          config: subscription,
-          notify_time: "09:00",
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        });
-      }
+      });
 
       setVisible(false);
     } catch {

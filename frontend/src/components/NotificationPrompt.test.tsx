@@ -13,10 +13,12 @@ import {
   fireEvent,
   waitFor,
   cleanup,
+  act,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import "../i18n";
 import NotificationPrompt from "./NotificationPrompt";
+import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
 import * as push from "../lib/push";
 import * as api from "../api";
 import { AuthContext } from "../context/AuthContext";
@@ -181,7 +183,9 @@ describe("NotificationPrompt", () => {
     );
     render(<NotificationPrompt />, { wrapper: Wrapper });
     fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
-    await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole("banner") === null).toBe(true),
+    );
     expect(Notification.requestPermission).not.toHaveBeenCalled();
     expect(push.subscribeToPush).not.toHaveBeenCalled();
     expect(api.getVapidPublicKey).not.toHaveBeenCalled();
@@ -211,7 +215,7 @@ describe("NotificationPrompt", () => {
 
     fireEvent.click(screen.getByLabelText("Dismiss notification prompt"));
 
-    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("banner") === null).toBe(true);
     expect(localStorage.getItem("notification-prompt-dismissed")).toBe("1");
   });
 
@@ -241,7 +245,7 @@ describe("NotificationPrompt", () => {
     });
 
     // Banner should be hidden after successful enable
-    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("banner") === null).toBe(true);
   });
 
   it("hides banner when permission is denied during enable", async () => {
@@ -263,7 +267,7 @@ describe("NotificationPrompt", () => {
     fireEvent.click(screen.getByText("Enable"));
 
     await waitFor(() => {
-      expect(screen.queryByRole("banner")).toBeNull();
+      expect(screen.queryByRole("banner") === null).toBe(true);
     });
   });
 });
@@ -272,7 +276,7 @@ it("recovers granted permission when the browser subscription is missing", async
   mockNotificationPermission("granted");
   render(<NotificationPrompt />, { wrapper: Wrapper });
   fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
-  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("banner") === null).toBe(true));
   expect(Notification.requestPermission).not.toHaveBeenCalled();
   expect(push.subscribeToPush).toHaveBeenCalledTimes(1);
   expect(api.createNotifier).toHaveBeenCalledTimes(1);
@@ -314,7 +318,9 @@ it.each(["permission", "browser", "notifiers", "vapid", "subscribe", "create"])(
     expect(screen.getByRole("banner")).toBeDefined();
     expect(localStorage.getItem("notification-prompt-dismissed")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole("banner") === null).toBe(true),
+    );
     expect(api.createNotifier).toHaveBeenCalledTimes(
       stage === "create" ? 2 : 1,
     );
@@ -340,7 +346,9 @@ it.each(["browser", "notifiers"])(
     render(<NotificationPrompt />, { wrapper: Wrapper });
     expect(await screen.findByRole("alert")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole("banner") === null).toBe(true),
+    );
     expect(api.createNotifier).toHaveBeenCalledTimes(1);
   },
 );
@@ -355,7 +363,7 @@ it("reconciles a successful create whose response was lost without duplicate des
   fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
   await screen.findByRole("alert");
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("banner") === null).toBe(true));
   expect(api.createNotifier).toHaveBeenCalledTimes(1);
   expect(push.subscribeToPush).toHaveBeenCalledTimes(1);
   expect(api.updateNotifier).not.toHaveBeenCalled();
@@ -379,7 +387,7 @@ it("retries updating an incomplete matching notifier without creating another", 
   fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
   await screen.findByRole("alert");
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("banner") === null).toBe(true));
   expect(api.updateNotifier).toHaveBeenCalledTimes(2);
   expect(api.updateNotifier).toHaveBeenLastCalledWith("n1", {
     config: subscription,
@@ -402,7 +410,7 @@ it("does not count another browser's destination as registered or overwrite it",
   });
   render(<NotificationPrompt />, { wrapper: Wrapper });
   fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
-  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("banner") === null).toBe(true));
   expect(api.createNotifier).toHaveBeenCalledTimes(1);
   expect(api.updateNotifier).not.toHaveBeenCalled();
 });
@@ -426,5 +434,100 @@ it("prevents repeated activation while a registration request is pending", async
   fireEvent.click(enable);
   expect(api.createNotifier).toHaveBeenCalledTimes(1);
   finish({ notifier });
-  await waitFor(() => expect(screen.queryByRole("banner")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("banner") === null).toBe(true));
+});
+
+it("waits for automatic renewal and reconciles its destination before enabling", async () => {
+  mockNotificationPermission("granted");
+  let browser = browserSubscription;
+  let serverNotifier = { ...notifier, enabled: false };
+  let finishRenewal!: (value: typeof subscription) => void;
+  const renewed = { ...subscription, endpoint: "https://example.com/renewed" };
+  (push.getExistingSubscription as any).mockImplementation(async () => browser);
+  (api.getNotifiers as any).mockImplementation(async () => ({
+    notifiers: [serverNotifier],
+  }));
+  (push.subscribeToPush as any).mockImplementation(async () => {
+    const result = await new Promise<typeof subscription>((resolve) => {
+      finishRenewal = resolve;
+    });
+    browser = {
+      endpoint: result.endpoint,
+      toJSON: () => ({
+        endpoint: result.endpoint,
+        keys: { p256dh: result.p256dh, auth: result.auth },
+      }),
+    } as PushSubscription;
+    return result;
+  });
+  (api.updateNotifier as any).mockImplementation(
+    async (_id: string, data: api.NotifierPayload) => {
+      serverNotifier = { ...serverNotifier, ...data };
+      return { notifier: serverNotifier };
+    },
+  );
+  const originalServiceWorker = Object.getOwnPropertyDescriptor(
+    navigator,
+    "serviceWorker",
+  );
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: {
+      addEventListener: mock(() => {}),
+      removeEventListener: mock(() => {}),
+    },
+  });
+  function PromptWithSync() {
+    usePushSubscriptionSync();
+    return <NotificationPrompt />;
+  }
+  const view = render(<PromptWithSync />, { wrapper: Wrapper });
+  try {
+    await waitFor(() => expect(push.subscribeToPush).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+    expect(
+      (screen.getByRole("button", { name: "Enabling..." }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(api.createNotifier).not.toHaveBeenCalled();
+    expect(api.updateNotifier).not.toHaveBeenCalled();
+    await act(async () => {
+      finishRenewal(renewed);
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("banner") === null).toBe(true),
+    );
+    expect(api.updateNotifier).toHaveBeenCalledTimes(1);
+    expect(api.updateNotifier).toHaveBeenCalledWith("n1", {
+      config: renewed,
+      enabled: true,
+    });
+    expect(api.createNotifier).not.toHaveBeenCalled();
+    expect(push.subscribeToPush).toHaveBeenCalledTimes(1);
+  } finally {
+    view.unmount();
+    if (originalServiceWorker)
+      Object.defineProperty(navigator, "serviceWorker", originalServiceWorker);
+    else Reflect.deleteProperty(navigator, "serviceWorker");
+  }
+});
+
+it("does not register a pending setup after unmounting", async () => {
+  mockNotificationPermission("granted");
+  let finish!: (value: typeof subscription) => void;
+  (push.subscribeToPush as any).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const view = render(<NotificationPrompt />, { wrapper: Wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+  await waitFor(() => expect(push.subscribeToPush).toHaveBeenCalledTimes(1));
+  view.unmount();
+  await act(async () => {
+    finish(subscription);
+  });
+  expect(api.createNotifier).not.toHaveBeenCalled();
+  expect(api.updateNotifier).not.toHaveBeenCalled();
 });
