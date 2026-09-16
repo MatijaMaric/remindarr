@@ -213,3 +213,36 @@ it("moves focus, announces selection, dismisses with Escape and selects status b
   );
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
 });
+
+it("restores focus after selection while saving and prevents reopening", async () => {
+  let finish!: () => void;
+  (api.updateTrackedStatus as any).mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const user = userEvent.setup();
+  render(
+    <StatusPicker
+      titleId="t-1"
+      objectType="SHOW"
+      currentStatus={null}
+      onStatusChange={() => {}}
+    />,
+    { wrapper: Wrapper },
+  );
+  const trigger = screen.getByRole("button", { name: "Auto" });
+  trigger.focus();
+  await user.keyboard("{ArrowDown}");
+  await screen.findByRole("menu");
+  await user.keyboard("{End}{Enter}");
+  await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("true"));
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(screen.queryByRole("menu")).toBeNull();
+  await user.keyboard("{Enter}");
+  expect(screen.queryByRole("menu")).toBeNull();
+  finish();
+  await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("false"));
+  expect(document.activeElement).toBe(trigger);
+});
