@@ -7,9 +7,15 @@ import {
   act,
   waitFor,
 } from "@testing-library/react";
-import { MemoryRouter, useSearchParams } from "react-router";
+import {
+  MemoryRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  useSearchParams,
+} from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import "../i18n";
@@ -30,6 +36,8 @@ let mockUser: {
   is_admin: boolean;
 } | null = null;
 let mockAuthLoading = false;
+let mockSubscriptionsStatus = "loading";
+const mockRefreshSubscriptions = mock(() => Promise.resolve());
 
 mock.module("../context/AuthContext", () => ({
   useAuth: () => ({
@@ -38,7 +46,8 @@ mock.module("../context/AuthContext", () => ({
     loading: mockAuthLoading,
     sessionStatus: "authenticated",
     subscriptions: mockSubscriptions,
-    refreshSubscriptions: mock(() => Promise.resolve()),
+    subscriptionsStatus: mockSubscriptionsStatus,
+    refreshSubscriptions: mockRefreshSubscriptions,
     login: mock(() => Promise.resolve()),
     signup: mock(() => Promise.resolve()),
     logout: mock(() => Promise.resolve()),
@@ -145,6 +154,9 @@ afterEach(() => {
   mockSubscriptions = null;
   mockUser = null;
   mockAuthLoading = false;
+  mockSubscriptionsStatus = "loading";
+  mockRefreshSubscriptions.mockClear();
+  sessionStorage.clear();
 });
 
 describe("BrowsePage active filter chips", () => {
@@ -227,88 +239,115 @@ describe("BrowsePage active filter chips", () => {
   });
 });
 
-describe("BrowsePage subscription preselect", () => {
-  // Helper that captures the current URLSearchParams from inside the router tree
-  function SearchParamsSpy({
-    onCapture,
-  }: {
-    onCapture: (p: URLSearchParams) => void;
-  }) {
-    const [sp] = useSearchParams();
-    useEffect(() => {
-      onCapture(sp);
-    }, [sp, onCapture]);
-    return null;
-  }
+const USER = {
+  id: "u1",
+  username: "alice",
+  display_name: null,
+  auth_provider: "local",
+  is_admin: false,
+};
 
-  it("preselects subscribed providers when no provider param in URL", async () => {
-    mockSubscriptions = { providerIds: [8, 337], onlyMine: false };
+function SearchParamsSpy() {
+  const [params] = useSearchParams();
+  return <span data-testid="search-params">{params.toString()}</span>;
+}
 
-    let captured: URLSearchParams | null = null;
+function currentParams() {
+  return new URLSearchParams(screen.getByTestId("search-params").textContent!);
+}
 
-    await act(async () => {
-      render(
-        <QueryClientProvider client={newTestClient()}>
-          <MemoryRouter initialEntries={["/browse"]}>
-            <BrowsePage />
-            <SearchParamsSpy
-              onCapture={(sp) => {
-                captured = sp;
-              }}
-            />
-          </MemoryRouter>
-        </QueryClientProvider>,
-      );
+function renderBrowse(path = "/browse") {
+  return render(
+    <>
+      <BrowsePage />
+      <SearchParamsSpy />
+    </>,
+    { wrapper: makeWrapper(path) },
+  );
+}
+
+describe("BrowsePage saved service preference", () => {
+  it("uses the saved enabled preference without preselecting separate providers", async () => {
+    mockUser = USER;
+    mockSubscriptions = { providerIds: [8, 337], onlyMine: true };
+    renderBrowse();
+    await screen.findByText(BROWSE_TITLE);
+    expect(
+      screen
+        .getByRole("button", { name: /On my services$/ })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(currentParams().has("provider")).toBe(false);
+    expect(apiMock.browseTitles.mock.calls[0][0]).toMatchObject({
+      onlyMine: true,
+      provider: undefined,
     });
-
-    expect(captured?.get("provider")).toBe("8,337");
+    expect(apiMock.browseTitles).toHaveBeenCalledTimes(1);
   });
 
-  it("does not overwrite an existing provider param in the URL", async () => {
-    mockSubscriptions = { providerIds: [8, 337], onlyMine: false };
-
-    let captured: URLSearchParams | null = null;
-
-    await act(async () => {
-      render(
-        <QueryClientProvider client={newTestClient()}>
-          <MemoryRouter initialEntries={["/browse?provider=15"]}>
-            <BrowsePage />
-            <SearchParamsSpy
-              onCapture={(sp) => {
-                captured = sp;
-              }}
-            />
-          </MemoryRouter>
-        </QueryClientProvider>,
-      );
+  it("leaves browsing unfiltered with the saved preference disabled", async () => {
+    mockUser = USER;
+    mockSubscriptions = { providerIds: [8], onlyMine: false };
+    renderBrowse();
+    await screen.findByText(BROWSE_TITLE);
+    expect(apiMock.browseTitles.mock.calls[0][0]).toMatchObject({
+      onlyMine: undefined,
+      provider: undefined,
     });
-
-    // The existing provider=15 should be preserved, not overwritten
-    expect(captured?.get("provider")).toBe("15");
   });
 
-  it("does not preselect when user has no subscriptions", async () => {
-    mockSubscriptions = null;
-
-    let captured: URLSearchParams | null = null;
-
-    await act(async () => {
-      render(
-        <QueryClientProvider client={newTestClient()}>
-          <MemoryRouter initialEntries={["/browse"]}>
-            <BrowsePage />
-            <SearchParamsSpy
-              onCapture={(sp) => {
-                captured = sp;
-              }}
-            />
-          </MemoryRouter>
-        </QueryClientProvider>,
-      );
+  it("honors an explicit false override and Clear filters without changing the saved preference", async () => {
+    mockUser = USER;
+    mockSubscriptions = { providerIds: [8], onlyMine: true };
+    renderBrowse("/browse?onlyMine=false&provider=15");
+    await screen.findByText(BROWSE_TITLE);
+    expect(apiMock.browseTitles.mock.calls[0][0]).toMatchObject({
+      onlyMine: undefined,
+      provider: "15",
     });
+    fireEvent.click(screen.getByRole("button", { name: "Clear", exact: true }));
+    expect(currentParams().get("onlyMine")).toBe("false");
+    expect(currentParams().has("provider")).toBe(false);
+    expect(mockSubscriptions.onlyMine).toBe(true);
+  });
 
-    expect(captured?.get("provider")).toBeNull();
+  it("allows Clear when the saved service preference is the only active filter", async () => {
+    mockUser = USER;
+    mockSubscriptions = { providerIds: [8], onlyMine: true };
+    renderBrowse();
+    await screen.findByText(BROWSE_TITLE);
+    const clear = screen.getByRole("button", { name: "Clear", exact: true });
+    expect(clear.hasAttribute("disabled")).toBe(false);
+    fireEvent.click(clear);
+    expect(currentParams().get("onlyMine")).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: /On my services$/ })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("honors an explicit enabled override when the saved preference is disabled", async () => {
+    mockUser = USER;
+    mockSubscriptions = { providerIds: [8], onlyMine: false };
+    renderBrowse("/browse?onlyMine=true");
+    await screen.findByText(BROWSE_TITLE);
+    expect(apiMock.browseTitles.mock.calls[0][0]).toMatchObject({
+      onlyMine: true,
+    });
+  });
+
+  it("does not apply the preference when no services are subscribed", async () => {
+    mockUser = USER;
+    mockSubscriptions = { providerIds: [], onlyMine: true };
+    renderBrowse();
+    await screen.findByText(BROWSE_TITLE);
+    expect(apiMock.browseTitles.mock.calls[0][0]).toMatchObject({
+      onlyMine: undefined,
+    });
+    expect(
+      screen.queryByRole("button", { name: /On my services$/ }),
+    ).toBeNull();
   });
 });
 
@@ -373,5 +412,210 @@ describe("BrowsePage CategoryBrowse mount gate", () => {
     await waitFor(() => {
       expect(screen.getByText(BROWSE_TITLE)).toBeDefined();
     });
+  });
+});
+
+describe("BrowsePage preference failures", () => {
+  it("shows an actionable preference error and retries before one filtered catalog request", async () => {
+    mockUser = USER;
+    mockSubscriptionsStatus = "error";
+    const view = renderBrowse();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "service preferences",
+    );
+    expect(apiMock.browseTitles).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Retry preferences" }));
+    expect(mockRefreshSubscriptions).toHaveBeenCalledTimes(1);
+    mockSubscriptionsStatus = "loading";
+    view.rerender(
+      <>
+        <BrowsePage />
+        <SearchParamsSpy />
+      </>,
+    );
+    expect(screen.getByRole("status").textContent).toContain(
+      "service preferences",
+    );
+    expect(apiMock.browseTitles).not.toHaveBeenCalled();
+    mockSubscriptionsStatus = "success";
+    mockSubscriptions = { providerIds: [8], onlyMine: true };
+    view.rerender(
+      <>
+        <BrowsePage />
+        <SearchParamsSpy />
+      </>,
+    );
+    await screen.findByText(BROWSE_TITLE);
+    expect(apiMock.browseTitles).toHaveBeenCalledTimes(1);
+    expect(apiMock.browseTitles.mock.calls[0][0]).toMatchObject({
+      onlyMine: true,
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps catalog errors separate from successfully loaded preferences", async () => {
+    mockUser = USER;
+    mockSubscriptionsStatus = "success";
+    mockSubscriptions = { providerIds: [8], onlyMine: false };
+    apiMock.browseTitles.mockRejectedValue(new Error("Catalog unavailable"));
+    renderBrowse();
+    await screen.findAllByText("Catalog unavailable");
+    expect(
+      screen.queryByRole("button", { name: "Retry preferences" }),
+    ).toBeNull();
+  });
+});
+
+function NavigationControls() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return (
+    <>
+      <button onClick={() => navigate(-1)}>History back</button>
+      <button onClick={() => navigate(1)}>History forward</button>
+      <span data-testid="entry-key">{location.key}</span>
+      <SearchParamsSpy />
+    </>
+  );
+}
+
+describe("BrowsePage restorable search", () => {
+  it("restores a fresh search URL and its filters without loading a catalog", async () => {
+    apiMock.searchTitles.mockResolvedValue(makeBrowseResponse());
+    renderBrowse(
+      "/browse?q=Breaking+Bad&searchType=SHOW&searchYearMin=2008&searchYearMax=2013&searchMinRating=8&searchLanguage=en&provider=8",
+    );
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
+      "Breaking Bad",
+    );
+    await screen.findByText(BROWSE_TITLE);
+    expect(apiMock.searchTitles.mock.calls[0][0]).toBe("Breaking Bad");
+    expect(apiMock.searchTitles.mock.calls[0][1]).toEqual({
+      type: "SHOW",
+      yearMin: 2008,
+      yearMax: 2013,
+      minRating: 8,
+      language: "en",
+    });
+    expect(apiMock.browseTitles).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Clear", exact: true }));
+    expect(currentParams().has("q")).toBe(false);
+    expect(currentParams().has("searchType")).toBe(false);
+    expect(currentParams().get("provider")).toBe("8");
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("");
+  });
+
+  it("restores submitted results, query and scroll after detail Back and forward", async () => {
+    apiMock.searchTitles.mockResolvedValue(makeBrowseResponse());
+    const scroll = mock(() => {});
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = scroll;
+    render(
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/browse"]}>
+          <NavigationControls />
+          <Routes>
+            <Route path="/browse" element={<BrowsePage />} />
+            <Route path="/title/:id" element={<h1>Title detail</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Breaking Bad" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Search", exact: true }),
+    );
+    await screen.findByText(BROWSE_TITLE);
+    const key = screen.getByTestId("entry-key").textContent;
+    expect(currentParams().get("q")).toBe("Breaking Bad");
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 640,
+    });
+    fireEvent.scroll(window);
+    fireEvent.click(
+      screen.getByRole("link", { name: BROWSE_TITLE, exact: true }),
+    );
+    await screen.findByText("Title detail");
+    expect(sessionStorage.getItem(`scroll:browse:${key}`)).toBe("640");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await screen.findByText(BROWSE_TITLE);
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
+      "Breaking Bad",
+    );
+    expect(scroll).toHaveBeenCalledWith({ top: 640, behavior: "instant" });
+    expect(apiMock.searchTitles).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "History forward" }));
+    await screen.findByText("Title detail");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await screen.findByText(BROWSE_TITLE);
+    expect(currentParams().get("q")).toBe("Breaking Bad");
+    window.scrollTo = originalScrollTo;
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  });
+
+  it("keeps the previous search scroll when submitting another query", async () => {
+    apiMock.searchTitles.mockResolvedValue(makeBrowseResponse());
+    const originalScrollTo = window.scrollTo;
+    const scroll = mock(({ top }: { top: number }) => {
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: top,
+      });
+    });
+    window.scrollTo = scroll as typeof window.scrollTo;
+    render(
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/browse?q=First"]}>
+          <NavigationControls />
+          <BrowsePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByText(BROWSE_TITLE);
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 640,
+    });
+    fireEvent.scroll(window);
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Second" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Search", exact: true }),
+    );
+    await screen.findByText(BROWSE_TITLE);
+    await waitFor(() => expect(window.scrollY).toBe(0));
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await screen.findByText(BROWSE_TITLE);
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
+      "First",
+    );
+    expect(window.scrollY).toBe(640);
+    window.scrollTo = originalScrollTo;
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  });
+
+  it("keeps search loading and failure distinct from catalog mode and supports retry", async () => {
+    let rejectSearch!: (error: Error) => void;
+    apiMock.searchTitles.mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          rejectSearch = reject;
+        }),
+    );
+    renderBrowse("/browse?q=Breaking+Bad");
+    expect(screen.getByRole("status").textContent).toContain(
+      "Searching titles",
+    );
+    expect(apiMock.browseTitles).not.toHaveBeenCalled();
+    await act(async () => rejectSearch(new Error("Search offline")));
+    await screen.findByText(/Search offline/);
+    expect(apiMock.browseTitles).not.toHaveBeenCalled();
+    apiMock.searchTitles.mockResolvedValue(makeBrowseResponse());
+    fireEvent.click(screen.getByRole("button", { name: "Retry search" }));
+    await screen.findByText(BROWSE_TITLE);
   });
 });

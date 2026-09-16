@@ -39,6 +39,7 @@ interface AuthContextType {
   loading: boolean;
   sessionStatus: SessionStatus;
   subscriptions: UserSubscriptions | null;
+  subscriptionsStatus: "idle" | "loading" | "success" | "error";
   refreshSubscriptions: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   signup: (
@@ -105,8 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     null,
   );
 
+  const [subscriptionsStatus, setSubscriptionsStatus] =
+    useState<AuthContextType["subscriptionsStatus"]>("idle");
+  const subscriptionsRequest = useRef<AbortController | null>(null);
+
   const replaceIdentity = useCallback((user: User | null) => {
     cancelIdentityRequests();
+    subscriptionsRequest.current?.abort();
     void current.current.client.cancelQueries();
     current.current.client.clear();
     const next = {
@@ -117,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     current.current = next;
     setIdentity(next);
     setSubscriptions(null);
+    setSubscriptionsStatus("idle");
     void clearPrivateData();
     return next.epoch;
   }, []);
@@ -124,11 +131,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshSubscriptions = useCallback(async () => {
     const epoch = current.current.epoch;
     if (!current.current.user) return;
+    // A settings save must read fresh preferences, even if an older focus
+    // refresh is still pending. Only the newest request may publish its result.
+    subscriptionsRequest.current?.abort();
+    const controller = new AbortController();
+    subscriptionsRequest.current = controller;
+    setSubscriptionsStatus("loading");
     try {
-      const data = await getSubscriptions();
-      if (epoch === current.current.epoch) setSubscriptions(data);
+      const data = await getSubscriptions(controller.signal);
+      if (epoch !== current.current.epoch || controller.signal.aborted) return;
+      setSubscriptions(data);
+      setSubscriptionsStatus("success");
     } catch {
-      if (epoch === current.current.epoch) setSubscriptions(null);
+      if (epoch !== current.current.epoch || controller.signal.aborted) return;
+      setSubscriptionsStatus("error");
     }
   }, []);
 
@@ -267,6 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         sessionStatus,
         subscriptions,
+        subscriptionsStatus,
         refreshSubscriptions,
         login,
         signup,

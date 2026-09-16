@@ -1,11 +1,28 @@
-import { describe, it, expect, afterEach } from "bun:test";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { describe, it, expect, afterEach, beforeEach, spyOn } from "bun:test";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
 import "../i18n";
 import { resolveSession } from "../lib/sessionBootstrap";
+import * as sessionBootstrap from "../lib/sessionBootstrap";
+import * as swControl from "../lib/swControl";
+import { apiMock, resetApiMock } from "../test-utils/apiMock";
+import type { UserSubscriptions } from "../types";
+
+// A distinct module URL bypasses other files' global Bun AuthContext stubs,
+// so these regressions exercise the production provider, including its races.
+const productionAuthPath = "./AuthContext.tsx?subscriptions-regression";
+const { AuthProvider: ProductionAuthProvider, useAuth: useProductionAuth } =
+  (await import(productionAuthPath)) as typeof import("./AuthContext");
 
 // bun v1.3.9 runs test files concurrently in a shared module cache. Importing
 // from "./AuthContext" would return whatever other test files registered via
@@ -194,5 +211,126 @@ describe("AuthContext", () => {
     });
     // user stays null but we did NOT conclude "unauthenticated" — no forced redirect
     expect(screen.getByTestId("no-user")).toBeDefined();
+  });
+});
+
+function SubscriptionState() {
+  const { subscriptions, subscriptionsStatus, refreshSubscriptions } =
+    useProductionAuth();
+  return (
+    <>
+      <span data-testid="subscriptions-status">{subscriptionsStatus}</span>
+      <span data-testid="subscriptions-value">
+        {JSON.stringify(subscriptions)}
+      </span>
+      <button onClick={() => void refreshSubscriptions()}>
+        Refresh subscriptions
+      </button>
+    </>
+  );
+}
+
+describe("AuthContext subscription requests", () => {
+  let sessionSpy: ReturnType<
+    typeof spyOn<typeof sessionBootstrap, "resolveSession">
+  >;
+  let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, "fetch">>;
+  let clearPrivateDataSpy: ReturnType<
+    typeof spyOn<typeof swControl, "clearPrivateData">
+  >;
+
+  beforeEach(() => {
+    clearPrivateDataSpy = spyOn(
+      swControl,
+      "clearPrivateData",
+    ).mockResolvedValue();
+    sessionSpy = spyOn(sessionBootstrap, "resolveSession").mockResolvedValue({
+      verdict: "authenticated",
+      data: { user: { id: "test-user", username: "test-user" } },
+    });
+    fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ local: true, oidc: null }),
+    );
+  });
+
+  afterEach(() => {
+    sessionSpy.mockRestore();
+    fetchSpy.mockRestore();
+    clearPrivateDataSpy.mockRestore();
+    resetApiMock();
+  });
+
+  it("exposes preference failure and recovers after retry without reloading the session", async () => {
+    apiMock.getSubscriptions.mockRejectedValueOnce(
+      new Error("Preferences unavailable"),
+    );
+    apiMock.getSubscriptions.mockResolvedValue({
+      providerIds: [8],
+      onlyMine: true,
+    });
+    render(
+      <ProductionAuthProvider>
+        <SubscriptionState />
+      </ProductionAuthProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("subscriptions-status").textContent).toBe(
+        "error",
+      ),
+    );
+    expect(screen.getByTestId("subscriptions-value").textContent).toBe("null");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh subscriptions" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("subscriptions-status").textContent).toBe(
+        "success",
+      ),
+    );
+    expect(screen.getByTestId("subscriptions-value").textContent).toBe(
+      JSON.stringify({ providerIds: [8], onlyMine: true }),
+    );
+    expect(apiMock.getSubscriptions).toHaveBeenCalledTimes(2);
+    expect(sessionSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels a pending pre-save read and ignores its stale result after a fresh refresh", async () => {
+    let resolveOld!: (value: UserSubscriptions) => void;
+    apiMock.getSubscriptions.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        }),
+    );
+    apiMock.getSubscriptions.mockResolvedValue({
+      providerIds: [8, 337],
+      onlyMine: true,
+    });
+    render(
+      <ProductionAuthProvider>
+        <SubscriptionState />
+      </ProductionAuthProvider>,
+    );
+    await waitFor(() =>
+      expect(apiMock.getSubscriptions).toHaveBeenCalledTimes(1),
+    );
+    expect(screen.getByTestId("subscriptions-status").textContent).toBe(
+      "loading",
+    );
+    const oldSignal = apiMock.getSubscriptions.mock.calls[0][0] as AbortSignal;
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh subscriptions" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("subscriptions-status").textContent).toBe(
+        "success",
+      ),
+    );
+    expect(oldSignal.aborted).toBe(true);
+    await act(async () => resolveOld({ providerIds: [], onlyMine: false }));
+    expect(screen.getByTestId("subscriptions-value").textContent).toBe(
+      JSON.stringify({ providerIds: [8, 337], onlyMine: true }),
+    );
+    expect(apiMock.getSubscriptions).toHaveBeenCalledTimes(2);
   });
 });

@@ -31,6 +31,7 @@ interface Props {
   languages?: string[] | LanguageOption[];
   priorityLanguageCodes?: string[];
   onClearFilters?: () => void;
+  onlyMine?: boolean;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
 }
@@ -84,11 +85,13 @@ const FilterBar = memo(function FilterBar({
   languages,
   priorityLanguageCodes,
   onClearFilters,
+  onlyMine,
   hideTracked,
   onHideTrackedChange,
 }: Props) {
   const { t } = useTranslation();
   const hasActiveFilters =
+    onlyMine ||
     type.length > 0 ||
     (daysBack !== undefined && daysBack !== 30 && showDaysFilter) ||
     (genre && genre.length > 0) ||
