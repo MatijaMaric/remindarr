@@ -7,6 +7,7 @@ import {
   cleanup,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { userEvent } from "storybook/test";
 import "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
@@ -80,7 +81,7 @@ describe("StatusPicker", () => {
       { wrapper: Wrapper },
     );
     fireEvent.click(screen.getByRole("button", { expanded: false }));
-    expect(screen.getByRole("listbox")).toBeTruthy();
+    expect(screen.getByRole("menu")).toBeTruthy();
   });
 
   it("calls api.updateTrackedStatus when an option is clicked", async () => {
@@ -96,7 +97,9 @@ describe("StatusPicker", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { expanded: false }));
-    const watchingOption = screen.getByRole("option", { name: /watching/i });
+    const watchingOption = screen.getByRole("menuitemradio", {
+      name: /watching/i,
+    });
     fireEvent.click(watchingOption);
 
     await waitFor(() => {
@@ -119,7 +122,7 @@ describe("StatusPicker", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { expanded: false }));
-    fireEvent.click(screen.getByRole("option", { name: /watching/i }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: /watching/i }));
 
     await waitFor(() => {
       expect(called).toBe("watching");
@@ -140,7 +143,7 @@ describe("StatusPicker", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { expanded: false }));
-    fireEvent.click(screen.getByRole("option", { name: /watching/i }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: /watching/i }));
 
     await waitFor(() => {
       expect(sonner.toast.error).toHaveBeenCalledWith(
@@ -161,8 +164,52 @@ describe("StatusPicker", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { expanded: false }));
-    const listbox = screen.getByRole("listbox");
+    const listbox = screen.getByRole("menu");
     expect(listbox.textContent).toContain("Plan to Watch");
     expect(listbox.textContent).not.toContain("Watching");
   });
+});
+
+it("moves focus, announces selection, dismisses with Escape and selects status by keyboard", async () => {
+  const user = userEvent.setup();
+  render(
+    <StatusPicker
+      titleId="t-1"
+      objectType="SHOW"
+      currentStatus="watching"
+      onStatusChange={() => {}}
+    />,
+    { wrapper: Wrapper },
+  );
+  const trigger = screen.getByRole("button", { name: "Watching" });
+  trigger.focus();
+  await user.keyboard("{ArrowDown}");
+  await screen.findByRole("menu");
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  expect(
+    screen
+      .getByRole("menuitemradio", { name: "Watching" })
+      .getAttribute("aria-checked"),
+  ).toBe("true");
+  await user.keyboard("{End}");
+  expect(document.activeElement).toBe(
+    screen.getByRole("menuitemradio", { name: "Completed" }),
+  );
+  await user.keyboard("{Home}");
+  expect(document.activeElement).toBe(
+    screen.getByRole("menuitemradio", { name: "Auto" }),
+  );
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  expect(document.activeElement).toBe(trigger);
+  await waitFor(() =>
+    expect(trigger.getAttribute("aria-expanded")).toBe("false"),
+  );
+  await user.keyboard("{Enter}");
+  await screen.findByRole("menu");
+  await user.keyboard("d{Enter}");
+  await waitFor(() =>
+    expect(api.updateTrackedStatus).toHaveBeenCalledWith("t-1", "dropped"),
+  );
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
 });

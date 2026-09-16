@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Menu } from "@base-ui/react/menu";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -72,23 +73,17 @@ export default function StatusPicker({
   const statusMutation = useMutation({
     mutationFn: (status: UserStatus | null) =>
       api.updateTrackedStatus(titleId, status),
-    onMutate: () => setOpen(false),
     onSuccess: (_data, status) => onStatusChange(status),
     onError: () => toast.error("Failed to update status"),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
   });
 
   return (
-    <div className="relative">
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          setOpen((v) => !v);
-        }}
+    <Menu.Root open={open} onOpenChange={setOpen}>
+      <Menu.Trigger
+        aria-expanded={open}
         disabled={statusMutation.isPending}
         className={`w-full text-left text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 transition-colors flex items-center gap-1.5 ${activeOption.color}`}
-        aria-haspopup="listbox"
-        aria-expanded={open}
       >
         <span className="flex-1 truncate">{t(activeOption.labelKey)}</span>
         <svg
@@ -105,37 +100,32 @@ export default function StatusPicker({
             d="M19 9l-7 7-7-7"
           />
         </svg>
-      </button>
+      </Menu.Trigger>
 
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <ul
-            role="listbox"
-            className="absolute bottom-full mb-1 left-0 right-0 z-20 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden"
-          >
-            {options.map((opt) => (
-              <li key={String(opt.value)}>
-                <button
-                  role="option"
-                  aria-selected={opt.value === (currentStatus ?? null)}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    statusMutation.mutate(opt.value);
-                  }}
-                  className={`w-full text-left text-xs px-3 py-2 hover:bg-zinc-700 transition-colors ${opt.color} ${opt.value === (currentStatus ?? null) ? "bg-zinc-700" : ""}`}
+      <Menu.Portal>
+        <Menu.Positioner
+          side="top"
+          align="start"
+          sideOffset={4}
+          className="z-50"
+        >
+          <Menu.Popup className="min-w-[140px] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+            <Menu.RadioGroup value={currentStatus ?? "auto"}>
+              {options.map((opt) => (
+                <Menu.RadioItem
+                  key={String(opt.value)}
+                  value={opt.value ?? "auto"}
+                  closeOnClick
+                  onClick={() => statusMutation.mutate(opt.value)}
+                  className={`w-full text-left text-xs px-3 py-2 outline-none data-[highlighted]:bg-zinc-700 transition-colors ${opt.color} ${opt.value === (currentStatus ?? null) ? "bg-zinc-700" : ""}`}
                 >
                   {t(opt.labelKey)}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
+                </Menu.RadioItem>
+              ))}
+            </Menu.RadioGroup>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }
