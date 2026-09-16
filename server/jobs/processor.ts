@@ -23,6 +23,7 @@ import {
   listTrackedShowsForEpisodeSync,
 } from "../tmdb/sync";
 import { enqueueAdhoc } from "./backend";
+import { handleReleaseReminder } from "./release-reminders";
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { getCache } from "../cache";
@@ -618,6 +619,8 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> =
     "sync-trending": () => handleSyncTrending(),
     "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
     "send-notifications": () => handleSendNotifications(),
+    "release-reminder": (data) =>
+      handleReleaseReminder(data ? JSON.parse(data) : {}),
     "backfill-title-offers": (data) => handleBackfillTitleOffers(data),
     "migrate-offers": () => handleMigrateOffers(),
     "sync-deep-links": () => handleSyncDeepLinks(),

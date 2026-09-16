@@ -114,11 +114,9 @@ export async function registerNotificationJobs() {
             const tzInfo = timesByTimezone.get(notifier.timezone);
             if (!tzInfo) continue;
 
-            let todayDayOfWeek = 0;
             let endDateStr = "";
             try {
-              todayDayOfWeek = new Date(tzInfo.date + "T00:00:00Z").getUTCDay();
-              const endDate = new Date(tzInfo.date + "T00:00:00Z");
+              const endDate = new Date(notifier.todayDate + "T00:00:00Z");
               endDate.setUTCDate(endDate.getUTCDate() + 7);
               endDateStr = endDate.toISOString().slice(0, 10);
             } catch (err) {
@@ -130,14 +128,9 @@ export async function registerNotificationJobs() {
               continue;
             }
 
-            if (notifier.digest_day !== todayDayOfWeek) {
-              // Not the right day — skip without marking sent so we retry tomorrow
-              continue;
-            }
-
             const content = await getWeeklyContentCached(
               notifier.user_id,
-              tzInfo.date,
+              notifier.todayDate,
               endDateStr,
             );
 

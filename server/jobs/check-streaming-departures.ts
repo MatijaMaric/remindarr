@@ -9,6 +9,8 @@ import {
   getUserDepartureSettings,
   recordDelivery,
   getUsersTrackingTitles,
+  getDeliveredStreamingNotifiers,
+  markStreamingDelivered,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 
@@ -137,6 +139,12 @@ export async function checkStreamingDepartures(
           }
         }
 
+        const delivered = await getDeliveredStreamingNotifiers(
+          titleId,
+          pid,
+          "departure",
+        );
+        let allDelivered = true;
         if (userNotifiers.length > 0) {
           const content = {
             episodes: [] as never[],
@@ -155,11 +163,21 @@ export async function checkStreamingDepartures(
           };
 
           for (const notifier of userNotifiers) {
+            if (delivered.has(notifier.id)) continue;
             const notifierProvider = getProvider(notifier.provider);
-            if (!notifierProvider) continue;
+            if (!notifierProvider) {
+              allDelivered = false;
+              continue;
+            }
             const alertStart = Date.now();
             try {
               await notifierProvider.send(notifier.config, content);
+              await markStreamingDelivered(
+                notifier.id,
+                titleId,
+                pid,
+                "departure",
+              );
               await recordDelivery({
                 notifierId: notifier.id,
                 status: "success",
@@ -174,6 +192,7 @@ export async function checkStreamingDepartures(
                 leavingAt,
               });
             } catch (err) {
+              allDelivered = false;
               const message = err instanceof Error ? err.message : String(err);
               await recordDelivery({
                 notifierId: notifier.id,
@@ -193,13 +212,14 @@ export async function checkStreamingDepartures(
         }
 
         // Mark departure as alerted (dedup for this user+title+provider combo)
-        await markAlerted(
-          userId,
-          titleId,
-          pid,
-          provider.providerName,
-          "departure",
-        );
+        if (allDelivered)
+          await markAlerted(
+            userId,
+            titleId,
+            pid,
+            provider.providerName,
+            "departure",
+          );
       }
     }
   }

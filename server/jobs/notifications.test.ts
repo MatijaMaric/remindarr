@@ -290,17 +290,7 @@ describe("computeNotificationCron", () => {
     const cron = await computeNotificationCron();
     expect(cron).not.toBeNull();
 
-    // Should have format: "minutes hours * * *"
-    const parts = cron!.split(" ");
-    expect(parts).toHaveLength(5);
-    expect(parts[0]).toBe("0"); // minute 0
-    expect(parts[2]).toBe("*"); // any day
-    expect(parts[3]).toBe("*"); // any month
-    expect(parts[4]).toBe("*"); // any weekday
-
-    // Hours should contain 3 values (target ± 1 for DST buffer)
-    const hours = parts[1].split(",").map(Number);
-    expect(hours).toHaveLength(3);
+    expect(cron).toBe("* * * * *");
   });
 
   it("combines multiple notifier times into one cron", async () => {
@@ -324,11 +314,7 @@ describe("computeNotificationCron", () => {
     const cron = await computeNotificationCron();
     expect(cron).not.toBeNull();
 
-    const parts = cron!.split(" ");
-    // Should include both minute 0 and minute 30
-    const minutes = parts[0].split(",").map(Number);
-    expect(minutes).toContain(0);
-    expect(minutes).toContain(30);
+    expect(cron).toBe("* * * * *");
   });
 
   it("does not include disabled notifiers", async () => {

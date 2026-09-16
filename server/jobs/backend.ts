@@ -6,10 +6,10 @@
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { CONFIG } from "../config";
-import { getDb, jobs } from "../db/schema";
+import { getDb, jobs, cronJobs } from "../db/schema";
+import { and, eq, sql } from "drizzle-orm";
 import {
   processPendingJobs,
-  enqueueCronJob,
   enqueueJobReturningId,
   enqueueOneTimeMigration,
   recoverStaleJobs,
@@ -136,6 +136,7 @@ export async function armCron(
   env: CFEnv,
   name: string,
   cron: string,
+  now: Date = new Date(),
 ): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     try {
@@ -151,7 +152,54 @@ export async function armCron(
       await doFetch(env, name, "/arm", "POST", { name, cron });
     }
   } else {
-    await enqueueCronJob(name);
+    const db = getDb();
+    const nextRun = CronExpressionParser.parse(cron, {
+      currentDate: now,
+      tz: "UTC",
+    })
+      .next()
+      .toDate()
+      .toISOString();
+    // Bootstrap includes this watchdog interval; persisted schedules catch up
+    // after longer outages without replaying every missed occurrence.
+    const firstRun = CronExpressionParser.parse(cron, {
+      currentDate: new Date(now.getTime() - 5 * 60_000),
+      tz: "UTC",
+    })
+      .next()
+      .toDate()
+      .toISOString();
+    await db
+      .insert(cronJobs)
+      .values({ name, cron, nextRun: firstRun })
+      .onConflictDoNothing();
+    const schedule = await db
+      .select()
+      .from(cronJobs)
+      .where(eq(cronJobs.name, name))
+      .get();
+    if (!schedule || !schedule.enabled) return;
+    if (schedule.cron !== cron) {
+      await db
+        .update(cronJobs)
+        .set({ cron, nextRun: firstRun })
+        .where(eq(cronJobs.name, name));
+      schedule.nextRun = firstRun;
+    }
+    if (schedule.nextRun > now.toISOString()) return;
+    const data = JSON.stringify({ cronRunAt: schedule.nextRun });
+    // One statement prevents concurrent watchdogs from duplicating an occurrence.
+    // Keep its identity in data because retries change run_at.
+    await db.run(sql`INSERT INTO jobs (name, data, run_at)
+      SELECT ${name}, ${data}, ${now.toISOString()}
+      WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE name = ${name}
+        AND (data = ${data} OR status IN ('pending', 'running')))`);
+    await db
+      .update(cronJobs)
+      .set({ lastRun: now.toISOString(), nextRun })
+      .where(
+        and(eq(cronJobs.name, name), eq(cronJobs.nextRun, schedule.nextRun)),
+      );
   }
 }
 
@@ -181,7 +229,7 @@ export async function tickCron(env: CFEnv, name: string): Promise<void> {
 export async function enqueueAdhoc(
   name: string,
   data?: Record<string, unknown>,
-  opts?: { detachTick?: boolean },
+  opts?: { detachTick?: boolean; runAt?: Date; maxAttempts?: number },
 ): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     const env = envStorage.getStore() ?? null;
@@ -196,6 +244,8 @@ export async function enqueueAdhoc(
       {
         name,
         data: data ? JSON.stringify(data) : null,
+        runAt: opts?.runAt?.toISOString(),
+        maxAttempts: opts?.maxAttempts,
       },
       partitionKey,
     );
@@ -207,6 +257,7 @@ export async function enqueueAdhoc(
     // wall time inside blockConcurrencyWhile and reset the DO (#1058). Pending
     // I/O keeps the caller DO alive until detached ticks land; a dropped tick
     // drains on the next daily run.
+    if (opts?.runAt && opts.runAt > new Date()) return;
     const tick = doFetch(env, name, "/tick", "POST", {}, partitionKey);
     if (opts?.detachTick) {
       void tick.catch((err) =>
@@ -223,9 +274,37 @@ export async function enqueueAdhoc(
     await db.insert(jobs).values({
       name,
       data: data ? JSON.stringify(data) : null,
-      runAt: new Date().toISOString(),
+      runAt: (opts?.runAt ?? new Date()).toISOString(),
+      maxAttempts: opts?.maxAttempts ?? 3,
     });
   }
+}
+
+/** Cancel this user's pending reminder in the same backend used to enqueue it. */
+export async function cancelReleaseReminder(
+  userId: string,
+  titleId: string,
+): Promise<void> {
+  if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
+    const env = envStorage.getStore();
+    if (!env?.JOB_QUEUE_DO)
+      throw new Error("JOB_QUEUE_DO binding not available");
+    await doFetch(env, "release-reminder", "/cancel-reminder", "POST", {
+      userId,
+      titleId,
+    });
+    return;
+  }
+  await getDb()
+    .delete(jobs)
+    .where(
+      and(
+        eq(jobs.name, "release-reminder"),
+        eq(jobs.status, "pending"),
+        sql`json_extract(${jobs.data}, '$.userId') = ${userId}`,
+        sql`json_extract(${jobs.data}, '$.titleId') = ${titleId}`,
+      ),
+    );
 }
 
 /**
