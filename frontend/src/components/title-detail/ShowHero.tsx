@@ -109,8 +109,8 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
           </div>
         </div>
         {/* Mobile CTA row */}
-        <div className="flex gap-2 -mt-2">
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap gap-2 -mt-2">
+          <div className="flex-1 min-w-[180px]">
             {playableOffers.length > 0 ? (
               <WatchButtonGroup offers={playableOffers} size="lg" fullWidth />
             ) : (
