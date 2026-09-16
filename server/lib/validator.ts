@@ -1,3 +1,4 @@
+import { routePath } from "hono/route";
 import { zValidator as baseValidator } from "@hono/zod-validator";
 import type { ValidationTargets } from "hono";
 import type { ZodType } from "zod";
@@ -37,7 +38,7 @@ export function zValidator<
       log.warn("Request validation failed", {
         target,
         method: c.req.method,
-        path: c.req.path,
+        path: routePath(c) || "<unmatched>",
         issues: result.error.issues,
       });
       return c.json(

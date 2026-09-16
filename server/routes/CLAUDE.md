@@ -87,7 +87,6 @@ All routes are under `/api` except `/metrics`.
 ### Public (no auth)
 
 - `GET /api/health`
-- `GET /metrics` (optionally bearer-guarded via `METRICS_TOKEN`)
 - `POST|GET /api/auth/*` — better-auth handler
 - `GET /api/auth/custom/providers`
 - `GET /api/feed/calendar.ics?token=<user-feed-token>`
@@ -126,6 +125,10 @@ All routes are under `/api` except `/metrics`.
 - `POST /api/episodes/sync`
 
 ### Admin only
+
+The Bun `/metrics` endpoint uses a separate `METRICS_TOKEN` bearer credential
+and is disabled when that operator setting is empty. See
+[telemetry remediation](../../docs/telemetry-token-remediation.md) for upgrades.
 
 - `GET/PUT /api/admin/settings`
 - `GET/PATCH /api/admin/users`

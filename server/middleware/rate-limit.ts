@@ -1,3 +1,4 @@
+import { routePath } from "hono/route";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "../types";
 import { logger } from "../logger";
@@ -166,14 +167,18 @@ export function rateLimiter(options: RateLimitOptions) {
       log.warn("Rate limit store error — failing open", {
         scope,
         ip,
-        path: c.req.path,
+        path: routePath(c) || "<unmatched>",
         error: err instanceof Error ? err.message : String(err),
       });
       return next();
     }
 
     if (!allowed) {
-      log.info("Rate limit exceeded", { scope, ip, path: c.req.path });
+      log.info("Rate limit exceeded", {
+        scope,
+        ip,
+        path: routePath(c) || "<unmatched>",
+      });
       c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
       return c.json({ error: "Too many requests" }, 429);
     }
