@@ -612,11 +612,8 @@ describe("HomePage dashboard modes", () => {
       );
       expect(screen.queryByText("Today")).toBeNull();
       expect(
-        screen.getByRole("navigation", { name: "Home views" }),
-      ).toBeDefined();
-      expect(
-        screen.getByRole("link", { name: "Reels" }).getAttribute("href"),
-      ).toBe("/reels");
+        screen.queryByRole("navigation", { name: "Home views" }),
+      ).toBeNull();
     });
   }
 });
