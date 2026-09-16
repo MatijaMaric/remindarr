@@ -24,6 +24,9 @@ import {
 } from "../tmdb/sync";
 import { enqueueAdhoc } from "./backend";
 import { handleReleaseReminder } from "./release-reminders";
+import { checkStreamingAlerts } from "./check-streaming-alerts";
+import { checkStreamingDepartures } from "./check-streaming-departures";
+import { syncFailureTotal } from "../metrics";
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { getCache } from "../cache";
@@ -72,6 +75,20 @@ async function handleSyncTitles(): Promise<void> {
   });
   const count = await upsertTitles(titles);
   log.info("Synced titles from TMDB", { count });
+  const titleIds = titles.map((title) => title.id);
+  // Titles are committed: notification failures must not retry the sync batch.
+  try {
+    await checkStreamingAlerts(titleIds);
+  } catch (err) {
+    log.error("checkStreamingAlerts failed", { err });
+    syncFailureTotal.inc({ source: "streaming-alerts" });
+  }
+  try {
+    await checkStreamingDepartures(titleIds);
+  } catch (err) {
+    log.error("checkStreamingDepartures failed", { err });
+    syncFailureTotal.inc({ source: "streaming-departures" });
+  }
 }
 
 async function handleSyncEpisodes(): Promise<void> {
