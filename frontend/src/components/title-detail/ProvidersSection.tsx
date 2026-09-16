@@ -96,7 +96,7 @@ function ProviderRow({
       </div>
       <div className="flex flex-wrap gap-2 items-center min-h-8">
         {isEmpty ? (
-          <span className="text-xs text-zinc-600 italic">— not available</span>
+          <span className="text-xs text-zinc-500 italic">— not available</span>
         ) : (
           children
         )}
