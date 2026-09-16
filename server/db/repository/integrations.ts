@@ -1,10 +1,53 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import { getDb } from "../schema";
-import { integrations } from "../schema";
+import { integrations, verification } from "../schema";
 import { logger } from "../../logger";
 import { traceDbQuery } from "../../tracing";
 
 const log = logger.child({ module: "repository" });
+
+export async function savePlexPin(
+  pinId: number,
+  userId: string,
+  expiresAt: string,
+) {
+  // Reuse persisted verification state in both Bun and D1; never store the Plex token.
+  await getDb()
+    .insert(verification)
+    .values({
+      id: `plex-pin:${pinId}`,
+      identifier: "plex-pin",
+      value: userId,
+      expiresAt: new Date(expiresAt).toISOString(),
+    })
+    .run();
+}
+
+function ownedPlexPin(pinId: number, userId: string) {
+  return and(
+    eq(verification.id, `plex-pin:${pinId}`),
+    eq(verification.identifier, "plex-pin"),
+    eq(verification.value, userId),
+    gt(verification.expiresAt, new Date().toISOString()),
+  );
+}
+
+export async function hasPlexPin(pinId: number, userId: string) {
+  return !!(await getDb()
+    .select({ id: verification.id })
+    .from(verification)
+    .where(ownedPlexPin(pinId, userId))
+    .get());
+}
+
+export async function consumePlexPin(pinId: number, userId: string) {
+  // DELETE RETURNING makes completion single-use even across concurrent Worker requests.
+  const consumed = await getDb()
+    .delete(verification)
+    .where(ownedPlexPin(pinId, userId))
+    .returning({ id: verification.id });
+  return consumed.length === 1;
+}
 
 export type PlexConfig = {
   plexToken: string;

@@ -20,6 +20,11 @@ import { enqueueAdhoc } from "../jobs/backend";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 import Sentry from "../sentry";
+import {
+  savePlexPin,
+  hasPlexPin,
+  consumePlexPin,
+} from "../db/repository/integrations";
 
 const idParamSchema = z.object({ id: z.string().uuid() });
 
@@ -67,6 +72,7 @@ app.get("/", async (c) => {
 app.post("/plex/pin", async (c) => {
   try {
     const pin = await createPin();
+    await savePlexPin(pin.id, c.get("user")!.id, pin.expiresAt);
     const authUrl = buildPlexAuthUrl(pin.code);
     return ok(c, { pinId: pin.id, authUrl });
   } catch (e) {
@@ -77,8 +83,15 @@ app.post("/plex/pin", async (c) => {
 
 // POST /plex/pin/:pinId — poll PIN; if resolved returns server list
 app.post("/plex/pin/:pinId", async (c) => {
-  const pinId = parseInt(c.req.param("pinId"), 10);
-  if (isNaN(pinId)) return err(c, "Invalid pin ID");
+  const rawPinId = c.req.param("pinId");
+  const pinId = Number(rawPinId);
+  if (!/^\d+$/.test(rawPinId) || !Number.isSafeInteger(pinId) || pinId <= 0) {
+    return err(c, "Invalid pin ID");
+  }
+  const userId = c.get("user")!.id;
+  if (!(await hasPlexPin(pinId, userId))) {
+    return err(c, "Plex PIN not found or expired", 404);
+  }
 
   let pin;
   try {
@@ -98,6 +111,10 @@ app.post("/plex/pin/:pinId", async (c) => {
   } catch (e) {
     Sentry.captureException(e);
     return err(c, "Failed to fetch Plex servers", 500);
+  }
+
+  if (!(await consumePlexPin(pinId, userId))) {
+    return err(c, "Plex PIN not found or expired", 404);
   }
 
   return ok(c, {
