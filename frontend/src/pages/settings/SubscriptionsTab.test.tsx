@@ -147,8 +147,8 @@ describe("SubscriptionsTab", () => {
     (api.getProviders as ReturnType<typeof spyOn>).mockRejectedValueOnce(
       new Error("503"),
     );
-    await act(async () => {
-      await queryClient.invalidateQueries({
+    act(() => {
+      void queryClient.invalidateQueries({
         queryKey: ["subscription-providers"],
       });
     });
@@ -180,7 +180,9 @@ describe("SubscriptionsTab", () => {
         regionProviderIds: [8],
       }),
     );
-    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole("status") === null).toBe(true),
+    );
     expect(
       (screen.getByRole("checkbox", { name: "Netflix" }) as HTMLInputElement)
         .checked,
