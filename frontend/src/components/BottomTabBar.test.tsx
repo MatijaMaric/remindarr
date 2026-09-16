@@ -128,7 +128,9 @@ describe("BottomTabBar", () => {
 
     const links = screen.getAllByRole("link");
     const hrefs = links.map((link) => link.getAttribute("href"));
-    expect(hrefs).toContain("/reels");
+    expect(
+      screen.getByRole("link", { name: "Home" }).getAttribute("href"),
+    ).toBe("/");
     expect(hrefs).toContain("/browse");
     expect(hrefs).toContain("/calendar");
     expect(hrefs).toContain("/tracked");

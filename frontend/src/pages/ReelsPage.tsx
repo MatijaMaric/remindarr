@@ -711,7 +711,7 @@ export default function ReelsPage() {
               to="/"
               className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent"
             >
-              Feed
+              Home
             </Link>
             <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">
               Reels
@@ -758,7 +758,7 @@ export default function ReelsPage() {
 
   return (
     <>
-      {/* Feed / Reels mode switcher + source picker — fixed overlay, edge-to-edge with scrim */}
+      {/* Home / Reels mode switcher + source picker — fixed overlay, edge-to-edge with scrim */}
       <div
         className="fixed z-40 left-0 right-0 bg-gradient-to-b from-black/55 to-transparent"
         style={{
@@ -767,7 +767,7 @@ export default function ReelsPage() {
           paddingBottom: 12,
         }}
       >
-        {/* Single horizontally-scrolling row: Feed/Reels toggle + source chips */}
+        {/* Single horizontally-scrolling row: Home/Reels toggle + source chips */}
         <div
           className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{ paddingLeft: 20, paddingRight: 20 }}
@@ -776,7 +776,7 @@ export default function ReelsPage() {
             to="/"
             className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold text-white/60 border border-transparent"
           >
-            Feed
+            Home
           </Link>
           <span className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[11px] font-bold text-white">
             Reels
