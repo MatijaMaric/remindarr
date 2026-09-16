@@ -32,7 +32,10 @@ import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
 import { getCache } from "../cache";
 import { buildTrendingSnapshot, trendingCacheKey } from "../routes/trending";
 import { getProvider } from "../notifications/registry";
-import { buildNotificationContent } from "../notifications/content";
+import {
+  buildNotificationContent,
+  buildWeeklyDigestContent,
+} from "../notifications/content";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { getCurrentTimeInTimezone, nextRetryAt } from "./time-utils";
 import {
@@ -198,21 +201,33 @@ async function handleSendNotifications(): Promise<void> {
 
   log.info("Processing due notifiers", { count: dueNotifiers.length });
 
-  // Per-invocation caches keyed by "userId|date" — local to this job run, not global.
+  // Per-invocation cache keyed by user, date and digest mode — local to this job run, not global.
   // For N notifiers sharing the same user+date, DB queries drop from 2N to 2.
-  const dailyContentCache = new Map<
+  const contentCache = new Map<
     string,
     Awaited<ReturnType<typeof buildNotificationContent>>
   >();
 
-  async function getDailyContentCached(userId: string, date: string) {
-    const key = `${userId}|${date}`;
-    if (dailyContentCache.has(key)) {
+  async function getContentCached(
+    userId: string,
+    date: string,
+    weekly: boolean,
+  ) {
+    const key = `${userId}|${date}|${weekly}`;
+    if (contentCache.has(key)) {
       log.debug("Notification content cache hit", { userId, date });
-      return dailyContentCache.get(key)!;
+      return contentCache.get(key)!;
     }
-    const result = await buildNotificationContent(userId, date);
-    dailyContentCache.set(key, result);
+    const endDate = new Date(date + "T00:00:00Z");
+    endDate.setUTCDate(endDate.getUTCDate() + 7);
+    const result = weekly
+      ? await buildWeeklyDigestContent(
+          userId,
+          date,
+          endDate.toISOString().slice(0, 10),
+        )
+      : await buildNotificationContent(userId, date);
+    contentCache.set(key, result);
     return result;
   }
 
@@ -227,15 +242,23 @@ async function handleSendNotifications(): Promise<void> {
         continue;
       }
 
-      // Default daily behavior
-      const content = await getDailyContentCached(
+      // getDueNotifiers filters weekly days using the scheduled local date,
+      // including digests deferred past midnight by quiet hours.
+      if (notifier.digest_mode === "off") {
+        await markNotifierSent(notifier.id, notifier.todayDate);
+        continue;
+      }
+      const weekly = notifier.digest_mode === "weekly";
+      const eventKind = weekly ? "digest" : "episode_air";
+      const content = await getContentCached(
         notifier.user_id,
         notifier.todayDate,
+        weekly,
       );
 
       // Inject achievements if enabled for this notifier
       let achievementKeys: string[] = [];
-      if (notifier.achievementsEnabled) {
+      if (!weekly && notifier.achievementsEnabled) {
         const lastSentDate =
           notifier.last_sent_date ?? "1970-01-01T00:00:00.000Z";
         const earnedSince = await listEarnedSince(
@@ -271,23 +294,23 @@ async function handleSendNotifications(): Promise<void> {
         continue;
       }
 
-      const dailyStart = Date.now();
+      const sendStart = Date.now();
       try {
         await provider.send(notifier.config, content);
         await recordDelivery({
           notifierId: notifier.id,
           status: "success",
-          latencyMs: Date.now() - dailyStart,
-          eventKind: "episode_air",
+          latencyMs: Date.now() - sendStart,
+          eventKind,
         });
       } catch (sendErr) {
         await recordDelivery({
           notifierId: notifier.id,
           status: "failure",
-          latencyMs: Date.now() - dailyStart,
+          latencyMs: Date.now() - sendStart,
           errorMessage:
             sendErr instanceof Error ? sendErr.message : String(sendErr),
-          eventKind: "episode_air",
+          eventKind,
         });
         throw sendErr;
       }
