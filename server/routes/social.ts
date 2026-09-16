@@ -1,3 +1,4 @@
+import { userIdSchema } from "../lib/user-id";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -20,7 +21,7 @@ const friendsLovedQuerySchema = z.object({
 });
 
 // User IDs are crypto.randomUUID() (see repository/users.ts).
-const userIdParamSchema = z.object({ userId: z.string().uuid() });
+const userIdParamSchema = z.object({ userId: userIdSchema });
 
 const log = logger.child({ module: "social" });
 

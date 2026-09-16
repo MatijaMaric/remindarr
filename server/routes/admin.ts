@@ -1,3 +1,4 @@
+import { userIdSchema } from "../lib/user-id";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -57,7 +58,7 @@ const banUserSchema = z.object({
 });
 
 // User IDs are crypto.randomUUID() (see repository/users.ts).
-const userIdParam = z.object({ id: z.string().uuid() });
+const userIdParam = z.object({ id: userIdSchema });
 
 /**
  * Callback to recreate the auth instance after OIDC settings change.

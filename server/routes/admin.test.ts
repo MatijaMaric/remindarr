@@ -367,18 +367,18 @@ describe("validation", () => {
     expect(Array.isArray(body.issues)).toBe(true);
   });
 
-  it("rejects a non-UUID :id on the user routes", async () => {
+  it("rejects a malformed :id on the user routes", async () => {
     for (const path of [
-      "/admin/users/not-a-uuid",
-      "/admin/users/not-a-uuid/role",
-      "/admin/users/not-a-uuid/ban",
-      "/admin/users/not-a-uuid/unban",
+      "/admin/users/invalid%20id",
+      "/admin/users/invalid%20id/role",
+      "/admin/users/invalid%20id/ban",
+      "/admin/users/invalid%20id/unban",
     ]) {
       const res = await app.request(path, {
-        method: path === "/admin/users/not-a-uuid" ? "GET" : "PUT",
+        method: path === "/admin/users/invalid%20id" ? "GET" : "PUT",
         headers: { Cookie: adminCookie, "Content-Type": "application/json" },
         body:
-          path === "/admin/users/not-a-uuid" ? undefined : JSON.stringify({}),
+          path === "/admin/users/invalid%20id" ? undefined : JSON.stringify({}),
       });
       expect(res.status).toBe(400);
       const body = await res.json();
@@ -386,7 +386,7 @@ describe("validation", () => {
       expect(Array.isArray(body.issues)).toBe(true);
     }
 
-    const del = await app.request("/admin/users/not-a-uuid", {
+    const del = await app.request("/admin/users/invalid%20id", {
       method: "DELETE",
       headers: { Cookie: adminCookie },
     });

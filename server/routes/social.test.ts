@@ -109,8 +109,8 @@ describe("POST /social/follow/:userId", () => {
     expect(body.error).toBe("User not found");
   });
 
-  it("rejects a non-UUID :userId with 400", async () => {
-    const res = await app.request("/social/follow/not-a-uuid", {
+  it("rejects a malformed :userId with 400", async () => {
+    const res = await app.request("/social/follow/invalid%20id", {
       method: "POST",
       headers: authHeaders(userAToken),
     });
