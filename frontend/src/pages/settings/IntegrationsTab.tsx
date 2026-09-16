@@ -714,6 +714,7 @@ function WatchlistShareSection() {
 }
 
 function WatchlistSection() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [msg, setMsg] = useState("");
@@ -764,8 +765,10 @@ function WatchlistSection() {
       subtitle="Back up your tracked titles and watch history as JSON. Importing merges, never overwrites."
     >
       <div className="space-y-3">
-        {msg && <SMessage kind="success">{msg}</SMessage>}
-        {err && <SMessage kind="error">{err}</SMessage>}
+        <div role="status">
+          {msg && <SMessage kind="success">{msg}</SMessage>}
+        </div>
+        <div role="alert">{err && <SMessage kind="error">{err}</SMessage>}</div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="p-4 bg-zinc-800 border border-white/[0.08] rounded-[10px]">
@@ -786,22 +789,30 @@ function WatchlistSection() {
             <div className="text-xs text-zinc-500 mb-3 leading-relaxed">
               {t("profile.importDescription")}
             </div>
-            <label
+            <button
+              type="button"
+              aria-disabled={importing}
+              aria-busy={importing}
+              onClick={() => {
+                if (!importing) fileInputRef.current?.click();
+              }}
               className={cn(
-                "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-lg bg-white/[0.06] text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1] transition-colors cursor-pointer",
-                importing && "opacity-50 pointer-events-none",
+                "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-lg bg-white/[0.06] text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1] transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-amber-400",
+                importing && "opacity-50 cursor-wait",
               )}
             >
-              <span>↑</span>
+              <span aria-hidden="true">↑</span>
               {importing ? t("profile.importing") : t("profile.import")}
-              <input
-                type="file"
-                accept=".json,application/json"
-                onChange={handleImport}
-                className="hidden"
-                disabled={importing}
-              />
-            </label>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleImport}
+              className="hidden"
+              disabled={importing}
+              aria-label={t("profile.importWatchlist")}
+            />
           </div>
         </div>
       </div>
