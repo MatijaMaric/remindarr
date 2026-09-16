@@ -11,7 +11,8 @@ import { eq } from "drizzle-orm";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import { CONFIG } from "../config";
-import { getDb, jobs, notifiers, users, providers } from "../db/schema";
+import { getDb, jobs, notifiers, users, providers, offers } from "../db/schema";
+import { getRawDb } from "../db/bun-db";
 import {
   createUser,
   createNotifier,
@@ -22,6 +23,8 @@ import {
   getUnalertedProviders,
   setRemindOnRelease,
   markAlerted,
+  getArrivalAlertedProviders,
+  updateNotifier,
 } from "../db/repository";
 import {
   armCron,
@@ -73,6 +76,53 @@ describe("D1 watchdog schedules", () => {
 });
 
 describe("notifier due windows", () => {
+  it("does not infer a deferred schedule from before creation or activation", async () => {
+    const id = await createNotifier(
+      userId,
+      "discord",
+      "New",
+      {},
+      "23:03",
+      "UTC",
+      null,
+      null,
+      true,
+      { quietHoursStart: "23:00", quietHoursEnd: "08:00" },
+    );
+    const due = () =>
+      getDueNotifiers(
+        new Map([["UTC", { date: "2026-09-16", time: "09:00", dayOfWeek: 3 }]]),
+      );
+    await getDb()
+      .update(notifiers)
+      .set({ createdAt: "2026-09-16 08:00:00" })
+      .where(eq(notifiers.id, id));
+    expect(await due()).toHaveLength(0);
+    await getDb()
+      .update(notifiers)
+      .set({ createdAt: "2026-09-15 08:00:00" })
+      .where(eq(notifiers.id, id));
+    expect(await due()).toHaveLength(1);
+    await getDb()
+      .update(notifiers)
+      .set({ scheduleStartedAt: "2026-09-16T08:00:00.000Z" })
+      .where(eq(notifiers.id, id));
+    expect(await due()).toHaveLength(0);
+    await getDb()
+      .update(notifiers)
+      .set({ scheduleStartedAt: "2026-09-15T22:00:00.000Z" })
+      .where(eq(notifiers.id, id));
+    expect(await due()).toHaveLength(1);
+    await updateNotifier(id, userId, { enabled: true });
+    const activated = await getDb()
+      .select()
+      .from(notifiers)
+      .where(eq(notifiers.id, id))
+      .get();
+    expect(activated?.scheduleStartedAt?.slice(0, 10)).toBe(
+      new Date().toISOString().slice(0, 10),
+    );
+  });
   for (const runtime of ["Bun", "Cloudflare"])
     it(`${runtime} delivers 09:03 on the first later tick, retries failure, and deduplicates success`, async () => {
       const dispatch = async () => {
@@ -366,3 +416,74 @@ for (const kind of ["arrival", "departure"] as const) {
     ).toEqual([]);
   });
 }
+
+for (const allFail of [false, true]) {
+  it(`preserves observed arrival history for departure after ${allFail ? "all" : "partial"} delivery failure`, async () => {
+    const titleId = "movie-observed";
+    await getDb()
+      .insert(providers)
+      .values({ id: 8, name: "Netflix" })
+      .onConflictDoNothing();
+    await upsertTitles([
+      makeParsedTitle({ id: titleId, offers: [makeParsedOffer({ titleId })] }),
+    ]);
+    await trackTitle(titleId, userId);
+    await getDb()
+      .update(users)
+      .set({ streamingDeparturesEnabled: 1 })
+      .where(eq(users.id, userId));
+    for (const destination of ["good", "retry"])
+      await createNotifier(
+        userId,
+        "discord",
+        destination,
+        { destination },
+        "09:00",
+        "UTC",
+      );
+    const deliveries: string[] = [];
+    spies.push(
+      spyOn(registry, "getProvider").mockReturnValue({
+        name: "discord",
+        validateConfig: () => ({ valid: true }),
+        send: async (config, content) => {
+          const kind = content.streamingAlerts![0].kind;
+          if (kind === "arrival" && (allFail || config.destination === "retry"))
+            throw new Error("503");
+          deliveries.push(`${kind}:${config.destination}`);
+        },
+      }),
+    );
+    await checkStreamingAlerts([titleId]);
+    expect(
+      await getUnalertedProviders(userId, titleId, [8], "arrival"),
+    ).toEqual([8]);
+    expect(await getArrivalAlertedProviders(titleId)).toEqual([
+      { userId, providerId: 8, providerName: "Netflix" },
+    ]);
+    await getDb().delete(offers).where(eq(offers.titleId, titleId));
+    await checkStreamingDepartures([titleId]);
+    await checkStreamingDepartures([titleId]);
+    expect(deliveries.filter((item) => item.startsWith("departure:"))).toEqual([
+      "departure:good",
+      "departure:retry",
+    ]);
+    expect(
+      await getUnalertedProviders(userId, titleId, [8], "departure"),
+    ).toEqual([]);
+  });
+}
+
+it("looks up event destinations through the covering index", () => {
+  const plan = getRawDb()
+    .query(
+      "EXPLAIN QUERY PLAN SELECT notifier_id FROM streaming_alert_deliveries WHERE title_id = ? AND provider_id = ? AND kind = ?",
+    )
+    .all("movie-index", 8, "arrival") as { detail: string }[];
+  expect(
+    plan.some((step) =>
+      step.detail.includes("COVERING INDEX idx_streaming_deliveries_event"),
+    ),
+  ).toBe(true);
+  expect(plan.some((step) => step.detail.includes("SCAN"))).toBe(false);
+});
