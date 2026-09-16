@@ -615,6 +615,7 @@
     "remindOnRelease": "Remind on release day"
   },
   "notificationPrompt": {
+    "error": "Could not finish setting up push notifications. Please try again.",
     "message": "Enable push notifications to get alerts about new episodes and releases.",
     "enable": "Enable",
     "enabling": "Enabling...",
