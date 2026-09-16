@@ -1,23 +1,18 @@
+import { describe, it, expect, mock, afterEach } from "bun:test";
 import {
-  describe,
-  it,
-  expect,
-  mock,
-  beforeEach,
-  afterEach,
-  spyOn,
-} from "bun:test";
-import { render, screen, cleanup } from "@testing-library/react";
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "./i18n";
-import * as api from "./api";
+import { resetApiMock } from "./test-utils/apiMock";
 import { AuthContext } from "./context/AuthContext";
 import App from "./App";
-
-// Silence push-subscription API calls made by usePushSubscriptionSync
-let getNotifiersSpy: ReturnType<typeof spyOn>;
 
 function newTestClient() {
   return new QueryClient({
@@ -37,6 +32,7 @@ const noUserAuth = {
   user: null,
   providers: null,
   loading: false,
+  subscriptions: null,
   login: mock(() => Promise.resolve()),
   logout: mock(() => Promise.resolve()),
   refresh: mock(() => Promise.resolve()),
@@ -59,13 +55,9 @@ function renderApp(path: string, auth: typeof noUserAuth = noUserAuth) {
   );
 }
 
-beforeEach(() => {
-  getNotifiersSpy = spyOn(api, "getNotifiers").mockResolvedValue([] as never);
-});
-
 afterEach(() => {
-  getNotifiersSpy.mockRestore();
   cleanup();
+  resetApiMock();
 });
 
 describe("App nav Sign In link", () => {
@@ -90,5 +82,54 @@ describe("App nav Sign In link", () => {
     const nav = screen.getByRole("navigation", { name: "Main navigation" });
     const signInLink = nav.querySelector("a[href='/login']");
     expect(signInLink).toBeNull();
+  });
+});
+
+describe("App search trigger", () => {
+  it("advertises title search and the supported cross-platform shortcut", () => {
+    renderApp("/login");
+    const trigger = screen.getByRole("button", { name: "Search titles…" });
+    expect(trigger.getAttribute("aria-keyshortcuts")).toBe("/");
+    expect(trigger.querySelector("span.font-mono")?.textContent?.trim()).toBe(
+      "/",
+    );
+    expect(
+      trigger.querySelector("span.font-mono")?.getAttribute("aria-hidden"),
+    ).toBe("true");
+  });
+
+  it("navigates to Browse and focuses search using the displayed shortcut", async () => {
+    renderApp("/login");
+    fireEvent.keyDown(window, { key: "/" });
+    const input = await screen.findByRole("textbox", {
+      name: "Search titles or paste IMDB link",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(input));
+  });
+
+  it("focuses and selects existing search text on Browse", async () => {
+    renderApp("/browse");
+    const input = (await screen.findByRole("textbox", {
+      name: "Search titles or paste IMDB link",
+    })) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "Breaking Bad" } });
+    screen.getByRole("button", { name: "Search titles…" }).focus();
+    fireEvent.keyDown(window, { key: "/" });
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+  });
+
+  it("leaves focused editing fields alone", async () => {
+    renderApp("/login");
+    const input = await screen.findByLabelText("Username");
+    input.focus();
+    fireEvent.keyDown(input, { key: "/" });
+    expect(document.activeElement).toBe(input);
+    expect(
+      screen.queryByRole("textbox", {
+        name: "Search titles or paste IMDB link",
+      }),
+    ).toBeNull();
   });
 });
