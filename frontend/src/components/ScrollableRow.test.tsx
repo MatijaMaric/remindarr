@@ -2,6 +2,8 @@ import { describe, it, expect, afterEach, mock } from "bun:test";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import ScrollableRow from "./ScrollableRow";
 
+import "../i18n";
+
 afterEach(() => {
   cleanup();
 });
@@ -92,6 +94,18 @@ describe("ScrollableRow", () => {
 
     const buttons = container.querySelectorAll("button");
     expect(buttons.length).toBe(2);
+    expect(screen.getByRole("button", { name: "Scroll left" })).toBe(
+      buttons[0],
+    );
+    expect(screen.getByRole("button", { name: "Scroll right" })).toBe(
+      buttons[1],
+    );
+    for (const button of buttons) {
+      button.focus();
+      expect(document.activeElement).toBe(button);
+      expect(button.classList.contains("focus:opacity-100")).toBe(true);
+      expect(button.classList.contains("focus-visible:ring-2")).toBe(true);
+    }
 
     // Click right button — scrolls by clientWidth (400)
     fireEvent.click(buttons[1]);

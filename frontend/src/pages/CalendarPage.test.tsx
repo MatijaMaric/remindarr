@@ -108,6 +108,41 @@ describe("CalendarPage", () => {
     expect(screen.getByText("Wed")).toBeDefined();
   });
 
+  it("opens a labelled day dialog and restores its invoking day on Escape or close", async () => {
+    render(
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/?month=2024-03"]}>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const day = await screen.findByRole("button", { name: "20", exact: true });
+    const dateLabel = new Date(2024, 2, 20).toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+
+    day.focus();
+    fireEvent.click(day);
+    const dialog = screen.getByRole("dialog", { name: dateLabel });
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    const close = screen.getByRole("button", { name: "Close", exact: true });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(close, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(close, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(day);
+
+    fireEvent.click(day);
+    fireEvent.click(screen.getByRole("button", { name: "Close", exact: true }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(day);
+  });
+
   it("renders view toggle buttons on desktop", () => {
     render(<CalendarPage />, { wrapper: Wrapper });
 
@@ -394,6 +429,17 @@ describe("SlideOverPanel — movie watched toggle", () => {
     renderSlideOver(noop);
     const btn = screen.getByRole("button", { name: /mark as watched/i });
     expect(btn).toBeTruthy();
+  });
+
+  it("wraps keyboard focus in both directions through the day contents", () => {
+    renderSlideOver(noop);
+    const close = screen.getByRole("button", { name: "Close", exact: true });
+    const last = screen.getByRole("button", { name: /mark as watched/i });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    fireEvent.keyDown(last, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
   });
 
   it("calls onToggleTitleWatched when the toggle is clicked", () => {

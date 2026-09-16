@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 const FOCUSABLE_SELECTORS =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -17,27 +17,12 @@ export function useFocusTrap(
   containerRef: React.RefObject<HTMLElement | null>,
   isOpen: boolean,
 ): void {
-  // Keep a stable ref to the element that was focused before the trap opened
-  const savedFocusRef = useRef<Element | null>(null);
-
   useEffect(() => {
-    if (!isOpen) {
-      // Restore focus to whoever had it when the modal opened
-      if (
-        savedFocusRef.current &&
-        savedFocusRef.current instanceof HTMLElement
-      ) {
-        savedFocusRef.current.focus();
-      }
-      savedFocusRef.current = null;
-      return;
-    }
-
-    // Save active element
-    savedFocusRef.current = document.activeElement;
+    if (!isOpen) return;
 
     const container = containerRef.current;
     if (!container) return;
+    const savedFocus = document.activeElement;
 
     // Focus first focusable child, or the container itself
     const focusable = Array.from(
@@ -87,6 +72,9 @@ export function useFocusTrap(
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      if (savedFocus instanceof HTMLElement && savedFocus.isConnected) {
+        savedFocus.focus();
+      }
     };
   }, [isOpen, containerRef]);
 }

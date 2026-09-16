@@ -653,6 +653,8 @@
     "settingsLink": "Invite Friends"
   },
   "common": {
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
     "loading": "Loading...",
     "error": "An error occurred",
     "save": "Save",

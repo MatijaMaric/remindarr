@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useId } from "react";
 import {
   useQuery,
   useQueries,
@@ -26,6 +26,7 @@ import {
 } from "../api";
 import { getISOWeekKey } from "../lib/isoWeek";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useContentAdvisory } from "../hooks/useContentAdvisory";
 import TitleCard from "../components/TitleCard";
 import type { Title, Episode } from "../types";
@@ -118,6 +119,9 @@ export function SlideOverPanel({
   onToggleTitleWatched?: (id: string, watched: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useFocusTrap(dialogRef, true);
   const { actionFor } = useContentAdvisory();
   const today = formatDateKey(new Date());
   const dateLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(
@@ -146,14 +150,24 @@ export function SlideOverPanel({
       <div
         className="fixed inset-0 bg-black/50 z-40 transition-opacity"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
-      <div className="fixed right-0 top-14 bottom-0 w-full sm:w-[420px] z-50 bg-zinc-950 border-l border-white/[0.06] overflow-y-auto animate-slide-in-right">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="fixed right-0 top-14 bottom-0 w-full sm:w-[420px] z-50 bg-zinc-950 border-l border-white/[0.06] overflow-y-auto animate-slide-in-right"
+      >
         {/* Header */}
         <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-white">{dateLabel}</h3>
+            <h3 id={titleId} className="font-semibold text-white">
+              {dateLabel}
+            </h3>
             <p className="text-xs text-zinc-500">
               {items.length} item{items.length !== 1 ? "s" : ""}
             </p>
@@ -1059,7 +1073,10 @@ function GridCalendar({
                   return (
                     <button
                       key={di}
-                      onClick={() => setSelectedDate(isSelected ? "" : dateKey)}
+                      onClick={(event) => {
+                        event.currentTarget.focus();
+                        setSelectedDate(isSelected ? "" : dateKey);
+                      }}
                       className={`${minHClass} p-1.5 text-left transition-colors cursor-pointer bg-zinc-950 ${
                         borderColor ? `border-l-2 ${borderColor}` : ""
                       } ${

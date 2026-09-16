@@ -1,4 +1,5 @@
 import { memo, useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface FullBleedCarouselProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ const LEFT_ARROW_STYLE: React.CSSProperties = { left: ARROW_OFFSET };
 const RIGHT_ARROW_STYLE: React.CSSProperties = { right: ARROW_OFFSET };
 
 function FullBleedCarouselImpl({ children }: FullBleedCarouselProps) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -107,9 +109,11 @@ function FullBleedCarouselImpl({ children }: FullBleedCarouselProps) {
       {/* Left arrow — on top of the fade overlay so it stays fully visible */}
       {canScrollLeft && (
         <button
+          type="button"
+          aria-label={t("common.scrollLeft")}
           onClick={() => scroll("left")}
           style={LEFT_ARROW_STYLE}
-          className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 transition-opacity"
+          className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-opacity"
         >
           <svg
             className="w-4 h-4"
@@ -130,9 +134,11 @@ function FullBleedCarouselImpl({ children }: FullBleedCarouselProps) {
       {/* Right arrow */}
       {canScrollRight && (
         <button
+          type="button"
+          aria-label={t("common.scrollRight")}
           onClick={() => scroll("right")}
           style={RIGHT_ARROW_STYLE}
-          className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 transition-opacity"
+          className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-opacity"
         >
           <svg
             className="w-4 h-4"
