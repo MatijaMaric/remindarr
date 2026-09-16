@@ -16,6 +16,8 @@ import {
   act,
 } from "@testing-library/react";
 import "../../i18n";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import * as api from "../../api";
 
 const mockRefreshSubscriptions = mock(() => Promise.resolve());
@@ -46,9 +48,19 @@ mock.module("../../context/AuthContext", () => ({
 const { default: SubscriptionsTab } = await import("./SubscriptionsTab");
 
 let spies: ReturnType<typeof spyOn>[] = [];
+let queryClient: QueryClient;
+function Wrapper({ children }: { children: ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
 
 beforeEach(() => {
   mockRefreshSubscriptions.mockClear();
+  STABLE_SUBSCRIPTIONS.providerIds = [];
+  queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   spies = [
     spyOn(api, "getProviders").mockResolvedValue({
       providers: [
@@ -76,13 +88,107 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   for (const spy of spies) spy.mockRestore();
   spies = [];
 });
 
 describe("SubscriptionsTab", () => {
+  it("shows loading until a slow request returns a valid empty catalog", async () => {
+    let resolve!: (value: Awaited<ReturnType<typeof api.getProviders>>) => void;
+    (api.getProviders as ReturnType<typeof spyOn>).mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
+    expect(screen.getByRole("status").textContent).toBe(
+      "Loading streaming services...",
+    );
+    expect(screen.queryByText("No providers found.")).toBeNull();
+    await act(async () => resolve({ providers: [], regionProviderIds: [] }));
+    await waitFor(() =>
+      expect(screen.getByText("No providers found.")).toBeDefined(),
+    );
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("retries a failed catalog without changing saved subscriptions", async () => {
+    STABLE_SUBSCRIPTIONS.providerIds = [8];
+    (api.getProviders as ReturnType<typeof spyOn>).mockRejectedValueOnce(
+      new Error("503"),
+    );
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "Could not load streaming services",
+      ),
+    );
+    expect(screen.queryByText("No providers found.")).toBeNull();
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Retry" })),
+    );
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("checkbox", { name: "Netflix" }) as HTMLInputElement)
+          .checked,
+      ).toBe(true),
+    );
+    expect(api.updateSubscriptions).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps selected providers visible during a failed refresh and retry", async () => {
+    STABLE_SUBSCRIPTIONS.providerIds = [8];
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
+    await waitFor(() => screen.getByRole("checkbox", { name: "Netflix" }));
+    (api.getProviders as ReturnType<typeof spyOn>).mockRejectedValueOnce(
+      new Error("503"),
+    );
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["subscription-providers"],
+      });
+    });
+    await waitFor(() => screen.getByRole("alert"));
+    expect(
+      (screen.getByRole("checkbox", { name: "Netflix" }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    let resolve!: (value: Awaited<ReturnType<typeof api.getProviders>>) => void;
+    (api.getProviders as ReturnType<typeof spyOn>).mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Retry" })),
+    );
+    await waitFor(() => screen.getByRole("status"));
+    expect(
+      (screen.getByRole("checkbox", { name: "Netflix" }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    await act(async () =>
+      resolve({
+        providers: [
+          { id: 8, name: "Netflix", technical_name: "netflix", icon_url: null },
+        ],
+        regionProviderIds: [8],
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+    expect(
+      (screen.getByRole("checkbox", { name: "Netflix" }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    expect(api.updateSubscriptions).not.toHaveBeenCalled();
+  });
   it("renders providers fetched from the API", async () => {
-    render(<SubscriptionsTab />);
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(screen.getByText("Netflix")).toBeDefined();
@@ -91,7 +197,7 @@ describe("SubscriptionsTab", () => {
   });
 
   it("calls updateSubscriptions when a provider checkbox is toggled", async () => {
-    render(<SubscriptionsTab />);
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
 
     await waitFor(() => screen.getByText("Netflix"));
 
@@ -109,7 +215,7 @@ describe("SubscriptionsTab", () => {
   });
 
   it("calls refreshSubscriptions after updating providers", async () => {
-    render(<SubscriptionsTab />);
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
 
     await waitFor(() => screen.getByText("Netflix"));
 
@@ -128,7 +234,7 @@ describe("SubscriptionsTab", () => {
       new Error("500"),
     );
 
-    render(<SubscriptionsTab />);
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
     await waitFor(() => screen.getByText("Netflix"));
 
     const netflixLabel = screen.getByText("Netflix").closest("label")!;
@@ -145,7 +251,7 @@ describe("SubscriptionsTab", () => {
   });
 
   it("calls updateOnlyMine when the Apply Automatically switch is toggled", async () => {
-    render(<SubscriptionsTab />);
+    render(<SubscriptionsTab />, { wrapper: Wrapper });
 
     await waitFor(() => screen.getByText("Netflix"));
 

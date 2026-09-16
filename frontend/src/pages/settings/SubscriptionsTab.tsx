@@ -1,32 +1,26 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "../../api";
 import type { Provider } from "../../types";
-import { SCard, SSwitch } from "../../components/settings/kit";
+import { SButton, SCard, SSwitch } from "../../components/settings/kit";
 import { useAuth } from "../../context/AuthContext";
 
 export default function SubscriptionsTab() {
   const { t } = useTranslation();
   const { subscriptions, refreshSubscriptions } = useAuth();
 
-  const [allProviders, setAllProviders] = useState<Provider[]>([]);
-  const [regionProviderIds, setRegionProviderIds] = useState<number[]>([]);
+  const { data, isFetching, isError, refetch } = useQuery({
+    queryKey: ["subscription-providers"],
+    queryFn: ({ signal }) => api.getProviders(signal),
+    retry: false,
+  });
+  const allProviders = data?.providers ?? [];
+  const regionProviderIds = data?.regionProviderIds ?? [];
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [onlyMine, setOnlyMine] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    api
-      .getProviders(controller.signal)
-      .then((data) => {
-        setAllProviders(data.providers);
-        setRegionProviderIds(data.regionProviderIds);
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
 
   useEffect(() => {
     if (subscriptions) {
@@ -127,7 +121,27 @@ export default function SubscriptionsTab() {
         title={t("settings.subscriptions.title")}
         subtitle={t("settings.subscriptions.subtitle")}
       >
-        {allProviders.length === 0 ? (
+        {isFetching && (
+          <p role="status" className="text-sm text-zinc-400 mb-3">
+            {t("settings.subscriptions.loading")}
+          </p>
+        )}
+        {isError && (
+          <div className="mb-3 space-y-2">
+            <p role="alert" className="text-sm text-red-400">
+              {t("settings.subscriptions.loadError")}
+            </p>
+            <SButton
+              variant="outline"
+              small
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              {t("common.retry")}
+            </SButton>
+          </div>
+        )}
+        {allProviders.length === 0 && !isFetching && !isError ? (
           <p className="text-sm text-zinc-500">
             {t("settings.subscriptions.empty")}
           </p>

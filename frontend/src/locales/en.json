@@ -480,6 +480,8 @@
         "description": "When on, browsing always filters to titles available on your subscribed services."
       },
       "empty": "No providers found.",
+      "loading": "Loading streaming services...",
+      "loadError": "Could not load streaming services. Please try again.",
       "regionProviders": "My Region",
       "otherProviders": "Other",
       "saveError": "Failed to save. Please try again."
