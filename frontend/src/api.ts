@@ -45,6 +45,7 @@ import type {
   TrendingSnapshot,
 } from "./types";
 import { ApiError } from "./lib/api-error";
+import { identityRequest } from "./lib/identity";
 
 const BASE = "/api";
 
@@ -54,7 +55,13 @@ const BASE = "/api";
  * error-body parsing across JSON, blob, and form-data callers.
  */
 async function doFetch(url: string, options: RequestInit): Promise<Response> {
-  const res = await fetch(`${BASE}${url}`, options);
+  const identity = identityRequest(options.signal);
+  const res = await fetch(`${BASE}${url}`, {
+    ...options,
+    cache: "no-store",
+    signal: identity.signal,
+  });
+  identity.check();
   if (res.status === 401) {
     window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     throw new ApiError("Authentication required", 401);
@@ -70,11 +77,14 @@ async function doFetch(url: string, options: RequestInit): Promise<Response> {
 }
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const identity = identityRequest(options?.signal);
   const res = await doFetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
-  return res.json();
+  const data = await res.json();
+  identity.check();
+  return data;
 }
 
 /** Fetches a binary response. Returns the raw Response so callers can read the
@@ -194,17 +204,6 @@ export async function trackTitle(
     method: "POST",
     body: JSON.stringify({ notes, titleData }),
   });
-  if (
-    titleData &&
-    "serviceWorker" in navigator &&
-    navigator.serviceWorker.controller
-  ) {
-    navigator.serviceWorker.controller.postMessage({
-      type: "PRECACHE_TITLE",
-      titleId: id,
-      objectType: titleData.object_type,
-    });
-  }
 }
 
 export async function untrackTitle(id: string): Promise<void> {

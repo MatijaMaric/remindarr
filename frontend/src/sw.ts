@@ -15,7 +15,7 @@ import {
   NetworkOnly,
 } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
-import { BackgroundSyncPlugin } from "workbox-background-sync";
+import { Queue } from "workbox-background-sync";
 declare let self: ServiceWorkerGlobalScope;
 
 // Precache all assets built by Vite
@@ -46,205 +46,83 @@ setCatchHandler(async ({ request }) => {
   return Response.error();
 });
 
-const CACHE_PREFIXES = [
-  "api-static-v",
-  "api-titles-v",
-  "api-tracked-v",
-  "api-episodes-v",
-  "api-details-v",
-  "api-calendar-v",
-  "api-auth-v",
-];
-
-const CURRENT_CACHES = new Set([
-  `api-static-v${__APP_VERSION__}`,
-  `api-titles-v${__APP_VERSION__}`,
-  `api-tracked-v${__APP_VERSION__}`,
-  `api-episodes-v${__APP_VERSION__}`,
-  `api-details-v${__APP_VERSION__}`,
-  `api-calendar-v${__APP_VERSION__}`,
-  `api-auth-v${__APP_VERSION__}`,
-]);
-
-const lastFetchTime = new Map<string, number>();
-
-// Cache static/infrequently-changing API data (providers, genres, languages)
+// Only these endpoints are independent of the signed-in account. Titles and
+// details contain tracked/watched fields and must not enter a shared cache.
+const publicCache = `api-static-v${__APP_VERSION__}`;
 registerRoute(
   ({ url }) =>
-    url.pathname === "/api/titles/providers" ||
-    url.pathname === "/api/titles/genres" ||
-    url.pathname === "/api/titles/languages",
+    url.origin === self.location.origin &&
+    [
+      "/api/titles/providers",
+      "/api/titles/genres",
+      "/api/titles/languages",
+    ].includes(url.pathname),
   new StaleWhileRevalidate({
-    cacheName: `api-static-v${__APP_VERSION__}`,
+    cacheName: publicCache,
     plugins: [
       new ExpirationPlugin({ maxAgeSeconds: 7 * 24 * 60 * 60, maxEntries: 10 }),
     ],
   }),
 );
 
-// Cache title listings — show cached immediately, update in background
-registerRoute(
-  ({ url }) => url.pathname === "/api/titles",
-  new StaleWhileRevalidate({
-    cacheName: `api-titles-v${__APP_VERSION__}`,
-    plugins: [
-      new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 30 }),
-      {
-        cacheDidUpdate: async () => {
-          lastFetchTime.set(`api-titles-v${__APP_VERSION__}`, Date.now());
-        },
-      },
-    ],
-  }),
-);
-
-// Tracked titles — prefer network, fall back to cache for offline browsing
-registerRoute(
-  ({ url }) => url.pathname === "/api/track",
-  new NetworkFirst({
-    cacheName: `api-tracked-v${__APP_VERSION__}`,
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 20 }),
-    ],
-  }),
-);
-
-// Upcoming episodes — prefer fresh data, serve cached when offline
-registerRoute(
-  ({ url }) => url.pathname === "/api/episodes/upcoming",
-  new NetworkFirst({
-    cacheName: `api-episodes-v${__APP_VERSION__}`,
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 10 }),
-    ],
-  }),
-);
-
-// Detail pages — show cached immediately, update in background (long TTL; content rarely changes)
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/details/"),
-  new StaleWhileRevalidate({
-    cacheName: `api-details-v${__APP_VERSION__}`,
-    plugins: [
-      new ExpirationPlugin({
-        maxAgeSeconds: 7 * 24 * 60 * 60,
-        maxEntries: 200,
-      }),
-    ],
-  }),
-);
-
-// Calendar data — prefer network, fall back to cached months when offline
-registerRoute(
-  ({ url }) => url.pathname === "/api/calendar",
-  new NetworkFirst({
-    cacheName: `api-calendar-v${__APP_VERSION__}`,
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({ maxAgeSeconds: 24 * 60 * 60, maxEntries: 12 }),
-    ],
-  }),
-);
-
-// Current user — prefer network for up-to-date auth state, cache as fallback
-registerRoute(
-  ({ url }) => url.pathname === "/api/auth/me",
-  new NetworkFirst({
-    cacheName: `api-auth-v${__APP_VERSION__}`,
-    networkTimeoutSeconds: 5,
-    plugins: [new ExpirationPlugin({ maxAgeSeconds: 60 * 60, maxEntries: 5 })],
-  }),
-);
-
-// Background sync for watchlist mutations made while offline
-const trackSyncPlugin = new BackgroundSyncPlugin("track-queue", {
-  maxRetentionTime: 24 * 60, // Retain for up to 24 hours (in minutes)
-});
-
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/track/"),
-  new NetworkOnly({ plugins: [trackSyncPlugin] }),
-  "POST",
-);
-
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/track/"),
-  new NetworkOnly({ plugins: [trackSyncPlugin] }),
-  "DELETE",
-);
-
-// Background sync for watched/unwatched mutations made while offline
-const watchedSyncPlugin = new BackgroundSyncPlugin("watched-queue", {
-  maxRetentionTime: 24 * 60,
-});
-
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/watched/"),
-  new NetworkOnly({ plugins: [watchedSyncPlugin] }),
-  "POST",
-);
-
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/watched/"),
-  new NetworkOnly({ plugins: [watchedSyncPlugin] }),
-  "DELETE",
-);
-
-// Message handler: SW lifecycle control + cache queries + on-demand precaching
-self.addEventListener("message", (event) => {
-  if (event.data?.type === "SKIP_WAITING") {
-    self.skipWaiting();
-    return;
-  }
-
-  if (event.data?.type === "CLEAR_PAGES_CACHE") {
-    event.waitUntil(caches.delete("pages"));
-    return;
-  }
-
-  if (event.data?.type === "GET_CACHE_AGE") {
-    const ts = lastFetchTime.get(event.data.cacheName as string) ?? null;
-    const ageMs = ts !== null ? Date.now() - ts : null;
-    event.ports[0]?.postMessage({ ageMs });
-    return;
-  }
-
-  if (event.data?.type !== "PRECACHE_TITLE") return;
-  const { titleId, objectType } = event.data as {
-    titleId: string;
-    objectType: "MOVIE" | "SHOW";
-  };
-  const path =
-    objectType === "MOVIE"
-      ? `/api/details/movie/${encodeURIComponent(titleId)}`
-      : `/api/details/show/${encodeURIComponent(titleId)}`;
-  event.waitUntil(
-    caches
-      .open(`api-details-v${__APP_VERSION__}`)
-      .then((c) => c.add(path))
-      .catch(() => {}),
+// No persistent private responses or deferred writes: an HttpOnly session cookie
+// can change while this worker is asleep, so URL-keyed storage/replay is unsafe.
+for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"] as const) {
+  registerRoute(
+    ({ url }) =>
+      url.origin === self.location.origin && url.pathname.startsWith("/api/"),
+    new NetworkOnly({ fetchOptions: { cache: "no-store" } }),
+    method,
   );
-});
+}
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
+async function discardQueue(queue: Queue) {
+  while (await queue.shiftRequest()) {
+    /* Delete legacy writes without replay. */
+  }
+}
+
+// Keep the legacy queue names solely to intercept old sync registrations. Even
+// after all clients close, a sync event discards entries instead of sending them.
+const legacyQueues = ["track-queue", "watched-queue"].map(
+  (name) => new Queue(name, { onSync: ({ queue }) => discardQueue(queue) }),
+);
+
+async function clearPrivateData() {
+  await Promise.all([
     caches
       .keys()
       .then((keys) =>
         Promise.all(
           keys
-            .filter(
-              (k) =>
-                CACHE_PREFIXES.some((p) => k.startsWith(p)) &&
-                !CURRENT_CACHES.has(k),
-            )
-            .map((k) => caches.delete(k)),
+            .filter((key) => key.startsWith("api-") && key !== publicCache)
+            .map((key) => caches.delete(key)),
         ),
-      )
-      .then(() => (self as ServiceWorkerGlobalScope).clients.claim()),
-  );
+      ),
+    ...legacyQueues.map(discardQueue),
+  ]);
+}
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    void self.skipWaiting();
+  } else if (event.data?.type === "CLEAR_PAGES_CACHE") {
+    event.waitUntil(caches.delete("pages"));
+  } else if (event.data?.type === "CLEAR_PRIVATE_DATA") {
+    event.waitUntil(
+      clearPrivateData().then(() =>
+        event.ports[0]?.postMessage({ cleared: true }),
+      ),
+    );
+  }
+  // Legacy PRECACHE_TITLE messages are intentionally ignored: details are private.
+});
+
+self.addEventListener("install", () => {
+  void self.skipWaiting();
+});
+self.addEventListener("activate", (event) => {
+  event.waitUntil(clearPrivateData().then(() => self.clients.claim()));
 });
 
 // Push notification handler
