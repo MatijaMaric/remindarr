@@ -419,8 +419,6 @@
   }
   body {
     @apply bg-background text-foreground overflow-x-hidden;
-    -webkit-user-select: none;
-    user-select: none;
   }
   html {
     @apply font-sans overflow-x-hidden;

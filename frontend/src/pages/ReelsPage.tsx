@@ -829,7 +829,7 @@ export default function ReelsPage() {
       ) : (
         <div
           ref={scrollRef}
-          className="overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          className="select-none overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{
             height: "calc(100dvh - env(safe-area-inset-top, 0px))",
             marginTop: "env(safe-area-inset-top, 0px)",

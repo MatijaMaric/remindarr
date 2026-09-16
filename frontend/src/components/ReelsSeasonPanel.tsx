@@ -74,7 +74,7 @@ export default function ReelsSeasonPanel({
         role="dialog"
         aria-modal="true"
         aria-label={`${showTitle} — Season ${seasonNumber}`}
-        className="dark-section fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-sm bg-zinc-900/95 backdrop-blur-sm border-l border-white/[0.06] overflow-y-auto animate-slide-in-right safe-top"
+        className="select-none dark-section fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-sm bg-zinc-900/95 backdrop-blur-sm border-l border-white/[0.06] overflow-y-auto animate-slide-in-right safe-top"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

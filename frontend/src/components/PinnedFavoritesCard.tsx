@@ -67,7 +67,7 @@ function SortableTile({ title, onUnpin, saving }: SortableTileProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="relative touch-none cursor-grab active:cursor-grabbing"
+      className="relative touch-none select-none cursor-grab active:cursor-grabbing"
     >
       {title.poster_url ? (
         <img
