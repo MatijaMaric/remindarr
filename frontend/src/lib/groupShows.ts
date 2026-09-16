@@ -1,4 +1,5 @@
 import type { Title } from "../types";
+import { getEffectiveStatus } from "./titleStatus";
 
 export interface ShowGroup {
   key: string;
@@ -80,7 +81,7 @@ function sortGroup(key: string, titles: Title[]): Title[] {
 }
 
 /**
- * Groups shows by their show_status into sorted sections.
+ * Groups shows by their effective status into sorted sections.
  * Returns only non-empty groups in the defined order.
  */
 export function groupShowsByStatus(shows: Title[]): ShowGroup[] {
@@ -91,8 +92,7 @@ export function groupShowsByStatus(shows: Title[]): ShowGroup[] {
   }
 
   for (const show of shows) {
-    // user_status takes precedence over computed show_status
-    const status = show.user_status ?? show.show_status ?? "not_started";
+    const status = getEffectiveStatus(show) ?? "not_started";
     const bucket = buckets[status];
     if (bucket) {
       bucket.push(show);

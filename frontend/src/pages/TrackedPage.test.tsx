@@ -199,6 +199,61 @@ describe("TrackedPage", () => {
     });
   });
 
+  it("uses manual status for summaries, tabs, rows, and grid groups, with Auto fallback", async () => {
+    const titles = [
+      makeShow("dropped", "watching", { user_status: "dropped" }),
+      makeShow("held", "completed", { user_status: "on_hold" }),
+      makeShow("done", "watching", { user_status: "completed" }),
+      makeShow("auto-watching", "watching", { user_status: null }),
+      makeShow("auto-completed", "completed"),
+    ];
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles,
+      count: titles.length,
+      profile_public: false,
+    });
+    render(<TrackedPage />, { wrapper: Wrapper });
+    await screen.findByText("Show dropped");
+
+    expect(
+      screen.getByText("Currently watching").parentElement?.textContent,
+    ).toContain("1of 5 tracked");
+    expect(screen.getByText("shows & movies").parentElement?.textContent).toBe(
+      "2shows & movies",
+    );
+    for (const [tab, names] of [
+      ["Watching 1", ["Show auto-watching"]],
+      ["Completed 2", ["Show done", "Show auto-completed"]],
+      ["On Hold 1", ["Show held"]],
+      ["Dropped 1", ["Show dropped"]],
+    ] as const) {
+      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      const panel = screen.getByRole("tabpanel");
+      for (const title of titles) {
+        expect(within(panel).queryByText(title.title) !== null).toBe(
+          names.some((name) => name === title.title),
+        );
+      }
+    }
+    fireEvent.click(screen.getByRole("tab", { name: "All 5" }));
+    fireEvent.click(screen.getByText("Grid"));
+    for (const [heading, names] of [
+      ["Currently Watching (1)", ["Show auto-watching"]],
+      ["Completed (2)", ["Show done", "Show auto-completed"]],
+      ["On Hold (1)", ["Show held"]],
+      ["Dropped (1)", ["Show dropped"]],
+    ] as const) {
+      const group = screen.getByRole("heading", {
+        name: heading,
+      }).parentElement!;
+      expect(
+        within(group)
+          .getAllByRole("article")
+          .map((card) => card.getAttribute("aria-label")),
+      ).toEqual([...names]);
+    }
+  });
+
   it("does not render empty groups", async () => {
     const titles = [makeShow("s1", "watching"), makeMovie("m1")];
     apiMock.getTrackedTitles.mockImplementation(() =>
