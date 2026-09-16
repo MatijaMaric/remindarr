@@ -169,8 +169,9 @@ export async function mergeOffers(
   titleId: string,
   newOffers: ParsedOffer[],
   tx: DrizzleDb,
+  offersFetched = false,
 ): Promise<void> {
-  if (newOffers.length === 0) return;
+  if (newOffers.length === 0 && !offersFetched) return;
 
   // Preserve deep links: build a map of (providerId, monetizationType) → deepLink
   const existingOffers = await tx
@@ -262,7 +263,7 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
     for (const t of parsedTitles) {
       await upsertTitleRow(t, db);
       await upsertTitleGenres(t.id, t.genres, db);
-      await mergeOffers(t.id, t.offers, db);
+      await mergeOffers(t.id, t.offers, db, t.offersFetched);
       await upsertScores(t.id, t.scores, db);
     }
 

@@ -8,7 +8,21 @@ import {
   afterEach,
 } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
-import { makeParsedTitle, makeParsedOffer } from "../../test-utils/fixtures";
+import {
+  makeParsedTitle,
+  makeParsedOffer,
+  makeTmdbMovieDetails,
+  makeTmdbTvDetails,
+  makeTmdbDiscoverMovie,
+  makeTmdbDiscoverTv,
+} from "../../test-utils/fixtures";
+import {
+  parseMovieDetails,
+  parseTvDetails,
+  parseDiscoverMovie,
+  parseDiscoverTv,
+  parseSearchResult,
+} from "../../tmdb/parser";
 import {
   upsertTitles,
   upsertProviderRows,
@@ -132,6 +146,58 @@ describe("upsertTitles", () => {
       .prepare("SELECT deep_link FROM offers WHERE title_id = 'movie-4'")
       .get() as { deep_link: string | null };
     expect(deepLinkRow?.deep_link).toBe("plex://movie/4");
+  });
+
+  it.each([
+    parseMovieDetails(
+      makeTmdbMovieDetails({ "watch/providers": { id: 123, results: {} } }),
+    ),
+    parseTvDetails(
+      makeTmdbTvDetails({ "watch/providers": { id: 456, results: {} } }),
+    ),
+  ])(
+    "clears offers after an authoritative empty provider response: $id",
+    async (title) => {
+      await upsertTitles([
+        makeParsedTitle({
+          id: title.id,
+          offers: [makeParsedOffer({ titleId: title.id })],
+        }),
+      ]);
+      await upsertTitles([title]);
+      const rows = await getDb()
+        .select()
+        .from(offers)
+        .where(eq(offers.titleId, title.id))
+        .all();
+      expect(rows).toHaveLength(0);
+    },
+  );
+
+  it.each([
+    parseMovieDetails(makeTmdbMovieDetails()),
+    parseTvDetails(makeTmdbTvDetails()),
+    parseDiscoverMovie(makeTmdbDiscoverMovie(), new Map()),
+    parseDiscoverTv(makeTmdbDiscoverTv(), new Map()),
+    parseSearchResult(
+      { id: 123, media_type: "movie", title: "Fallback" },
+      new Map(),
+    )!,
+  ])("preserves offers when provider data is missing: $id", async (title) => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: title.id,
+        offers: [makeParsedOffer({ titleId: title.id })],
+      }),
+    ]);
+    await upsertTitles([title]);
+    const rows = await getDb()
+      .select()
+      .from(offers)
+      .where(eq(offers.titleId, title.id))
+      .all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].providerId).toBe(8);
   });
 
   it("handles empty input without error", async () => {
