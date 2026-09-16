@@ -3,6 +3,7 @@ import { getDb } from "../schema";
 import { notifiers } from "../schema";
 import { logger } from "../../logger";
 import { traceDbQuery } from "../../tracing";
+import { getCurrentTimeInTimezone } from "../../jobs/time-utils";
 
 const log = logger.child({ module: "repository" });
 
@@ -81,6 +82,20 @@ export async function updateNotifier(
     if (updates.notifyTime !== undefined) set.notifyTime = updates.notifyTime;
     if (updates.timezone !== undefined) set.timezone = updates.timezone;
     if (updates.enabled !== undefined) set.enabled = updates.enabled ? 1 : 0;
+    if (
+      updates.enabled === true ||
+      [
+        "notifyTime",
+        "timezone",
+        "digestMode",
+        "digestDay",
+        "quietHoursStart",
+        "quietHoursEnd",
+        "quietHoursDays",
+      ].some((key) => key in updates)
+    ) {
+      set.scheduleStartedAt = new Date().toISOString();
+    }
     if ("digestMode" in updates) set.digestMode = updates.digestMode ?? null;
     if ("digestDay" in updates) set.digestDay = updates.digestDay ?? null;
     if (updates.streamingAlertsEnabled !== undefined)
@@ -271,6 +286,8 @@ export async function getDueNotifiers(
         leaving_soon_alerts_enabled: notifiers.leavingSoonAlertsEnabled,
         friend_activity_alerts_enabled: notifiers.friendActivityAlertsEnabled,
         achievements_enabled: notifiers.achievementsEnabled,
+        created_at: notifiers.createdAt,
+        schedule_started_at: notifiers.scheduleStartedAt,
       })
       .from(notifiers)
       .where(eq(notifiers.enabled, 1))
@@ -303,6 +320,21 @@ export async function getDueNotifiers(
           previousDate.setUTCDate(previousDate.getUTCDate() - 1);
           scheduledDate = previousDate.toISOString().slice(0, 10);
           scheduledDay = previousDay;
+          const startedAt = n.schedule_started_at ?? n.created_at;
+          if (!startedAt) return false;
+          const localStart = getCurrentTimeInTimezone(
+            n.timezone,
+            new Date(
+              startedAt.includes("T")
+                ? startedAt
+                : startedAt.replace(" ", "T") + "Z",
+            ),
+          );
+          if (
+            `${localStart.date}T${localStart.time}` >
+            `${scheduledDate}T${n.notify_time}`
+          )
+            return false;
         }
         if (n.last_sent_date === scheduledDate) return false;
         if (n.digest_mode === "off") return false;

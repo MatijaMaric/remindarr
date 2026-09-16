@@ -360,6 +360,7 @@ export const notifiers = sqliteTable(
     timezone: text("timezone").notNull().default("UTC"),
     enabled: integer("enabled").notNull().default(1),
     lastSentDate: text("last_sent_date"),
+    scheduleStartedAt: text("schedule_started_at"),
     digestMode: text("digest_mode"),
     digestDay: integer("digest_day"),
     streamingAlertsEnabled: integer("streaming_alerts_enabled")
@@ -702,6 +703,7 @@ export const streamingAlerts = sqliteTable(
       .notNull()
       .default(sql`(datetime('now'))`),
     kind: text("kind").notNull().default("arrival"),
+    deliveryCompleted: integer("delivery_completed").notNull().default(1),
   },
   (table) => [
     uniqueIndex("uq_streaming_alerts_user_title_provider_kind").on(
@@ -730,6 +732,12 @@ export const streamingAlertDeliveries = sqliteTable(
     primaryKey({
       columns: [table.notifierId, table.titleId, table.providerId, table.kind],
     }),
+    index("idx_streaming_deliveries_event").on(
+      table.titleId,
+      table.providerId,
+      table.kind,
+      table.notifierId,
+    ),
   ],
 );
 

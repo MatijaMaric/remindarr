@@ -56,6 +56,7 @@ export async function getUnalertedProviders(
           eq(streamingAlerts.userId, userId),
           eq(streamingAlerts.titleId, titleId),
           eq(streamingAlerts.kind, kind),
+          eq(streamingAlerts.deliveryCompleted, 1),
           inArray(streamingAlerts.providerId, providerIds),
         ),
       )
@@ -86,7 +87,7 @@ export async function getUnalertedProvidersBulk(
 
     if (userIds.length > 0 && providerIds.length > 0) {
       const db = getDb();
-      // D1 caps bound parameters at 100 per statement; titleId + kind take 2
+      // D1 caps bound parameters at 100; titleId + kind + completion take 3
       // slots and providerIds take providerIds.length, so chunk the userIds
       // to stay under the cap.
       const chunkSize = Math.max(1, 97 - providerIds.length);
@@ -102,6 +103,7 @@ export async function getUnalertedProvidersBulk(
             and(
               eq(streamingAlerts.titleId, titleId),
               eq(streamingAlerts.kind, kind),
+              eq(streamingAlerts.deliveryCompleted, 1),
               inArray(streamingAlerts.userId, chunk),
               inArray(streamingAlerts.providerId, providerIds),
             ),
@@ -125,8 +127,8 @@ export async function getUnalertedProvidersBulk(
 }
 
 /**
- * Marks a (userId, titleId, providerId, kind) quadruple as alerted so we don't
- * send duplicate notifications.
+ * Record observed availability separately from completed delivery. Pending
+ * observations support departure detection without consuming arrival retries.
  */
 export async function markAlerted(
   userId: string,
@@ -134,6 +136,7 @@ export async function markAlerted(
   providerId: number,
   providerName: string,
   kind: "arrival" | "departure" = "arrival",
+  deliveryCompleted = true,
 ): Promise<void> {
   return traceDbQuery("markAlerted", async () => {
     const db = getDb();
@@ -146,16 +149,25 @@ export async function markAlerted(
         providerId,
         providerName,
         kind,
+        deliveryCompleted: deliveryCompleted ? 1 : 0,
       })
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: [
+          streamingAlerts.userId,
+          streamingAlerts.titleId,
+          streamingAlerts.providerId,
+          streamingAlerts.kind,
+        ],
+        set: { deliveryCompleted: deliveryCompleted ? 1 : 0 },
+        setWhere: eq(streamingAlerts.deliveryCompleted, 0),
+      })
       .run();
   });
 }
 
 /**
- * Returns all (userId, titleId, providerId) triples that have an arrival alert
- * for a given titleId. Used by the departure checker to know which providers
- * were historically available.
+ * Returns observed arrivals, including incomplete deliveries, so departure
+ * detection does not lose availability history when a destination fails.
  */
 export async function getArrivalAlertedProviders(
   titleId: string,

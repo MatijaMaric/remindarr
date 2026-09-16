@@ -85,6 +85,16 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
       for (const pid of newProviderIds) {
         const provider = streamingProviders.find((sp) => sp.id === pid);
         if (!provider) continue;
+        // Availability was observed even if a destination fails. Departures
+        // need this history while unfinished arrival deliveries remain retryable.
+        await markAlerted(
+          userId,
+          titleId,
+          pid,
+          provider.name,
+          "arrival",
+          false,
+        );
         const delivered = await getDeliveredStreamingNotifiers(
           titleId,
           pid,
