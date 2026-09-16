@@ -5,6 +5,7 @@ import TrackButton from "../TrackButton";
 import PinButton from "../PinButton";
 import VisibilityButton from "../VisibilityButton";
 import WatchButtonGroup from "../WatchButtonGroup";
+import { getUniqueProviders } from "../EpisodeComponents";
 import EpisodeCountdown from "../EpisodeCountdown";
 import { Chip, Kicker } from "../design";
 import { NetworkList } from "./NetworkList";
@@ -34,7 +35,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
     title.age_certification;
   const backdropUrl = mkBackdropUrl(tmdb?.backdrop_path, "w1280") ?? null;
   const posterUrl = mkPosterUrl(tmdb?.poster_path, "w500") ?? title.poster_url;
-  const firstOfferUrl = title.offers[0]?.url ?? null;
+  const playableOffers = getUniqueProviders(title.offers);
   const displayTitle = tmdb?.name || title.title;
   const originalTitle = tmdb?.original_name || title.original_title;
 
@@ -109,20 +110,15 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
         </div>
         {/* Mobile CTA row */}
         <div className="flex gap-2 -mt-2">
-          {firstOfferUrl ? (
-            <a
-              href={firstOfferUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-zinc-950 px-4 py-3 rounded-xl text-[14px] font-bold transition-colors"
-            >
-              ▶ Play
-            </a>
-          ) : (
-            <div className="flex-1 flex items-center justify-center gap-2 bg-white/[0.06] border border-white/[0.08] text-zinc-500 px-4 py-3 rounded-xl text-[14px] font-bold cursor-not-allowed">
-              ▶ No stream
-            </div>
-          )}
+          <div className="flex-1 min-w-0">
+            {playableOffers.length > 0 ? (
+              <WatchButtonGroup offers={playableOffers} size="lg" fullWidth />
+            ) : (
+              <div className="flex items-center justify-center gap-2 bg-white/[0.06] border border-white/[0.08] text-zinc-500 px-4 py-3 rounded-xl text-[14px] font-bold cursor-not-allowed">
+                ▶ No stream
+              </div>
+            )}
+          </div>
           <TrackButton
             titleId={title.id}
             isTracked={title.is_tracked}
