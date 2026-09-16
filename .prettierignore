@@ -1,6 +1,8 @@
 node_modules
 dist
 frontend/dist
+frontend/storybook-static
+frontend/public/mockServiceWorker.js
 .wrangler
 coverage
 bun.lock

@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -7,7 +10,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import eslintConfigPrettier from "eslint-config-prettier";
 
 export default defineConfig([
-  globalIgnores(["dist"]),
+  globalIgnores(["dist", "storybook-static", "public/mockServiceWorker.js"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -35,4 +38,5 @@ export default defineConfig([
     },
   },
   eslintConfigPrettier,
+  ...storybook.configs["flat/recommended"],
 ]);
