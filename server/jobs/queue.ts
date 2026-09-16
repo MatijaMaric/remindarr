@@ -1,7 +1,7 @@
 import { CronExpressionParser } from "cron-parser";
 import { getRawDb } from "../db/bun-db";
 import { logger } from "../logger";
-import { nextRetryDelaySec } from "./time-utils";
+import { nextRetryAt } from "./time-utils";
 
 const log = logger.child({ module: "jobs" });
 
@@ -52,15 +52,16 @@ export function enqueueJob(
   options?: { runAt?: Date; maxAttempts?: number },
 ): number {
   const db = getRawDb();
+  const now = new Date().toISOString();
   const runAt = (options?.runAt ?? new Date()).toISOString();
   const maxAttempts = options?.maxAttempts ?? 3;
   const dataStr = data ? JSON.stringify(data) : null;
 
   const result = db
     .prepare(
-      "INSERT INTO jobs (name, data, run_at, max_attempts) VALUES (?, ?, ?, ?)",
+      "INSERT INTO jobs (name, data, run_at, max_attempts, created_at) VALUES (?, ?, ?, ?, ?)",
     )
-    .run(name, dataStr, runAt, maxAttempts);
+    .run(name, dataStr, runAt, maxAttempts, now);
 
   return Number(result.lastInsertRowid);
 }
@@ -69,6 +70,7 @@ export function claimNextJob(name: string): Job | null {
   const db = getRawDb();
   const now = new Date().toISOString();
 
+  // Normalize legacy SQLite timestamps when comparing against ISO timestamps.
   // Atomically claim one pending job that's ready to run
   const row = db
     .prepare(
@@ -76,8 +78,9 @@ export function claimNextJob(name: string): Job | null {
        SET status = 'running', started_at = ?, attempts = attempts + 1
        WHERE id = (
          SELECT id FROM jobs
-         WHERE name = ? AND status = 'pending' AND run_at <= ?
-         ORDER BY run_at ASC
+         WHERE name = ? AND status = 'pending'
+           AND strftime('%Y-%m-%dT%H:%M:%fZ', run_at) <= ?
+         ORDER BY strftime('%Y-%m-%dT%H:%M:%fZ', run_at) ASC
          LIMIT 1
        )
        RETURNING *`,
@@ -90,8 +93,8 @@ export function claimNextJob(name: string): Job | null {
 export function completeJob(id: number) {
   const db = getRawDb();
   db.prepare(
-    "UPDATE jobs SET status = 'completed', completed_at = datetime('now') WHERE id = ?",
-  ).run(id);
+    "UPDATE jobs SET status = 'completed', completed_at = ? WHERE id = ?",
+  ).run(new Date().toISOString(), id);
 }
 
 export function failJob(id: number, error: string) {
@@ -100,16 +103,15 @@ export function failJob(id: number, error: string) {
 
   if (job && job.attempts < job.max_attempts) {
     // Re-queue with exponential backoff: 2^attempts * 30 seconds
-    const delaySec = nextRetryDelaySec(job.attempts);
     db.prepare(
       `UPDATE jobs SET status = 'pending', error = ?,
-       run_at = datetime('now', '+' || ? || ' seconds')
+       run_at = ?
        WHERE id = ?`,
-    ).run(error, delaySec, id);
+    ).run(error, nextRetryAt(job.attempts), id);
   } else {
     db.prepare(
-      "UPDATE jobs SET status = 'failed', error = ?, completed_at = datetime('now') WHERE id = ?",
-    ).run(error, id);
+      "UPDATE jobs SET status = 'failed', error = ?, completed_at = ? WHERE id = ?",
+    ).run(error, new Date().toISOString(), id);
   }
 }
 
@@ -129,26 +131,28 @@ export function hasActiveJob(name: string): boolean {
 
 export function cleanupOldJobs(retentionDays: number = 30) {
   const db = getRawDb();
+  const cutoff = new Date(Date.now() - retentionDays * 86400_000).toISOString();
   const result = db
     .prepare(
       `DELETE FROM jobs
        WHERE status IN ('completed', 'failed')
-       AND completed_at < datetime('now', '-' || ? || ' days')`,
+       AND strftime('%Y-%m-%dT%H:%M:%fZ', completed_at) < ?`,
     )
-    .run(retentionDays);
+    .run(cutoff);
   return result.changes;
 }
 
 // Reset jobs that were left running (e.g., after a crash)
 export function recoverStaleJobs(staleMinutes: number = 30) {
   const db = getRawDb();
+  const cutoff = new Date(Date.now() - staleMinutes * 60_000).toISOString();
   const result = db
     .prepare(
       `UPDATE jobs SET status = 'pending', error = 'Recovered after stale timeout'
        WHERE status = 'running'
-       AND started_at < datetime('now', '-' || ? || ' minutes')`,
+       AND strftime('%Y-%m-%dT%H:%M:%fZ', started_at) < ?`,
     )
-    .run(staleMinutes);
+    .run(cutoff);
   if (result.changes > 0) {
     log.info("Recovered stale jobs", { count: result.changes });
   }
