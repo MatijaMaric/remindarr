@@ -753,6 +753,13 @@ describe("TrackedPage sorting", () => {
 
 it("supports Escape and keyboard selection in the bulk status menu", async () => {
   const user = userEvent.setup();
+  let finish!: (value: { updated: number }) => void;
+  apiMock.bulkTrackAction.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
   apiMock.getTrackedTitles.mockResolvedValue({
     titles: [makeMovie("m1")],
     count: 1,
@@ -777,5 +784,16 @@ it("supports Escape and keyboard selection in the bulk status menu", async () =>
       action: "set_status",
       payload: { status: "completed" },
     }),
+  );
+  await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("true"));
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(screen.queryByRole("menu")).toBeNull();
+  await user.keyboard("{Enter}");
+  expect(screen.queryByRole("menu")).toBeNull();
+  finish({ updated: 1 });
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Select" }),
+    ),
   );
 });

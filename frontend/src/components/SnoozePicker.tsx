@@ -67,14 +67,20 @@ export default function SnoozePicker({
   const visibleOptions = options.filter((o) => o.show !== false);
 
   return (
-    <Menu.Root open={open} onOpenChange={setOpen}>
+    <Menu.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen || !snoozeMutation.isPending) setOpen(nextOpen);
+      }}
+    >
       <Menu.Trigger
         aria-expanded={open}
         type="button"
         title={isSnoozed ? t("snooze.snoozed") : t("snooze.snooze")}
         aria-label={isSnoozed ? t("snooze.snoozed") : t("snooze.snooze")}
         aria-pressed={isSnoozed}
-        disabled={snoozeMutation.isPending}
+        aria-disabled={snoozeMutation.isPending}
+        aria-busy={snoozeMutation.isPending}
         className={`flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs transition-colors border ${
           isSnoozed
             ? "bg-blue-500/20 text-blue-400 border-blue-500/40"

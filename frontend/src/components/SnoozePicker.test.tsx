@@ -206,3 +206,30 @@ it("dismisses with Escape and selects a snooze duration by keyboard", async () =
   expect(new Date(until).getTime() - Date.now()).toBeGreaterThan(6 * 86400000);
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
 });
+
+it("restores focus after snooze selection while saving and prevents reopening", async () => {
+  let finish!: () => void;
+  mockSetTitleSnooze.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const user = userEvent.setup();
+  render(<SnoozePicker titleId="movie-123" snoozeUntil={null} />, {
+    wrapper: Wrapper,
+  });
+  const trigger = screen.getByRole("button", { name: /snooze notifications/i });
+  trigger.focus();
+  await user.keyboard("{ArrowDown}");
+  await screen.findByRole("menu");
+  await user.keyboard("{End}{Enter}");
+  await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("true"));
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(screen.queryByRole("menu")).toBeNull();
+  await user.keyboard("{Enter}");
+  expect(screen.queryByRole("menu")).toBeNull();
+  finish();
+  await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("false"));
+  expect(document.activeElement).toBe(trigger);
+});

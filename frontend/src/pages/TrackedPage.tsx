@@ -927,11 +927,17 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
             </button>
 
             {/* Set Status */}
-            <Menu.Root open={statusOpen} onOpenChange={setStatusOpen}>
+            <Menu.Root
+              open={statusOpen}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen || !loading) setStatusOpen(nextOpen);
+              }}
+            >
               <Menu.Trigger
                 aria-expanded={statusOpen}
-                disabled={loading}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                aria-disabled={loading}
+                aria-busy={loading}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer aria-disabled:opacity-50"
               >
                 Set Status ▾
               </Menu.Trigger>
