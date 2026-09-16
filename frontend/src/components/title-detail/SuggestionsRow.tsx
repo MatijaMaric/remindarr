@@ -53,7 +53,7 @@ function SuggestionsRowInner({ titleId, type }: SuggestionsRowProps) {
                     height={168}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+                  <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs">
                     N/A
                   </div>
                 )}

@@ -1,8 +1,10 @@
+import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "@playwright/test";
 import {
   mockLoggedOut,
   mockLoggedIn,
   MOCK_MOVIE_DETAILS,
+  MOCK_SEARCH_TITLE,
   MOCK_SHOW_DETAILS,
 } from "./helpers";
 import { TitleDetailPage } from "./pages/title-detail-page";
@@ -205,3 +207,103 @@ test.describe("Title detail page", () => {
     expect(page.url()).toContain("/season/1");
   });
 });
+
+for (const theme of ["dark", "oled", "midnight", "moss", "plum", "light"]) {
+  for (const highContrast of [false, true]) {
+    test(`muted title text has AA contrast: ${theme}, high contrast ${highContrast}`, async ({
+      page,
+    }, testInfo) => {
+      await page.addInitScript(
+        (theme) => localStorage.setItem("remindarr-theme", theme),
+        theme,
+      );
+      await setupMovieMocks(page);
+      await mockLoggedOut(page);
+      await page.route("**/api/ratings/**", (route) =>
+        route.fulfill({
+          json: { user_rating: null, aggregated: {}, friends_ratings: [] },
+        }),
+      );
+      await page.route("**/api/details/movie/tt1234567", (route) =>
+        route.fulfill({
+          json: {
+            ...MOVIE_DETAILS,
+            title: {
+              ...MOVIE_DETAILS.title,
+              offers: [
+                {
+                  id: 1,
+                  provider_id: 8,
+                  provider_name: "Netflix",
+                  provider_icon_url:
+                    "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+                  monetization_type: "FLATRATE",
+                  url: "https://example.com/watch",
+                },
+              ],
+            },
+          },
+        }),
+      );
+      await page.route(
+        "**/api/details/movie/tt1234567/suggestions?*",
+        (route) =>
+          route.fulfill({
+            json: {
+              titles: [
+                {
+                  ...MOCK_SEARCH_TITLE,
+                  id: "tt7654321",
+                  title: "Suggested movie",
+                  releaseYear: 2025,
+                },
+              ],
+              page: 1,
+              totalPages: 1,
+            },
+          }),
+      );
+
+      const details = new TitleDetailPage(page);
+      await details.goto("tt1234567");
+      await expect(details.heading()).toHaveText("Test Movie");
+      await expect(page.locator("html")).toHaveClass(
+        new RegExp(`theme-${theme}`),
+      );
+      await page.evaluate(
+        (enabled) =>
+          document.documentElement.classList.toggle("high-contrast", enabled),
+        highContrast,
+      );
+      if (highContrast)
+        await expect(page.locator("html")).toHaveClass(/high-contrast/);
+      const labels = [
+        page.getByText("Your rating", { exact: true }),
+        page.getByText("2025", { exact: true }),
+        page.getByText("— not available").first(),
+        page.getByText("N/A", { exact: true }),
+      ];
+      for (const label of labels) {
+        await expect(label).toBeVisible();
+        await label.evaluate((el) =>
+          el.setAttribute("data-contrast-check", ""),
+        );
+      }
+      // The workspace resolves two Playwright versions; axe uses their shared page API.
+      const results = await new AxeBuilder({
+        page: page as unknown as ConstructorParameters<
+          typeof AxeBuilder
+        >[0]["page"],
+      })
+        .include("[data-contrast-check]")
+        .withRules(["color-contrast"])
+        .analyze();
+      expect(results.violations).toEqual([]);
+      expect(results.incomplete).toEqual([]);
+      await page.screenshot({
+        path: testInfo.outputPath("muted-text.png"),
+        fullPage: true,
+      });
+    });
+  }
+}
