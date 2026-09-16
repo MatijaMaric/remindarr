@@ -418,7 +418,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground overflow-x-hidden;
+    @apply overflow-x-hidden;
+    background: var(--bg-app);
+    color: var(--text-app);
   }
   html {
     @apply font-sans overflow-x-hidden;

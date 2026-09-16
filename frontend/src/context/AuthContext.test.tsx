@@ -230,7 +230,7 @@ function SubscriptionState() {
   );
 }
 
-describe("AuthContext subscription requests", () => {
+describe("AuthContext production requests", () => {
   let sessionSpy: ReturnType<
     typeof spyOn<typeof sessionBootstrap, "resolveSession">
   >;
@@ -258,6 +258,63 @@ describe("AuthContext subscription requests", () => {
     fetchSpy.mockRestore();
     clearPrivateDataSpy.mockRestore();
     resetApiMock();
+  });
+
+  it("shows a themed startup screen until the session is ready", async () => {
+    let finishSession!: (
+      value: Awaited<ReturnType<typeof resolveSession>>,
+    ) => void;
+    sessionSpy.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSession = resolve;
+        }),
+    );
+    render(
+      <ProductionAuthProvider>
+        <SubscriptionState />
+      </ProductionAuthProvider>,
+    );
+
+    const startup = screen.getByRole("status", { name: "Loading Remindarr" });
+    expect(startup.style.background).toBe("var(--bg-app)");
+    expect(startup.style.color).toBe("var(--text-app)");
+    expect(startup.textContent).toContain("Remindarr");
+    expect(screen.queryByTestId("subscriptions-status")).toBeNull();
+
+    await act(async () =>
+      finishSession({ verdict: "unauthenticated", data: null }),
+    );
+    expect(
+      screen.queryByRole("status", { name: "Loading Remindarr" }),
+    ).toBeNull();
+    expect(screen.getByTestId("subscriptions-status").textContent).toBe("idle");
+  });
+
+  it("leaves startup when session checks fail without treating the user as signed out", async () => {
+    sessionSpy.mockResolvedValue({
+      verdict: "indeterminate",
+      data: null,
+    });
+    function SessionState() {
+      return (
+        <div data-testid="session-status">
+          {useProductionAuth().sessionStatus}
+        </div>
+      );
+    }
+
+    render(
+      <ProductionAuthProvider>
+        <SessionState />
+      </ProductionAuthProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("session-status").textContent).toBe("unknown");
+    });
+    expect(
+      screen.queryByRole("status", { name: "Loading Remindarr" }),
+    ).toBeNull();
   });
 
   it("exposes preference failure and recovers after retry without reloading the session", async () => {

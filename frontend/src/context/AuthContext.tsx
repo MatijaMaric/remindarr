@@ -153,7 +153,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const request = ++sessionRequest.current;
       const epoch = current.current.epoch;
       const { verdict, data } = await resolveSession(() =>
-        authClient.getSession({ query: { disableCookieCache: true } }),
+        authClient.getSession({
+          query: { disableCookieCache: true },
+          fetchOptions: { timeout: 5000 },
+        }),
       );
       if (request !== sessionRequest.current || epoch !== current.current.epoch)
         return;
@@ -292,7 +295,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       <QueryClientProvider key={identity.epoch} client={identity.client}>
-        {loading ? <div role="status">Loading session...</div> : children}
+        {loading ? (
+          <div
+            role="status"
+            aria-label="Loading Remindarr"
+            className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6"
+            style={{ background: "var(--bg-app)", color: "var(--text-app)" }}
+          >
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-amber-400 text-xl font-extrabold text-black">
+                R
+              </div>
+              <span className="text-2xl font-bold tracking-tight">
+                Remindarr
+              </span>
+            </div>
+            <div
+              aria-hidden="true"
+              className="size-5 rounded-full border-2 border-current border-t-transparent opacity-50 motion-safe:animate-spin"
+            />
+          </div>
+        ) : (
+          children
+        )}
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </AuthContext>
