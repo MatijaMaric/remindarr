@@ -201,7 +201,7 @@ it("moves focus, announces selection, dismisses with Escape and selects status b
   );
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-  expect(document.activeElement).toBe(trigger);
+  expect(document.activeElement === trigger).toBe(true);
   await waitFor(() =>
     expect(trigger.getAttribute("aria-expanded")).toBe("false"),
   );
@@ -238,11 +238,11 @@ it("restores focus after selection while saving and prevents reopening", async (
   await screen.findByRole("menu");
   await user.keyboard("{End}{Enter}");
   await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("true"));
-  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  await waitFor(() => expect(document.activeElement === trigger).toBe(true));
   expect(screen.queryByRole("menu")).toBeNull();
   await user.keyboard("{Enter}");
   expect(screen.queryByRole("menu")).toBeNull();
   finish();
   await waitFor(() => expect(trigger.getAttribute("aria-busy")).toBe("false"));
-  expect(document.activeElement).toBe(trigger);
+  expect(document.activeElement === trigger).toBe(true);
 });
