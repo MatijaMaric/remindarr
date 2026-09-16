@@ -5,12 +5,15 @@ interface PillProps {
   active?: boolean;
   onClick?: () => void;
   className?: string;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
-export function Pill({ children, active, onClick, className }: PillProps) {
+export function Pill({ children, active, onClick, className, ref }: PillProps) {
   return (
     <button
       type="button"
+      ref={ref}
+      aria-pressed={active}
       onClick={onClick}
       className={cn(
         "rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors",

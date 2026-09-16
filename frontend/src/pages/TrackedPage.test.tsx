@@ -23,6 +23,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router";
+import { userEvent } from "storybook/test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
@@ -460,6 +461,126 @@ describe("TrackedPage URL views", () => {
 });
 
 describe("TrackedPage select mode", () => {
+  it.each(["Grid", "Stats"])(
+    "clears selection and hides Select in %s, including history navigation",
+    async (view) => {
+      apiMock.getTrackedTitles.mockImplementation(() =>
+        Promise.resolve({ titles: [makeMovie("m1")], count: 1 }),
+      );
+      renderViewRoute("/tracked");
+      await screen.findByText("Movie m1");
+      expect(
+        screen.getByRole("button", { name: "List", pressed: true }),
+      ).toBeDefined();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Select", pressed: false }),
+      );
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: "Select Movie m1" }),
+      );
+      expect(screen.getByText("1 selected")).toBeDefined();
+      fireEvent.click(
+        screen.getByRole("button", { name: view, pressed: false }),
+      );
+      expect(
+        screen.getByRole("button", { name: view, pressed: true }),
+      ).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Select" })).toBeNull();
+      expect(screen.queryByText("1 selected")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Select", pressed: false }),
+      );
+      expect(
+        (
+          screen.getByRole("checkbox", {
+            name: "Select Movie m1",
+          }) as HTMLInputElement
+        ).checked,
+      ).toBe(false);
+      fireEvent.click(screen.getByRole("button", { name: "Forward" }));
+      expect(
+        screen.queryByText("Select titles to apply bulk actions"),
+      ).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(
+        screen.getByRole("button", { name: "Select", pressed: false }),
+      ).toBeDefined();
+    },
+  );
+
+  it.each([false, true])(
+    "supports keyboard bulk selection, select all and clear (mobile: %s)",
+    async (isMobile) => {
+      const mobile = spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(
+        isMobile,
+      );
+      const user = userEvent.setup();
+      try {
+        apiMock.getTrackedTitles.mockImplementation(() =>
+          Promise.resolve({
+            titles: [makeMovie("m1"), makeMovie("m2")],
+            count: 2,
+          }),
+        );
+        render(<TrackedPage />, { wrapper: Wrapper });
+        await screen.findByText("Movie m1");
+        const select = screen.getByRole("button", { name: "Select" });
+        select.focus();
+        await user.keyboard(" ");
+        expect(select.getAttribute("aria-pressed")).toBe("true");
+        const all = screen.getByRole("checkbox", {
+          name: "Select all titles",
+        }) as HTMLInputElement;
+        // Tab through the view/filter controls to the native selection controls.
+        for (let i = 0; i < 15 && document.activeElement !== all; i++)
+          await user.tab();
+        expect(document.activeElement).toBe(all);
+        await user.keyboard(" ");
+        expect(all.checked).toBe(true);
+        expect(screen.getByText("2 selected")).toBeDefined();
+        await user.keyboard(" ");
+        expect(all.checked).toBe(false);
+        expect(document.activeElement).toBe(all);
+        expect(
+          screen.getByText("Select titles to apply bulk actions"),
+        ).toBeDefined();
+        await user.tab();
+        const first = screen.getByRole("checkbox", {
+          name: "Select Movie m1",
+        }) as HTMLInputElement;
+        const second = screen.getByRole("checkbox", {
+          name: "Select Movie m2",
+        }) as HTMLInputElement;
+        expect(document.activeElement).toBe(first);
+        await user.keyboard(" ");
+        expect(first.checked).toBe(true);
+        expect(second.checked).toBe(false);
+        expect(all.indeterminate).toBe(true);
+        await user.keyboard(" ");
+        expect(first.checked).toBe(false);
+        await user.keyboard(" ");
+        const mute = screen.getByRole("button", { name: "Mute Notifications" });
+        for (let i = 0; i < 8 && document.activeElement !== mute; i++)
+          await user.tab();
+        expect(document.activeElement).toBe(mute);
+        await user.keyboard("{Enter}");
+        await waitFor(() =>
+          expect(apiMock.bulkTrackAction).toHaveBeenCalledWith({
+            titleIds: ["m1"],
+            action: "set_notification_mode",
+            payload: { mode: "none" },
+          }),
+        );
+        await waitFor(() => expect(document.activeElement).toBe(select));
+        expect(select.getAttribute("aria-pressed")).toBe("false");
+        expect(screen.queryByRole("checkbox")).toBeNull();
+      } finally {
+        mobile.mockRestore();
+      }
+    },
+  );
+
   it("shows Select toggle button", async () => {
     apiMock.getTrackedTitles.mockImplementation(() =>
       Promise.resolve({
@@ -512,6 +633,9 @@ describe("TrackedPage select mode", () => {
 
     // Click Cancel in the bar
     fireEvent.click(screen.getByText("Cancel"));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Select" }),
+    );
 
     // Bar should be gone
     await waitFor(() =>
