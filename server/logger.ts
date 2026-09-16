@@ -2,6 +2,7 @@ import type { MiddlewareHandler } from "hono";
 import { routePath } from "hono/route";
 import { CONFIG } from "./config";
 import { httpRequestsTotal, httpRequestDurationSeconds } from "./metrics";
+import { redactTelemetryValue } from "./lib/telemetry-redaction";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -107,19 +108,23 @@ export class Logger {
 
     let line: string;
     try {
-      line = JSON.stringify(entry);
+      line = JSON.stringify(entry, redactTelemetryValue);
     } catch {
-      line = JSON.stringify({
-        time: entry.time,
-        level,
-        msg,
-        serializationError: "Failed to serialize log data",
-      });
+      line = JSON.stringify(
+        {
+          time: entry.time,
+          level,
+          msg,
+          serializationError: "Failed to serialize log data",
+        },
+        redactTelemetryValue,
+      );
     }
 
     if (bufferEnabled) {
       if (logBuffer.length >= LOG_BUFFER_CAPACITY) logBuffer.shift();
-      logBuffer.push(entry as LogEntry);
+      // Store the same sanitized entry exposed on stdout, never the raw data.
+      logBuffer.push(JSON.parse(line) as LogEntry);
     }
 
     if (level === "warn" || level === "error") {
