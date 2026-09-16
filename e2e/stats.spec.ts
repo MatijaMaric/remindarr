@@ -34,8 +34,7 @@ test.describe("Stats", () => {
       route.fulfill({ json: MOCK_STATS_FULL }),
     );
 
-    await stats.gotoTracked();
-    await stats.clickStatsPill();
+    await page.goto("/stats");
 
     // Overview section cards
     await expect(page.getByText("Movies Watched")).toBeVisible();

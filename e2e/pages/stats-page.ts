@@ -5,12 +5,10 @@ import { BasePage } from "./base-page";
  * Stats page POM.
  *
  * Non-DOM notes:
- * - Stats are accessed via the Tracked page at /tracked by clicking the
- *   "Stats" Pill button. The route /stats redirects to /tracked?view=stats
- *   but TrackedPage does NOT read the ?view=stats query param — the pill
- *   must be clicked to switch views.
+ * - /stats redirects to /tracked?view=stats; both open the Stats view directly.
+ * - The selected library view is stored in the URL for refresh and history.
  * - TrackedPage calls GET /api/track on mount (getTrackedTitles).
- * - StatsView calls GET /api/stats when mounted (after clicking the pill).
+ * - StatsView calls GET /api/stats when the Stats view is mounted.
  * - The app shell background components (AchievementToast, SuggestedForYouRow,
  *   AuthContext.getSubscriptions) call additional endpoints that must be mocked
  *   to prevent auth:unauthorized events from logging the test user out.
