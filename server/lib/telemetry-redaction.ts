@@ -13,7 +13,7 @@ export function redactTelemetryValue(key: string, value: unknown): unknown {
       // parameterized SQL and stack frames, but never export the parameter dump.
       .replace(/(\nparams: )[^\n]*/g, "$1[redacted]")
       .replace(
-      /(\/(?:api\/)?(?:share\/(?:watchlist|wrapped)|kiosk)\/)(?!:)[^/?#\s"'<>]+/gi,
+        /(\/(?:api\/)?(?:share\/(?:watchlist|wrapped)|kiosk)\/)(?!:)[^/?#\s"'<>]+/gi,
         "$1[redacted]",
       )
       .replace(
