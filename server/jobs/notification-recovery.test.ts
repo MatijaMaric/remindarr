@@ -5,6 +5,7 @@ import {
   expect,
   it,
   mock,
+  setSystemTime,
   spyOn,
 } from "bun:test";
 import { eq } from "drizzle-orm";
@@ -239,6 +240,9 @@ describe("notifier due windows", () => {
   });
 
   it("defers a weekly notification across midnight without losing its scheduled date", async () => {
+    // Freeze creation time before the simulated Wednesday window so
+    // schedule_started_at is in the past relative to the test's timestamps.
+    setSystemTime(new Date("2027-09-14T00:00:00Z"));
     const id = await createNotifier(
       userId,
       "discord",
@@ -247,11 +251,12 @@ describe("notifier due windows", () => {
       "23:03",
       "UTC",
     );
+    setSystemTime();
     await getDb()
       .update(notifiers)
       .set({
         digestMode: "weekly",
-        digestDay: 3,
+        digestDay: 3, // Wednesday (Sun=0 … Sat=6)
         quietHoursStart: "23:00",
         quietHoursEnd: "08:00",
       })
@@ -260,13 +265,14 @@ describe("notifier due windows", () => {
       getDueNotifiers(
         new Map([["UTC", getCurrentTimeInTimezone("UTC", new Date(iso))]]),
       );
-    expect(await due("2026-09-16T23:05:00Z")).toHaveLength(0);
-    expect(await due("2026-09-17T07:55:00Z")).toHaveLength(0);
-    const resumed = await due("2026-09-17T08:05:00Z");
+    // 2027-09-15 is a Wednesday; quiet hours (23:00–08:00) block until 08:00.
+    expect(await due("2027-09-15T23:05:00Z")).toHaveLength(0);
+    expect(await due("2027-09-16T07:55:00Z")).toHaveLength(0);
+    const resumed = await due("2027-09-16T08:05:00Z");
     expect(resumed).toHaveLength(1);
-    expect(resumed[0].todayDate).toBe("2026-09-16");
+    expect(resumed[0].todayDate).toBe("2027-09-15");
     await markNotifierSent(id, resumed[0].todayDate);
-    expect(await due("2026-09-17T08:10:00Z")).toHaveLength(0);
+    expect(await due("2027-09-16T08:10:00Z")).toHaveLength(0);
   });
 });
 const getCurrentTimeInTimezoneOriginal = getCurrentTimeInTimezone;
