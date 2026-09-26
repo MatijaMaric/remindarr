@@ -25,6 +25,7 @@ import {
 } from "../../tmdb/parser";
 import {
   upsertTitles,
+  insertTitlesIfAbsent,
   upsertProviderRows,
   upsertTitleRow,
   upsertTitleGenres,
@@ -753,5 +754,118 @@ describe("getTitleLabels", () => {
       title: "Label 100",
       poster_url: null,
     });
+  });
+});
+
+describe("insertTitlesIfAbsent", () => {
+  it("inserts titles past one chunk and leaves an existing title unchanged", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-keep",
+        title: "Original",
+        posterUrl: "https://image.tmdb.org/keep.jpg",
+        tmdbId: "1",
+        genres: ["Drama"],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-keep",
+            providerName: "Netflix",
+          }),
+        ],
+      }),
+    ]);
+
+    const count = await insertTitlesIfAbsent([
+      makeParsedTitle({
+        id: "movie-keep",
+        title: "Hijacked",
+        posterUrl: "https://evil.example/p.jpg",
+        tmdbId: "9",
+        genres: ["Horror"],
+        offers: [
+          makeParsedOffer({
+            titleId: "movie-keep",
+            providerName: "Hacked",
+          }),
+        ],
+      }),
+      ...Array.from({ length: 7 }, (_, i) =>
+        makeParsedTitle({
+          id: `movie-new-${i}`,
+          title: `New ${i}`,
+          tmdbId: String(1000 + i),
+          genres: ["Comedy"],
+          offers:
+            i === 0
+              ? [
+                  makeParsedOffer({
+                    titleId: "movie-new-0",
+                    providerId: 99,
+                    providerName: "NewFlix",
+                    providerTechnicalName: "newflix",
+                  }),
+                ]
+              : [],
+        }),
+      ),
+    ]);
+    expect(count).toBe(7);
+
+    const db = getDb();
+    const kept = await db
+      .select({
+        title: titles.title,
+        posterUrl: titles.posterUrl,
+        tmdbId: titles.tmdbId,
+      })
+      .from(titles)
+      .where(eq(titles.id, "movie-keep"))
+      .get();
+    expect(kept).toEqual({
+      title: "Original",
+      posterUrl: "https://image.tmdb.org/keep.jpg",
+      tmdbId: "1",
+    });
+
+    const keptGenres = await db
+      .select({ genre: titleGenres.genre })
+      .from(titleGenres)
+      .where(eq(titleGenres.titleId, "movie-keep"))
+      .all();
+    expect(keptGenres.map((g) => g.genre)).toEqual(["Drama"]);
+
+    const keptOffers = await db
+      .select({ providerId: offers.providerId })
+      .from(offers)
+      .where(eq(offers.titleId, "movie-keep"))
+      .all();
+    expect(keptOffers).toEqual([{ providerId: 8 }]);
+
+    const provider = await db
+      .select({ name: providers.name })
+      .from(providers)
+      .where(eq(providers.id, 8))
+      .get();
+    expect(provider?.name).toBe("Netflix");
+
+    const inserted = await db
+      .select({ id: titles.id })
+      .from(titles)
+      .where(eq(titles.id, "movie-new-6"))
+      .get();
+    expect(inserted?.id).toBe("movie-new-6");
+
+    const newOffer = await db
+      .select({ providerId: offers.providerId })
+      .from(offers)
+      .where(eq(offers.titleId, "movie-new-0"))
+      .all();
+    expect(newOffer).toEqual([{ providerId: 99 }]);
+    const newProvider = await db
+      .select({ name: providers.name })
+      .from(providers)
+      .where(eq(providers.id, 99))
+      .get();
+    expect(newProvider?.name).toBe("NewFlix");
   });
 });

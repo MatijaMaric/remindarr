@@ -101,6 +101,125 @@ describe("POST /track/:id", () => {
     expect(listBody.titles).toHaveLength(1);
   });
 
+  it("rejects titleData whose id does not match the route", async () => {
+    await upsertTitles([makeParsedTitle()]);
+
+    const res = await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleData: {
+          id: "movie-999",
+          object_type: "MOVIE",
+          title: "Hijacked",
+          poster_url: "https://evil.example/p.jpg",
+          tmdb_id: "999999",
+        },
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+
+    const db = getRawDb();
+    const row = db
+      .prepare("SELECT title, poster_url, tmdb_id FROM titles WHERE id = ?")
+      .get("movie-123") as {
+      title: string;
+      poster_url: string;
+      tmdb_id: string;
+    };
+    expect(row.title).toBe("Test Movie");
+    expect(row.poster_url).toBe("https://image.tmdb.org/t/p/w342/test.jpg");
+    expect(row.tmdb_id).toBe("123");
+    const other = db
+      .prepare("SELECT id FROM titles WHERE id = ?")
+      .get("movie-999");
+    expect(other).toBeNull();
+  });
+
+  it("does not overwrite shared metadata when tracking an existing title", async () => {
+    await upsertTitles([makeParsedTitle()]);
+
+    const res = await app.request("/track/movie-123", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleData: {
+          id: "movie-123",
+          object_type: "MOVIE",
+          title: "Hijacked",
+          poster_url: "https://evil.example/p.jpg",
+          tmdb_id: "999999",
+          genres: ["Horror"],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const row = db
+      .prepare("SELECT title, poster_url, tmdb_id FROM titles WHERE id = ?")
+      .get("movie-123") as {
+      title: string;
+      poster_url: string;
+      tmdb_id: string;
+    };
+    expect(row).toEqual({
+      title: "Test Movie",
+      poster_url: "https://image.tmdb.org/t/p/w342/test.jpg",
+      tmdb_id: "123",
+    });
+    const genres = db
+      .prepare(
+        "SELECT genre FROM title_genres WHERE title_id = ? ORDER BY genre",
+      )
+      .all("movie-123") as Array<{ genre: string }>;
+    expect(genres.map((g) => g.genre)).toEqual(["Action", "Drama"]);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles).toHaveLength(1);
+    expect(listBody.titles[0].id).toBe("movie-123");
+  });
+
+  it("inserts title metadata when tracking a title that does not exist yet", async () => {
+    const res = await app.request("/track/movie-new", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleData: {
+          id: "movie-new",
+          object_type: "MOVIE",
+          title: "Brand New",
+          poster_url: "https://image.tmdb.org/t/p/w342/new.jpg",
+          tmdb_id: "4242",
+          genres: ["Comedy"],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const row = db
+      .prepare("SELECT title, poster_url, tmdb_id FROM titles WHERE id = ?")
+      .get("movie-new") as {
+      title: string;
+      poster_url: string;
+      tmdb_id: string;
+    };
+    expect(row).toEqual({
+      title: "Brand New",
+      poster_url: "https://image.tmdb.org/t/p/w342/new.jpg",
+      tmdb_id: "4242",
+    });
+    const genres = db
+      .prepare("SELECT genre FROM title_genres WHERE title_id = ?")
+      .all("movie-new") as Array<{ genre: string }>;
+    expect(genres.map((g) => g.genre)).toEqual(["Comedy"]);
+  });
+
   it("enqueues sync-show-episodes job when tracking a SHOW with tmdb_id", async () => {
     const showTitle = makeParsedTitle({
       id: "tv-456",
@@ -678,6 +797,12 @@ describe("POST /track/import", () => {
       body: JSON.stringify(exportData),
     });
     expect(res.status).toBe(200);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].id).toBe("movie-watched");
+    expect(listBody.titles[0].is_watched).toBe(true);
+    expect(listBody.titles[0].user_status).toBe("completed");
   });
 
   it("does not enqueue sync-show-episodes for MOVIE titles", async () => {
@@ -715,6 +840,147 @@ describe("POST /track/import", () => {
     expect(job).toBeNull();
 
     CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("does not overwrite shared metadata for a title that already exists", async () => {
+    await upsertTitles([makeParsedTitle()]);
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titles: [
+          {
+            id: "movie-123",
+            tmdb_id: "999999",
+            object_type: "MOVIE",
+            title: "Hijacked",
+            poster_url: "https://evil.example/p.jpg",
+            genres: ["Horror"],
+            notes: "from import",
+            watched_episodes: [],
+          },
+        ],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.imported).toBe(1);
+
+    const listRes = await app.request("/track", { headers: headers() });
+    const listBody = await listRes.json();
+    expect(listBody.titles[0].notes).toBe("from import");
+
+    const db = getRawDb();
+    const row = db
+      .prepare("SELECT title, poster_url, tmdb_id FROM titles WHERE id = ?")
+      .get("movie-123") as {
+      title: string;
+      poster_url: string;
+      tmdb_id: string;
+    };
+    expect(row).toEqual({
+      title: "Test Movie",
+      poster_url: "https://image.tmdb.org/t/p/w342/test.jpg",
+      tmdb_id: "123",
+    });
+    const genres = db
+      .prepare(
+        "SELECT genre FROM title_genres WHERE title_id = ? ORDER BY genre",
+      )
+      .all("movie-123") as Array<{ genre: string }>;
+    expect(genres.map((g) => g.genre)).toEqual(["Action", "Drama"]);
+    const score = db
+      .prepare("SELECT tmdb_score FROM scores WHERE title_id = ?")
+      .get("movie-123") as { tmdb_score: number };
+    expect(score.tmdb_score).toBe(7.2);
+  });
+
+  it("restores watched episodes already in the catalog when TMDB sync is off", async () => {
+    const originalKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "";
+    await upsertTitles([
+      makeParsedTitle({
+        id: "tv-local",
+        objectType: "SHOW",
+        title: "Local Show",
+        tmdbId: null,
+      }),
+    ]);
+    await upsertEpisodes([
+      {
+        title_id: "tv-local",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "tv-local",
+        season_number: 1,
+        episode_number: 2,
+        name: "Next",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
+    ]);
+
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titles: [
+          {
+            id: "tv-local",
+            object_type: "SHOW",
+            title: "Local Show",
+            tmdb_id: null,
+            watched_episodes: [
+              { season: 1, episode: 1 },
+              { season: 1, episode: 2 },
+            ],
+          },
+        ],
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    const db = getRawDb();
+    const watched = db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM watched_episodes we
+         INNER JOIN episodes e ON e.id = we.episode_id
+         WHERE e.title_id = 'tv-local'`,
+      )
+      .get() as { n: number };
+    expect(watched.n).toBe(2);
+    CONFIG.TMDB_API_KEY = originalKey;
+  });
+
+  it("rejects an import larger than 1000 titles", async () => {
+    const titles = Array.from({ length: 1001 }, (_, i) => ({
+      id: `movie-${i}`,
+      object_type: "MOVIE" as const,
+      title: "T",
+    }));
+    const res = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titles }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+
+    const db = getRawDb();
+    const count = db.prepare("SELECT COUNT(*) AS n FROM titles").get() as {
+      n: number;
+    };
+    expect(count.n).toBe(0);
   });
 });
 

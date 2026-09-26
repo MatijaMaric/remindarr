@@ -17,6 +17,7 @@ export {
 
 export {
   upsertTitles,
+  insertTitlesIfAbsent,
   getTitleById,
   getTitleLabels,
   getRecentTitles,
@@ -54,6 +55,7 @@ export {
   getSeasonEpisodeStatus,
   getWatchedEpisodesForExport,
   getEpisodeIdsBySE,
+  getEpisodeIdsBySEForTitles,
 } from "./episodes";
 export type { NextUnwatchedEpisodeRow } from "./episodes";
 
@@ -69,6 +71,7 @@ export {
 
 export {
   trackTitle,
+  trackTitlesBulk,
   untrackTitle,
   getTrackedTitleIds,
   getTrackedStatusForIds,
@@ -178,6 +181,7 @@ export {
 
 export {
   watchTitle,
+  watchTitlesBulk,
   unwatchTitle,
   getWatchedTitleIds,
   setWatchedTitleWatchedAt,

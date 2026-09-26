@@ -272,6 +272,141 @@ export async function upsertTitles(parsedTitles: ParsedTitle[]) {
   });
 }
 
+// D1 caps bound parameters at 100 per statement.
+const TITLE_ID_LOOKUP_CHUNK = 90;
+const TITLE_INSERT_CHUNK = 6; // 16 columns per title row
+const PROVIDER_INSERT_CHUNK = 20; // 4 columns per provider row
+const GENRE_INSERT_CHUNK = 45; // title_id + genre
+const SCORE_INSERT_CHUNK = 20; // 4 columns per score row
+
+async function insertProvidersIfAbsent(
+  providerList: ParsedProvider[],
+  tx: DrizzleDb,
+): Promise<void> {
+  for (let i = 0; i < providerList.length; i += PROVIDER_INSERT_CHUNK) {
+    const chunk = providerList.slice(i, i + PROVIDER_INSERT_CHUNK);
+    await tx
+      .insert(providers)
+      .values(
+        chunk.map((p) => ({
+          id: p.id,
+          name: p.name,
+          technicalName: p.technicalName,
+          iconUrl: p.iconUrl,
+        })),
+      )
+      .onConflictDoNothing()
+      .run();
+  }
+}
+
+/**
+ * Insert catalog rows that are not already present. Existing titles, genres,
+ * scores, and offers are left untouched — user-supplied track/import data
+ * must not overwrite metadata other users already see. TMDB sync owns updates.
+ * Returns the number of title rows actually inserted.
+ */
+export async function insertTitlesIfAbsent(
+  parsedTitles: ParsedTitle[],
+): Promise<number> {
+  return traceDbQuery("insertTitlesIfAbsent", async () => {
+    if (parsedTitles.length === 0) return 0;
+    const db = getDb();
+
+    const byId = new Map<string, ParsedTitle>();
+    for (const title of parsedTitles) byId.set(title.id, title);
+    const unique = [...byId.values()];
+
+    const existing = new Set<string>();
+    const ids = unique.map((title) => title.id);
+    for (let i = 0; i < ids.length; i += TITLE_ID_LOOKUP_CHUNK) {
+      const chunk = ids.slice(i, i + TITLE_ID_LOOKUP_CHUNK);
+      const rows = await db
+        .select({ id: titles.id })
+        .from(titles)
+        .where(inArray(titles.id, chunk))
+        .all();
+      for (const row of rows) existing.add(row.id);
+    }
+
+    const fresh = unique.filter((title) => !existing.has(title.id));
+    if (fresh.length === 0) return 0;
+
+    await insertProvidersIfAbsent(extractProviders(fresh), db);
+
+    const insertedIds: string[] = [];
+    for (let i = 0; i < fresh.length; i += TITLE_INSERT_CHUNK) {
+      const chunk = fresh.slice(i, i + TITLE_INSERT_CHUNK);
+      const rows = await db
+        .insert(titles)
+        .values(
+          chunk.map((t) => ({
+            id: t.id,
+            objectType: t.objectType,
+            title: t.title,
+            originalTitle: t.originalTitle,
+            releaseYear: t.releaseYear,
+            releaseDate: t.releaseDate,
+            runtimeMinutes: t.runtimeMinutes,
+            shortDescription: t.shortDescription,
+            originalLanguage: t.originalLanguage,
+            imdbId: t.imdbId,
+            tmdbId: t.tmdbId,
+            posterUrl: t.posterUrl,
+            backdropUrl: t.backdropUrl,
+            ageCertification: t.ageCertification,
+            tmdbUrl: t.tmdbUrl,
+            updatedAt: sql`datetime('now')`,
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ id: titles.id });
+      for (const row of rows) insertedIds.push(row.id);
+    }
+    if (insertedIds.length === 0) return 0;
+
+    const inserted = new Set(insertedIds);
+    const genreRows: { titleId: string; genre: string }[] = [];
+    const scoreRows: {
+      titleId: string;
+      imdbScore: number | null;
+      imdbVotes: number | null;
+      tmdbScore: number | null;
+    }[] = [];
+    for (const title of fresh) {
+      if (!inserted.has(title.id)) continue;
+      const seenGenres = new Set<string>();
+      for (const genre of title.genres ?? []) {
+        if (seenGenres.has(genre)) continue;
+        seenGenres.add(genre);
+        genreRows.push({ titleId: title.id, genre });
+      }
+      scoreRows.push({
+        titleId: title.id,
+        imdbScore: title.scores.imdbScore,
+        imdbVotes: title.scores.imdbVotes,
+        tmdbScore: title.scores.tmdbScore,
+      });
+    }
+
+    for (let i = 0; i < genreRows.length; i += GENRE_INSERT_CHUNK) {
+      const chunk = genreRows.slice(i, i + GENRE_INSERT_CHUNK);
+      await db.insert(titleGenres).values(chunk).onConflictDoNothing().run();
+    }
+    for (let i = 0; i < scoreRows.length; i += SCORE_INSERT_CHUNK) {
+      const chunk = scoreRows.slice(i, i + SCORE_INSERT_CHUNK);
+      await db.insert(scores).values(chunk).onConflictDoNothing().run();
+    }
+    for (const title of fresh) {
+      if (!inserted.has(title.id) || title.offers.length === 0) continue;
+      await mergeOffers(title.id, title.offers, db, title.offersFetched);
+    }
+
+    invalidateFilterCaches();
+    return insertedIds.length;
+  });
+}
+
 // ─── Genre helpers ───────────────────────────────────────────────────────────
 
 // D1 caps bound parameters at 100 per statement; this query binds only titleIds.
