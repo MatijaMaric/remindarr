@@ -122,7 +122,6 @@ All routes are under `/api` except `/metrics`.
 - `GET/POST /api/recommendations`
 - `GET/POST/DELETE /api/invitations`
 - `GET/POST/DELETE /api/feed/token`
-- `POST /api/episodes/sync`
 
 ### Admin only
 
@@ -134,3 +133,4 @@ and is disabled when that operator setting is empty. See
 - `GET/PATCH /api/admin/users`
 - `GET /api/jobs`, `POST /api/jobs/:name`
 - `POST /api/sync` (rate-limited: 5/min)
+- `POST /api/episodes/sync` (admin only, same 5/min sync limiter)

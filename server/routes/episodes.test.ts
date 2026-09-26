@@ -47,6 +47,7 @@ function createMockAuth() {
 let app: Hono<AppEnv>;
 let authedApp: Hono<AppEnv>;
 let userToken: string;
+let adminToken: string;
 let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeEach(async () => {
@@ -54,6 +55,15 @@ beforeEach(async () => {
 
   const userId = await createUser("episodeuser", "hash");
   userToken = await createSession(userId);
+  const adminId = await createUser(
+    "episodeadmin",
+    "hash",
+    "Admin",
+    "local",
+    undefined,
+    true,
+  );
+  adminToken = await createSession(adminId);
 
   spies = [
     spyOn(sync, "syncEpisodes").mockResolvedValue({ synced: 5, shows: 2 }),
@@ -367,6 +377,10 @@ function authHeaders() {
   return { Cookie: `better-auth.session_token=${userToken}` };
 }
 
+function adminHeaders() {
+  return { Cookie: `better-auth.session_token=${adminToken}` };
+}
+
 describe("POST /episodes/sync", () => {
   it("returns 401 when unauthenticated", async () => {
     const origKey = CONFIG.TMDB_API_KEY;
@@ -379,7 +393,21 @@ describe("POST /episodes/sync", () => {
     CONFIG.TMDB_API_KEY = origKey;
   });
 
-  it("syncs episodes successfully", async () => {
+  it("returns 403 for a signed-in non-admin and does not sync", async () => {
+    const origKey = CONFIG.TMDB_API_KEY;
+    CONFIG.TMDB_API_KEY = "test-key";
+
+    const res = await authedApp.request("/episodes/sync", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(403);
+    expect(sync.syncEpisodes).not.toHaveBeenCalled();
+
+    CONFIG.TMDB_API_KEY = origKey;
+  });
+
+  it("syncs episodes successfully for an admin", async () => {
     const origKey = CONFIG.TMDB_API_KEY;
     CONFIG.TMDB_API_KEY = "test-key";
 
@@ -387,7 +415,7 @@ describe("POST /episodes/sync", () => {
 
     const res = await authedApp.request("/episodes/sync", {
       method: "POST",
-      headers: authHeaders(),
+      headers: adminHeaders(),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -404,7 +432,7 @@ describe("POST /episodes/sync", () => {
 
     const res = await authedApp.request("/episodes/sync", {
       method: "POST",
-      headers: authHeaders(),
+      headers: adminHeaders(),
     });
     expect(res.status).toBe(500);
     const body = await res.json();
