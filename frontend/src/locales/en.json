@@ -133,6 +133,11 @@
     "airingSoon": {
       "title": "Airing Soon",
       "empty": "No upcoming episodes from tracked shows"
+    },
+    "shelves": {
+      "kicker": "My Lists",
+      "continueWatching": "Continue Watching",
+      "startWatching": "Start Watching"
     }
   },
   "tracked": {

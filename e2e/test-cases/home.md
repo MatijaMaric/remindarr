@@ -28,6 +28,7 @@ real DB state is needed to confirm the session-gated branch renders.
   - `GET **/api/friends-loved**` → `{ items: [] }`
   - `GET **/api/streak**` → `null`
   - `GET **/api/movies/tracking**` → `{ to_watch: [], upcoming: [] }`
+  - `GET **/api/track/shelves**` → `{ continue_watching: [], start_watching: [] }`
 - Viewport is set to desktop width (≥ 640 px) to avoid the mobile redirect to `/reels`.
 
 **Steps**:

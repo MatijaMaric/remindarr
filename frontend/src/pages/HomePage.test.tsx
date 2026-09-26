@@ -147,6 +147,9 @@ function applyHomeDefaults() {
   apiMock.getMovieTracking.mockImplementation(() =>
     Promise.resolve({ to_watch: [], upcoming: [] }),
   );
+  apiMock.getShelves.mockImplementation(() =>
+    Promise.resolve({ continue_watching: [], start_watching: [] }),
+  );
   apiMock.getMyStreak.mockImplementation(() => Promise.resolve(null));
   apiMock.getSuggestionsAggregate.mockImplementation(() =>
     Promise.resolve({ flat: [] }),
@@ -590,6 +593,108 @@ describe("HomePage — friends loved this week", () => {
     });
 
     expect(screen.queryByText("Friends Loved This Week")).toBeNull();
+  });
+});
+
+describe("HomePage smart shelves", () => {
+  function shelfTitle(id: string, title: string) {
+    return {
+      id,
+      object_type: "SHOW" as const,
+      title,
+      original_title: null,
+      release_year: 2020,
+      release_date: "2020-01-01",
+      runtime_minutes: 42,
+      short_description: null,
+      genres: [] as string[],
+      imdb_id: null,
+      tmdb_id: null,
+      poster_url: null,
+      age_certification: null,
+      original_language: "en",
+      tmdb_url: null,
+      imdb_score: null,
+      imdb_votes: null,
+      tmdb_score: null,
+      is_tracked: true,
+      offers: [],
+    };
+  }
+
+  function signedInUser() {
+    mockUser = {
+      id: "u1",
+      username: "testuser",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    };
+  }
+
+  it("renders continue and start rows below the release sections", async () => {
+    signedInUser();
+    apiMock.getShelves.mockImplementation(() =>
+      Promise.resolve({
+        continue_watching: [shelfTitle("show-1", "Half Show")],
+        start_watching: [shelfTitle("movie-1", "Fresh Movie")],
+      }),
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Continue Watching" }),
+      ).toBeDefined();
+    });
+    expect(
+      screen.getByRole("heading", { name: "Start Watching" }),
+    ).toBeDefined();
+    expect(screen.getAllByText("My Lists").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Half Show" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Fresh Movie" })).toBeDefined();
+    const continueHeading = screen.getByRole("heading", {
+      name: "Continue Watching",
+    });
+    const todayHeading = screen.getByRole("heading", { name: "Today" });
+    expect(
+      todayHeading.compareDocumentPosition(continueHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(apiMock.getShelves).toHaveBeenCalledWith(expect.any(AbortSignal));
+  });
+
+  it("hides empty shelves", async () => {
+    signedInUser();
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Today")).toBeDefined();
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Continue Watching" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Start Watching" }),
+    ).toBeNull();
+  });
+
+  it("still loads the page when getShelves fails", async () => {
+    signedInUser();
+    apiMock.getShelves.mockImplementation(() =>
+      Promise.reject(new Error("network error")),
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Today")).toBeDefined();
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Continue Watching" }),
+    ).toBeNull();
   });
 });
 

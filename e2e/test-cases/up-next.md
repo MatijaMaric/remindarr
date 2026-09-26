@@ -21,6 +21,7 @@
   - `GET **/api/user/settings/homepage-layout` → a layout fixture that includes
     `{ "id": "up_next", "enabled": true }` (see layout fixture below)
   - `GET **/api/movies/tracking` → `{ to_watch: [], upcoming: [] }`
+  - `GET **/api/track/shelves` → `{ continue_watching: [], start_watching: [] }`
   - `GET **/api/user/streak` → `null` (or abort — caught silently)
 
 ### Standard `upNextResponse` fixture

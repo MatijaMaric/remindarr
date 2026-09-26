@@ -223,6 +223,13 @@ export async function getTrackedTitles(signal?: AbortSignal): Promise<{
   return fetchJson("/track", { signal });
 }
 
+export async function getShelves(signal?: AbortSignal): Promise<{
+  continue_watching: Title[];
+  start_watching: Title[];
+}> {
+  return fetchJson("/track/shelves", { signal });
+}
+
 export async function exportWatchlist(): Promise<void> {
   const res = await fetchBlob("/track/export");
   const blob = await res.blob();

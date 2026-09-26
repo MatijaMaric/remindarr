@@ -67,6 +67,11 @@ async function setupHomeMocks(
   await page.route("**/api/movies/tracking**", (route) =>
     route.fulfill({ json: { to_watch: [], upcoming: [] } }),
   );
+  await page.route("**/api/track/shelves**", (route) =>
+    route.fulfill({
+      json: { continue_watching: [], start_watching: [] },
+    }),
+  );
   await page.route("**/api/user/settings/subscriptions**", (route) =>
     route.fulfill({ json: { providerIds: [] } }),
   );

@@ -108,6 +108,7 @@ All routes are under `/api` except `/metrics`.
 
 ### Requires auth
 
+- `GET /api/track/shelves`
 - `GET/POST/DELETE /api/track/:id`
 - `POST/DELETE /api/watched/:episodeId`, `POST /api/watched/bulk`
 - `POST /api/imdb`

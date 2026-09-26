@@ -8,6 +8,9 @@ import {
   createUser,
   createSession,
   getSessionWithUser,
+  trackTitle,
+  watchEpisode,
+  setWatchedEpisodeWatchedAt,
   setTags,
   getTagsForTitle,
   getWatchedTitleIds,
@@ -2375,5 +2378,123 @@ describe("PATCH /track/:id/remind-on-release", () => {
       body: JSON.stringify({ enabled: true }),
     });
     expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /track/shelves", () => {
+  async function episodeIds(titleId: string): Promise<number[]> {
+    const rows = getRawDb()
+      .prepare(
+        `SELECT id FROM episodes WHERE title_id = ? ORDER BY season_number, episode_number`,
+      )
+      .all(titleId) as { id: number }[];
+    return rows.map((row) => row.id);
+  }
+
+  it("returns 401 without auth", async () => {
+    const res = await app.request("/track/shelves");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns empty shelves", async () => {
+    const res = await app.request("/track/shelves", { headers: headers() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ continue_watching: [], start_watching: [] });
+  });
+
+  it("returns continue and start lists from watch state", async () => {
+    const user = await getSessionWithUser(userToken);
+    const userId = user!.id;
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-recent",
+        objectType: "SHOW",
+        tmdbId: "931",
+        title: "Recent Show",
+      }),
+      makeParsedTitle({
+        id: "show-older",
+        objectType: "SHOW",
+        tmdbId: "932",
+        title: "Older Show",
+      }),
+      makeParsedTitle({
+        id: "movie-ready",
+        tmdbId: "933",
+        title: "Ready Movie",
+        releaseDate: "2024-06-15",
+      }),
+    ]);
+    await trackTitle("show-recent", userId);
+    await trackTitle("show-older", userId);
+    await trackTitle("movie-ready", userId);
+
+    await upsertEpisodes([
+      {
+        title_id: "show-recent",
+        season_number: 1,
+        episode_number: 1,
+        name: "One",
+        overview: null,
+        air_date: "2024-01-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-recent",
+        season_number: 1,
+        episode_number: 2,
+        name: "Two",
+        overview: null,
+        air_date: "2024-01-08",
+        still_path: null,
+      },
+      {
+        title_id: "show-older",
+        season_number: 1,
+        episode_number: 1,
+        name: "One",
+        overview: null,
+        air_date: "2024-02-01",
+        still_path: null,
+      },
+      {
+        title_id: "show-older",
+        season_number: 1,
+        episode_number: 2,
+        name: "Two",
+        overview: null,
+        air_date: "2024-02-08",
+        still_path: null,
+      },
+    ]);
+
+    const recentIds = await episodeIds("show-recent");
+    const olderIds = await episodeIds("show-older");
+    await watchEpisode(recentIds[0], userId);
+    await setWatchedEpisodeWatchedAt(
+      recentIds[0],
+      userId,
+      "2026-08-02T00:00:00",
+    );
+    await watchEpisode(olderIds[0], userId);
+    await setWatchedEpisodeWatchedAt(
+      olderIds[0],
+      userId,
+      "2026-01-01T00:00:00",
+    );
+
+    const res = await app.request("/track/shelves", { headers: headers() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.continue_watching.map((t: { id: string }) => t.id)).toEqual([
+      "show-recent",
+      "show-older",
+    ]);
+    expect(body.start_watching.map((t: { id: string }) => t.id)).toEqual([
+      "movie-ready",
+    ]);
+    expect(body.continue_watching[0].is_tracked).toBe(true);
+    expect(body.start_watching[0].object_type).toBe("MOVIE");
   });
 });
