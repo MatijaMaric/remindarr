@@ -133,4 +133,4 @@ and is disabled when that operator setting is empty. See
 - `GET/PATCH /api/admin/users`
 - `GET /api/jobs`, `POST /api/jobs/:name`
 - `POST /api/sync` (rate-limited: 5/min)
-- `POST /api/episodes/sync` (admin only, same 5/min sync limiter)
+- `POST /api/episodes/sync` (rate-limited: 5/min, shared with `/api/sync`)
