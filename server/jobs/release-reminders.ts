@@ -2,12 +2,14 @@ import { logger } from "../logger";
 import {
   getNotifiersByUser,
   getTitleById,
+  recordDelivery,
   setRemindOnRelease,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 import type { NotificationContent } from "../notifications/types";
 import { getDb, tracked } from "../db/schema";
 import { and, eq } from "drizzle-orm";
+import { notificationsSentTotal } from "../metrics";
 
 const log = logger.child({ module: "release-reminder" });
 
@@ -65,6 +67,8 @@ export async function handleReleaseReminder(payload: unknown): Promise<void> {
     date: titleRow.release_date ?? new Date().toISOString().slice(0, 10),
   };
 
+  let succeeded = 0;
+
   for (const notifier of enabledNotifiers) {
     const provider = getProvider(notifier.provider);
     if (!provider) {
@@ -75,14 +79,40 @@ export async function handleReleaseReminder(payload: unknown): Promise<void> {
       continue;
     }
 
+    const started = Date.now();
     try {
       await provider.send(notifier.config, content);
+      succeeded++;
+      await recordDelivery({
+        notifierId: notifier.id,
+        status: "success",
+        latencyMs: Date.now() - started,
+        eventKind: "release_reminder",
+      });
+      notificationsSentTotal.inc({
+        provider: notifier.provider,
+        kind: "release_reminder",
+        outcome: "success",
+      });
       log.info("Sent release reminder notification", {
         provider: notifier.provider,
         notifierId: notifier.id,
         titleId,
       });
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await recordDelivery({
+        notifierId: notifier.id,
+        status: "failure",
+        latencyMs: Date.now() - started,
+        errorMessage: message,
+        eventKind: "release_reminder",
+      });
+      notificationsSentTotal.inc({
+        provider: notifier.provider,
+        kind: "release_reminder",
+        outcome: "failure",
+      });
       log.error("Failed to send release reminder notification", {
         provider: notifier.provider,
         notifierId: notifier.id,
@@ -92,7 +122,16 @@ export async function handleReleaseReminder(payload: unknown): Promise<void> {
     }
   }
 
-  // Clear the flag after dispatching
+  // A total outage must stay retryable. Clearing the flag here used to drop
+  // the reminder even when every provider failed.
+  if (succeeded === 0) {
+    log.error("All release reminder sends failed; keeping reminder", {
+      userId,
+      titleId,
+    });
+    throw new Error("All release reminder sends failed");
+  }
+
   await setRemindOnRelease(titleId, userId, false);
   log.info("Release reminder completed, flag cleared", { userId, titleId });
 }
