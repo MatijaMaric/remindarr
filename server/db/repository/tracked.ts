@@ -540,6 +540,33 @@ const BULK_TRACKED_CHUNK_SIZE = 90;
 // watched_titles inserts bind title_id and user_id per row (90 params).
 const BULK_WATCHED_TITLE_CHUNK_SIZE = 45;
 
+// title_id, user_id, and notes — 3 bound params per row.
+const BULK_TRACK_INSERT_CHUNK = 30;
+
+export async function trackTitlesBulk(
+  userId: string,
+  rows: Array<{ titleId: string; notes?: string | null }>,
+) {
+  return traceDbQuery("trackTitlesBulk", async () => {
+    if (rows.length === 0) return;
+    const byId = new Map<string, string | null>();
+    for (const row of rows) byId.set(row.titleId, row.notes || null);
+    const entries = [...byId.entries()];
+    const db = getDb();
+    for (let i = 0; i < entries.length; i += BULK_TRACK_INSERT_CHUNK) {
+      const chunk = entries.slice(i, i + BULK_TRACK_INSERT_CHUNK);
+      await db
+        .insert(tracked)
+        .values(chunk.map(([titleId, notes]) => ({ titleId, userId, notes })))
+        .onConflictDoUpdate({
+          target: [tracked.titleId, tracked.userId],
+          set: { notes: sql`excluded.notes` },
+        })
+        .run();
+    }
+  });
+}
+
 export async function untrackTitlesBulk(userId: string, titleIds: string[]) {
   return traceDbQuery("untrackTitlesBulk", async () => {
     if (titleIds.length === 0) return;

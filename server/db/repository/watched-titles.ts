@@ -31,6 +31,45 @@ export async function watchTitle(titleId: string, userId: string) {
   });
 }
 
+// watched_titles binds title_id and user_id (2 params). D1 caps at 100.
+const BULK_WATCH_TITLE_CHUNK = 45;
+const BULK_MOVIE_STATUS_CHUNK = 90;
+
+export async function watchTitlesBulk(userId: string, titleIds: string[]) {
+  return traceDbQuery("watchTitlesBulk", async () => {
+    if (titleIds.length === 0) return;
+    const unique = [...new Set(titleIds)];
+    const db = getDb();
+    for (let i = 0; i < unique.length; i += BULK_WATCH_TITLE_CHUNK) {
+      const chunk = unique.slice(i, i + BULK_WATCH_TITLE_CHUNK);
+      await db
+        .insert(watchedTitles)
+        .values(chunk.map((titleId) => ({ titleId, userId })))
+        .onConflictDoNothing()
+        .run();
+    }
+
+    const movieIds: string[] = [];
+    for (let i = 0; i < unique.length; i += BULK_MOVIE_STATUS_CHUNK) {
+      const chunk = unique.slice(i, i + BULK_MOVIE_STATUS_CHUNK);
+      const rows = await db
+        .select({ id: titles.id })
+        .from(titles)
+        .where(and(inArray(titles.id, chunk), eq(titles.objectType, "MOVIE")))
+        .all();
+      for (const row of rows) movieIds.push(row.id);
+    }
+    for (let i = 0; i < movieIds.length; i += BULK_MOVIE_STATUS_CHUNK) {
+      const chunk = movieIds.slice(i, i + BULK_MOVIE_STATUS_CHUNK);
+      await db
+        .update(tracked)
+        .set({ userStatus: "completed" })
+        .where(and(eq(tracked.userId, userId), inArray(tracked.titleId, chunk)))
+        .run();
+    }
+  });
+}
+
 export async function unwatchTitle(titleId: string, userId: string) {
   return traceDbQuery("unwatchTitle", async () => {
     const db = getDb();

@@ -5,12 +5,13 @@ import {
   untrackTitle,
   untrackTitlesBulk,
   getTrackedTitles,
-  upsertTitles,
+  insertTitlesIfAbsent,
   getWatchedEpisodesForExport,
-  getEpisodeIdsBySE,
+  getEpisodeIdsBySEForTitles,
   watchEpisodesBulk,
   getWatchedTitleIds,
-  watchTitle,
+  watchTitlesBulk,
+  trackTitlesBulk,
   updateTrackedVisibility,
   updateAllTrackedVisibility,
   updateProfilePublic,
@@ -118,8 +119,40 @@ const trackPostBodySchema = z.object({
   notes: z.string().nullish(),
 });
 
+const IMPORT_MAX_TITLES = 1000;
+
+const importItemSchema = z.object({
+  id: z.string().min(1).max(128),
+  title: z.string().min(1),
+  object_type: z.enum(["MOVIE", "SHOW"]),
+  original_title: z.string().nullish(),
+  release_year: z.number().int().nullish(),
+  release_date: z.string().nullish(),
+  runtime_minutes: z.number().int().nullish(),
+  short_description: z.string().nullish(),
+  genres: z.array(z.string()).optional(),
+  original_language: z.string().nullish(),
+  imdb_id: z.string().nullish(),
+  tmdb_id: z.string().nullish(),
+  poster_url: z.string().nullish(),
+  age_certification: z.string().nullish(),
+  tmdb_url: z.string().nullish(),
+  notes: z.string().max(500).nullish(),
+  is_watched: z.boolean().optional(),
+  watched_episodes: z
+    .array(
+      z.object({
+        season: z.number().int(),
+        episode: z.number().int(),
+      }),
+    )
+    .optional(),
+});
+
+type ImportItem = z.infer<typeof importItemSchema>;
+
 const importBodySchema = z.object({
-  titles: z.array(z.unknown()),
+  titles: z.array(z.unknown()).max(IMPORT_MAX_TITLES),
 });
 
 const profileVisibilitySchema = z
@@ -177,7 +210,7 @@ const bulkActionSchema = z.object({
     .optional(),
 });
 
-// Convert frontend Title (snake_case) to ParsedTitle (camelCase) for upsert
+// Convert frontend Title (snake_case) to ParsedTitle (camelCase).
 function toParsedTitle(t: FrontendTitle): ParsedTitle {
   return {
     id: t.id,
@@ -256,74 +289,80 @@ app.get("/export", async (c) => {
   return c.json(exportData);
 });
 
-// Per-row shape is intentionally validated leniently — bad rows are skipped,
-// not rejected. Only the wrapping `{ titles: [...] }` shape is strict so
-// callers get a clear 400 when posting the wrong envelope.
+function importItemToParsedTitle(item: ImportItem): ParsedTitle {
+  return {
+    id: item.id,
+    objectType: item.object_type,
+    title: item.title,
+    originalTitle: item.original_title ?? null,
+    releaseYear: item.release_year ?? null,
+    releaseDate: item.release_date ?? null,
+    runtimeMinutes: item.runtime_minutes ?? null,
+    shortDescription: item.short_description ?? null,
+    genres: item.genres ?? [],
+    originalLanguage: item.original_language ?? null,
+    imdbId: item.imdb_id ?? null,
+    tmdbId: item.tmdb_id ?? null,
+    posterUrl: item.poster_url ?? null,
+    backdropUrl: null,
+    ageCertification: item.age_certification ?? null,
+    tmdbUrl: item.tmdb_url ?? null,
+    offers: [],
+    scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
+  };
+}
+
+// The envelope is strict (including a size cap). Each item is parsed with
+// `importItemSchema`; a bad row is skipped so one corrupt export entry does
+// not reject the rest.
 app.post("/import", zValidator("json", importBodySchema), async (c) => {
   const user = c.get("user")!;
   const data = c.req.valid("json");
 
-  let imported = 0;
   let skipped = 0;
-
+  const valid: ImportItem[] = [];
   for (const raw of data.titles) {
-    const item = (raw ?? {}) as {
-      id?: string;
-      title?: string;
-      object_type?: "MOVIE" | "SHOW";
-      original_title?: string | null;
-      release_year?: number | null;
-      release_date?: string | null;
-      runtime_minutes?: number | null;
-      short_description?: string | null;
-      genres?: string[];
-      original_language?: string | null;
-      imdb_id?: string | null;
-      tmdb_id?: string | null;
-      poster_url?: string | null;
-      age_certification?: string | null;
-      tmdb_url?: string | null;
-      notes?: string | null;
-      is_watched?: boolean;
-      watched_episodes?: Array<{ season: number; episode: number }>;
-    };
-    if (!item.id || !item.title || !item.object_type) {
+    const parsed = importItemSchema.safeParse(raw);
+    if (!parsed.success) {
       skipped++;
       continue;
     }
+    valid.push(parsed.data);
+  }
 
+  const byId = new Map<string, ImportItem>();
+  for (const item of valid) byId.set(item.id, item);
+  const items = [...byId.values()];
+
+  await insertTitlesIfAbsent(items.map(importItemToParsedTitle));
+  await trackTitlesBulk(
+    user.id,
+    items.map((item) => ({ titleId: item.id, notes: item.notes })),
+  );
+  await watchTitlesBulk(
+    user.id,
+    items.filter((item) => item.is_watched).map((item) => item.id),
+  );
+
+  const localEpisodeWatch = items.flatMap((item) => {
+    const watched = item.watched_episodes ?? [];
+    const canSyncEpisodes =
+      item.object_type === "SHOW" &&
+      Boolean(item.tmdb_id) &&
+      Boolean(CONFIG.TMDB_API_KEY);
+    if (canSyncEpisodes || watched.length === 0) return [];
+    return [{ titleId: item.id, pairs: watched }];
+  });
+  if (localEpisodeWatch.length > 0) {
+    const episodeIds = await getEpisodeIdsBySEForTitles(localEpisodeWatch);
+    if (episodeIds.length > 0) {
+      await watchEpisodesBulk(episodeIds, user.id);
+    }
+  }
+
+  let imported = 0;
+  for (const item of items) {
     try {
-      await upsertTitles([
-        {
-          id: item.id,
-          objectType: item.object_type,
-          title: item.title,
-          originalTitle: item.original_title ?? null,
-          releaseYear: item.release_year ?? null,
-          releaseDate: item.release_date ?? null,
-          runtimeMinutes: item.runtime_minutes ?? null,
-          shortDescription: item.short_description ?? null,
-          genres: Array.isArray(item.genres) ? item.genres : [],
-          originalLanguage: item.original_language ?? null,
-          imdbId: item.imdb_id ?? null,
-          tmdbId: item.tmdb_id ?? null,
-          posterUrl: item.poster_url ?? null,
-          backdropUrl: null,
-          ageCertification: item.age_certification ?? null,
-          tmdbUrl: item.tmdb_url ?? null,
-          offers: [],
-          scores: { imdbScore: null, imdbVotes: null, tmdbScore: null },
-        },
-      ]);
-
-      await trackTitle(item.id, user.id, item.notes ?? undefined);
-
-      // Restore movie watched status
-      if (item.is_watched) {
-        await watchTitle(item.id, user.id);
-      }
-
-      // Backfill watch provider offers from TMDB
       if (item.tmdb_id && CONFIG.TMDB_API_KEY) {
         await enqueueAdhoc("backfill-title-offers", {
           tmdbId: item.tmdb_id,
@@ -331,33 +370,23 @@ app.post("/import", zValidator("json", importBodySchema), async (c) => {
         });
       }
 
-      const hasWatched =
-        Array.isArray(item.watched_episodes) &&
-        item.watched_episodes.length > 0;
+      const watched = item.watched_episodes ?? [];
       const canSyncEpisodes =
-        item.object_type === "SHOW" && item.tmdb_id && CONFIG.TMDB_API_KEY;
-
+        item.object_type === "SHOW" &&
+        Boolean(item.tmdb_id) &&
+        Boolean(CONFIG.TMDB_API_KEY);
       if (canSyncEpisodes) {
         const jobData: Record<string, unknown> = {
           titleId: item.id,
           tmdbId: item.tmdb_id,
           title: item.title,
         };
-        if (hasWatched) {
-          jobData.watchedEpisodes = item.watched_episodes;
+        if (watched.length > 0) {
+          jobData.watchedEpisodes = watched;
           jobData.userId = user.id;
         }
         await enqueueAdhoc("sync-show-episodes", jobData);
-      } else if (hasWatched && item.watched_episodes) {
-        const episodeIds = await getEpisodeIdsBySE(
-          item.id,
-          item.watched_episodes,
-        );
-        if (episodeIds.length > 0) {
-          await watchEpisodesBulk(episodeIds, user.id);
-        }
       }
-
       imported++;
     } catch (err) {
       log.warn("Failed to import title", { titleId: item.id, err });
@@ -463,9 +492,19 @@ app.post("/:id", zValidator("param", titleIdParamSchema), async (c) => {
   }
   const body = parsed.data;
 
-  // If title data is provided (e.g. from search results), upsert it first
+  // Caller-supplied catalog data may only fill a title that does not exist
+  // yet, and only for the id in the URL. Existing rows stay owned by TMDB sync.
   if (body.titleData) {
-    await upsertTitles([toParsedTitle(body.titleData)]);
+    if (body.titleData.id !== titleId) {
+      return c.json(
+        {
+          error: "Validation failed",
+          issues: [{ message: "titleData.id must match the title id" }],
+        },
+        400,
+      );
+    }
+    await insertTitlesIfAbsent([toParsedTitle(body.titleData)]);
   }
 
   await trackTitle(titleId, user.id, body.notes ?? undefined);

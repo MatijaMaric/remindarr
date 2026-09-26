@@ -25,11 +25,12 @@ import {
   untrackTitlesBulk,
   updateTrackedStatusBulk,
   updateNotificationModeBulk,
+  trackTitlesBulk,
   MAX_TRACKED_LOAD,
 } from "./tracked";
 import { getDb, tracked } from "../schema";
-import { eq } from "drizzle-orm";
-import { getWatchedTitleIds } from "./watched-titles";
+import { and, eq } from "drizzle-orm";
+import { getWatchedTitleIds, watchTitlesBulk } from "./watched-titles";
 import { getRawDb } from "../bun-db";
 
 let userId: string;
@@ -742,6 +743,49 @@ describe("bulk tracked writes", () => {
     expect(other.find((row) => row.titleId === ids[90])?.notificationMode).toBe(
       "premieres_only",
     );
+  });
+
+  it("trackTitlesBulk writes every id past one chunk and keeps notes", async () => {
+    const count = 31;
+    const ids = Array.from({ length: count }, (_, i) => `bulk-track-${i}`);
+    await upsertTitles(
+      ids.map((id) => makeParsedTitle({ id, title: id, tmdbId: id })),
+    );
+    await trackTitlesBulk(
+      userId,
+      ids.map((id, i) => ({ titleId: id, notes: i === 30 ? "last" : null })),
+    );
+
+    expect((await getTrackedTitleIds(userId)).size).toBe(count);
+    const row = await getDb()
+      .select({ notes: tracked.notes })
+      .from(tracked)
+      .where(eq(tracked.titleId, ids[30]))
+      .get();
+    expect(row?.notes).toBe("last");
+  });
+
+  it("watchTitlesBulk marks every movie past one chunk as watched", async () => {
+    const count = 46;
+    const ids = Array.from({ length: count }, (_, i) => `bulk-watch-${i}`);
+    await upsertTitles(
+      ids.map((id) => makeParsedTitle({ id, title: id, tmdbId: id })),
+    );
+    await trackTitlesBulk(
+      userId,
+      ids.map((id) => ({ titleId: id })),
+    );
+    await watchTitlesBulk(userId, ids);
+
+    const watched = await getWatchedTitleIds(userId);
+    expect(watched.size).toBe(count);
+    expect(watched.has(ids[45])).toBe(true);
+    const row = await getDb()
+      .select({ userStatus: tracked.userStatus })
+      .from(tracked)
+      .where(and(eq(tracked.userId, userId), eq(tracked.titleId, ids[45])))
+      .get();
+    expect(row?.userStatus).toBe("completed");
   });
 });
 

@@ -842,3 +842,47 @@ export async function getEpisodeIdsBySE(
       .map((r) => r.id);
   });
 }
+
+// One bound param per title id. D1 caps a statement at 100.
+const EPISODE_LOOKUP_TITLE_CHUNK = 90;
+
+export async function getEpisodeIdsBySEForTitles(
+  byTitle: Array<{
+    titleId: string;
+    pairs: Array<{ season: number; episode: number }>;
+  }>,
+): Promise<number[]> {
+  return traceDbQuery("getEpisodeIdsBySEForTitles", async () => {
+    const wanted = new Map<string, Set<string>>();
+    for (const item of byTitle) {
+      if (item.pairs.length === 0) continue;
+      const set = wanted.get(item.titleId) ?? new Set<string>();
+      for (const pair of item.pairs) set.add(`${pair.season}:${pair.episode}`);
+      wanted.set(item.titleId, set);
+    }
+    const titleIds = [...wanted.keys()];
+    if (titleIds.length === 0) return [];
+
+    const db = getDb();
+    const ids: number[] = [];
+    for (let i = 0; i < titleIds.length; i += EPISODE_LOOKUP_TITLE_CHUNK) {
+      const chunk = titleIds.slice(i, i + EPISODE_LOOKUP_TITLE_CHUNK);
+      const rows = await db
+        .select({
+          id: episodes.id,
+          titleId: episodes.titleId,
+          season: episodes.seasonNumber,
+          episode: episodes.episodeNumber,
+        })
+        .from(episodes)
+        .where(inArray(episodes.titleId, chunk))
+        .all();
+      for (const row of rows) {
+        if (wanted.get(row.titleId)?.has(`${row.season}:${row.episode}`)) {
+          ids.push(row.id);
+        }
+      }
+    }
+    return ids;
+  });
+}
