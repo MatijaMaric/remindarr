@@ -254,11 +254,9 @@ describe("checkStreamingDepartures", () => {
       traceSpy.mockRestore();
     }
 
-    const sentTitles = (
-      mockSend.mock.calls as Array<
-        [unknown, { streamingAlerts: Array<{ title: string }> }]
-      >
-    ).map((call) => call[1].streamingAlerts[0].title);
+    const sentTitles = mockSend.mock.calls.map(
+      (call) => (call as any[])[1].streamingAlerts[0].title as string,
+    );
     expect(sentTitles.sort()).toEqual(
       titleIds.flatMap((id) => [`Title ${id}`, `Title ${id}`]).sort(),
     );
