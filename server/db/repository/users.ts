@@ -1,4 +1,4 @@
-import { eq, and, sql, count, desc } from "drizzle-orm";
+import { eq, and, sql, count, desc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { users, sessions, account, tracked } from "../schema";
 import { logger } from "../../logger";
@@ -115,6 +115,51 @@ export async function getUserDepartureSettings(userId: string): Promise<{
       .where(eq(users.id, userId))
       .get();
     return row ?? null;
+  });
+}
+
+// D1 caps bound parameters at 100 per statement; this query binds only user ids.
+const DEPARTURE_SETTINGS_USERIDS_CHUNK_SIZE = 100;
+
+/** Missing users are omitted, matching a null result from getUserDepartureSettings. */
+export async function getDepartureSettingsForUsers(
+  userIds: string[],
+): Promise<
+  Map<
+    string,
+    { streamingDeparturesEnabled: number; departureAlertLeadDays: number }
+  >
+> {
+  return traceDbQuery("getDepartureSettingsForUsers", async () => {
+    const map = new Map<
+      string,
+      { streamingDeparturesEnabled: number; departureAlertLeadDays: number }
+    >();
+    if (userIds.length === 0) return map;
+    const db = getDb();
+    for (
+      let i = 0;
+      i < userIds.length;
+      i += DEPARTURE_SETTINGS_USERIDS_CHUNK_SIZE
+    ) {
+      const chunk = userIds.slice(i, i + DEPARTURE_SETTINGS_USERIDS_CHUNK_SIZE);
+      const rows = await db
+        .select({
+          id: users.id,
+          streamingDeparturesEnabled: users.streamingDeparturesEnabled,
+          departureAlertLeadDays: users.departureAlertLeadDays,
+        })
+        .from(users)
+        .where(inArray(users.id, chunk))
+        .all();
+      for (const row of rows) {
+        map.set(row.id, {
+          streamingDeparturesEnabled: row.streamingDeparturesEnabled,
+          departureAlertLeadDays: row.departureAlertLeadDays,
+        });
+      }
+    }
+    return map;
   });
 }
 

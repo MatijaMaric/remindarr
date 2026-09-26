@@ -1,12 +1,12 @@
 import { logger } from "../logger";
 import {
   getOffersForTitles,
-  getArrivalAlertedProviders,
+  getArrivalAlertedProvidersForTitles,
   getUnalertedProvidersBulk,
   markAlerted,
   getStreamingAlertNotifiersForUsers,
-  getTitleById,
-  getUserDepartureSettings,
+  getTitleLabels,
+  getDepartureSettingsForUsers,
   recordDelivery,
   getUsersTrackingTitles,
   getDeliveredStreamingNotifiers,
@@ -15,6 +15,8 @@ import {
 import { getProvider } from "../notifications/registry";
 
 const log = logger.child({ module: "check-streaming-departures" });
+
+type DepartedProvider = { providerId: number; providerName: string };
 
 /**
  * After a batch of titles has been synced, check whether any tracked title
@@ -31,7 +33,17 @@ export async function checkStreamingDepartures(
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // 2. Arrival history for every title in one query (chunked for D1).
+  const arrivalAlertsByTitle =
+    await getArrivalAlertedProvidersForTitles(titleIds);
+
+  const departedByTitle = new Map<string, Map<string, DepartedProvider[]>>();
+  const titlesWithDepartures: string[] = [];
+
   for (const titleId of titleIds) {
+    const arrivalAlerts = arrivalAlertsByTitle.get(titleId) ?? [];
+    if (arrivalAlerts.length === 0) continue;
+
     const titleOffers = offersByTitle.get(titleId) ?? [];
 
     // Current set of FLATRATE/FREE provider IDs
@@ -46,10 +58,6 @@ export async function checkStreamingDepartures(
         .filter((id): id is number => id != null),
     );
 
-    // 2. Get all (user, provider) pairs that have arrival alerts for this title
-    const arrivalAlerts = await getArrivalAlertedProviders(titleId);
-    if (arrivalAlerts.length === 0) continue;
-
     // 3. Find providers that are no longer in current offers (departed)
     const departedAlerts = arrivalAlerts.filter(
       (a) => !currentStreamingProviderIds.has(a.providerId),
@@ -57,10 +65,7 @@ export async function checkStreamingDepartures(
     if (departedAlerts.length === 0) continue;
 
     // Group departed alerts by userId
-    const byUser = new Map<
-      string,
-      Array<{ providerId: number; providerName: string }>
-    >();
+    const byUser = new Map<string, DepartedProvider[]>();
     for (const alert of departedAlerts) {
       const list = byUser.get(alert.userId) ?? [];
       list.push({
@@ -69,21 +74,54 @@ export async function checkStreamingDepartures(
       });
       byUser.set(alert.userId, list);
     }
+    departedByTitle.set(titleId, byUser);
+    titlesWithDepartures.push(titleId);
+  }
 
-    // 4. Verify the user is still tracking this title
-    const trackersByTitle = await getUsersTrackingTitles([titleId]);
+  if (titlesWithDepartures.length === 0) return;
+
+  // 4. Who still tracks these titles — one query, not one per title.
+  const trackersByTitle = await getUsersTrackingTitles(titlesWithDepartures);
+
+  const candidatesByTitle = new Map<string, string[]>();
+  const allCandidateUserIds = new Set<string>();
+  for (const titleId of titlesWithDepartures) {
+    const byUser = departedByTitle.get(titleId)!;
     const trackingUserIds = new Set(trackersByTitle.get(titleId) ?? []);
-
     const candidateUserIds = [...byUser.keys()].filter((id) =>
       trackingUserIds.has(id),
     );
     if (candidateUserIds.length === 0) continue;
+    candidatesByTitle.set(titleId, candidateUserIds);
+    for (const userId of candidateUserIds) allCandidateUserIds.add(userId);
+  }
 
-    // 5. Bulk-fetch unalerted departures and notifiers once per title instead
-    // of once per user. The bulk query uses the union of departed providers;
-    // each user's own departed set is intersected back in below.
+  if (allCandidateUserIds.size === 0) return;
+
+  const candidateUserIdList = [...allCandidateUserIds];
+  const titleIdsToNotify = [...candidatesByTitle.keys()];
+  const [settingsByUser, titlesById, notifiersByUser] = await Promise.all([
+    getDepartureSettingsForUsers(candidateUserIdList),
+    getTitleLabels(titleIdsToNotify),
+    getStreamingAlertNotifiersForUsers(candidateUserIdList),
+  ]);
+
+  for (const titleId of titleIdsToNotify) {
+    const byUser = departedByTitle.get(titleId)!;
+    const candidateUserIds = candidatesByTitle.get(titleId)!;
+    const titleOffers = offersByTitle.get(titleId) ?? [];
+    const titleRow = titlesById.get(titleId);
+    if (!titleRow) continue;
+
+    // 5. Bulk-fetch unalerted departures once per title. The bulk query uses
+    // the union of departed providers; each user's own departed set is
+    // intersected back in below.
     const departedProviderIds = [
-      ...new Set(departedAlerts.map((a) => a.providerId)),
+      ...new Set(
+        candidateUserIds.flatMap((userId) =>
+          (byUser.get(userId) ?? []).map((provider) => provider.providerId),
+        ),
+      ),
     ];
     const unalertedByUser = await getUnalertedProvidersBulk(
       candidateUserIds,
@@ -91,14 +129,12 @@ export async function checkStreamingDepartures(
       departedProviderIds,
       "departure",
     );
-    const notifiersByUser =
-      await getStreamingAlertNotifiersForUsers(candidateUserIds);
 
     for (const userId of candidateUserIds) {
       const departedProviders = byUser.get(userId) ?? [];
 
       // 6. Check user's departure settings
-      const userSettings = await getUserDepartureSettings(userId);
+      const userSettings = settingsByUser.get(userId);
       if (!userSettings || userSettings.streamingDeparturesEnabled === 0)
         continue;
 
@@ -111,10 +147,6 @@ export async function checkStreamingDepartures(
 
       // 7. Enabled streaming-alert notifiers for this user (prefetched above)
       const userNotifiers = notifiersByUser.get(userId) ?? [];
-
-      // 8. Fetch title info for the notification message
-      const titleRow = await getTitleById(titleId);
-      if (!titleRow) continue;
 
       for (const pid of newProviderIds) {
         const provider = departedProviders.find((p) => p.providerId === pid);

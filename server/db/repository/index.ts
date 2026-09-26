@@ -18,6 +18,7 @@ export {
 export {
   upsertTitles,
   getTitleById,
+  getTitleLabels,
   getRecentTitles,
   searchLocalTitles,
   getTitlesByMonth,
@@ -152,6 +153,7 @@ export {
   setWatchlistShareToken,
   getUserByWatchlistShareToken,
   getUserDepartureSettings,
+  getDepartureSettingsForUsers,
   updateUserDepartureSettings,
   getCrowdedWeekSettings,
   updateCrowdedWeekSettings,
@@ -301,6 +303,7 @@ export {
   getUnalertedProvidersBulk,
   markAlerted,
   getArrivalAlertedProviders,
+  getArrivalAlertedProvidersForTitles,
   getDeliveredStreamingNotifiers,
   markStreamingDelivered,
 } from "./streaming-alerts";

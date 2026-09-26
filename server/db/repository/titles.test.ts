@@ -31,6 +31,7 @@ import {
   mergeOffers,
   upsertScores,
   getGenres,
+  getTitleLabels,
   invalidateFilterCaches,
 } from "./titles";
 import { getDb } from "../schema";
@@ -708,5 +709,49 @@ describe("getTitlesByTmdbIds", () => {
     ]);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("movie-901");
+  });
+});
+
+describe("getTitleLabels", () => {
+  it("returns an empty map for no titles", async () => {
+    const result = await getTitleLabels([]);
+    expect(result.size).toBe(0);
+  });
+
+  it("returns title and poster and omits unknown ids", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-label-1",
+        tmdbId: "501",
+        title: "Labeled",
+        posterUrl: "https://example.com/p.jpg",
+      }),
+    ]);
+    const result = await getTitleLabels(["movie-label-1", "missing-title"]);
+    expect(result.get("movie-label-1")).toEqual({
+      title: "Labeled",
+      poster_url: "https://example.com/p.jpg",
+    });
+    expect(result.has("missing-title")).toBe(false);
+  });
+
+  it("returns every title past the D1 parameter cap", async () => {
+    const ids = Array.from({ length: 101 }, (_, i) => `label-chunk-${i}`);
+    await upsertTitles(
+      ids.map((id, i) =>
+        makeParsedTitle({
+          id,
+          tmdbId: String(2000 + i),
+          title: `Label ${i}`,
+          posterUrl: null,
+        }),
+      ),
+    );
+    const result = await getTitleLabels(ids);
+    expect(result.size).toBe(ids.length);
+    expect(result.get(ids[100])).toEqual({
+      title: "Label 100",
+      poster_url: null,
+    });
   });
 });

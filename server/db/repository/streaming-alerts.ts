@@ -165,6 +165,62 @@ export async function markAlerted(
   });
 }
 
+// D1 caps bound parameters at 100; kind takes 1 slot.
+const ARRIVAL_ALERTS_TITLEIDS_CHUNK_SIZE = 99;
+
+/**
+ * Bulk variant of getArrivalAlertedProviders. Missing titles are omitted.
+ */
+export async function getArrivalAlertedProvidersForTitles(
+  titleIds: string[],
+): Promise<
+  Map<
+    string,
+    Array<{ userId: string; providerId: number; providerName: string }>
+  >
+> {
+  return traceDbQuery("getArrivalAlertedProvidersForTitles", async () => {
+    const map = new Map<
+      string,
+      Array<{ userId: string; providerId: number; providerName: string }>
+    >();
+    if (titleIds.length === 0) return map;
+    const db = getDb();
+    for (
+      let i = 0;
+      i < titleIds.length;
+      i += ARRIVAL_ALERTS_TITLEIDS_CHUNK_SIZE
+    ) {
+      const chunk = titleIds.slice(i, i + ARRIVAL_ALERTS_TITLEIDS_CHUNK_SIZE);
+      const rows = await db
+        .select({
+          titleId: streamingAlerts.titleId,
+          userId: streamingAlerts.userId,
+          providerId: streamingAlerts.providerId,
+          providerName: streamingAlerts.providerName,
+        })
+        .from(streamingAlerts)
+        .where(
+          and(
+            eq(streamingAlerts.kind, "arrival"),
+            inArray(streamingAlerts.titleId, chunk),
+          ),
+        )
+        .all();
+      for (const row of rows) {
+        const list = map.get(row.titleId) ?? [];
+        list.push({
+          userId: row.userId,
+          providerId: row.providerId,
+          providerName: row.providerName,
+        });
+        map.set(row.titleId, list);
+      }
+    }
+    return map;
+  });
+}
+
 /**
  * Returns observed arrivals, including incomplete deliveries, so departure
  * detection does not lose availability history when a destination fails.
