@@ -259,6 +259,10 @@ describe("notifier due windows", () => {
         digestDay: 3, // Wednesday (Sun=0 … Sat=6)
         quietHoursStart: "23:00",
         quietHoursEnd: "08:00",
+        // created_at defaults to now. The overnight deferral guard ignores a
+        // schedule that starts after the deferred local date, so pin the start
+        // before 2026-09-16 or this fails once the wall clock passes that day.
+        scheduleStartedAt: "2026-09-01 00:00:00",
       })
       .where(eq(notifiers.id, id));
     const due = (iso: string) =>
