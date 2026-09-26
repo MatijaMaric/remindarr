@@ -3,7 +3,14 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { BookmarkPlus, Play, Quote, Star, X } from "lucide-react";
+import {
+  BookmarkPlus,
+  MessageCircle,
+  Play,
+  Quote,
+  Star,
+  X,
+} from "lucide-react";
 import { DossierCard } from "./atoms/DossierCard";
 import { Kicker } from "../design/Kicker";
 import * as api from "../../api";
@@ -24,7 +31,7 @@ interface RecentActivityCardProps {
 
 const ICON_BY_TYPE: Record<
   ActivityEvent["type"],
-  "rating" | "watched" | "review" | "track"
+  "rating" | "watched" | "review" | "track" | "discussion"
 > = {
   rating_title: "rating",
   rating_episode: "rating",
@@ -32,6 +39,7 @@ const ICON_BY_TYPE: Record<
   watched_episode: "watched",
   recommendation: "review",
   tracked: "track",
+  episode_comment: "discussion",
 };
 
 const ICON_STYLES = {
@@ -39,6 +47,7 @@ const ICON_STYLES = {
   watched: "bg-amber-500/15 text-amber-500",
   review: "bg-sky-500/15 text-sky-400",
   track: "bg-emerald-500/15 text-emerald-400",
+  discussion: "bg-violet-500/15 text-violet-400",
 } as const;
 
 const RATING_TO_STARS: Record<NonNullable<ActivityEvent["rating"]>, number> = {
@@ -82,6 +91,12 @@ function ActivityIcon({ type }: { type: ActivityEvent["type"] }) {
       return (
         <div className={className} aria-hidden="true">
           <BookmarkPlus size={18} />
+        </div>
+      );
+    case "discussion":
+      return (
+        <div className={className} aria-hidden="true">
+          <MessageCircle size={18} />
         </div>
       );
   }
@@ -143,6 +158,7 @@ const BADGE_LABEL_KEY = {
   watched: "userProfile.dossier.activity.badge.watched",
   review: "userProfile.dossier.activity.badge.review",
   track: "userProfile.dossier.activity.badge.track",
+  discussion: "userProfile.dossier.activity.badge.discussion",
 } as const;
 
 interface ActivityRowProps {
@@ -154,7 +170,10 @@ interface ActivityRowProps {
 function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
   const { t } = useTranslation();
   const relative = useRelativeTime(event.created_at);
-  const titleHref = `/title/${encodeURIComponent(event.title.id)}`;
+  const titleHref =
+    event.type === "episode_comment" && event.episode
+      ? `/title/${encodeURIComponent(event.title.id)}/season/${event.episode.season_number}/episode/${event.episode.episode_number}`
+      : `/title/${encodeURIComponent(event.title.id)}`;
 
   let badgeKey: keyof typeof BADGE_LABEL_KEY;
   let summary: string;
@@ -247,6 +266,16 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
           { title: event.title.title },
         );
       }
+      break;
+    }
+    case "episode_comment": {
+      badgeKey = "discussion";
+      const epName = event.episode?.name ? ` · ${event.episode.name}` : "";
+      summary = t("userProfile.dossier.activity.summary.episodeComment", {
+        season: event.episode?.season_number ?? 0,
+        episode: event.episode?.episode_number ?? 0,
+        episodeName: epName,
+      });
       break;
     }
   }

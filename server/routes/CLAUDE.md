@@ -71,6 +71,7 @@ test("happy path — minimal realistic body", async () => {
 | `profile.ts`             | User profile (public view)                                                   |
 | `social.ts`              | Follow/unfollow, follower/following lists                                    |
 | `ratings.ts`             | Title and episode ratings (HATE/DISLIKE/LIKE/LOVE)                           |
+| `episode-comments.ts`    | Per-episode discussion threads and emoji reactions (watched gate)            |
 | `recommendations.ts`     | Recommendation broadcast to followers (1-to-N, not 1-to-1)                   |
 | `invitations.ts`         | Signup invite codes                                                          |
 | `feed.ts`                | Public `.ics` calendar feed (token-authenticated) + token management         |
@@ -119,6 +120,7 @@ All routes are under `/api` except `/metrics`.
 - `GET/PUT /api/user/settings`
 - `POST/DELETE /api/social/follow`
 - `POST/DELETE /api/ratings`
+- `GET/POST /api/episode-comments`, `DELETE /api/episode-comments/:id`, `POST /api/episode-comments/:id/reactions`
 - `GET/POST /api/recommendations`
 - `GET/POST/DELETE /api/invitations`
 - `GET/POST/DELETE /api/feed/token`

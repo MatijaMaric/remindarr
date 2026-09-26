@@ -543,6 +543,7 @@ describe("PATCH /user/me/activity-settings", () => {
       watched_episode: "private",
       tracked: "friends_only",
       recommendation: "public",
+      episode_comment: "public",
     };
     const res = await app.request("/user/me/activity-settings", {
       method: "PATCH",

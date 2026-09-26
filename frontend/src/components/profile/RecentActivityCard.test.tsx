@@ -182,6 +182,37 @@ describe("RecentActivityCard", () => {
     expect(calls[1].before).toBe("2026-04-25T00:00:00Z");
   });
 
+  it("renders an episode discussion without the comment text", async () => {
+    const { fetcher } = makeFetcher([
+      {
+        activities: [
+          event({
+            id: "ec:1",
+            type: "episode_comment",
+            rating: undefined,
+            episode: {
+              id: 7,
+              season_number: 1,
+              episode_number: 2,
+              name: "Pilot",
+            },
+          }),
+        ],
+        has_more: false,
+        next_cursor: null,
+      },
+    ]);
+    render(<RecentActivityCard username="testuser" fetcher={fetcher} />, {
+      wrapper: Wrapper,
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/commented on S1·E2 · Pilot/)).toBeDefined(),
+    );
+    expect(screen.getByText("Discussion")).toBeDefined();
+    const link = screen.getByRole("link", { name: "Halcyon Drift" });
+    expect(link.getAttribute("href")).toBe("/title/movie-1/season/1/episode/2");
+  });
+
   it("renders the recommendation message in italic when present", async () => {
     const { fetcher } = makeFetcher([
       {

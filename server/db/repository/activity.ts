@@ -1,6 +1,7 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import { getDb } from "../schema";
 import {
+  episodeComments,
   episodeRatings,
   episodes,
   ratings,
@@ -20,7 +21,8 @@ export type ActivityType =
   | "watched_title"
   | "watched_episode"
   | "tracked"
-  | "recommendation";
+  | "recommendation"
+  | "episode_comment";
 
 export interface ActivityTitleRef {
   id: string;
@@ -47,6 +49,8 @@ export interface ActivityEvent {
   review?: string | null;
   message?: string | null;
   status?: UserStatus | null;
+  /** Set on episode_comment events. friends_only is hidden from public viewers. */
+  visibility?: "public" | "friends_only";
 }
 
 export type ActivityKindVisibilityMap = Partial<
@@ -72,7 +76,7 @@ interface ActivityQueryOptions {
  * Builds a chronological mixed-source activity feed for a user.
  *
  * Each underlying source (ratings, watched_titles, watched_episodes, tracked,
- * recommendations, episode_ratings) is queried independently with a `< before`
+ * recommendations, episode_ratings, episode_comments) is queried independently with a `< before`
  * cursor and a limit of `limit + 1` rows. Results are merged in memory, sorted
  * by `created_at DESC`, and trimmed to `limit`. The `+1` row tells us whether
  * there's a next page.
@@ -236,6 +240,42 @@ export async function getUserActivity(
       .limit(fetch)
       .all();
 
+    const commentFilters = before
+      ? and(
+          eq(episodeComments.userId, userId),
+          lt(episodeComments.createdAt, before),
+        )
+      : eq(episodeComments.userId, userId);
+    const commentRows = await db
+      .select({
+        id: episodeComments.id,
+        visibility: episodeComments.visibility,
+        createdAt: episodeComments.createdAt,
+        seasonNumber: episodes.seasonNumber,
+        episodeNumber: episodes.episodeNumber,
+        episodeName: episodes.name,
+        episodeId: episodes.id,
+        titleId: titles.id,
+        titleName: titles.title,
+        objectType: titles.objectType,
+        posterUrl: titles.posterUrl,
+        runtimeMinutes: titles.runtimeMinutes,
+      })
+      .from(episodeComments)
+      .innerJoin(
+        episodes,
+        and(
+          eq(episodes.titleId, episodeComments.titleId),
+          eq(episodes.seasonNumber, episodeComments.seasonNumber),
+          eq(episodes.episodeNumber, episodeComments.episodeNumber),
+        ),
+      )
+      .innerJoin(titles, eq(titles.id, episodeComments.titleId))
+      .where(commentFilters)
+      .orderBy(desc(episodeComments.createdAt))
+      .limit(fetch)
+      .all();
+
     const merged: ActivityEvent[] = [];
 
     for (const row of titleRatingsRows) {
@@ -351,6 +391,32 @@ export async function getUserActivity(
       });
     }
 
+    for (const row of commentRows) {
+      if (!row.createdAt) continue;
+      const visibility =
+        row.visibility === "friends_only" ? "friends_only" : "public";
+      merged.push({
+        id: `ec:${row.id}`,
+        type: "episode_comment",
+        created_at: row.createdAt,
+        title: {
+          id: row.titleId,
+          title: row.titleName,
+          object_type: row.objectType,
+          poster_url: row.posterUrl,
+          runtime_minutes: row.runtimeMinutes,
+        },
+        episode: {
+          id: row.episodeId,
+          season_number: row.seasonNumber,
+          episode_number: row.episodeNumber,
+          name: row.episodeName,
+        },
+        // Body stays on the watched-gated thread so the profile feed is spoiler-safe.
+        visibility,
+      });
+    }
+
     merged.sort((a, b) => b.created_at.localeCompare(a.created_at));
 
     const { kindVisibility, viewerRelation, hiddenKeys } = options;
@@ -362,6 +428,9 @@ export async function getUserActivity(
         if (kindVis === "private") return false;
         if (kindVis === "friends_only" && viewerRelation !== "friend")
           return false;
+      }
+      if (event.visibility === "friends_only" && viewerRelation === "public") {
+        return false;
       }
       return true;
     });

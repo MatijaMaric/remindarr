@@ -88,6 +88,7 @@ import jobsCfRoutes from "./routes/jobs-cf";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
+import episodeCommentsRoutes from "./routes/episode-comments";
 import recommendationsRoutes from "./routes/recommendations";
 import suggestionsRoutes from "./routes/suggestions";
 import invitationsRoutes from "./routes/invitations";
@@ -498,6 +499,16 @@ function createApp(env: Env) {
   app.use("/api/ratings/*", ratingsRateLimiter, optionalAuth);
   app.use("/api/ratings", ratingsRateLimiter, optionalAuth);
   app.route("/api/ratings", ratingsRoutes);
+
+  const episodeCommentsRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "episode-comments",
+    limit: 60,
+    windowMs: 60_000,
+  });
+  app.use("/api/episode-comments/*", episodeCommentsRateLimiter, requireAuth);
+  app.use("/api/episode-comments", episodeCommentsRateLimiter, requireAuth);
+  app.route("/api/episode-comments", episodeCommentsRoutes);
 
   // Recommendations routes (social broadcast)
   app.use("/api/recommendations/*", requireAuth);

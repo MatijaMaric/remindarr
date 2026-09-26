@@ -683,7 +683,8 @@ export type ActivityType =
   | "watched_title"
   | "watched_episode"
   | "tracked"
-  | "recommendation";
+  | "recommendation"
+  | "episode_comment";
 
 export type ActivityKindVisibility = Partial<
   Record<ActivityType, "public" | "friends_only" | "private">
@@ -725,6 +726,7 @@ export interface ActivityEvent {
     | "dropped"
     | "completed"
     | null;
+  visibility?: "public" | "friends_only";
 }
 
 export interface ActivityFeedResponse {
@@ -746,6 +748,26 @@ export interface TitleRatingResponse {
   user_rating: RatingValue | null;
   aggregated: Record<RatingValue, number>;
   friends_ratings: FriendRating[];
+}
+
+export interface EpisodeComment {
+  id: string;
+  body: string;
+  visibility: "public" | "friends_only";
+  created_at: string;
+  user: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    image: string | null;
+  };
+  reactions: { emoji: string; count: number; reacted: boolean }[];
+  can_delete: boolean;
+}
+
+export interface EpisodeCommentsResponse {
+  emojis: string[];
+  comments: EpisodeComment[];
 }
 
 export interface EpisodeRatingResponse {

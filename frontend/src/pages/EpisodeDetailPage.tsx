@@ -14,6 +14,7 @@ import { useAuth } from "../context/AuthContext";
 import { WatchedIcon } from "../components/EpisodeComponents";
 import ShareButton from "../components/ShareButton";
 import EpisodeRatingButtons from "../components/EpisodeRatingButtons";
+import EpisodeThread from "../components/EpisodeThread";
 import { stillUrl as mkStillUrl } from "../lib/tmdb-images";
 import {
   formatEpisodeCode,
@@ -85,7 +86,7 @@ export default function EpisodeDetailPage() {
   };
   type SeasonStatusData = { episodes: SeasonStatusEntry[] };
 
-  const { data: statusData } = useQuery({
+  const { data: statusData, isFetched: statusFetched } = useQuery({
     queryKey: ["season-status", id, season],
     queryFn: ({ signal }) =>
       user && id && season
@@ -369,6 +370,17 @@ export default function EpisodeDetailPage() {
           </section>
         </SectionErrorBoundary>
       )}
+
+      <SectionErrorBoundary label="discussion">
+        <EpisodeThread
+          titleId={title.id}
+          seasonNumber={seasonNumber}
+          episodeNumber={episodeNumber}
+          signedIn={!!user}
+          watched={!!episodeStatus?.is_watched}
+          statusReady={!user || statusFetched}
+        />
+      </SectionErrorBoundary>
 
       {/* Overview */}
       {tmdb?.overview && (

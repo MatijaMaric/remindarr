@@ -37,6 +37,7 @@ const ACTIVITY_KINDS = [
   "watched_episode",
   "tracked",
   "recommendation",
+  "episode_comment",
 ] as const satisfies readonly ActivityType[];
 
 const app = new Hono<AppEnv>();
