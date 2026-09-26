@@ -73,6 +73,7 @@ export {
   getTrackedStatusForIds,
   getTrackedTitles,
   getPublicTrackedTitles,
+  getPublicTrackedTitleIds,
   getPublicTrackedCount,
   updateTrackedVisibility,
   updateAllTrackedVisibility,

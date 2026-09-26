@@ -2,9 +2,18 @@ import { eq, and, sql, gte, lt, lte, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
+import { logger } from "../../logger";
 import { getOffersWithPlex } from "./offers";
 import { localDateForTimezone } from "../../utils/timezone";
 import type { MonthFilters } from "./titles";
+
+const log = logger.child({ module: "episodes-repo" });
+
+// Safety nets against unbounded unwatched queues (soaps, long anime), not
+// pagination. Per-title keeps the earliest unwatched episodes. The global cap
+// keeps the front of the recency sort.
+export const MAX_UNWATCHED_PER_TITLE = 100;
+export const MAX_UNWATCHED_EPISODES = 2000;
 
 export async function upsertEpisodes(
   episodeList: {
@@ -186,66 +195,150 @@ export async function deleteEpisodesForTitle(titleId: string) {
   });
 }
 
+type UnwatchedEpisodeQueryRow = {
+  id: number;
+  title_id: string;
+  season_number: number;
+  episode_number: number;
+  name: string | null;
+  overview: string | null;
+  air_date: string | null;
+  still_path: string | null;
+  updated_at: string | null;
+  show_title: string;
+  show_original_title: string | null;
+  poster_url: string | null;
+  backdrop_url: string | null;
+  age_certification: string | null;
+  total_episodes: number;
+  watched_episodes_count: number;
+  unwatched_count: number;
+};
+
 /**
  * Core implementation: fetches unwatched episodes and returns them alongside
  * the lastWatchedByTitle map so callers can reuse it without a second query.
+ *
+ * Per-title aired/watched totals are aggregated once and joined. `opts.limit`
+ * keeps the first N titles in the recency sort (up-next). `opts.perTitleLimit`
+ * caps episodes per show; counts stay the full-show totals.
  */
 export async function getUnwatchedEpisodesWithMeta(
   userId: string,
   timezone = "UTC",
+  opts?: { limit?: number; perTitleLimit?: number },
 ) {
   return traceDbQuery("getUnwatchedEpisodesWithMeta", async () => {
     const db = getDb();
     const today = localDateForTimezone(timezone);
+    const perTitleLimit = Math.min(
+      opts?.perTitleLimit ?? MAX_UNWATCHED_PER_TITLE,
+      MAX_UNWATCHED_PER_TITLE,
+    );
+    const titleLimitSql =
+      opts?.limit != null ? sql`AND title_rank <= ${opts.limit}` : sql``;
 
-    const rows = await db
-      .select({
-        id: episodes.id,
-        title_id: episodes.titleId,
-        season_number: episodes.seasonNumber,
-        episode_number: episodes.episodeNumber,
-        name: episodes.name,
-        overview: episodes.overview,
-        air_date: episodes.airDate,
-        still_path: episodes.stillPath,
-        updated_at: episodes.updatedAt,
-        show_title: titles.title,
-        show_original_title: titles.originalTitle,
-        poster_url: titles.posterUrl,
-        backdrop_url: titles.backdropUrl,
-        age_certification: titles.ageCertification,
-        total_episodes: sql<number>`(
-          SELECT COUNT(*) FROM episodes e2
-          WHERE e2.title_id = ${episodes.titleId}
-          AND e2.air_date IS NOT NULL AND e2.air_date <= ${today}
-        )`,
-        watched_episodes_count: sql<number>`(
-          SELECT COUNT(*) FROM watched_episodes we2
-          INNER JOIN episodes e3 ON e3.id = we2.episode_id
-          WHERE e3.title_id = ${episodes.titleId} AND we2.user_id = ${userId}
-        )`,
-      })
-      .from(episodes)
-      .innerJoin(titles, eq(titles.id, episodes.titleId))
-      .innerJoin(
-        tracked,
-        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
-      )
-      .where(
-        and(
-          lte(episodes.airDate, today),
-          sql`NOT EXISTS(
+    // Counts are per title, not per episode. Window rank keeps the earliest
+    // unwatched episodes and (when asked) the first N titles by recency.
+    const rows = await db.all<UnwatchedEpisodeQueryRow>(sql`
+      WITH title_counts AS (
+        SELECT
+          e.title_id AS title_id,
+          SUM(CASE
+            WHEN e.air_date IS NOT NULL AND e.air_date <= ${today} THEN 1
+            ELSE 0
+          END) AS total_episodes,
+          COUNT(we.episode_id) AS watched_episodes_count,
+          SUM(CASE
+            WHEN e.air_date IS NOT NULL AND e.air_date <= ${today}
+              AND we.episode_id IS NULL THEN 1
+            ELSE 0
+          END) AS unwatched_count
+        FROM episodes e
+        INNER JOIN tracked t ON t.title_id = e.title_id AND t.user_id = ${userId}
+        LEFT JOIN watched_episodes we
+          ON we.episode_id = e.id AND we.user_id = ${userId}
+        GROUP BY e.title_id
+      ),
+      last_watched AS (
+        SELECT e.title_id AS title_id, MAX(we.watched_at) AS last_watched_at
+        FROM watched_episodes we
+        INNER JOIN episodes e ON e.id = we.episode_id
+        WHERE we.user_id = ${userId}
+        GROUP BY e.title_id
+      ),
+      ranked AS (
+        SELECT
+          e.id AS id,
+          e.title_id AS title_id,
+          e.season_number AS season_number,
+          e.episode_number AS episode_number,
+          e.name AS name,
+          e.overview AS overview,
+          e.air_date AS air_date,
+          e.still_path AS still_path,
+          e.updated_at AS updated_at,
+          ti.title AS show_title,
+          ti.original_title AS show_original_title,
+          ti.poster_url AS poster_url,
+          ti.backdrop_url AS backdrop_url,
+          ti.age_certification AS age_certification,
+          tc.total_episodes AS total_episodes,
+          tc.watched_episodes_count AS watched_episodes_count,
+          tc.unwatched_count AS unwatched_count,
+          lw.last_watched_at AS last_watched_at,
+          ROW_NUMBER() OVER (
+            PARTITION BY e.title_id
+            ORDER BY e.season_number ASC, e.episode_number ASC
+          ) AS rn,
+          DENSE_RANK() OVER (
+            ORDER BY
+              CASE WHEN lw.last_watched_at IS NULL THEN 1 ELSE 0 END ASC,
+              lw.last_watched_at DESC,
+              ti.title ASC,
+              e.title_id ASC
+          ) AS title_rank
+        FROM episodes e
+        INNER JOIN titles ti ON ti.id = e.title_id
+        INNER JOIN tracked t ON t.title_id = ti.id AND t.user_id = ${userId}
+        INNER JOIN title_counts tc ON tc.title_id = e.title_id
+        LEFT JOIN last_watched lw ON lw.title_id = e.title_id
+        WHERE e.air_date IS NOT NULL
+          AND e.air_date <= ${today}
+          AND NOT EXISTS (
             SELECT 1 FROM watched_episodes we
-            WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
-          )`,
-        ),
+            WHERE we.episode_id = e.id AND we.user_id = ${userId}
+          )
       )
-      .orderBy(
-        asc(titles.title),
-        asc(episodes.seasonNumber),
-        asc(episodes.episodeNumber),
-      )
-      .all();
+      SELECT
+        id, title_id, season_number, episode_number, name, overview, air_date,
+        still_path, updated_at, show_title, show_original_title, poster_url,
+        backdrop_url, age_certification, total_episodes, watched_episodes_count,
+        unwatched_count
+      FROM ranked
+      WHERE rn <= ${perTitleLimit}
+      ${titleLimitSql}
+      ORDER BY
+        CASE WHEN last_watched_at IS NULL THEN 1 ELSE 0 END ASC,
+        last_watched_at DESC,
+        show_title ASC,
+        title_id ASC,
+        season_number ASC,
+        episode_number ASC
+      LIMIT ${MAX_UNWATCHED_EPISODES}
+    `);
+
+    const hitPerTitleCap =
+      perTitleLimit === MAX_UNWATCHED_PER_TITLE &&
+      rows.some((row) => Number(row.unwatched_count) > MAX_UNWATCHED_PER_TITLE);
+    if (hitPerTitleCap || rows.length >= MAX_UNWATCHED_EPISODES) {
+      log.warn("getUnwatchedEpisodesWithMeta hit cap; result truncated", {
+        userId,
+        perTitleLimit,
+        globalLimit: MAX_UNWATCHED_EPISODES,
+        titleLimit: opts?.limit ?? null,
+      });
+    }
 
     const lastWatchedByTitle = await getLastWatchedAtPerShow(userId);
 
@@ -278,6 +371,9 @@ export async function getUnwatchedEpisodesWithMeta(
     );
     const episodeRows = sortedRows.map((row) => ({
       ...row,
+      total_episodes: Number(row.total_episodes),
+      watched_episodes_count: Number(row.watched_episodes_count),
+      unwatched_count: Number(row.unwatched_count),
       is_watched: false,
       offers: offersByTitle.get(row.title_id) ?? [],
     }));
@@ -292,7 +388,7 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
     userId,
     timezone,
   );
-  return episodeRows;
+  return episodeRows.map(({ unwatched_count: _unwatchedCount, ...row }) => row);
 }
 
 /**

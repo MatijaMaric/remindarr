@@ -14,6 +14,9 @@ import {
 } from "../repository";
 import {
   getTrackedTitles,
+  getPublicTrackedTitles,
+  getPublicTrackedTitleIds,
+  updateTrackedVisibility,
   getReleasedUnwatchedTrackedMovies,
   getUpcomingTrackedMoviesOpen,
   getTrackedStatusForIds,
@@ -280,6 +283,55 @@ describe("getTrackedTitles soft cap", () => {
       "cap-2",
       "cap-1",
     ]);
+  });
+});
+
+describe("getPublicTrackedTitles soft cap", () => {
+  async function seedFivePublic() {
+    const ids = ["pub-1", "pub-2", "pub-3", "pub-4", "pub-5"];
+    await upsertTitles(
+      ids.map((id) =>
+        makeParsedTitle({ id, objectType: "MOVIE", title: `Pub ${id}` }),
+      ),
+    );
+    const db = getRawDb();
+    for (const [i, id] of ids.entries()) {
+      await trackTitle(id, userId);
+      db.prepare(
+        `UPDATE tracked SET tracked_at = ? WHERE title_id = ? AND user_id = ?`,
+      ).run(`2024-01-0${i + 1} 00:00:00`, id, userId);
+    }
+    return ids;
+  }
+
+  it("returns at most opts.limit public rows, newest tracked first", async () => {
+    await seedFivePublic();
+    await updateTrackedVisibility("pub-5", userId, false);
+
+    const results = await getPublicTrackedTitles(userId, { limit: 2 });
+    expect(results.map((r) => r.id)).toEqual(["pub-4", "pub-3"]);
+  });
+
+  it("returns every public title under the default cap", async () => {
+    await seedFivePublic();
+    await updateTrackedVisibility("pub-1", userId, false);
+
+    const results = await getPublicTrackedTitles(userId);
+    expect(results.map((r) => r.id)).toEqual([
+      "pub-5",
+      "pub-4",
+      "pub-3",
+      "pub-2",
+    ]);
+  });
+
+  it("getPublicTrackedTitleIds returns public ids and skips private ones", async () => {
+    await seedFivePublic();
+    await updateTrackedVisibility("pub-2", userId, false);
+    await updateTrackedVisibility("pub-4", userId, false);
+
+    const ids = await getPublicTrackedTitleIds(userId);
+    expect(ids).toEqual(new Set(["pub-1", "pub-3", "pub-5"]));
   });
 });
 

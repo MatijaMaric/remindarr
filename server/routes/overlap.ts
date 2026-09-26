@@ -4,7 +4,7 @@ import { inArray, eq } from "drizzle-orm";
 import {
   getUserByUsername,
   getTrackedTitleIds,
-  getPublicTrackedTitles,
+  getPublicTrackedTitleIds,
   getOffersForTitles,
   areMutualFollowers,
   getUserRating,
@@ -98,9 +98,9 @@ app.get(
       if (isMutual) {
         friendIds = await getTrackedTitleIds(friendId);
       } else {
-        // Public profile — only public titles
-        const publicTitles = await getPublicTrackedTitles(friendId);
-        friendIds = new Set(publicTitles.map((t) => t.id));
+        // Public profile — only public titles. Ids only; the full payload
+        // is capped and overlap just needs membership.
+        friendIds = await getPublicTrackedTitleIds(friendId);
       }
     }
 
