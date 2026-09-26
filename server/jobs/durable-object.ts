@@ -17,7 +17,7 @@ import { MemoryCache } from "../cache/memory";
 import { logger, resetLogLevel } from "../logger";
 import Sentry from "../sentry";
 import { BACKFILL_DONE_KEY } from "../achievements/sync";
-import { handlers } from "./processor";
+import { handlers, takeDeepLinkContinue } from "./processor";
 import { runWithEnv } from "./backend";
 import { nextRetryAt } from "./time-utils";
 import { patchConfig, cfEnvToConfigOverrides } from "../config";
@@ -475,6 +475,16 @@ export class JobQueueDO {
         } else {
           log.info("migrate-offers migration complete");
         }
+      }
+
+      // sync-deep-links: one batch per tick. The handler sets the flag only when
+      // the batch was full and it did not stop for a rate limit (#1128).
+      if (job.name === "sync-deep-links" && takeDeepLinkContinue()) {
+        this.ctx.storage.sql.exec(
+          "INSERT INTO jobs (name, run_at, max_attempts) VALUES ('sync-deep-links', ?, 3)",
+          new Date().toISOString(),
+        );
+        log.info("sync-deep-links batch done, re-queued in DO");
       }
 
       // backfill-achievements: re-enqueue next page unless the handler marked it done.

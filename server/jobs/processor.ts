@@ -385,7 +385,28 @@ async function handleMigrateOffers(): Promise<void> {
   }
 }
 
+/**
+ * Titles per sync-deep-links run. The query default is 500; at 500ms between
+ * calls that held one DO /tick open for ~8 minutes (#1128). 20 stays near the
+ * per-tick budget. JobQueueDO re-queues when {@link takeDeepLinkContinue} is set.
+ */
+const DEEP_LINK_BATCH = 20;
+let deepLinkContinue = false;
+
+/** True once when the last batch filled up and did not stop for rate-limit. */
+export function takeDeepLinkContinue(): boolean {
+  const more = deepLinkContinue;
+  deepLinkContinue = false;
+  return more;
+}
+
+/** Handler asks the DO to insert another sync-deep-links row (#1128). */
+export function markDeepLinkBatchPending(): void {
+  deepLinkContinue = true;
+}
+
 async function handleSyncDeepLinks(): Promise<void> {
+  deepLinkContinue = false;
   if (!CONFIG.STREAMING_AVAILABILITY_API_KEY) {
     log.info("Skipping deep link sync", {
       reason: "STREAMING_AVAILABILITY_API_KEY not configured",
@@ -398,11 +419,12 @@ async function handleSyncDeepLinks(): Promise<void> {
   const { BreakerOpenError } = await import("../lib/circuit-breaker");
   const { getTitlesNeedingSaEnrichment } = await import("../db/repository");
 
-  const titleRows = await getTitlesNeedingSaEnrichment();
+  const titleRows = await getTitlesNeedingSaEnrichment(DEEP_LINK_BATCH);
   if (titleRows.length === 0) return;
 
   let enriched = 0;
   let processed = 0;
+  let stoppedEarly = false;
   for (const t of titleRows) {
     try {
       const count = await enrichTitleDeepLinks(
@@ -415,15 +437,20 @@ async function handleSyncDeepLinks(): Promise<void> {
     } catch (err) {
       if (err instanceof RateLimitError) {
         log.warn("SA rate limit hit, stopping early", { processed, enriched });
+        stoppedEarly = true;
         break;
       }
       if (err instanceof BreakerOpenError) {
         log.warn("SA breaker open, stopping early", { processed, enriched });
+        stoppedEarly = true;
         break;
       }
       log.error("SA enrichment failed", { titleId: t.id, err });
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  if (!stoppedEarly && titleRows.length === DEEP_LINK_BATCH) {
+    markDeepLinkBatchPending();
   }
   log.info("Deep link sync complete", { processed, enriched });
 }

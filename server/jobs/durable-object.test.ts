@@ -363,6 +363,30 @@ describe("JobQueueDO", () => {
     }
   });
 
+  it("re-queues sync-deep-links when the handler reports another batch (#1128)", async () => {
+    processorModule.handlers["sync-deep-links"] = async () => {
+      processorModule.markDeepLinkBatchPending();
+    };
+    await do_.enqueue("sync-deep-links", null);
+    await do_.runJob(null);
+
+    const pending = do_
+      .getRecentJobs()
+      .filter((row) => row.status === "pending");
+    expect(pending).toHaveLength(1);
+    expect(pending[0].name).toBe("sync-deep-links");
+  });
+
+  it("does not re-queue sync-deep-links when the batch was partial", async () => {
+    processorModule.handlers["sync-deep-links"] = async () => {};
+    await do_.enqueue("sync-deep-links", null);
+    await do_.runJob(null);
+
+    expect(
+      do_.getRecentJobs().filter((row) => row.status === "pending"),
+    ).toHaveLength(0);
+  });
+
   it("runJob does not re-arm the cron itself — re-arm is watchdog-owned (#1058)", async () => {
     // Regression: the post-run self-heal armCron() (added for #795, made
     // best-effort for #1020) was removed entirely in #1058. Cron schedules
