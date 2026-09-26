@@ -37,6 +37,55 @@ import { CONFIG } from "../config";
 
 const log = logger.child({ module: "browse" });
 
+function errorText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+type DiscoverPage<T> = {
+  results: T[];
+  total_pages: number;
+  total_results: number;
+};
+
+function normalizeDiscoverPage<T>(
+  res:
+    | {
+        results?: T[] | null;
+        total_pages?: number;
+        total_results?: number;
+      }
+    | null
+    | undefined,
+): DiscoverPage<T> {
+  return {
+    results: Array.isArray(res?.results) ? res.results : [],
+    total_pages: res?.total_pages ?? 1,
+    total_results: res?.total_results ?? 0,
+  };
+}
+
+// TMDB discover (and a missing `results` array) used to throw into the route
+// catch and return HTTP 500 for an otherwise renderable browse page (#1139).
+async function loadDiscover<T>(
+  source: string,
+  fn: () => Promise<{
+    results?: T[] | null;
+    total_pages?: number;
+    total_results?: number;
+  }>,
+): Promise<{ page: DiscoverPage<T>; failed: boolean }> {
+  try {
+    return { page: normalizeDiscoverPage(await fn()), failed: false };
+  } catch (e: unknown) {
+    log.warn("Browse discover failed", { source, error: errorText(e) });
+    syncFailureTotal.inc({ source: "tmdb" });
+    return {
+      page: { results: [], total_pages: 1, total_results: 0 },
+      failed: true,
+    };
+  }
+}
+
 function buildBrowseCacheKey(params: {
   category: string;
   type: string[];
@@ -206,12 +255,18 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       onlyMine,
     });
 
-    const cachedPayload = await getCache().get<{
+    let cachedPayload: {
       titles: ParsedTitle[];
       page: number;
       totalPages: number;
       totalResults: number;
-    }>(browseCacheKey);
+    } | null = null;
+    try {
+      cachedPayload = await getCache().get(browseCacheKey);
+    } catch (e: unknown) {
+      // KV/Redis blip: treat as a miss instead of failing the page.
+      log.warn("Browse cache read failed", { error: errorText(e) });
+    }
     if (cachedPayload !== null) {
       browseCacheTotal.inc({ result: "hit" });
       Sentry.addBreadcrumb({
@@ -233,10 +288,19 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
     browseCacheTotal.inc({ result: "miss" });
     // ──────────────────────────────────────────────────────────────────────
 
-    const [movieGenreMap, tvGenreMap] = await Promise.all([
-      getMovieGenres(),
-      getTvGenres(),
-    ]);
+    let degraded = false;
+    let movieGenreMap = new Map<number, string>();
+    let tvGenreMap = new Map<number, string>();
+    try {
+      [movieGenreMap, tvGenreMap] = await Promise.all([
+        getMovieGenres(),
+        getTvGenres(),
+      ]);
+    } catch (e: unknown) {
+      degraded = true;
+      log.warn("Browse genre lookup failed", { error: errorText(e) });
+      syncFailureTotal.inc({ source: "tmdb" });
+    }
     const allGenres = new Map([...movieGenreMap, ...tvGenreMap]);
 
     // Build discover filters
@@ -267,42 +331,59 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
     const fetchShows = typeValues.length === 0 || typeValues.includes("SHOW");
 
     if (fetchMovies && !fetchShows) {
-      const res = await fetchMoviesByCategory(
-        category as Category,
-        discoverOpts,
-      );
-      basicTitles = res.results.map((m) => parseDiscoverMovie(m, allGenres));
-      totalPages = Math.min(res.total_pages, 500);
-      totalResults = res.total_results;
-    } else if (fetchShows && !fetchMovies) {
-      const res = await fetchTvByCategory(category as Category, discoverOpts);
-      basicTitles = res.results.map((t) => parseDiscoverTv(t, allGenres));
-      totalPages = Math.min(res.total_pages, 500);
-      totalResults = res.total_results;
-    } else {
-      const [movieRes, tvRes] = await Promise.all([
+      const movie = await loadDiscover("movie", () =>
         fetchMoviesByCategory(category as Category, discoverOpts),
-        fetchTvByCategory(category as Category, discoverOpts),
-      ]);
-      const movies = movieRes.results.map((m) =>
+      );
+      degraded = degraded || movie.failed;
+      basicTitles = movie.page.results.map((m) =>
         parseDiscoverMovie(m, allGenres),
       );
-      const tvShows = tvRes.results.map((t) => parseDiscoverTv(t, allGenres));
+      totalPages = Math.min(movie.page.total_pages, 500);
+      totalResults = movie.page.total_results;
+    } else if (fetchShows && !fetchMovies) {
+      const tv = await loadDiscover("tv", () =>
+        fetchTvByCategory(category as Category, discoverOpts),
+      );
+      degraded = degraded || tv.failed;
+      basicTitles = tv.page.results.map((t) => parseDiscoverTv(t, allGenres));
+      totalPages = Math.min(tv.page.total_pages, 500);
+      totalResults = tv.page.total_results;
+    } else {
+      // One side failing must not discard the other (#1139: movie+TV popular).
+      const [movie, tv] = await Promise.all([
+        loadDiscover("movie", () =>
+          fetchMoviesByCategory(category as Category, discoverOpts),
+        ),
+        loadDiscover("tv", () =>
+          fetchTvByCategory(category as Category, discoverOpts),
+        ),
+      ]);
+      degraded = degraded || movie.failed || tv.failed;
+      const movies = movie.page.results.map((m) =>
+        parseDiscoverMovie(m, allGenres),
+      );
+      const tvShows = tv.page.results.map((t) => parseDiscoverTv(t, allGenres));
       basicTitles = [...movies, ...tvShows];
       totalPages = Math.min(
-        Math.max(movieRes.total_pages, tvRes.total_pages),
+        Math.max(movie.page.total_pages, tv.page.total_pages),
         500,
       );
-      totalResults = movieRes.total_results + tvRes.total_results;
+      totalResults = movie.page.total_results + tv.page.total_results;
     }
 
-    // Batch-read known titles from DB to skip TMDB calls for already-stored titles
-    const dbTitles = await getTitlesByTmdbIds(
-      basicTitles.map((t) => ({
-        tmdbId: parseInt(t.tmdbId || "0", 10),
-        objectType: t.objectType,
-      })),
-    );
+    // Batch-read known titles from DB to skip TMDB calls for already-stored titles.
+    // A D1 timeout should fall through to the TMDB fan-out, not 500 the page.
+    let dbTitles: ParsedTitle[] = [];
+    try {
+      dbTitles = await getTitlesByTmdbIds(
+        basicTitles.map((t) => ({
+          tmdbId: parseInt(t.tmdbId || "0", 10),
+          objectType: t.objectType,
+        })),
+      );
+    } catch (e: unknown) {
+      log.warn("Browse title lookup failed", { error: errorText(e) });
+    }
     const dbByKey = new Map(
       dbTitles.map((t) => [`${t.objectType}:${t.tmdbId}`, t]),
     );
@@ -369,12 +450,19 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       });
     }
 
-    // Cache the user-agnostic payload (isTracked is applied after cache read)
-    await getCache().set(
-      browseCacheKey,
-      { titles, page, totalPages, totalResults },
-      CONFIG.CACHE_TTL_BROWSE,
-    );
+    // Cache the user-agnostic payload (isTracked is applied after cache read).
+    // Skip the write when discover/genres failed so a partial page is not pinned.
+    if (!degraded) {
+      try {
+        await getCache().set(
+          browseCacheKey,
+          { titles, page, totalPages, totalResults },
+          CONFIG.CACHE_TTL_BROWSE,
+        );
+      } catch (e: unknown) {
+        log.warn("Browse cache write failed", { error: errorText(e) });
+      }
+    }
 
     const trackedIds = user
       ? await getTrackedTitleIds(user.id)
@@ -384,13 +472,20 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       isTracked: trackedIds.has(t.id),
     }));
 
-    setPublicCacheIfAnon(c, 1800);
+    if (degraded) {
+      c.header("Cache-Control", "no-store");
+    } else {
+      setPublicCacheIfAnon(c, 1800);
+    }
     return ok(c, { titles: titlesWithTracked, page, totalPages, totalResults });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
+    const message = errorText(e);
     const stack = e instanceof Error ? e.stack : undefined;
-    log.error("Browse error", { error: message, stack });
-    return err(c, message, 500);
+    Sentry.captureException(e);
+    // Message text is in the template so CF Observability can show it without
+    // opening structured fields (the #1139 monitor only saw "Browse error").
+    log.error(`Browse error: ${message}`, { error: message, stack });
+    return err(c, "Browse failed", 500);
   }
 });
 
