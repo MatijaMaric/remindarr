@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { MOCK_EPISODE, MOCK_UPCOMING_EPISODE, mockLoggedIn } from "./helpers";
+import {
+  MOCK_EPISODE,
+  MOCK_UPCOMING_EPISODE,
+  isAuthGetSession,
+  mockLoggedIn,
+} from "./helpers";
 
 test.describe("Mark episodes as watched", () => {
   test.beforeEach(async ({ page }) => {
@@ -103,7 +108,7 @@ test.describe("Mark episodes as watched", () => {
   test("redirects unauthenticated user from /upcoming to /login", async ({
     page,
   }) => {
-    await page.route("**/api/auth/get-session", (route) =>
+    await page.route(isAuthGetSession, (route) =>
       route.fulfill({ json: null }),
     );
     await page.route("**/api/auth/custom/providers", (route) =>

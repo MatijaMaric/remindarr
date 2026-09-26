@@ -3,6 +3,7 @@ import {
   MOCK_TITLE,
   MOCK_TRACKED_TITLE,
   MOCK_SEARCH_TITLE,
+  isAuthGetSession,
   mockLoggedIn,
   mockTitleEndpoints,
   mockBrowseEndpoints,
@@ -89,7 +90,7 @@ test.describe("Track and untrack titles", () => {
   test("redirects unauthenticated user from /tracked to /login", async ({
     page,
   }) => {
-    await page.route("**/api/auth/get-session", (route) =>
+    await page.route(isAuthGetSession, (route) =>
       route.fulfill({ json: null }),
     );
     await page.route("**/api/auth/custom/providers", (route) =>

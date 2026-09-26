@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockLoggedIn } from "./helpers";
+import { isAuthGetSession, mockLoggedIn } from "./helpers";
 import { SignupPage } from "./pages/signup-page";
 
 /**
@@ -61,7 +61,7 @@ test.describe("Signup", () => {
     // Mock get-session to always return null (not logged in) so the signup
     // form stays visible. The navigate('/') in handleSubmit fires directly
     // after the signup call resolves — it doesn't wait for a session update.
-    await page.route("**/api/auth/get-session", (route) =>
+    await page.route(isAuthGetSession, (route) =>
       route.fulfill({ json: null }),
     );
 
@@ -118,7 +118,7 @@ test.describe("Signup", () => {
     const suffix = Date.now() + 2;
     const username = `tc02_${suffix}`;
 
-    await page.route("**/api/auth/get-session", (route) =>
+    await page.route(isAuthGetSession, (route) =>
       route.fulfill({ json: null }),
     );
 

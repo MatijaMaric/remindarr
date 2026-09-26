@@ -71,6 +71,7 @@ export default defineConfig({
   // These security regressions have dedicated configs and isolated production servers.
   testIgnore: [
     "**/fixtures/**",
+    "**/*.test.ts",
     "**/share-security.spec.ts",
     "**/identity-isolation.spec.ts",
   ],

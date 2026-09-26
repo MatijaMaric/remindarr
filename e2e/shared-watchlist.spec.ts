@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockLoggedOut } from "./helpers";
+import { isAuthGetSession, mockLoggedOut } from "./helpers";
 import { SharedWatchlistPage } from "./pages/shared-watchlist-page";
 
 test.describe.configure({ mode: "serial" });
@@ -34,9 +34,7 @@ const STANDARD_WATCHLIST = {
 
 async function setupPublicShellMocks(page: SharedWatchlistPage["page"]) {
   // Auth shell — public page, no session required.
-  await page.route("**/api/auth/get-session", (route) =>
-    route.fulfill({ json: null }),
-  );
+  await page.route(isAuthGetSession, (route) => route.fulfill({ json: null }));
   await page.route("**/api/auth/custom/providers", (route) =>
     route.fulfill({ json: { local: true, oidc: null } }),
   );
