@@ -3,6 +3,7 @@ import {
   it,
   expect,
   beforeEach,
+  afterEach,
   afterAll,
   mock,
   spyOn,
@@ -14,9 +15,12 @@ import {
   trackTitle,
   createUser,
   setRemindOnRelease,
+  getTrackedTitles,
+  getRecentForNotifier,
 } from "../db/repository";
 import { createNotifier } from "../db/repository/notifiers";
 import * as registry from "../notifications/registry";
+import { resetMetrics, renderMetrics } from "../metrics";
 import { handleReleaseReminder } from "./release-reminders";
 
 let sendSpy: ReturnType<typeof spyOn>;
@@ -31,6 +35,10 @@ beforeEach(() => {
     );
     sendSpy.mockClear();
   }
+});
+
+afterEach(() => {
+  sendSpy?.mockRestore();
 });
 
 afterAll(() => {
@@ -59,10 +67,86 @@ describe("handleReleaseReminder", () => {
 
     expect(sendSpy).toHaveBeenCalledTimes(1);
 
-    // Verify flag was cleared
-    const { getTrackedTitles } = await import("../db/repository");
     const tracked = await getTrackedTitles(userId);
     expect(tracked[0].remind_on_release).toBe(0);
+  });
+
+  it("keeps the reminder and rejects when every send fails", async () => {
+    const userId = await createUser("reminder-all-fail", "hash");
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-fail", title: "Fail Movie" }),
+    ]);
+    await trackTitle("movie-fail", userId);
+    await setRemindOnRelease("movie-fail", userId, true);
+    const notifierId = await createNotifier(
+      userId,
+      "discord",
+      "My Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
+      "09:00",
+      "UTC",
+    );
+    sendSpy.mockRejectedValue(new Error("webhook down"));
+    resetMetrics();
+
+    await expect(
+      handleReleaseReminder({ userId, titleId: "movie-fail" }),
+    ).rejects.toThrow("All release reminder sends failed");
+
+    const tracked = await getTrackedTitles(userId);
+    expect(tracked[0].remind_on_release).toBe(1);
+    const rows = await getRecentForNotifier(notifierId, 5);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("failure");
+    expect(rows[0].eventKind).toBe("release_reminder");
+    expect(rows[0].errorMessage).toBe("webhook down");
+    expect(renderMetrics()).toContain(
+      'notifications_sent_total{kind="release_reminder",outcome="failure",provider="discord"} 1',
+    );
+  });
+
+  it("clears the reminder when one provider succeeds", async () => {
+    const userId = await createUser("reminder-partial", "hash");
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-partial", title: "Partial Movie" }),
+    ]);
+    await trackTitle("movie-partial", userId);
+    await setRemindOnRelease("movie-partial", userId, true);
+    const discordId = await createNotifier(
+      userId,
+      "discord",
+      "My Discord",
+      { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
+      "09:00",
+      "UTC",
+    );
+    const ntfyId = await createNotifier(
+      userId,
+      "ntfy",
+      "My Ntfy",
+      { url: "https://ntfy.sh", topic: "remindarr" },
+      "09:00",
+      "UTC",
+    );
+    const ntfy = registry.getProvider("ntfy");
+    const ntfySpy = spyOn(ntfy!, "send").mockRejectedValue(
+      new Error("ntfy down"),
+    );
+
+    try {
+      await handleReleaseReminder({ userId, titleId: "movie-partial" });
+
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+      expect(ntfySpy).toHaveBeenCalledTimes(1);
+      const tracked = await getTrackedTitles(userId);
+      expect(tracked[0].remind_on_release).toBe(0);
+      expect((await getRecentForNotifier(discordId, 5))[0].status).toBe(
+        "success",
+      );
+      expect((await getRecentForNotifier(ntfyId, 5))[0].status).toBe("failure");
+    } finally {
+      ntfySpy.mockRestore();
+    }
   });
 
   it("handles unknown userId gracefully without throwing", async () => {
