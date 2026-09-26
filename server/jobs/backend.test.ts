@@ -158,6 +158,55 @@ describe("recoverStale (D1 mode)", () => {
   });
 });
 
+describe("recoverStale (DO mode)", () => {
+  it("sums counts from every cron DO", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const ns = makeFakeDoNamespace(() => ({ count: 1 }));
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    const total = await recoverStale(env, 15);
+
+    expect(ns.calls).toHaveLength(6);
+    expect(ns.calls.every((c) => c.path === "/recover")).toBe(true);
+    expect(total).toBe(6);
+  });
+
+  it("continues when one peer DO was evicted (#1126)", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    const attempted: string[] = [];
+    const failingNs = {
+      idFromName: (name: string) => ({ name, toString: () => name }),
+      get: (id: { name?: string; toString: () => string }) => ({
+        fetch: async () => {
+          const name = id.name ?? id.toString();
+          attempted.push(name);
+          if (name === "sync-episodes") {
+            throw new Error(
+              "Connection closed: this Durable Object instance is no longer active",
+            );
+          }
+          return new Response(JSON.stringify({ count: 2 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        },
+      }),
+    };
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: failingNs as unknown as DurableObjectNamespace,
+    };
+
+    const total = await recoverStale(env, 15);
+
+    expect(attempted).toHaveLength(6);
+    expect(total).toBe(10);
+  });
+});
+
 describe("enqueueOnce", () => {
   it("delegates to enqueueOneTimeMigration in D1 mode", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "d1";
@@ -250,7 +299,29 @@ describe("armCron (DO mode)", () => {
     expect(ns.calls.every((c) => c.path === "/arm")).toBe(true);
   });
 
-  it("rethrows when the retry also fails", async () => {
+  it("retries again after a second eviction (#1126)", async () => {
+    CONFIG.JOB_QUEUE_BACKEND = "durable-object";
+    let attempts = 0;
+    const ns = makeFakeDoNamespace(() => {
+      attempts++;
+      if (attempts < 3)
+        throw new Error(
+          "Connection closed: this Durable Object instance is no longer active",
+        );
+      return { ok: true };
+    });
+    const env = {
+      ...d1Env,
+      JOB_QUEUE_DO: ns as unknown as DurableObjectNamespace,
+    };
+
+    await armCron(env, "sync-titles", "0 3 * * *");
+
+    expect(ns.calls).toHaveLength(3);
+    expect(ns.calls.every((c) => c.path === "/arm")).toBe(true);
+  });
+
+  it("rethrows when every arm attempt fails", async () => {
     CONFIG.JOB_QUEUE_BACKEND = "durable-object";
     const ns = makeFakeDoNamespace(() => {
       throw new Error("POST https://do/arm");
@@ -263,7 +334,7 @@ describe("armCron (DO mode)", () => {
     await expect(armCron(env, "sync-titles", "0 3 * * *")).rejects.toThrow(
       "POST https://do/arm",
     );
-    expect(ns.calls).toHaveLength(2);
+    expect(ns.calls).toHaveLength(3);
   });
 });
 
