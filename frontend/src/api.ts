@@ -21,6 +21,8 @@ import type {
   UserSummary,
   TitleRatingResponse,
   EpisodeRatingResponse,
+  EpisodeCommentsResponse,
+  EpisodeComment,
   SeasonEpisodeRatingsResponse,
   ShowEpisodeRatingsResponse,
   SentRecommendation,
@@ -974,6 +976,58 @@ export async function unrateEpisode(episodeId: number): Promise<void> {
   await fetchJson(`/ratings/episode/${episodeId}`, {
     method: "DELETE",
   });
+}
+
+export async function getEpisodeComments(
+  titleId: string,
+  seasonNumber: number,
+  episodeNumber: number,
+  signal?: AbortSignal,
+): Promise<EpisodeCommentsResponse> {
+  const qs = new URLSearchParams({
+    title_id: titleId,
+    season_number: String(seasonNumber),
+    episode_number: String(episodeNumber),
+  });
+  return fetchJson(`/episode-comments?${qs}`, { signal });
+}
+
+export async function postEpisodeComment(
+  titleId: string,
+  seasonNumber: number,
+  episodeNumber: number,
+  body: string,
+  visibility: "public" | "friends_only",
+): Promise<{ comment: EpisodeComment }> {
+  return fetchJson("/episode-comments", {
+    method: "POST",
+    body: JSON.stringify({
+      title_id: titleId,
+      season_number: seasonNumber,
+      episode_number: episodeNumber,
+      body,
+      visibility,
+    }),
+  });
+}
+
+export async function deleteEpisodeComment(commentId: string): Promise<void> {
+  await fetchJson(`/episode-comments/${encodeURIComponent(commentId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function toggleEpisodeCommentReaction(
+  commentId: string,
+  emoji: string,
+): Promise<{ comment: EpisodeComment }> {
+  return fetchJson(
+    `/episode-comments/${encodeURIComponent(commentId)}/reactions`,
+    {
+      method: "POST",
+      body: JSON.stringify({ emoji }),
+    },
+  );
 }
 
 export async function getEpisodeRating(

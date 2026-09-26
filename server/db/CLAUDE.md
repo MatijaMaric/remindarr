@@ -4,16 +4,16 @@
 
 `server/db/schema.ts` — 30 SQLite tables via Drizzle ORM:
 
-| Group          | Tables                                                                                    |
-| -------------- | ----------------------------------------------------------------------------------------- |
-| Content        | `titles`, `providers`, `offers`, `scores`, `title_genres`, `episodes`, `streaming_alerts` |
-| Auth/user      | `users`, `sessions`, `account`, `verification`, `passkey`, `oidc_states`, `invitations`   |
-| Tracking       | `tracked`, `watched_episodes`, `watched_titles`, `watch_history`, `title_tags`            |
-| Ratings/social | `ratings`, `episode_ratings`, `follows`, `recommendations`, `recommendation_reads`        |
-| Config/ops     | `settings`, `notifiers`, `integrations`, `plex_library_items`, `jobs`, `cron_jobs`        |
+| Group          | Tables                                                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Content        | `titles`, `providers`, `offers`, `scores`, `title_genres`, `episodes`, `streaming_alerts`                                           |
+| Auth/user      | `users`, `sessions`, `account`, `verification`, `passkey`, `oidc_states`, `invitations`                                             |
+| Tracking       | `tracked`, `watched_episodes`, `watched_titles`, `watch_history`, `title_tags`                                                      |
+| Ratings/social | `ratings`, `episode_ratings`, `episode_comments`, `episode_comment_reactions`, `follows`, `recommendations`, `recommendation_reads` |
+| Config/ops     | `settings`, `notifiers`, `integrations`, `plex_library_items`, `jobs`, `cron_jobs`                                                  |
 
 Repository modules in `server/db/repository/` (domain-specific query modules):
-users, titles, episodes, offers, tracked, watched, notifiers, settings, ratings, recommendations, social, integrations, invitations, plex, stats, year-in-review, sessions.
+users, titles, episodes, offers, tracked, watched, notifiers, settings, ratings, recommendations, episode-comments, social, integrations, invitations, plex, stats, year-in-review, sessions.
 
 ## Migration Safety Rules (Cloudflare D1) ⚠️
 
@@ -21,7 +21,7 @@ users, titles, episodes, offers, tracked, watched, notifiers, settings, ratings,
 
 `PRAGMA foreign_keys=OFF` does NOT persist across `--> statement-breakpoint` boundaries on D1 — each statement runs in a separate connection context. If a migration drops a parent table while child tables have `ON DELETE CASCADE` FKs, the cascade fires unconditionally and wipes all child rows.
 
-**Parent tables (never recreate):** `users`, `titles`, `providers`
+**Parent tables (never recreate):** `users`, `titles`, `providers`, `episode_comments`
 
 **Safe pattern for adding columns:**
 

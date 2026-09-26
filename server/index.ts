@@ -41,6 +41,7 @@ import importRoutes from "./routes/import";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
+import episodeCommentsRoutes from "./routes/episode-comments";
 import recommendationsRoutes from "./routes/recommendations";
 import suggestionsRoutes from "./routes/suggestions";
 import invitationsRoutes from "./routes/invitations";
@@ -346,6 +347,11 @@ const writeRateLimiter = rateLimiter({
 app.use("/api/ratings/*", writeRateLimiter, optionalAuth);
 app.use("/api/ratings", writeRateLimiter, optionalAuth);
 app.route("/api/ratings", ratingsRoutes);
+
+// Episode discussion threads — watched gate, auth required.
+app.use("/api/episode-comments/*", writeRateLimiter, requireAuth);
+app.use("/api/episode-comments", writeRateLimiter, requireAuth);
+app.route("/api/episode-comments", episodeCommentsRoutes);
 
 // Recommendations routes (social broadcast)
 app.use("/api/recommendations/*", requireAuth);

@@ -99,6 +99,10 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   rateEpisode: async () => ({}),
   unrateEpisode: async () => ({}),
   getEpisodeRating: async () => ({ rating: null }),
+  getEpisodeComments: async () => ({ emojis: [], comments: [] }),
+  postEpisodeComment: async () => ({ comment: {} }),
+  deleteEpisodeComment: async () => ({}),
+  toggleEpisodeCommentReaction: async () => ({ comment: {} }),
   getSeasonEpisodeRatings: async () => ({ ratings: {}, user_ratings: [] }),
   getShowEpisodeRatings: async () => ({ user_ratings: [] }),
 

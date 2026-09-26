@@ -688,6 +688,53 @@ export const episodeRatings = sqliteTable(
   ],
 );
 
+export const episodeComments = sqliteTable(
+  "episode_comments",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    seasonNumber: integer("season_number").notNull(),
+    episodeNumber: integer("episode_number").notNull(),
+    body: text("body").notNull(),
+    visibility: text("visibility").notNull().default("public"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    index("idx_episode_comments_scope").on(
+      table.titleId,
+      table.seasonNumber,
+      table.episodeNumber,
+      table.createdAt,
+    ),
+    index("idx_episode_comments_user_created").on(
+      table.userId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const episodeCommentReactions = sqliteTable(
+  "episode_comment_reactions",
+  {
+    commentId: text("comment_id")
+      .notNull()
+      .references(() => episodeComments.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commentId, table.userId, table.emoji] }),
+  ],
+);
+
 export const streamingAlerts = sqliteTable(
   "streaming_alerts",
   {
@@ -814,6 +861,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   tracked: many(tracked),
   ratings: many(ratings),
   episodeRatings: many(episodeRatings),
+  episodeComments: many(episodeComments),
   followers: many(follows, { relationName: "following" }),
   following: many(follows, { relationName: "follower" }),
   sentRecommendations: many(recommendations),
@@ -919,6 +967,35 @@ export const episodeRatingsRelations = relations(episodeRatings, ({ one }) => ({
     references: [episodes.id],
   }),
 }));
+
+export const episodeCommentsRelations = relations(
+  episodeComments,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [episodeComments.userId],
+      references: [users.id],
+    }),
+    title: one(titles, {
+      fields: [episodeComments.titleId],
+      references: [titles.id],
+    }),
+    reactions: many(episodeCommentReactions),
+  }),
+);
+
+export const episodeCommentReactionsRelations = relations(
+  episodeCommentReactions,
+  ({ one }) => ({
+    comment: one(episodeComments, {
+      fields: [episodeCommentReactions.commentId],
+      references: [episodeComments.id],
+    }),
+    user: one(users, {
+      fields: [episodeCommentReactions.userId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const recommendationsRelations = relations(
   recommendations,

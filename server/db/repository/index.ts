@@ -268,6 +268,23 @@ export {
 } from "./recommendations";
 
 export { getUserActivity } from "./activity";
+
+export {
+  EPISODE_COMMENT_EMOJIS,
+  findEpisodeByScope,
+  userWatchedEpisode,
+  listEpisodeComments,
+  createEpisodeComment,
+  deleteOwnEpisodeComment,
+  toggleEpisodeCommentReaction,
+} from "./episode-comments";
+export type {
+  EpisodeCommentEmoji,
+  EpisodeCommentVisibility,
+  EpisodeCommentView,
+  EpisodeScope,
+  ReactionToggleResult,
+} from "./episode-comments";
 export type {
   ActivityEvent,
   ActivityType,

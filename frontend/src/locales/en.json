@@ -348,7 +348,26 @@
     "directedBy": "Directed by:",
     "writtenBy": "Written by:",
     "cast": "Cast",
-    "noPreview": "No preview available"
+    "noPreview": "No preview available",
+    "discussion": {
+      "title": "Discussion",
+      "loading": "Loading…",
+      "signIn": "Sign in and mark this episode as watched to join the discussion.",
+      "watchFirst": "Mark this episode as watched to join the discussion.",
+      "empty": "No comments yet.",
+      "loadError": "Couldn't load the discussion.",
+      "composer": "Comment",
+      "post": "Post",
+      "postError": "Couldn't post your comment.",
+      "delete": "Delete comment",
+      "deleteError": "Couldn't delete the comment.",
+      "visibility": "Who can see this comment",
+      "public": "Public",
+      "friendsOnly": "Friends only",
+      "friendsBadge": "Friends only",
+      "react": "React with {{emoji}}",
+      "reactError": "Couldn't update your reaction."
+    }
   },
   "season": {
     "notFound": "Season not found",
@@ -452,7 +471,8 @@
           "watched": "Watched",
           "review": "Review",
           "track": "Track",
-          "recommendation": "Recommended"
+          "recommendation": "Recommended",
+          "discussion": "Discussion"
         },
         "summary": {
           "ratedTitle": "rated {{title}}",
@@ -461,7 +481,8 @@
           "watchedEpisode": "watched S{{season}}·E{{episode}}{{episodeName}}{{runtime}}",
           "trackedDefault": "added to watchlist",
           "trackedStatus": "added to {{status}}",
-          "recommendationDefault": "recommended {{title}}"
+          "recommendationDefault": "recommended {{title}}",
+          "episodeComment": "commented on S{{season}}·E{{episode}}{{episodeName}}"
         },
         "ratingLabel": {
           "HATE": "hated it",

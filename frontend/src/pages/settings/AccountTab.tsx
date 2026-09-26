@@ -714,6 +714,7 @@ const ACTIVITY_KIND_LABELS: Record<ActivityType, string> = {
   watched_episode: "Watched episodes",
   tracked: "Watchlist additions",
   recommendation: "Recommendations sent",
+  episode_comment: "Episode discussions",
 };
 
 const ACTIVITY_KINDS = Object.keys(ACTIVITY_KIND_LABELS) as ActivityType[];
