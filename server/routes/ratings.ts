@@ -52,43 +52,48 @@ const seasonParamSchema = z.object({
 });
 
 const titleIdParamSchema = z.object({
-  titleId: z.string().min(1),
+  titleId: z.string().min(1).max(128),
 });
 
 const app = new Hono<AppEnv>();
 
 // POST /:titleId — Rate a title
-app.post("/:titleId", zValidator("json", rateTitleSchema), async (c) => {
-  const user = c.get("user");
-  if (!user) {
-    return err(c, "Authentication required", 401);
-  }
+app.post(
+  "/:titleId",
+  zValidator("param", titleIdParamSchema),
+  zValidator("json", rateTitleSchema),
+  async (c) => {
+    const user = c.get("user");
+    if (!user) {
+      return err(c, "Authentication required", 401);
+    }
 
-  const titleId = c.req.param("titleId");
-  const { rating } = c.req.valid("json");
+    const { titleId } = c.req.valid("param");
+    const { rating } = c.req.valid("json");
 
-  await rateTitle(user.id, titleId, rating as RatingValue);
-  log.info("Title rated", { userId: user.id, titleId, rating });
-  return ok(c, { success: true, rating });
-});
+    await rateTitle(user.id, titleId, rating as RatingValue);
+    log.info("Title rated", { userId: user.id, titleId, rating });
+    return ok(c, { success: true, rating });
+  },
+);
 
 // DELETE /:titleId — Remove rating
-app.delete("/:titleId", async (c) => {
+app.delete("/:titleId", zValidator("param", titleIdParamSchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return err(c, "Authentication required", 401);
   }
 
-  const titleId = c.req.param("titleId");
+  const { titleId } = c.req.valid("param");
   await unrateTitle(user.id, titleId);
   log.info("Title unrated", { userId: user.id, titleId });
   return ok(c, { success: true });
 });
 
 // GET /:titleId — Get rating info
-app.get("/:titleId", async (c) => {
+app.get("/:titleId", zValidator("param", titleIdParamSchema), async (c) => {
   const user = c.get("user");
-  const titleId = c.req.param("titleId");
+  const { titleId } = c.req.valid("param");
 
   const userRating = user ? await getUserRating(user.id, titleId) : null;
   const aggregated = await getTitleRatings(titleId);

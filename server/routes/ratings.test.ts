@@ -348,6 +348,53 @@ describe("GET /ratings/:titleId", () => {
 });
 
 describe("validation", () => {
+  it("rejects oversized :titleId on POST, GET, and DELETE", async () => {
+    const longId = "x".repeat(129);
+
+    const post = await app.request(`/ratings/${longId}`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "LIKE" }),
+    });
+    expect(post.status).toBe(400);
+    const postBody = await post.json();
+    expect(postBody.error).toBe("Validation failed");
+    expect(postBody.issues).toBeInstanceOf(Array);
+
+    const get = await app.request(`/ratings/${longId}`);
+    expect(get.status).toBe(400);
+    const getBody = await get.json();
+    expect(getBody.error).toBe("Validation failed");
+    expect(getBody.issues).toBeInstanceOf(Array);
+
+    const del = await app.request(`/ratings/${longId}`, {
+      method: "DELETE",
+      headers: authHeaders(userAToken),
+    });
+    expect(del.status).toBe(400);
+    const delBody = await del.json();
+    expect(delBody.error).toBe("Validation failed");
+    expect(delBody.issues).toBeInstanceOf(Array);
+  });
+
+  it("happy path — POST /:titleId with a valid titleId and rating", async () => {
+    const res = await app.request("/ratings/movie-123", {
+      method: "POST",
+      headers: {
+        ...authHeaders(userAToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating: "LIKE" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.rating).toBe("LIKE");
+  });
+
   it("rejects POST /:titleId with unknown rating enum value", async () => {
     const res = await app.request("/ratings/movie-123", {
       method: "POST",
