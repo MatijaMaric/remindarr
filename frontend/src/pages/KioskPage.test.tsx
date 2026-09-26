@@ -102,6 +102,8 @@ function Wrapper({
   );
 }
 
+const originalFetch = globalThis.fetch;
+
 beforeEach(() => {
   globalThis.fetch = mockFetch as any;
   mockFetch.mockImplementation((_url: string) =>
@@ -115,8 +117,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   mockFetch.mockReset();
-  // @ts-expect-error — restore to undefined so other test files are unaffected
-  globalThis.fetch = undefined;
+  globalThis.fetch = originalFetch;
 });
 
 describe("KioskPage", () => {

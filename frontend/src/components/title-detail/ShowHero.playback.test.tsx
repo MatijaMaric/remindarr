@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ComponentProps } from "react";
@@ -6,6 +14,11 @@ import { AuthContext } from "../../context/AuthContext";
 import type { Offer, Title } from "../../types";
 import "../../i18n";
 import ShowHero from "./ShowHero";
+
+// Other files' mock.module("useIsMobile") stubs leak across files; re-bind it to matchMedia.
+mock.module("../../hooks/useIsMobile", () => ({
+  useIsMobile: () => window.matchMedia("(max-width: 639px)").matches,
+}));
 
 let mediaSpy: ReturnType<typeof spyOn>;
 const matchMedia = window.matchMedia.bind(window);
