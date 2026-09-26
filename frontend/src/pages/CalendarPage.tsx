@@ -69,6 +69,14 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // ─── Month Stats Bar ────────────────────────────────────────────────────────
 
+function CalendarFetchError() {
+  return (
+    <p className="text-zinc-400 text-sm py-12 text-center">
+      Failed to load calendar. Please try again.
+    </p>
+  );
+}
+
 function MonthStatsBar({
   episodes,
   titles,
@@ -413,13 +421,16 @@ function MobileCalendar({
     return new Date(y, m - 1, 1);
   }, [monthParam]);
 
-  const { data: mobileCalData, isFetching: loadingMonth } =
-    useQuery<CalendarData>({
-      queryKey: ["calendar", formatMonth(currentMonth), undefined],
-      queryFn: ({ signal }) =>
-        getCalendarTitles({ month: formatMonth(currentMonth) }, signal),
-      enabled: mobileView === "month",
-    });
+  const {
+    data: mobileCalData,
+    isFetching: loadingMonth,
+    isError: monthError,
+  } = useQuery<CalendarData>({
+    queryKey: ["calendar", formatMonth(currentMonth), undefined],
+    queryFn: ({ signal }) =>
+      getCalendarTitles({ month: formatMonth(currentMonth) }, signal),
+    enabled: mobileView === "month",
+  });
   const { actionFor } = useContentAdvisory();
   const episodes = useMemo(() => {
     const raw = mobileCalData?.episodes ?? [];
@@ -461,7 +472,8 @@ function MobileCalendar({
           <div className="flex items-baseline justify-between px-5 pt-3 pb-2">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-0.5">
-                {year} · {dotDates.size} airings
+                {year}
+                {!monthError && ` · ${dotDates.size} airings`}
               </div>
               <h1 className="text-[32px] font-extrabold tracking-[-1.2px]">
                 {monthLabel}
@@ -505,6 +517,8 @@ function MobileCalendar({
             <div className="text-center py-8 text-zinc-400 font-mono text-xs">
               Loading...
             </div>
+          ) : monthError ? (
+            <CalendarFetchError />
           ) : (
             <MiniMonthGrid year={year} month={month} dotDates={dotDates} />
           )}
@@ -662,7 +676,11 @@ function GridCalendar({
   const qc = useQueryClient();
   const calendarMonthKey = formatMonth(currentMonth);
   const calendarTypeKey = typeFilter || undefined;
-  const { data: calendarData, isFetching: loading } = useQuery<CalendarData>({
+  const {
+    data: calendarData,
+    isFetching: loading,
+    isError,
+  } = useQuery<CalendarData>({
     queryKey: ["calendar", calendarMonthKey, calendarTypeKey],
     queryFn: ({ signal }) =>
       getCalendarTitles(
@@ -1001,13 +1019,15 @@ function GridCalendar({
       />
 
       {/* Stats bar */}
-      {!loading && (
+      {!loading && !isError && (
         <MonthStatsBar episodes={stats.episodes} titles={stats.titles} />
       )}
 
       {/* Calendar grid */}
       {loading ? (
         <GridCalendarSkeleton />
+      ) : isError ? (
+        <CalendarFetchError />
       ) : (
         <div className="border border-white/[0.06] rounded-xl overflow-hidden">
           {/* Weekday headers */}
@@ -1148,7 +1168,7 @@ function GridCalendar({
       )}
 
       {/* Legend */}
-      {!loading && (
+      {!loading && !isError && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-zinc-400 pt-1">
           <div className="flex items-center gap-1.5">
             <span className="text-amber-400">●</span>
@@ -1259,6 +1279,7 @@ function WeekCalendar({
   });
 
   const loading = weekQueries.some((q) => q.isFetching);
+  const isError = weekQueries.some((q) => q.isError);
 
   const weekQ0Data = weekQueries[0]?.data;
   const weekQ1Data = weekQueries[1]?.data;
@@ -1409,6 +1430,8 @@ function WeekCalendar({
 
       {loading ? (
         <GridCalendarSkeleton />
+      ) : isError ? (
+        <CalendarFetchError />
       ) : (
         <div className="border border-white/[0.06] rounded-xl overflow-hidden">
           {/* Day column headers */}

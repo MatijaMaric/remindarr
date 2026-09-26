@@ -108,6 +108,45 @@ describe("CalendarPage", () => {
     expect(screen.getByText("Wed")).toBeDefined();
   });
 
+  it("shows an error instead of an empty grid when the calendar fetch fails", async () => {
+    apiSpies[0].mockRejectedValue(new Error("network"));
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByText("Failed to load calendar. Please try again."),
+    ).toBeDefined();
+    expect(screen.queryByText("Mon")).toBeNull();
+  });
+
+  it("shows an error in week view when the calendar fetch fails", async () => {
+    apiSpies[0].mockRejectedValue(new Error("network"));
+    render(
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/?view=week"]}>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText("Failed to load calendar. Please try again."),
+    ).toBeDefined();
+    expect(screen.queryByTestId("week-day-column")).toBeNull();
+  });
+
+  it("shows an error in mobile month view when the calendar fetch fails", async () => {
+    useIsMobileSpy.mockReturnValue(true);
+    apiSpies[0].mockRejectedValue(new Error("network"));
+    render(<CalendarPage />, { wrapper: Wrapper });
+
+    fireEvent.click(screen.getByRole("button", { name: "Month" }));
+
+    expect(
+      await screen.findByText("Failed to load calendar. Please try again."),
+    ).toBeDefined();
+    expect(screen.queryByText("Loading...")).toBeNull();
+  });
+
   it("opens a labelled day dialog and restores its invoking day on Escape or close", async () => {
     render(
       <QueryClientProvider client={newTestClient()}>
