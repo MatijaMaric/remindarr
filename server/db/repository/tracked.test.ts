@@ -9,6 +9,7 @@ import {
   watchEpisode,
   watchEpisodesBulk,
   updateTrackedStatus,
+  updateNotificationMode,
   watchTitle,
 } from "../repository";
 import {
@@ -16,8 +17,14 @@ import {
   getReleasedUnwatchedTrackedMovies,
   getUpcomingTrackedMoviesOpen,
   getTrackedStatusForIds,
+  getTrackedTitleIds,
+  untrackTitlesBulk,
+  updateTrackedStatusBulk,
+  updateNotificationModeBulk,
   MAX_TRACKED_LOAD,
 } from "./tracked";
+import { getDb, tracked } from "../schema";
+import { eq } from "drizzle-orm";
 import { getWatchedTitleIds } from "./watched-titles";
 import { getRawDb } from "../bun-db";
 
@@ -547,5 +554,140 @@ describe("getTrackedStatusForIds", () => {
 
     const ids = await getTrackedStatusForIds(userId, []);
     expect(ids.size).toBe(0);
+  });
+});
+
+describe("bulk tracked writes", () => {
+  // One past BULK_TRACKED_CHUNK_SIZE (90) so a single-chunk write would drop a row.
+  const CHUNK_PLUS_ONE = 91;
+
+  async function seedTracked(
+    prefix: string,
+    count: number,
+    objectType: "MOVIE" | "SHOW" = "MOVIE",
+  ) {
+    const ids = Array.from({ length: count }, (_, i) => `${prefix}-${i}`);
+    await upsertTitles(
+      ids.map((id) =>
+        makeParsedTitle({ id, objectType, title: id, tmdbId: id }),
+      ),
+    );
+    for (const id of ids) await trackTitle(id, userId);
+    return ids;
+  }
+
+  it("untrackTitlesBulk deletes every id past one chunk and keeps other users", async () => {
+    const ids = await seedTracked("untrack", CHUNK_PLUS_ONE);
+    const otherId = await createUser("untrack-other", "hash");
+    await trackTitle(ids[0], otherId);
+    await trackTitle(ids[90], otherId);
+
+    await untrackTitlesBulk(userId, ids);
+
+    expect((await getTrackedTitleIds(userId)).size).toBe(0);
+    const other = await getTrackedTitleIds(otherId);
+    expect(other.has(ids[0])).toBe(true);
+    expect(other.has(ids[90])).toBe(true);
+  });
+
+  it("updateTrackedStatusBulk sets every row, syncs movies, and skips other users", async () => {
+    const movies = await seedTracked("status-m", CHUNK_PLUS_ONE);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "status-show",
+        objectType: "SHOW",
+        title: "Show",
+        tmdbId: "status-show",
+      }),
+    ]);
+    await trackTitle("status-show", userId);
+    const otherId = await createUser("status-other", "hash");
+    await trackTitle(movies[0], otherId);
+    await updateTrackedStatus(movies[0], otherId, "watching");
+
+    await updateTrackedStatusBulk(
+      userId,
+      [...movies, "status-show"],
+      "completed",
+    );
+
+    const mine = await getDb()
+      .select({ userStatus: tracked.userStatus })
+      .from(tracked)
+      .where(eq(tracked.userId, userId))
+      .all();
+    expect(mine).toHaveLength(CHUNK_PLUS_ONE + 1);
+    expect(mine.every((row) => row.userStatus === "completed")).toBe(true);
+
+    const watched = await getWatchedTitleIds(userId);
+    expect(watched.size).toBe(CHUNK_PLUS_ONE);
+    expect(watched.has("status-show")).toBe(false);
+    expect(watched.has(movies[90])).toBe(true);
+
+    const otherRows = await getDb()
+      .select({ titleId: tracked.titleId, userStatus: tracked.userStatus })
+      .from(tracked)
+      .where(eq(tracked.userId, otherId))
+      .all();
+    expect(otherRows).toHaveLength(1);
+    expect(otherRows[0]?.userStatus).toBe("watching");
+    expect((await getWatchedTitleIds(otherId)).has(movies[0])).toBe(false);
+  });
+
+  it("updateTrackedStatusBulk clears movie watches when status is not completed", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "clear-m", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("clear-m", userId);
+    const otherId = await createUser("clear-other", "hash");
+    await trackTitle("clear-m", otherId);
+    await updateTrackedStatus("clear-m", userId, "completed");
+    await updateTrackedStatus("clear-m", otherId, "completed");
+
+    await updateTrackedStatusBulk(userId, ["clear-m"], null);
+
+    expect((await getWatchedTitleIds(userId)).has("clear-m")).toBe(false);
+    expect((await getWatchedTitleIds(otherId)).has("clear-m")).toBe(true);
+    const row = await getDb()
+      .select({ userId: tracked.userId, userStatus: tracked.userStatus })
+      .from(tracked)
+      .where(eq(tracked.titleId, "clear-m"))
+      .all();
+    expect(row.find((r) => r.userId === userId)?.userStatus).toBeNull();
+    expect(row.find((r) => r.userId === otherId)?.userStatus).toBe("completed");
+  });
+
+  it("updateNotificationModeBulk updates every id past one chunk and keeps other users", async () => {
+    const ids = await seedTracked("mode", CHUNK_PLUS_ONE);
+    const otherId = await createUser("mode-other", "hash");
+    await trackTitle(ids[0], otherId);
+    await trackTitle(ids[90], otherId);
+    await updateNotificationMode(ids[0], otherId, "all");
+    await updateNotificationMode(ids[90], otherId, "premieres_only");
+
+    await updateNotificationModeBulk(userId, ids, "none");
+
+    const mine = await getDb()
+      .select({ notificationMode: tracked.notificationMode })
+      .from(tracked)
+      .where(eq(tracked.userId, userId))
+      .all();
+    expect(mine).toHaveLength(CHUNK_PLUS_ONE);
+    expect(mine.every((row) => row.notificationMode === "none")).toBe(true);
+
+    const other = await getDb()
+      .select({
+        titleId: tracked.titleId,
+        notificationMode: tracked.notificationMode,
+      })
+      .from(tracked)
+      .where(eq(tracked.userId, otherId))
+      .all();
+    expect(other.find((row) => row.titleId === ids[0])?.notificationMode).toBe(
+      "all",
+    );
+    expect(other.find((row) => row.titleId === ids[90])?.notificationMode).toBe(
+      "premieres_only",
+    );
   });
 });

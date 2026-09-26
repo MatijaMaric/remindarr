@@ -10,6 +10,7 @@ import {
   getSessionWithUser,
   setTags,
   getTagsForTitle,
+  getWatchedTitleIds,
 } from "../db/repository";
 import { requireAuth } from "../middleware/auth";
 import { getRawDb } from "../db/bun-db";
@@ -1396,6 +1397,147 @@ describe("POST /track/bulk", () => {
     expect(tags).not.toContain("  Favorite  ");
   });
 
+  async function trackAs(token: string, id: string) {
+    const res = await app.request(`/track/${id}`, {
+      method: "POST",
+      headers: {
+        Cookie: `better-auth.session_token=${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  it("bulk untrack removes every selected title and leaves other users tracked", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+    ]);
+    const otherId = await createUser("bulk-untrack-other", "hash");
+    const otherToken = await createSession(otherId);
+    for (const id of ["movie-1", "movie-2"]) {
+      await trackAs(userToken, id);
+      await trackAs(otherToken, id);
+    }
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleIds: ["movie-1", "movie-2"],
+        action: "untrack",
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).updated).toBe(2);
+
+    const mine = await app.request("/track", { headers: headers() });
+    expect((await mine.json()).titles).toHaveLength(0);
+
+    const theirs = await app.request("/track", {
+      headers: { Cookie: `better-auth.session_token=${otherToken}` },
+    });
+    const theirTitles = (await theirs.json()).titles as { id: string }[];
+    expect(theirTitles.map((t) => t.id).sort()).toEqual(["movie-1", "movie-2"]);
+  });
+
+  it("bulk set_status updates every selected title without touching other users", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "show-1", objectType: "SHOW", title: "Show" }),
+    ]);
+    const otherId = await createUser("bulk-status-other", "hash");
+    const otherToken = await createSession(otherId);
+    const me = (await getSessionWithUser(userToken))!;
+    for (const id of ["movie-1", "show-1"]) {
+      await trackAs(userToken, id);
+      await trackAs(otherToken, id);
+    }
+    const otherStatus = await app.request("/track/movie-1/status", {
+      method: "PATCH",
+      headers: {
+        Cookie: `better-auth.session_token=${otherToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "watching" }),
+    });
+    expect(otherStatus.status).toBe(200);
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleIds: ["movie-1", "show-1"],
+        action: "set_status",
+        payload: { status: "completed" },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).updated).toBe(2);
+
+    const mine = await app.request("/track", { headers: headers() });
+    const myTitles = (await mine.json()).titles as {
+      id: string;
+      user_status: string | null;
+    }[];
+    expect(myTitles.every((t) => t.user_status === "completed")).toBe(true);
+
+    const watched = await getWatchedTitleIds(me.id);
+    expect(watched.has("movie-1")).toBe(true);
+    expect(watched.has("show-1")).toBe(false);
+    const otherWatched = await getWatchedTitleIds(otherId);
+    expect(otherWatched.has("movie-1")).toBe(false);
+
+    const theirs = await app.request("/track", {
+      headers: { Cookie: `better-auth.session_token=${otherToken}` },
+    });
+    const theirTitles = (await theirs.json()).titles as {
+      id: string;
+      user_status: string | null;
+    }[];
+    expect(theirTitles.find((t) => t.id === "movie-1")?.user_status).toBe(
+      "watching",
+    );
+    expect(theirTitles.find((t) => t.id === "show-1")?.user_status).toBeNull();
+  });
+
+  it("bulk set_status other than completed clears that user's movie watch", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", objectType: "MOVIE" }),
+    ]);
+    const otherId = await createUser("bulk-status-clear-other", "hash");
+    const otherToken = await createSession(otherId);
+    const me = (await getSessionWithUser(userToken))!;
+    await trackAs(userToken, "movie-1");
+    await trackAs(otherToken, "movie-1");
+    for (const token of [userToken, otherToken]) {
+      const marked = await app.request("/track/movie-1/status", {
+        method: "PATCH",
+        headers: {
+          Cookie: `better-auth.session_token=${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "completed" }),
+      });
+      expect(marked.status).toBe(200);
+    }
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleIds: ["movie-1"],
+        action: "set_status",
+        payload: { status: "plan_to_watch" },
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    expect((await getWatchedTitleIds(me.id)).has("movie-1")).toBe(false);
+    expect((await getWatchedTitleIds(otherId)).has("movie-1")).toBe(true);
+  });
+
   it("bulk set_notification_mode updates all selected titles", async () => {
     await upsertTitles([
       makeParsedTitle({ id: "movie-1" }),
@@ -1427,6 +1569,55 @@ describe("POST /track/bulk", () => {
     expect(
       listBody.titles.every((t: any) => t.notification_mode === "none"),
     ).toBe(true);
+  });
+
+  it("bulk set_notification_mode leaves another user's mode unchanged", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1" }),
+      makeParsedTitle({ id: "movie-2" }),
+    ]);
+    const otherToken = await createSession(
+      await createUser("bulk-mode-other", "hash"),
+    );
+    for (const id of ["movie-1", "movie-2"]) {
+      await trackAs(userToken, id);
+      await trackAs(otherToken, id);
+      const marked = await app.request(`/track/${id}/notification`, {
+        method: "PATCH",
+        headers: {
+          Cookie: `better-auth.session_token=${otherToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ mode: "all" }),
+      });
+      expect(marked.status).toBe(200);
+    }
+
+    const res = await app.request("/track/bulk", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleIds: ["movie-1", "movie-2"],
+        action: "set_notification_mode",
+        payload: { mode: "none" },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).updated).toBe(2);
+
+    const mine = await app.request("/track", { headers: headers() });
+    const myTitles = (await mine.json()).titles as {
+      notification_mode: string | null;
+    }[];
+    expect(myTitles.every((t) => t.notification_mode === "none")).toBe(true);
+
+    const theirs = await app.request("/track", {
+      headers: { Cookie: `better-auth.session_token=${otherToken}` },
+    });
+    const theirTitles = (await theirs.json()).titles as {
+      notification_mode: string | null;
+    }[];
+    expect(theirTitles.every((t) => t.notification_mode === "all")).toBe(true);
   });
 
   it("returns 401 without auth", async () => {

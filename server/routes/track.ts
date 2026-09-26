@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   trackTitle,
   untrackTitle,
+  untrackTitlesBulk,
   getTrackedTitles,
   upsertTitles,
   getWatchedEpisodesForExport,
@@ -15,7 +16,9 @@ import {
   updateProfilePublic,
   getUserById,
   updateTrackedStatus,
+  updateTrackedStatusBulk,
   updateNotificationMode,
+  updateNotificationModeBulk,
   updateTrackedNotes,
   setTags,
   getTagsForTitle,
@@ -372,10 +375,8 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
   let updated = 0;
 
   if (action === "untrack") {
-    for (const titleId of titleIds) {
-      await untrackTitle(titleId, user.id);
-      updated++;
-    }
+    await untrackTitlesBulk(user.id, titleIds);
+    updated = titleIds.length;
   } else if (action === "set_status") {
     const status = (payload?.status ?? null) as UserStatus | null;
     if (
@@ -392,10 +393,8 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
         400,
       );
     }
-    for (const titleId of titleIds) {
-      await updateTrackedStatus(titleId, user.id, status);
-      updated++;
-    }
+    await updateTrackedStatusBulk(user.id, titleIds, status);
+    updated = titleIds.length;
   } else if (action === "add_tag") {
     const tag = payload?.tag;
     if (!tag || tag.trim().length === 0 || tag.trim().length > 30) {
@@ -436,10 +435,8 @@ app.post("/bulk", zValidator("json", bulkActionSchema), async (c) => {
         400,
       );
     }
-    for (const titleId of titleIds) {
-      await updateNotificationMode(titleId, user.id, mode);
-      updated++;
-    }
+    await updateNotificationModeBulk(user.id, titleIds, mode);
+    updated = titleIds.length;
   }
 
   log.info("Bulk track action applied", {
