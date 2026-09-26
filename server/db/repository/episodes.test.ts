@@ -13,6 +13,7 @@ import {
   getUnwatchedEpisodes,
   getUnwatchedEpisodesWithMeta,
   getNextUnwatchedEpisodesForTitles,
+  MAX_UNWATCHED_PER_TITLE,
 } from "./episodes";
 import { getRawDb } from "../bun-db";
 
@@ -291,6 +292,218 @@ describe("getUnwatchedEpisodesWithMeta", () => {
 
     const { lastWatchedByTitle } = await getUnwatchedEpisodesWithMeta(userId);
     expect(lastWatchedByTitle.size).toBe(0);
+  });
+
+  it("keeps full-show counts when episodes are watched and not yet aired", async () => {
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString()
+      .slice(0, 10);
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    await upsertEpisodes([
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Aired",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Aired too",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 3,
+        name: "Watched",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 4,
+        name: "Future",
+        overview: null,
+        air_date: tomorrow,
+        still_path: null,
+      },
+    ]);
+
+    const before = await getUnwatchedEpisodes(userId);
+    const watched = before.find((e) => e.episode_number === 3)!;
+    await watchEpisode(watched.id, userId);
+
+    const results = await getUnwatchedEpisodes(userId);
+    expect(results.map((e) => e.episode_number)).toEqual([1, 2]);
+    for (const row of results) {
+      expect(row.total_episodes).toBe(3);
+      expect(row.watched_episodes_count).toBe(1);
+      expect("unwatched_count" in row).toBe(false);
+    }
+  });
+
+  it("returns at most MAX_UNWATCHED_PER_TITLE episodes per show, earliest first, with full counts", async () => {
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString()
+      .slice(0, 10);
+    const airedCount = MAX_UNWATCHED_PER_TITLE + 5;
+
+    const db = getRawDb();
+    const insert = db.prepare(
+      `INSERT INTO episodes (title_id, season_number, episode_number, name, air_date)
+       VALUES (?, 1, ?, ?, ?)`,
+    );
+    const insertAll = db.transaction(() => {
+      for (let n = 1; n <= airedCount; n++) {
+        insert.run("show-1", n, `E${n}`, yesterday);
+      }
+    });
+    insertAll();
+
+    const last = db
+      .prepare(
+        `SELECT id FROM episodes WHERE title_id = ? AND episode_number = ?`,
+      )
+      .get("show-1", airedCount) as { id: number };
+    await watchEpisode(last.id, userId);
+
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-aaa",
+        objectType: "SHOW",
+        title: "AAA Show",
+      }),
+    ]);
+    await trackTitle("show-aaa", userId);
+    await upsertEpisodes([
+      {
+        title_id: "show-aaa",
+        season_number: 1,
+        episode_number: 1,
+        name: "A1",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+      {
+        title_id: "show-aaa",
+        season_number: 1,
+        episode_number: 2,
+        name: "A2",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+    ]);
+
+    const { episodes: results } = await getUnwatchedEpisodesWithMeta(userId);
+    const show1 = results.filter((e) => e.title_id === "show-1");
+    const showAaa = results.filter((e) => e.title_id === "show-aaa");
+
+    expect(show1).toHaveLength(MAX_UNWATCHED_PER_TITLE);
+    expect(show1.map((e) => e.episode_number)).toEqual(
+      Array.from({ length: MAX_UNWATCHED_PER_TITLE }, (_, i) => i + 1),
+    );
+    for (const row of show1) {
+      expect(row.total_episodes).toBe(airedCount);
+      expect(row.watched_episodes_count).toBe(1);
+      expect(row.unwatched_count).toBe(airedCount - 1);
+    }
+
+    expect(showAaa.map((e) => e.episode_number)).toEqual([1, 2]);
+
+    const titleOrder: string[] = [];
+    for (const ep of results) {
+      if (titleOrder[titleOrder.length - 1] !== ep.title_id)
+        titleOrder.push(ep.title_id);
+    }
+    // show-1 has a watch, so it sorts ahead of the never-watched show.
+    expect(titleOrder).toEqual(["show-1", "show-aaa"]);
+  });
+
+  it("limits titles to the most recently watched shows", async () => {
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString()
+      .slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-zzz",
+        objectType: "SHOW",
+        title: "ZZZ Show",
+      }),
+    ]);
+    await trackTitle("show-zzz", userId);
+    await upsertEpisodes([
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 1,
+        name: "Unwatched",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+      {
+        title_id: "show-1",
+        season_number: 1,
+        episode_number: 2,
+        name: "Watched",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+      {
+        title_id: "show-zzz",
+        season_number: 1,
+        episode_number: 1,
+        name: "Z1",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+      {
+        title_id: "show-zzz",
+        season_number: 1,
+        episode_number: 2,
+        name: "Z2",
+        overview: null,
+        air_date: yesterday,
+        still_path: null,
+      },
+    ]);
+
+    const db = getRawDb();
+    const watched = db
+      .prepare(
+        `SELECT id FROM episodes WHERE title_id = 'show-zzz' AND episode_number = 2`,
+      )
+      .get() as { id: number };
+    await watchEpisode(watched.id, userId);
+    await db
+      .prepare(
+        `UPDATE watched_episodes SET watched_at = ? WHERE episode_id = ?`,
+      )
+      .run("2024-06-01 12:00:00", watched.id);
+
+    const { episodes: results } = await getUnwatchedEpisodesWithMeta(
+      userId,
+      "UTC",
+      { limit: 1 },
+    );
+    expect(results.map((e) => e.title_id)).toEqual(["show-zzz"]);
+    expect(results.map((e) => e.episode_number)).toEqual([1]);
+    expect(results[0].unwatched_count).toBe(1);
+    expect(results[0].watched_episodes_count).toBe(1);
+    expect(results[0].total_episodes).toBe(2);
   });
 });
 

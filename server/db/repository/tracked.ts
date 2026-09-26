@@ -201,8 +201,12 @@ export async function getTrackedTitles(
   });
 }
 
-export async function getPublicTrackedTitles(userId: string) {
+export async function getPublicTrackedTitles(
+  userId: string,
+  opts: { limit?: number } = {},
+) {
   return traceDbQuery("getPublicTrackedTitles", async () => {
+    const limit = opts.limit ?? MAX_TRACKED_LOAD;
     const db = getDb();
     const rows = await db
       .select({
@@ -244,7 +248,15 @@ export async function getPublicTrackedTitles(userId: string) {
       .leftJoin(scores, eq(scores.titleId, titles.id))
       .where(and(eq(tracked.userId, userId), eq(tracked.public, 1)))
       .orderBy(desc(tracked.trackedAt))
+      .limit(limit)
       .all();
+
+    if (rows.length >= limit) {
+      log.warn("getPublicTrackedTitles hit soft cap; result truncated", {
+        userId,
+        limit,
+      });
+    }
 
     const titleIds = rows.map((r) => r.id);
     const [offersByTitle, genresByTitle] = await Promise.all([
@@ -265,6 +277,21 @@ export async function getPublicTrackedTitles(userId: string) {
         row.total_episodes,
       ),
     }));
+  });
+}
+
+/** Public watchlist ids only. Overlap uses this instead of the full title payload. */
+export async function getPublicTrackedTitleIds(
+  userId: string,
+): Promise<Set<string>> {
+  return traceDbQuery("getPublicTrackedTitleIds", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({ titleId: tracked.titleId })
+      .from(tracked)
+      .where(and(eq(tracked.userId, userId), eq(tracked.public, 1)))
+      .all();
+    return new Set(rows.map((r) => r.titleId));
   });
 }
 

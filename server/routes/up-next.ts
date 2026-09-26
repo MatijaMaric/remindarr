@@ -43,11 +43,15 @@ app.get("/", zValidator("query", querySchema), async (c) => {
 
   log.debug("Building up-next queue", { userId: user.id, limit });
 
-  // 1. Fetch all unwatched aired episodes for the user.
+  // 1. One row per candidate title, capped to this response's limit.
+  //    Counts come from a per-title aggregate, not from the row window.
   //    getUnwatchedEpisodesWithMeta calls getLastWatchedAtPerShow exactly once
   //    and returns the map so we don't repeat that query.
   const { episodes: unwatchedRows, lastWatchedByTitle: lastWatchedMap } =
-    await getUnwatchedEpisodesWithMeta(user.id, timezone);
+    await getUnwatchedEpisodesWithMeta(user.id, timezone, {
+      limit,
+      perTitleLimit: 1,
+    });
 
   // Group by titleId so we can determine in-progress vs newly-aired.
   const byTitle = new Map<
@@ -129,7 +133,7 @@ app.get("/", zValidator("query", querySchema), async (c) => {
       nextEpisodeSeason: nextEp?.season_number,
       nextEpisodeNumber: nextEp?.episode_number,
       nextEpisodeAirDate: nextEp?.air_date ?? undefined,
-      unwatchedCount: entry.rows.length,
+      unwatchedCount: entry.rows[0].unwatched_count,
     });
   }
 
@@ -153,7 +157,7 @@ app.get("/", zValidator("query", querySchema), async (c) => {
       nextEpisodeSeason: nextEp?.season_number,
       nextEpisodeNumber: nextEp?.episode_number,
       nextEpisodeAirDate: nextEp?.air_date ?? undefined,
-      unwatchedCount: entry.rows.length,
+      unwatchedCount: entry.rows[0].unwatched_count,
     });
   }
 
