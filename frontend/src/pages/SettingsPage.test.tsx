@@ -514,3 +514,26 @@ describe("KioskSection", () => {
     getKioskToken.mockImplementation(() => Promise.resolve({ token: null }));
   });
 });
+
+describe("Settings breadcrumb (#1148)", () => {
+  it("renders a nav landmark with aria-current on the active tab", () => {
+    render(<SettingsPage />, { wrapper: Wrapper });
+
+    const nav = screen.getByRole("navigation", { name: /^breadcrumb$/i });
+    const current = within(nav).getByText("Account");
+    expect(current.getAttribute("aria-current")).toBe("location");
+    expect(nav.querySelector("[aria-hidden='true']")?.textContent).toBe("›");
+  });
+
+  it("marks the selected tab as the current breadcrumb location", () => {
+    render(<SettingsPage />, {
+      wrapper: WrapperWithPath("/settings?tab=integrations"),
+    });
+
+    const nav = screen.getByRole("navigation", { name: /^breadcrumb$/i });
+    expect(
+      within(nav).getByText("Integrations").getAttribute("aria-current"),
+    ).toBe("location");
+    expect(within(nav).queryByText("Account")).toBeNull();
+  });
+});

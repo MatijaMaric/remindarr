@@ -81,11 +81,18 @@ export default function SettingsPage() {
       </div>
 
       {/* Breadcrumb */}
-      <div className="pb-4 font-mono text-xs text-zinc-400 tracking-wide">
+      <nav
+        aria-label="Breadcrumb"
+        className="pb-4 font-mono text-xs text-zinc-400 tracking-wide"
+      >
         <span>/settings</span>
-        <span className="mx-2 text-zinc-600">›</span>
-        <span className="text-amber-400">{breadcrumbLabel}</span>
-      </div>
+        <span className="mx-2 text-zinc-600" aria-hidden="true">
+          ›
+        </span>
+        <span className="text-amber-400" aria-current="location">
+          {breadcrumbLabel}
+        </span>
+      </nav>
 
       <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-4 sm:gap-9">
         <SettingsSidebar
