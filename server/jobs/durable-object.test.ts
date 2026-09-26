@@ -319,6 +319,50 @@ describe("JobQueueDO", () => {
     expect(rows[0].completed_at).not.toBeNull();
   });
 
+  it("binds CF env around the handler so enqueueAdhoc can reach JOB_QUEUE_DO (#1112)", async () => {
+    // Regression: runJob used runWithDb/runWithCache but not runWithEnv. ALS
+    // does not cross the DO stub, so every sync-episodes enqueue threw
+    // "JOB_QUEUE_DO binding not available" and the cron failed 3/3.
+    const calls: string[] = [];
+    const ns = {
+      idFromName: (name: string) => ({ toString: () => name }),
+      get: () => ({
+        fetch: async (req: Request) => {
+          calls.push(new URL(req.url).pathname);
+          return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        },
+      }),
+    };
+    const envState = new FakeDurableObjectState("sync-episodes");
+    // Constructor patchConfig() reads JOB_QUEUE_BACKEND from the DO env.
+    const envDo = new JobQueueDO(envState as any, {
+      ...fakeEnv,
+      JOB_QUEUE_BACKEND: "durable-object",
+      JOB_QUEUE_DO: ns,
+    } as any);
+    const { enqueueAdhoc } = await import("./backend");
+    processorModule.handlers["sync-episodes"] = async () => {
+      await enqueueAdhoc(
+        "sync-show-episodes",
+        { titleId: "tv-1", tmdbId: "1", title: "Show" },
+        { detachTick: true },
+      );
+    };
+
+    try {
+      await envDo.enqueue("sync-episodes", null);
+      await envDo.runJob(null);
+      expect(calls).toContain("/enqueue");
+      expect(envDo.getRecentJobs()[0].status).toBe("completed");
+      expect(envDo.getRecentJobs()[0].error).toBeNull();
+    } finally {
+      envState.close();
+    }
+  });
+
   it("runJob does not re-arm the cron itself — re-arm is watchdog-owned (#1058)", async () => {
     // Regression: the post-run self-heal armCron() (added for #795, made
     // best-effort for #1020) was removed entirely in #1058. Cron schedules
