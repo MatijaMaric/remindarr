@@ -58,6 +58,7 @@ export type { NextUnwatchedEpisodeRow } from "./episodes";
 
 export {
   logWatch,
+  logWatchBulk,
   getTitlePlayCount,
   getTitleWatchHistory,
   getWatchHistoryById,

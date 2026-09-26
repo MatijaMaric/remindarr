@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
@@ -9,6 +9,7 @@ import {
   updateWatchHistoryWatchedAt,
   getLatestWatchHistoryFor,
   logWatch,
+  logWatchBulk,
   getTitleWatchHistory,
 } from "./watch-history";
 
@@ -441,5 +442,117 @@ describe("getTitleWatchHistory", () => {
     expect(lastResult!.has_more).toBe(false);
     expect(lastResult!.next_cursor).toBeNull();
     expect(pages).toBeGreaterThan(1);
+  });
+});
+
+function countWatchHistoryInserts(): {
+  count: () => number;
+  restore: () => void;
+} {
+  const db = getRawDb();
+  let inserts = 0;
+  const original = db.prepare.bind(db);
+  const spy = spyOn(db, "prepare").mockImplementation(((sql: string) => {
+    if (/insert into ["`]?watch_history["`]?/i.test(sql)) inserts++;
+    return original(sql);
+  }) as typeof db.prepare);
+  return {
+    count: () => inserts,
+    restore: () => spy.mockRestore(),
+  };
+}
+
+describe("logWatchBulk", () => {
+  it("inserts nothing for an empty batch", async () => {
+    const counter = countWatchHistoryInserts();
+    try {
+      await logWatchBulk([]);
+      expect(counter.count()).toBe(0);
+    } finally {
+      counter.restore();
+    }
+
+    const db = getRawDb();
+    const row = db
+      .prepare("SELECT COUNT(*) as cnt FROM watch_history")
+      .get() as { cnt: number };
+    expect(row.cnt).toBe(0);
+  });
+
+  it("writes N rows in one INSERT when the batch fits in one chunk", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-lwb-1", objectType: "SHOW" }),
+    ]);
+    await upsertEpisodes([
+      makeEpisode("show-lwb-1", 1),
+      makeEpisode("show-lwb-1", 2),
+    ]);
+    const ep1 = getEpisodeId("show-lwb-1", 1);
+    const ep2 = getEpisodeId("show-lwb-1", 2);
+
+    const counter = countWatchHistoryInserts();
+    try {
+      await logWatchBulk([
+        {
+          userId,
+          titleId: "show-lwb-1",
+          episodeId: ep1,
+          watchedAt: "2024-02-01 00:00:00",
+        },
+        {
+          userId,
+          titleId: "show-lwb-1",
+          episodeId: ep2,
+          watchedAt: "2024-02-02 00:00:00",
+        },
+      ]);
+      expect(counter.count()).toBe(1);
+    } finally {
+      counter.restore();
+    }
+
+    const db = getRawDb();
+    const rows = db
+      .prepare(
+        "SELECT episode_id, watched_at FROM watch_history WHERE user_id = ? ORDER BY episode_id",
+      )
+      .all(userId) as { episode_id: number; watched_at: string }[];
+    expect(rows).toEqual([
+      { episode_id: ep1, watched_at: "2024-02-01 00:00:00" },
+      { episode_id: ep2, watched_at: "2024-02-02 00:00:00" },
+    ]);
+  });
+
+  it("chunks past D1's 100-parameter limit and still writes every row", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "show-lwb-chunk", objectType: "SHOW" }),
+    ]);
+    // 19 rows × 5 binds = 95, over the 18-row chunk (90 binds).
+    const n = 19;
+    await upsertEpisodes(
+      Array.from({ length: n }, (_, i) => makeEpisode("show-lwb-chunk", i + 1)),
+    );
+    const rows = Array.from({ length: n }, (_, i) => ({
+      userId,
+      titleId: "show-lwb-chunk",
+      episodeId: getEpisodeId("show-lwb-chunk", i + 1),
+      watchedAt: "2024-03-01 00:00:00",
+    }));
+
+    const counter = countWatchHistoryInserts();
+    try {
+      await logWatchBulk(rows);
+      expect(counter.count()).toBe(2);
+    } finally {
+      counter.restore();
+    }
+
+    const db = getRawDb();
+    const count = db
+      .prepare(
+        "SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?",
+      )
+      .get(userId, "show-lwb-chunk") as { cnt: number };
+    expect(count.cnt).toBe(n);
   });
 });
