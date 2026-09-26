@@ -167,12 +167,18 @@ export default function EpisodeDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400 select-text">Episode not found</div>
+        <div className="text-red-400 select-text">
+          {t("episodes.notFound", "Episode not found")}
+        </div>
       </div>
     );
   }
 
   const { title, tmdb, seasonNumber, episodeNumber } = data;
+  const episodeFallback = t("episodes.episode", "Episode {{number}}", {
+    number: episodeNumber,
+  });
+  const episodeLabel = tmdb?.name || episodeFallback;
   const stillUrl = mkStillUrl(tmdb?.still_path, "w780");
   const released = isReleased(tmdb?.air_date);
 
@@ -213,11 +219,11 @@ export default function EpisodeDetailPage() {
           to={`/title/${title.id}/season/${seasonNumber}`}
           className="hover:text-white transition-colors"
         >
-          Season {seasonNumber}
+          {t("home.season", { number: seasonNumber })}
         </Link>
         <span className="text-zinc-600">/</span>
         <span className="text-white" aria-current="page">
-          Episode {episodeNumber}
+          {episodeFallback}
         </span>
       </nav>
 
@@ -226,7 +232,7 @@ export default function EpisodeDetailPage() {
         {stillUrl ? (
           <img
             src={stillUrl}
-            alt={tmdb?.name || `Episode ${episodeNumber}`}
+            alt={episodeLabel}
             className="w-full"
             width={780}
             height={439}
@@ -234,7 +240,9 @@ export default function EpisodeDetailPage() {
           />
         ) : (
           <div className="w-full aspect-video bg-zinc-800 flex items-center justify-center">
-            <span className="text-zinc-400 text-sm">No preview available</span>
+            <span className="text-zinc-400 text-sm">
+              {t("episodes.noPreview", "No preview available")}
+            </span>
           </div>
         )}
       </div>
@@ -299,7 +307,7 @@ export default function EpisodeDetailPage() {
               S{String(seasonNumber).padStart(2, "0")}E
               {String(episodeNumber).padStart(2, "0")}
             </span>{" "}
-            {tmdb?.name || `Episode ${episodeNumber}`}
+            {episodeLabel}
           </h1>
           {episodeStatus && (
             <WatchedIcon
@@ -309,9 +317,7 @@ export default function EpisodeDetailPage() {
               size="md"
             />
           )}
-          <ShareButton
-            title={`${title.title} — ${tmdb?.name || `Episode ${episodeNumber}`}`}
-          />
+          <ShareButton title={`${title.title} — ${episodeLabel}`} />
         </div>
 
         <div className="flex items-center gap-3 text-sm text-zinc-400">
@@ -330,7 +336,7 @@ export default function EpisodeDetailPage() {
               </span>
               {tmdb.vote_count > 0 && (
                 <span className="text-zinc-600 text-xs">
-                  ({tmdb.vote_count} votes)
+                  ({t("episodes.votes", { count: tmdb.vote_count })})
                 </span>
               )}
             </>
@@ -342,9 +348,11 @@ export default function EpisodeDetailPage() {
             onClick={() => setEditHistoryEntry(watchHistoryEntries[0].id)}
             className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors underline-offset-2 hover:underline cursor-pointer"
           >
-            Watched{" "}
-            {formatDate(watchHistoryEntries[0].watchedAt.replace(" ", "T"), {
-              utcAssumed: true,
+            {t("episodes.watchedOn", "Watched {{date}}", {
+              date: formatDate(
+                watchHistoryEntries[0].watchedAt.replace(" ", "T"),
+                { utcAssumed: true },
+              ),
             })}
           </button>
         )}
@@ -355,7 +363,7 @@ export default function EpisodeDetailPage() {
         <SectionErrorBoundary label="ratings">
           <section className="space-y-2">
             <h2 className="text-lg font-semibold text-white">
-              Rate this episode
+              {t("episodes.rateThis", "Rate this episode")}
             </h2>
             <EpisodeRatingButtons episodeId={episodeStatus.id} />
           </section>
@@ -365,7 +373,9 @@ export default function EpisodeDetailPage() {
       {/* Overview */}
       {tmdb?.overview && (
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-white">Overview</h2>
+          <h2 className="text-lg font-semibold text-white">
+            {t("episodes.overview", "Overview")}
+          </h2>
           <p className="text-zinc-300 leading-relaxed select-text">
             {tmdb.overview}
           </p>
@@ -376,11 +386,15 @@ export default function EpisodeDetailPage() {
       {(directors.length > 0 || writers.length > 0) && (
         <SectionErrorBoundary label="crew">
           <section className="space-y-2">
-            <h2 className="text-lg font-semibold text-white">Crew</h2>
+            <h2 className="text-lg font-semibold text-white">
+              {t("episodes.crew", "Crew")}
+            </h2>
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               {directors.length > 0 && (
                 <div>
-                  <span className="text-zinc-400">Directed by: </span>
+                  <span className="text-zinc-400">
+                    {t("episodes.directedBy", "Directed by:")}{" "}
+                  </span>
                   <span className="text-white">
                     {directors.map((d) => d.name).join(", ")}
                   </span>
@@ -388,7 +402,9 @@ export default function EpisodeDetailPage() {
               )}
               {writers.length > 0 && (
                 <div>
-                  <span className="text-zinc-400">Written by: </span>
+                  <span className="text-zinc-400">
+                    {t("episodes.writtenBy", "Written by:")}{" "}
+                  </span>
                   <span className="text-white">
                     {writers.map((w) => w.name).join(", ")}
                   </span>
@@ -403,7 +419,9 @@ export default function EpisodeDetailPage() {
       {allCast.length > 0 && (
         <SectionErrorBoundary label="cast">
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-white">Cast</h2>
+            <h2 className="text-lg font-semibold text-white">
+              {t("episodes.cast", "Cast")}
+            </h2>
             <ScrollableRow className="gap-4 pb-2">
               {allCast.slice(0, 20).map((c) => (
                 <PersonCard

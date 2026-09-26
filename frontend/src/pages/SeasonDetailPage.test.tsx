@@ -19,7 +19,7 @@ function newTestClient() {
 }
 import * as sonner from "sonner";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
-import "../i18n";
+import i18n from "../i18n";
 
 let mockUser: any = {
   id: "user1",
@@ -146,7 +146,7 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   resetApiMock();
   mockUser = {
@@ -160,6 +160,7 @@ afterEach(() => {
   // Re-set default implementations that differ from the shared empty defaults
   apiMock.getSeasonDetails.mockImplementation(defaultSeasonDetails);
   apiMock.getSeasonEpisodeStatus.mockImplementation(defaultSeasonEpisodeStatus);
+  await i18n.changeLanguage("en");
 });
 
 describe("SeasonDetailPage", () => {
@@ -532,5 +533,80 @@ describe("SeasonDetailPage", () => {
 
     await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
     expect(screen.queryByTestId("rating-sparkline")).toBeNull();
+  });
+
+  it("translates season detail chrome (#1144)", async () => {
+    i18n.addResourceBundle(
+      "zz",
+      "translation",
+      {
+        home: { season: "SZN {{number}}" },
+        season: {
+          notFound: "SZN_MISSING",
+          episodeCount_one: "{{count}} EPISODE",
+          episodeCount_other: "{{count}} EPISODES",
+          watchProgress: "PROG {{watched}} {{total}} {{remaining}}",
+          cast: "SZN_CAST",
+          ratings_one: "{{count}} RATE",
+          ratings_other: "{{count}} RATES",
+        },
+      },
+      true,
+      true,
+    );
+    await i18n.changeLanguage("zz");
+    try {
+      expect(i18n.t("season.episodeCount", { count: 1 })).toBe("1 EPISODE");
+
+      apiMock.getSeasonDetails.mockImplementation(() =>
+        Promise.reject(new Error("missing")),
+      );
+      render(<SeasonDetailPage />, { wrapper: Wrapper });
+      await waitFor(() => {
+        expect(screen.getByText("SZN_MISSING")).toBeDefined();
+      });
+      cleanup();
+
+      apiMock.getSeasonDetails.mockImplementation(async () => {
+        const data = await defaultSeasonDetails();
+        return {
+          ...data,
+          tmdb: {
+            ...data.tmdb,
+            name: "",
+            credits: {
+              cast: [
+                {
+                  id: 9,
+                  name: "Actor One",
+                  character: "Hero",
+                  profile_path: null,
+                  order: 0,
+                },
+              ],
+              crew: [],
+            },
+          },
+        };
+      });
+      apiMock.getSeasonEpisodeRatings.mockResolvedValue({
+        ratings: {
+          1: { HATE: 0, DISLIKE: 0, LIKE: 2, LOVE: 0 },
+        },
+        user_ratings: [],
+      });
+
+      render(<SeasonDetailPage />, { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText("3 EPISODES")).toBeDefined();
+      });
+      expect(screen.getAllByText("SZN 1").length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText("PROG 1 3 2")).toBeDefined();
+      expect(screen.getByText("SZN_CAST")).toBeDefined();
+      expect(screen.getByText("2 RATES")).toBeDefined();
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 });
