@@ -76,6 +76,7 @@ export {
   getTrackedTitleIds,
   getTrackedStatusForIds,
   getTrackedTitles,
+  getSmartShelves,
   getPublicTrackedTitles,
   getPublicTrackedTitleIds,
   getPublicTrackedCount,

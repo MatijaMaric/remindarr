@@ -17,6 +17,8 @@ import type {
 import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import StreakCounter from "../components/profile/StreakCounter";
 import TitleList from "../components/TitleList";
+import TitleCard from "../components/TitleCard";
+import ScrollableRow from "../components/ScrollableRow";
 import { HomeAuthSkeleton } from "../components/SkeletonComponents";
 import {
   groupByShow,
@@ -44,6 +46,14 @@ const EMPTY_EPISODES: Episode[] = [];
 const EMPTY_RECOMMENDATIONS: Recommendation[] = [];
 const EMPTY_UP_NEXT_ITEMS: UpNextItem[] = [];
 const EMPTY_FRIENDS_LOVED_ITEMS: FriendsLovedItem[] = [];
+const EMPTY_TITLES: Title[] = [];
+const EMPTY_SHELVES: {
+  continue_watching: Title[];
+  start_watching: Title[];
+} = {
+  continue_watching: EMPTY_TITLES,
+  start_watching: EMPTY_TITLES,
+};
 
 export interface UnwatchedCardEntry {
   episode: Episode;
@@ -92,6 +102,10 @@ type AuthHomeData = {
   friendsLovedItems: FriendsLovedItem[];
   streakData: StreakData | null;
   movieData: MovieTrackResponse;
+  shelves: {
+    continue_watching: Title[];
+    start_watching: Title[];
+  };
 };
 
 export default function HomePage() {
@@ -144,6 +158,7 @@ export default function HomePage() {
         friendsLovedData,
         streakResult,
         moviesResult,
+        shelvesResult,
       ] = await Promise.all([
         api.getUpcomingEpisodes(signal),
         api
@@ -161,6 +176,7 @@ export default function HomePage() {
         api
           .getMovieTracking(signal)
           .catch(() => ({ to_watch: [], upcoming: [] }) as MovieTrackResponse),
+        api.getShelves(signal).catch(() => EMPTY_SHELVES),
       ]);
       return {
         today: episodeData.today,
@@ -172,6 +188,7 @@ export default function HomePage() {
         friendsLovedItems: friendsLovedData.items,
         streakData: streakResult,
         movieData: moviesResult,
+        shelves: shelvesResult,
       };
     },
   });
@@ -301,6 +318,9 @@ export default function HomePage() {
 
   const streakData = authData?.streakData ?? null;
   const movieData = authData?.movieData ?? { to_watch: [], upcoming: [] };
+  const shelves = authData?.shelves ?? EMPTY_SHELVES;
+  const continueWatching = shelves.continue_watching;
+  const startWatching = shelves.start_watching;
 
   const popularTitlesPreview = useMemo(
     () => (anonData ?? []).slice(0, 12),
@@ -778,6 +798,52 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       {layout.filter((s) => s.enabled).map((s) => renderSection(s.id))}
+      {continueWatching.length > 0 && (
+        <section>
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <Kicker>{t("home.shelves.kicker")}</Kicker>
+              <h2 className="text-xl font-bold tracking-[-0.01em]">
+                {t("home.shelves.continueWatching")}
+              </h2>
+            </div>
+          </div>
+          <ScrollableRow
+            className="gap-4 pb-2"
+            focusable
+            ariaLabel={t("home.shelves.continueWatching")}
+          >
+            {continueWatching.map((title) => (
+              <div key={title.id} className="w-48 flex-shrink-0">
+                <TitleCard title={title} />
+              </div>
+            ))}
+          </ScrollableRow>
+        </section>
+      )}
+      {startWatching.length > 0 && (
+        <section>
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <Kicker>{t("home.shelves.kicker")}</Kicker>
+              <h2 className="text-xl font-bold tracking-[-0.01em]">
+                {t("home.shelves.startWatching")}
+              </h2>
+            </div>
+          </div>
+          <ScrollableRow
+            className="gap-4 pb-2"
+            focusable
+            ariaLabel={t("home.shelves.startWatching")}
+          >
+            {startWatching.map((title) => (
+              <div key={title.id} className="w-48 flex-shrink-0">
+                <TitleCard title={title} />
+              </div>
+            ))}
+          </ScrollableRow>
+        </section>
+      )}
       <SuggestedForYouRow />
     </div>
   );

@@ -8,12 +8,14 @@ import {
   upsertEpisodes,
   watchEpisode,
   watchEpisodesBulk,
+  setWatchedEpisodeWatchedAt,
   updateTrackedStatus,
   updateNotificationMode,
   watchTitle,
 } from "../repository";
 import {
   getTrackedTitles,
+  getSmartShelves,
   getPublicTrackedTitles,
   getPublicTrackedTitleIds,
   updateTrackedVisibility,
@@ -73,6 +75,14 @@ async function insertEpisodes(
     episode_number: number;
   }[];
   return rows.map((r) => r.id);
+}
+
+async function setTrackedAt(titleId: string, at: string) {
+  await getDb()
+    .update(tracked)
+    .set({ trackedAt: at })
+    .where(and(eq(tracked.titleId, titleId), eq(tracked.userId, userId)))
+    .run();
 }
 
 describe("getTrackedTitles show_status", () => {
@@ -822,5 +832,242 @@ describe("getUsersTrackingTitles", () => {
     const map = await getUsersTrackingTitles(ids);
     expect(map.size).toBe(ids.length);
     for (const id of ids) expect(map.get(id)).toEqual([userId]);
+  });
+});
+
+describe("getSmartShelves", () => {
+  it("lists in-progress shows by most recent episode watch", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-recent",
+        objectType: "SHOW",
+        tmdbId: "901",
+        title: "Recent Show",
+      }),
+      makeParsedTitle({
+        id: "show-older",
+        objectType: "SHOW",
+        tmdbId: "902",
+        title: "Older Show",
+      }),
+      makeParsedTitle({
+        id: "show-caught-up",
+        objectType: "SHOW",
+        tmdbId: "903",
+        title: "Caught Up",
+      }),
+    ]);
+    for (const id of ["show-recent", "show-older", "show-caught-up"]) {
+      await trackTitle(id, userId);
+    }
+    // Tracked later, but watched earlier — sort is by watch time.
+    await setTrackedAt("show-older", "2026-09-01T00:00:00");
+    await setTrackedAt("show-recent", "2020-01-01T00:00:00");
+
+    const [recentWatched] = await insertEpisodes("show-recent", [
+      { season: 1, episode: 1, airDate: "2024-01-01" },
+      { season: 1, episode: 2, airDate: "2024-01-08" },
+    ]);
+    const [olderWatched] = await insertEpisodes("show-older", [
+      { season: 1, episode: 1, airDate: "2024-02-01" },
+      { season: 1, episode: 2, airDate: "2024-02-08" },
+    ]);
+    const caughtUpIds = await insertEpisodes("show-caught-up", [
+      { season: 1, episode: 1, airDate: "2024-03-01" },
+      { season: 1, episode: 2, airDate: "2024-03-08" },
+    ]);
+
+    await watchEpisode(recentWatched, userId);
+    await setWatchedEpisodeWatchedAt(
+      recentWatched,
+      userId,
+      "2026-08-02T00:00:00",
+    );
+    await watchEpisode(olderWatched, userId);
+    await setWatchedEpisodeWatchedAt(
+      olderWatched,
+      userId,
+      "2026-01-01T00:00:00",
+    );
+    for (const id of caughtUpIds) await watchEpisode(id, userId);
+
+    const shelves = await getSmartShelves(userId);
+    expect(shelves.continue_watching.map((t) => t.id)).toEqual([
+      "show-recent",
+      "show-older",
+    ]);
+    expect(shelves.continue_watching[0]).toMatchObject({
+      title: "Recent Show",
+      object_type: "SHOW",
+      is_tracked: true,
+      is_watched: false,
+      show_status: "watching",
+      watched_episodes_count: 1,
+      released_episodes_count: 2,
+    });
+    expect(shelves.continue_watching[0].genres).toContain("Action");
+    expect(shelves.continue_watching[0].offers).toEqual([]);
+    expect(shelves.start_watching.map((t) => t.id)).not.toContain(
+      "show-recent",
+    );
+    expect(shelves.start_watching.map((t) => t.id)).not.toContain(
+      "show-caught-up",
+    );
+  });
+
+  it("lists unstarted released titles by tracking date", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-new",
+        tmdbId: "911",
+        title: "New Movie",
+        releaseDate: "2024-01-01",
+      }),
+      makeParsedTitle({
+        id: "show-old",
+        objectType: "SHOW",
+        tmdbId: "912",
+        title: "Old Show",
+      }),
+      makeParsedTitle({
+        id: "movie-future",
+        tmdbId: "913",
+        title: "Future Movie",
+        releaseDate: "2099-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-seen",
+        tmdbId: "914",
+        title: "Seen Movie",
+        releaseDate: "2023-01-01",
+      }),
+      makeParsedTitle({
+        id: "movie-blank",
+        tmdbId: "915",
+        title: "Undated Movie",
+        releaseDate: "",
+      }),
+      makeParsedTitle({
+        id: "show-future",
+        objectType: "SHOW",
+        tmdbId: "916",
+        title: "Future Show",
+      }),
+      makeParsedTitle({
+        id: "show-undated",
+        objectType: "SHOW",
+        tmdbId: "917",
+        title: "Undated Show",
+      }),
+      makeParsedTitle({
+        id: "show-marked",
+        objectType: "SHOW",
+        tmdbId: "918",
+        title: "Marked Show",
+      }),
+      makeParsedTitle({
+        id: "show-progress",
+        objectType: "SHOW",
+        tmdbId: "919",
+        title: "Progress Show",
+      }),
+    ]);
+
+    for (const id of [
+      "movie-new",
+      "show-old",
+      "movie-future",
+      "movie-seen",
+      "movie-blank",
+      "show-future",
+      "show-undated",
+      "show-marked",
+      "show-progress",
+    ]) {
+      await trackTitle(id, userId);
+    }
+    await setTrackedAt("movie-new", "2026-09-01T00:00:00");
+    await setTrackedAt("show-old", "2024-01-01T00:00:00");
+    await setTrackedAt("movie-seen", "2026-09-03T00:00:00");
+
+    await insertEpisodes("show-old", [
+      { season: 1, episode: 1, airDate: "2024-01-01" },
+    ]);
+    await insertEpisodes("show-future", [
+      { season: 1, episode: 1, airDate: "2099-01-01" },
+    ]);
+    await insertEpisodes("show-undated", [
+      { season: 1, episode: 1, airDate: null },
+    ]);
+    await insertEpisodes("show-marked", [
+      { season: 1, episode: 1, airDate: "2024-01-01" },
+    ]);
+    const [progressId] = await insertEpisodes("show-progress", [
+      { season: 1, episode: 1, airDate: "2024-01-01" },
+      { season: 1, episode: 2, airDate: "2024-01-08" },
+    ]);
+    await watchEpisode(progressId, userId);
+    await watchTitle("movie-seen", userId);
+    await watchTitle("show-marked", userId);
+
+    const shelves = await getSmartShelves(userId);
+    expect(shelves.start_watching.map((t) => t.id)).toEqual([
+      "movie-new",
+      "show-old",
+    ]);
+    expect(shelves.start_watching[0]).toMatchObject({
+      object_type: "MOVIE",
+      is_watched: false,
+      is_tracked: true,
+    });
+    expect(shelves.continue_watching.map((t) => t.id)).toEqual([
+      "show-progress",
+    ]);
+  });
+
+  it("ignores other users and untracked titles", async () => {
+    const otherId = await createUser("shelf-other", "hash");
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-shared",
+        objectType: "SHOW",
+        tmdbId: "921",
+        title: "Shared",
+      }),
+      makeParsedTitle({
+        id: "show-loose",
+        objectType: "SHOW",
+        tmdbId: "922",
+        title: "Loose",
+      }),
+    ]);
+    await trackTitle("show-shared", userId);
+    await trackTitle("show-shared", otherId);
+    const [sharedEp] = await insertEpisodes("show-shared", [
+      { season: 1, episode: 1, airDate: "2024-01-01" },
+      { season: 1, episode: 2, airDate: "2024-01-08" },
+    ]);
+    await watchEpisode(sharedEp, otherId);
+
+    const [looseEp] = await insertEpisodes("show-loose", [
+      { season: 1, episode: 1, airDate: "2024-01-01" },
+      { season: 1, episode: 2, airDate: "2024-01-08" },
+    ]);
+    await watchEpisode(looseEp, userId);
+
+    const shelves = await getSmartShelves(userId);
+    expect(shelves.continue_watching.map((t) => t.id)).not.toContain(
+      "show-shared",
+    );
+    expect(shelves.continue_watching.map((t) => t.id)).not.toContain(
+      "show-loose",
+    );
+    expect(shelves.start_watching.map((t) => t.id)).toEqual(["show-shared"]);
+
+    const otherShelves = await getSmartShelves(otherId);
+    expect(otherShelves.continue_watching.map((t) => t.id)).toEqual([
+      "show-shared",
+    ]);
+    expect(otherShelves.start_watching.map((t) => t.id)).toEqual([]);
   });
 });

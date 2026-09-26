@@ -1,7 +1,26 @@
 import { episodeRuntime } from "./episode-runtime";
-import { eq, and, sql, desc, gte, lt, lte, asc, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  sql,
+  desc,
+  gte,
+  lt,
+  lte,
+  asc,
+  inArray,
+} from "drizzle-orm";
 import { getDb } from "../schema";
-import { titles, scores, tracked, watchedTitles, ratings } from "../schema";
+import {
+  titles,
+  scores,
+  tracked,
+  watchedTitles,
+  ratings,
+  episodes,
+  watchedEpisodes,
+} from "../schema";
 import { traceDbQuery } from "../../tracing";
 import { logger } from "../../logger";
 import { getOffersWithPlex } from "./offers";
@@ -198,6 +217,227 @@ export async function getTrackedTitles(
         row.total_episodes,
       ),
     }));
+  });
+}
+
+// D1 allows 100 bound parameters. This statement also binds userId.
+const SHELF_ID_CHUNK = 90;
+
+type ShelfTitleRow = {
+  id: string;
+  object_type: string;
+  title: string;
+  original_title: string | null;
+  release_year: number | null;
+  release_date: string | null;
+  runtime_minutes: number | null;
+  short_description: string | null;
+  imdb_id: string | null;
+  tmdb_id: string | null;
+  poster_url: string | null;
+  age_certification: string | null;
+  original_language: string | null;
+  tmdb_url: string | null;
+  imdb_score: number | null;
+  imdb_votes: number | null;
+  tmdb_score: number | null;
+  tracked_at: string | null;
+  public: number | boolean;
+  user_status: string | null;
+  is_watched: number | boolean;
+  total_episodes: number;
+  watched_episodes_count: number;
+  released_episodes_count: number;
+};
+
+async function loadShelfTitles(userId: string, orderedIds: string[]) {
+  if (orderedIds.length === 0) return [];
+  const db = getDb();
+  const byId = new Map<string, ShelfTitleRow>();
+  for (let i = 0; i < orderedIds.length; i += SHELF_ID_CHUNK) {
+    const chunk = orderedIds.slice(i, i + SHELF_ID_CHUNK);
+    const rows = await db
+      .select({
+        id: titles.id,
+        object_type: titles.objectType,
+        title: titles.title,
+        original_title: titles.originalTitle,
+        release_year: titles.releaseYear,
+        release_date: titles.releaseDate,
+        runtime_minutes: titles.runtimeMinutes,
+        short_description: titles.shortDescription,
+        imdb_id: titles.imdbId,
+        tmdb_id: titles.tmdbId,
+        poster_url: titles.posterUrl,
+        age_certification: titles.ageCertification,
+        original_language: titles.originalLanguage,
+        tmdb_url: titles.tmdbUrl,
+        imdb_score: scores.imdbScore,
+        imdb_votes: scores.imdbVotes,
+        tmdb_score: scores.tmdbScore,
+        tracked_at: tracked.trackedAt,
+        public: tracked.public,
+        user_status: tracked.userStatus,
+        is_watched: sql<number>`EXISTS(SELECT 1 FROM watched_titles wt WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId})`,
+        total_episodes: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id})`,
+        watched_episodes_count: sql<number>`(SELECT COUNT(*) FROM watched_episodes we INNER JOIN episodes e ON e.id = we.episode_id WHERE e.title_id = ${titles.id} AND we.user_id = ${userId})`,
+        released_episodes_count: sql<number>`(SELECT COUNT(*) FROM episodes e WHERE e.title_id = ${titles.id} AND e.air_date <= date('now'))`,
+      })
+      .from(titles)
+      .innerJoin(
+        tracked,
+        and(eq(tracked.titleId, titles.id), eq(tracked.userId, userId)),
+      )
+      .leftJoin(scores, eq(scores.titleId, titles.id))
+      .where(inArray(titles.id, chunk))
+      .all();
+    for (const row of rows) byId.set(row.id, row);
+  }
+
+  const uniqueIds = [...new Set(orderedIds)];
+  const [offersByTitle, genresByTitle] = await Promise.all([
+    getOffersWithPlex(uniqueIds, userId),
+    getGenresForTitles(uniqueIds),
+  ]);
+
+  return orderedIds.flatMap((id) => {
+    const row = byId.get(id);
+    if (!row) return [];
+    return [
+      {
+        ...row,
+        genres: genresByTitle.get(row.id) ?? [],
+        is_tracked: true,
+        is_watched: Boolean(row.is_watched),
+        public: Boolean(row.public),
+        offers: offersByTitle.get(row.id) ?? [],
+        show_status: computeShowStatus(
+          row.object_type,
+          row.released_episodes_count,
+          row.watched_episodes_count,
+          row.total_episodes,
+        ),
+      },
+    ];
+  });
+}
+
+/**
+ * Read-only smart shelves derived from tracked titles and watch rows.
+ * Continue Watching: shows with at least one watched episode and at least one
+ * already-aired episode still unwatched, newest watch first.
+ * Start Watching: tracked movies and shows the user has not started that
+ * already have a release or an aired episode, newest tracked first.
+ */
+export async function getSmartShelves(userId: string) {
+  return traceDbQuery("getSmartShelves", async () => {
+    const db = getDb();
+    const [continueRows, startRows] = await Promise.all([
+      db
+        .select({
+          id: titles.id,
+        })
+        .from(tracked)
+        .innerJoin(titles, eq(titles.id, tracked.titleId))
+        .innerJoin(episodes, eq(episodes.titleId, titles.id))
+        .innerJoin(
+          watchedEpisodes,
+          and(
+            eq(watchedEpisodes.episodeId, episodes.id),
+            eq(watchedEpisodes.userId, userId),
+          ),
+        )
+        .where(
+          and(
+            eq(tracked.userId, userId),
+            eq(titles.objectType, "SHOW"),
+            sql`EXISTS (
+              SELECT 1 FROM episodes eu
+              WHERE eu.title_id = ${titles.id}
+                AND eu.air_date IS NOT NULL
+                AND eu.air_date != ''
+                AND eu.air_date <= date('now')
+                AND NOT EXISTS (
+                  SELECT 1 FROM watched_episodes weu
+                  WHERE weu.episode_id = eu.id AND weu.user_id = ${userId}
+                )
+            )`,
+          ),
+        )
+        .groupBy(titles.id)
+        .orderBy(desc(sql`MAX(${watchedEpisodes.watchedAt})`), asc(titles.id))
+        .limit(MAX_TRACKED_LOAD)
+        .all(),
+      db
+        .select({ id: titles.id })
+        .from(tracked)
+        .innerJoin(titles, eq(titles.id, tracked.titleId))
+        .where(
+          and(
+            eq(tracked.userId, userId),
+            sql`NOT EXISTS (
+              SELECT 1 FROM watched_titles wt
+              WHERE wt.title_id = ${titles.id} AND wt.user_id = ${userId}
+            )`,
+            sql`NOT EXISTS (
+              SELECT 1 FROM watched_episodes we
+              INNER JOIN episodes e ON e.id = we.episode_id
+              WHERE e.title_id = ${titles.id} AND we.user_id = ${userId}
+            )`,
+            or(
+              and(
+                eq(titles.objectType, "MOVIE"),
+                sql`${titles.releaseDate} IS NOT NULL AND ${titles.releaseDate} != ''`,
+                lte(titles.releaseDate, sql`date('now')`),
+              ),
+              and(
+                eq(titles.objectType, "SHOW"),
+                sql`EXISTS (
+                  SELECT 1 FROM episodes e
+                  WHERE e.title_id = ${titles.id}
+                    AND e.air_date IS NOT NULL
+                    AND e.air_date != ''
+                    AND e.air_date <= date('now')
+                )`,
+              ),
+            ),
+          ),
+        )
+        .orderBy(desc(tracked.trackedAt), asc(titles.id))
+        .limit(MAX_TRACKED_LOAD)
+        .all(),
+    ]);
+
+    if (continueRows.length >= MAX_TRACKED_LOAD) {
+      log.warn("getSmartShelves continue_watching hit soft cap", {
+        userId,
+        limit: MAX_TRACKED_LOAD,
+      });
+    }
+    if (startRows.length >= MAX_TRACKED_LOAD) {
+      log.warn("getSmartShelves start_watching hit soft cap", {
+        userId,
+        limit: MAX_TRACKED_LOAD,
+      });
+    }
+
+    const continueIds = continueRows.map((row) => row.id);
+    const startIds = startRows.map((row) => row.id);
+    const titlesById = new Map(
+      (await loadShelfTitles(userId, [...continueIds, ...startIds])).map(
+        (title) => [title.id, title],
+      ),
+    );
+    const pick = (ids: string[]) =>
+      ids.flatMap((id) => {
+        const title = titlesById.get(id);
+        return title ? [title] : [];
+      });
+
+    return {
+      continue_watching: pick(continueIds),
+      start_watching: pick(startIds),
+    };
   });
 }
 

@@ -12,8 +12,8 @@ import { BasePage } from "./base-page";
  *   different `MobileFeedHome` component is shown and may redirect to `/reels`.
  *   Tests that use this POM should set viewport to 1280x720.
  * - The authenticated home fetches several endpoints in parallel (episodes,
- *   recommendations, homepage-layout, up-next, friends-loved, streak, movies).
- *   All must be mocked to avoid network calls.
+ *   recommendations, homepage-layout, up-next, friends-loved, streak, movies,
+ *   shelves). All must be mocked to avoid network calls.
  */
 export class HomePage extends BasePage {
   async gotoHome(): Promise<void> {
@@ -66,6 +66,12 @@ export class HomePage extends BasePage {
     // Real URL: /api/movies/tracking
     await this.page.route("**/api/movies/tracking**", (route) =>
       route.fulfill({ json: { to_watch: [], upcoming: [] } }),
+    );
+    // Real URL: /api/track/shelves
+    await this.page.route("**/api/track/shelves**", (route) =>
+      route.fulfill({
+        json: { continue_watching: [], start_watching: [] },
+      }),
     );
     // AuthContext calls getSubscriptions() after auth succeeds.
     // If unmocked it hits the real server with a fake userId and gets 401,
