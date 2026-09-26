@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  spyOn,
+  beforeEach,
+  afterEach,
+} from "bun:test";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 
@@ -102,21 +110,24 @@ function Wrapper({
   );
 }
 
+let fetchSpy: ReturnType<typeof spyOn>;
+
 beforeEach(() => {
-  globalThis.fetch = mockFetch as any;
   mockFetch.mockImplementation((_url: string) =>
     Promise.resolve({
       ok: true,
       json: () => Promise.resolve(makeData()),
     } as Response),
   );
+  fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+    mockFetch as unknown as typeof fetch,
+  );
 });
 
 afterEach(() => {
   cleanup();
   mockFetch.mockReset();
-  // @ts-expect-error — restore to undefined so other test files are unaffected
-  globalThis.fetch = undefined;
+  fetchSpy.mockRestore();
 });
 
 describe("KioskPage", () => {
