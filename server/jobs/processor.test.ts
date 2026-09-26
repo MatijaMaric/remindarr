@@ -21,6 +21,8 @@ const mockFetchNewReleases = spyOn(
 ).mockResolvedValue([]);
 
 import * as repository from "../db/repository";
+import * as enrichMod from "../streaming-availability/enrich";
+import { RateLimitError } from "../streaming-availability/types";
 const mockUpsertTitles = spyOn(repository, "upsertTitles").mockResolvedValue(0);
 const mockDeleteExpiredSessions = spyOn(
   repository,
@@ -85,6 +87,7 @@ import {
   enqueueCronJob,
   cleanupOldJobs,
   handlers,
+  takeDeepLinkContinue,
 } from "./processor";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
@@ -785,6 +788,83 @@ describe("sync-trending handler (CF path)", () => {
 // the CF writer (this file's handler) and the DO re-enqueue guard kept the old
 // literal, so the registry guard never saw "done" and re-enqueued on every
 // cold isolate. These tests pin writer/reader key parity on the CF path.
+
+describe("sync-deep-links batch (#1128)", () => {
+  const originalSaKey = CONFIG.STREAMING_AVAILABILITY_API_KEY;
+
+  function titles(n: number) {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `t-${i}`,
+      tmdbId: String(1000 + i),
+      objectType: "MOVIE",
+    }));
+  }
+
+  afterEach(() => {
+    CONFIG.STREAMING_AVAILABILITY_API_KEY = originalSaKey;
+    // Drop a leftover continuation flag so later tests stay isolated.
+    takeDeepLinkContinue();
+  });
+
+  it("requests a 20-title batch instead of the 500 default", async () => {
+    CONFIG.STREAMING_AVAILABILITY_API_KEY = "test-sa";
+    const getSpy = spyOn(
+      repository,
+      "getTitlesNeedingSaEnrichment",
+    ).mockResolvedValue([]);
+    try {
+      await handlers["sync-deep-links"](null);
+      expect(getSpy).toHaveBeenCalledWith(20);
+      expect(takeDeepLinkContinue()).toBe(false);
+    } finally {
+      getSpy.mockRestore();
+    }
+  });
+
+  it("asks for another batch after a full page of enrichments", async () => {
+    CONFIG.STREAMING_AVAILABILITY_API_KEY = "test-sa";
+    const getSpy = spyOn(
+      repository,
+      "getTitlesNeedingSaEnrichment",
+    ).mockResolvedValue(titles(20) as any);
+    const enrichSpy = spyOn(
+      enrichMod,
+      "enrichTitleDeepLinks",
+    ).mockResolvedValue(0);
+    const realSetTimeout = globalThis.setTimeout;
+    globalThis.setTimeout = ((cb: TimerHandler, _ms?: number) =>
+      realSetTimeout(cb, 0)) as typeof setTimeout;
+    try {
+      await handlers["sync-deep-links"](null);
+      expect(enrichSpy).toHaveBeenCalledTimes(20);
+      expect(takeDeepLinkContinue()).toBe(true);
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+      getSpy.mockRestore();
+      enrichSpy.mockRestore();
+    }
+  });
+
+  it("does not queue another batch when the provider rate-limits", async () => {
+    CONFIG.STREAMING_AVAILABILITY_API_KEY = "test-sa";
+    const getSpy = spyOn(
+      repository,
+      "getTitlesNeedingSaEnrichment",
+    ).mockResolvedValue(titles(20) as any);
+    const enrichSpy = spyOn(
+      enrichMod,
+      "enrichTitleDeepLinks",
+    ).mockRejectedValue(new RateLimitError());
+    try {
+      await handlers["sync-deep-links"](null);
+      expect(enrichSpy).toHaveBeenCalledTimes(1);
+      expect(takeDeepLinkContinue()).toBe(false);
+    } finally {
+      getSpy.mockRestore();
+      enrichSpy.mockRestore();
+    }
+  });
+});
 
 describe("backfill-achievements handler (CF path)", () => {
   it("writes BACKFILL_DONE_KEY so the registry guard finds it (#1062)", async () => {
