@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
@@ -11,6 +11,8 @@ import {
 import { getRawDb } from "../db/bun-db";
 import watchedApp from "./watched";
 import type { AppEnv } from "../types";
+import * as tracing from "../tracing";
+import * as episodesRepo from "../db/repository/episodes";
 
 let secondUserId: string;
 
@@ -1228,6 +1230,144 @@ describe("Watch history logging", () => {
       )
       .get(userId, "show-hist-bulk") as { cnt: number };
     expect(row.cnt).toBe(2);
+  });
+
+  it("bulk watch logs N history rows with a single logWatchBulk span", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([
+      makeParsedTitle({ id: "show-hist-span", objectType: "SHOW" }),
+    ]);
+    await upsertEpisodes([
+      {
+        title_id: "show-hist-span",
+        season_number: 1,
+        episode_number: 1,
+        name: "Ep1",
+        overview: null,
+        air_date: yesterdayStr,
+        still_path: null,
+      },
+      {
+        title_id: "show-hist-span",
+        season_number: 1,
+        episode_number: 2,
+        name: "Ep2",
+        overview: null,
+        air_date: yesterdayStr,
+        still_path: null,
+      },
+      {
+        title_id: "show-hist-span",
+        season_number: 1,
+        episode_number: 3,
+        name: "Ep3",
+        overview: null,
+        air_date: yesterdayStr,
+        still_path: null,
+      },
+    ]);
+    const ids = [
+      await getEpisodeId("show-hist-span", 1, 1),
+      await getEpisodeId("show-hist-span", 1, 2),
+      await getEpisodeId("show-hist-span", 1, 3),
+    ];
+
+    const ops: string[] = [];
+    const traceSpy = spyOn(tracing, "traceDbQuery").mockImplementation(((
+      op: string,
+      fn: () => unknown,
+    ) => {
+      ops.push(op);
+      return fn();
+    }) as typeof tracing.traceDbQuery);
+    try {
+      const app = makeAuthedApp();
+      const res = await app.request("/watched/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episodeIds: ids, watched: true }),
+      });
+      expect(res.status).toBe(200);
+      expect(ops.filter((op) => op === "logWatch")).toEqual([]);
+      expect(ops.filter((op) => op === "logWatchBulk")).toEqual([
+        "logWatchBulk",
+      ]);
+    } finally {
+      traceSpy.mockRestore();
+    }
+
+    const db = getRawDb();
+    const row = db
+      .prepare(
+        "SELECT COUNT(*) as cnt FROM watch_history WHERE user_id = ? AND title_id = ?",
+      )
+      .get(userId, "show-hist-span") as { cnt: number };
+    expect(row.cnt).toBe(3);
+  });
+
+  it("skips watch_history when an episode has no title mapping", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    await upsertTitles([
+      makeParsedTitle({ id: "show-hist-unmap", objectType: "SHOW" }),
+    ]);
+    await upsertEpisodes([
+      {
+        title_id: "show-hist-unmap",
+        season_number: 1,
+        episode_number: 1,
+        name: "Mapped",
+        overview: null,
+        air_date: yesterdayStr,
+        still_path: null,
+      },
+      {
+        title_id: "show-hist-unmap",
+        season_number: 1,
+        episode_number: 2,
+        name: "Unmapped",
+        overview: null,
+        air_date: yesterdayStr,
+        still_path: null,
+      },
+    ]);
+    const mappedId = await getEpisodeId("show-hist-unmap", 1, 1);
+    const unmappedId = await getEpisodeId("show-hist-unmap", 1, 2);
+    const original = episodesRepo.getEpisodeTitleIds;
+    const mapSpy = spyOn(episodesRepo, "getEpisodeTitleIds").mockImplementation(
+      async (episodeIds) => {
+        const map = await original(episodeIds);
+        map.delete(unmappedId);
+        return map;
+      },
+    );
+    try {
+      const app = makeAuthedApp();
+      const res = await app.request("/watched/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          episodeIds: [mappedId, unmappedId],
+          watched: true,
+        }),
+      });
+      expect(res.status).toBe(200);
+    } finally {
+      mapSpy.mockRestore();
+    }
+
+    const db = getRawDb();
+    const rows = db
+      .prepare(
+        "SELECT episode_id FROM watch_history WHERE user_id = ? AND title_id = ?",
+      )
+      .all(userId, "show-hist-unmap") as { episode_id: number }[];
+    expect(rows.map((r) => r.episode_id)).toEqual([mappedId]);
   });
 });
 

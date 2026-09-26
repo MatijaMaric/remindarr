@@ -25,6 +25,47 @@ export async function logWatch(
   });
 }
 
+export type LogWatchRow = {
+  userId: string;
+  titleId: string;
+  episodeId?: number;
+  watchedAt?: string;
+};
+
+// id, user_id, title_id, episode_id, watched_at = 5 binds.
+// 18 rows × 5 = 90, under D1's 100-parameter cap (same headroom as watchEpisodesBulk).
+const BULK_HISTORY_CHUNK_SIZE = 18;
+
+export async function logWatchBulk(rows: LogWatchRow[]): Promise<void> {
+  return traceDbQuery("logWatchBulk", async () => {
+    if (rows.length === 0) return;
+    const db = getDb();
+    // Split so a chunk never mixes "omit watched_at" (SQL default) with an
+    // explicit timestamp. Drizzle emits one column list per INSERT.
+    const groups = [
+      rows.filter((r) => r.watchedAt),
+      rows.filter((r) => !r.watchedAt),
+    ];
+    for (const group of groups) {
+      for (let i = 0; i < group.length; i += BULK_HISTORY_CHUNK_SIZE) {
+        const chunk = group.slice(i, i + BULK_HISTORY_CHUNK_SIZE);
+        await db
+          .insert(watchHistory)
+          .values(
+            chunk.map((row) => ({
+              id: randomUUID(),
+              userId: row.userId,
+              titleId: row.titleId,
+              episodeId: row.episodeId ?? null,
+              ...(row.watchedAt ? { watchedAt: row.watchedAt } : {}),
+            })),
+          )
+          .run();
+      }
+    }
+  });
+}
+
 export async function getTitlePlayCount(
   userId: string,
   titleId: string,

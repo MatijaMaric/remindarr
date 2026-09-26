@@ -18,11 +18,13 @@ import {
 } from "../db/repository";
 import {
   logWatch,
+  logWatchBulk,
   getTitlePlayCount,
   getTitleWatchHistory,
   getWatchHistoryById,
   updateWatchHistoryWatchedAt,
   getLatestWatchHistoryFor,
+  type LogWatchRow,
 } from "../db/repository/watch-history";
 import { localDateForTimezone } from "../utils/timezone";
 import type { AppEnv } from "../types";
@@ -105,19 +107,21 @@ app.post("/bulk", zValidator("json", bulkWatchedSchema), async (c) => {
     }
     await watchEpisodesBulk(releasedIds, user.id, watchedAtByEpisodeId);
 
-    // Log watch history for each released episode
+    // One INSERT (chunked under D1's bind limit) instead of one per episode.
     const titleIdMap = await getEpisodeTitleIds(releasedIds);
+    const historyRows: LogWatchRow[] = [];
     for (const episodeId of releasedIds) {
       const titleId = titleIdMap.get(episodeId);
-      if (titleId) {
-        await logWatch(
-          user.id,
-          titleId,
-          episodeId,
-          watchedAtByEpisodeId?.get(episodeId),
-        );
-      }
+      if (!titleId) continue;
+      const watchedAt = watchedAtByEpisodeId?.get(episodeId);
+      historyRows.push({
+        userId: user.id,
+        titleId,
+        episodeId,
+        ...(watchedAt ? { watchedAt } : {}),
+      });
     }
+    await logWatchBulk(historyRows);
 
     // Trigger achievement evaluation for bulk episode watch
     const distinctTitleIds = new Set(

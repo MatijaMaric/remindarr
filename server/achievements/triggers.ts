@@ -159,7 +159,7 @@ export async function onWatchedEpisode(
 }
 
 /**
- * Called after watchEpisodesBulk + logWatch loop
+ * Called after watchEpisodesBulk + logWatchBulk
  */
 export async function onWatchedEpisodesBulk(
   userId: string,
