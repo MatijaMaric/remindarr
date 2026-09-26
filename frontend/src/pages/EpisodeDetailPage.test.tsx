@@ -26,7 +26,7 @@ function newTestClient() {
   });
 }
 import * as sonner from "sonner";
-import "../i18n";
+import i18n from "../i18n";
 
 let mockUser: any = {
   id: "user1",
@@ -125,7 +125,7 @@ beforeEach(() => {
   applyEpisodeApiDefaults();
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   resetApiMock();
   mockUser = {
@@ -135,6 +135,7 @@ afterEach(() => {
     auth_provider: "local",
     is_admin: false,
   };
+  await i18n.changeLanguage("en");
 });
 
 describe("EpisodeDetailPage", () => {
@@ -385,5 +386,123 @@ describe("EpisodeDetailPage", () => {
       name: "Previous episode, S01E02",
     });
     expect(prev.getAttribute("href")).toBe("/title/tv-100/season/1/episode/2");
+  });
+
+  it("translates episode detail chrome (#1144)", async () => {
+    i18n.addResourceBundle(
+      "zz",
+      "translation",
+      {
+        home: { season: "SZN {{number}}" },
+        episodes: {
+          episode: "EP {{number}}",
+          notFound: "EP_MISSING",
+          votes_one: "{{count}} BALLOT",
+          votes_other: "{{count}} BALLOTS",
+          watchedOn: "SAW {{date}}",
+          rateThis: "RATE_EP",
+          overview: "OVERVIEW_H",
+          crew: "CREW_H",
+          directedBy: "DIRECTED",
+          writtenBy: "WRITTEN",
+          cast: "CAST_H",
+          noPreview: "NO_PREVIEW",
+        },
+      },
+      true,
+      true,
+    );
+    await i18n.changeLanguage("zz");
+    try {
+      expect(i18n.t("episodes.votes", { count: 1 })).toBe("1 BALLOT");
+
+      apiMock.getEpisodeDetails.mockImplementation(() =>
+        Promise.reject(new Error("missing")),
+      );
+      render(<EpisodeDetailPage />, { wrapper: Wrapper });
+      await waitFor(() => {
+        expect(screen.getByText("EP_MISSING")).toBeDefined();
+      });
+      cleanup();
+
+      apiMock.getEpisodeDetails.mockImplementation(() =>
+        Promise.resolve({
+          ...EPISODE_DETAILS_DEFAULT,
+          tmdb: {
+            ...EPISODE_DETAILS_DEFAULT.tmdb,
+            name: "",
+            still_path: null,
+            crew: [
+              {
+                id: 1,
+                name: "Dir Name",
+                job: "Director",
+                department: "Directing",
+                profile_path: null,
+              },
+              {
+                id: 2,
+                name: "Writer Name",
+                job: "Writer",
+                department: "Writing",
+                profile_path: null,
+              },
+            ],
+            guest_stars: [
+              {
+                id: 3,
+                name: "Guest Name",
+                character: "Guest",
+                profile_path: null,
+                order: 0,
+              },
+            ],
+          },
+        }),
+      );
+      apiMock.getSeasonEpisodeStatus.mockImplementation(() =>
+        Promise.resolve({
+          episodes: [{ episode_number: 1, id: 10, is_watched: true }],
+        }),
+      );
+      apiMock.getWatchHistory.mockImplementation(() =>
+        Promise.resolve({
+          history: [{ id: "wh1", watchedAt: "2026-06-28 14:30:00" }],
+          playCount: 1,
+        }),
+      );
+      apiMock.getEpisodeRating.mockImplementation(() =>
+        Promise.resolve({
+          user_rating: null,
+          user_review: null,
+          aggregated: { HATE: 0, DISLIKE: 0, LIKE: 0, LOVE: 0 },
+          friends_ratings: [],
+        }),
+      );
+
+      render(<EpisodeDetailPage />, { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText("RATE_EP")).toBeDefined();
+      });
+      expect(screen.getByText("SZN 1")).toBeDefined();
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(
+        "EP 1",
+      );
+      const currentCrumb = screen
+        .getAllByText("EP 1")
+        .find((el) => el.getAttribute("aria-current") === "page");
+      expect(currentCrumb).toBeDefined();
+      expect(screen.getByText("NO_PREVIEW")).toBeDefined();
+      expect(screen.getByText(/100 BALLOTS/)).toBeDefined();
+      expect(screen.getByText(/SAW /)).toBeDefined();
+      expect(screen.getByText("OVERVIEW_H")).toBeDefined();
+      expect(screen.getByText("CREW_H")).toBeDefined();
+      expect(screen.getByText(/DIRECTED/)).toBeDefined();
+      expect(screen.getByText(/WRITTEN/)).toBeDefined();
+      expect(screen.getByText("CAST_H")).toBeDefined();
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 });

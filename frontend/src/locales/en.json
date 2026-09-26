@@ -336,7 +336,29 @@
     "previous": "Previous",
     "next": "Next",
     "previousEpisode": "Previous episode, {{code}}",
-    "nextEpisode": "Next episode, {{code}}"
+    "nextEpisode": "Next episode, {{code}}",
+    "episode": "Episode {{number}}",
+    "notFound": "Episode not found",
+    "votes_one": "{{count}} vote",
+    "votes_other": "{{count}} votes",
+    "watchedOn": "Watched {{date}}",
+    "rateThis": "Rate this episode",
+    "overview": "Overview",
+    "crew": "Crew",
+    "directedBy": "Directed by:",
+    "writtenBy": "Written by:",
+    "cast": "Cast",
+    "noPreview": "No preview available"
+  },
+  "season": {
+    "notFound": "Season not found",
+    "episodes": "Episodes",
+    "episodeCount_one": "{{count}} episode",
+    "episodeCount_other": "{{count}} episodes",
+    "watchProgress": "{{watched}} of {{total}} watched · {{remaining}} remaining",
+    "cast": "Season Cast",
+    "ratings_one": "{{count}} rating",
+    "ratings_other": "{{count}} ratings"
   },
   "calendar": {
     "all": "All",

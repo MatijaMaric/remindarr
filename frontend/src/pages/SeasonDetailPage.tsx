@@ -261,12 +261,16 @@ export default function SeasonDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400">Season not found</div>
+        <div className="text-red-400">
+          {t("season.notFound", "Season not found")}
+        </div>
       </div>
     );
   }
 
   const { title, tmdb, seasonNumber, seasons } = data;
+  const seasonFallback = t("home.season", { number: seasonNumber });
+  const seasonLabel = tmdb?.name || seasonFallback;
   const posterUrl = mkPosterUrl(tmdb?.poster_path, "w500") ?? title.poster_url;
   const episodes = tmdb?.episodes || [];
 
@@ -299,7 +303,7 @@ export default function SeasonDetailPage() {
         </Link>
         <span className="text-zinc-600">/</span>
         <span className="text-white" aria-current="page">
-          {tmdb?.name || `Season ${seasonNumber}`}
+          {seasonLabel}
         </span>
       </nav>
 
@@ -309,7 +313,7 @@ export default function SeasonDetailPage() {
           {posterUrl ? (
             <img
               src={posterUrl}
-              alt={tmdb?.name || `Season ${seasonNumber}`}
+              alt={seasonLabel}
               className="w-full rounded-xl shadow-xl"
               width={500}
               height={750}
@@ -317,22 +321,20 @@ export default function SeasonDetailPage() {
             />
           ) : (
             <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-300">
-              Season {seasonNumber}
+              {seasonFallback}
             </div>
           )}
         </div>
 
         <div className="flex-1 space-y-3">
-          <h1 className="text-2xl font-bold text-white">
-            {tmdb?.name || `Season ${seasonNumber}`}
-          </h1>
+          <h1 className="text-2xl font-bold text-white">{seasonLabel}</h1>
           <div className="flex items-center gap-2 text-sm text-zinc-400">
             {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}
             {episodes.length > 0 && (
               <>
                 <span className="text-zinc-600">·</span>
                 <span>
-                  {episodes.length} episode{episodes.length !== 1 ? "s" : ""}
+                  {t("season.episodeCount", { count: episodes.length })}
                 </span>
               </>
             )}
@@ -353,9 +355,7 @@ export default function SeasonDetailPage() {
           )}
 
           <div className="pt-2">
-            <ShareButton
-              title={`${title.title} — ${tmdb?.name || `Season ${seasonNumber}`}`}
-            />
+            <ShareButton title={`${title.title} — ${seasonLabel}`} />
           </div>
         </div>
       </div>
@@ -397,8 +397,11 @@ export default function SeasonDetailPage() {
             <div className="flex items-center gap-4">
               {hasStatus && releasedWithStatus.length > 0 && (
                 <span className="text-[11px] font-mono text-zinc-500 tracking-wide whitespace-nowrap">
-                  {watchedCount} of {episodes.length} watched ·{" "}
-                  {episodes.length - watchedCount} remaining
+                  {t("season.watchProgress", {
+                    watched: watchedCount,
+                    total: episodes.length,
+                    remaining: episodes.length - watchedCount,
+                  })}
                 </span>
               )}
               {hasStatus &&
@@ -534,8 +537,7 @@ export default function SeasonDetailPage() {
                       )}
                       {totalRatings > 0 && (
                         <div className="text-pink-400 mt-0.5">
-                          {totalRatings}{" "}
-                          {totalRatings === 1 ? "rating" : "ratings"}
+                          {t("season.ratings", { count: totalRatings })}
                         </div>
                       )}
                     </div>
@@ -580,7 +582,9 @@ export default function SeasonDetailPage() {
       {tmdb?.credits?.cast && tmdb.credits.cast.length > 0 && (
         <SectionErrorBoundary label="cast">
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-white">Season Cast</h2>
+            <h2 className="text-lg font-semibold text-white">
+              {t("season.cast", "Season Cast")}
+            </h2>
             <ScrollableRow className="gap-4 pb-2">
               {tmdb.credits.cast.slice(0, 15).map((c) => (
                 <PersonCard
