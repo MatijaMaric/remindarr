@@ -485,6 +485,37 @@ describe("PUT /admin/users/:id/ban and /unban", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("revokes existing sessions so a banned user is logged out", async () => {
+    const userId = await createUser("stillloggedin", "hash");
+    const token = await createSession(userId);
+    const other = await createSession(userId);
+    const userCookie = `better-auth.session_token=${token}`;
+
+    const before = await app.request("/admin/settings", {
+      headers: { Cookie: userCookie },
+    });
+    expect(before.status).toBe(403);
+
+    const res = await app.request(`/admin/users/${userId}/ban`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "spam" }),
+    });
+    expect(res.status).toBe(200);
+    expect(await getSessionWithUser(token)).toBeNull();
+    expect(await getSessionWithUser(other)).toBeNull();
+
+    const after = await app.request("/admin/settings", {
+      headers: { Cookie: userCookie },
+    });
+    expect(after.status).toBe(401);
+
+    const adminStillIn = await app.request("/admin/settings", {
+      headers: { Cookie: adminCookie },
+    });
+    expect(adminStillIn.status).toBe(200);
+  });
 });
 
 describe("DELETE /admin/users/:id", () => {

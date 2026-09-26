@@ -608,11 +608,24 @@ export async function banUser(
 ) {
   return traceDbQuery("banUser", async () => {
     const db = getDb();
-    await db
-      .update(users)
-      .set({ banned: true, banReason: reason, banExpires: expiresAt })
-      .where(eq(users.id, userId))
-      .run();
+    // Revoke sessions in the same transaction as the ban flag. better-auth
+    // only refuses new sessions for a banned user.
+    // bun:sqlite commits when the callback returns a promise, so that path
+    // stays synchronous. D1 awaits a returned promise before commit.
+    const result = db.transaction((tx) => {
+      const updated = tx
+        .update(users)
+        .set({ banned: true, banReason: reason, banExpires: expiresAt })
+        .where(eq(users.id, userId))
+        .run();
+      if (updated instanceof Promise) {
+        return updated.then(() =>
+          tx.delete(sessions).where(eq(sessions.userId, userId)).run(),
+        );
+      }
+      tx.delete(sessions).where(eq(sessions.userId, userId)).run();
+    });
+    await result;
   });
 }
 
