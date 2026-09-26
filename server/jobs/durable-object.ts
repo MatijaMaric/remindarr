@@ -18,6 +18,7 @@ import { logger, resetLogLevel } from "../logger";
 import Sentry from "../sentry";
 import { BACKFILL_DONE_KEY } from "../achievements/sync";
 import { handlers } from "./processor";
+import { runWithEnv } from "./backend";
 import { nextRetryAt } from "./time-utils";
 import { patchConfig, cfEnvToConfigOverrides } from "../config";
 import type { CfConfigEnv } from "../config";
@@ -420,7 +421,9 @@ export class JobQueueDO {
 
     try {
       if (job.name === "cleanup") {
-        await runWithCache(cache, () => runWithDb(db, () => this.runCleanup()));
+        await runWithEnv(this.env, () =>
+          runWithCache(cache, () => runWithDb(db, () => this.runCleanup())),
+        );
       } else {
         const handler = handlers[job.name];
         if (!handler) {
@@ -438,7 +441,11 @@ export class JobQueueDO {
           return;
         }
         log.info("Running job", { name: job.name, jobId: job.id });
-        await runWithCache(cache, () => runWithDb(db, () => handler(job.data)));
+        // ALS does not cross the DO RPC boundary. Handlers that enqueue more
+        // work (sync-episodes → enqueueAdhoc) read JOB_QUEUE_DO from here (#1112).
+        await runWithEnv(this.env, () =>
+          runWithCache(cache, () => runWithDb(db, () => handler(job.data))),
+        );
       }
 
       this.ctx.storage.sql.exec(
