@@ -507,6 +507,102 @@ export async function updateNotificationMode(
   });
 }
 
+// Cloudflare D1 caps bound parameters per statement at 100. These writes bind
+// the user id plus one placeholder per title id.
+const BULK_TRACKED_CHUNK_SIZE = 90;
+// watched_titles inserts bind title_id and user_id per row (90 params).
+const BULK_WATCHED_TITLE_CHUNK_SIZE = 45;
+
+export async function untrackTitlesBulk(userId: string, titleIds: string[]) {
+  return traceDbQuery("untrackTitlesBulk", async () => {
+    if (titleIds.length === 0) return;
+    const db = getDb();
+    for (let i = 0; i < titleIds.length; i += BULK_TRACKED_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + BULK_TRACKED_CHUNK_SIZE);
+      await db
+        .delete(tracked)
+        .where(and(eq(tracked.userId, userId), inArray(tracked.titleId, chunk)))
+        .run();
+    }
+  });
+}
+
+export async function updateTrackedStatusBulk(
+  userId: string,
+  titleIds: string[],
+  status: UserStatus | null,
+) {
+  return traceDbQuery("updateTrackedStatusBulk", async () => {
+    if (titleIds.length === 0) return;
+    const db = getDb();
+    for (let i = 0; i < titleIds.length; i += BULK_TRACKED_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + BULK_TRACKED_CHUNK_SIZE);
+      await db
+        .update(tracked)
+        .set({ userStatus: status })
+        .where(and(eq(tracked.userId, userId), inArray(tracked.titleId, chunk)))
+        .run();
+    }
+
+    // Same movie-only watched_titles side effect as updateTrackedStatus.
+    const movieIds: string[] = [];
+    for (let i = 0; i < titleIds.length; i += BULK_TRACKED_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + BULK_TRACKED_CHUNK_SIZE);
+      const rows = await db
+        .select({ id: titles.id })
+        .from(titles)
+        .where(and(inArray(titles.id, chunk), eq(titles.objectType, "MOVIE")))
+        .all();
+      for (const row of rows) movieIds.push(row.id);
+    }
+    if (movieIds.length === 0) return;
+
+    if (status === "completed") {
+      for (let i = 0; i < movieIds.length; i += BULK_WATCHED_TITLE_CHUNK_SIZE) {
+        const chunk = movieIds.slice(i, i + BULK_WATCHED_TITLE_CHUNK_SIZE);
+        await db
+          .insert(watchedTitles)
+          .values(chunk.map((titleId) => ({ titleId, userId })))
+          .onConflictDoNothing()
+          .run();
+      }
+      return;
+    }
+
+    for (let i = 0; i < movieIds.length; i += BULK_TRACKED_CHUNK_SIZE) {
+      const chunk = movieIds.slice(i, i + BULK_TRACKED_CHUNK_SIZE);
+      await db
+        .delete(watchedTitles)
+        .where(
+          and(
+            eq(watchedTitles.userId, userId),
+            inArray(watchedTitles.titleId, chunk),
+          ),
+        )
+        .run();
+    }
+  });
+}
+
+export async function updateNotificationModeBulk(
+  userId: string,
+  titleIds: string[],
+  mode: NotificationMode | null,
+): Promise<void> {
+  return traceDbQuery("updateNotificationModeBulk", async () => {
+    if (titleIds.length === 0) return;
+    const db = getDb();
+    for (let i = 0; i < titleIds.length; i += BULK_TRACKED_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + BULK_TRACKED_CHUNK_SIZE);
+      await db
+        .update(tracked)
+        .set({ notificationMode: mode })
+        .where(and(eq(tracked.userId, userId), inArray(tracked.titleId, chunk)))
+        .run();
+    }
+  });
+}
+
 export async function getTrackedTitlesForNotifications(userId: string) {
   return traceDbQuery("getTrackedTitlesForNotifications", async () => {
     const db = getDb();
