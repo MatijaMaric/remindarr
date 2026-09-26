@@ -5,6 +5,7 @@ import { makeParsedTitle } from "../../test-utils/fixtures";
 import {
   getUnalertedProviders,
   getUnalertedProvidersBulk,
+  getArrivalAlertedProvidersForTitles,
   markAlerted,
 } from "./streaming-alerts";
 
@@ -146,6 +147,57 @@ describe("getUnalertedProvidersBulk", () => {
     );
     for (let i = 1; i < 60; i++) {
       expect(result.get(userIds[i])).toEqual(providerIds);
+    }
+  });
+});
+
+describe("getArrivalAlertedProvidersForTitles", () => {
+  it("returns an empty map for no titles", async () => {
+    const result = await getArrivalAlertedProvidersForTitles([]);
+    expect(result.size).toBe(0);
+  });
+
+  it("groups arrival alerts by title and ignores departures", async () => {
+    const otherTitleId = "movie-streaming-2";
+    await upsertTitles([
+      makeParsedTitle({ id: otherTitleId, tmdbId: "2", title: "Other Movie" }),
+    ]);
+    const otherUserId = await createUser("arrival-bulk-other", "hash");
+    await markAlerted(userId, TITLE_ID, 8, "Netflix", "arrival");
+    await markAlerted(userId, TITLE_ID, 119, "Amazon Prime", "departure");
+    await markAlerted(otherUserId, otherTitleId, 8, "Netflix", "arrival");
+
+    const result = await getArrivalAlertedProvidersForTitles([
+      TITLE_ID,
+      otherTitleId,
+      "missing-title",
+    ]);
+
+    expect(result.get(TITLE_ID)).toEqual([
+      { userId, providerId: 8, providerName: "Netflix" },
+    ]);
+    expect(result.get(otherTitleId)).toEqual([
+      { userId: otherUserId, providerId: 8, providerName: "Netflix" },
+    ]);
+    expect(result.has("missing-title")).toBe(false);
+  });
+
+  it("returns alerts for every title past the D1 parameter cap", async () => {
+    // kind takes 1 bound parameter, so title ids chunk at 99.
+    const ids = Array.from({ length: 100 }, (_, i) => `chunk-alert-${i}`);
+    await upsertTitles(
+      ids.map((id, i) =>
+        makeParsedTitle({ id, tmdbId: String(i + 1), title: id }),
+      ),
+    );
+    for (const id of ids) await markAlerted(userId, id, 8, "Netflix");
+
+    const result = await getArrivalAlertedProvidersForTitles(ids);
+    expect(result.size).toBe(ids.length);
+    for (const id of ids) {
+      expect(result.get(id)).toEqual([
+        { userId, providerId: 8, providerName: "Netflix" },
+      ]);
     }
   });
 });

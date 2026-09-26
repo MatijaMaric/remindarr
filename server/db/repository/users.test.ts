@@ -5,6 +5,8 @@ import {
   getWatchlistShareToken,
   setWatchlistShareToken,
   getUserByWatchlistShareToken,
+  getDepartureSettingsForUsers,
+  updateUserDepartureSettings,
 } from "./users";
 
 beforeEach(() => {
@@ -57,5 +59,49 @@ describe("Watchlist share token", () => {
     await setWatchlistShareToken(userId, null);
     const user = await getUserByWatchlistShareToken("revokeme");
     expect(user).toBeNull();
+  });
+});
+
+describe("getDepartureSettingsForUsers", () => {
+  it("returns an empty map for no users", async () => {
+    const result = await getDepartureSettingsForUsers([]);
+    expect(result.size).toBe(0);
+  });
+
+  it("returns each user's settings and omits unknown ids", async () => {
+    const userId = await createUser("dep-settings-a", "hash");
+    const otherId = await createUser("dep-settings-b", "hash");
+    await updateUserDepartureSettings(userId, {
+      streamingDeparturesEnabled: false,
+      departureAlertLeadDays: 3,
+    });
+
+    const result = await getDepartureSettingsForUsers([
+      userId,
+      otherId,
+      "missing-user",
+    ]);
+
+    expect(result.get(userId)).toEqual({
+      streamingDeparturesEnabled: 0,
+      departureAlertLeadDays: 3,
+    });
+    expect(result.get(otherId)).toEqual({
+      streamingDeparturesEnabled: 1,
+      departureAlertLeadDays: 7,
+    });
+    expect(result.has("missing-user")).toBe(false);
+  });
+
+  it("returns settings for every user past the D1 parameter cap", async () => {
+    const ids: string[] = [];
+    for (let i = 0; i < 101; i++) {
+      ids.push(await createUser(`dep-chunk-${i}`, "hash"));
+    }
+    const result = await getDepartureSettingsForUsers(ids);
+    expect(result.size).toBe(ids.length);
+    for (const id of ids) {
+      expect(result.get(id)?.streamingDeparturesEnabled).toBe(1);
+    }
   });
 });

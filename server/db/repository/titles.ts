@@ -365,6 +365,36 @@ export async function getTitleById(titleId: string, userId?: string) {
   });
 }
 
+// D1 caps bound parameters at 100 per statement; this query binds only title ids.
+const TITLE_LABELS_CHUNK_SIZE = 100;
+
+/** Title copy used by streaming alerts. Unknown ids are omitted. */
+export async function getTitleLabels(
+  titleIds: string[],
+): Promise<Map<string, { title: string; poster_url: string | null }>> {
+  return traceDbQuery("getTitleLabels", async () => {
+    const map = new Map<string, { title: string; poster_url: string | null }>();
+    if (titleIds.length === 0) return map;
+    const db = getDb();
+    for (let i = 0; i < titleIds.length; i += TITLE_LABELS_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + TITLE_LABELS_CHUNK_SIZE);
+      const rows = await db
+        .select({
+          id: titles.id,
+          title: titles.title,
+          poster_url: titles.posterUrl,
+        })
+        .from(titles)
+        .where(inArray(titles.id, chunk))
+        .all();
+      for (const row of rows) {
+        map.set(row.id, { title: row.title, poster_url: row.poster_url });
+      }
+    }
+    return map;
+  });
+}
+
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 export interface TitleFilters {

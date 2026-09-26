@@ -18,6 +18,7 @@ import {
   getUpcomingTrackedMoviesOpen,
   getTrackedStatusForIds,
   getTrackedTitleIds,
+  getUsersTrackingTitles,
   untrackTitlesBulk,
   updateTrackedStatusBulk,
   updateNotificationModeBulk,
@@ -689,5 +690,41 @@ describe("bulk tracked writes", () => {
     expect(other.find((row) => row.titleId === ids[90])?.notificationMode).toBe(
       "premieres_only",
     );
+  });
+});
+
+describe("getUsersTrackingTitles", () => {
+  it("groups trackers by title and omits titles nobody tracks", async () => {
+    const otherId = await createUser("other-tracker", "hash");
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-t1", tmdbId: "1", title: "One" }),
+      makeParsedTitle({ id: "movie-t2", tmdbId: "2", title: "Two" }),
+    ]);
+    await trackTitle("movie-t1", userId);
+    await trackTitle("movie-t1", otherId);
+    await trackTitle("movie-t2", otherId);
+
+    const map = await getUsersTrackingTitles([
+      "movie-t1",
+      "movie-t2",
+      "movie-missing",
+    ]);
+    expect(new Set(map.get("movie-t1"))).toEqual(new Set([userId, otherId]));
+    expect(map.get("movie-t2")).toEqual([otherId]);
+    expect(map.has("movie-missing")).toBe(false);
+  });
+
+  it("returns trackers for every title past the D1 parameter cap", async () => {
+    const ids = Array.from({ length: 101 }, (_, i) => `track-chunk-${i}`);
+    await upsertTitles(
+      ids.map((id, i) =>
+        makeParsedTitle({ id, tmdbId: String(3000 + i), title: id }),
+      ),
+    );
+    for (const id of ids) await trackTitle(id, userId);
+
+    const map = await getUsersTrackingTitles(ids);
+    expect(map.size).toBe(ids.length);
+    for (const id of ids) expect(map.get(id)).toEqual([userId]);
   });
 });

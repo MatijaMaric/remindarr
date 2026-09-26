@@ -677,6 +677,9 @@ export async function getTrackedMoviesByReleaseDateRange(
   });
 }
 
+// D1 caps bound parameters at 100 per statement; this query binds only title ids.
+const TRACKED_TITLEIDS_CHUNK_SIZE = 100;
+
 /**
  * Returns a map of titleId -> userIds for all users tracking any of the given titleIds.
  * Used during sync to find who should receive streaming availability alerts.
@@ -687,16 +690,19 @@ export async function getUsersTrackingTitles(
   return traceDbQuery("getUsersTrackingTitles", async () => {
     if (titleIds.length === 0) return new Map();
     const db = getDb();
-    const rows = await db
-      .select({ titleId: tracked.titleId, userId: tracked.userId })
-      .from(tracked)
-      .where(inArray(tracked.titleId, titleIds))
-      .all();
     const map = new Map<string, string[]>();
-    for (const row of rows) {
-      const list = map.get(row.titleId) ?? [];
-      list.push(row.userId);
-      map.set(row.titleId, list);
+    for (let i = 0; i < titleIds.length; i += TRACKED_TITLEIDS_CHUNK_SIZE) {
+      const chunk = titleIds.slice(i, i + TRACKED_TITLEIDS_CHUNK_SIZE);
+      const rows = await db
+        .select({ titleId: tracked.titleId, userId: tracked.userId })
+        .from(tracked)
+        .where(inArray(tracked.titleId, chunk))
+        .all();
+      for (const row of rows) {
+        const list = map.get(row.titleId) ?? [];
+        list.push(row.userId);
+        map.set(row.titleId, list);
+      }
     }
     return map;
   });

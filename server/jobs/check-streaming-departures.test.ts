@@ -21,6 +21,7 @@ import {
 } from "../db/schema";
 import { checkStreamingDepartures } from "./check-streaming-departures";
 import * as registry from "../notifications/registry";
+import * as tracing from "../tracing";
 
 // ─── Mock notification registry ───────────────────────────────────────────────
 
@@ -223,5 +224,52 @@ describe("checkStreamingDepartures", () => {
   it("skips when titleIds is empty", async () => {
     await checkStreamingDepartures([]);
     expect(mockSend).toHaveBeenCalledTimes(0);
+  });
+
+  it("loads departure inputs once for many titles and users (#1145)", async () => {
+    const titleIds = ["title-dep-a", "title-dep-b", "title-dep-c"];
+    const otherId = await createUser("depuser-b", null);
+    await insertNotifier(userId);
+    await insertNotifier(otherId);
+    for (const titleId of titleIds) {
+      await insertTitle(titleId);
+      for (const id of [userId, otherId]) {
+        await insertTracked(id, titleId);
+        await insertArrivalAlert(id, titleId, PROVIDER_ID, PROVIDER_NAME);
+      }
+    }
+
+    const counts = new Map<string, number>();
+    const traceSpy = spyOn(tracing, "traceDbQuery").mockImplementation(((
+      name: string,
+      fn: () => unknown,
+    ) => {
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+      return fn();
+    }) as typeof tracing.traceDbQuery);
+
+    try {
+      await checkStreamingDepartures(titleIds);
+    } finally {
+      traceSpy.mockRestore();
+    }
+
+    const sentTitles = (
+      mockSend.mock.calls as Array<
+        [unknown, { streamingAlerts: Array<{ title: string }> }]
+      >
+    ).map((call) => call[1].streamingAlerts[0].title);
+    expect(sentTitles.sort()).toEqual(
+      titleIds.flatMap((id) => [`Title ${id}`, `Title ${id}`]).sort(),
+    );
+    expect(counts.get("getArrivalAlertedProvidersForTitles")).toBe(1);
+    expect(counts.get("getArrivalAlertedProviders") ?? 0).toBe(0);
+    expect(counts.get("getUsersTrackingTitles")).toBe(1);
+    expect(counts.get("getDepartureSettingsForUsers")).toBe(1);
+    expect(counts.get("getUserDepartureSettings") ?? 0).toBe(0);
+    expect(counts.get("getTitleLabels")).toBe(1);
+    expect(counts.get("getTitleById") ?? 0).toBe(0);
+    expect(counts.get("getStreamingAlertNotifiersForUsers")).toBe(1);
+    expect(counts.get("getUnalertedProvidersBulk")).toBe(titleIds.length);
   });
 });
