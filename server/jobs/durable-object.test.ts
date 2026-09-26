@@ -338,11 +338,14 @@ describe("JobQueueDO", () => {
     };
     const envState = new FakeDurableObjectState("sync-episodes");
     // Constructor patchConfig() reads JOB_QUEUE_BACKEND from the DO env.
-    const envDo = new JobQueueDO(envState as any, {
-      ...fakeEnv,
-      JOB_QUEUE_BACKEND: "durable-object",
-      JOB_QUEUE_DO: ns,
-    } as any);
+    const envDo = new JobQueueDO(
+      envState as any,
+      {
+        ...fakeEnv,
+        JOB_QUEUE_BACKEND: "durable-object",
+        JOB_QUEUE_DO: ns,
+      } as any,
+    );
     const { enqueueAdhoc } = await import("./backend");
     processorModule.handlers["sync-episodes"] = async () => {
       await enqueueAdhoc(
