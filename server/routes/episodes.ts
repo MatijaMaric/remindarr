@@ -8,7 +8,7 @@ import {
 } from "../db/repository";
 import { localDateForTimezone, addDays } from "../utils/timezone";
 import { CONFIG } from "../config";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { AppEnv } from "../types";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
@@ -69,7 +69,7 @@ app.get(
   },
 );
 
-app.post("/sync", requireAuth, async (c) => {
+app.post("/sync", requireAuth, requireAdmin, async (c) => {
   if (!CONFIG.TMDB_API_KEY) {
     return err(c, "TMDB_API_KEY not configured", 500);
   }

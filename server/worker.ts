@@ -638,7 +638,8 @@ function createApp(env: Env) {
   app.use("/api/sync", requireAuth, requireAdmin);
   app.route("/api/sync", syncRoutes);
 
-  // Episodes (optionalAuth for upcoming/status, requireAuth for sync)
+  // Episodes (optionalAuth for upcoming/status; POST /sync is admin + sync rate limit)
+  app.use("/api/episodes/sync", syncRateLimiter);
   app.use("/api/episodes/*", optionalAuth);
   app.use("/api/episodes", optionalAuth);
   app.route("/api/episodes", episodesRoutes);
