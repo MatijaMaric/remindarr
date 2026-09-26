@@ -563,6 +563,152 @@ describe("GET /browse", () => {
     });
   });
 
+  describe("upstream failures (#1139)", () => {
+    const providerQuery =
+      "/browse?category=popular&page=1&provider=8,9,283,337,384,1773";
+
+    function providerFilter(spy: { mock: { calls: unknown[][] } }): string {
+      const callArgs = spy.mock.calls[0]?.[0] as
+        | { filters?: { withProviders?: string } }
+        | undefined;
+      return callArgs?.filters?.withProviders ?? "";
+    }
+
+    it("returns the TV page when movie discover throws for a multi-provider browse", async () => {
+      const tv = makeTmdbDiscoverTv({ id: 4242 });
+      (tmdbClient.discoverMovies as any).mockRejectedValueOnce(
+        new Error("TMDB API error 429: rate limit"),
+      );
+      (tmdbClient.discoverTv as any).mockResolvedValueOnce({
+        results: [tv],
+        total_pages: 4,
+        total_results: 80,
+        page: 1,
+      });
+      (tmdbClient.cachedFetchTvDetails as any).mockResolvedValueOnce(
+        makeTmdbTvDetails({ id: tv.id }),
+      );
+
+      const res = await app.request(providerQuery);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+      const body = await res.json();
+      expect(body.titles).toHaveLength(1);
+      expect(body.titles[0].tmdbId).toBe(String(tv.id));
+      expect(body.titles[0].objectType).toBe("SHOW");
+      expect(providerFilter(tmdbClient.discoverMovies as any)).toBe(
+        "8|9|283|337|384|1773",
+      );
+      expect(providerFilter(tmdbClient.discoverTv as any)).toBe(
+        "8|9|283|337|384|1773",
+      );
+    });
+
+    it("returns an empty page instead of HTTP 500 when both discover calls throw", async () => {
+      (tmdbClient.discoverMovies as any).mockRejectedValueOnce(
+        new Error("TMDB API error 500"),
+      );
+      (tmdbClient.discoverTv as any).mockRejectedValueOnce(
+        new Error("TMDB API error 500"),
+      );
+
+      const res = await app.request(providerQuery);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.titles).toEqual([]);
+      expect(body.page).toBe(1);
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
+
+    it("does not throw when discover omits the results array", async () => {
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        total_pages: 3,
+        total_results: 0,
+        page: 1,
+      });
+
+      const res = await app.request(
+        "/browse?category=popular&type=MOVIE&provider=8,9",
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.titles).toEqual([]);
+      expect(body.totalPages).toBe(3);
+    });
+
+    it("treats a cache read failure as a miss and still returns discover results", async () => {
+      spies.push(
+        spyOn(MemoryCache.prototype, "get").mockRejectedValueOnce(
+          new Error("KV timeout"),
+        ),
+      );
+      const movie = makeTmdbDiscoverMovie({ id: 5150 });
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [movie],
+        total_pages: 1,
+        total_results: 1,
+        page: 1,
+      });
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+        makeTmdbMovieDetails({ id: movie.id }),
+      );
+
+      const res = await app.request("/browse?category=popular&type=MOVIE");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.titles).toHaveLength(1);
+      expect(tmdbClient.discoverMovies).toHaveBeenCalled();
+    });
+
+    it("returns the page when the browse cache write throws", async () => {
+      spies.push(
+        spyOn(MemoryCache.prototype, "set").mockRejectedValueOnce(
+          new Error("KV put failed"),
+        ),
+      );
+      const movie = makeTmdbDiscoverMovie({ id: 6160 });
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [movie],
+        total_pages: 1,
+        total_results: 1,
+        page: 1,
+      });
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+        makeTmdbMovieDetails({ id: movie.id }),
+      );
+
+      const res = await app.request("/browse?category=popular&type=MOVIE");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.titles[0].tmdbId).toBe(String(movie.id));
+      expect(res.headers.get("Cache-Control")).toContain("public");
+    });
+
+    it("falls through to TMDB enrichment when the title lookup throws", async () => {
+      spies.push(
+        spyOn(repository, "getTitlesByTmdbIds").mockRejectedValueOnce(
+          new Error("D1 timeout"),
+        ),
+      );
+      const movie = makeTmdbDiscoverMovie({ id: 7170 });
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [movie],
+        total_pages: 1,
+        total_results: 1,
+        page: 1,
+      });
+      (tmdbClient.cachedFetchMovieDetails as any).mockResolvedValueOnce(
+        makeTmdbMovieDetails({ id: movie.id }),
+      );
+
+      const res = await app.request("/browse?category=popular&type=MOVIE");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.titles).toHaveLength(1);
+      expect(tmdbClient.cachedFetchMovieDetails).toHaveBeenCalled();
+    });
+  });
+
   describe("language filtering", () => {
     it("passes language code to discover filters", async () => {
       (tmdbClient.discoverTv as any).mockResolvedValueOnce({
@@ -811,7 +957,7 @@ describe("GET /browse", () => {
       );
       expect(res.status).toBe(500);
       const body = await res.json();
-      expect(body.error).toBeDefined();
+      expect(body.error).toBe("Browse failed");
     });
 
     it("happy-path: onlyMine=true passes subscribed providers to discover filters", async () => {
