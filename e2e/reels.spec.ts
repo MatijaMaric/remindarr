@@ -83,8 +83,10 @@ test.describe("Reels page", () => {
 
     // Reels label visible in overlay
     await expect(page.getByText("Reels")).toBeVisible();
-    // Feed link visible
-    await expect(page.getByRole("link", { name: "Feed" })).toBeVisible();
+    // Home link in the reels overlay (the old Feed link was removed)
+    await expect(
+      page.getByRole("link", { name: "Home" }).first(),
+    ).toBeVisible();
     // All source chip buttons visible
     await expect(rp.comingSoonChip()).toBeVisible();
     await expect(rp.popularChip()).toBeVisible();

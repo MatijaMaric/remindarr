@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { isAuthGetSession } from "./helpers";
 import { KioskPage } from "./pages/kiosk-page";
 
 test.describe.configure({ mode: "serial" });
@@ -54,9 +55,7 @@ const STANDARD_KIOSK_DATA = {
 
 async function setupKioskShellMocks(page: KioskPage["page"]) {
   // Prevent shell auth requests from erroring on public page
-  await page.route("**/api/auth/get-session", (route) =>
-    route.fulfill({ json: null }),
-  );
+  await page.route(isAuthGetSession, (route) => route.fulfill({ json: null }));
   await page.route("**/api/auth/custom/providers", (route) =>
     route.fulfill({ json: { local: true, oidc: null } }),
   );

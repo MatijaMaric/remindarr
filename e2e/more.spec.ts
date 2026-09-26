@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockLoggedOut, mockLoggedIn } from "./helpers";
+import { isAuthGetSession, mockLoggedOut, mockLoggedIn } from "./helpers";
 import { MorePagePO } from "./pages/more-page";
 
 test.describe.configure({ mode: "serial" });
@@ -154,9 +154,7 @@ test.describe("More page", () => {
     await page.route("**/api/auth/**sign-out**", async (route) => {
       signOutCalled++;
       // After sign-out, override get-session to return null
-      await page.route("**/api/auth/get-session**", (r) =>
-        r.fulfill({ json: null }),
-      );
+      await page.route(isAuthGetSession, (r) => r.fulfill({ json: null }));
       return route.fulfill({ json: { success: true } });
     });
 
@@ -174,7 +172,7 @@ test.describe("More page", () => {
     await setupMoreMocks(page);
 
     // Custom session with display_name
-    await page.route("**/api/auth/get-session", (route) =>
+    await page.route(isAuthGetSession, (route) =>
       route.fulfill({
         json: {
           session: {

@@ -204,12 +204,19 @@ export const MOCK_SHOW_DETAILS = {
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
 /**
+ * AuthContext calls get-session with `?disableCookieCache=true`. A glob that
+ * ends at `get-session` does not match that query, so the stub never runs and
+ * the page falls through to Sign in.
+ */
+export function isAuthGetSession(url: URL): boolean {
+  return url.pathname === "/api/auth/get-session";
+}
+
+/**
  * Sets up route mocks for a logged-out user.
  */
 export async function mockLoggedOut(page: Page) {
-  await page.route("**/api/auth/get-session", (route) =>
-    route.fulfill({ json: null }),
-  );
+  await page.route(isAuthGetSession, (route) => route.fulfill({ json: null }));
   await page.route("**/api/auth/custom/providers", (route) =>
     route.fulfill({ json: MOCK_PROVIDERS }),
   );
@@ -219,15 +226,38 @@ export async function mockLoggedOut(page: Page) {
 }
 
 /**
+ * Shell requests that run for every signed-in page. A 401 from any of them
+ * dispatches auth:unauthorized and replaces the app with Sign in.
+ *
+ * Registered on the browser context so a page.route() in the spec still wins.
+ */
+async function stubAuthenticatedShell(page: Page) {
+  const context = page.context();
+  await context.route("**/api/user/settings/advisory**", (route) =>
+    route.fulfill({ json: { level: "none", allowlist: [] } }),
+  );
+  await context.route("**/api/user/settings/subscriptions**", (route) =>
+    route.fulfill({ json: { providerIds: [], onlyMine: false } }),
+  );
+  await context.route("**/api/recommendations/count**", (route) =>
+    route.fulfill({ json: { count: 0 } }),
+  );
+  await context.route("**/api/achievements/me**", (route) =>
+    route.fulfill({ json: { achievements: [] } }),
+  );
+}
+
+/**
  * Sets up route mocks for a logged-in user.
  */
 export async function mockLoggedIn(page: Page) {
-  await page.route("**/api/auth/get-session", (route) =>
+  await page.route(isAuthGetSession, (route) =>
     route.fulfill({ json: MOCK_SESSION }),
   );
   await page.route("**/api/auth/custom/providers", (route) =>
     route.fulfill({ json: MOCK_PROVIDERS }),
   );
+  await stubAuthenticatedShell(page);
 }
 
 // ─── API helpers ──────────────────────────────────────────────────────────────

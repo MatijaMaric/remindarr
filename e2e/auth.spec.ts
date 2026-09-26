@@ -4,6 +4,7 @@ import {
   MOCK_USER,
   MOCK_PROVIDERS,
   MOCK_OIDC_PROVIDERS,
+  isAuthGetSession,
   mockLoggedOut,
   mockLoggedIn,
   mockTitleEndpoints,
@@ -44,7 +45,7 @@ test.describe("Login flow", () => {
     page,
   }) => {
     let sessionRequests = 0;
-    await page.route("**/api/auth/get-session", (route) => {
+    await page.route(isAuthGetSession, (route) => {
       // First request (on app load): not logged in
       // Subsequent requests (after sign-in): logged in
       if (sessionRequests === 0) {
@@ -101,7 +102,7 @@ test.describe("Login flow", () => {
   test("shows OIDC sign-in button when OIDC is configured", async ({
     page,
   }) => {
-    await page.route("**/api/auth/get-session", (route) =>
+    await page.route(isAuthGetSession, (route) =>
       route.fulfill({ json: null }),
     );
     await page.route("**/api/auth/custom/providers", (route) =>
@@ -120,7 +121,7 @@ test.describe("Login flow", () => {
   test("reveals local login form when 'sign in with username' is clicked", async ({
     page,
   }) => {
-    await page.route("**/api/auth/get-session", (route) =>
+    await page.route(isAuthGetSession, (route) =>
       route.fulfill({ json: null }),
     );
     await page.route("**/api/auth/custom/providers", (route) =>
