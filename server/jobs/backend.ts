@@ -128,6 +128,10 @@ async function doFetch<T>(
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
+/** Attempts for POST /arm. An immediate retry still hits an evicting DO (#1126). */
+const ARM_ATTEMPTS = 3;
+const ARM_RETRY_DELAY_MS = 500;
+
 /**
  * Arm a cron DO (DO mode) or enqueue a cron job (D1 mode).
  * Called from the scheduled() handler for each cron trigger.
@@ -139,18 +143,26 @@ export async function armCron(
   now: Date = new Date(),
 ): Promise<void> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
-    try {
-      await doFetch(env, name, "/arm", "POST", { name, cron });
-    } catch (err) {
-      // Platform-level DO init can throw with cpuTimeMs=0 before JS runs
-      // (#1066). One retry covers a transient reset without delaying the
-      // watchdog loop on a persistent failure.
-      log.warn("armCron failed, retrying once", {
-        name,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await doFetch(env, name, "/arm", "POST", { name, cron });
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= ARM_ATTEMPTS; attempt++) {
+      try {
+        await doFetch(env, name, "/arm", "POST", { name, cron });
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (attempt === ARM_ATTEMPTS) break;
+        // Platform-level DO init can throw with cpuTimeMs=0 before JS runs
+        // (#1066). A short pause lets an evicted instance come back (#1126);
+        // an immediate second call often hits the same dead stub.
+        log.warn("armCron failed, retrying", {
+          name,
+          attempt,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        await new Promise((resolve) => setTimeout(resolve, ARM_RETRY_DELAY_MS));
+      }
     }
+    throw lastErr;
   } else {
     const db = getDb();
     const nextRun = CronExpressionParser.parse(cron, {
@@ -348,14 +360,33 @@ export async function recoverStale(
 ): Promise<number> {
   if (CONFIG.JOB_QUEUE_BACKEND === "durable-object") {
     if (!env.JOB_QUEUE_DO) return 0;
-    const results = await Promise.all(
-      [...CRON_JOB_NAMES, "cleanup"].map((name) =>
+    // allSettled: one evicted DO must not reject the */5 watchdog. Promise.all
+    // turned "Connection closed" into "Worker scheduled error" and skipped the
+    // rest of the tick (#1126).
+    const names = [...CRON_JOB_NAMES, "cleanup"];
+    const results = await Promise.allSettled(
+      names.map((name) =>
         doFetch<{ count: number }>(env, name, "/recover", "POST", {
           staleMinutes,
         }),
       ),
     );
-    return results.reduce((sum, r) => sum + (r.count ?? 0), 0);
+    let total = 0;
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "fulfilled") {
+        total += result.value.count ?? 0;
+      } else {
+        log.warn("DO recover peer failed", {
+          name: names[i],
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
+        });
+      }
+    }
+    return total;
   }
   return recoverStaleJobs(staleMinutes);
 }
