@@ -14,6 +14,7 @@ import { rateLimiter, type RateLimitStore } from "./middleware/rate-limit";
 import * as backendModule from "./jobs/backend";
 import * as achievementsModule from "./achievements";
 import * as schema from "./db/schema";
+import * as repository from "./db/repository";
 import { withConfigGuard } from "./test-utils/config";
 
 // ─── Scheduled handler cron-branching tests ───────────────────────────────────
@@ -339,6 +340,8 @@ describe("scheduled() bootstrap KV timestamp", () => {
   let spies: ReturnType<typeof spyOn<any, any>>[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let syncSpy: ReturnType<typeof spyOn<any, any>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let enqueueOnceSpy: ReturnType<typeof spyOn<any, any>>;
 
   beforeEach(() => {
     resetAchievementRegistrySync();
@@ -348,12 +351,18 @@ describe("scheduled() bootstrap KV timestamp", () => {
       achievementsModule,
       "syncAchievementRegistry",
     ).mockResolvedValue(undefined);
+    enqueueOnceSpy = spyOn(backendModule, "enqueueOnce").mockResolvedValue(
+      undefined,
+    );
     spies = [
       syncSpy,
+      enqueueOnceSpy,
       spyOn(backendModule, "armCron").mockResolvedValue(undefined as any),
       spyOn(backendModule, "tickCron").mockResolvedValue(undefined),
       spyOn(backendModule, "recoverStale").mockResolvedValue(0),
       spyOn(backendModule, "processPending").mockResolvedValue(0),
+      spyOn(backendModule, "cleanupOld").mockResolvedValue(0),
+      spyOn(repository, "deleteExpiredSessions").mockResolvedValue(undefined),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       spyOn(backendModule, "runWithEnv").mockImplementation(
         (_env: any, fn: any) => fn(),
@@ -514,5 +523,37 @@ describe("scheduled() bootstrap KV timestamp", () => {
     );
 
     expect(puts).toHaveLength(0);
+  });
+
+  it("enqueues migrate-backdrops on the daily tick and not on the watchdog (#1308)", async () => {
+    const fakeEnv = {
+      DB: {} as D1Database,
+      CACHE_KV: {
+        put: async () => {},
+        get: async () => null,
+      } as unknown as KVNamespace,
+      TMDB_COUNTRY: "HR",
+      TMDB_LANGUAGE: "hr-HR",
+      LOG_LEVEL: "info",
+    } as unknown as Parameters<typeof handler.scheduled>[1];
+    const fakeCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as unknown as ExecutionContext;
+
+    await handler.scheduled(
+      { cron: "*/5 * * * *", type: "scheduled", scheduledTime: Date.now() },
+      fakeEnv,
+      fakeCtx,
+    );
+    expect(enqueueOnceSpy).not.toHaveBeenCalled();
+
+    await handler.scheduled(
+      { cron: "0 0 * * *", type: "scheduled", scheduledTime: Date.now() },
+      fakeEnv,
+      fakeCtx,
+    );
+    expect(enqueueOnceSpy).toHaveBeenCalledWith("migrate-backdrops");
+    expect(enqueueOnceSpy).toHaveBeenCalledWith("migrate-offers");
   });
 });

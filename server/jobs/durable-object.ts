@@ -477,6 +477,30 @@ export class JobQueueDO {
         }
       }
 
+      // migrate-backdrops: same batch continuation as migrate-offers. Predicate
+      // matches migrateBackdrops() so titles with no TMDB id, or that already
+      // have a backdrop, do not keep the job alive.
+      if (job.name === "migrate-backdrops") {
+        const remaining = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(titles)
+          .where(
+            sql`${titles.backdropChecked} = 0 AND ${titles.backdropUrl} IS NULL AND ${titles.tmdbId} IS NOT NULL`,
+          )
+          .get();
+        if (remaining && remaining.count > 0) {
+          this.ctx.storage.sql.exec(
+            "INSERT INTO jobs (name, run_at, max_attempts) VALUES ('migrate-backdrops', ?, 1)",
+            new Date().toISOString(),
+          );
+          log.info("migrate-backdrops batch done, re-queued in DO", {
+            remaining: remaining.count,
+          });
+        } else {
+          log.info("migrate-backdrops migration complete");
+        }
+      }
+
       // sync-deep-links: one batch per tick. The handler sets the flag only when
       // the batch was full and it did not stop for a rate limit (#1128).
       if (job.name === "sync-deep-links" && takeDeepLinkContinue()) {

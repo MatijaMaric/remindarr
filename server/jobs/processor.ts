@@ -385,6 +385,22 @@ async function handleMigrateOffers(): Promise<void> {
   }
 }
 
+async function handleMigrateBackdrops(): Promise<void> {
+  const { migrateBackdrops } = await import("./migrate-backdrops");
+  const result = await migrateBackdrops();
+  if (result.hasMore && CONFIG.JOB_QUEUE_BACKEND !== "durable-object") {
+    // Same split as migrate-offers: D1 inserts the next batch here; DO mode
+    // re-enqueues in JobQueueDO after the handler returns.
+    const db = getDb();
+    await db.insert(jobs).values({
+      name: "migrate-backdrops",
+      runAt: new Date().toISOString(),
+      maxAttempts: 1,
+    });
+    log.info("migrate-backdrops batch done, re-enqueued for next tick");
+  }
+}
+
 /**
  * Titles per sync-deep-links run. The query default is 500; at 500ms between
  * calls that held one DO /tick open for ~8 minutes (#1128). 20 stays near the
@@ -690,6 +706,7 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> =
       handleReleaseReminder(data ? JSON.parse(data) : {}),
     "backfill-title-offers": (data) => handleBackfillTitleOffers(data),
     "migrate-offers": () => handleMigrateOffers(),
+    "migrate-backdrops": () => handleMigrateBackdrops(),
     "sync-deep-links": () => handleSyncDeepLinks(),
     cleanup: () => handleCleanup(),
     "evaluate-achievements": (data) => handleEvaluateAchievements(data),

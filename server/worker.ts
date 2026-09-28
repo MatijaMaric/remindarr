@@ -940,6 +940,7 @@ export const handler = {
             if (isDailyTick) {
               // One-time migrations (idempotent — no-ops once done)
               await enqueueOnce("migrate-offers");
+              await enqueueOnce("migrate-backdrops");
 
               // Daily cleanup — moved out of JobQueueDO alarm to avoid the 30-second
               // DO alarm hard limit (#726). This handler has no such limit.
