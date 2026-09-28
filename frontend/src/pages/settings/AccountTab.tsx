@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { SUPPORTED_LANGUAGES, setLanguage } from "../../i18n";
+import { SUPPORTED_LANGUAGES, setLanguage, currentLanguage } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import * as api from "../../api";
 import type {
@@ -57,9 +57,20 @@ const COUNTRIES = [
   { code: "ZA", name: "South Africa" },
 ];
 
+function countryName(code: string, fallback: string, lang: string): string {
+  if (lang === "en") return fallback;
+  try {
+    return (
+      new Intl.DisplayNames([lang], { type: "region" }).of(code) ?? fallback
+    );
+  } catch {
+    return fallback;
+  }
+}
+
 function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
   const [countryCode, setCountryCode] = useState(profile.country_code ?? "");
@@ -82,7 +93,7 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
   return (
     <SCard
       title={t("profile.editProfile")}
-      subtitle="Your display name, bio, and country appear on your public profile."
+      subtitle={t("settings.account.editProfileSubtitle")}
     >
       <form onSubmit={handleSave} className="space-y-3.5 max-w-[640px]">
         {msg && <SMessage kind="success">{msg}</SMessage>}
@@ -104,7 +115,7 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
               <option value="">{t("profile.noCountry")}</option>
               {COUNTRIES.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.name}
+                  {countryName(c.code, c.name, i18n.language)}
                 </option>
               ))}
             </select>
@@ -173,7 +184,9 @@ function UserSection() {
         newPassword,
       });
       if (result.error) {
-        throw new Error(result.error.message || "Password change failed");
+        throw new Error(
+          result.error.message || t("settings.account.passwordChangeFailed"),
+        );
       }
       setPasswordMsg(t("profile.passwordChanged"));
       setCurrentPassword("");
@@ -184,11 +197,11 @@ function UserSection() {
   const strength = passwordStrength(newPassword);
   const strengthLabel =
     strength >= 4
-      ? "strong"
+      ? t("settings.account.strength.strong")
       : strength >= 3
-        ? "good"
+        ? t("settings.account.strength.good")
         : strength > 0
-          ? "weak"
+          ? t("settings.account.strength.weak")
           : "";
 
   const initials = (user?.username ?? "??").slice(0, 2).toUpperCase();
@@ -197,7 +210,7 @@ function UserSection() {
     <>
       <SCard
         title={t("profile.title")}
-        subtitle="Your account identity. Username is used on public profile pages and friend activity."
+        subtitle={t("settings.account.profileSubtitle")}
       >
         <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-6 items-start">
           <div
@@ -211,17 +224,21 @@ function UserSection() {
             <SFormRow label={t("profile.username")}>
               <SInput value={user?.username ?? ""} mono readOnly />
             </SFormRow>
-            <SFormRow label="Auth provider">
+            <SFormRow label={t("settings.account.authProvider")}>
               <SInput value={user?.auth_provider ?? "local"} mono readOnly />
             </SFormRow>
-            <SFormRow label="Display name">
+            <SFormRow label={t("profile.displayName")}>
               <SInput
                 value={user?.display_name ?? user?.username ?? ""}
                 readOnly
               />
             </SFormRow>
-            <SFormRow label="Role">
-              <SInput value={user?.is_admin ? "admin" : "user"} mono readOnly />
+            <SFormRow label={t("profile.role")}>
+              <SInput
+                value={user?.is_admin ? t("profile.admin") : t("profile.user")}
+                mono
+                readOnly
+              />
             </SFormRow>
           </div>
         </div>
@@ -230,7 +247,7 @@ function UserSection() {
       {user && user.auth_provider === "local" && (
         <SCard
           title={t("profile.changePassword")}
-          subtitle="Use at least 6 characters. We recommend a long passphrase."
+          subtitle={t("settings.account.passwordSubtitle")}
         >
           <form onSubmit={handleChangePassword} className="space-y-3.5">
             {passwordMsg && <SMessage kind="success">{passwordMsg}</SMessage>}
@@ -249,7 +266,11 @@ function UserSection() {
                 label={t("profile.newPassword")}
                 hint={
                   strengthLabel ? (
-                    <span>strength: {strengthLabel}</span>
+                    <span>
+                      {t("settings.account.strengthLabel", {
+                        strength: strengthLabel,
+                      })}
+                    </span>
                   ) : undefined
                 }
               >
@@ -283,28 +304,66 @@ function UserSection() {
         </SCard>
       )}
 
-      {SUPPORTED_LANGUAGES.length > 1 && (
-        <SCard
-          title={t("profile.language")}
-          subtitle="Changes apply immediately. Title metadata is fetched in TMDB's own language."
-        >
-          <div className="flex gap-1.5 flex-wrap">
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => setLanguage(lang.code)}
-                className="px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer bg-zinc-800 text-zinc-200 border border-white/[0.08] hover:bg-amber-400 hover:text-black hover:border-transparent flex items-center gap-1.5"
-              >
-                <span className="font-mono text-[10px] text-zinc-500">
-                  {lang.code}
-                </span>
-                {lang.label}
-              </button>
-            ))}
-          </div>
-        </SCard>
-      )}
+      <LanguageSection />
     </>
+  );
+}
+
+function LanguageSection() {
+  const { t } = useTranslation();
+  const active = currentLanguage();
+
+  async function handleSelect(code: string) {
+    if (code === active) return;
+    await setLanguage(code);
+    // Remember the choice on the account too, so server-generated content
+    // can follow it. Best-effort: the UI switch already happened locally.
+    api.updateMyProfile({ locale: code }).catch(() => undefined);
+  }
+
+  return (
+    <SCard
+      title={t("profile.language")}
+      subtitle={t("settings.account.languageSubtitle")}
+    >
+      <div
+        role="group"
+        aria-label={t("profile.language")}
+        className="flex gap-1.5 flex-wrap"
+      >
+        {SUPPORTED_LANGUAGES.map((lang) => {
+          const selected = lang.code === active;
+          return (
+            <button
+              key={lang.code}
+              type="button"
+              lang={lang.code}
+              aria-pressed={selected}
+              onClick={() => void handleSelect(lang.code)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer border flex items-center gap-1.5",
+                selected
+                  ? "bg-amber-400 text-black border-transparent"
+                  : "bg-zinc-800 text-zinc-200 border-white/[0.08] hover:bg-zinc-700",
+              )}
+            >
+              <span
+                className={cn(
+                  "font-mono text-[10px]",
+                  selected ? "text-black/60" : "text-zinc-500",
+                )}
+              >
+                {lang.code}
+              </span>
+              {lang.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-zinc-500 mt-3">
+        {t("settings.account.languageHint")}
+      </p>
+    </SCard>
   );
 }
 
@@ -403,7 +462,9 @@ function PasskeySection() {
       const result = await authClient.passkey.deletePasskey({ id });
       if (result?.error) {
         throw new Error(
-          String(result.error.message || "Failed to delete passkey"),
+          String(
+            result.error.message || t("settings.account.passkeyDeleteFailed"),
+          ),
         );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
@@ -425,7 +486,9 @@ function PasskeySection() {
       });
       if (result?.error) {
         throw new Error(
-          String(result.error.message || "Failed to rename passkey"),
+          String(
+            result.error.message || t("settings.account.passkeyRenameFailed"),
+          ),
         );
       }
       const listResult = await authClient.passkey.listUserPasskeys();
@@ -445,7 +508,7 @@ function PasskeySection() {
   return (
     <SCard
       title={t("profile.passkeys")}
-      subtitle="Sign in with Face ID, Touch ID, Windows Hello, or a security key."
+      subtitle={t("settings.account.passkeysSubtitle")}
     >
       <div className="space-y-3">
         {msg && <SMessage kind="success">{msg}</SMessage>}
@@ -478,7 +541,7 @@ function PasskeySection() {
                           value={editName}
                           onChange={setEditName}
                           autoFocus
-                          aria-label="Passkey name"
+                          aria-label={t("settings.account.passkeyNameLabel")}
                         />
                         <SButton type="submit" small>
                           {t("common.save")}
@@ -509,8 +572,11 @@ function PasskeySection() {
                           </div>
                           {pk.createdAt && (
                             <div className="text-[11px] text-zinc-500 font-mono">
-                              Created{" "}
-                              {new Date(pk.createdAt).toLocaleDateString()}
+                              {t("settings.account.passkeyCreated", {
+                                date: new Date(
+                                  pk.createdAt,
+                                ).toLocaleDateString(),
+                              })}
                             </div>
                           )}
                         </div>
@@ -548,7 +614,7 @@ function PasskeySection() {
               <div className="flex-1">
                 <SLabel
                   htmlFor="passkey-name-input"
-                  hint={<span>optional</span>}
+                  hint={<span>{t("common.optional")}</span>}
                 >
                   {t("profile.passkeyName")}
                 </SLabel>
@@ -591,7 +657,7 @@ function ProfileVisibilitySection() {
       api.updateProfileVisibility(newVisibility),
     onError: (e: unknown) => {
       setErr(e instanceof Error ? e.message : String(e));
-      toast.error("Failed to update visibility");
+      toast.error(t("settings.account.visibilityUpdateFailed"));
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
   });
@@ -600,7 +666,7 @@ function ProfileVisibilitySection() {
     mutationFn: (isPublic: boolean) => api.updateAllTitleVisibility(isPublic),
     onError: (e: unknown) => {
       setErr(e instanceof Error ? e.message : String(e));
-      toast.error("Failed to update visibility");
+      toast.error(t("settings.account.visibilityUpdateFailed"));
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: ["tracked"] }),
   });
@@ -675,7 +741,7 @@ function ProfileVisibilitySection() {
 
       {titles.length > 0 ? (
         <>
-          <SDivider label="Per-title overrides" />
+          <SDivider label={t("settings.account.perTitleOverrides")} />
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-zinc-400 mr-auto">
               {t("settings.perTitleVisibility")}
@@ -707,28 +773,20 @@ function ProfileVisibilitySection() {
   );
 }
 
-const ACTIVITY_KIND_LABELS: Record<ActivityType, string> = {
-  rating_title: "Movie/show ratings",
-  rating_episode: "Episode ratings",
-  watched_title: "Watched movies/shows",
-  watched_episode: "Watched episodes",
-  tracked: "Watchlist additions",
-  recommendation: "Recommendations sent",
-  episode_comment: "Episode discussions",
-};
-
-const ACTIVITY_KINDS = Object.keys(ACTIVITY_KIND_LABELS) as ActivityType[];
-
-const KIND_VIS_OPTIONS: Array<{
-  value: "public" | "friends_only" | "private";
-  label: string;
-}> = [
-  { value: "public", label: "Everyone" },
-  { value: "friends_only", label: "Friends only" },
-  { value: "private", label: "Only me" },
+const ACTIVITY_KINDS: ActivityType[] = [
+  "rating_title",
+  "rating_episode",
+  "watched_title",
+  "watched_episode",
+  "tracked",
+  "recommendation",
+  "episode_comment",
 ];
 
+const KIND_VIS_OPTIONS = ["public", "friends_only", "private"] as const;
+
 function ActivityStreamSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [err, setErr] = useState("");
 
@@ -757,7 +815,7 @@ function ActivityStreamSection() {
       if (context?.snapshot)
         qc.setQueryData(["activity-settings"], context.snapshot);
       setErr(e instanceof Error ? e.message : String(e));
-      toast.error("Failed to update activity settings");
+      toast.error(t("settings.activityStream.updateFailed"));
     },
     onSettled: () =>
       void qc.invalidateQueries({ queryKey: ["activity-settings"] }),
@@ -785,18 +843,18 @@ function ActivityStreamSection() {
   if (loading) {
     return (
       <SCard
-        title="Activity stream"
-        subtitle="Share your activity on your public profile."
+        title={t("settings.activityStream.title")}
+        subtitle={t("settings.activityStream.loadingSubtitle")}
       >
-        <div className="text-zinc-500 text-sm">Loading…</div>
+        <div className="text-zinc-500 text-sm">{t("common.loading")}</div>
       </SCard>
     );
   }
 
   return (
     <SCard
-      title="Activity stream"
-      subtitle="Share your recent activity (ratings, watches, recommendations) on your profile. Off by default."
+      title={t("settings.activityStream.title")}
+      subtitle={t("settings.activityStream.subtitle")}
     >
       {err && (
         <div className="mb-4">
@@ -804,11 +862,11 @@ function ActivityStreamSection() {
         </div>
       )}
       <SSwitch
-        label="Show activity on profile"
+        label={t("settings.activityStream.showOnProfile")}
         sub={
           settings.enabled
-            ? "Visitors who can see your profile will see your activity feed."
-            : "Activity feed is hidden from other users."
+            ? t("settings.activityStream.visibleHint")
+            : t("settings.activityStream.hiddenHint")
         }
         on={settings.enabled}
         onChange={handleToggle}
@@ -816,10 +874,9 @@ function ActivityStreamSection() {
       />
       {settings.enabled && (
         <>
-          <SDivider label="Per-kind visibility" />
+          <SDivider label={t("settings.activityStream.perKind")} />
           <p className="text-xs text-zinc-500 mb-3">
-            Override who can see each type of activity. Falls back to your
-            profile visibility when set to "Everyone".
+            {t("settings.activityStream.perKindHint")}
           </p>
           <div className="space-y-2">
             {ACTIVITY_KINDS.map((kind) => {
@@ -830,23 +887,24 @@ function ActivityStreamSection() {
                   className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-b-0"
                 >
                   <span className="text-sm text-zinc-300">
-                    {ACTIVITY_KIND_LABELS[kind]}
+                    {t(`settings.activityStream.kinds.${kind}`)}
                   </span>
                   <div className="flex items-center gap-1">
                     {KIND_VIS_OPTIONS.map((opt) => (
                       <button
-                        key={opt.value}
+                        key={opt}
                         type="button"
                         disabled={saving}
-                        onClick={() => handleKindChange(kind, opt.value)}
+                        aria-pressed={current === opt}
+                        onClick={() => handleKindChange(kind, opt)}
                         className={cn(
                           "text-[11px] font-mono px-2 py-1 rounded-md transition-colors disabled:opacity-50",
-                          current === opt.value
+                          current === opt
                             ? "bg-amber-400/15 text-amber-400 font-semibold"
                             : "text-zinc-500 hover:text-zinc-300",
                         )}
                       >
-                        {opt.label}
+                        {t(`settings.activityStream.visibility.${opt}`)}
                       </button>
                     ))}
                   </div>
@@ -865,8 +923,8 @@ function SocialSection() {
 
   return (
     <SCard
-      title="Social"
-      subtitle="Invite friends to your Remindarr instance. They'll get a limited signup link."
+      title={t("settings.account.socialTitle")}
+      subtitle={t("settings.account.socialSubtitle")}
     >
       <Link
         to="/invite"
@@ -883,7 +941,7 @@ function SocialSection() {
             {t("invite.settingsLink")}
           </div>
           <div className="text-[11px] text-zinc-400 font-mono">
-            Manage invite codes on the Invite page
+            {t("settings.account.socialHint")}
           </div>
         </div>
         <span aria-hidden="true" className="text-amber-400 font-mono">

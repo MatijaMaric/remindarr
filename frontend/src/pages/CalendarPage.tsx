@@ -65,14 +65,19 @@ function getDaysInMonth(year: number, month: number): Date[] {
   return days;
 }
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Monday-first short weekday names in the same regional format as the dates.
+// 2024-01-01 was a Monday.
+const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
+  new Date(2024, 0, 1 + i).toLocaleDateString(undefined, { weekday: "short" }),
+);
 
 // ─── Month Stats Bar ────────────────────────────────────────────────────────
 
 function CalendarFetchError() {
+  const { t } = useTranslation();
   return (
     <p className="text-zinc-400 text-sm py-12 text-center">
-      Failed to load calendar. Please try again.
+      {t("calendar.loadError")}
     </p>
   );
 }
@@ -84,22 +89,23 @@ function MonthStatsBar({
   episodes: number;
   titles: number;
 }) {
+  const { t } = useTranslation();
   const total = episodes + titles;
   if (total === 0) return null;
   return (
     <div className="flex items-center gap-3 text-xs font-medium">
       {episodes > 0 && (
         <span className="bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full">
-          {episodes} Episode{episodes !== 1 ? "s" : ""}
+          {t("calendar.stats.episodes", { count: episodes })}
         </span>
       )}
       {titles > 0 && (
         <span className="bg-blue-500/15 text-blue-400 px-2.5 py-1 rounded-full">
-          {titles} Title{titles !== 1 ? "s" : ""}
+          {t("calendar.stats.titles", { count: titles })}
         </span>
       )}
       <span className="bg-amber-500/15 text-amber-400 px-2.5 py-1 rounded-full">
-        {total} Total
+        {t("calendar.stats.total", { count: total })}
       </span>
     </div>
   );
@@ -193,7 +199,7 @@ export function SlideOverPanel({
         {episodes.length > 0 && (
           <div className="px-4 pb-4 pt-4">
             <h4 className="text-sm font-medium text-emerald-400 mb-3">
-              Episodes
+              {t("calendar.episodes")}
             </h4>
             {Array.from(episodesByShow.entries()).map(([titleId, showEps]) => {
               const allWatched = showEps.every((ep) => ep.is_watched);
@@ -218,8 +224,8 @@ export function SlideOverPanel({
                           className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
                         >
                           {allWatched
-                            ? "Mark all unwatched"
-                            : "Mark all watched"}
+                            ? t("episodes.markAllUnwatched")
+                            : t("episodes.markAllWatched")}
                         </button>
                       )}
                     </div>
@@ -304,7 +310,9 @@ export function SlideOverPanel({
         {/* Titles */}
         {titles.length > 0 && (
           <div className="px-4 pb-6">
-            <h4 className="text-sm font-medium text-blue-400 mb-3">Releases</h4>
+            <h4 className="text-sm font-medium text-blue-400 mb-3">
+              {t("calendar.releases")}
+            </h4>
             <div className="grid grid-cols-2 gap-3">
               {titles.map((t) => (
                 <div key={t.id} className="relative">
@@ -333,7 +341,7 @@ export function SlideOverPanel({
 
         {items.length === 0 && (
           <div className="px-4 py-8 text-center text-zinc-500 text-sm">
-            No tracked releases on this day
+            {t("calendar.noReleasesOnDay")}
           </div>
         )}
       </div>
@@ -408,6 +416,7 @@ function MobileCalendar({
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
 }) {
+  const { t } = useTranslation();
   const [mobileView, setMobileView] = useState<"agenda" | "month">("agenda");
   const [monthParam, setMonthParam] = useCalendarParam(
     searchParams,
@@ -482,14 +491,14 @@ function MobileCalendar({
             <div className="flex gap-2 items-center">
               <button
                 onClick={prevMonth}
-                aria-label="Previous month"
+                aria-label={t("calendar.previousMonth")}
                 className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300"
               >
                 ‹
               </button>
               <button
                 onClick={nextMonth}
-                aria-label="Next month"
+                aria-label={t("calendar.nextMonth")}
                 className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300"
               >
                 ›
@@ -503,19 +512,19 @@ function MobileCalendar({
               aria-pressed={mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
             >
-              Month
+              {t("calendar.month")}
             </button>
             <button
               onClick={() => setMobileView("agenda")}
               aria-pressed={!mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
             >
-              Agenda
+              {t("calendar.agenda")}
             </button>
           </div>
           {loadingMonth ? (
             <div className="text-center py-8 text-zinc-400 font-mono text-xs">
-              Loading...
+              {t("common.loading")}
             </div>
           ) : monthError ? (
             <CalendarFetchError />
@@ -534,14 +543,14 @@ function MobileCalendar({
               aria-pressed={mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
             >
-              Month
+              {t("calendar.month")}
             </button>
             <button
               onClick={() => setMobileView("agenda")}
               aria-pressed={!mobileMonthActive}
               className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
             >
-              Agenda
+              {t("calendar.agenda")}
             </button>
           </div>
           <AgendaCalendar
@@ -650,6 +659,7 @@ function GridCalendar({
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
 }) {
+  const { t } = useTranslation();
   const [monthParam, setMonthParam] = useCalendarParam(
     searchParams,
     setSearchParams,
@@ -956,7 +966,7 @@ function GridCalendar({
     <div className="flex flex-wrap items-center gap-2 justify-end">
       <button
         onClick={prevMonth}
-        aria-label="Previous month"
+        aria-label={t("calendar.previousMonth")}
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronLeftIcon className="size-5" />
@@ -965,11 +975,11 @@ function GridCalendar({
         onClick={() => setMonthParam(formatMonth(new Date()))}
         className="px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
       >
-        Today
+        {t("home.today")}
       </button>
       <button
         onClick={nextMonth}
-        aria-label="Next month"
+        aria-label={t("calendar.nextMonth")}
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronRightIcon className="size-5" />
@@ -996,7 +1006,9 @@ function GridCalendar({
             ? "bg-amber-500 text-zinc-950"
             : "text-zinc-400 hover:text-white hover:bg-zinc-800"
         }`}
-        aria-label={hideWatched ? "Show watched" : "Hide watched"}
+        aria-label={
+          hideWatched ? t("calendar.showWatched") : t("calendar.hideWatched")
+        }
       >
         {hideWatched ? (
           <EyeOffIcon className="size-4" />
@@ -1172,18 +1184,18 @@ function GridCalendar({
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-zinc-400 pt-1">
           <div className="flex items-center gap-1.5">
             <span className="text-amber-400">●</span>
-            <span>Tracked · airing</span>
+            <span>{t("calendar.legend.tracked")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span style={{ color: "oklch(0.72 0.13 220)" }}>●</span>
-            <span>Followed · new episode</span>
+            <span>{t("calendar.legend.followed")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span style={{ color: "oklch(0.72 0.15 140)" }}>●</span>
-            <span>Premiere</span>
+            <span>{t("calendar.legend.premiere")}</span>
           </div>
           <div className="ml-auto">
-            {stats.episodes} episode{stats.episodes === 1 ? "" : "s"} this month
+            {t("calendar.episodesThisMonth", { count: stats.episodes })}
           </div>
         </div>
       )}
@@ -1232,6 +1244,7 @@ function WeekCalendar({
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
 }) {
+  const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useCalendarParam(
     searchParams,
     setSearchParams,
@@ -1368,7 +1381,7 @@ function WeekCalendar({
     <div className="flex flex-wrap items-center gap-2 justify-end">
       <button
         onClick={prevWeek}
-        aria-label="Previous week"
+        aria-label={t("calendar.previousWeek")}
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronLeftIcon className="size-5" />
@@ -1377,11 +1390,11 @@ function WeekCalendar({
         onClick={goToThisWeek}
         className="px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
       >
-        This week
+        {t("calendar.thisWeek")}
       </button>
       <button
         onClick={nextWeek}
-        aria-label="Next week"
+        aria-label={t("calendar.nextWeek")}
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
         <ChevronRightIcon className="size-5" />
@@ -1407,7 +1420,9 @@ function WeekCalendar({
             ? "bg-amber-500 text-zinc-950"
             : "text-zinc-400 hover:text-white hover:bg-zinc-800"
         }`}
-        aria-label={hideWatched ? "Show watched" : "Hide watched"}
+        aria-label={
+          hideWatched ? t("calendar.showWatched") : t("calendar.hideWatched")
+        }
       >
         {hideWatched ? (
           <EyeOffIcon className="size-4" />

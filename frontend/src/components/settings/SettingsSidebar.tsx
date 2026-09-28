@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { useTranslation } from "react-i18next";
 
 export interface SettingsTabDef {
   value: string;
@@ -17,12 +18,13 @@ export function SettingsSidebar({
   onSelect: (value: string) => void;
   buildInfo?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       {/* Mobile: horizontal pill row */}
       <nav
         role="tablist"
-        aria-label="Settings sections"
+        aria-label={t("settings.sectionsLabel")}
         className="flex sm:hidden gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] min-w-0 w-full"
       >
         {tabs.map((tab) => {
@@ -49,11 +51,11 @@ export function SettingsSidebar({
       {/* Desktop: sidebar */}
       <aside className="hidden sm:block">
         <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 px-3.5 pb-2.5">
-          Sections
+          {t("settings.sections")}
         </div>
         <nav
           role="tablist"
-          aria-label="Settings sections"
+          aria-label={t("settings.sectionsLabel")}
           className="flex flex-col gap-0.5"
         >
           {tabs.map((tab) => {

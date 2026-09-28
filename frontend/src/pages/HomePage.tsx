@@ -225,7 +225,7 @@ export default function HomePage() {
     onError: (_err, _vars, context) => {
       if (context?.snapshot)
         qc.setQueryData(["home", "auth"], context.snapshot);
-      toast.error("Failed to update watched status — please try again");
+      toast.error(t("home.errors.watchedStatus"));
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["home", "auth"] });
@@ -253,7 +253,7 @@ export default function HomePage() {
     onError: (_err, _vars, context) => {
       if (context?.snapshot)
         qc.setQueryData(["home", "auth"], context.snapshot);
-      toast.error("Failed to mark episodes as watched — please try again");
+      toast.error(t("home.errors.markEpisodes"));
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["home", "auth"] });
@@ -280,7 +280,7 @@ export default function HomePage() {
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.snapshot) qc.setQueryData(["home", "auth"], ctx.snapshot);
-      toast.error("Failed to mark episode as watched — please try again");
+      toast.error(t("home.errors.markEpisode"));
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["home", "auth"] });
@@ -419,7 +419,7 @@ export default function HomePage() {
         {/* Popular titles */}
         <section>
           <SectionHeader
-            kicker="Browse"
+            kicker={t("home.kickers.browse")}
             title={t("landing.popularNow")}
             href="/browse"
             linkLabel={`${t("landing.discoverMore")} →`}
@@ -459,7 +459,7 @@ export default function HomePage() {
             </div>
             <section key="unwatched">
               <SectionHeader
-                kicker="Up next"
+                kicker={t("home.kickers.upNext")}
                 title={t("home.unwatched")}
                 href="/upcoming"
                 linkLabel={`${t("home.seeAll")} →`}
@@ -467,7 +467,7 @@ export default function HomePage() {
                   <Link
                     to="/reels"
                     className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
-                    title="Full-screen reels view"
+                    title={t("home.reelsView")}
                   >
                     <Maximize2 size={14} />
                     {t("home.reels")}
@@ -510,7 +510,7 @@ export default function HomePage() {
         return recommendations.length > 0 ? (
           <section key="recommendations">
             <SectionHeader
-              kicker="From friends"
+              kicker={t("home.kickers.fromFriends")}
               title={t("home.recommendedForYou")}
               href="/discovery"
               linkLabel={`${t("home.seeAll")} →`}
@@ -547,7 +547,7 @@ export default function HomePage() {
         return (
           <section key="today">
             <SectionHeader
-              kicker="Airing tonight"
+              kicker={t("home.kickers.airingTonight")}
               title={t("home.today")}
               href="/calendar"
               linkLabel={`${t("home.seeAll")} →`}
@@ -581,10 +581,10 @@ export default function HomePage() {
         return upcoming.length > 0 ? (
           <section key="upcoming">
             <SectionHeader
-              kicker="This week"
+              kicker={t("home.kickers.thisWeek")}
               title={t("home.comingUp")}
               href="/calendar"
-              linkLabel="Open calendar →"
+              linkLabel={`${t("home.openCalendar")} →`}
             />
             <div className="space-y-4">
               {upcomingByDateEntries.map(({ date, dateLabel, byShow }) => (
@@ -620,10 +620,10 @@ export default function HomePage() {
         return airingEntries.length > 0 ? (
           <section key="airing_soon">
             <SectionHeader
-              kicker="Coming up"
+              kicker={t("home.kickers.comingUp")}
               title={t("home.airingSoon.title")}
               href="/calendar"
-              linkLabel="Open calendar →"
+              linkLabel={`${t("home.openCalendar")} →`}
             />
             <FullBleedCarousel>
               {airingEntries.map((ep) => (
@@ -646,7 +646,7 @@ export default function HomePage() {
         ) : (
           <section key="airing_soon">
             <SectionHeader
-              kicker="Coming up"
+              kicker={t("home.kickers.comingUp")}
               title={t("home.airingSoon.title")}
             />
             <p className="text-zinc-400 text-sm">
@@ -678,10 +678,10 @@ export default function HomePage() {
         return movieData.to_watch.length > 0 ? (
           <section key="movies_to_watch">
             <SectionHeader
-              kicker="Movies"
-              title="Movies to Watch"
+              kicker={t("home.kickers.movies")}
+              title={t("home.moviesToWatch")}
               href="/tracked"
-              linkLabel="See all →"
+              linkLabel={`${t("home.seeAll")} →`}
             />
             <MovieRow variant="to_watch" movies={movieData.to_watch} />
           </section>
@@ -691,10 +691,10 @@ export default function HomePage() {
         return movieData.upcoming.length > 0 ? (
           <section key="upcoming_movies">
             <SectionHeader
-              kicker="Movies"
-              title="Upcoming Movies"
+              kicker={t("home.kickers.movies")}
+              title={t("home.upcomingMovies")}
               href="/calendar"
-              linkLabel="Calendar →"
+              linkLabel={`${t("home.calendar")} →`}
             />
             <MovieRow variant="upcoming" movies={movieData.upcoming} />
           </section>

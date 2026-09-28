@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import type { Title } from "../types";
+import { useTranslation } from "react-i18next";
 import TitleCard from "./TitleCard";
 import { useContentAdvisory } from "../hooks/useContentAdvisory";
 
@@ -53,7 +54,7 @@ interface Props {
 function TitleListImpl({
   titles,
   onTrackToggle,
-  emptyMessage = "No titles found",
+  emptyMessage,
   showVisibilityToggle,
   onVisibilityToggle,
   hideTypeBadge,
@@ -68,6 +69,7 @@ function TitleListImpl({
   viewAllLabel,
   applyContentAdvisory = false,
 }: Props) {
+  const { t } = useTranslation();
   const { actionFor } = useContentAdvisory();
   const visibleTitles = useMemo(() => {
     if (!applyContentAdvisory) return titles;
@@ -164,7 +166,9 @@ function TitleListImpl({
 
   if (visibleTitles.length === 0) {
     return (
-      <div className="text-center py-12 text-zinc-500">{emptyMessage}</div>
+      <div className="text-center py-12 text-zinc-500">
+        {emptyMessage ?? t("common.noTitlesFound")}
+      </div>
     );
   }
 
@@ -232,7 +236,7 @@ function TitleListImpl({
             href={viewAllHref}
             className="text-sm text-amber-500 hover:text-amber-400 transition-colors"
           >
-            {viewAllLabel ?? "View all"}
+            {viewAllLabel ?? t("common.viewAll")}
           </a>
         </div>
       )}

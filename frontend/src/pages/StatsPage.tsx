@@ -3,13 +3,17 @@ import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import { useQuery } from "@tanstack/react-query";
 import type { StatsResponse } from "../types";
+import i18n from "../i18n";
+import { languageName } from "../lib/languageName";
+import { statusLabelKey } from "../lib/titleStatus";
 
 export function formatEta(days: number | null): string {
   if (days === null) return "—";
-  if (days === 0) return "< 1 day";
-  if (days < 7) return `${days}d`;
-  if (days < 30) return `~${Math.round(days / 7)}w`;
-  return `~${Math.round(days / 30)}mo`;
+  if (days === 0) return i18n.t("stats.eta.underDay");
+  if (days < 7) return i18n.t("stats.eta.days", { count: days });
+  if (days < 30)
+    return i18n.t("stats.eta.weeks", { count: Math.round(days / 7) });
+  return i18n.t("stats.eta.months", { count: Math.round(days / 30) });
 }
 
 function formatMonth(ym: string): string {
@@ -24,12 +28,12 @@ function formatMonth(ym: string): string {
 }
 
 function formatTime(minutes: number): string {
-  if (minutes === 0) return "0h";
+  if (minutes === 0) return i18n.t("stats.time.hours", { h: 0 });
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
+  if (h === 0) return i18n.t("stats.time.minutes", { m });
+  if (m === 0) return i18n.t("stats.time.hours", { h });
+  return i18n.t("stats.time.hoursMinutes", { h, m });
 }
 
 function OverviewCard({
@@ -79,6 +83,7 @@ function HorizontalBar({
 }
 
 function MonthlyChart({ monthly }: { monthly: StatsResponse["monthly"] }) {
+  const { t } = useTranslation();
   const maxVal = Math.max(
     ...monthly.map((m) => m.movies_watched + m.episodes_watched),
     1,
@@ -103,7 +108,10 @@ function MonthlyChart({ monthly }: { monthly: StatsResponse["monthly"] }) {
                 <div
                   className="w-full rounded-t overflow-hidden flex flex-col-reverse"
                   style={{ height: `${heightPct}%` }}
-                  title={`${m.movies_watched} movies, ${m.episodes_watched} episodes`}
+                  title={t("stats.monthTooltip", {
+                    movies: m.movies_watched,
+                    episodes: m.episodes_watched,
+                  })}
                 >
                   <div
                     className="bg-blue-500"
@@ -130,16 +138,21 @@ function ShowStatusGrid({
 }: {
   showsByStatus: StatsResponse["shows_by_status"];
 }) {
+  const { t } = useTranslation();
   const entries = [
-    { key: "watching", label: "Watching", color: "bg-amber-500" },
-    { key: "caught_up", label: "Caught Up", color: "bg-teal-500" },
-    { key: "not_started", label: "Not Started", color: "bg-zinc-500" },
-    { key: "completed", label: "Completed", color: "bg-emerald-500" },
-    { key: "on_hold", label: "On Hold", color: "bg-yellow-500" },
-    { key: "dropped", label: "Dropped", color: "bg-red-600" },
-    { key: "plan_to_watch", label: "Plan to Watch", color: "bg-blue-500" },
-    { key: "unreleased", label: "Unreleased", color: "bg-zinc-700" },
-  ] as const;
+    { key: "watching", color: "bg-amber-500" },
+    { key: "caught_up", color: "bg-teal-500" },
+    { key: "not_started", color: "bg-zinc-500" },
+    { key: "completed", color: "bg-emerald-500" },
+    { key: "on_hold", color: "bg-yellow-500" },
+    { key: "dropped", color: "bg-red-600" },
+    { key: "plan_to_watch", color: "bg-blue-500" },
+    { key: "unreleased", color: "bg-zinc-700" },
+  ].map((e) => ({ ...e, label: t(statusLabelKey(e.key) ?? e.key) })) as {
+    key: keyof StatsResponse["shows_by_status"];
+    color: string;
+    label: string;
+  }[];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -165,21 +178,10 @@ function ShowStatusGrid({
   );
 }
 
-function languageLabel(code: string): string {
-  try {
-    return (
-      new Intl.DisplayNames(["en"], {
-        type: "language",
-        fallback: "none",
-      }).of(code) ?? code.toUpperCase()
-    );
-  } catch {
-    return code.toUpperCase();
-  }
-}
-
 export function StatsView() {
-  const { t } = useTranslation();
+  const { t, i18n: i18nInstance } = useTranslation();
+  const languageLabel = (code: string) =>
+    languageName(code, i18nInstance.language) ?? code.toUpperCase();
   const {
     data,
     isLoading: loading,
@@ -192,7 +194,7 @@ export function StatsView() {
   if (isError) {
     return (
       <p className="text-zinc-400 text-sm py-12 text-center">
-        Failed to load stats. Please try again.
+        {t("stats.loadError")}
       </p>
     );
   }
@@ -228,36 +230,45 @@ export function StatsView() {
       </div>
       {/* Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <OverviewCard label="Movies Watched" value={overview.watched_movies} />
         <OverviewCard
-          label="Episodes Watched"
+          label={t("stats.moviesWatched")}
+          value={overview.watched_movies}
+        />
+        <OverviewCard
+          label={t("stats.episodesWatched")}
           value={overview.watched_episodes}
         />
-        <OverviewCard label="Shows Tracked" value={overview.tracked_shows} />
-        <OverviewCard label="Movies Tracked" value={overview.tracked_movies} />
         <OverviewCard
-          label="Watch Time"
-          value={formatTime(overview.watch_time_minutes)}
-          sub="total"
+          label={t("stats.showsTracked")}
+          value={overview.tracked_shows}
         />
         <OverviewCard
-          label="Watchlist ETA"
+          label={t("stats.moviesTracked")}
+          value={overview.tracked_movies}
+        />
+        <OverviewCard
+          label={t("stats.watchTime")}
+          value={formatTime(overview.watch_time_minutes)}
+          sub={t("stats.total")}
+        />
+        <OverviewCard
+          label={t("stats.watchlistEta")}
           value={formatEta(pace?.watchlistEtaDays ?? null)}
-          sub="at your current pace"
+          sub={t("stats.atCurrentPace")}
         />
       </div>
 
       {/* Watch time breakdown */}
       <div className="grid grid-cols-2 gap-4">
         <OverviewCard
-          label="TV Watch Time"
+          label={t("stats.tvWatchTime")}
           value={formatTime(overview.watch_time_minutes_shows)}
-          sub={`${overview.watched_episodes} episodes`}
+          sub={t("stats.episodeCount", { count: overview.watched_episodes })}
         />
         <OverviewCard
-          label="Movie Watch Time"
+          label={t("stats.movieWatchTime")}
           value={formatTime(overview.watch_time_minutes_movies)}
-          sub={`${overview.watched_movies} movies`}
+          sub={t("stats.movieCount", { count: overview.watched_movies })}
         />
       </div>
 
@@ -272,15 +283,17 @@ export function StatsView() {
       {/* Monthly Activity */}
       <div className="bg-zinc-900 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Monthly Activity</h3>
+          <h3 className="text-sm font-semibold">
+            {t("stats.monthlyActivity")}
+          </h3>
           <div className="flex items-center gap-4 text-xs text-zinc-500">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block" />{" "}
-              Episodes
+              {t("stats.episodes")}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />{" "}
-              Movies
+              {t("stats.movies")}
             </span>
           </div>
         </div>
@@ -291,7 +304,7 @@ export function StatsView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {genres.length > 0 && (
           <div className="bg-zinc-900 rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold">Top Genres</h3>
+            <h3 className="text-sm font-semibold">{t("stats.topGenres")}</h3>
             <div className="space-y-2">
               {genres.map((g) => (
                 <HorizontalBar
@@ -307,7 +320,7 @@ export function StatsView() {
 
         {languages.length > 0 && (
           <div className="bg-zinc-900 rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold">Top Languages</h3>
+            <h3 className="text-sm font-semibold">{t("stats.topLanguages")}</h3>
             <div className="space-y-2">
               {languages.map((l) => (
                 <HorizontalBar
@@ -325,7 +338,7 @@ export function StatsView() {
       {/* Shows by status */}
       {overview.tracked_shows > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Shows by Status</h3>
+          <h3 className="text-sm font-semibold">{t("stats.showsByStatus")}</h3>
           <ShowStatusGrid showsByStatus={shows_by_status} />
         </div>
       )}
@@ -334,9 +347,10 @@ export function StatsView() {
 }
 
 export default function StatsPage() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-8">
-      <h2 className="text-lg font-semibold">Stats</h2>
+      <h2 className="text-lg font-semibold">{t("stats.title")}</h2>
       <StatsView />
     </div>
   );

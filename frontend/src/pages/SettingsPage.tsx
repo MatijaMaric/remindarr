@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
       {/* Breadcrumb */}
       <nav
-        aria-label="Breadcrumb"
+        aria-label={t("settings.breadcrumb")}
         className="pb-4 font-mono text-xs text-zinc-400 tracking-wide"
       >
         <span>/settings</span>
@@ -101,7 +101,7 @@ export default function SettingsPage() {
           onSelect={setTab}
           buildInfo={
             <div className="space-y-0.5">
-              <div>Remindarr · self-hosted</div>
+              <div>{t("settings.buildInfo")}</div>
               <div className="text-zinc-400">
                 TMDB · {navigator.language || "en"}
               </div>

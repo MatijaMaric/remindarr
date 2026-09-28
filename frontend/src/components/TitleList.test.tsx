@@ -10,6 +10,7 @@ import {
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import "../i18n";
 import TitleList from "./TitleList";
 import { AuthContext } from "../context/AuthContext";
 import * as api from "../api";

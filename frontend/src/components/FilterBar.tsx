@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { languageName } from "../lib/languageName";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import type { Section } from "./MultiSelectDropdown";
 
@@ -48,15 +49,6 @@ const DAYS = [
   { value: 90, label: "90d" },
 ];
 
-function languageLabel(code: string): string {
-  try {
-    const names = new Intl.DisplayNames(["en"], { type: "language" });
-    return names.of(code) || code;
-  } catch {
-    return code;
-  }
-}
-
 function toggleType(current: string[], value: string): string[] {
   if (current.includes(value)) {
     return current.filter((v) => v !== value);
@@ -89,7 +81,7 @@ const FilterBar = memo(function FilterBar({
   hideTracked,
   onHideTrackedChange,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const hasActiveFilters =
     onlyMine ||
     type.length > 0 ||
@@ -121,16 +113,16 @@ const FilterBar = memo(function FilterBar({
     const sections: Section[] = [];
     if (regionOpts.length > 0) sections.push({ options: regionOpts });
     if (otherOpts.length > 0)
-      sections.push({ label: "Other", options: otherOpts });
+      sections.push({ label: t("filter.otherGroup"), options: otherOpts });
     return sections;
-  }, [providers, regionProviderIds]);
+  }, [providers, regionProviderIds, t]);
 
   // Build language sections: priority languages first, then others
   const languageSections = useMemo((): Section[] | undefined => {
     if (!languages || languages.length === 0) return undefined;
     const allOpts = (languages as (string | LanguageOption)[]).map((l) =>
       typeof l === "string"
-        ? { value: l, label: languageLabel(l) }
+        ? { value: l, label: languageName(l, i18n.language) ?? l }
         : { value: l.code, label: l.name },
     );
     if (!priorityLanguageCodes || priorityLanguageCodes.length === 0) {
@@ -142,15 +134,15 @@ const FilterBar = memo(function FilterBar({
     const sections: Section[] = [];
     if (priorityOpts.length > 0) sections.push({ options: priorityOpts });
     if (otherOpts.length > 0)
-      sections.push({ label: "Other", options: otherOpts });
+      sections.push({ label: t("filter.otherGroup"), options: otherOpts });
     return sections;
-  }, [languages, priorityLanguageCodes]);
+  }, [languages, priorityLanguageCodes, i18n.language, t]);
 
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <div
         role="group"
-        aria-label="Content type"
+        aria-label={t("filter.card.contentType")}
         className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
       >
         <button
@@ -182,7 +174,7 @@ const FilterBar = memo(function FilterBar({
       {showDaysFilter && onDaysBackChange && (
         <div
           role="group"
-          aria-label="Time period"
+          aria-label={t("filter.timePeriod")}
           className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
         >
           {DAYS.map((d) => (

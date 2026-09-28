@@ -2,6 +2,7 @@ import { useRef, useState, useMemo } from "react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
+import { languageName } from "../lib/languageName";
 
 interface ProviderOption {
   id: number;
@@ -61,14 +62,6 @@ const RATING_OPTIONS = [
   "9.5",
 ] as const;
 
-function languageLabel(code: string): string {
-  try {
-    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) || code;
-  } catch {
-    return code;
-  }
-}
-
 export default function BrowseFilterCard(props: Props) {
   const {
     genre,
@@ -94,7 +87,8 @@ export default function BrowseFilterCard(props: Props) {
     onHideTrackedChange,
     onClearFilters,
   } = props;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const uiLanguage = i18n.language;
 
   const hasActiveFilters =
     onlyMine ||
@@ -109,10 +103,10 @@ export default function BrowseFilterCard(props: Props) {
   // Genre summary
   const genreSummary =
     genre.length === 0
-      ? "All genres"
+      ? t("filter.card.allGenres")
       : genre.length <= 2
         ? genre.join(", ")
-        : `${genre.length} selected`;
+        : t("filter.selectedCount", { count: genre.length });
 
   // Provider summary (use provider names)
   const providerById = useMemo(() => {
@@ -122,17 +116,19 @@ export default function BrowseFilterCard(props: Props) {
   }, [providers]);
   const providerSummary =
     provider.length === 0
-      ? "All providers"
+      ? t("filter.card.allProviders")
       : provider.length <= 2
         ? provider.map((id) => providerById.get(id)?.name ?? id).join(", ")
         : `${providerById.get(provider[0])?.name ?? provider[0]}, ${providerById.get(provider[1])?.name ?? provider[1]} +${provider.length - 2}`;
 
   // Year summary
   const yearSummary =
-    yearMin || yearMax ? `${yearMin || "…"} – ${yearMax || "…"}` : "Any year";
+    yearMin || yearMax
+      ? `${yearMin || "…"} – ${yearMax || "…"}`
+      : t("filter.anyYear");
 
   // Rating summary
-  const ratingSummary = minRating ? `★ ${minRating}+` : "Any rating";
+  const ratingSummary = minRating ? `★ ${minRating}+` : t("filter.anyRating");
 
   // Provider sections (region first, then others)
   const providerSections = useMemo(() => {
@@ -146,18 +142,19 @@ export default function BrowseFilterCard(props: Props) {
     const other = providers.filter((p) => !regionSet.has(p.id));
     const sections: { label?: string; options: ProviderOption[] }[] = [];
     if (region.length) sections.push({ options: region });
-    if (other.length) sections.push({ label: "Other", options: other });
+    if (other.length)
+      sections.push({ label: t("filter.otherGroup"), options: other });
     return sections;
-  }, [providers, regionProviderIds]);
+  }, [providers, regionProviderIds, t]);
 
   // Language sections
   const languageOptions = useMemo(() => {
     return (languages as (string | LanguageOption)[]).map((l) =>
       typeof l === "string"
-        ? { value: l, label: languageLabel(l) }
+        ? { value: l, label: languageName(l, uiLanguage) ?? l }
         : { value: l.code, label: l.name },
     );
-  }, [languages]);
+  }, [languages, uiLanguage]);
   const languageSections = useMemo(() => {
     if (!priorityLanguageCodes || priorityLanguageCodes.length === 0) {
       return [{ options: languageOptions }];
@@ -170,22 +167,25 @@ export default function BrowseFilterCard(props: Props) {
       options: { value: string; label: string }[];
     }[] = [];
     if (priority.length) sections.push({ options: priority });
-    if (other.length) sections.push({ label: "Other", options: other });
+    if (other.length)
+      sections.push({ label: t("filter.otherGroup"), options: other });
     return sections;
-  }, [languageOptions, priorityLanguageCodes]);
+  }, [languageOptions, priorityLanguageCodes, t]);
 
   const languageSummary =
     language.length === 0
       ? t("filter.allLanguages")
       : language.length <= 2
-        ? language.map((code) => languageLabel(code)).join(", ")
-        : `${language.length} selected`;
+        ? language
+            .map((code) => languageName(code, uiLanguage) ?? code)
+            .join(", ")
+        : t("filter.selectedCount", { count: language.length });
 
   return (
     <div className="space-y-3">
       {/* Primary: 4 dropdown fields + Clear */}
       <Card className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[repeat(4,1fr)_auto] gap-3 items-end">
-        <FilterField label="Genre" summary={genreSummary}>
+        <FilterField label={t("filter.card.genre")} summary={genreSummary}>
           <CheckboxList
             sections={[
               { options: genres.map((g) => ({ value: g, label: g })) },
@@ -195,7 +195,10 @@ export default function BrowseFilterCard(props: Props) {
             searchable
           />
         </FilterField>
-        <FilterField label="Provider" summary={providerSummary}>
+        <FilterField
+          label={t("filter.card.provider")}
+          summary={providerSummary}
+        >
           <CheckboxList
             sections={providerSections.map((s) => ({
               label: s.label,
@@ -210,14 +213,14 @@ export default function BrowseFilterCard(props: Props) {
             searchable
           />
         </FilterField>
-        <FilterField label="Year" summary={yearSummary}>
+        <FilterField label={t("filter.card.year")} summary={yearSummary}>
           <YearRangeInput
             yearMin={yearMin}
             yearMax={yearMax}
             onChange={onYearChange}
           />
         </FilterField>
-        <FilterField label="Min. rating" summary={ratingSummary}>
+        <FilterField label={t("filter.card.minRating")} summary={ratingSummary}>
           <RatingList value={minRating} onChange={onMinRatingChange} />
         </FilterField>
         <button
@@ -226,7 +229,7 @@ export default function BrowseFilterCard(props: Props) {
           disabled={!hasActiveFilters}
           className="bg-white/[0.06] border border-white/[0.08] text-zinc-300 text-xs font-semibold px-4 py-[9px] rounded-lg hover:bg-white/[0.1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
-          Clear
+          {t("filter.card.clear")}
         </button>
       </Card>
 
@@ -234,7 +237,7 @@ export default function BrowseFilterCard(props: Props) {
       <div className="flex flex-wrap items-center gap-2">
         <div
           role="group"
-          aria-label="Content type"
+          aria-label={t("filter.card.contentType")}
           className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
         >
           <button
@@ -509,6 +512,7 @@ function YearRangeInput({
   yearMax: string;
   onChange: (min: string, max: string) => void;
 }) {
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
   return (
     <div className="p-3 flex flex-col gap-2 min-w-[220px]">
@@ -518,7 +522,7 @@ function YearRangeInput({
           inputMode="numeric"
           value={yearMin}
           onChange={(e) => onChange(e.target.value, yearMax)}
-          placeholder="From"
+          placeholder={t("filter.card.from")}
           min={1900}
           max={2100}
           className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
@@ -529,7 +533,7 @@ function YearRangeInput({
           inputMode="numeric"
           value={yearMax}
           onChange={(e) => onChange(yearMin, e.target.value)}
-          placeholder="To"
+          placeholder={t("filter.card.to")}
           min={1900}
           max={2100}
           className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
@@ -538,12 +542,12 @@ function YearRangeInput({
       <div className="flex flex-wrap gap-1">
         {[
           {
-            label: "This year",
+            label: t("filter.card.thisYear"),
             min: String(currentYear),
             max: String(currentYear),
           },
           {
-            label: "Last 5y",
+            label: t("filter.card.last5y"),
             min: String(currentYear - 5),
             max: String(currentYear),
           },
@@ -565,7 +569,7 @@ function YearRangeInput({
             onClick={() => onChange("", "")}
             className="text-[11px] px-2 py-1 rounded text-zinc-400 hover:text-white cursor-pointer ml-auto"
           >
-            Clear
+            {t("filter.card.clear")}
           </button>
         )}
       </div>

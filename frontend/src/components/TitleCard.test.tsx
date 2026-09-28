@@ -15,7 +15,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import "../i18n";
+import i18n, { setLanguage, LANGUAGE_STORAGE_KEY } from "../i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TitleCard from "./TitleCard";
 import { AuthContext } from "../context/AuthContext";
@@ -667,5 +667,32 @@ describe("TitleCard refreshed server state", () => {
     expect(
       screen.getByRole("button", { name: "Remove tag server" }),
     ).toBeDefined();
+  });
+
+  describe("localization", () => {
+    afterEach(async () => {
+      localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+      await i18n.changeLanguage("en");
+    });
+
+    it("renders status pills and fallbacks in the active language", async () => {
+      await setLanguage("de");
+      render(
+        <TitleCard
+          title={makeTitle({
+            id: "show-1",
+            object_type: "SHOW",
+            poster_url: null,
+            user_status: "completed",
+          })}
+        />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.getByText("Abgeschlossen")).toBeDefined();
+      expect(screen.getByText("Kein Poster")).toBeDefined();
+      expect(screen.getByText("Serie")).toBeDefined();
+      expect(screen.queryByText("Completed")).toBeNull();
+    });
   });
 });

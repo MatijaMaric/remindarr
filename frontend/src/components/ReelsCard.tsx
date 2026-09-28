@@ -1,5 +1,6 @@
 import { CheckCircle, Check, Share2, Info } from "lucide-react";
 import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { Episode, RatingValue } from "../types";
 import WatchButtonGroup from "./WatchButtonGroup";
@@ -103,6 +104,7 @@ export default function ReelsCard({
   isMovie,
   blurred,
 }: ReelsCardProps) {
+  const { t } = useTranslation();
   const bgUrl = getBackgroundImageUrl(episode);
   const airDateFormatted = formatAirDate(episode.air_date);
   const isLive = isToday(episode.air_date);
@@ -137,7 +139,7 @@ export default function ReelsCard({
           className="absolute inset-0 bg-zinc-950/40 flex items-center justify-center pointer-events-none z-[1]"
         >
           <span className="text-xs font-bold uppercase tracking-wide text-zinc-100 bg-black/70 px-3 py-1.5 rounded">
-            {episode.age_certification ?? "Sensitive"}
+            {episode.age_certification ?? t("titleCard.sensitive")}
           </span>
         </div>
       )}
