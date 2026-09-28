@@ -8,8 +8,8 @@ import path from "node:path";
  * other silently vanishes from that deployment.
  *
  * This test extracts `app.route("/api/...")` mounts from both files and
- * asserts the sets match. It does not validate middleware or HTTP methods —
- * only that every API surface exists on both runtimes.
+ * asserts the sets match. Route presence does not cover middleware; write-path
+ * rate limiters are checked separately below (#1307).
  *
  * Known excluded routes (intentional divergence):
  *   - /api/jobs: Bun uses the in-memory queue route; CF uses jobs-cf.
@@ -55,5 +55,74 @@ describe("Bun vs CF Workers route parity", () => {
     const missingInBun = cfApiRoutes.filter((r) => !bunRoutes.has(r));
 
     expect(missingInBun).toEqual([]);
+  });
+});
+
+/**
+ * Write-path limiters are mounted by hand in both entry points. A route that
+ * exists on CF without the Bun limiter is a real throttle gap (#1307).
+ *
+ * Ratings and episode comments are intentionally excluded: Bun shares
+ * `writeRateLimiter` with them, while CF keeps dedicated limiters.
+ */
+const WRITE_LIMITED_ROUTES = [
+  "/api/track/*",
+  "/api/track",
+  "/api/watched/*",
+  "/api/watched",
+  "/api/imdb/*",
+  "/api/imdb",
+  "/api/notifiers/*",
+  "/api/notifiers",
+  "/api/integrations/*",
+  "/api/integrations",
+  "/api/import/*",
+  "/api/import",
+] as const;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalize(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function extractUseArgs(src: string, route: string): string | null {
+  const re = new RegExp(
+    `app\\.use\\(\\s*["'\`]${escapeRegExp(route)}["'\`]\\s*,([\\s\\S]*?)\\)`,
+  );
+  const match = src.match(re);
+  return match ? normalize(match[1]) : null;
+}
+
+function extractLimiterConfig(src: string, name: string): string | null {
+  const re = new RegExp(`const ${name} = rateLimiter\\(\\{([\\s\\S]*?)\\}\\)`);
+  const match = src.match(re);
+  return match ? normalize(match[1]) : null;
+}
+
+describe("Bun vs CF Workers write-path rate limiter parity", () => {
+  const bunSrc = fs.readFileSync(BUN_INDEX, "utf-8");
+  const cfSrc = fs.readFileSync(CF_WORKER, "utf-8");
+
+  test("write and import limiters use the same store, scope, and budget", () => {
+    for (const name of ["writeRateLimiter", "importRateLimiter"] as const) {
+      const bun = extractLimiterConfig(bunSrc, name);
+      const cf = extractLimiterConfig(cfSrc, name);
+      expect(bun, `${name} missing from server/index.ts`).not.toBeNull();
+      expect(cf, `${name} missing from server/worker.ts`).not.toBeNull();
+      expect(cf).toBe(bun);
+    }
+  });
+
+  test("each write-path route mounts the same limiter ahead of requireAuth", () => {
+    for (const route of WRITE_LIMITED_ROUTES) {
+      const bun = extractUseArgs(bunSrc, route);
+      const cf = extractUseArgs(cfSrc, route);
+      expect(bun, `${route} missing from server/index.ts`).not.toBeNull();
+      expect(cf).toBe(bun);
+      expect(cf).toMatch(/RateLimiter, requireAuth$/);
+    }
   });
 });
