@@ -53,6 +53,87 @@ function EpCount({ watched, total }: { watched: number; total: number }) {
   );
 }
 
+function StatusBadge({
+  colorClass,
+  label,
+  check = false,
+}: {
+  colorClass: string;
+  label: string;
+  check?: boolean;
+}) {
+  return (
+    <span
+      className={`absolute bottom-2 left-2 ${colorClass} text-white text-[10px] font-bold px-1.5 py-0.5 rounded${check ? " flex items-center gap-0.5" : ""}`}
+    >
+      {check && (
+        <svg
+          className="w-3 h-3"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+        >
+          <path
+            fillRule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+            clipRule="evenodd"
+          />
+        </svg>
+      )}
+      {label}
+    </span>
+  );
+}
+
+/** Progress bar or episode-count pill. Call-site conditions stay here so both overlays cannot diverge. */
+function EpisodeCountOrProgress({
+  title,
+  effectiveStatus,
+  showProgressBar,
+}: {
+  title: Title;
+  effectiveStatus: string | null;
+  showProgressBar?: boolean;
+}) {
+  const watched = title.watched_episodes_count ?? 0;
+
+  if (effectiveStatus === "watching" && title.object_type === "SHOW") {
+    const releasedOrTotal =
+      title.released_episodes_count ?? title.total_episodes ?? 0;
+    if (showProgressBar && releasedOrTotal > 0) {
+      return (
+        <ProgressBar
+          watched={watched}
+          max={title.released_episodes_count ?? title.total_episodes ?? 1}
+        />
+      );
+    }
+    return (
+      <EpCount
+        watched={watched}
+        total={title.released_episodes_count ?? title.total_episodes ?? 0}
+      />
+    );
+  }
+
+  if (
+    !effectiveStatus &&
+    !title.is_watched &&
+    title.object_type === "SHOW" &&
+    title.total_episodes != null &&
+    title.total_episodes > 0
+  ) {
+    const count = title.released_episodes_count ?? title.total_episodes;
+    return showProgressBar ? (
+      <ProgressBar watched={watched} max={count} />
+    ) : (
+      <EpCount watched={watched} total={count} />
+    );
+  }
+
+  return null;
+}
+
 const TitleCard = memo(function TitleCard({
   title,
   onTrackToggle,
@@ -173,100 +254,29 @@ const TitleCard = memo(function TitleCard({
               className="absolute inset-0 bg-emerald-900/40 pointer-events-none"
               data-testid="completed-overlay"
             />
-            <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-              <svg
-                className="w-3 h-3"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Completed
-            </span>
+            <StatusBadge colorClass="bg-emerald-600" label="Completed" check />
           </>
         )}
         {effectiveStatus === "caught_up" && (
-          <span className="absolute bottom-2 left-2 bg-teal-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            Caught Up
-          </span>
+          <StatusBadge colorClass="bg-teal-600" label="Caught Up" />
         )}
         {effectiveStatus === "on_hold" && (
-          <span className="absolute bottom-2 left-2 bg-yellow-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            On Hold
-          </span>
+          <StatusBadge colorClass="bg-yellow-600" label="On Hold" />
         )}
         {effectiveStatus === "dropped" && (
-          <span className="absolute bottom-2 left-2 bg-red-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            Dropped
-          </span>
+          <StatusBadge colorClass="bg-red-700" label="Dropped" />
         )}
         {effectiveStatus === "plan_to_watch" && (
-          <span className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            Plan to Watch
-          </span>
+          <StatusBadge colorClass="bg-blue-600" label="Plan to Watch" />
         )}
-        {effectiveStatus === "watching" && title.object_type === "SHOW" && (
-          <>
-            {showProgressBar &&
-            (title.released_episodes_count ?? title.total_episodes ?? 0) > 0 ? (
-              <ProgressBar
-                watched={title.watched_episodes_count ?? 0}
-                max={title.released_episodes_count ?? title.total_episodes ?? 1}
-              />
-            ) : (
-              <EpCount
-                watched={title.watched_episodes_count ?? 0}
-                total={
-                  title.released_episodes_count ?? title.total_episodes ?? 0
-                }
-              />
-            )}
-          </>
-        )}
+        <EpisodeCountOrProgress
+          title={title}
+          effectiveStatus={effectiveStatus}
+          showProgressBar={showProgressBar}
+        />
         {!effectiveStatus && title.is_watched && (
-          <span className="absolute bottom-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-            <svg
-              className="w-3 h-3"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Watched
-          </span>
+          <StatusBadge colorClass="bg-emerald-500" label="Watched" check />
         )}
-        {!effectiveStatus &&
-          !title.is_watched &&
-          !showProgressBar &&
-          title.object_type === "SHOW" &&
-          title.total_episodes != null &&
-          title.total_episodes > 0 && (
-            <EpCount
-              watched={title.watched_episodes_count ?? 0}
-              total={title.released_episodes_count ?? title.total_episodes}
-            />
-          )}
-        {!effectiveStatus &&
-          !title.is_watched &&
-          showProgressBar &&
-          title.object_type === "SHOW" &&
-          title.total_episodes != null &&
-          title.total_episodes > 0 && (
-            <ProgressBar
-              watched={title.watched_episodes_count ?? 0}
-              max={title.released_episodes_count ?? title.total_episodes}
-            />
-          )}
         {title.imdb_score && !showVisibilityToggle && !showRating && (
           <span className="absolute top-2 right-2 bg-yellow-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded">
             {title.imdb_score.toFixed(1)}
