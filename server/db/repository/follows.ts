@@ -32,6 +32,11 @@ export async function unfollow(followerId: string, followingId: string) {
   });
 }
 
+// Defensive cap on follower/following list reads — these routes are public
+// (optionalAuth, no rate limiter) and previously had no LIMIT at all, so a
+// popular account's list could grow unbounded on every page view.
+export const MAX_FOLLOW_LIST = 500;
+
 export async function getFollowers(userId: string) {
   return traceDbQuery("getFollowers", async () => {
     const db = getDb();
@@ -46,6 +51,7 @@ export async function getFollowers(userId: string) {
       .from(follows)
       .innerJoin(users, eq(users.id, follows.followerId))
       .where(eq(follows.followingId, userId))
+      .limit(MAX_FOLLOW_LIST)
       .all();
   });
 }
@@ -64,6 +70,7 @@ export async function getFollowing(userId: string) {
       .from(follows)
       .innerJoin(users, eq(users.id, follows.followingId))
       .where(eq(follows.followerId, userId))
+      .limit(MAX_FOLLOW_LIST)
       .all();
   });
 }
