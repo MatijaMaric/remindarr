@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Episode } from "../types";
 import { formatEpisodeCode } from "./EpisodeComponents";
@@ -73,6 +74,7 @@ export default function HeroBanner({
   episodes: Episode[];
   onToggleWatched?: (episodeId: number, currentlyWatched: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const slides = getHeroBannerSlides(episodes);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -210,15 +212,17 @@ export default function HeroBanner({
                 to={`/title/${current.featured.title_id}`}
                 className="inline-flex items-center bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 h-10 rounded-lg transition-colors"
               >
-                ▶ Play S{current.featured.season_number}·E
-                {current.featured.episode_number}
+                {t("watchAction.viewEpisode", {
+                  season: current.featured.season_number,
+                  episode: current.featured.episode_number,
+                })}
               </Link>
               <button
                 onClick={handleMarkWatched}
                 disabled={markingWatched}
                 className="inline-flex items-center bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 h-10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {markingWatched ? "Marking…" : "Mark watched"}
+                {markingWatched ? "Marking…" : t("episodes.markWatchedShort")}
               </button>
               <WatchButtonGroup
                 offers={current.featured.offers ?? []}

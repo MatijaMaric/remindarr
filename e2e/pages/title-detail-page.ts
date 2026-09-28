@@ -16,11 +16,11 @@ export class TitleDetailPage extends BasePage {
 
   /** Track/Tracked toggle button. */
   trackButton() {
-    return this.page.getByRole("button", { name: /^Track$/i });
+    return this.page.getByRole("button", { name: /^Add to watchlist$/i });
   }
 
   trackedButton() {
-    return this.page.getByRole("button", { name: /^Tracked$/i });
+    return this.page.getByRole("button", { name: /^In watchlist$/i });
   }
 
   /** Confirm untrack button inside the AlertDialog. */

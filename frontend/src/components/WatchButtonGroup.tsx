@@ -1,9 +1,11 @@
 import { useState, useRef, useMemo } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
+import { useTranslation } from "react-i18next";
 import type { Offer } from "../types";
 import WatchButton, {
   monetizationLabel,
+  watchActionLabel,
   PLEX_PROVIDER_ID,
   plexDeepLink,
   getPlexPlatform,
@@ -70,6 +72,9 @@ export default function WatchButtonGroup({
               providerName={o.provider_name}
               providerIconUrl={o.provider_icon_url}
               monetizationType={o.monetization_type}
+              subscribed={
+                subscribedSet.size === 0 || isSubscribed(o.provider_id)
+              }
               variant="full"
               className={buttonClassName}
             />
@@ -120,9 +125,16 @@ function DropdownProviderItem({
   isLg: boolean;
   isSubscribed: boolean;
 }) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
   const c = getProviderColor(offer.provider_id);
   const lbl = monetizationLabel(offer.monetization_type);
+  const actionLabel = watchActionLabel(
+    t,
+    offer.provider_name,
+    offer.monetization_type,
+    { subscribed: isSubscribed },
+  );
   const platform =
     offer.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
   const useMobileDeepLink = platform === "ios" || platform === "android";
@@ -135,7 +147,8 @@ function DropdownProviderItem({
       href={effectiveUrl}
       target={useMobileDeepLink ? undefined : "_blank"}
       rel="noopener noreferrer"
-      aria-label={`Watch on ${offer.provider_name}${!isSubscribed ? " (not subscribed)" : ""}`}
+      aria-label={actionLabel}
+      title={actionLabel}
       data-subscribed={isSubscribed}
       className={`flex items-center justify-center gap-1.5 font-semibold transition-colors duration-200 ${
         isLg
@@ -153,7 +166,7 @@ function DropdownProviderItem({
         className="w-5 h-5 rounded"
         loading="lazy"
       />
-      <ExternalLink size={14} className="opacity-60" />
+      <ExternalLink size={14} className="opacity-60" aria-hidden="true" />
     </a>
   );
 }
@@ -169,6 +182,7 @@ function SplitWatchButton({
   size: "sm" | "lg";
   fullWidth?: boolean;
 }) {
+  const { t } = useTranslation();
   const [primaryHovered, setPrimaryHovered] = useState(false);
   const [caretHovered, setCaretHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -177,6 +191,17 @@ function SplitWatchButton({
   const color = getProviderColor(primary.provider_id);
   const label = monetizationLabel(primary.monetization_type);
   const isLg = size === "lg";
+  const primaryLabel = watchActionLabel(
+    t,
+    primary.provider_name,
+    primary.monetization_type,
+    {
+      subscribed:
+        subscribedSet.size === 0 ||
+        subscribedSet.has(primary.provider_id) ||
+        primary.provider_id === PLEX_PROVIDER_ID,
+    },
+  );
 
   const platform =
     primary.provider_id === PLEX_PROVIDER_ID ? getPlexPlatform() : "desktop";
@@ -195,6 +220,8 @@ function SplitWatchButton({
         href={primaryUrl}
         target={useMobileDeepLink ? undefined : "_blank"}
         rel="noopener noreferrer"
+        aria-label={primaryLabel}
+        title={primaryLabel}
         className={`flex-1 flex items-center justify-center gap-1.5 transition-colors duration-200 font-semibold ${
           isLg
             ? "rounded-l-xl px-6 py-3 text-base"
@@ -214,7 +241,7 @@ function SplitWatchButton({
           className="w-5 h-5 rounded"
           loading="lazy"
         />
-        <ExternalLink size={14} className="opacity-60" />
+        <ExternalLink size={14} className="opacity-60" aria-hidden="true" />
       </a>
 
       {/* Caret / dropdown trigger */}
@@ -229,7 +256,7 @@ function SplitWatchButton({
           }}
           onMouseEnter={() => setCaretHovered(true)}
           onMouseLeave={() => setCaretHovered(false)}
-          aria-label={`More streaming options (${rest.length} more)`}
+          aria-label={t("watchAction.moreOptions", { count: rest.length })}
         >
           <ChevronDown size={isLg ? 14 : 12} className="opacity-70" />
         </Popover.Trigger>

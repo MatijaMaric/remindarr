@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { getProviderColor } from "../data/providerColors";
 import { cn } from "../lib/utils";
 
@@ -47,6 +49,8 @@ interface WatchButtonProps {
   providerIconUrl: string;
   variant?: "compact" | "full";
   monetizationType?: string;
+  /** False when the user has subscriptions set and this provider isn't one. */
+  subscribed?: boolean;
   className?: string;
 }
 
@@ -67,6 +71,34 @@ export function monetizationLabel(type?: string): string | null {
   }
 }
 
+const ACTION_KEYS: Record<string, string> = {
+  FLATRATE: "watchAction.stream",
+  FREE: "watchAction.free",
+  ADS: "watchAction.ads",
+  RENT: "watchAction.rent",
+  BUY: "watchAction.buy",
+};
+
+/**
+ * Accessible name for a link that leaves Remindarr for a streaming provider.
+ * Names the provider and how it is offered (stream/rent/buy/free) so it is
+ * never mistaken for in-app playback, marking watched, or tracking.
+ */
+export function watchActionLabel(
+  t: TFunction,
+  providerName: string,
+  monetizationType?: string,
+  opts: { subscribed?: boolean } = {},
+): string {
+  const key =
+    (monetizationType && ACTION_KEYS[monetizationType]) || "watchAction.open";
+  let action = t(key, { provider: providerName });
+  if (opts.subscribed === false) {
+    action = t("watchAction.notSubscribed", { action });
+  }
+  return t("watchAction.external", { action });
+}
+
 export default function WatchButton({
   url,
   providerId,
@@ -74,9 +106,14 @@ export default function WatchButton({
   providerIconUrl,
   variant = "compact",
   monetizationType,
+  subscribed,
   className,
 }: WatchButtonProps) {
+  const { t } = useTranslation();
   const color = getProviderColor(providerId);
+  const actionLabel = watchActionLabel(t, providerName, monetizationType, {
+    subscribed,
+  });
   const [hovered, setHovered] = useState(false);
   const isPlex = providerId === PLEX_PROVIDER_ID;
   const platform = isPlex ? getPlexPlatform() : "desktop";
@@ -90,7 +127,8 @@ export default function WatchButton({
         href={effectiveUrl}
         target={target}
         rel="noopener noreferrer"
-        title={providerName}
+        title={actionLabel}
+        aria-label={actionLabel}
         className="block rounded-lg transition-all duration-200"
         style={{
           boxShadow: hovered
@@ -119,6 +157,8 @@ export default function WatchButton({
       href={effectiveUrl}
       target={target}
       rel="noopener noreferrer"
+      aria-label={actionLabel}
+      title={actionLabel}
       className={cn(
         "min-h-8 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
         className,
@@ -139,7 +179,7 @@ export default function WatchButton({
         width={20}
         height={20}
       />
-      <ExternalLink size={14} className="opacity-60" />
+      <ExternalLink size={14} className="opacity-60" aria-hidden="true" />
     </a>
   );
 }

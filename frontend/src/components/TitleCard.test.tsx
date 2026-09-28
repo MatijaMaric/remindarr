@@ -554,8 +554,8 @@ describe("TitleCard", () => {
     const title = makeTitle({ id: "movie-99", is_tracked: true });
     render(<TitleCard title={title} />, { wrapper: Wrapper });
 
-    // Real TrackButton renders a button with text "Tracked" when is_tracked=true
-    expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+    // Real TrackButton renders "In watchlist" when is_tracked=true
+    expect(screen.getByRole("button", { name: "In watchlist" })).toBeDefined();
   });
 
   it("blurs the poster when the advisory overlay is requested", () => {
