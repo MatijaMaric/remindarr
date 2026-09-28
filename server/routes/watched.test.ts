@@ -573,6 +573,22 @@ describe("POST /watched/bulk validation", () => {
     const body = await res.json();
     expect(body.error).toBe("Validation failed");
   });
+
+  it("returns 400 with issues array when episodeIds exceeds 500 entries", async () => {
+    const app = makeAuthedApp();
+    const res = await app.request("/watched/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        episodeIds: Array.from({ length: 501 }, (_, i) => i + 1),
+        watched: true,
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
+    expect(Array.isArray(body.issues)).toBe(true);
+  });
 });
 
 describe("POST /watched/backdate", () => {

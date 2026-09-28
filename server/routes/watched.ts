@@ -75,7 +75,8 @@ const historyIdParamSchema = z.object({ id: z.string().min(1).max(128) });
 const bulkWatchedSchema = z.object({
   episodeIds: z
     .array(z.number().int())
-    .min(1, "episodeIds must be a non-empty array"),
+    .min(1, "episodeIds must be a non-empty array")
+    .max(500, "Cannot mark more than 500 episodes at once"),
   watched: z.boolean(),
   useAirDate: z.boolean().optional(),
 });
