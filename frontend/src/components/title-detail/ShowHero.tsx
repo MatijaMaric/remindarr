@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ShowDetailsResponse, Title } from "../../types";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import TrackButton from "../TrackButton";
@@ -25,6 +26,7 @@ export interface ShowHeroProps {
 }
 
 export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
+  const { t } = useTranslation();
   const [showTrailer, setShowTrailer] = useState(false);
   const isMobile = useIsMobile();
   const videos = tmdb?.videos?.results ?? [];
@@ -140,8 +142,8 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             {playableOffers.length > 0 ? (
               <WatchButtonGroup offers={playableOffers} size="lg" fullWidth />
             ) : (
-              <div className="flex items-center justify-center gap-2 bg-white/[0.06] border border-white/[0.08] text-zinc-500 px-4 py-3 rounded-xl text-[14px] font-bold cursor-not-allowed">
-                ▶ No stream
+              <div className="flex items-center justify-center gap-2 bg-white/[0.06] border border-white/[0.08] text-zinc-500 px-4 py-3 rounded-xl text-[14px] font-bold">
+                {t("watchAction.noStream")}
               </div>
             )}
           </div>

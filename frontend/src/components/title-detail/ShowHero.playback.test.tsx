@@ -107,7 +107,9 @@ describe("mobile ShowHero playback", () => {
   it("prefers a subscribed provider and exposes the remaining providers", async () => {
     renderHero([offer(), offer(15, "Hulu"), offer(15, "Hulu")], [15]);
     expect(
-      screen.getByRole("link", { name: "Stream Hulu" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Stream on Hulu — opens external site" })
+        .getAttribute("href"),
     ).toBe("https://example.test/watch/15");
     fireEvent.click(
       screen.getByRole("button", { name: "More streaming options (1 more)" }),
@@ -115,7 +117,7 @@ describe("mobile ShowHero playback", () => {
     expect(
       (
         await screen.findByRole("link", {
-          name: "Watch on Netflix (not subscribed)",
+          name: "Stream on Netflix (not subscribed) — opens external site",
         })
       ).getAttribute("href"),
     ).toBe("https://example.test/watch/8");
@@ -128,7 +130,9 @@ describe("mobile ShowHero playback", () => {
       offer(15, "Hulu"),
     ]);
     expect(
-      screen.getByRole("link", { name: "Stream Netflix" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Stream on Netflix — opens external site" })
+        .getAttribute("href"),
     ).toBe("https://example.test/watch/8");
   });
 
@@ -148,7 +152,9 @@ describe("mobile ShowHero playback", () => {
         url: "https://app.plex.tv/desktop/#!/server/server-1/details?key=%2Flibrary%2Fmetadata%2F123&watchSlug=test-show&mediaType=show",
       }),
     ]);
-    const link = screen.getByRole("link", { name: "Stream Plex" });
+    const link = screen.getByRole("link", {
+      name: "Stream on Plex — opens external site",
+    });
     expect(link.getAttribute("href")).toBe(expectedUrl);
     expect(link.getAttribute("target")).toBeNull();
   });
@@ -158,7 +164,7 @@ describe("mobile ShowHero playback", () => {
     { offers: [offer(1, "Rental", { monetization_type: "RENT" })] },
   ])("shows no playback action without a playable offer", ({ offers }) => {
     renderHero(offers);
-    expect(screen.getByText("▶ No stream")).toBeDefined();
+    expect(screen.getByText("Not available to stream")).toBeDefined();
     expect(screen.queryByRole("link")).toBeNull();
   });
 });

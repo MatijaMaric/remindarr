@@ -1,6 +1,9 @@
-import { describe, it, expect } from "bun:test";
-import { render } from "@testing-library/react";
-import WatchButton from "./WatchButton";
+import { describe, it, expect, afterEach } from "bun:test";
+import { render, cleanup } from "@testing-library/react";
+import i18n from "../i18n";
+import WatchButton, { watchActionLabel } from "./WatchButton";
+
+afterEach(cleanup);
 
 describe("WatchButton", () => {
   const defaultProps = {
@@ -18,7 +21,9 @@ describe("WatchButton", () => {
     expect(link).toBeTruthy();
     expect(link!.getAttribute("href")).toBe("https://example.com/watch");
     expect(link!.getAttribute("target")).toBe("_blank");
-    expect(link!.getAttribute("title")).toBe("Netflix");
+    expect(link!.getAttribute("title")).toBe(
+      "Open on Netflix — opens external site",
+    );
   });
 
   it("renders full variant with provider icon only (no name text)", () => {
@@ -37,7 +42,9 @@ describe("WatchButton", () => {
     const { container } = render(<WatchButton {...defaultProps} />);
     const link = container.querySelector("a");
     expect(link).toBeTruthy();
-    expect(link!.getAttribute("title")).toBe("Netflix");
+    expect(link!.getAttribute("title")).toBe(
+      "Open on Netflix — opens external site",
+    );
     const img = link!.querySelector("img");
     expect(img).toBeTruthy();
     expect(img!.getAttribute("alt")).toBe("Netflix");
@@ -135,5 +142,58 @@ describe("WatchButton", () => {
     const link = container.querySelector("a");
     expect(link!.className).not.toContain("text-xs");
     expect(link!.className).toContain("text-base");
+  });
+
+  it("names the provider and offer type in the accessible label", () => {
+    const { getByRole } = render(
+      <WatchButton {...defaultProps} variant="full" monetizationType="RENT" />,
+    );
+    const link = getByRole("link", {
+      name: "Rent on Netflix — opens external site",
+    });
+    expect(link.getAttribute("title")).toBe(
+      "Rent on Netflix — opens external site",
+    );
+  });
+
+  it("marks unsubscribed providers in the accessible label", () => {
+    const { getByRole } = render(
+      <WatchButton
+        {...defaultProps}
+        variant="full"
+        monetizationType="FLATRATE"
+        subscribed={false}
+      />,
+    );
+    expect(
+      getByRole("link", {
+        name: "Stream on Netflix (not subscribed) — opens external site",
+      }),
+    ).toBeDefined();
+  });
+});
+
+describe("watchActionLabel", () => {
+  const t = i18n.t.bind(i18n);
+
+  it.each([
+    ["FLATRATE", "Stream on Netflix — opens external site"],
+    ["FREE", "Watch free on Netflix — opens external site"],
+    ["ADS", "Watch with ads on Netflix — opens external site"],
+    ["RENT", "Rent on Netflix — opens external site"],
+    ["BUY", "Buy on Netflix — opens external site"],
+    [undefined, "Open on Netflix — opens external site"],
+    ["UNKNOWN", "Open on Netflix — opens external site"],
+  ])("labels %s offers", (type, expected) => {
+    expect(watchActionLabel(t, "Netflix", type)).toBe(expected);
+  });
+
+  it("only flags not-subscribed when explicitly false", () => {
+    expect(watchActionLabel(t, "Hulu", "FLATRATE", { subscribed: true })).toBe(
+      "Stream on Hulu — opens external site",
+    );
+    expect(watchActionLabel(t, "Hulu", "FLATRATE", { subscribed: false })).toBe(
+      "Stream on Hulu (not subscribed) — opens external site",
+    );
   });
 });

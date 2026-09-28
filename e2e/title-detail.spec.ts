@@ -141,10 +141,10 @@ test.describe("Title detail page", () => {
     await expect(tdp.trackButton()).toHaveAttribute("aria-pressed", "false");
     await tdp.trackButton().click();
 
-    // Optimistic update — button becomes Tracked
+    // Optimistic update — button becomes "In watchlist"
     await expect(tdp.trackedButton()).toBeVisible();
     await expect(tdp.trackedButton()).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByText("Title tracked")).toBeVisible();
+    await expect(page.getByText("Added to watchlist")).toBeVisible();
   });
 
   test("TC-05: authenticated user can untrack a title (confirm dialog)", async ({
@@ -165,14 +165,14 @@ test.describe("Title detail page", () => {
 
     // Confirm dialog appears
     await expect(
-      page.getByRole("dialog").or(page.getByText(/Stop tracking/i)),
+      page.getByRole("dialog").or(page.getByText(/from your watchlist\?/i)),
     ).toBeVisible();
     await tdp.confirmUntrackButton().click();
 
-    // After confirm, button reverts to Track
+    // After confirm, button reverts to "Add to watchlist"
     await expect(tdp.trackButton()).toBeVisible();
     await expect(tdp.trackButton()).toHaveAttribute("aria-pressed", "false");
-    await expect(page.getByText("Removed from tracked")).toBeVisible();
+    await expect(page.getByText("Removed from watchlist")).toBeVisible();
   });
 
   test("TC-06: error state when title is not found (404)", async ({ page }) => {

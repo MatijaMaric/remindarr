@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "bun:test";
 import { render, screen, cleanup } from "@testing-library/react";
 import WatchButtonGroup from "./WatchButtonGroup";
 import { AuthContext } from "../context/AuthContext";
+import "../i18n";
 import type { Offer } from "../types";
 import type { ReactNode } from "react";
 
@@ -308,5 +309,45 @@ describe("WatchButtonGroup subscription dimming", () => {
     // The dropdown trigger exists (2 providers → split button)
     const trigger = screen.getByLabelText(/More streaming options/);
     expect(trigger).toBeDefined();
+  });
+
+  it("labels inline provider links with the offer type and subscription state", () => {
+    render(
+      <Wrapper subscriptions={{ providerIds: [8], onlyMine: false }}>
+        <WatchButtonGroup
+          offers={[netflixOffer, disneyOffer]}
+          variant="inline"
+        />
+      </Wrapper>,
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "Stream on Netflix — opens external site",
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("link", {
+        name: "Stream on Disney+ (not subscribed) — opens external site",
+      }),
+    ).toBeDefined();
+  });
+
+  it("labels the split-button primary link with its offer type", () => {
+    render(
+      <Wrapper>
+        <WatchButtonGroup
+          offers={[
+            makeOffer({ monetization_type: "FREE" }),
+            { ...disneyOffer, monetization_type: "ADS" },
+          ]}
+        />
+      </Wrapper>,
+    );
+    const primary = screen.getByRole("link", {
+      name: "Watch free on Netflix — opens external site",
+    });
+    expect(primary.getAttribute("title")).toBe(
+      "Watch free on Netflix — opens external site",
+    );
   });
 });

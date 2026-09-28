@@ -52,8 +52,8 @@ describe("i18n", () => {
   });
 
   it("translates track button states", () => {
-    expect(i18n.t("track.track")).toBe("Track");
-    expect(i18n.t("track.tracked")).toBe("Tracked");
+    expect(i18n.t("track.track")).toBe("Add to watchlist");
+    expect(i18n.t("track.tracked")).toBe("In watchlist");
   });
 
   it("translates filter labels", () => {

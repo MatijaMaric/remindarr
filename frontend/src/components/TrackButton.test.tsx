@@ -81,18 +81,20 @@ afterEach(() => {
 });
 
 describe("TrackButton", () => {
-  it("renders 'Track' when not tracked", () => {
+  it("renders 'Add to watchlist' when not tracked", () => {
     render(<TrackButton titleId="123" isTracked={false} />, {
       wrapper: Wrapper,
     });
-    expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Add to watchlist" }),
+    ).toBeDefined();
   });
 
-  it("renders 'Tracked' when tracked", () => {
+  it("renders 'In watchlist' when tracked", () => {
     render(<TrackButton titleId="123" isTracked={true} />, {
       wrapper: Wrapper,
     });
-    expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "In watchlist" })).toBeDefined();
   });
 
   it("returns null when user is not logged in", () => {
@@ -114,11 +116,13 @@ describe("TrackButton", () => {
       { wrapper: Wrapper },
     );
 
-    const button = screen.getByRole("button", { name: "Track" });
+    const button = screen.getByRole("button", { name: "Add to watchlist" });
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+      expect(
+        screen.getByRole("button", { name: "In watchlist" }),
+      ).toBeDefined();
     });
 
     expect(api.trackTitle).toHaveBeenCalledWith("123", undefined, undefined);
@@ -131,7 +135,7 @@ describe("TrackButton", () => {
     });
     expect(
       screen
-        .getByRole("button", { name: "Track" })
+        .getByRole("button", { name: "Add to watchlist" })
         .getAttribute("aria-pressed"),
     ).toBe("false");
   });
@@ -142,7 +146,7 @@ describe("TrackButton", () => {
     });
     expect(
       screen
-        .getByRole("button", { name: "Tracked" })
+        .getByRole("button", { name: "In watchlist" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
   });
@@ -152,10 +156,13 @@ describe("TrackButton", () => {
       wrapper: Wrapper,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Track" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
 
     await waitFor(() => {
-      expect(sonner.toast.success).toHaveBeenCalledWith("Title tracked");
+      expect(sonner.toast.success).toHaveBeenCalledWith("Added to watchlist", {
+        description:
+          "Reminders are only sent if you've set up a notification channel in Settings.",
+      });
     });
   });
 
@@ -166,11 +173,11 @@ describe("TrackButton", () => {
       wrapper: Wrapper,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Track" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
 
     await waitFor(() => {
       expect(sonner.toast.error).toHaveBeenCalledWith(
-        "Failed to track — please try again",
+        "Failed to add to watchlist — please try again",
       );
     });
   });
@@ -189,22 +196,22 @@ describe("TrackButton", () => {
       wrapper: Wrapper,
     });
 
-    const button = screen.getByRole("button", { name: "Track" });
+    const button = screen.getByRole("button", { name: "Add to watchlist" });
     fireEvent.click(button);
 
+    // Optimistic update flips the label immediately; the button stays
+    // disabled and busy until the request settles.
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "..." })).toBeDefined();
+      const pending = screen.getByRole("button", { name: "In watchlist" });
+      expect(pending.hasAttribute("disabled")).toBe(true);
+      expect(pending.getAttribute("aria-busy")).toBe("true");
     });
-
-    // Button should be disabled while loading
-    expect(
-      screen.getByRole("button", { name: "..." }).hasAttribute("disabled"),
-    ).toBe(true);
 
     resolveTrack!();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+      const done = screen.getByRole("button", { name: "In watchlist" });
+      expect(done.hasAttribute("disabled")).toBe(false);
     });
   });
 
@@ -219,10 +226,12 @@ describe("TrackButton", () => {
         { wrapper: Wrapper },
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+      fireEvent.click(screen.getByRole("button", { name: "In watchlist" }));
 
       await waitFor(() => {
-        expect(screen.getByText("Stop tracking Breaking Bad?")).toBeDefined();
+        expect(
+          screen.getByText("Remove Breaking Bad from your watchlist?"),
+        ).toBeDefined();
       });
 
       // untrackTitle should NOT have been called yet
@@ -239,24 +248,30 @@ describe("TrackButton", () => {
         { wrapper: Wrapper },
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+      fireEvent.click(screen.getByRole("button", { name: "In watchlist" }));
 
       await waitFor(() => {
-        expect(screen.getByText("Stop tracking Breaking Bad?")).toBeDefined();
+        expect(
+          screen.getByText("Remove Breaking Bad from your watchlist?"),
+        ).toBeDefined();
       });
 
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByText("Stop tracking Breaking Bad?")).toBeNull();
+        expect(
+          screen.queryByText("Remove Breaking Bad from your watchlist?"),
+        ).toBeNull();
       });
 
       // untrackTitle should not have been called
       expect(api.untrackTitle).not.toHaveBeenCalled();
 
-      // Button should still show "Tracked"
-      expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+      // Button should still show "In watchlist"
+      expect(
+        screen.getByRole("button", { name: "In watchlist" }),
+      ).toBeDefined();
     });
 
     it("proceeds with untrack when confirm is clicked", async () => {
@@ -271,16 +286,20 @@ describe("TrackButton", () => {
         { wrapper: Wrapper },
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+      fireEvent.click(screen.getByRole("button", { name: "In watchlist" }));
 
       await waitFor(() => {
-        expect(screen.getByText("Stop tracking Breaking Bad?")).toBeDefined();
+        expect(
+          screen.getByText("Remove Breaking Bad from your watchlist?"),
+        ).toBeDefined();
       });
 
       fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
+        expect(
+          screen.getByRole("button", { name: "Add to watchlist" }),
+        ).toBeDefined();
       });
 
       expect(api.untrackTitle).toHaveBeenCalledWith("456");
@@ -297,17 +316,19 @@ describe("TrackButton", () => {
         { wrapper: Wrapper },
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+      fireEvent.click(screen.getByRole("button", { name: "In watchlist" }));
 
       await waitFor(() => {
-        expect(screen.getByText("Stop tracking Breaking Bad?")).toBeDefined();
+        expect(
+          screen.getByText("Remove Breaking Bad from your watchlist?"),
+        ).toBeDefined();
       });
 
       fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
       await waitFor(() => {
         expect(sonner.toast.success).toHaveBeenCalledWith(
-          "Removed from tracked",
+          "Removed from watchlist",
         );
       });
     });
@@ -326,17 +347,19 @@ describe("TrackButton", () => {
         { wrapper: Wrapper },
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+      fireEvent.click(screen.getByRole("button", { name: "In watchlist" }));
 
       await waitFor(() => {
-        expect(screen.getByText("Stop tracking Breaking Bad?")).toBeDefined();
+        expect(
+          screen.getByText("Remove Breaking Bad from your watchlist?"),
+        ).toBeDefined();
       });
 
       fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
       await waitFor(() => {
         expect(sonner.toast.error).toHaveBeenCalledWith(
-          "Failed to untrack — please try again",
+          "Failed to remove from watchlist — please try again",
         );
       });
     });
@@ -346,10 +369,12 @@ describe("TrackButton", () => {
         wrapper: Wrapper,
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Tracked" }));
+      fireEvent.click(screen.getByRole("button", { name: "In watchlist" }));
 
       await waitFor(() => {
-        expect(screen.getByText("Stop tracking Track?")).toBeDefined();
+        expect(
+          screen.getByText("Remove this title from your watchlist?"),
+        ).toBeDefined();
       });
     });
 
@@ -358,10 +383,34 @@ describe("TrackButton", () => {
         wrapper: Wrapper,
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Track" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
 
       // No dialog should appear
-      expect(screen.queryByText(/Stop tracking/)).toBeNull();
+      expect(screen.queryByText(/from your watchlist\?/)).toBeNull();
+    });
+  });
+
+  describe("reminder prerequisites hint", () => {
+    it("describes the add action and notification prerequisite when not tracked", () => {
+      render(<TrackButton titleId="123" isTracked={false} />, {
+        wrapper: Wrapper,
+      });
+      const button = screen.getByRole("button", { name: "Add to watchlist" });
+      const hintId = button.getAttribute("aria-describedby");
+      expect(hintId).toBeTruthy();
+      const hint = document.getElementById(hintId!);
+      expect(hint?.textContent).toContain("notification channel");
+      expect(hint?.textContent).toContain("Settings");
+      expect(button.getAttribute("title")).toBe(hint?.textContent ?? null);
+    });
+
+    it("omits the hint once the title is in the watchlist", () => {
+      render(<TrackButton titleId="123" isTracked={true} />, {
+        wrapper: Wrapper,
+      });
+      const button = screen.getByRole("button", { name: "In watchlist" });
+      expect(button.getAttribute("aria-describedby")).toBeNull();
+      expect(button.getAttribute("title")).toBeNull();
     });
   });
 
@@ -373,7 +422,9 @@ describe("TrackButton", () => {
         </Wrapper>,
       );
 
-      expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
+      expect(
+        screen.getByRole("button", { name: "Add to watchlist" }),
+      ).toBeDefined();
 
       await act(async () => {
         rerender(
@@ -384,7 +435,9 @@ describe("TrackButton", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+        expect(
+          screen.getByRole("button", { name: "In watchlist" }),
+        ).toBeDefined();
       });
     });
 
@@ -395,7 +448,9 @@ describe("TrackButton", () => {
         </Wrapper>,
       );
 
-      expect(screen.getByRole("button", { name: "Tracked" })).toBeDefined();
+      expect(
+        screen.getByRole("button", { name: "In watchlist" }),
+      ).toBeDefined();
 
       await act(async () => {
         rerender(
@@ -406,7 +461,9 @@ describe("TrackButton", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Track" })).toBeDefined();
+        expect(
+          screen.getByRole("button", { name: "Add to watchlist" }),
+        ).toBeDefined();
       });
     });
   });

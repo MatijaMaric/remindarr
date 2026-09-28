@@ -278,15 +278,15 @@ lets us assert the full track flow without a real DB.
 1. Apply `mockLoggedIn(page)` and all route intercepts above.
 2. Navigate to `/title/tt1234567`.
 3. Wait for `getByRole("heading", { level: 1 })` to be visible.
-4. Assert the `TrackButton` shows its untracked state: `getByRole("button", { name: /Track/i })` with `aria-pressed="false"`.
-5. Click `getByRole("button", { name: /Track/i })`.
+4. Assert the `TrackButton` shows its untracked state: `getByRole("button", { name: /Add to watchlist/i })` with `aria-pressed="false"`.
+5. Click `getByRole("button", { name: /Add to watchlist/i })`.
 6. Wait for the button state to change.
 
 **Expected**:
 
-- After the click, `getByRole("button", { name: /Tracked/i })` with `aria-pressed="true"`
+- After the click, `getByRole("button", { name: /In watchlist/i })` with `aria-pressed="true"`
   is visible (optimistic update applied immediately).
-- A success toast `"Title tracked"` appears at the bottom of the screen.
+- A success toast `"Added to watchlist"` appears at the bottom of the screen.
 - The `POST /api/titles/tt1234567/track` request was made exactly once.
 
 ---
@@ -312,9 +312,9 @@ frontend-only concerns. Mocking keeps the test deterministic.
 
 1. Apply `mockLoggedIn(page)` and all route intercepts.
 2. Navigate to `/title/tt1234567`.
-3. Wait for `getByRole("button", { name: /Tracked/i })` with `aria-pressed="true"` to be
+3. Wait for `getByRole("button", { name: /In watchlist/i })` with `aria-pressed="true"` to be
    visible.
-4. Click `getByRole("button", { name: /Tracked/i })`.
+4. Click `getByRole("button", { name: /In watchlist/i })`.
 5. Wait for the confirm dialog to appear.
 6. Click the confirm (Remove / Untrack) button inside the dialog.
 
@@ -322,9 +322,9 @@ frontend-only concerns. Mocking keeps the test deterministic.
 
 - The confirm `AlertDialog` appears after step 4 (contains the title name and a description
   asking to confirm).
-- After confirming, the button reverts to `getByRole("button", { name: /Track/i })` with
+- After confirming, the button reverts to `getByRole("button", { name: /Add to watchlist/i })` with
   `aria-pressed="false"`.
-- A success toast `"Removed from tracked"` appears.
+- A success toast `"Removed from watchlist"` appears.
 - The `DELETE /api/titles/tt1234567/track` request was made exactly once.
 
 ---

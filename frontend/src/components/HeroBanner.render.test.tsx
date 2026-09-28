@@ -3,6 +3,7 @@ import { render, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { AuthContext } from "../context/AuthContext";
+import "../i18n";
 
 // Prevent canvas extraction from throwing in happy-dom
 mock.module("fast-average-color", () => ({
@@ -102,5 +103,20 @@ describe("HeroBanner", () => {
 
     const dots = container.querySelectorAll('button[aria-label^="Slide"]');
     expect(dots.length).toBe(0);
+  });
+
+  it("labels the details link as viewing the episode, not in-app playback (#1214)", () => {
+    const { getByRole, queryByText } = render(
+      <Wrapper>
+        <HeroBanner
+          episodes={[makeEpisode({ season_number: 2, episode_number: 5 })]}
+        />
+      </Wrapper>,
+    );
+
+    const link = getByRole("link", { name: "View S2·E5" });
+    expect(link.getAttribute("href")).toBe("/title/tv-1");
+    expect(queryByText(/Play S/)).toBeNull();
+    expect(getByRole("button", { name: "Mark watched" })).toBeDefined();
   });
 });

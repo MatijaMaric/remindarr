@@ -142,7 +142,7 @@
   },
   "tracked": {
     "title": "Tracked Titles ({{count}})",
-    "empty": "No tracked titles yet. Search for titles and click 'Track' to add them here.",
+    "empty": "No tracked titles yet. Search for titles and click 'Add to watchlist' to add them here.",
     "sortBy": "Sort titles by",
     "filterTabs": "Filter by status",
     "sections": {
@@ -302,11 +302,31 @@
     "empty": "No releases found."
   },
   "track": {
-    "track": "Track",
-    "tracked": "Tracked",
-    "confirmUntrack": "Stop tracking {{title}}?",
-    "confirmUntrackDescription": "This title will be removed from your watchlist.",
+    "track": "Add to watchlist",
+    "tracked": "In watchlist",
+    "hint": "Adds this title to your watchlist so new episodes and releases show up in your calendar. Reminders are only delivered through a notification channel you've set up in Settings.",
+    "added": "Added to watchlist",
+    "addedDescription": "Reminders are only sent if you've set up a notification channel in Settings.",
+    "removed": "Removed from watchlist",
+    "addError": "Failed to add to watchlist — please try again",
+    "removeError": "Failed to remove from watchlist — please try again",
+    "confirmUntrack": "Remove {{title}} from your watchlist?",
+    "confirmUntrackDescription": "You'll stop getting new-episode and release reminders for this title. Your watch history is kept.",
+    "thisTitle": "this title",
     "confirm": "Confirm"
+  },
+  "watchAction": {
+    "stream": "Stream on {{provider}}",
+    "free": "Watch free on {{provider}}",
+    "ads": "Watch with ads on {{provider}}",
+    "rent": "Rent on {{provider}}",
+    "buy": "Buy on {{provider}}",
+    "open": "Open on {{provider}}",
+    "notSubscribed": "{{action}} (not subscribed)",
+    "external": "{{action}} — opens external site",
+    "moreOptions": "More streaming options ({{count}} more)",
+    "noStream": "Not available to stream",
+    "viewEpisode": "View S{{season}}·E{{episode}}"
   },
   "episodes": {
     "tomorrow": "Tomorrow",
