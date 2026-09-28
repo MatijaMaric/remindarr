@@ -30,7 +30,7 @@ import {
 } from "../components/EpisodeShowCard";
 import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
-import { Kicker } from "../components/design";
+import { SectionHeader } from "../components/SectionHeader";
 import { posterUrl } from "../lib/tmdb-images";
 import UpNextRow from "../components/UpNextRow";
 import FriendsLovedRow from "../components/FriendsLovedRow";
@@ -418,20 +418,12 @@ export default function HomePage() {
 
         {/* Popular titles */}
         <section>
-          <div className="flex items-baseline justify-between mb-4">
-            <div>
-              <Kicker>Browse</Kicker>
-              <h2 className="text-xl font-bold tracking-[-0.01em]">
-                {t("landing.popularNow")}
-              </h2>
-            </div>
-            <Link
-              to="/browse"
-              className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-            >
-              {t("landing.discoverMore")} →
-            </Link>
-          </div>
+          <SectionHeader
+            kicker="Browse"
+            title={t("landing.popularNow")}
+            href="/browse"
+            linkLabel={`${t("landing.discoverMore")} →`}
+          />
           <TitleList titles={popularTitlesPreview} />
         </section>
       </div>
@@ -466,30 +458,22 @@ export default function HomePage() {
               />
             </div>
             <section key="unwatched">
-              <div className="flex items-baseline justify-between mb-4">
-                <div>
-                  <Kicker>Up next</Kicker>
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold tracking-[-0.01em]">
-                      {t("home.unwatched")}
-                    </h2>
-                    <Link
-                      to="/reels"
-                      className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
-                      title="Full-screen reels view"
-                    >
-                      <Maximize2 size={14} />
-                      {t("home.reels")}
-                    </Link>
-                  </div>
-                </div>
-                <Link
-                  to="/upcoming"
-                  className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                >
-                  {t("home.seeAll")} →
-                </Link>
-              </div>
+              <SectionHeader
+                kicker="Up next"
+                title={t("home.unwatched")}
+                href="/upcoming"
+                linkLabel={`${t("home.seeAll")} →`}
+                headingExtra={
+                  <Link
+                    to="/reels"
+                    className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
+                    title="Full-screen reels view"
+                  >
+                    <Maximize2 size={14} />
+                    {t("home.reels")}
+                  </Link>
+                }
+              />
               <FullBleedCarousel>
                 {unwatchedCards.map((card) => (
                   <div
@@ -525,20 +509,12 @@ export default function HomePage() {
       case "recommendations":
         return recommendations.length > 0 ? (
           <section key="recommendations">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>From friends</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  {t("home.recommendedForYou")}
-                </h2>
-              </div>
-              <Link
-                to="/discovery"
-                className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                {t("home.seeAll")} →
-              </Link>
-            </div>
+            <SectionHeader
+              kicker="From friends"
+              title={t("home.recommendedForYou")}
+              href="/discovery"
+              linkLabel={`${t("home.seeAll")} →`}
+            />
             <FullBleedCarousel>
               {recommendations.map((rec) => (
                 <div
@@ -570,20 +546,12 @@ export default function HomePage() {
       case "today":
         return (
           <section key="today">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>Airing tonight</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  {t("home.today")}
-                </h2>
-              </div>
-              <Link
-                to="/calendar"
-                className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                {t("home.seeAll")} →
-              </Link>
-            </div>
+            <SectionHeader
+              kicker="Airing tonight"
+              title={t("home.today")}
+              href="/calendar"
+              linkLabel={`${t("home.seeAll")} →`}
+            />
             {today.length === 0 ? (
               <p className="text-zinc-400 text-sm">
                 {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
@@ -612,20 +580,12 @@ export default function HomePage() {
       case "upcoming":
         return upcoming.length > 0 ? (
           <section key="upcoming">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>This week</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  {t("home.comingUp")}
-                </h2>
-              </div>
-              <Link
-                to="/calendar"
-                className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                Open calendar →
-              </Link>
-            </div>
+            <SectionHeader
+              kicker="This week"
+              title={t("home.comingUp")}
+              href="/calendar"
+              linkLabel="Open calendar →"
+            />
             <div className="space-y-4">
               {upcomingByDateEntries.map(({ date, dateLabel, byShow }) => (
                 <div key={date}>
@@ -659,20 +619,12 @@ export default function HomePage() {
       case "airing_soon":
         return airingEntries.length > 0 ? (
           <section key="airing_soon">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>Coming up</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  {t("home.airingSoon.title")}
-                </h2>
-              </div>
-              <Link
-                to="/calendar"
-                className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                Open calendar →
-              </Link>
-            </div>
+            <SectionHeader
+              kicker="Coming up"
+              title={t("home.airingSoon.title")}
+              href="/calendar"
+              linkLabel="Open calendar →"
+            />
             <FullBleedCarousel>
               {airingEntries.map((ep) => (
                 <div
@@ -693,14 +645,10 @@ export default function HomePage() {
           </section>
         ) : (
           <section key="airing_soon">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>Coming up</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  {t("home.airingSoon.title")}
-                </h2>
-              </div>
-            </div>
+            <SectionHeader
+              kicker="Coming up"
+              title={t("home.airingSoon.title")}
+            />
             <p className="text-zinc-400 text-sm">
               {t("home.airingSoon.empty")}
             </p>
@@ -710,14 +658,10 @@ export default function HomePage() {
       case "up_next":
         return (
           <section key="up_next">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>{t("home.upNext.inProgress")}</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  {t("home.upNext.title")}
-                </h2>
-              </div>
-            </div>
+            <SectionHeader
+              kicker={t("home.upNext.inProgress")}
+              title={t("home.upNext.title")}
+            />
             <UpNextRow
               items={upNextItems}
               onMarkWatched={(id) => upNextMarkWatchedMutation.mutate(id)}
@@ -733,20 +677,12 @@ export default function HomePage() {
       case "movies_to_watch":
         return movieData.to_watch.length > 0 ? (
           <section key="movies_to_watch">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>Movies</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  Movies to Watch
-                </h2>
-              </div>
-              <Link
-                to="/tracked"
-                className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                See all →
-              </Link>
-            </div>
+            <SectionHeader
+              kicker="Movies"
+              title="Movies to Watch"
+              href="/tracked"
+              linkLabel="See all →"
+            />
             <MovieRow variant="to_watch" movies={movieData.to_watch} />
           </section>
         ) : null;
@@ -754,20 +690,12 @@ export default function HomePage() {
       case "upcoming_movies":
         return movieData.upcoming.length > 0 ? (
           <section key="upcoming_movies">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <Kicker>Movies</Kicker>
-                <h2 className="text-xl font-bold tracking-[-0.01em]">
-                  Upcoming Movies
-                </h2>
-              </div>
-              <Link
-                to="/calendar"
-                className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                Calendar →
-              </Link>
-            </div>
+            <SectionHeader
+              kicker="Movies"
+              title="Upcoming Movies"
+              href="/calendar"
+              linkLabel="Calendar →"
+            />
             <MovieRow variant="upcoming" movies={movieData.upcoming} />
           </section>
         ) : null;
@@ -800,14 +728,10 @@ export default function HomePage() {
       {layout.filter((s) => s.enabled).map((s) => renderSection(s.id))}
       {continueWatching.length > 0 && (
         <section>
-          <div className="flex items-baseline justify-between mb-4">
-            <div>
-              <Kicker>{t("home.shelves.kicker")}</Kicker>
-              <h2 className="text-xl font-bold tracking-[-0.01em]">
-                {t("home.shelves.continueWatching")}
-              </h2>
-            </div>
-          </div>
+          <SectionHeader
+            kicker={t("home.shelves.kicker")}
+            title={t("home.shelves.continueWatching")}
+          />
           <ScrollableRow
             className="gap-4 pb-2"
             focusable
@@ -823,14 +747,10 @@ export default function HomePage() {
       )}
       {startWatching.length > 0 && (
         <section>
-          <div className="flex items-baseline justify-between mb-4">
-            <div>
-              <Kicker>{t("home.shelves.kicker")}</Kicker>
-              <h2 className="text-xl font-bold tracking-[-0.01em]">
-                {t("home.shelves.startWatching")}
-              </h2>
-            </div>
-          </div>
+          <SectionHeader
+            kicker={t("home.shelves.kicker")}
+            title={t("home.shelves.startWatching")}
+          />
           <ScrollableRow
             className="gap-4 pb-2"
             focusable

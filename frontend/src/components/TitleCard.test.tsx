@@ -459,6 +459,31 @@ describe("TitleCard", () => {
     expect(screen.queryByText("Completed")).toBeNull();
   });
 
+  it("uses the same check icon for Completed and Watched badges", () => {
+    const { unmount } = render(
+      <TitleCard
+        title={makeTitle({ object_type: "SHOW", show_status: "completed" })}
+      />,
+      { wrapper: NoUserWrapper },
+    );
+    const completedPath = screen
+      .getByText("Completed")
+      .querySelector("path")
+      ?.getAttribute("d");
+    expect(completedPath).toBeTruthy();
+    unmount();
+
+    render(
+      <TitleCard
+        title={makeTitle({ object_type: "MOVIE", is_watched: true })}
+      />,
+      { wrapper: NoUserWrapper },
+    );
+    expect(
+      screen.getByText("Watched").querySelector("path")?.getAttribute("d"),
+    ).toBe(completedPath);
+  });
+
   // ─── Fallback behavior for titles without show_status ─────────────────────
 
   it("shows progress bar when showProgressBar is true for shows without show_status", () => {
