@@ -1,5 +1,6 @@
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi, afterEach } from "bun:test";
+import "../../i18n";
 import { SettingsSidebar, type SettingsTabDef } from "./SettingsSidebar";
 
 const tabs: SettingsTabDef[] = [
