@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { createUser } from "../repository";
+import { getRawDb } from "../bun-db";
 import {
   follow,
   unfollow,
@@ -11,6 +12,7 @@ import {
   getFollowerCount,
   getFollowingCount,
   getMutualFollowers,
+  MAX_FOLLOW_LIST,
 } from "./follows";
 
 let userA: string;
@@ -76,6 +78,27 @@ describe("getFollowers", () => {
   it("returns empty list when no followers", async () => {
     const followers = await getFollowers(userA);
     expect(followers).toHaveLength(0);
+  });
+
+  it("caps the result at MAX_FOLLOW_LIST rows", async () => {
+    const db = getRawDb();
+    const insertUser = db.prepare(
+      "INSERT INTO users (id, username, email_verified) VALUES (?, ?, 0)",
+    );
+    const insertFollow = db.prepare(
+      "INSERT INTO follows (follower_id, following_id) VALUES (?, ?)",
+    );
+    const insertAll = db.transaction(() => {
+      for (let i = 0; i < MAX_FOLLOW_LIST + 5; i++) {
+        const id = `bulk-follower-${i}`;
+        insertUser.run(id, `bulk_follower_${i}`);
+        insertFollow.run(id, userC);
+      }
+    });
+    insertAll();
+
+    const followers = await getFollowers(userC);
+    expect(followers).toHaveLength(MAX_FOLLOW_LIST);
   });
 });
 
