@@ -215,7 +215,12 @@ export function registerSyncJobs() {
   });
 
   registerHandler("migrate-backdrops", async () => {
-    await migrateBackdrops();
+    // Bun has no per-invocation wall-clock cap, so drain every batch here.
+    // CF re-enqueues each batch from processor.ts / JobQueueDO.
+    let hasMore = true;
+    while (hasMore) {
+      hasMore = (await migrateBackdrops()).hasMore;
+    }
   });
 
   registerHandler("migrate-offers", async () => {

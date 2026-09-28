@@ -89,6 +89,7 @@ import {
   handlers,
   takeDeepLinkContinue,
 } from "./processor";
+import * as migrateBackdropsModule from "./migrate-backdrops";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
@@ -749,6 +750,10 @@ describe("CF handler parity", () => {
   it("includes a sync-trending handler", () => {
     expect(handlers["sync-trending"]).toBeDefined();
   });
+
+  it("registers migrate-backdrops so CF dispatches the one-time backfill (#1308)", () => {
+    expect(handlers["migrate-backdrops"]).toBeTypeOf("function");
+  });
 });
 
 // ─── sync-trending (CF path) ─────────────────────────────────────────────────
@@ -879,6 +884,51 @@ describe("backfill-achievements handler (CF path)", () => {
     for (const file of ["processor.ts", "durable-object.ts"]) {
       const src = await Bun.file(new URL(file, import.meta.url)).text();
       expect(src).not.toInclude('"achievements_backfill_done"');
+    }
+  });
+});
+
+describe("migrate-backdrops handler (CF path, #1308)", () => {
+  it("re-enqueues the next D1 batch when more titles remain", async () => {
+    const spy = spyOn(
+      migrateBackdropsModule,
+      "migrateBackdrops",
+    ).mockResolvedValue({ updated: 1, skipped: 0, failed: 0, hasMore: true });
+    try {
+      await handlers["migrate-backdrops"](null);
+      const rows = await getDb()
+        .select()
+        .from(jobs)
+        .where(eq(jobs.name, "migrate-backdrops"))
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.status).toBe("pending");
+      expect(rows[0]?.maxAttempts).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("does not re-enqueue when the batch finishes the backfill", async () => {
+    const spy = spyOn(
+      migrateBackdropsModule,
+      "migrateBackdrops",
+    ).mockResolvedValue({
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      hasMore: false,
+    });
+    try {
+      await handlers["migrate-backdrops"](null);
+      const rows = await getDb()
+        .select()
+        .from(jobs)
+        .where(eq(jobs.name, "migrate-backdrops"))
+        .all();
+      expect(rows).toHaveLength(0);
+    } finally {
+      spy.mockRestore();
     }
   });
 });

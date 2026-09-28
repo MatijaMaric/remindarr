@@ -44,6 +44,8 @@ export const titles = sqliteTable(
     tmdbId: text("tmdb_id"),
     posterUrl: text("poster_url"),
     backdropUrl: text("backdrop_url"),
+    // 1 after migrate-backdrops has looked this title up, including "no backdrop".
+    backdropChecked: integer("backdrop_checked").notNull().default(0),
     ageCertification: text("age_certification"),
     originalLanguage: text("original_language"),
     tmdbUrl: text("tmdb_url"),
