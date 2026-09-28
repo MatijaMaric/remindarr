@@ -11,7 +11,7 @@ import TitleList from "../components/TitleList";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groupShowsByStatus } from "../lib/groupShows";
-import { getEffectiveStatus } from "../lib/titleStatus";
+import { getEffectiveStatus, statusLabelKey } from "../lib/titleStatus";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -31,6 +31,7 @@ import {
 const EMPTY_TITLES: Title[] = [];
 
 function TrackedStatsBand({ titles }: { titles: Title[] }) {
+  const { t } = useTranslation();
   const watching = titles.filter(
     (t) => getEffectiveStatus(t) === "watching",
   ).length;
@@ -49,21 +50,27 @@ function TrackedStatsBand({ titles }: { titles: Title[] }) {
       : null;
   const stats = [
     {
-      label: "Currently watching",
+      label: t("tracked.stats.watching"),
       value: String(watching),
-      sub: `of ${titles.length} tracked`,
+      sub: t("tracked.stats.watchingSub", { count: titles.length }),
     },
-    { label: "Completed", value: String(completed), sub: "shows & movies" },
     {
-      label: "Avg score",
+      label: t("status.completed"),
+      value: String(completed),
+      sub: t("tracked.stats.completedSub"),
+    },
+    {
+      label: t("tracked.stats.avgScore"),
       value: avgScore ? `★ ${avgScore}` : "—",
       sub:
-        scored.length > 0 ? `across ${scored.length} rated` : "no ratings yet",
+        scored.length > 0
+          ? t("tracked.stats.avgScoreSub", { count: scored.length })
+          : t("tracked.stats.noRatings"),
     },
     {
-      label: "Total tracked",
+      label: t("tracked.stats.total"),
       value: String(titles.length),
-      sub: "titles in library",
+      sub: t("tracked.stats.totalSub"),
     },
   ];
   return (
@@ -86,12 +93,12 @@ function TrackedStatsBand({ titles }: { titles: Title[] }) {
 }
 
 const STATUS_TABS = [
-  { key: "all", label: "All" },
-  { key: "watching", label: "Watching" },
-  { key: "completed", label: "Completed" },
-  { key: "on_hold", label: "On Hold" },
-  { key: "plan_to_watch", label: "Planning" },
-  { key: "dropped", label: "Dropped" },
+  { key: "all", labelKey: "tracked.tabs.all" },
+  { key: "watching", labelKey: "status.watching" },
+  { key: "completed", labelKey: "status.completed" },
+  { key: "on_hold", labelKey: "status.onHold" },
+  { key: "plan_to_watch", labelKey: "tracked.tabs.planning" },
+  { key: "dropped", labelKey: "status.dropped" },
 ] as const;
 type StatusTab = (typeof STATUS_TABS)[number]["key"];
 
@@ -230,8 +237,8 @@ export default function TrackedPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        kicker={`Your library · ${allTitles.length} title${allTitles.length === 1 ? "" : "s"}`}
-        title="Tracked"
+        kicker={t("tracked.kicker", { count: allTitles.length })}
+        title={t("tracked.heading")}
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <BackdateWatchedButton scope="all" variant="ghost" />
@@ -241,17 +248,17 @@ export default function TrackedPage() {
                 active={selectMode}
                 onClick={toggleSelectMode}
               >
-                Select
+                {t("tracked.view.select")}
               </Pill>
             )}
             <Pill active={view === "grid"} onClick={() => setView("grid")}>
-              Grid
+              {t("tracked.view.grid")}
             </Pill>
             <Pill active={view === "list"} onClick={() => setView("list")}>
-              List
+              {t("tracked.view.list")}
             </Pill>
             <Pill active={view === "stats"} onClick={() => setView("stats")}>
-              Stats
+              {t("tracked.view.stats")}
             </Pill>
           </div>
         }
@@ -288,7 +295,7 @@ export default function TrackedPage() {
                       : "text-zinc-400 border-transparent hover:text-zinc-100"
                   }`}
                 >
-                  {tab.label}
+                  {t(tab.labelKey)}
                   <span className="ml-2 font-mono text-[11px] text-zinc-400">
                     {count}
                   </span>
@@ -302,10 +309,10 @@ export default function TrackedPage() {
             aria-label={t("tracked.sortBy")}
             className="self-end sm:self-auto font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 mb-2 sm:mb-0.5 shrink-0"
           >
-            <option value="last_aired">sort: last aired</option>
-            <option value="title">sort: title</option>
-            <option value="rating">sort: rating</option>
-            <option value="progress">sort: progress</option>
+            <option value="last_aired">{t("tracked.sort.lastAired")}</option>
+            <option value="title">{t("tracked.sort.title")}</option>
+            <option value="rating">{t("tracked.sort.rating")}</option>
+            <option value="progress">{t("tracked.sort.progress")}</option>
           </select>
         </div>
       )}
@@ -414,6 +421,7 @@ function RowActionsMenu({
   title: Title;
   onRefetch: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -429,7 +437,7 @@ function RowActionsMenu({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        aria-label={`More actions for ${title.title}`}
+        aria-label={t("tracked.row.moreActions", { title: title.title })}
         aria-expanded={open}
         className="px-2 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-400 hover:text-white transition-colors cursor-pointer"
       >
@@ -445,7 +453,7 @@ function RowActionsMenu({
               onClick={() => setOpen(false)}
               className="block px-3 py-2 text-zinc-300 hover:bg-white/[0.06] transition-colors"
             >
-              Open on TMDB ↗
+              {t("tracked.row.openTmdb")} ↗
             </a>
           )}
           <button
@@ -454,7 +462,7 @@ function RowActionsMenu({
             }}
             className="w-full text-left px-3 py-2 text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
-            Untrack
+            {t("tracked.row.untrack")}
           </button>
         </div>
       )}
@@ -477,14 +485,19 @@ function TrackedTable({
   selectedIds = new Set(),
   onSelectionChange,
 }: TrackedTableProps) {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const statusText = (key: string | null) => {
+    const labelKey = statusLabelKey(key);
+    return labelKey ? t(labelKey) : (key ?? "—");
+  };
   const allSelected =
     titles.length > 0 && titles.every((title) => selectedIds.has(title.id));
   const someSelected = titles.some((title) => selectedIds.has(title.id));
   const selectAll = (
     <input
       type="checkbox"
-      aria-label="Select all titles"
+      aria-label={t("tracked.row.selectAll")}
       checked={allSelected}
       ref={(input) => {
         if (input) input.indeterminate = someSelected && !allSelected;
@@ -517,7 +530,7 @@ function TrackedTable({
         {selectMode && (
           <label className="flex items-center gap-3 px-3 py-2 text-sm text-zinc-300 cursor-pointer">
             {selectAll}
-            Select all titles
+            {t("tracked.row.selectAll")}
           </label>
         )}
         {titles.map((title) => {
@@ -525,11 +538,7 @@ function TrackedTable({
           const statusColor = statusKey
             ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS["plan_to_watch"])
             : "#71717a";
-          const statusLabel = statusKey
-            ? statusKey
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase())
-            : "—";
+          const statusLabel = statusText(statusKey);
           const watched = title.watched_episodes_count ?? 0;
           const total =
             title.total_episodes ?? title.released_episodes_count ?? 0;
@@ -542,7 +551,7 @@ function TrackedTable({
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
                   <input
                     type="checkbox"
-                    aria-label={`Select ${title.title}`}
+                    aria-label={t("tracked.row.select", { title: title.title })}
                     checked={isSelected}
                     onChange={() => toggleId(title.id)}
                     className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
@@ -591,7 +600,7 @@ function TrackedTable({
                 )}
                 {title.eta_days != null && (
                   <span className="font-mono text-[10px] text-zinc-400">
-                    ETA: {formatEta(title.eta_days)}
+                    {t("tracked.row.eta", { eta: formatEta(title.eta_days) })}
                   </span>
                 )}
               </div>
@@ -637,12 +646,12 @@ function TrackedTable({
       >
         {selectMode && <div>{selectAll}</div>}
         <div />
-        <div>Show</div>
-        <div>Status</div>
-        <div>Progress</div>
-        <div>Next</div>
-        <div>Rating</div>
-        <div className="text-right">Actions</div>
+        <div>{t("tracked.columns.show")}</div>
+        <div>{t("tracked.columns.status")}</div>
+        <div>{t("tracked.columns.progress")}</div>
+        <div>{t("tracked.columns.next")}</div>
+        <div>{t("tracked.columns.rating")}</div>
+        <div className="text-right">{t("tracked.columns.actions")}</div>
       </div>
       {/* Rows */}
       <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
@@ -651,11 +660,7 @@ function TrackedTable({
           const statusColor = statusKey
             ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS["plan_to_watch"])
             : "#71717a";
-          const statusLabel = statusKey
-            ? statusKey
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase())
-            : "—";
+          const statusLabel = statusText(statusKey);
           const watched = title.watched_episodes_count ?? 0;
           const total =
             title.total_episodes ?? title.released_episodes_count ?? 0;
@@ -687,7 +692,7 @@ function TrackedTable({
                 <div className="flex items-center justify-center">
                   <input
                     type="checkbox"
-                    aria-label={`Select ${title.title}`}
+                    aria-label={t("tracked.row.select", { title: title.title })}
                     checked={isSelected}
                     onChange={() => toggleId(title.id)}
                     className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
@@ -721,7 +726,10 @@ function TrackedTable({
                 )}
                 <div className="font-mono text-[11px] text-zinc-400 mt-0.5">
                   {title.release_year}
-                  {title.object_type === "SHOW" ? " · Show" : " · Movie"}
+                  {" · "}
+                  {title.object_type === "SHOW"
+                    ? t("tracked.row.show")
+                    : t("tracked.row.movie")}
                   {title.offers[0] && ` · ${title.offers[0].provider_name}`}
                 </div>
               </div>
@@ -754,7 +762,9 @@ function TrackedTable({
                   </div>
                   {title.eta_days != null && (
                     <span className="font-mono text-[10px] text-zinc-400">
-                      ETA: {formatEta(title.eta_days)}
+                      {t("tracked.row.eta", {
+                        eta: formatEta(title.eta_days),
+                      })}
                     </span>
                   )}
                 </div>
@@ -780,7 +790,7 @@ function TrackedTable({
                       to={`/title/${title.id}`}
                       className="px-2.5 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-300 hover:text-white transition-colors"
                     >
-                      Open
+                      {t("tracked.row.open")}
                     </Link>
                     <RowActionsMenu title={title} onRefetch={onRefetch} />
                   </>
@@ -797,11 +807,11 @@ function TrackedTable({
 // ─── Bulk Action Bar ──────────────────────────────────────────────────────────
 
 const BULK_STATUS_OPTIONS = [
-  { value: "watching", label: "Watching" },
-  { value: "completed", label: "Completed" },
-  { value: "on_hold", label: "On Hold" },
-  { value: "plan_to_watch", label: "Plan to Watch" },
-  { value: "dropped", label: "Dropped" },
+  { value: "watching", labelKey: "status.watching" },
+  { value: "completed", labelKey: "status.completed" },
+  { value: "on_hold", labelKey: "status.onHold" },
+  { value: "plan_to_watch", labelKey: "status.planToWatch" },
+  { value: "dropped", labelKey: "status.dropped" },
 ] as const;
 
 interface BulkActionBarProps {
@@ -811,6 +821,7 @@ interface BulkActionBarProps {
 }
 
 function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
+  const { t } = useTranslation();
   const [confirmUntrack, setConfirmUntrack] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
@@ -826,13 +837,11 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
     const titleIds = action.titleIds;
     try {
       await api.bulkTrackAction(action);
-      toast.success(
-        `Updated ${titleIds.length} title${titleIds.length === 1 ? "" : "s"}`,
-      );
+      toast.success(t("tracked.bulk.updated", { count: titleIds.length }));
       onDone();
     } catch (err) {
       console.error("Bulk action failed", err);
-      toast.error("Bulk action failed — please try again");
+      toast.error(t("tracked.bulk.failed"));
     } finally {
       setLoading(false);
     }
@@ -880,14 +889,14 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
         <div className="mx-4 mb-4 max-w-xl w-full bg-zinc-900 border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl pointer-events-auto">
           <div className="flex items-center justify-between">
             <span className="text-sm text-zinc-400">
-              Select titles to apply bulk actions
+              {t("tracked.bulk.hint")}
             </span>
             <button
               type="button"
               onClick={onCancel}
               className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -901,7 +910,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
         <div className="mx-4 mb-4 max-w-2xl w-full bg-zinc-900 border border-white/[0.1] rounded-2xl px-4 py-3 shadow-2xl">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-mono text-[11px] text-amber-400 font-semibold shrink-0">
-              {count} selected
+              {t("filter.selectedCount", { count })}
             </span>
 
             {/* Untrack */}
@@ -913,7 +922,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
               }
               className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer disabled:opacity-50"
             >
-              Untrack
+              {t("tracked.row.untrack")}
             </button>
 
             {/* Set Status */}
@@ -929,7 +938,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                 aria-busy={loading}
                 className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer aria-disabled:opacity-50"
               >
-                Set Status ▾
+                {t("tracked.bulk.setStatus")} ▾
               </Menu.Trigger>
               <Menu.Portal>
                 <Menu.Positioner
@@ -945,7 +954,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                         onClick={() => void handleSetStatus(opt.value)}
                         className="w-full text-left px-3 py-2 text-xs text-zinc-300 outline-none data-[highlighted]:bg-white/[0.06] transition-colors cursor-pointer"
                       >
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </Menu.Item>
                     ))}
                   </Menu.Popup>
@@ -961,7 +970,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                 onClick={() => setTagOpen((v) => !v)}
                 className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
               >
-                Add Tag
+                {t("tracked.bulk.addTag")}
               </button>
               {tagOpen && (
                 <>
@@ -980,7 +989,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                           if (e.key === "Enter") void handleAddTag();
                           if (e.key === "Escape") setTagOpen(false);
                         }}
-                        placeholder="Tag name…"
+                        placeholder={t("tracked.bulk.tagPlaceholder")}
                         maxLength={30}
                         className="flex-1 bg-zinc-900 border border-white/[0.08] rounded-md px-2 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus-visible:ring-1 focus-visible:ring-amber-400"
                       />
@@ -989,7 +998,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                         onClick={() => void handleAddTag()}
                         className="px-2.5 py-1.5 text-xs font-medium bg-amber-500 text-zinc-900 rounded-md hover:bg-amber-400 transition-colors cursor-pointer"
                       >
-                        Add
+                        {t("tracked.bulk.add")}
                       </button>
                     </div>
                   </div>
@@ -1004,7 +1013,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
               onClick={() => void handleMuteNotifications()}
               className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
             >
-              Mute Notifications
+              {t("tracked.bulk.mute")}
             </button>
 
             <div className="flex-1" />
@@ -1014,7 +1023,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
               onClick={onCancel}
               className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer shrink-0"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -1023,20 +1032,21 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
       {/* Confirm bulk untrack for large selections */}
       <AlertDialog open={confirmUntrack} onOpenChange={setConfirmUntrack}>
         <AlertDialogPopup>
-          <AlertDialogTitle>Untrack {count} titles?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("tracked.bulk.confirmTitle", { count })}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            This will remove all {count} selected titles from your watchlist.
-            This cannot be undone.
+            {t("tracked.bulk.confirmDescription", { count })}
           </AlertDialogDescription>
           <div className="mt-4 flex justify-end gap-2">
             <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
-              Cancel
+              {t("common.cancel")}
             </AlertDialogClose>
             <button
               onClick={() => void handleUntrack()}
               className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 cursor-pointer transition-colors"
             >
-              Untrack all
+              {t("tracked.bulk.untrackAll")}
             </button>
           </div>
         </AlertDialogPopup>

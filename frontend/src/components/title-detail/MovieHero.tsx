@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type { MovieDetailsResponse, Title } from "../../types";
 import TrackButton from "../TrackButton";
 import PinButton from "../PinButton";
@@ -28,6 +29,7 @@ export default function MovieHero({
   watchedActions,
   watchHistoryPanel,
 }: MovieHeroProps) {
+  const { t } = useTranslation();
   const [showTrailer, setShowTrailer] = useState(false);
   const videos = tmdb?.videos?.results ?? [];
   const trailerAvailable = hasTrailer(videos);
@@ -70,7 +72,7 @@ export default function MovieHero({
             />
           ) : (
             <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">
-              No poster
+              {t("titleCard.noPoster")}
             </div>
           )}
         </div>

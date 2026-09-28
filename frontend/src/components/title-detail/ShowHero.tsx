@@ -161,7 +161,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
         {showTrailer && trailerAvailable && <TrailerEmbed videos={videos} />}
         {title.is_tracked && title.eta_days != null && (
           <div className="text-xs text-zinc-400 text-center">
-            Finish in ~{formatEta(title.eta_days)} at your current pace
+            {t("titleDetail.finishIn", { eta: formatEta(title.eta_days) })}
           </div>
         )}
         {title.next_episode_air_date && (
@@ -205,7 +205,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             />
           ) : (
             <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">
-              No poster
+              {t("titleCard.noPoster")}
             </div>
           )}
         </div>
@@ -321,7 +321,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
           </div>
           {title.is_tracked && title.eta_days != null && (
             <div className="text-xs text-zinc-400">
-              Finish in ~{formatEta(title.eta_days)} at your current pace
+              {t("titleDetail.finishIn", { eta: formatEta(title.eta_days) })}
             </div>
           )}
           {title.next_episode_air_date && (

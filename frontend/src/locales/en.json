@@ -138,6 +138,25 @@
       "kicker": "My Lists",
       "continueWatching": "Continue Watching",
       "startWatching": "Start Watching"
+    },
+    "kickers": {
+      "browse": "Browse",
+      "upNext": "Up next",
+      "fromFriends": "From friends",
+      "airingTonight": "Airing tonight",
+      "thisWeek": "This week",
+      "comingUp": "Coming up",
+      "movies": "Movies"
+    },
+    "reelsView": "Full-screen reels view",
+    "openCalendar": "Open calendar",
+    "moviesToWatch": "Movies to Watch",
+    "upcomingMovies": "Upcoming Movies",
+    "calendar": "Calendar",
+    "errors": {
+      "watchedStatus": "Failed to update watched status — please try again",
+      "markEpisodes": "Failed to mark episodes as watched — please try again",
+      "markEpisode": "Failed to mark episode as watched — please try again"
     }
   },
   "tracked": {
@@ -155,6 +174,70 @@
       "dropped": "Dropped",
       "planToWatch": "Plan to Watch",
       "movies": "Movies"
+    },
+    "heading": "Tracked",
+    "kicker_one": "Your library · {{count}} title",
+    "kicker_other": "Your library · {{count}} titles",
+    "stats": {
+      "watching": "Currently watching",
+      "watchingSub": "of {{count}} tracked",
+      "completedSub": "shows & movies",
+      "avgScore": "Avg score",
+      "avgScoreSub": "across {{count}} rated",
+      "noRatings": "no ratings yet",
+      "total": "Total tracked",
+      "totalSub": "titles in library"
+    },
+    "tabs": {
+      "all": "All",
+      "planning": "Planning"
+    },
+    "view": {
+      "select": "Select",
+      "grid": "Grid",
+      "list": "List",
+      "stats": "Stats"
+    },
+    "sort": {
+      "lastAired": "sort: last aired",
+      "title": "sort: title",
+      "rating": "sort: rating",
+      "progress": "sort: progress"
+    },
+    "columns": {
+      "show": "Show",
+      "status": "Status",
+      "progress": "Progress",
+      "next": "Next",
+      "rating": "Rating",
+      "actions": "Actions"
+    },
+    "row": {
+      "moreActions": "More actions for {{title}}",
+      "openTmdb": "Open on TMDB",
+      "untrack": "Untrack",
+      "selectAll": "Select all titles",
+      "select": "Select {{title}}",
+      "eta": "ETA: {{eta}}",
+      "show": "Show",
+      "movie": "Movie",
+      "open": "Open"
+    },
+    "bulk": {
+      "updated_one": "Updated {{count}} title",
+      "updated_other": "Updated {{count}} titles",
+      "failed": "Bulk action failed — please try again",
+      "hint": "Select titles to apply bulk actions",
+      "setStatus": "Set Status",
+      "addTag": "Add Tag",
+      "tagPlaceholder": "Tag name…",
+      "add": "Add",
+      "mute": "Mute Notifications",
+      "confirmTitle_one": "Untrack {{count}} title?",
+      "confirmTitle_other": "Untrack {{count}} titles?",
+      "confirmDescription_one": "This will remove the selected title from your watchlist. This cannot be undone.",
+      "confirmDescription_other": "This will remove all {{count}} selected titles from your watchlist. This cannot be undone.",
+      "untrackAll": "Untrack all"
     }
   },
   "status": {
@@ -186,7 +269,23 @@
       "popular": "Popular",
       "upcoming": "Upcoming",
       "top_rated": "Top Rated"
-    }
+    },
+    "title": "Browse",
+    "kicker": {
+      "search": "Search",
+      "searchResults_one": "Search · {{count}} result",
+      "searchResults_other": "Search · {{count}} results",
+      "catalog": "Catalog · discover titles",
+      "catalogCount_one": "Catalog · {{formatted}} title",
+      "catalogCount_other": "Catalog · {{formatted}} titles"
+    },
+    "hideFilters": "Hide filters",
+    "showFilters": "Show filters",
+    "clearAllFilters": "Clear all filters",
+    "removeFilter": "Remove {{name}} filter",
+    "removeLanguageFilter": "Remove {{name}} language filter",
+    "removeYearFilter": "Remove year range filter",
+    "removeRatingFilter": "Remove minimum rating filter"
   },
   "signup": {
     "title": "Create an account",
@@ -288,7 +387,24 @@
     "yearTo": "To year",
     "minRating": "Min rating",
     "anyRating": "Any rating",
-    "anyYear": "Any year"
+    "anyYear": "Any year",
+    "otherGroup": "Other",
+    "selectedCount": "{{count}} selected",
+    "timePeriod": "Time period",
+    "card": {
+      "allGenres": "All genres",
+      "allProviders": "All providers",
+      "genre": "Genre",
+      "provider": "Provider",
+      "year": "Year",
+      "minRating": "Min. rating",
+      "clear": "Clear",
+      "contentType": "Content type",
+      "from": "From",
+      "to": "To",
+      "thisYear": "This year",
+      "last5y": "Last 5y"
+    }
   },
   "search": {
     "titles": "Search titles…",
@@ -417,7 +533,33 @@
     "goToDay": "Go to {{date}}",
     "densityCompact": "Compact",
     "densityComfortable": "Comfortable",
-    "densitySpacious": "Spacious"
+    "densitySpacious": "Spacious",
+    "loadError": "Failed to load calendar. Please try again.",
+    "stats": {
+      "episodes_one": "{{count}} Episode",
+      "episodes_other": "{{count}} Episodes",
+      "titles_one": "{{count}} Title",
+      "titles_other": "{{count}} Titles",
+      "total_one": "{{count}} Total",
+      "total_other": "{{count}} Total"
+    },
+    "episodes": "Episodes",
+    "releases": "Releases",
+    "noReleasesOnDay": "No tracked releases on this day",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "month": "Month",
+    "agenda": "Agenda",
+    "legend": {
+      "tracked": "Tracked · airing",
+      "followed": "Followed · new episode",
+      "premiere": "Premiere"
+    },
+    "episodesThisMonth_one": "{{count}} episode this month",
+    "episodesThisMonth_other": "{{count}} episodes this month",
+    "previousWeek": "Previous week",
+    "nextWeek": "Next week",
+    "thisWeek": "This week"
   },
   "landing": {
     "tagline": "Track movies & TV shows you love",
@@ -667,7 +809,61 @@
     "noTrackedTitles": "No tracked titles to manage.",
     "perTitleVisibility": "Choose which titles to show:",
     "showTitle": "Show on profile",
-    "hideTitle": "Hide from profile"
+    "hideTitle": "Hide from profile",
+    "account": {
+      "editProfileSubtitle": "Your display name, bio, and country appear on your public profile.",
+      "profileSubtitle": "Your account identity. Username is used on public profile pages and friend activity.",
+      "authProvider": "Auth provider",
+      "passwordSubtitle": "Use at least 6 characters. We recommend a long passphrase.",
+      "passwordChangeFailed": "Password change failed",
+      "strengthLabel": "strength: {{strength}}",
+      "strength": {
+        "weak": "weak",
+        "good": "good",
+        "strong": "strong"
+      },
+      "languageSubtitle": "The language of menus, buttons, and messages. Changes apply immediately.",
+      "languageHint": "Title names and overviews come from TMDB and follow the metadata language, not this setting. Dates and times use your browser's regional format.",
+      "passkeysSubtitle": "Sign in with Face ID, Touch ID, Windows Hello, or a security key.",
+      "passkeyCreated": "Created {{date}}",
+      "passkeyDeleteFailed": "Failed to delete passkey",
+      "passkeyRenameFailed": "Failed to rename passkey",
+      "visibilityUpdateFailed": "Failed to update visibility",
+      "perTitleOverrides": "Per-title overrides",
+      "socialTitle": "Social",
+      "socialSubtitle": "Invite friends to your Remindarr instance. They'll get a limited signup link.",
+      "socialHint": "Manage invite codes on the Invite page",
+      "passkeyNameLabel": "Passkey name"
+    },
+    "activityStream": {
+      "title": "Activity stream",
+      "loadingSubtitle": "Share your activity on your public profile.",
+      "subtitle": "Share your recent activity (ratings, watches, recommendations) on your profile. Off by default.",
+      "updateFailed": "Failed to update activity settings",
+      "showOnProfile": "Show activity on profile",
+      "visibleHint": "Visitors who can see your profile will see your activity feed.",
+      "hiddenHint": "Activity feed is hidden from other users.",
+      "perKind": "Per-kind visibility",
+      "perKindHint": "Override who can see each type of activity. Falls back to your profile visibility when set to \"Everyone\".",
+      "kinds": {
+        "rating_title": "Movie/show ratings",
+        "rating_episode": "Episode ratings",
+        "watched_title": "Watched movies/shows",
+        "watched_episode": "Watched episodes",
+        "tracked": "Watchlist additions",
+        "recommendation": "Recommendations sent",
+        "episode_comment": "Episode discussions"
+      },
+      "visibility": {
+        "public": "Everyone",
+        "friends_only": "Friends only",
+        "private": "Only me"
+      }
+    },
+    "breadcrumb": "Breadcrumb",
+    "buildInfo": "Remindarr · self-hosted",
+    "sections": "Sections",
+    "sectionsLabel": "Settings sections"
   },
   "notifications": {
     "all": "All episodes",
@@ -700,7 +896,51 @@
     "dismiss": "Dismiss",
     "tracked": "\"{{title}}\" added to your watchlist",
     "trackFailed": "Failed to track title",
-    "dismissFailed": "Failed to dismiss recommendation"
+    "dismissFailed": "Failed to dismiss recommendation",
+    "loadFailed": "Failed to load recommendations",
+    "because": {
+      "loved": "Because you loved",
+      "liked": "Because you liked",
+      "watched": "Because you watched",
+      "tracked": "Because you tracked"
+    },
+    "trackedBadge": "Tracked",
+    "dismissed": "Dismissed",
+    "undo": "Undo",
+    "friendCount_one": "{{count}} friend",
+    "friendCount_other": "{{count}} friends",
+    "direct": "Direct",
+    "noPoster": "N/A",
+    "kicker": "Based on what you watch & who you follow",
+    "forYou": "For you",
+    "activity": "Activity",
+    "sessionCounts": "{{tracked}} tracked · {{dismissed}} dismissed",
+    "moreForYou": {
+      "kicker": "More for you",
+      "title": "Suggested next",
+      "sub": "Ranked by score — tracked and dismissed titles are filtered out."
+    },
+    "friendRecs": {
+      "kicker": "From people you follow",
+      "title": "Friends are recommending"
+    },
+    "hiddenCount_one": "{{count}} hidden — already tracked or dismissed",
+    "hiddenCount_other": "{{count}} hidden — already tracked or dismissed",
+    "allHandled": "All suggestions tracked or dismissed.",
+    "hero": {
+      "kicker": "Top pick for you",
+      "tvSeries": "TV Series",
+      "match": "{{score}}% match",
+      "algo": "algo",
+      "tasteProfile": "Top pick from your taste profile.",
+      "friends": "Friends",
+      "recCount_one": "{{count}} rec",
+      "recCount_other": "{{count}} recs",
+      "noFriendRecs": "None of your friends have recommended this yet.",
+      "viewDetails": "View details",
+      "undoDismiss": "Undo dismiss",
+      "notInterested": "Not interested"
+    }
   },
   "invite": {
     "title": "Invite Friends",
@@ -732,7 +972,18 @@
     "saving": "Saving...",
     "cancel": "Cancel",
     "optional": "optional",
-    "retry": "Retry"
+    "retry": "Retry",
+    "viewAll": "View all",
+    "noTitlesFound": "No titles found",
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    }
   },
   "feed": {
     "title": "Calendar Feed",
@@ -785,7 +1036,8 @@
     "watchHistory": {
       "loadMore": "Load more →",
       "loading": "Loading…"
-    }
+    },
+    "finishIn": "Finish in {{eta}} at your current pace"
   },
   "suggestions": {
     "alsoLike": "You might also like",
@@ -840,5 +1092,53 @@
   "watchTime": {
     "unknownEpisodes_one": "{{count}} watched episode has unknown duration; time totals exclude it.",
     "unknownEpisodes_other": "{{count}} watched episodes have unknown duration; time totals exclude them."
+  },
+  "titleCard": {
+    "progress_one": "{{watched}} of {{count}} episode watched",
+    "progress_other": "{{watched}} of {{count}} episodes watched",
+    "epCount": "{{watched}}/{{total}} ep",
+    "noPoster": "No poster",
+    "sensitive": "Sensitive",
+    "tv": "TV",
+    "snoozed": "Snoozed"
+  },
+  "stats": {
+    "title": "Stats",
+    "loadError": "Failed to load stats. Please try again.",
+    "moviesWatched": "Movies Watched",
+    "episodesWatched": "Episodes Watched",
+    "showsTracked": "Shows Tracked",
+    "moviesTracked": "Movies Tracked",
+    "watchTime": "Watch Time",
+    "total": "total",
+    "watchlistEta": "Watchlist ETA",
+    "atCurrentPace": "at your current pace",
+    "tvWatchTime": "TV Watch Time",
+    "movieWatchTime": "Movie Watch Time",
+    "episodeCount_one": "{{count}} episode",
+    "episodeCount_other": "{{count}} episodes",
+    "movieCount_one": "{{count}} movie",
+    "movieCount_other": "{{count}} movies",
+    "monthlyActivity": "Monthly Activity",
+    "episodes": "Episodes",
+    "movies": "Movies",
+    "topGenres": "Top Genres",
+    "topLanguages": "Top Languages",
+    "showsByStatus": "Shows by Status",
+    "monthTooltip": "{{movies}} movies, {{episodes}} episodes",
+    "eta": {
+      "underDay": "< 1 day",
+      "days_one": "{{count}}d",
+      "days_other": "{{count}}d",
+      "weeks_one": "~{{count}}w",
+      "weeks_other": "~{{count}}w",
+      "months_one": "~{{count}}mo",
+      "months_other": "~{{count}}mo"
+    },
+    "time": {
+      "hours": "{{h}}h",
+      "minutes": "{{m}}m",
+      "hoursMinutes": "{{h}}h {{m}}m"
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { memo, useState } from "react";
 import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import type { Title } from "../types";
 import { getEffectiveStatus } from "../lib/titleStatus";
 import TrackButton from "./TrackButton";
@@ -27,11 +28,12 @@ interface Props {
 
 /** Thin amber progress bar overlay showing watched/total episode progress. */
 function ProgressBar({ watched, max }: { watched: number; max: number }) {
+  const { t } = useTranslation();
   return (
     <div
       className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700"
       role="progressbar"
-      aria-label={`${watched} of ${max} episodes watched`}
+      aria-label={t("titleCard.progress", { watched, count: max })}
       aria-valuenow={watched}
       aria-valuemin={0}
       aria-valuemax={max}
@@ -46,9 +48,10 @@ function ProgressBar({ watched, max }: { watched: number; max: number }) {
 
 /** "X/Y ep" count pill overlay. */
 function EpCount({ watched, total }: { watched: number; total: number }) {
+  const { t } = useTranslation();
   return (
     <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-      {watched}/{total} ep
+      {t("titleCard.epCount", { watched, total })}
     </span>
   );
 }
@@ -148,6 +151,7 @@ const TitleCard = memo(function TitleCard({
   showRating,
   blurred,
 }: Props) {
+  const { t } = useTranslation();
   const [prevTitle, setPrevTitle] = useState(title);
   const [userStatus, setUserStatus] = useState(title.user_status ?? null);
   const [notifMode, setNotifMode] = useState(title.notification_mode ?? null);
@@ -222,7 +226,7 @@ const TitleCard = memo(function TitleCard({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
-              No poster
+              {t("titleCard.noPoster")}
             </div>
           )}
         </Link>
@@ -232,7 +236,7 @@ const TitleCard = memo(function TitleCard({
             className="absolute inset-0 bg-zinc-950/50 flex items-center justify-center pointer-events-none"
           >
             <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-100 bg-black/70 px-2 py-1 rounded">
-              {title.age_certification ?? "Sensitive"}
+              {title.age_certification ?? t("titleCard.sensitive")}
             </span>
           </div>
         )}
@@ -245,7 +249,7 @@ const TitleCard = memo(function TitleCard({
           !showProviderBadge &&
           title.object_type === "SHOW" && (
             <span className="absolute top-2 left-2 bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
-              TV
+              {t("titleCard.tv")}
             </span>
           )}
         {effectiveStatus === "completed" && (
@@ -254,20 +258,30 @@ const TitleCard = memo(function TitleCard({
               className="absolute inset-0 bg-emerald-900/40 pointer-events-none"
               data-testid="completed-overlay"
             />
-            <StatusBadge colorClass="bg-emerald-600" label="Completed" check />
+            <StatusBadge
+              colorClass="bg-emerald-600"
+              label={t("status.completed")}
+              check
+            />
           </>
         )}
         {effectiveStatus === "caught_up" && (
-          <StatusBadge colorClass="bg-teal-600" label="Caught Up" />
+          <StatusBadge
+            colorClass="bg-teal-600"
+            label={t("tracked.sections.caughtUp")}
+          />
         )}
         {effectiveStatus === "on_hold" && (
-          <StatusBadge colorClass="bg-yellow-600" label="On Hold" />
+          <StatusBadge colorClass="bg-yellow-600" label={t("status.onHold")} />
         )}
         {effectiveStatus === "dropped" && (
-          <StatusBadge colorClass="bg-red-700" label="Dropped" />
+          <StatusBadge colorClass="bg-red-700" label={t("status.dropped")} />
         )}
         {effectiveStatus === "plan_to_watch" && (
-          <StatusBadge colorClass="bg-blue-600" label="Plan to Watch" />
+          <StatusBadge
+            colorClass="bg-blue-600"
+            label={t("status.planToWatch")}
+          />
         )}
         <EpisodeCountOrProgress
           title={title}
@@ -275,7 +289,11 @@ const TitleCard = memo(function TitleCard({
           showProgressBar={showProgressBar}
         />
         {!effectiveStatus && title.is_watched && (
-          <StatusBadge colorClass="bg-emerald-500" label="Watched" check />
+          <StatusBadge
+            colorClass="bg-emerald-500"
+            label={t("episodes.watched")}
+            check
+          />
         )}
         {title.imdb_score && !showVisibilityToggle && !showRating && (
           <span className="absolute top-2 right-2 bg-yellow-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded">
@@ -298,7 +316,7 @@ const TitleCard = memo(function TitleCard({
         )}
         {isSnoozed && showNotificationPicker && (
           <span className="absolute top-2 right-2 bg-blue-600/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            Snoozed
+            {t("titleCard.snoozed")}
           </span>
         )}
       </div>

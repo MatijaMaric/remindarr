@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import * as api from "../api";
 import type {
   Recommendation,
@@ -20,27 +21,35 @@ import { posterUrl } from "../lib/tmdb-images";
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
-function formatRelativeTime(dateStr: string): string {
+function formatRelativeTime(dateStr: string, t: TFunction): string {
   const diffMs = Date.now() - new Date(dateStr).getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  if (diffDay < 30) return `${diffDay}d ago`;
+  if (diffMin < 1) return t("common.relative.justNow");
+  if (diffMin < 60) return t("common.relative.minutesAgo", { count: diffMin });
+  if (diffHr < 24) return t("common.relative.hoursAgo", { count: diffHr });
+  if (diffDay < 30) return t("common.relative.daysAgo", { count: diffDay });
   return new Date(dateStr).toLocaleDateString();
 }
 
-function becausePrefix(reason: SuggestionSeedReason): string {
-  if (reason === "loved") return "Because you loved";
-  if (reason === "liked") return "Because you liked";
-  if (reason === "watched") return "Because you watched";
-  return "Because you tracked";
+function becausePrefix(reason: SuggestionSeedReason, t: TFunction): string {
+  if (reason === "loved") return t("discovery.because.loved");
+  if (reason === "liked") return t("discovery.because.liked");
+  if (reason === "watched") return t("discovery.because.watched");
+  return t("discovery.because.tracked");
 }
 
-function becauseLabel(reason: SuggestionSeedReason, title: string): string {
-  return `${becausePrefix(reason)} ${title}`;
+function becauseLabel(
+  reason: SuggestionSeedReason,
+  title: string,
+  t: TFunction,
+): string {
+  // Full-sentence keys so languages can place the title where it belongs.
+  if (reason === "loved") return t("suggestions.becauseLoved", { title });
+  if (reason === "liked") return t("suggestions.becauseLiked", { title });
+  if (reason === "watched") return t("suggestions.becauseWatched", { title });
+  return t("suggestions.becauseTracked", { title });
 }
 
 // ─── Small primitives ─────────────────────────────────────────────────────────
@@ -124,17 +133,18 @@ function FriendStack({
 }
 
 function StateBadge({ state }: { state: "tracked" | "dismissed" | null }) {
+  const { t } = useTranslation();
   if (!state) return null;
   if (state === "tracked") {
     return (
       <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-amber-400/90 text-zinc-950 text-[9px] font-black font-mono uppercase tracking-wider">
-        ✓ Tracked
+        ✓ {t("discovery.trackedBadge")}
       </div>
     );
   }
   return (
     <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-zinc-950/85 text-zinc-400 border border-white/[0.12] text-[9px] font-bold font-mono uppercase tracking-wider">
-      Dismissed
+      {t("discovery.dismissed")}
     </div>
   );
 }
@@ -164,6 +174,7 @@ function SuggestionCard({
   onDismiss: () => void;
   onUndismiss: () => void;
 }) {
+  const { t } = useTranslation();
   const src = posterUrl(item.posterUrl, "w342");
   const state = isTracked ? "tracked" : isDismissed ? "dismissed" : null;
 
@@ -187,9 +198,9 @@ function SuggestionCard({
         titleClamp={2}
         badge={
           state === "tracked"
-            ? { label: "✓ Tracked", tone: "accent" }
+            ? { label: `✓ ${t("discovery.trackedBadge")}`, tone: "accent" }
             : state === "dismissed"
-              ? { label: "Dismissed", tone: "neutral" }
+              ? { label: t("discovery.dismissed"), tone: "neutral" }
               : undefined
         }
         subtitle={
@@ -197,7 +208,7 @@ function SuggestionCard({
             <span className="flex items-center gap-1.5 text-zinc-400">
               <FriendStack friends={friends} max={3} />
               <span className="truncate">
-                {friends.length} {friends.length === 1 ? "friend" : "friends"}
+                {t("discovery.friendCount", { count: friends.length })}
               </span>
             </span>
           ) : undefined
@@ -212,7 +223,7 @@ function SuggestionCard({
                 }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400/[0.16] text-amber-400 border border-amber-400/[0.35] cursor-pointer"
               >
-                ✓ Tracked
+                ✓ {t("discovery.trackedBadge")}
               </button>
             ) : (
               <button
@@ -222,7 +233,7 @@ function SuggestionCard({
                 }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-black hover:bg-amber-400 transition-colors cursor-pointer"
               >
-                Track
+                {t("discovery.track")}
               </button>
             )}
             {isDismissed ? (
@@ -233,7 +244,7 @@ function SuggestionCard({
                 }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-zinc-400 border border-white/[0.08] hover:bg-white/[0.08] transition-colors cursor-pointer"
               >
-                Undo
+                {t("discovery.undo")}
               </button>
             ) : (
               <button
@@ -243,7 +254,7 @@ function SuggestionCard({
                 }}
                 className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
               >
-                Dismiss
+                {t("discovery.dismiss")}
               </button>
             )}
           </div>
@@ -274,6 +285,7 @@ function DiscoveryHero({
   onDismiss: () => void;
   onUndismiss: () => void;
 }) {
+  const { t } = useTranslation();
   const src = hero.posterUrl ? posterUrl(hero.posterUrl, "w342") : null;
   const sourceSrc = algoGroup?.source.posterUrl
     ? posterUrl(algoGroup.source.posterUrl, "w92")
@@ -310,7 +322,7 @@ function DiscoveryHero({
       {/* Info */}
       <div className="flex flex-col min-w-0 py-1">
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <Kicker>Top pick for you</Kicker>
+          <Kicker>{t("discovery.hero.kicker")}</Kicker>
         </div>
 
         <h2 className="text-[26px] sm:text-[36px] lg:text-[40px] font-extrabold tracking-[-0.03em] leading-[1.02] text-zinc-100 mb-3">
@@ -319,7 +331,9 @@ function DiscoveryHero({
 
         <div className="flex flex-wrap gap-2 mb-5">
           <Chip variant="default">
-            {hero.objectType === "SHOW" ? "TV Series" : "Movie"}
+            {hero.objectType === "SHOW"
+              ? t("discovery.hero.tvSeries")
+              : t("discovery.movie")}
           </Chip>
           {hero.genres?.slice(0, 3).map((g) => (
             <Chip key={g} variant="default">
@@ -330,7 +344,9 @@ function DiscoveryHero({
             <Chip variant="default">{hero.releaseYear}</Chip>
           )}
           {hero.matchScore != null && (
-            <Chip variant="amber">{hero.matchScore}% match</Chip>
+            <Chip variant="amber">
+              {t("discovery.hero.match", { score: hero.matchScore })}
+            </Chip>
           )}
         </div>
 
@@ -342,7 +358,9 @@ function DiscoveryHero({
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black font-mono uppercase tracking-wider bg-amber-400/[0.14] text-amber-400 border border-amber-400/[0.3]">
                 Remindarr
               </span>
-              <span className="text-[11px] text-zinc-500 font-mono">algo</span>
+              <span className="text-[11px] text-zinc-500 font-mono">
+                {t("discovery.hero.algo")}
+              </span>
             </div>
             {algoGroup ? (
               <div className="flex gap-2.5 items-center">
@@ -360,7 +378,7 @@ function DiscoveryHero({
                 )}
                 <div className="min-w-0">
                   <p className="font-mono text-[9px] uppercase tracking-wider text-zinc-500 mb-0.5">
-                    {becausePrefix(algoGroup.source.reason)}
+                    {becausePrefix(algoGroup.source.reason, t)}
                   </p>
                   <p className="text-[13px] text-zinc-200 font-semibold truncate">
                     {algoGroup.source.title}
@@ -369,7 +387,7 @@ function DiscoveryHero({
               </div>
             ) : (
               <p className="text-xs text-zinc-400 leading-snug">
-                Top pick from your taste profile.
+                {t("discovery.hero.tasteProfile")}
               </p>
             )}
           </div>
@@ -378,10 +396,10 @@ function DiscoveryHero({
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black font-mono uppercase tracking-wider bg-blue-400/[0.10] text-blue-300 border border-blue-400/[0.2]">
-                Friends
+                {t("discovery.hero.friends")}
               </span>
               <span className="text-[11px] text-zinc-500 font-mono">
-                {friendRecs.length} {friendRecs.length === 1 ? "rec" : "recs"}
+                {t("discovery.hero.recCount", { count: friendRecs.length })}
               </span>
             </div>
             {friendRecs.length > 0 ? (
@@ -419,13 +437,13 @@ function DiscoveryHero({
                 )}
                 {friendRecs.some((r) => r.is_targeted) && (
                   <span className="inline-flex items-center self-start px-1.5 py-0.5 rounded text-[9px] font-bold font-mono uppercase tracking-wider bg-amber-400/[0.15] text-amber-400 border border-amber-400/[0.3]">
-                    Direct
+                    {t("discovery.direct")}
                   </span>
                 )}
               </div>
             ) : (
               <p className="text-xs text-zinc-500 leading-snug">
-                None of your friends have recommended this yet.
+                {t("discovery.hero.noFriendRecs")}
               </p>
             )}
           </div>
@@ -438,35 +456,35 @@ function DiscoveryHero({
               onClick={onTrack}
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-bold bg-amber-400/[0.16] text-amber-400 border border-amber-400/[0.35] cursor-pointer"
             >
-              ✓ Tracked
+              ✓ {t("discovery.trackedBadge")}
             </button>
           ) : (
             <button
               onClick={onTrack}
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-bold bg-amber-400 text-black hover:bg-amber-300 transition-colors cursor-pointer"
             >
-              Track
+              {t("discovery.track")}
             </button>
           )}
           <Link
             to={`/title/${hero.id}`}
             className="inline-flex items-center justify-center px-[18px] py-2.5 rounded-lg text-sm font-semibold bg-white/[0.08] border border-white/[0.14] text-zinc-100 hover:bg-white/[0.14] transition-colors"
           >
-            View details
+            {t("discovery.hero.viewDetails")}
           </Link>
           {isDismissed ? (
             <button
               onClick={onUndismiss}
               className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-lg text-sm font-medium bg-white/[0.04] text-zinc-500 border border-white/[0.08] cursor-pointer"
             >
-              Undo dismiss
+              {t("discovery.hero.undoDismiss")}
             </button>
           ) : (
             <button
               onClick={onDismiss}
               className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-lg text-sm font-semibold text-zinc-500 border border-white/[0.08] hover:text-zinc-300 hover:border-white/[0.16] transition-colors cursor-pointer"
             >
-              Not interested
+              {t("discovery.hero.notInterested")}
             </button>
           )}
         </div>
@@ -603,11 +621,11 @@ function RecommendationCard({
         </span>
         {rec.is_targeted && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
-            Direct
+            {t("discovery.direct")}
           </span>
         )}
         <span className="text-xs text-zinc-500 ml-auto">
-          {formatRelativeTime(rec.created_at)}
+          {formatRelativeTime(rec.created_at, t)}
         </span>
       </div>
 
@@ -624,7 +642,7 @@ function RecommendationCard({
             />
           ) : (
             <div className="w-12 h-[72px] rounded bg-zinc-800 flex items-center justify-center text-zinc-600 text-xs">
-              N/A
+              {t("discovery.noPoster")}
             </div>
           )}
         </Link>
@@ -896,12 +914,15 @@ export default function DiscoveryPage() {
   return (
     <div className="space-y-0">
       <PageHeader
-        kicker="Based on what you watch & who you follow"
-        title="For you"
+        kicker={t("discovery.kicker")}
+        title={t("discovery.forYou")}
         right={
           trackedSet.size > 0 || dismissedSet.size > 0 ? (
             <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-zinc-500">
-              {trackedSet.size} tracked · {dismissedSet.size} dismissed
+              {t("discovery.sessionCounts", {
+                tracked: trackedSet.size,
+                dismissed: dismissedSet.size,
+              })}
             </span>
           ) : undefined
         }
@@ -910,10 +931,10 @@ export default function DiscoveryPage() {
       {/* Tab toggle */}
       <div className="flex gap-2 mb-6">
         <Pill active={tab === "foryou"} onClick={() => setTab("foryou")}>
-          For you
+          {t("discovery.forYou")}
         </Pill>
         <Pill active={tab === "activity"} onClick={() => setTab("activity")}>
-          Activity
+          {t("discovery.activity")}
           {unreadCount > 0 && (
             <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-zinc-950 text-[9px] font-bold">
               {unreadCount}
@@ -954,9 +975,9 @@ export default function DiscoveryPage() {
             {moreForYou.length > 0 && (
               <section>
                 <SectionHead
-                  kicker="More for you"
-                  title="Suggested next"
-                  sub="Ranked by score — tracked and dismissed titles are filtered out."
+                  kicker={t("discovery.moreForYou.kicker")}
+                  title={t("discovery.moreForYou.title")}
+                  sub={t("discovery.moreForYou.sub")}
                 />
                 <ScrollableRow className="gap-3 pb-2">
                   {moreForYou.map((title) => (
@@ -987,8 +1008,8 @@ export default function DiscoveryPage() {
             {Object.keys(recsByTitle).length > 0 && (
               <section>
                 <SectionHead
-                  kicker="From people you follow"
-                  title="Friends are recommending"
+                  kicker={t("discovery.friendRecs.kicker")}
+                  title={t("discovery.friendRecs.title")}
                 />
                 <ScrollableRow className="gap-3 pb-2">
                   {Object.entries(recsByTitle).map(([titleId, recs]) => {
@@ -1040,10 +1061,11 @@ export default function DiscoveryPage() {
                     title={becauseLabel(
                       group.source.reason,
                       group.source.title,
+                      t,
                     )}
                     sub={
                       totalHidden > 0
-                        ? `${totalHidden} hidden — already tracked or dismissed`
+                        ? t("discovery.hiddenCount", { count: totalHidden })
                         : undefined
                     }
                     sourcePosterUrl={sourceSrc}
@@ -1074,7 +1096,7 @@ export default function DiscoveryPage() {
                     </ScrollableRow>
                   ) : (
                     <p className="text-xs text-zinc-500 py-2">
-                      All suggestions tracked or dismissed.
+                      {t("discovery.allHandled")}
                     </p>
                   )}
                 </section>

@@ -1,6 +1,117 @@
-import { describe, it, expect } from "bun:test";
-import i18n from "./i18n";
+import { afterEach, describe, expect, it } from "bun:test";
 import en from "./locales/en.json";
+import i18n, {
+  LANGUAGE_STORAGE_KEY,
+  SUPPORTED_LANGUAGES,
+  currentLanguage,
+  detectLanguage,
+  resolveLanguage,
+  setLanguage,
+} from "./i18n";
+
+const originalLanguages = Object.getOwnPropertyDescriptor(
+  navigator,
+  "languages",
+);
+
+function mockNavigatorLanguages(languages: string[]) {
+  Object.defineProperty(navigator, "languages", {
+    value: languages,
+    configurable: true,
+  });
+}
+
+afterEach(async () => {
+  localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+  if (originalLanguages) {
+    Object.defineProperty(navigator, "languages", originalLanguages);
+  } else {
+    delete (navigator as { languages?: unknown }).languages;
+  }
+  await i18n.changeLanguage("en");
+});
+
+describe("resolveLanguage", () => {
+  it("maps regional tags to the supported base language", () => {
+    expect(resolveLanguage("pt-BR")).toBe("pt");
+    expect(resolveLanguage("de_AT")).toBe("de");
+    expect(resolveLanguage("JA")).toBe("ja");
+  });
+
+  it("returns null for unsupported or missing tags", () => {
+    expect(resolveLanguage("hr")).toBeNull();
+    expect(resolveLanguage("")).toBeNull();
+    expect(resolveLanguage(null)).toBeNull();
+    expect(resolveLanguage(undefined)).toBeNull();
+  });
+});
+
+describe("detectLanguage", () => {
+  it("prefers the saved choice over the browser language", () => {
+    mockNavigatorLanguages(["fr-FR"]);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, "ja");
+    expect(detectLanguage()).toBe("ja");
+  });
+
+  it("uses the first supported browser language", () => {
+    mockNavigatorLanguages(["hr-HR", "es-MX", "en-US"]);
+    expect(detectLanguage()).toBe("es");
+  });
+
+  it("ignores an unsupported saved value", () => {
+    mockNavigatorLanguages(["de-DE"]);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, "klingon");
+    expect(detectLanguage()).toBe("de");
+  });
+
+  it("falls back to English", () => {
+    mockNavigatorLanguages(["hr-HR"]);
+    expect(detectLanguage()).toBe("en");
+  });
+});
+
+describe("setLanguage", () => {
+  it("loads the bundle, switches the UI, and remembers the choice", async () => {
+    await setLanguage("de");
+
+    expect(i18n.language).toBe("de");
+    expect(currentLanguage()).toBe("de");
+    expect(i18n.t("nav.settings")).toBe("Einstellungen");
+    expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("de");
+    expect(document.documentElement.lang).toBe("de");
+  });
+
+  it("normalizes regional codes", async () => {
+    await setLanguage("pt-BR");
+    expect(i18n.language).toBe("pt");
+    expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("pt");
+  });
+
+  it("falls back to English for unsupported codes", async () => {
+    await setLanguage("de");
+    await setLanguage("xx");
+    expect(i18n.language).toBe("en");
+    expect(i18n.t("nav.settings")).toBe("Settings");
+  });
+
+  it("uses language-specific plural rules", async () => {
+    await setLanguage("fr");
+    expect(i18n.t("season.episodeCount", { count: 1 })).toBe("1 épisode");
+    expect(i18n.t("season.episodeCount", { count: 3 })).toBe("3 épisodes");
+
+    await setLanguage("ja");
+    expect(i18n.t("season.episodeCount", { count: 1 })).toBe("1 エピソード");
+  });
+
+  it.each(SUPPORTED_LANGUAGES.map((l) => l.code))(
+    "switches to %s",
+    async (code) => {
+      await setLanguage(code);
+      expect(i18n.language).toBe(code);
+      expect(i18n.hasResourceBundle(code, "translation")).toBe(true);
+    },
+  );
+});
 
 describe("i18n", () => {
   it("initializes with English as default", () => {

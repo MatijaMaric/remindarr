@@ -18,6 +18,7 @@ import { PageHeader } from "../components/design";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Card } from "../components/ui/card";
 import { useAuth } from "../context/AuthContext";
+import { languageName } from "../lib/languageName";
 
 const VALID_CATEGORIES: BrowseCategory[] = [
   "new_releases",
@@ -123,7 +124,7 @@ export default function BrowsePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [resultsCount, setResultsCount] = useState<number | null>(null);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
   const {
     user,
@@ -224,16 +225,7 @@ export default function BrowsePage() {
   );
 
   const availableLanguages = filterLanguages
-    .map((code) => {
-      let label = code;
-      try {
-        label =
-          new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
-      } catch {
-        /* Display unsupported language codes as-is. */
-      }
-      return { code, label };
-    })
+    .map((code) => ({ code, label: languageName(code, i18n.language) ?? code }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const rawCategory = searchParams.get("category") || "popular";
@@ -404,13 +396,18 @@ export default function BrowsePage() {
         kicker={
           isSearch
             ? searchResults
-              ? `Search · ${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`
-              : "Search"
+              ? t("browse.kicker.searchResults", {
+                  count: searchResults.length,
+                })
+              : t("browse.kicker.search")
             : resultsCount !== null
-              ? `Catalog · ${resultsCount.toLocaleString()} titles`
-              : "Catalog · discover titles"
+              ? t("browse.kicker.catalogCount", {
+                  count: resultsCount,
+                  formatted: resultsCount.toLocaleString(),
+                })
+              : t("browse.kicker.catalog")
         }
-        title="Browse"
+        title={t("browse.title")}
       />
       <SearchBar
         key={lastQuery}
@@ -520,7 +517,11 @@ export default function BrowsePage() {
                 onClick={() => setMobileFiltersOpen((v) => !v)}
                 aria-expanded={mobileFiltersOpen}
                 aria-controls="mobile-filter-panel"
-                aria-label={mobileFiltersOpen ? "Hide filters" : "Show filters"}
+                aria-label={
+                  mobileFiltersOpen
+                    ? t("browse.hideFilters")
+                    : t("browse.showFilters")
+                }
                 className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 transition-colors"
               >
                 <svg
@@ -546,7 +547,7 @@ export default function BrowsePage() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  aria-label="Clear all filters"
+                  aria-label={t("browse.clearAllFilters")}
                   className="inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 hover:text-white transition-colors"
                 >
                   <svg
@@ -675,15 +676,17 @@ export default function BrowsePage() {
                 On my services ×
               </button>
             )}
-            {type.map((t) => (
+            {type.map((ty) => (
               <button
-                key={t}
+                key={ty}
                 type="button"
-                onClick={() => setType(type.filter((v) => v !== t))}
-                aria-label={`Remove ${t === "MOVIE" ? "Movies" : "Shows"} filter`}
+                onClick={() => setType(type.filter((v) => v !== ty))}
+                aria-label={t("browse.removeFilter", {
+                  name: ty === "MOVIE" ? t("filter.movies") : t("filter.shows"),
+                })}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
               >
-                {t === "MOVIE" ? "Movies" : "Shows"} ×
+                {ty === "MOVIE" ? t("filter.movies") : t("filter.shows")} ×
               </button>
             ))}
             {genre.map((g) => (
@@ -691,7 +694,7 @@ export default function BrowsePage() {
                 key={g}
                 type="button"
                 onClick={() => setGenre(genre.filter((v) => v !== g))}
-                aria-label={`Remove ${g} filter`}
+                aria-label={t("browse.removeFilter", { name: g })}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
               >
                 {g} ×
@@ -702,7 +705,11 @@ export default function BrowsePage() {
                 key={p}
                 type="button"
                 onClick={() => setProvider(provider.filter((v) => v !== p))}
-                aria-label={`Remove ${filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} filter`}
+                aria-label={t("browse.removeFilter", {
+                  name:
+                    filterProviders.find((fp) => String(fp.id) === p)?.name ??
+                    p,
+                })}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
               >
                 {filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} ×
@@ -713,7 +720,7 @@ export default function BrowsePage() {
                 key={l}
                 type="button"
                 onClick={() => setLanguage(language.filter((v) => v !== l))}
-                aria-label={`Remove ${l} language filter`}
+                aria-label={t("browse.removeLanguageFilter", { name: l })}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
               >
                 {l} ×
@@ -723,7 +730,7 @@ export default function BrowsePage() {
               <button
                 type="button"
                 onClick={() => setBrowseYearRange("", "")}
-                aria-label="Remove year range filter"
+                aria-label={t("browse.removeYearFilter")}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
               >
                 {browseYearMin || "…"}–{browseYearMax || "…"} ×
@@ -733,7 +740,7 @@ export default function BrowsePage() {
               <button
                 type="button"
                 onClick={() => setBrowseMinRating("")}
-                aria-label="Remove minimum rating filter"
+                aria-label={t("browse.removeRatingFilter")}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
               >
                 ★ {browseMinRating}+ ×
