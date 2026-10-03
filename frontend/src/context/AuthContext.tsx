@@ -173,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }),
           )
         : { verdict: "indeterminate" as const, data: null };
+      const saved = verdict === "authenticated" ? await offlineSession() : null;
       if (request !== sessionRequest.current || epoch !== current.current.epoch)
         return;
       if (verdict !== "indeterminate") {
@@ -181,7 +182,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? mapSessionToUser(data as BetterAuthSessionData | null)
             : null;
         if (user?.id !== current.current.user?.id) {
-          if (announce) announceIdentity("settled");
+          // A pageshow/focus check can win startup before the in-memory user is
+          // restored. Revalidating that same saved account must not invalidate
+          // its offline revision and discard durable pending writes.
+          if (announce && (!user || user.id !== saved?.user.id))
+            announceIdentity("settled");
           replaceIdentity(user);
         } else {
           const next = { ...current.current, user };

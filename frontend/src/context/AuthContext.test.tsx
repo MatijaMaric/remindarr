@@ -15,6 +15,8 @@ import "../i18n";
 import { resolveSession } from "../lib/sessionBootstrap";
 import * as sessionBootstrap from "../lib/sessionBootstrap";
 import * as swControl from "../lib/swControl";
+import * as offline from "../lib/offline";
+import { AUTH_CHANGE_KEY, authRevision } from "../lib/identity";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import type { UserSubscriptions } from "../types";
 
@@ -290,6 +292,54 @@ describe("AuthContext production requests", () => {
     ).toBeNull();
     expect(screen.getByTestId("subscriptions-status").textContent).toBe("idle");
   });
+
+  it.each(["test-user", "other-user"])(
+    "preserves an offline revision only when startup revalidation finds the same account (%s)",
+    async (savedUserId) => {
+      const previous = localStorage.getItem(AUTH_CHANGE_KEY);
+      localStorage.setItem(
+        AUTH_CHANGE_KEY,
+        JSON.stringify({ phase: "settled", nonce: "saved-revision" }),
+      );
+      const saved = spyOn(offline, "offlineSession").mockResolvedValue({
+        user: {
+          id: savedUserId,
+          username: savedUserId,
+          display_name: null,
+          auth_provider: "local",
+          is_admin: false,
+        },
+        expires: Date.now() + 60_000,
+        revision: "saved-revision",
+      });
+      const remember = spyOn(offline, "rememberSession").mockResolvedValue();
+      const replay = spyOn(offline, "replayWatchlist").mockResolvedValue();
+      // pageshow wins the initial session request while in-memory user is null.
+      sessionSpy.mockImplementationOnce(() => new Promise(() => {}));
+      try {
+        render(
+          <ProductionAuthProvider>
+            <SubscriptionState />
+          </ProductionAuthProvider>,
+        );
+        await act(async () => {
+          window.dispatchEvent(new Event("pageshow"));
+        });
+        await waitFor(() => expect(replay).toHaveBeenCalledWith("test-user"));
+        expect(remember).toHaveBeenCalled();
+        if (savedUserId === "test-user")
+          expect(authRevision()).toBe("saved-revision");
+        else expect(authRevision()).not.toBe("saved-revision");
+      } finally {
+        cleanup();
+        saved.mockRestore();
+        remember.mockRestore();
+        replay.mockRestore();
+        if (previous === null) localStorage.removeItem(AUTH_CHANGE_KEY);
+        else localStorage.setItem(AUTH_CHANGE_KEY, previous);
+      }
+    },
+  );
 
   it("leaves startup when session checks fail without treating the user as signed out", async () => {
     sessionSpy.mockResolvedValue({

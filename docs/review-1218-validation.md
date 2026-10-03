@@ -39,7 +39,11 @@ accounts, notification destinations or Plex libraries are used.
   production service worker. Chromium and Firefox retain browser offline
   emulation. All browsers verify durable replay and denial of previously cached
   private content after session expiry; no projects or cases are skipped.
-  The follow-up frontend suite passes 1,397 tests.
+  Startup pageshow/focus revalidation also preserves the saved revision for the
+  same account, preventing durable pending writes from being discarded before
+  replay. A regression test reproduces the race and verifies that changing
+  accounts still invalidates the revision.
+  The follow-up frontend suite passes 1,399 tests.
 - Production browser checks: core journey, durable offline browser restart,
   expired-session denial, recovery/export guidance at 200% CSS text size and a
   500-title library at 390px width. Timing is attached as `watchlist-render.json`.
