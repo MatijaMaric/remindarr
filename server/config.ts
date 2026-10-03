@@ -1,4 +1,6 @@
 export const CONFIG = {
+  OUTBOUND_ALLOWED_ORIGINS: process.env.OUTBOUND_ALLOWED_ORIGINS || "",
+  OUTBOUND_PRIVATE_ORIGINS: process.env.OUTBOUND_PRIVATE_ORIGINS || "",
   LOG_LEVEL: (process.env.LOG_LEVEL || "info") as
     | "debug"
     | "info"
@@ -122,6 +124,8 @@ export function patchConfig(overrides: Partial<typeof CONFIG>): void {
 
 /** CF Workers env bindings (secrets + vars) that map onto CONFIG. */
 export interface CfConfigEnv {
+  OUTBOUND_ALLOWED_ORIGINS?: string;
+  OUTBOUND_PRIVATE_ORIGINS?: string;
   TMDB_API_KEY?: string;
   TMDB_COUNTRY?: string;
   TMDB_LANGUAGE?: string;
@@ -160,6 +164,8 @@ export function cfEnvToConfigOverrides(
   env: CfConfigEnv,
 ): Partial<typeof CONFIG> {
   return {
+    OUTBOUND_ALLOWED_ORIGINS: env.OUTBOUND_ALLOWED_ORIGINS || "",
+    OUTBOUND_PRIVATE_ORIGINS: env.OUTBOUND_PRIVATE_ORIGINS || "",
     TMDB_API_KEY: env.TMDB_API_KEY || "",
     COUNTRY: env.TMDB_COUNTRY || undefined,
     LANGUAGE: env.TMDB_LANGUAGE || undefined,

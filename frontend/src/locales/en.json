@@ -324,7 +324,9 @@
     "signUp": "Sign up",
     "loginFailed": "Login failed: {{error}}",
     "signInWithPasskey": "Sign in with Passkey",
-    "passkeyFailed": "Passkey sign-in failed"
+    "passkeyFailed": "Passkey sign-in failed",
+    "recoveryTitle": "Forgot your password?",
+    "recoveryHelp": "This instance does not offer email password resets. Contact your instance administrator to verify your identity and recover your local account. If you previously used a passkey or single sign-on, try that sign-in method above."
   },
   "profile": {
     "title": "Profile",
@@ -340,7 +342,7 @@
     "passwordChanged": "Password changed successfully",
     "watchlist": "Watchlist",
     "exportWatchlist": "Export Watchlist",
-    "exportDescription": "Download your tracked titles and watched episode history as a JSON file.",
+    "exportDescription": "Exports tracked titles, notes, movie watched flags and watched episodes. Excludes ratings, tags, statuses, reminder settings, profile, credentials and social data. This is a watchlist export, not a complete account backup.",
     "exporting": "Exporting...",
     "export": "Export",
     "importWatchlist": "Import Watchlist",
@@ -833,7 +835,7 @@
         "good": "good",
         "strong": "strong"
       },
-      "languageSubtitle": "The language of menus, buttons, and messages. Changes apply immediately.",
+      "languageSubtitle": "Menus, buttons and messages change immediately. Title metadata and search language follow the instance settings; dates may follow your browser or profile locale.",
       "languageHint": "Title names and overviews come from TMDB and follow the metadata language, not this setting. Dates and times use your browser's regional format.",
       "passkeysSubtitle": "Sign in with Face ID, Touch ID, Windows Hello, or a security key.",
       "passkeyCreated": "Created {{date}}",
@@ -1173,5 +1175,13 @@
     "profile": "Profile country is biographical. It does not change streaming availability.",
     "help": "Availability uses the instance streaming region. An administrator can change TMDB_COUNTRY in the server configuration.",
     "configuration": "Streaming region configuration"
+  },
+  "offline": {
+    "title": "You're offline",
+    "queued": "Queued for sync",
+    "pending": "{{count}} watchlist changes waiting to sync",
+    "available": "Saved library and calendar data are available for up to 24 hours. Watchlist adds/removes are saved on this device; episode changes require a connection.",
+    "unavailable": "Reconnect to verify your account. Saved data is unavailable or has expired.",
+    "syncError": "Sync failed. Your changes remain queued; try again when connected."
   }
 }

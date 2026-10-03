@@ -456,6 +456,44 @@ describe("GET /track/export", () => {
 });
 
 describe("POST /track/import", () => {
+  it("round-trips supported watchlist data to another account despite duplicate and malformed rows", async () => {
+    const source = {
+      id: "movie-roundtrip",
+      object_type: "MOVIE",
+      title: "Portable movie",
+      notes: "Keep this note",
+      is_watched: true,
+      watched_episodes: [],
+    };
+    const initial = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ titles: [source] }),
+    });
+    expect(initial.status).toBe(200);
+    const exported = await (
+      await app.request("/track/export", { headers: headers() })
+    ).json();
+    userToken = await createSession(
+      await createUser("importrecipient", "hash"),
+    );
+    const imported = await app.request("/track/import", {
+      method: "POST",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...exported,
+        titles: [...exported.titles, exported.titles[0], { broken: true }],
+      }),
+    });
+    // Duplicate IDs coalesce; only malformed rows contribute to skipped.
+    expect(await imported.json()).toMatchObject({ imported: 1, skipped: 1 });
+    const restored = await (
+      await app.request("/track/export", { headers: headers() })
+    ).json();
+    expect(restored.titles).toEqual(exported.titles);
+    expect(restored.titles[0]).toMatchObject(source);
+  });
+
   it("imports titles from export data", async () => {
     const exportData = {
       version: 1,

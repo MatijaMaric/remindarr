@@ -332,7 +332,9 @@
     "signUp": "S'inscrire",
     "loginFailed": "Échec de la connexion : {{error}}",
     "signInWithPasskey": "Se connecter avec une clé d'accès",
-    "passkeyFailed": "Échec de la connexion avec la clé d'accès"
+    "passkeyFailed": "Échec de la connexion avec la clé d'accès",
+    "recoveryTitle": "Mot de passe oublié ?",
+    "recoveryHelp": "Cette instance ne propose pas de réinitialisation par e-mail. Contactez son administrateur pour vérifier votre identité et récupérer votre compte local. Si vous utilisiez une clé d’accès ou une connexion unique, essayez cette méthode ci-dessus."
   },
   "profile": {
     "title": "Profil",
@@ -348,7 +350,7 @@
     "passwordChanged": "Mot de passe modifié",
     "watchlist": "Ma liste",
     "exportWatchlist": "Exporter ma liste",
-    "exportDescription": "Téléchargez vos titres suivis et votre historique d'épisodes vus au format JSON.",
+    "exportDescription": "Exporte les titres suivis, notes, films vus et épisodes vus. Exclut les évaluations, étiquettes, statuts, rappels, profil, identifiants et données sociales. Ce n’est pas une sauvegarde complète du compte.",
     "exporting": "Exportation...",
     "export": "Exporter",
     "importWatchlist": "Importer une liste",
@@ -849,7 +851,7 @@
         "good": "bonne",
         "strong": "forte"
       },
-      "languageSubtitle": "La langue des menus, boutons et messages. Les changements s'appliquent immédiatement.",
+      "languageSubtitle": "Les menus, boutons et messages changent immédiatement. La langue des métadonnées et de la recherche dépend de l’instance ; les dates peuvent suivre la langue du navigateur ou du profil.",
       "languageHint": "Les noms et résumés des titres proviennent de TMDB et suivent la langue des métadonnées, pas ce réglage. Les dates et heures utilisent le format régional de votre navigateur.",
       "passkeysSubtitle": "Connectez-vous avec Face ID, Touch ID, Windows Hello ou une clé de sécurité.",
       "passkeyCreated": "Créée le {{date}}",
@@ -1202,5 +1204,13 @@
     "profile": "Le pays du profil est une information biographique. Il ne modifie pas la disponibilité du streaming.",
     "help": "La disponibilité utilise la région de streaming de cette instance. Un administrateur peut modifier TMDB_COUNTRY dans la configuration du serveur.",
     "configuration": "Configuration de la région de streaming"
+  },
+  "offline": {
+    "title": "Vous êtes hors ligne",
+    "queued": "En attente de synchronisation",
+    "pending": "{{count}} modifications de la liste en attente",
+    "available": "La bibliothèque et le calendrier enregistrés sont disponibles jusqu’à 24 heures. Les ajouts et retraits sont enregistrés sur cet appareil ; les épisodes nécessitent une connexion.",
+    "unavailable": "Reconnectez-vous pour vérifier votre compte. Les données enregistrées sont indisponibles ou ont expiré.",
+    "syncError": "Échec de la synchronisation. Les modifications restent en attente ; réessayez une fois connecté."
   }
 }

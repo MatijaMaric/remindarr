@@ -5,7 +5,7 @@ import Sentry from "../sentry";
 spyOn(Sentry, "startSpan").mockImplementation((_opts: any, fn: any) => fn({}));
 spyOn(Sentry, "captureException").mockImplementation(() => "");
 
-import * as http from "../lib/http";
+import * as http from "../lib/outbound";
 import { getServers } from "./client";
 
 function makeResponse(body: unknown, status = 200): Response {
@@ -19,7 +19,7 @@ describe("getServers()", () => {
   let fetchSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
-    fetchSpy = spyOn(http, "httpFetch");
+    fetchSpy = spyOn(http, "integrationFetch");
   });
 
   afterEach(() => {

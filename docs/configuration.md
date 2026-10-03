@@ -85,6 +85,48 @@ Enables direct "Watch on Netflix/Disney+" links. Requires a [RapidAPI](https://r
 
 ## Caching
 
+### Outbound integration destinations
+
+Custom webhook, ntfy, Gotify, Plex and push-service origins must be approved by
+the operator. Set comma-separated **exact origins**, including a non-default port:
+
+```dotenv
+OUTBOUND_ALLOWED_ORIGINS=https://hooks.example.com,https://notify.example.com
+OUTBOUND_PRIVATE_ORIGINS=http://192.168.1.20:32400,http://gotify.internal:8080
+```
+
+The first setting permits public destinations only; DNS answers containing
+loopback, private, link-local or reserved addresses are rejected. The second
+explicitly permits the named internal services. These settings come from the
+process environment or Workers bindings, never a user's integration settings.
+No wildcards, paths, URL credentials or redirects are accepted. Requests time
+out after 10 seconds and response bodies are limited to 8 MiB. Provider response
+bodies are not returned by the notifier test API.
+
+Standard Discord, Telegram, ntfy.sh, Plex cloud and browser push service origins
+are included by the application. Existing custom integrations need an operator
+allowlist entry after upgrading. Allow only origins and DNS zones you trust:
+the public-address check is a DNS preflight, not connection-level DNS pinning.
+Use network egress controls when untrusted DNS or compromised allowed services
+are in the deployment's threat model.
+
+### Offline access
+
+After an authenticated online visit, the browser may retain the current account's
+library, calendar and visited title details in IndexedDB. Access expires at the
+earlier of 24 hours or the server session's expiry. The cache holds at most 100
+responses, each limited to 2 million serialized characters. Logout, account
+changes, rejected sessions and expiry clear private offline state.
+
+Watchlist adds/removes are durably queued before the UI says “Queued for sync”.
+Reopening the app online verifies the session before replay; requests include
+the intended account ID, which the backend checks against the authenticated
+account. Replay is serialized across tabs where Web Locks are available. Retries
+set the desired tracked/untracked state idempotently; they are not a guarantee
+of exactly one HTTP request after a crash. Queued work expires with offline
+access and is deliberately discarded by logout. Episode changes require an
+online connection. Browser storage must be enabled.
+
 | Variable                   | Default   | Description                                                |
 | -------------------------- | --------- | ---------------------------------------------------------- |
 | `CACHE_BACKEND`            | `memory`  | Cache backend: `memory`, `redis`, or `kv`                  |

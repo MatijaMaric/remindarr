@@ -4,6 +4,7 @@ import { formatPersonCredit, groupEpisodesByShow } from "./format";
 import { getVapidKeys } from "./vapid";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
+import { integrationFetch } from "../lib/outbound";
 
 const log = logger.child({ module: "webpush" });
 
@@ -69,8 +70,21 @@ export class WebPushProvider implements NotificationProvider {
     };
 
     try {
-      await webpush.sendNotification(subscription, JSON.stringify(payload));
+      const request = webpush.generateRequestDetails(
+        subscription,
+        JSON.stringify(payload),
+      );
+      const response = await integrationFetch(request.endpoint, {
+        method: request.method,
+        headers: request.headers,
+        body: new Uint8Array(request.body),
+      });
+      if (response.status === 410 || response.status === 404)
+        throw new SubscriptionExpiredError(config.endpoint);
+      if (!response.ok)
+        throw new Error(`Push service returned HTTP ${response.status}`);
     } catch (err: unknown) {
+      if (err instanceof SubscriptionExpiredError) throw err;
       const statusCode =
         typeof err === "object" && err !== null && "statusCode" in err
           ? (err as { statusCode?: number }).statusCode
@@ -78,13 +92,8 @@ export class WebPushProvider implements NotificationProvider {
       if (statusCode === 410 || statusCode === 404) {
         throw new SubscriptionExpiredError(config.endpoint);
       }
-      const body =
-        typeof err === "object" && err !== null && "body" in err
-          ? (err as { body?: string }).body
-          : undefined;
-      const message = err instanceof Error ? err.message : String(err);
       throw new Error(
-        `Web push failed (${statusCode ?? "unknown"}): ${body || message}`,
+        `Web push failed (${statusCode ?? "unknown"}). Check the subscription and operator outbound policy.`,
       );
     }
   }

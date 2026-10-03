@@ -288,6 +288,16 @@ const SAFE_CONFIG_KEYS: Array<{
   envVar?: string;
 }> = [
   { key: "LOG_LEVEL", value: () => CONFIG.LOG_LEVEL, envVar: "LOG_LEVEL" },
+  {
+    key: "OUTBOUND_ALLOWED_ORIGINS",
+    value: () => CONFIG.OUTBOUND_ALLOWED_ORIGINS,
+    envVar: "OUTBOUND_ALLOWED_ORIGINS",
+  },
+  {
+    key: "OUTBOUND_PRIVATE_ORIGINS",
+    value: () => CONFIG.OUTBOUND_PRIVATE_ORIGINS,
+    envVar: "OUTBOUND_PRIVATE_ORIGINS",
+  },
   { key: "BASE_URL", value: () => CONFIG.BASE_URL, envVar: "BASE_URL" },
   { key: "TMDB_COUNTRY", value: () => CONFIG.COUNTRY, envVar: "TMDB_COUNTRY" },
   {
@@ -414,7 +424,7 @@ const SECRET_CONFIG_KEYS: Array<{ key: string; present: () => boolean }> = [
 app.get("/config", (c) => {
   const safe = SAFE_CONFIG_KEYS.map(({ key, value, envVar }) => ({
     key,
-    value: value(),
+    value: value() ?? null,
     source: envVar && process.env[envVar] ? "env" : "default",
   }));
 

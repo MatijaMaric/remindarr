@@ -381,14 +381,18 @@ app.post("/:id/test", zValidator("param", idParamSchema), async (c) => {
       notifierId: id,
       status: "failure",
       latencyMs: Date.now() - start,
-      errorMessage: err instanceof Error ? err.message : String(err),
+      errorMessage:
+        "Delivery failed. Check the destination, credentials and operator outbound policy.",
       eventKind: "test",
     });
     if (!(err instanceof SubscriptionExpiredError)) {
       Sentry.captureException(err);
     }
-    const message = err instanceof Error ? err.message : String(err);
-    return c.json({ success: false, message: message || "Failed to send" });
+    return c.json({
+      success: false,
+      message:
+        "Delivery failed. Check the destination, credentials and operator outbound policy.",
+    });
   }
 });
 

@@ -1,5 +1,5 @@
 import { traceHttp } from "../tracing";
-import { httpFetch } from "../lib/http";
+import { integrationFetch } from "../lib/outbound";
 import {
   formatPersonCredit,
   formatProviderNames,
@@ -62,7 +62,7 @@ export class GotifyProvider implements NotificationProvider {
     const url = `${base}/message`;
 
     await traceHttp("POST", url, async () => {
-      const response = await httpFetch(url, {
+      const response = await integrationFetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -72,8 +72,7 @@ export class GotifyProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`Gotify request failed (${response.status}): ${text}`);
+        throw new Error(`Gotify request failed (${response.status})`);
       }
     });
   }

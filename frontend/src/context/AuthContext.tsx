@@ -16,6 +16,13 @@ import { clearPrivateData } from "../lib/swControl";
 import { getSubscriptions } from "../api";
 import { resolveSession } from "../lib/sessionBootstrap";
 import type { UserSubscriptions } from "../types";
+import {
+  offlineSession,
+  rememberSession,
+  clearOfflineData,
+  setOfflineAccount,
+  replayWatchlist,
+} from "../lib/offline";
 
 interface User {
   id: string;
@@ -31,7 +38,11 @@ interface AuthProviders {
   passkey?: boolean;
 }
 
-export type SessionStatus = "authenticated" | "unauthenticated" | "unknown";
+export type SessionStatus =
+  | "authenticated"
+  | "unauthenticated"
+  | "unknown"
+  | "offline";
 
 interface AuthContextType {
   user: User | null;
@@ -59,6 +70,7 @@ export function useAuth() {
 }
 
 interface BetterAuthSessionData {
+  session?: { expiresAt?: string };
   user?: {
     id: string;
     name?: string | null;
@@ -111,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const subscriptionsRequest = useRef<AbortController | null>(null);
 
   const replaceIdentity = useCallback((user: User | null) => {
+    setOfflineAccount(user?.id ?? null);
     cancelIdentityRequests();
     subscriptionsRequest.current?.abort();
     void current.current.client.cancelQueries();
@@ -152,12 +165,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (announce = true) => {
       const request = ++sessionRequest.current;
       const epoch = current.current.epoch;
-      const { verdict, data } = await resolveSession(() =>
-        authClient.getSession({
-          query: { disableCookieCache: true },
-          fetchOptions: { timeout: 5000 },
-        }),
-      );
+      const { verdict, data } = navigator.onLine
+        ? await resolveSession(() =>
+            authClient.getSession({
+              query: { disableCookieCache: true },
+              fetchOptions: { timeout: 5000 },
+            }),
+          )
+        : { verdict: "indeterminate" as const, data: null };
       if (request !== sessionRequest.current || epoch !== current.current.epoch)
         return;
       if (verdict !== "indeterminate") {
@@ -174,7 +189,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIdentity(next);
         }
         setSessionStatus(user ? "authenticated" : "unauthenticated");
+        if (user) {
+          await rememberSession(
+            user,
+            (data as BetterAuthSessionData)?.session?.expiresAt,
+          ).catch(() => {});
+          if (request !== sessionRequest.current || changing.current) return;
+          void replayWatchlist(user.id).catch(() =>
+            window.dispatchEvent(new Event("offline:sync-error")),
+          );
+        } else {
+          await clearOfflineData().catch(() => {});
+        }
         void refreshSubscriptions();
+      } else if (!changing.current) {
+        const saved = await offlineSession();
+        if (
+          request !== sessionRequest.current ||
+          epoch !== current.current.epoch
+        )
+          return;
+        if (saved) {
+          if (saved.user.id !== current.current.user?.id)
+            replaceIdentity(saved.user);
+          setOfflineAccount(saved.user.id);
+          setSessionStatus("offline");
+        } else {
+          replaceIdentity(null);
+          setSessionStatus("unknown");
+        }
       }
       setLoading(false);
     },
@@ -182,6 +225,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refresh = useCallback(() => refreshSession(), [refreshSession]);
+  useEffect(() => {
+    if (sessionStatus !== "offline") return;
+    const interval = setInterval(() => {
+      void refreshSession(false);
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [sessionStatus, refreshSession]);
   const cancelRefresh = useCallback(() => {
     ++sessionRequest.current;
   }, []);
@@ -204,6 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unauthorized = () => {
+      void clearOfflineData().catch(() => {});
       replaceIdentity(null);
       setSessionStatus("unauthenticated");
       setLoading(false);
@@ -232,11 +283,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener("storage", storage);
     window.addEventListener("focus", revalidate);
     window.addEventListener("pageshow", revalidate);
+    window.addEventListener("online", revalidate);
+    window.addEventListener("offline", revalidate);
+    window.addEventListener("offline:retry", revalidate);
+    const synced = () => {
+      void current.current.client.invalidateQueries();
+    };
+    window.addEventListener("offline:synced", synced);
     return () => {
       window.removeEventListener("auth:unauthorized", unauthorized);
       window.removeEventListener("storage", storage);
       window.removeEventListener("focus", revalidate);
       window.removeEventListener("pageshow", revalidate);
+      window.removeEventListener("online", revalidate);
+      window.removeEventListener("offline", revalidate);
+      window.removeEventListener("offline:retry", revalidate);
+      window.removeEventListener("offline:synced", synced);
     };
   }, [replaceIdentity, refreshSession]);
 
@@ -254,6 +316,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionStatus("unknown");
     }
     try {
+      await clearOfflineData().catch(() => {});
       await clearPrivateData();
       const result = await operation();
       if (result.error)

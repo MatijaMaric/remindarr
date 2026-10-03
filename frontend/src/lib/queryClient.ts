@@ -32,6 +32,7 @@ export function createQueryClient(userId: string | null) {
   return new AccountQueryClient({
     defaultOptions: {
       queries: {
+        networkMode: "always",
         queryKeyHashFn: (key) => hashKey([userId, ...key]),
         staleTime: 30_000,
         gcTime: 5 * 60_000,

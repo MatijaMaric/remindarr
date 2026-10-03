@@ -107,6 +107,7 @@ export function createAuth(
     username({
       minUsernameLength: 1,
       maxUsernameLength: 100,
+      usernameValidator: (value) => /^[a-zA-Z0-9_.-]+$/.test(value),
     }),
     admin(),
     passkeyPlugin({
@@ -136,6 +137,7 @@ export function createAuth(
             clientId: oidcConfig.clientId,
             clientSecret: oidcConfig.clientSecret,
             discoveryUrl,
+            requireIdTokenVerification: true,
             scopes: ["openid", "profile", "email", "groups"],
             redirectURI: oidcConfig.redirectUri || undefined,
             getUserInfo: async (tokens) => {
@@ -152,7 +154,11 @@ export function createAuth(
               if (tokens.idToken) {
                 try {
                   const payload = tokens.idToken.split(".")[1];
-                  claims = JSON.parse(atob(payload));
+                  const bytes = Uint8Array.from(
+                    atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+                    (character) => character.charCodeAt(0),
+                  );
+                  claims = JSON.parse(new TextDecoder().decode(bytes));
                 } catch {
                   /* ignore */
                 }
@@ -169,6 +175,7 @@ export function createAuth(
                       string,
                       unknown
                     >;
+                    if (userinfo.sub !== claims.sub) return null;
                     claims = { ...claims, ...userinfo };
                   }
                 } catch {
@@ -195,12 +202,13 @@ export function createAuth(
               }
 
               return {
+                sub: String(claims.sub),
                 id: String(claims.sub),
                 name: (claims.name ||
                   claims.preferred_username ||
                   String(claims.sub)) as string,
                 email: claims.email as string | undefined,
-                emailVerified: !!claims.email_verified,
+                emailVerified: claims.email_verified === true,
                 image: claims.picture as string | undefined,
               };
             },
@@ -290,6 +298,9 @@ export function createAuth(
     },
     account: {
       modelName: "account",
+      // A matching email is not proof of ownership of an existing local account.
+      // Existing linked identities still sign in; new links require a session.
+      accountLinking: { disableImplicitLinking: true },
     },
     plugins,
     databaseHooks: {
@@ -366,6 +377,17 @@ export function createAuth(
     },
   });
 
+  // Better Auth 1.7 consolidated generic OAuth callbacks. Keep existing IdP
+  // registrations working while operators migrate their registered URI.
+  const handler = auth.handler;
+  auth.handler = (request: Request) => {
+    const url = new URL(request.url);
+    if (url.pathname === "/api/auth/oauth2/callback/pocketid") {
+      url.pathname = "/api/auth/callback/pocketid";
+      return handler(new Request(url, request));
+    }
+    return handler(request);
+  };
   return auth;
 }
 

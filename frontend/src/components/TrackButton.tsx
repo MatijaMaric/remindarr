@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import type { Title } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { pendingWatchlist } from "../lib/offline";
 import {
   AlertDialog,
   AlertDialogPopup,
@@ -30,8 +31,30 @@ export default function TrackButton({
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [tracked, setTracked] = useState(isTracked);
+  const [queued, setQueued] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const hintId = useId();
+  useEffect(() => {
+    let active = true;
+    const update = () => {
+      void pendingWatchlist()
+        .then((items) => {
+          if (!active) return;
+          const pending = items.find(
+            (entry) => entry.url === `/track/${encodeURIComponent(titleId)}`,
+          );
+          setQueued(!!pending);
+          if (pending) setTracked(pending.method === "POST");
+        })
+        .catch(() => {});
+    };
+    update();
+    window.addEventListener("offline:changed", update);
+    return () => {
+      active = false;
+      window.removeEventListener("offline:changed", update);
+    };
+  }, [titleId, isTracked]);
 
   // Keep internal state in sync when parent prop changes (e.g., after data refetch)
   useEffect(() => {
@@ -41,8 +64,13 @@ export default function TrackButton({
   const trackMutation = useMutation({
     mutationFn: () => api.trackTitle(titleId, undefined, titleData),
     onMutate: () => setTracked(true),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      setQueued(result?.queued ?? false);
       onToggle?.(true);
+      if (result?.queued) {
+        toast.info(t("offline.queued"));
+        return;
+      }
       toast.success(t("track.added"), {
         description: t("track.addedDescription"),
       });
@@ -60,8 +88,13 @@ export default function TrackButton({
   const untrackMutation = useMutation({
     mutationFn: () => api.untrackTitle(titleId),
     onMutate: () => setTracked(false),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      setQueued(result?.queued ?? false);
       onToggle?.(false);
+      if (result?.queued) {
+        toast.info(t("offline.queued"));
+        return;
+      }
       toast.success(t("track.removed"));
     },
     onError: () => {
@@ -113,7 +146,7 @@ export default function TrackButton({
             : "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950"
         } disabled:opacity-50`}
       >
-        {label}
+        {queued ? t("offline.queued") : label}
       </button>
       {!tracked && (
         <span id={hintId} className="sr-only">

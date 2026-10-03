@@ -1,5 +1,5 @@
 import { traceHttp } from "../tracing";
-import { httpFetch } from "../lib/http";
+import { integrationFetch } from "../lib/outbound";
 import { groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -57,15 +57,14 @@ export class WebhookProvider implements NotificationProvider {
     }
 
     await traceHttp("POST", config.url, async () => {
-      const response = await httpFetch(config.url, {
+      const response = await integrationFetch(config.url, {
         method: "POST",
         headers,
         body,
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`Webhook request failed (${response.status}): ${text}`);
+        throw new Error(`Webhook request failed (${response.status})`);
       }
     });
   }

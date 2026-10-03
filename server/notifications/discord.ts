@@ -1,6 +1,6 @@
 import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
-import { httpFetch } from "../lib/http";
+import { integrationFetch } from "../lib/outbound";
 import {
   formatPersonCredit,
   formatProviderNames,
@@ -50,7 +50,7 @@ export class DiscordProvider implements NotificationProvider {
     if (embeds.length === 0) return;
 
     await traceHttp("POST", config.webhookUrl, async () => {
-      const response = await httpFetch(config.webhookUrl, {
+      const response = await integrationFetch(config.webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -60,8 +60,7 @@ export class DiscordProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`Discord webhook failed (${response.status}): ${text}`);
+        throw new Error(`Discord webhook failed (${response.status})`);
       }
     });
   }
