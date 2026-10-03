@@ -624,6 +624,7 @@
       "topGenres": "Géneros favoritos",
       "friendsCount": "Amigos · {{count}}",
       "seeAll": "Ver todo",
+      "followedPeople": "Personas que sigue",
       "followedSince": "siguiendo desde {{date}}",
       "activity12m": "Actividad de 12 meses",
       "activitySummary": "{{episodes}} episodios · {{movies}} películas",

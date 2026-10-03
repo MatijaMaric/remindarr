@@ -1,7 +1,11 @@
 import { CONFIG } from "../config";
 import { traceHttp } from "../tracing";
 import { httpFetch } from "../lib/http";
-import { formatProviderNames, groupEpisodesByShow } from "./format";
+import {
+  formatPersonCredit,
+  formatProviderNames,
+  groupEpisodesByShow,
+} from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -70,13 +74,15 @@ export class DiscordProvider implements NotificationProvider {
       date,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
 
     if (
       episodes.length === 0 &&
       movies.length === 0 &&
       streamingAlerts.length === 0 &&
-      achievementsEarned.length === 0
+      achievementsEarned.length === 0 &&
+      personCredits.length === 0
     )
       return [];
 
@@ -203,6 +209,14 @@ export class DiscordProvider implements NotificationProvider {
         title: "🏆 New badges earned",
         color: 0xf59e0b, // amber-500
         fields,
+      });
+    }
+
+    if (personCredits.length > 0) {
+      embeds.push({
+        title: "⭐ New from people you follow",
+        description: personCredits.map(formatPersonCredit).join("\n"),
+        color: EMBED_COLOR,
       });
     }
 

@@ -72,6 +72,8 @@ function getPartitionKey(
     return String(data.tmdbId);
   if (name === "evaluate-achievements" && data?.userId != null)
     return String(data.userId);
+  if (name === "check-person-credits" && data?.personId != null)
+    return String(data.personId);
   return null;
 }
 

@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PersonPage, { selectKnownFor, KNOWN_FOR_LIMIT } from "./PersonPage";
 import * as api from "../api";
+import { AuthContext } from "../context/AuthContext";
 import type {
   PersonCastCredit,
   PersonCrewCredit,
@@ -205,17 +206,47 @@ function newTestClient() {
   });
 }
 
-function renderPersonPage() {
+function renderPersonPage(user: { id: string } | null = null) {
   return render(
     <QueryClientProvider client={newTestClient()}>
-      <MemoryRouter initialEntries={["/person/287"]}>
-        <Routes>
-          <Route path="/person/:personId" element={<PersonPage />} />
-        </Routes>
-      </MemoryRouter>
+      <AuthContext value={{ user, providers: null, loading: false } as any}>
+        <MemoryRouter initialEntries={["/person/287"]}>
+          <Routes>
+            <Route path="/person/:personId" element={<PersonPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext>
     </QueryClientProvider>,
   );
 }
+
+describe("PersonPage follow button", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("shows the person's follow state to a signed-in user", async () => {
+    const spy = spyOn(api, "getPersonDetails").mockResolvedValue({
+      ...makeResponse([], []),
+      is_following: true,
+    });
+    renderPersonPage({ id: "u1" });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Following" })).toBeDefined(),
+    );
+    spy.mockRestore();
+  });
+
+  it("hides the follow button when signed out", async () => {
+    const spy = spyOn(api, "getPersonDetails").mockResolvedValue(
+      makeResponse([], []),
+    );
+    renderPersonPage();
+    await waitFor(() => expect(screen.getByText("Test Person")).toBeDefined());
+    expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
+    spy.mockRestore();
+  });
+});
 
 describe("PersonPage Known For section", () => {
   afterEach(() => {

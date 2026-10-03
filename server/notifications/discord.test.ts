@@ -132,6 +132,43 @@ describe("DiscordProvider.send", () => {
     ).rejects.toThrow("Discord webhook failed");
   });
 
+  it("sends New credits even when nothing else is due", async () => {
+    const onlyCredits: NotificationContent = {
+      episodes: [],
+      movies: [],
+      date: "2026-01-01",
+      personCredits: [
+        {
+          personName: "Tom Hanks",
+          title: "Upcoming",
+          role: "Captain",
+          releaseDate: "2099-01-01",
+          posterUrl: null,
+        },
+      ],
+    };
+    await discord.send(
+      { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
+      onlyCredits,
+    );
+    expect(fetchCalls).toHaveLength(1);
+    const embed = JSON.parse(fetchCalls[0].options.body).embeds.find((e: any) =>
+      e.title?.includes("people you follow"),
+    );
+    expect(embed.description).toBe("Tom Hanks: Upcoming (2099) as Captain");
+  });
+
+  it("does NOT render a New credits section when personCredits is empty", async () => {
+    await discord.send(
+      { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
+      sampleContent,
+    );
+    const body = JSON.parse(fetchCalls[0].options.body);
+    expect(
+      body.embeds.some((e: any) => e.title?.includes("people you follow")),
+    ).toBe(false);
+  });
+
   it("renders achievement embed when achievementsEarned is populated", async () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,

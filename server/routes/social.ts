@@ -15,6 +15,10 @@ import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 import { onFollow } from "../achievements/triggers";
 import Sentry from "../sentry";
+import { CONFIG } from "../config";
+import { fetchPersonDetails } from "../tmdb/client";
+import { collectCredits } from "../jobs/person-credits";
+import { followPerson, unfollowPerson } from "../db/repository/person-follows";
 
 const friendsLovedQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
@@ -50,6 +54,53 @@ app.post(
       followingId: targetUserId,
     });
     await onFollow(currentUser.id);
+    return ok(c, { success: true });
+  },
+);
+
+const personIdParamSchema = z.object({
+  personId: z.coerce.number().int().min(1),
+});
+
+// POST /follow/person/:personId — Follow a TMDB person. Their current credits
+// are the snapshot, so only credits added later count as New credits.
+app.post(
+  "/follow/person/:personId",
+  zValidator("param", personIdParamSchema),
+  async (c) => {
+    const currentUser = c.get("user")!;
+    const { personId } = c.req.valid("param");
+    if (!CONFIG.TMDB_API_KEY) {
+      return err(c, "TMDB not configured", 503);
+    }
+
+    let person;
+    try {
+      person = await fetchPersonDetails(personId);
+    } catch (e) {
+      log.error("TMDB person fetch failed", { personId, err: e });
+      return err(c, "Person not found", 404);
+    }
+
+    await followPerson(
+      currentUser.id,
+      { id: personId, name: person.name, profilePath: person.profile_path },
+      [...collectCredits(person).keys()],
+    );
+    log.info("Person followed", { userId: currentUser.id, personId });
+    return ok(c, { success: true });
+  },
+);
+
+// DELETE /follow/person/:personId — Unfollow a TMDB person
+app.delete(
+  "/follow/person/:personId",
+  zValidator("param", personIdParamSchema),
+  async (c) => {
+    const currentUser = c.get("user")!;
+    const { personId } = c.req.valid("param");
+    await unfollowPerson(currentUser.id, personId);
+    log.info("Person unfollowed", { userId: currentUser.id, personId });
     return ok(c, { success: true });
   },
 );

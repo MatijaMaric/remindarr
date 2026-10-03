@@ -608,6 +608,7 @@
       "topGenres": "Top genres",
       "friendsCount": "Friends · {{count}}",
       "seeAll": "See all",
+      "followedPeople": "People followed",
       "followedSince": "following since {{date}}",
       "activity12m": "12-month activity",
       "activitySummary": "{{episodes}} episodes · {{movies}} movies",

@@ -184,6 +184,33 @@ describe("TelegramProvider.send", () => {
     await expect(telegram.send(config, sampleContent)).rejects.toThrow("400");
   });
 
+  it("sends New credits even when nothing else is due", async () => {
+    const onlyCredits: NotificationContent = {
+      episodes: [],
+      movies: [],
+      date: "2026-01-01",
+      personCredits: [
+        {
+          personName: "Tom Hanks",
+          title: "Upcoming",
+          role: "Captain",
+          releaseDate: "2099-01-01",
+          posterUrl: null,
+        },
+      ],
+    };
+    await telegram.send(config, onlyCredits);
+    expect(fetchCalls).toHaveLength(1);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.text).toContain("Tom Hanks: Upcoming (2099) as Captain");
+  });
+
+  it("does NOT render a New credits section when personCredits is empty", async () => {
+    await telegram.send(config, sampleContent);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.text).not.toContain("people you follow");
+  });
+
   it("includes achievement section when achievementsEarned is populated", async () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,

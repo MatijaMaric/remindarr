@@ -5,6 +5,10 @@ import { syncPlexWatched } from "../plex/sync";
 import { syncPlexLibrary } from "../plex/library-sync";
 import { checkStreamingAlerts } from "./check-streaming-alerts";
 import { checkStreamingDepartures } from "./check-streaming-departures";
+import {
+  dispatchPersonCreditChecks,
+  handleCheckPersonCredits,
+} from "./person-credits";
 import { syncFailureTotal } from "../metrics";
 
 const log = logger.child({ module: "sync" });
@@ -116,7 +120,17 @@ export function registerSyncJobs() {
       shows: shows.length,
       dispatched,
     });
+    // ponytail: rides the daily episode-sync cron instead of its own cron entry.
+    try {
+      await dispatchPersonCreditChecks();
+    } catch (err) {
+      log.error("dispatchPersonCreditChecks failed", { err });
+    }
   });
+
+  registerHandler("check-person-credits", (job) =>
+    handleCheckPersonCredits(job.data ?? null),
+  );
 
   registerHandler("sync-trending", async () => {
     if (!CONFIG.TMDB_API_KEY) {

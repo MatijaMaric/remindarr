@@ -12,6 +12,7 @@ import PinnedFavoritesCard from "../components/PinnedFavoritesCard";
 import ProgressCard from "../components/profile/ProgressCard";
 import TopGenresCard from "../components/profile/TopGenresCard";
 import FriendsCard from "../components/profile/FriendsCard";
+import FollowedPeopleCard from "../components/profile/FollowedPeopleCard";
 import MonthlyActivityCard from "../components/profile/MonthlyActivityCard";
 import RecentActivityCard from "../components/profile/RecentActivityCard";
 import StatusBreakdown from "../components/profile/StatusBreakdown";
@@ -129,6 +130,7 @@ export default function UserProfilePage() {
     follower_count,
     following_count,
     is_following,
+    followed_people,
     pinned,
   } = data;
 
@@ -205,6 +207,12 @@ export default function UserProfilePage() {
                 friends={friends}
                 profileUsername={user.username}
                 totalFriends={friends.length}
+              />
+            )}
+            {show_watchlist && (
+              <FollowedPeopleCard
+                people={followed_people}
+                isOwnProfile={is_own_profile}
               />
             )}
           </aside>

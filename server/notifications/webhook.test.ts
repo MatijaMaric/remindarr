@@ -177,6 +177,33 @@ describe("WebhookProvider.send", () => {
     expect(sig1).toBe(sig2);
   });
 
+  it("sends New credits even when nothing else is due", async () => {
+    const onlyCredits: NotificationContent = {
+      episodes: [],
+      movies: [],
+      date: "2026-01-01",
+      personCredits: [
+        {
+          personName: "Tom Hanks",
+          title: "Upcoming",
+          role: "Captain",
+          releaseDate: "2099-01-01",
+          posterUrl: null,
+        },
+      ],
+    };
+    await webhook.send({ url: "https://example.com/hook" }, onlyCredits);
+    expect(fetchCalls).toHaveLength(1);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.person_credits).toEqual(onlyCredits.personCredits);
+  });
+
+  it("does NOT render a New credits section when personCredits is empty", async () => {
+    await webhook.send({ url: "https://example.com/hook" }, sampleContent);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.person_credits).toEqual([]);
+  });
+
   it("includes achievements_earned in payload when achievementsEarned is populated", async () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,

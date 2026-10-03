@@ -441,6 +441,7 @@ export interface TmdbEpisodeDetails {
 export interface TmdbPersonCastCredit {
   id: number;
   media_type: "movie" | "tv";
+  genre_ids?: number[];
   title?: string;
   name?: string;
   character: string;
@@ -455,6 +456,7 @@ export interface TmdbPersonCastCredit {
 export interface TmdbPersonCrewCredit {
   id: number;
   media_type: "movie" | "tv";
+  genre_ids?: number[];
   title?: string;
   name?: string;
   job: string;

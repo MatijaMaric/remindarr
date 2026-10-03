@@ -845,6 +845,51 @@ export const notificationLog = sqliteTable(
   ],
 );
 
+// A user following a TMDB person (actor, director) for New credit alerts.
+// seenCredits is the JSON array of credit keys ("movie:123") already known for
+// this follow; anything outside it on the next check is a New credit.
+export const personFollows = sqliteTable(
+  "person_follows",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    personId: integer("person_id").notNull(),
+    name: text("name").notNull(),
+    profilePath: text("profile_path"),
+    seenCredits: text("seen_credits").notNull().default("[]"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.personId] }),
+    index("idx_person_follows_person").on(table.personId),
+  ],
+);
+
+// New credits waiting to go out in a notifier's next digest. One row per
+// notifier so every notifier gets them; rows are deleted once sent.
+export const personCreditAlerts = sqliteTable(
+  "person_credit_alerts",
+  {
+    notifierId: text("notifier_id")
+      .notNull()
+      .references(() => notifiers.id, { onDelete: "cascade" }),
+    personId: integer("person_id").notNull(),
+    creditKey: text("credit_key").notNull(),
+    personName: text("person_name").notNull(),
+    title: text("title").notNull(),
+    role: text("role"),
+    releaseDate: text("release_date"),
+    posterPath: text("poster_path"),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.notifierId, table.personId, table.creditKey],
+    }),
+  ],
+);
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const titlesRelations = relations(titles, ({ many, one }) => ({

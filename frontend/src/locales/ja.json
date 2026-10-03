@@ -592,6 +592,7 @@
       "topGenres": "よく見るジャンル",
       "friendsCount": "友達 · {{count}}",
       "seeAll": "すべて表示",
+      "followedPeople": "フォロー中の人物",
       "followedSince": "{{date}} からフォロー",
       "activity12m": "過去 12 か月のアクティビティ",
       "activitySummary": "{{episodes}} エピソード · {{movies}} 本の映画",

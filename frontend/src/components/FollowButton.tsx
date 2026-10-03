@@ -4,14 +4,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api";
 import { useAuth } from "../context/AuthContext";
 
-interface Props {
-  userId: string;
+/** Follows a user (`userId`) or a TMDB person (`personId`). */
+type Props = (
+  | { userId: string; personId?: never }
+  | { personId: number; userId?: never }
+) & {
   initialIsFollowing: boolean;
   onToggle?: (isFollowing: boolean) => void;
-}
+};
 
 export default function FollowButton({
   userId,
+  personId,
   initialIsFollowing,
   onToggle,
 }: Props) {
@@ -21,8 +25,14 @@ export default function FollowButton({
   const [hovered, setHovered] = useState(false);
 
   const toggleFollowMutation = useMutation({
-    mutationFn: ({ wasFollowing }: { wasFollowing: boolean }) =>
-      wasFollowing ? api.unfollowUser(userId) : api.followUser(userId),
+    mutationFn: ({ wasFollowing }: { wasFollowing: boolean }) => {
+      if (personId != null) {
+        return wasFollowing
+          ? api.unfollowPerson(personId)
+          : api.followPerson(personId);
+      }
+      return wasFollowing ? api.unfollowUser(userId) : api.followUser(userId);
+    },
     onMutate: ({ wasFollowing }) => setFollowing(!wasFollowing),
     onSuccess: (_data, { wasFollowing }) => {
       onToggle?.(!wasFollowing);
@@ -32,7 +42,10 @@ export default function FollowButton({
       setFollowing(wasFollowing);
       toast.error("Failed to update follow status");
     },
-    onSettled: () => void qc.invalidateQueries({ queryKey: ["user-profile"] }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["user-profile"] });
+      if (personId != null) void qc.invalidateQueries({ queryKey: ["person"] });
+    },
   });
 
   // Don't render if not authenticated or viewing own profile

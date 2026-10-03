@@ -23,6 +23,7 @@ import {
   getMutualFollowers,
   type MutualFollower,
 } from "./follows";
+import { getFollowedPeople } from "./person-follows";
 import {
   getStatsOverview,
   getUserGenreBreakdown,
@@ -155,6 +156,11 @@ export async function getUserPublicProfile(
         : Promise.resolve([] as MutualFollower[]),
     ]);
 
+    // Followed people share the watchlist's visibility rule.
+    const followedPeople = showWatchlist
+      ? await getFollowedPeople(user.id)
+      : [];
+
     const shows = allTitles.filter((t) => t.object_type === "SHOW");
 
     // Compute show progress metrics
@@ -249,6 +255,7 @@ export async function getUserPublicProfile(
       follower_count: followerCount,
       following_count: followingCount,
       is_following: viewerIsFollowing,
+      followed_people: followedPeople,
       movies,
       shows,
       backdrops,

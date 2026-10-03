@@ -22,6 +22,10 @@ import * as registry from "../notifications/registry";
 import * as content from "../notifications/content";
 import { handlers, processPendingJobs } from "./processor";
 import { checkStreamingAlerts } from "./check-streaming-alerts";
+import {
+  insertPersonCreditAlerts,
+  listPersonCreditAlerts,
+} from "../db/repository/person-follows";
 
 const currentTime = timeUtils.getCurrentTimeInTimezone;
 const localDate = "2026-09-17"; // Thursday in Auckland, Wednesday in UTC.
@@ -127,6 +131,38 @@ for (const execution of ["D1 queue", "DO shared handler"] as const) {
       ).toBe(true);
       await dispatch();
       expect(send).toHaveBeenCalledTimes(2);
+    });
+
+    it("delivers pending New credits to every notifier, then clears them", async () => {
+      const ids = [await notifier("daily"), await notifier("weekly", 4)];
+      const credit = {
+        personId: 31,
+        creditKey: "movie:2",
+        personName: "Tom Hanks",
+        title: "Upcoming",
+        role: "Captain",
+        releaseDate: "2099-01-01",
+        posterPath: null,
+      };
+      await insertPersonCreditAlerts(ids, [credit]);
+
+      await dispatch();
+
+      expect(send).toHaveBeenCalledTimes(2);
+      for (const call of send.mock.calls) {
+        expect(call[1].personCredits).toEqual([
+          {
+            personName: "Tom Hanks",
+            title: "Upcoming",
+            role: "Captain",
+            releaseDate: "2099-01-01",
+            posterUrl: null,
+          },
+        ]);
+      }
+      for (const id of ids) {
+        expect(await listPersonCreditAlerts(id)).toEqual([]);
+      }
     });
 
     it("skips weekly digests on other local weekdays", async () => {

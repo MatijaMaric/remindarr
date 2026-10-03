@@ -1,6 +1,6 @@
 # Remindarr
 
-Tracks movie and TV releases and tells each user where they can watch them.
+Tracks movie and TV releases, tells each user where they can watch them, and reminds them when things they care about arrive.
 
 ## Language
 
@@ -26,9 +26,33 @@ _Avoid_: Collection, library item, physical media
 The medium of an owned copy: DVD, Blu-ray, 4K UHD Blu-ray, digital purchase, VHS, or other.
 _Avoid_: Media type, edition
 
+### Following
+
+**User follow**:
+One user subscribing to another user's activity and recommendations.
+_Avoid_: Friend, subscription
+
+**Person follow**:
+A user subscribing to a Person so they hear about that Person's New credits. Shown in the UI as "Follow" on a Person's page.
+_Avoid_: Person subscription, watching a person
+
+**Person**:
+A real-world cast or crew member (actor, director, showrunner) as known to TMDB.
+_Avoid_: Actor, celebrity, talent
+
+**Credit**:
+A Person's role (cast or crew) on one movie or show.
+_Avoid_: Role, appearance, filmography entry
+
+**New credit**:
+A Credit that was not part of the Person's credits when the user started following them or at any later check, and that is undated, upcoming, or released within the last 30 days. Talk-show and news-show credits never count.
+_Avoid_: New release, new work, announcement
+
 ## Relationships
 
 - A user has zero or more **Owned copies** of a title, at most one per **Format**
 - An **Owned copy** belongs to a whole title. Owning one season of a show isn't modeled.
 - Each **Owned copy** appears in **Where to Watch** as an owned **Offer**, and counts toward **My services**
 - An **Owned copy** is independent of tracking: owning a title doesn't track it, and tracking a title doesn't mean you own it
+- A **User** has many **Person follows**; a **Person** is followed by many **Users**
+- A **Person** has many **Credits**; a **New credit** is reported once per following **User**, in their next digest

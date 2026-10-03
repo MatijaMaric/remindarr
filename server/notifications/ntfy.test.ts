@@ -173,6 +173,35 @@ describe("NtfyProvider.send", () => {
     ).rejects.toThrow("403");
   });
 
+  it("sends New credits even when nothing else is due", async () => {
+    const onlyCredits: NotificationContent = {
+      episodes: [],
+      movies: [],
+      date: "2026-01-01",
+      personCredits: [
+        {
+          personName: "Tom Hanks",
+          title: "Upcoming",
+          role: "Captain",
+          releaseDate: "2099-01-01",
+          posterUrl: null,
+        },
+      ],
+    };
+    await ntfy.send({ url: "https://ntfy.sh/my-topic" }, onlyCredits);
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0].options.body as string).toContain(
+      "Tom Hanks: Upcoming (2099) as Captain",
+    );
+  });
+
+  it("does NOT render a New credits section when personCredits is empty", async () => {
+    await ntfy.send({ url: "https://ntfy.sh/my-topic" }, sampleContent);
+    expect(fetchCalls[0].options.body as string).not.toContain(
+      "people you follow",
+    );
+  });
+
   it("includes achievement section when achievementsEarned is populated", async () => {
     const contentWithAchievements: NotificationContent = {
       ...sampleContent,
