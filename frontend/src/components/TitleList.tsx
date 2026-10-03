@@ -13,7 +13,7 @@ import TitleCard from "./TitleCard";
 import { useContentAdvisory } from "../hooks/useContentAdvisory";
 
 /** Number of columns at each responsive breakpoint */
-const BREAKPOINT_COLS = { base: 3, sm: 3, md: 4, lg: 5, xl: 7 };
+const BREAKPOINT_COLS = { base: 2, sm: 3, md: 4, lg: 5, xl: 7 };
 
 /** Auto-virtualize when list exceeds this many items (4 rows × 6 cols at xl) */
 const VIRTUAL_THRESHOLD = 24;
@@ -93,11 +93,11 @@ function TitleListImpl({
   const [columnCount, setColumnCount] = useState(2);
   const [scrollMargin, setScrollMargin] = useState(0);
 
-  // Track container width to compute column count for row grouping
+  // Match the CSS viewport breakpoints when grouping virtual rows.
   useEffect(() => {
     if (!shouldVirtualize || !containerRef.current) return;
-    const obs = new ResizeObserver(([entry]) => {
-      setColumnCount(getColumnCount(entry.contentRect.width));
+    const obs = new ResizeObserver(() => {
+      setColumnCount(getColumnCount(window.innerWidth));
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
@@ -196,7 +196,7 @@ function TitleListImpl({
                 transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
               }}
             >
-              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-4 pb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-4 pb-4">
                 {(rows[virtualRow.index] ?? []).map((title) => (
                   <TitleCard
                     key={title.id}
@@ -215,7 +215,7 @@ function TitleListImpl({
       ) : (
         <div
           data-testid="title-grid"
-          className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-4"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2 sm:gap-4"
         >
           {displayTitles.map((title) => (
             <TitleCard

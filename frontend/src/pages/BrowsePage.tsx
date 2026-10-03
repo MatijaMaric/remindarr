@@ -1,3 +1,4 @@
+import StreamingRegion from "../components/StreamingRegion";
 import { useCallback, useState, useMemo } from "react";
 import { useLocation, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -409,6 +410,7 @@ export default function BrowsePage() {
         }
         title={t("browse.title")}
       />
+      <StreamingRegion country={filters?.country} />
       <SearchBar
         key={lastQuery}
         initialQuery={lastQuery}

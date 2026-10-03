@@ -200,7 +200,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       />
 
       {/* Metadata strip */}
-      <div className="dark-section -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-white/[0.06]">
+      <div className="bg-zinc-900 -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-white/[0.06]">
         {[
           { label: "TYPE", value: "Movie" },
           title.runtime_minutes
@@ -260,6 +260,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {/* Streaming Availability */}
       <SectionErrorBoundary label="streaming providers">
         <ProvidersSection
+          country={country}
           offers={title.offers}
           watchProviders={watchProviders}
           watchLink={watchProviders?.link}

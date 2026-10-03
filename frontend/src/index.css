@@ -257,6 +257,10 @@
 .theme-light .text-zinc-500 {
   color: #63636e; /* Maintain 4.5:1 even on the darker zinc-800 card surface. */
 }
+.theme-light .text-amber-400,
+.theme-light .text-amber-500 {
+  color: color-mix(in srgb, var(--color-amber-400) 45%, #000);
+}
 :root.theme-light.high-contrast .text-zinc-400,
 :root.theme-light.high-contrast .text-zinc-500 {
   color: #3f3f46;
@@ -336,6 +340,12 @@
    dark backgrounds via inline styles so text must stay light. */
 .theme-light .dark-section .text-white {
   color: white;
+}
+.theme-light .dark-section .text-amber-400 {
+  color: var(--color-amber-400);
+}
+.theme-light .dark-section .text-amber-500 {
+  color: var(--color-amber-400);
 }
 .theme-light .dark-section .text-zinc-100 {
   color: #f4f4f5;

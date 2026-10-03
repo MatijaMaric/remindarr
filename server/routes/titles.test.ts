@@ -20,6 +20,7 @@ import {
 import titlesApp from "./titles";
 import type { AppEnv } from "../types";
 import * as tmdbClient from "../tmdb/client";
+import { CONFIG } from "../config";
 
 let app: Hono<AppEnv>;
 let spies: ReturnType<typeof spyOn>[] = [];
@@ -371,6 +372,7 @@ describe("GET /titles/providers", () => {
     expect(body.providers[0].name).toBe("Netflix");
     expect(body.regionProviderIds).toBeDefined();
     expect(body.regionProviderIds).toContain(8);
+    expect(body.country).toBe(CONFIG.COUNTRY);
   });
 
   it("sets Cache-Control header", async () => {

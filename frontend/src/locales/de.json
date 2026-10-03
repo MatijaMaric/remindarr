@@ -238,6 +238,16 @@
       "confirmDescription_one": "Der ausgewählte Titel wird von deiner Merkliste entfernt. Dies kann nicht rückgängig gemacht werden.",
       "confirmDescription_other": "Alle {{count}} ausgewählten Titel werden von deiner Merkliste entfernt. Dies kann nicht rückgängig gemacht werden.",
       "untrackAll": "Alle entfernen"
+    },
+    "filters": {
+      "heading": "Bibliothek filtern",
+      "search": "Bibliothek durchsuchen",
+      "tag": "Nach Tag filtern",
+      "provider": "Nach Anbieter filtern",
+      "allTags": "Alle Tags",
+      "allProviders": "Alle Anbieter",
+      "reset": "Filter zurücksetzen",
+      "noMatches": "Keine Titel entsprechen diesen Filtern. Versuche eine andere Suche oder setze die Filter zurück."
     }
   },
   "status": {
@@ -1157,5 +1167,11 @@
       "vhs": "VHS",
       "other": "Sonstiges"
     }
+  },
+  "streamingRegion": {
+    "label": "Streaming-Region: {{country}}",
+    "profile": "Das Profilland ist eine biografische Angabe. Es ändert nicht die Streaming-Verfügbarkeit.",
+    "help": "Die Verfügbarkeit richtet sich nach der Streaming-Region der Instanz. Ein Administrator kann TMDB_COUNTRY in der Serverkonfiguration ändern.",
+    "configuration": "Streaming-Region konfigurieren"
   }
 }

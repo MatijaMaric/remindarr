@@ -244,6 +244,16 @@
       "confirmDescription_many": "Os {{count}} títulos selecionados serão removidos da sua lista. Esta ação não pode ser desfeita.",
       "confirmDescription_other": "Os {{count}} títulos selecionados serão removidos da sua lista. Esta ação não pode ser desfeita.",
       "untrackAll": "Deixar de acompanhar todos"
+    },
+    "filters": {
+      "heading": "Filtrar biblioteca",
+      "search": "Pesquisar na sua biblioteca",
+      "tag": "Filtrar por etiqueta",
+      "provider": "Filtrar por serviço",
+      "allTags": "Todas as etiquetas",
+      "allProviders": "Todos os serviços",
+      "reset": "Limpar filtros",
+      "noMatches": "Nenhum título corresponde a estes filtros. Tente outra pesquisa ou limpe os filtros."
     }
   },
   "status": {
@@ -1186,5 +1196,11 @@
       "vhs": "VHS",
       "other": "Outro"
     }
+  },
+  "streamingRegion": {
+    "label": "Região de streaming: {{country}}",
+    "profile": "O país do perfil é uma informação biográfica. Não altera a disponibilidade de streaming.",
+    "help": "A disponibilidade usa a região de streaming da instância. Um administrador pode alterar TMDB_COUNTRY na configuração do servidor.",
+    "configuration": "Configuração da região de streaming"
   }
 }

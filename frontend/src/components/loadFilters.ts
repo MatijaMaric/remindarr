@@ -7,6 +7,7 @@ export async function loadFilters(signal?: AbortSignal): Promise<{
   languages: string[];
   regionProviderIds: number[];
   priorityLanguageCodes: string[];
+  country?: string;
 }> {
   const [genresResult, providersResult, languagesResult] =
     await Promise.allSettled([
@@ -16,6 +17,10 @@ export async function loadFilters(signal?: AbortSignal): Promise<{
     ]);
 
   return {
+    country:
+      providersResult.status === "fulfilled"
+        ? providersResult.value.country
+        : undefined,
     genres:
       genresResult.status === "fulfilled" ? genresResult.value.genres : [],
     providers:

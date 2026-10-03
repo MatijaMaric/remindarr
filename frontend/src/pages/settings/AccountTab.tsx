@@ -119,6 +119,9 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
                 </option>
               ))}
             </select>
+            <p className="mt-2 text-sm text-zinc-400">
+              {t("streamingRegion.profile")}
+            </p>
           </SFormRow>
         </div>
         <SFormRow label={t("profile.bio")}>

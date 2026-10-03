@@ -4,6 +4,12 @@ A self-hosted app for tracking streaming media releases. Browse, search, and get
 
 ![Remindarr browse page](docs/screenshot.png)
 
+## Streaming region
+
+Streaming availability and service lists use the instance's `TMDB_COUNTRY` (a two-letter country code, for example `US`). An administrator changes it in the server environment or Cloudflare Worker variables and restarts/redeploys the app. Run a title sync to refresh stored availability after changing the region. Provider lists may remain cached for up to 24 hours.
+
+Your profile country is biographical; it does not change streaming availability. Per-user travel regions are not currently supported. Settings → Subscriptions, Browse, and title availability show the effective instance region.
+
 ## Features
 
 - **Browse & Discover** — Popular, upcoming, and top-rated titles with genre, provider, and language filters

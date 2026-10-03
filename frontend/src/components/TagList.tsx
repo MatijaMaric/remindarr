@@ -63,13 +63,13 @@ export default function TagList({ titleId, tags, onTagsChange }: Props) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-0.5 bg-zinc-800 text-zinc-300 text-[11px] px-1.5 py-0.5 rounded"
+          className="inline-flex items-center gap-0.5 bg-zinc-800 text-zinc-300 text-xs px-1.5 py-0.5 rounded"
         >
           {tag}
           <button
             type="button"
             onClick={() => removeTag(tag)}
-            className="text-amber-500 hover:text-amber-400 leading-none ml-0.5"
+            className="min-w-6 min-h-6 text-amber-500 hover:text-amber-400 leading-none ml-0.5"
             aria-label={`Remove tag ${tag}`}
           >
             ×
@@ -79,6 +79,7 @@ export default function TagList({ titleId, tags, onTagsChange }: Props) {
       <input
         ref={inputRef}
         type="text"
+        aria-label={t("tags.placeholder")}
         value={input}
         onChange={(e) => {
           setError(null);
@@ -89,7 +90,7 @@ export default function TagList({ titleId, tags, onTagsChange }: Props) {
           if (input.trim()) addTag(input);
         }}
         placeholder={tags.length === 0 ? t("tags.placeholder") : undefined}
-        className="bg-transparent text-[11px] text-zinc-300 placeholder-zinc-600 outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900 rounded-sm min-w-[60px] max-w-[100px]"
+        className="min-h-8 bg-transparent text-xs text-zinc-300 placeholder-zinc-600 outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900 rounded-sm min-w-[60px] max-w-[100px]"
         maxLength={31}
       />
       {error && (

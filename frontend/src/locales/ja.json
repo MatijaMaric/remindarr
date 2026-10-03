@@ -232,6 +232,16 @@
       "confirmTitle_other": "{{count}} 作品をリストから削除しますか？",
       "confirmDescription_other": "選択した {{count}} 作品がウォッチリストから削除されます。この操作は取り消せません。",
       "untrackAll": "すべて削除"
+    },
+    "filters": {
+      "heading": "ライブラリを絞り込む",
+      "search": "ライブラリを検索",
+      "tag": "タグで絞り込む",
+      "provider": "配信サービスで絞り込む",
+      "allTags": "すべてのタグ",
+      "allProviders": "すべての配信サービス",
+      "reset": "フィルターをクリア",
+      "noMatches": "条件に一致する作品がありません。別の検索を試すか、フィルターをクリアしてください。"
     }
   },
   "status": {
@@ -1128,5 +1138,11 @@
       "vhs": "VHS",
       "other": "その他"
     }
+  },
+  "streamingRegion": {
+    "label": "配信地域：{{country}}",
+    "profile": "プロフィールの国は自己紹介の情報です。配信状況は変更されません。",
+    "help": "配信状況には、このインスタンスの配信地域が使われます。管理者はサーバー設定の TMDB_COUNTRY で変更できます。",
+    "configuration": "配信地域の設定"
   }
 }

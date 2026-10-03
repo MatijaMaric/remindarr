@@ -146,6 +146,89 @@ function makeMovie(id: string) {
 }
 
 describe("TrackedPage", () => {
+  it("composes title, tag, provider and status filters in List and Grid and restores the URL", async () => {
+    const titles = [
+      makeShow("alpha", "watching", {
+        title: "Alpha",
+        tags: ["weekend"],
+        offers: [{ provider_id: 8, provider_name: "Netflix" }],
+      }),
+      makeShow("beta", "watching", {
+        title: "Beta",
+        tags: ["weekend"],
+        offers: [{ provider_id: 9, provider_name: "Prime" }],
+      }),
+      makeShow("gamma", "completed", {
+        title: "Gamma",
+        tags: ["weekend"],
+        offers: [{ provider_id: 8, provider_name: "Netflix" }],
+      }),
+    ];
+    apiMock.getTrackedTitles.mockResolvedValue({ titles, count: 3 });
+    function Location() {
+      return <output data-testid="filter-url">{useLocation().search}</output>;
+    }
+    const tree = () => (
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter
+          initialEntries={[
+            "/tracked?tag=weekend&provider=8&status=watching&sort=title",
+          ]}
+        >
+          <TrackedPage />
+          <Location />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const rendered = render(tree());
+    await screen.findByRole("link", { name: "Alpha" });
+    expect(screen.queryByRole("link", { name: "Beta" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Gamma" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Grid" }));
+    expect(
+      screen.getAllByRole("article").map((el) => el.getAttribute("aria-label")),
+    ).toEqual(["Alpha"]);
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "missing" },
+    });
+    expect(screen.getByText(/No titles match these filters/)).toBeDefined();
+    expect(screen.getByTestId("filter-url").textContent).toContain("q=missing");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Clear filters" })[0],
+    );
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+    expect(screen.getByTestId("filter-url").textContent).toBe(
+      "?sort=title&view=grid",
+    );
+    rendered.unmount();
+    render(tree());
+    await screen.findByRole("link", { name: "Alpha" });
+    expect(screen.queryByRole("link", { name: "Beta" })).toBeNull();
+  });
+
+  it("exposes existing status, tag and reminder actions from a compact list row", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [makeShow("s1", "watching")],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<TrackedPage />, { wrapper: Wrapper });
+    const trigger = await screen.findByRole("button", {
+      name: "More actions for Show s1",
+    });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("dialog");
+    expect(screen.getByRole("button", { name: "Auto" })).toBeDefined();
+    expect(screen.getByRole("textbox", { name: /tag/i })).toBeDefined();
+    expect(
+      screen.getAllByRole("button", { pressed: true }).length,
+    ).toBeGreaterThan(0);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+  });
+
   it("shows loading state initially", () => {
     apiMock.getTrackedTitles.mockImplementation(() => new Promise(() => {}));
     const { container } = render(<TrackedPage />, { wrapper: Wrapper });
@@ -757,9 +840,12 @@ describe("TrackedPage sorting", () => {
       render(<TrackedPage />, { wrapper: Wrapper });
       await screen.findAllByRole("link", { name: "Alpha" });
       fireEvent.click(screen.getByRole("button", { name: "Grid" }));
-      fireEvent.change(screen.getByRole("combobox"), {
-        target: { value: sort },
-      });
+      fireEvent.change(
+        screen.getByRole("combobox", { name: "Sort titles by" }),
+        {
+          target: { value: sort },
+        },
+      );
       for (const name of [
         "Currently Watching (3)",
         "Caught Up (3)",
@@ -784,13 +870,16 @@ describe("TrackedPage sorting", () => {
       );
       render(<TrackedPage />, { wrapper: Wrapper });
       await screen.findAllByRole("link", { name: "Alpha" });
-      fireEvent.change(screen.getByRole("combobox"), {
-        target: { value: sort },
-      });
+      fireEvent.change(
+        screen.getByRole("combobox", { name: "Sort titles by" }),
+        {
+          target: { value: sort },
+        },
+      );
       const rowOrder = () =>
         screen
           .getAllByRole("link", { name: /^(Zulu|Alpha|Bravo)$/ })
-          .map((link) => link.textContent);
+          .map((link) => link.getAttribute("aria-label") ?? link.textContent);
       expect(rowOrder()).toEqual([...order]);
       fireEvent.click(screen.getByRole("button", { name: "Grid" }));
       const cardOrder = () =>

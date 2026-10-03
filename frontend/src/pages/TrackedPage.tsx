@@ -1,6 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useClickOutside } from "../hooks/useClickOutside";
 import { Card } from "../components/ui/card";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -17,6 +16,10 @@ import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
 import BackdateWatchedButton from "../components/BackdateWatchedButton";
+import StatusPicker from "../components/StatusPicker";
+import TagList from "../components/TagList";
+import NotificationModePicker from "../components/NotificationModePicker";
+import { Popover } from "@base-ui/react/popover";
 import { StatsView, formatEta } from "./StatsPage";
 import {
   AlertDialog,
@@ -74,13 +77,13 @@ function TrackedStatsBand({ titles }: { titles: Title[] }) {
     },
   ];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div className="hidden sm:grid grid-cols-4 gap-3 mb-6">
       {stats.map((s) => (
-        <Card key={s.label} padding="none" className="p-[18px]">
+        <Card key={s.label} padding="none" className="p-3 lg:p-[18px] min-w-0">
           <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-400 font-semibold mb-2">
             {s.label}
           </div>
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-2">
             <div className="text-[30px] sm:text-[36px] font-extrabold tracking-[-0.03em] leading-none">
               {s.value}
             </div>
@@ -100,7 +103,6 @@ const STATUS_TABS = [
   { key: "plan_to_watch", labelKey: "tracked.tabs.planning" },
   { key: "dropped", labelKey: "status.dropped" },
 ] as const;
-type StatusTab = (typeof STATUS_TABS)[number]["key"];
 
 type SortKey = "last_aired" | "title" | "rating" | "progress";
 
@@ -151,8 +153,42 @@ export default function TrackedPage() {
   const { t } = useTranslation();
   useGridNavigation();
 
-  const [statusFilter, setStatusFilter] = useState<StatusTab>("all");
+  // Select mode state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectButtonRef = useRef<HTMLButtonElement>(null);
+
   const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter =
+    STATUS_TABS.find((tab) => tab.key === searchParams.get("status"))?.key ??
+    "all";
+  const search = searchParams.get("q") ?? "";
+  const tag = searchParams.get("tag") ?? "";
+  const provider = searchParams.get("provider") ?? "";
+  function setFilter(key: string, value: string) {
+    setSelectedIds(new Set());
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        if (value) next.set(key, value);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
+  }
+  function resetFilters() {
+    setSelectedIds(new Set());
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        for (const key of ["q", "tag", "provider", "status"]) next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
+  }
+  const hasFilters = !!(search || tag || provider || statusFilter !== "all");
   const requestedView = searchParams.get("view");
   const view =
     requestedView === "grid" || requestedView === "stats"
@@ -164,12 +200,13 @@ export default function TrackedPage() {
       return params;
     });
   }
-  const [sort, setSort] = useState<SortKey>("last_aired");
-
-  // Select mode state
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const selectButtonRef = useRef<HTMLButtonElement>(null);
+  const requestedSort = searchParams.get("sort");
+  const sort: SortKey =
+    requestedSort === "title" ||
+    requestedSort === "rating" ||
+    requestedSort === "progress"
+      ? requestedSort
+      : "last_aired";
 
   // URL navigation (including browser history) must also leave selection mode.
   if (selectMode && view !== "list") {
@@ -177,24 +214,52 @@ export default function TrackedPage() {
     setSelectedIds(new Set());
   }
 
+  const matchingTitles = useMemo(
+    () =>
+      allTitles.filter(
+        (title) =>
+          title.title
+            .toLocaleLowerCase()
+            .includes(search.trim().toLocaleLowerCase()) &&
+          (!tag || title.tags?.includes(tag)) &&
+          (!provider ||
+            title.offers.some(
+              (offer) => String(offer.provider_id) === provider,
+            )),
+      ),
+    [allTitles, search, tag, provider],
+  );
+  const tags = [
+    ...new Set(allTitles.flatMap((title) => title.tags ?? [])),
+  ].sort();
+  const providers = [
+    ...new Map(
+      allTitles.flatMap((title) =>
+        title.offers.map(
+          (offer) => [String(offer.provider_id), offer.provider_name] as const,
+        ),
+      ),
+    ).entries(),
+  ].sort((a, b) => a[1].localeCompare(b[1]));
+
   const { showGroups, movies } = useMemo(() => {
-    const shows = allTitles.filter((t) => t.object_type === "SHOW");
+    const shows = matchingTitles.filter((t) => t.object_type === "SHOW");
     return {
       showGroups: groupShowsByStatus(shows).map((group) => ({
         ...group,
         titles: sortTitles(group.titles, sort),
       })),
       movies: sortTitles(
-        allTitles.filter((t) => t.object_type === "MOVIE"),
+        matchingTitles.filter((t) => t.object_type === "MOVIE"),
         sort,
       ),
     };
-  }, [allTitles, sort]);
+  }, [matchingTitles, sort]);
 
   const filteredTitles = useMemo(() => {
-    if (statusFilter === "all") return allTitles;
-    return allTitles.filter((t) => getEffectiveStatus(t) === statusFilter);
-  }, [allTitles, statusFilter]);
+    if (statusFilter === "all") return matchingTitles;
+    return matchingTitles.filter((t) => getEffectiveStatus(t) === statusFilter);
+  }, [matchingTitles, statusFilter]);
 
   const sortedFilteredTitles = useMemo(
     () => sortTitles(filteredTitles, sort),
@@ -223,6 +288,13 @@ export default function TrackedPage() {
     if (!selectMode) return;
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        if (
+          e.target instanceof HTMLElement &&
+          e.target.closest(
+            'input:not([type="checkbox"]), textarea, select, [contenteditable=true]',
+          )
+        )
+          return;
         e.preventDefault();
         setSelectedIds(new Set(sortedFilteredTitles.map((t) => t.id)));
       }
@@ -266,6 +338,62 @@ export default function TrackedPage() {
 
       {!loading && <TrackedStatsBand titles={allTitles} />}
 
+      {view !== "stats" && allTitles.length > 0 && (
+        <details
+          className="rounded-lg border border-white/[0.08] p-2"
+          open={hasFilters || undefined}
+        >
+          <summary className="cursor-pointer min-h-8 text-sm font-medium">
+            {t("tracked.filters.heading")}
+          </summary>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+            <input
+              type="search"
+              aria-label={t("tracked.filters.search")}
+              placeholder={t("tracked.filters.search")}
+              value={search}
+              onChange={(event) => setFilter("q", event.target.value)}
+              className="min-w-0 min-h-10 rounded bg-zinc-800 px-3 text-sm"
+            />
+            <select
+              aria-label={t("tracked.filters.tag")}
+              value={tag}
+              onChange={(event) => setFilter("tag", event.target.value)}
+              className="min-w-0 min-h-10 rounded bg-zinc-800 px-3 text-sm"
+            >
+              <option value="">{t("tracked.filters.allTags")}</option>
+              {tags.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label={t("tracked.filters.provider")}
+              value={provider}
+              onChange={(event) => setFilter("provider", event.target.value)}
+              className="min-w-0 min-h-10 rounded bg-zinc-800 px-3 text-sm"
+            >
+              <option value="">{t("tracked.filters.allProviders")}</option>
+              {providers.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="min-h-10 text-sm text-amber-400"
+            >
+              {t("tracked.filters.reset")}
+            </button>
+          )}
+        </details>
+      )}
+
       {view !== "stats" && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-white/[0.06] mb-4">
           <div
@@ -276,9 +404,10 @@ export default function TrackedPage() {
             {STATUS_TABS.map((tab) => {
               const count =
                 tab.key === "all"
-                  ? allTitles.length
-                  : allTitles.filter((t) => getEffectiveStatus(t) === tab.key)
-                      .length;
+                  ? matchingTitles.length
+                  : matchingTitles.filter(
+                      (t) => getEffectiveStatus(t) === tab.key,
+                    ).length;
               const isActive = statusFilter === tab.key;
               return (
                 <button
@@ -288,7 +417,9 @@ export default function TrackedPage() {
                   id={`tracked-status-tab-${tab.key}`}
                   aria-selected={isActive}
                   aria-controls="tracked-status-panel"
-                  onClick={() => setStatusFilter(tab.key)}
+                  onClick={() =>
+                    setFilter("status", tab.key === "all" ? "" : tab.key)
+                  }
                   className={`shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                     isActive
                       ? "text-zinc-100 border-amber-400 font-semibold"
@@ -305,7 +436,7 @@ export default function TrackedPage() {
           </div>
           <select
             value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
+            onChange={(e) => setFilter("sort", e.target.value)}
             aria-label={t("tracked.sortBy")}
             className="self-end sm:self-auto font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 mb-2 sm:mb-0.5 shrink-0"
           >
@@ -331,6 +462,17 @@ export default function TrackedPage() {
             <p className="text-zinc-400 text-sm py-12 text-center">
               {t("common.error")}
             </p>
+          ) : filteredTitles.length === 0 && allTitles.length > 0 ? (
+            <div className="py-8 text-center">
+              <p>{t("tracked.filters.noMatches")}</p>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="min-h-11 text-amber-400"
+              >
+                {t("tracked.filters.reset")}
+              </button>
+            </div>
           ) : filteredTitles.length === 0 ? (
             <TitleList
               titles={EMPTY_TITLES}
@@ -382,6 +524,7 @@ export default function TrackedPage() {
                     titles={movies}
                     onTrackToggle={refetch}
                     showStatusPicker
+                    showNotificationPicker
                     showTags
                   />
                 </div>
@@ -422,51 +565,87 @@ function RowActionsMenu({
   onRefetch: () => void;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useClickOutside(ref, open, () => setOpen(false));
-
-  const handleUntrack = async () => {
-    setOpen(false);
-    await api.untrackTitle(title.id);
-    onRefetch();
-  };
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
+    <Popover.Root>
+      <Popover.Trigger
         aria-label={t("tracked.row.moreActions", { title: title.title })}
-        aria-expanded={open}
-        className="px-2 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        className="min-w-11 min-h-11 rounded text-zinc-300 hover:bg-zinc-800"
       >
         ···
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 min-w-[160px] bg-zinc-800 border border-white/[0.08] rounded-lg shadow-xl py-1 text-sm">
-          {title.tmdb_url && (
-            <a
-              href={title.tmdb_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setOpen(false)}
-              className="block px-3 py-2 text-zinc-300 hover:bg-white/[0.06] transition-colors"
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner
+          side="bottom"
+          align="end"
+          sideOffset={4}
+          className="z-50"
+        >
+          <Popover.Popup className="w-64 max-w-[calc(100vw-2rem)] rounded-lg bg-zinc-900 border border-white/[0.08] shadow-xl p-3 space-y-3">
+            <Popover.Title className="font-semibold text-sm break-words">
+              {title.title}
+            </Popover.Title>
+            <div className="space-y-1">
+              <p className="text-xs text-zinc-400">
+                {t("tracked.columns.status")}
+              </p>
+              <StatusPicker
+                titleId={title.id}
+                objectType={title.object_type}
+                currentStatus={title.user_status}
+                onStatusChange={onRefetch}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-zinc-400">
+                {t("notifications.label")}
+              </p>
+              <NotificationModePicker
+                titleId={title.id}
+                currentMode={title.notification_mode ?? null}
+                snoozeUntil={title.snooze_until}
+                remindOnRelease={title.remind_on_release}
+                releaseDate={title.release_date}
+                onModeChange={onRefetch}
+                onSnoozed={onRefetch}
+                onRemindOnReleaseChange={onRefetch}
+              />
+            </div>
+            <TagList
+              titleId={title.id}
+              tags={title.tags ?? []}
+              onTagsChange={onRefetch}
+            />
+            {title.tmdb_url && (
+              <a
+                href={title.tmdb_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-sm min-h-10"
+              >
+                {t("tracked.row.openTmdb")} ↗
+              </a>
+            )}
+            <button
+              type="button"
+              className="text-sm text-red-400 min-h-10"
+              onClick={async () => {
+                try {
+                  await api.untrackTitle(title.id);
+                  onRefetch();
+                } catch {
+                  toast.error(t("common.error"));
+                }
+              }}
             >
-              {t("tracked.row.openTmdb")} ↗
-            </a>
-          )}
-          <button
-            onClick={() => {
-              void handleUntrack();
-            }}
-            className="w-full text-left px-3 py-2 text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"
-          >
-            {t("tracked.row.untrack")}
-          </button>
-        </div>
-      )}
-    </div>
+              {t("tracked.row.untrack")}
+            </button>
+            <Popover.Close className="block min-h-10 text-sm">
+              {t("common.close")}
+            </Popover.Close>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -486,7 +665,7 @@ function TrackedTable({
   onSelectionChange,
 }: TrackedTableProps) {
   const { t } = useTranslation();
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile("(max-width: 1279px)");
   const statusText = (key: string | null) => {
     const labelKey = statusLabelKey(key);
     return labelKey ? t(labelKey) : (key ?? "—");
@@ -619,13 +798,19 @@ function TrackedTable({
           }
 
           return (
-            <Link
+            <div
               key={title.id}
-              to={`/title/${title.id}`}
-              className="flex gap-3 items-center bg-zinc-900 border border-white/[0.05] rounded-xl p-2.5"
+              className="flex items-center gap-1 bg-zinc-900 border border-white/[0.05] rounded-xl p-2.5"
             >
-              {rowContent}
-            </Link>
+              <Link
+                to={`/title/${title.id}`}
+                aria-label={title.title}
+                className="flex flex-1 min-w-0 gap-3 items-center"
+              >
+                {rowContent}
+              </Link>
+              <RowActionsMenu title={title} onRefetch={onRefetch} />
+            </div>
           );
         })}
       </div>
@@ -640,8 +825,8 @@ function TrackedTable({
         className="grid gap-4 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400"
         style={{
           gridTemplateColumns: selectMode
-            ? "32px 50px 1fr 130px 200px 130px 90px 90px"
-            : "50px 1fr 130px 200px 130px 90px 90px",
+            ? "32px 38px minmax(0,1fr) 110px 140px 100px 75px 105px"
+            : "38px minmax(0,1fr) 110px 140px 100px 75px 105px",
         }}
       >
         {selectMode && <div>{selectAll}</div>}
@@ -654,7 +839,7 @@ function TrackedTable({
         <div className="text-right">{t("tracked.columns.actions")}</div>
       </div>
       {/* Rows */}
-      <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
+      <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04]">
         {titles.map((title) => {
           const statusKey = getEffectiveStatus(title);
           const statusColor = statusKey
@@ -683,8 +868,8 @@ function TrackedTable({
               className={`grid gap-4 px-4 py-3 items-center transition-colors ${selectMode ? (isSelected ? "bg-amber-500/10 cursor-pointer" : "bg-zinc-900 hover:bg-zinc-800/60 cursor-pointer") : "bg-zinc-900 hover:bg-zinc-800/60"}`}
               style={{
                 gridTemplateColumns: selectMode
-                  ? "32px 50px 1fr 130px 200px 130px 90px 90px"
-                  : "50px 1fr 130px 200px 130px 90px 90px",
+                  ? "32px 38px minmax(0,1fr) 110px 140px 100px 75px 105px"
+                  : "38px minmax(0,1fr) 110px 140px 100px 75px 105px",
               }}
             >
               {/* Checkbox column */}
@@ -885,7 +1070,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
 
   if (count === 0) {
     return (
-      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 flex justify-center pointer-events-none">
+      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] xl:bottom-4 left-0 right-0 z-30 flex justify-center pointer-events-none">
         <div className="mx-4 mb-4 max-w-xl w-full bg-zinc-900 border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl pointer-events-auto">
           <div className="flex items-center justify-between">
             <span className="text-sm text-zinc-400">
@@ -906,7 +1091,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
 
   return (
     <>
-      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 flex justify-center">
+      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] xl:bottom-4 left-0 right-0 z-30 flex justify-center">
         <div className="mx-4 mb-4 max-w-2xl w-full bg-zinc-900 border border-white/[0.1] rounded-2xl px-4 py-3 shadow-2xl">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-mono text-[11px] text-amber-400 font-semibold shrink-0">

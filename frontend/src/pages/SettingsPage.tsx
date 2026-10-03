@@ -94,7 +94,7 @@ export default function SettingsPage() {
         </span>
       </nav>
 
-      <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-4 sm:gap-9">
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-4 lg:gap-9">
         <SettingsSidebar
           tabs={TABS}
           active={activeTab}
