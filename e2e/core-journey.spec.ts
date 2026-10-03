@@ -1,4 +1,10 @@
-import { test, expect, type TestInfo } from "@playwright/test";
+import {
+  test,
+  expect,
+  type TestInfo,
+  type APIRequestContext,
+  type BrowserContext,
+} from "@playwright/test";
 import { CoreJourneyPage } from "./pages/core-journey-page";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -13,6 +19,28 @@ function clientHeaders(info: TestInfo) {
 }
 test.use({
   extraHTTPHeaders: async ({}, use, info) => use(clientHeaders(info)),
+});
+
+async function setNavigationOffline(
+  context: BrowserContext,
+  request: APIRequestContext,
+  browserName: string,
+  offline: boolean,
+) {
+  if (browserName !== "webkit") return context.setOffline(offline);
+  const result = await request.post(
+    `http://127.0.0.1:4339/${offline ? "offline" : "online"}`,
+  );
+  expect(result.status()).toBe(204);
+  if (offline) {
+    await expect(
+      request.get("http://localhost:4337/api/health"),
+    ).rejects.toThrow();
+  }
+}
+
+test.afterEach(async ({ request }) => {
+  await request.post("http://127.0.0.1:4339/online");
 });
 
 test("real signup, search, track, watch, library and Stats survive refresh", async ({
@@ -53,6 +81,7 @@ test("real signup, search, track, watch, library and Stats survive refresh", asy
 test("production worker retains offline intent and cached pages across a browser restart", async ({
   playwright,
   browserName,
+  request,
 }, testInfo) => {
   mkdirSync(".e2e", { recursive: true });
   const profile = mkdtempSync(resolve(".e2e/p-"));
@@ -83,7 +112,7 @@ test("production worker retains offline intent and cached pages across a browser
   await expect
     .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
     .toBe(true);
-  await context.setOffline(true);
+  await setNavigationOffline(context, request, browserName, true);
   await page
     .getByRole("button", { name: "Add to watchlist", exact: true })
     .click();
@@ -96,13 +125,15 @@ test("production worker retains offline intent and cached pages across a browser
     playwright[browserName].launchPersistentContext(profile, {
       baseURL: "http://localhost:4337",
       headless: true,
-      offline: true,
+      offline: browserName !== "webkit",
       extraHTTPHeaders: clientHeaders(testInfo),
     }));
   const restarted = await resumed.newPage();
   try {
-    await test.step("load private library from production service worker", () =>
-      restarted.goto("http://localhost:4337/tracked"));
+    const navigation =
+      await test.step("load private library from production service worker", () =>
+        restarted.goto("http://localhost:4337/tracked"));
+    expect(navigation?.fromServiceWorker()).toBe(true);
     await expect(restarted.getByText(/Reconnecting/)).toHaveCount(0);
     await expect(
       restarted.getByRole("heading", { name: /watchlist|tracked/i }).first(),
@@ -111,7 +142,7 @@ test("production worker retains offline intent and cached pages across a browser
     await expect(
       restarted.getByRole("button", { name: "Next month" }),
     ).toBeVisible();
-    await resumed.setOffline(false);
+    await setNavigationOffline(resumed, request, browserName, false);
     await restarted.reload();
     await expect
       .poll(
@@ -131,11 +162,19 @@ test("production worker retains offline intent and cached pages across a browser
 test("expired offline session cannot reveal cached private pages", async ({
   page,
   context,
+  browserName,
+  request,
 }) => {
   const app = new CoreJourneyPage(page);
   await app.signup();
+  await app.search();
+  const tracked = await page.request.post("/api/track/movie-990001");
+  expect(tracked.ok()).toBe(true);
   await page.goto("/tracked");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Synthetic Journey/ }).first(),
+  ).toBeVisible();
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
@@ -160,12 +199,24 @@ test("expired offline session cannot reveal cached private pages", async ({
       };
     });
   });
-  await context.setOffline(true);
-  await page.reload();
+  await setNavigationOffline(context, request, browserName, true);
+  const navigation = await page.reload();
+  expect(navigation?.fromServiceWorker()).toBe(true);
   await expect(page.getByText(/Reconnecting/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   await expect(
-    page.getByText("Reconnect to verify your account.", { exact: false }),
-  ).toBeVisible();
+    page.getByRole("link", { name: /Synthetic Journey/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: /watchlist|tracked/i }),
+  ).toHaveCount(0);
+  // A transport outage leaves navigator.onLine true, so only browser offline
+  // emulation displays the connectivity banner in addition to the auth gate.
+  if (browserName !== "webkit") {
+    await expect(
+      page.getByText("Reconnect to verify your account.", { exact: false }),
+    ).toBeVisible();
+  }
 });
 
 test("sign-in recovery and export scope remain visible with large text", async ({

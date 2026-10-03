@@ -24,18 +24,22 @@ accounts, notification destinations or Plex libraries are used.
 - Final merged `bun run check` passed: 2,596 server tests, 1,394 frontend tests,
   one toolchain test, formatting, TypeScript, lint, production build, Wrangler
   dry run and all bundle limits. Frozen installation passed.
-- Chromium and Firefox each passed all six production journeys. OIDC and
+- Chromium, Firefox and WebKit each passed all six production journeys. OIDC and
   virtual-passkey login passed all three Chromium checks against the real auth
   backend. The test fixture trusts forwarded synthetic client addresses only
   from loopback, so unrelated test journeys do not share rate-limit buckets.
-- WebKit 1.63.0 on Windows did not pass the production-worker suite: navigation
-  stalled after signup. A direct signup/search/track comparison with service
-  workers blocked passed, which is not an offline/PWA pass. Related upstream
-  reports cover [worker/navigation hangs](https://github.com/microsoft/playwright/issues/42273)
-  and [offline emulation rejecting worker navigation](https://github.com/microsoft/playwright/issues/42775);
-  the exact cause here is not confirmed. The WebKit project remains enabled in
-  CI without a skip or a passing-results claim. Keep #1172 open pending a passing
-  supported-runtime run and native Safari checks.
+- WebKit startup stalled when the notification prompt queried the native push
+  subscription before notification permission was granted. The shared lookup
+  now requires granted permission; real-module tests cover default, denied and
+  granted states. WebKit's separate
+  [offline-emulation navigation bug](https://github.com/microsoft/playwright/issues/42775)
+  is handled in the test fixture with a controlled TCP origin outage for cached
+  navigation. The fixture severs existing and new connections, verifies that a
+  health request fails, and requires the navigation response to come from the
+  production service worker. Chromium and Firefox retain browser offline
+  emulation. All browsers verify durable replay and denial of previously cached
+  private content after session expiry; no projects or cases are skipped.
+  The follow-up frontend suite passes 1,397 tests.
 - Production browser checks: core journey, durable offline browser restart,
   expired-session denial, recovery/export guidance at 200% CSS text size and a
   500-title library at 390px width. Timing is attached as `watchlist-render.json`.
@@ -58,8 +62,9 @@ accounts, notification destinations or Plex libraries are used.
   uses the safe-area inset; this change also moves the offline banner above it.
 - #1173 still needs a real network interruption outside Playwright emulation,
   deployed runtime delivery and the external-device/service checks above.
-  Automated browser offline emulation is recorded as such, not physical-network
-  certification. Do not close those validation issues based only on this suite.
+  Browser offline emulation and the controlled WebKit TCP outage are not
+  physical-network certification. Do not close those validation issues based
+  only on this suite.
 
 ## Dependency audit
 
