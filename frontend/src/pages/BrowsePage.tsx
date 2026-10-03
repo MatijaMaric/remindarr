@@ -9,6 +9,8 @@ import CategoryBrowse from "../components/CategoryBrowse";
 import FilterBar from "../components/FilterBar";
 import BrowseFilterCard from "../components/BrowseFilterCard";
 import TitleList from "../components/TitleList";
+import PersonCard from "../components/PersonCard";
+import FollowButton from "../components/FollowButton";
 import { loadFilters } from "../components/loadFilters";
 import * as api from "../api";
 import { normalizeSearchTitle } from "../types";
@@ -179,8 +181,9 @@ export default function BrowsePage() {
     "searchLanguage",
   );
   const isImdb = /imdb\.com\/title\/tt\d+|^tt\d+$/i.test(lastQuery);
+  const isPeopleSearch = searchType === "PERSON" && !isImdb;
   const {
-    data: searchResults,
+    data: searchData,
     isLoading: searchLoading,
     error: searchError,
     refetch: retrySearch,
@@ -198,13 +201,18 @@ export default function BrowsePage() {
     queryFn: async ({ signal }) => {
       if (isImdb) {
         const result = await api.resolveImdb(lastQuery);
-        return result.title ? [normalizeSearchTitle(result.title)] : [];
+        return {
+          titles: result.title ? [normalizeSearchTitle(result.title)] : [],
+          people: [],
+        };
       }
       const result = await api.searchTitles(
         lastQuery,
         {
           type:
-            searchType === "MOVIE" || searchType === "SHOW"
+            searchType === "MOVIE" ||
+            searchType === "SHOW" ||
+            searchType === "PERSON"
               ? searchType
               : undefined,
           yearMin: yearMin ? Number(yearMin) : undefined,
@@ -214,10 +222,18 @@ export default function BrowsePage() {
         },
         signal,
       );
-      return result.titles.map(normalizeSearchTitle);
+      return {
+        titles: result.titles.map(normalizeSearchTitle),
+        people: result.people ?? [],
+      };
     },
     staleTime: 60_000,
   });
+  const searchResults = searchData?.titles;
+  const searchPeople = searchData?.people;
+  const searchCount = isPeopleSearch
+    ? searchPeople?.length
+    : searchResults?.length;
   useScrollRestoration(
     `browse:${location.key}`,
     isSearch && !searchLoading,
@@ -395,9 +411,9 @@ export default function BrowsePage() {
       <PageHeader
         kicker={
           isSearch
-            ? searchResults
+            ? searchCount !== undefined
               ? t("browse.kicker.searchResults", {
-                  count: searchResults.length,
+                  count: searchCount,
                 })
               : t("browse.kicker.search")
             : resultsCount !== null
@@ -444,62 +460,73 @@ export default function BrowsePage() {
               >
                 {t("filter.shows")}
               </button>
-            </div>
-            {/* Year range */}
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                className={inputCls + " w-24"}
-                placeholder={t("filter.yearFrom")}
-                key={"min:" + lastQuery + yearMin}
-                defaultValue={yearMin}
-                min={1900}
-                max={2100}
-                onBlur={(e) => setYearMin(e.target.value)}
-              />
-              <span className="text-zinc-500 text-sm">–</span>
-              <input
-                type="number"
-                className={inputCls + " w-24"}
-                placeholder={t("filter.yearTo")}
-                key={"max:" + lastQuery + yearMax}
-                defaultValue={yearMax}
-                min={1900}
-                max={2100}
-                onBlur={(e) => setYearMax(e.target.value)}
-              />
-            </div>
-            {/* Min rating */}
-            <div className="w-36">
-              <select
-                className={selectCls}
-                value={minRating}
-                onChange={(e) => setMinRating(e.target.value)}
+              <button
+                className={`${pillBase} ${isPeopleSearch ? pillActive : pillInactive}`}
+                onClick={() => setSearchType("PERSON")}
               >
-                <option value="">{t("filter.anyRating")}</option>
-                {RATING_OPTIONS.map((v) => (
-                  <option key={v} value={v}>
-                    {t("filter.minRating")} {v}+
-                  </option>
-                ))}
-              </select>
+                {t("filter.people")}
+              </button>
             </div>
-            {/* Language */}
-            {availableLanguages.length > 0 && (
-              <div className="w-40">
-                <select
-                  className={selectCls}
-                  value={searchLanguage}
-                  onChange={(e) => setSearchLanguage(e.target.value)}
-                >
-                  <option value="">{t("filter.allLanguages")}</option>
-                  {availableLanguages.map(({ code, label }) => (
-                    <option key={code} value={code}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Title-only filters don't apply to people */}
+            {!isPeopleSearch && (
+              <>
+                {/* Year range */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className={inputCls + " w-24"}
+                    placeholder={t("filter.yearFrom")}
+                    key={"min:" + lastQuery + yearMin}
+                    defaultValue={yearMin}
+                    min={1900}
+                    max={2100}
+                    onBlur={(e) => setYearMin(e.target.value)}
+                  />
+                  <span className="text-zinc-500 text-sm">–</span>
+                  <input
+                    type="number"
+                    className={inputCls + " w-24"}
+                    placeholder={t("filter.yearTo")}
+                    key={"max:" + lastQuery + yearMax}
+                    defaultValue={yearMax}
+                    min={1900}
+                    max={2100}
+                    onBlur={(e) => setYearMax(e.target.value)}
+                  />
+                </div>
+                {/* Min rating */}
+                <div className="w-36">
+                  <select
+                    className={selectCls}
+                    value={minRating}
+                    onChange={(e) => setMinRating(e.target.value)}
+                  >
+                    <option value="">{t("filter.anyRating")}</option>
+                    {RATING_OPTIONS.map((v) => (
+                      <option key={v} value={v}>
+                        {t("filter.minRating")} {v}+
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {/* Language */}
+                {availableLanguages.length > 0 && (
+                  <div className="w-40">
+                    <select
+                      className={selectCls}
+                      value={searchLanguage}
+                      onChange={(e) => setSearchLanguage(e.target.value)}
+                    >
+                      <option value="">{t("filter.allLanguages")}</option>
+                      {availableLanguages.map(({ code, label }) => (
+                        <option key={code} value={code}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -757,7 +784,7 @@ export default function BrowsePage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold tracking-[-0.01em]">
-              {t("browse.searchResults", { count: searchResults?.length ?? 0 })}
+              {t("browse.searchResults", { count: searchCount ?? 0 })}
             </h2>
             <button
               onClick={clearSearch}
@@ -781,6 +808,28 @@ export default function BrowsePage() {
                 {t("browse.searchRetry")}
               </button>
             </div>
+          ) : isPeopleSearch ? (
+            searchPeople?.length ? (
+              <ul className="flex flex-wrap gap-4">
+                {searchPeople.map((p) => (
+                  <li key={p.id} className="flex flex-col items-center gap-2">
+                    <PersonCard
+                      id={p.id}
+                      name={p.name}
+                      role={p.department ?? ""}
+                      profilePath={p.profilePath}
+                    />
+                    <FollowButton
+                      key={`${p.id}-${p.isFollowing}`}
+                      personId={p.id}
+                      initialIsFollowing={p.isFollowing}
+                    />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-zinc-400">{t("browse.noResults")}</p>
+            )
           ) : (
             <TitleList
               titles={searchResults ?? []}

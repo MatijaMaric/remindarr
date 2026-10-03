@@ -16,7 +16,7 @@ import {
   useSearchParams,
 } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import "../i18n";
 
@@ -39,23 +39,26 @@ let mockAuthLoading = false;
 let mockSubscriptionsStatus = "loading";
 const mockRefreshSubscriptions = mock(() => Promise.resolve());
 
+// A real context, and useAuth honours it: this mock leaks into other test
+// files (e.g. PersonPage.test) that render <AuthContext value={...}>.
+const MockAuthContext = createContext<unknown>(null);
+
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
-    user: mockUser,
-    providers: null,
-    loading: mockAuthLoading,
-    sessionStatus: "authenticated",
-    subscriptions: mockSubscriptions,
-    subscriptionsStatus: mockSubscriptionsStatus,
-    refreshSubscriptions: mockRefreshSubscriptions,
-    login: mock(() => Promise.resolve()),
-    signup: mock(() => Promise.resolve()),
-    logout: mock(() => Promise.resolve()),
-    refresh: mock(() => Promise.resolve()),
-  }),
-  AuthContext: {
-    Provider: ({ children }: { children: ReactNode }) => children,
-  },
+  useAuth: () =>
+    useContext(MockAuthContext) ?? {
+      user: mockUser,
+      providers: null,
+      loading: mockAuthLoading,
+      sessionStatus: "authenticated",
+      subscriptions: mockSubscriptions,
+      subscriptionsStatus: mockSubscriptionsStatus,
+      refreshSubscriptions: mockRefreshSubscriptions,
+      login: mock(() => Promise.resolve()),
+      signup: mock(() => Promise.resolve()),
+      logout: mock(() => Promise.resolve()),
+      refresh: mock(() => Promise.resolve()),
+    },
+  AuthContext: MockAuthContext,
   AuthProvider: ({ children }: { children: ReactNode }) => children,
 }));
 
@@ -617,5 +620,62 @@ describe("BrowsePage restorable search", () => {
     apiMock.searchTitles.mockResolvedValue(makeBrowseResponse());
     fireEvent.click(screen.getByRole("button", { name: "Retry search" }));
     await screen.findByText(BROWSE_TITLE);
+  });
+});
+
+describe("BrowsePage people search", () => {
+  const PEOPLE_RESPONSE = {
+    titles: [],
+    people: [
+      {
+        id: 31,
+        name: "Tom Hanks",
+        profilePath: null,
+        department: "Acting",
+        isFollowing: false,
+      },
+    ],
+    count: 1,
+  };
+
+  it("People pill searches people and shows cards with Follow", async () => {
+    mockUser = {
+      id: "u1",
+      username: "me",
+      display_name: null,
+      auth_provider: "local",
+      is_admin: false,
+    };
+    mockSubscriptions = { providerIds: [], onlyMine: false };
+    apiMock.searchTitles.mockImplementation(async (_q: string, f: any) =>
+      f?.type === "PERSON" ? PEOPLE_RESPONSE : makeBrowseResponse(),
+    );
+    renderBrowse("/browse?q=tom");
+    await screen.findByText(BROWSE_TITLE);
+    expect(screen.queryByText("Tom Hanks")).toBeNull();
+    expect(screen.getByPlaceholderText("From year")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "People" }));
+
+    await screen.findByText("Tom Hanks");
+    expect(currentParams().get("searchType")).toBe("PERSON");
+    expect(apiMock.searchTitles.mock.calls.at(-1)?.[1]).toMatchObject({
+      type: "PERSON",
+    });
+    expect(screen.getByText("Acting")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Tom Hanks/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Follow" })).toBeTruthy();
+    expect(screen.queryByPlaceholderText("From year")).toBeNull();
+    expect(screen.queryByText(BROWSE_TITLE)).toBeNull();
+  });
+
+  it("shows the empty message when no people match", async () => {
+    apiMock.searchTitles.mockResolvedValue({
+      titles: [],
+      people: [],
+      count: 0,
+    });
+    renderBrowse("/browse?q=zzz&searchType=PERSON");
+    await screen.findByText("No results found");
   });
 });

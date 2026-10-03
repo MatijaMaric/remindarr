@@ -1,6 +1,7 @@
 import type {
   Title,
   SearchTitle,
+  SearchPerson,
   Provider,
   Episode,
   StatsResponse,
@@ -133,10 +134,10 @@ export async function searchTitles(
     yearMax?: number;
     minRating?: number;
     language?: string;
-    type?: "MOVIE" | "SHOW";
+    type?: "MOVIE" | "SHOW" | "PERSON";
   },
   signal?: AbortSignal,
-): Promise<{ titles: SearchTitle[]; count: number }> {
+): Promise<{ titles: SearchTitle[]; people?: SearchPerson[]; count: number }> {
   const qs = new URLSearchParams();
   qs.set("q", query);
   if (filters?.yearMin != null) qs.set("year_min", String(filters.yearMin));

@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, notifiers, personCreditAlerts, personFollows } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
@@ -71,6 +71,27 @@ export async function isFollowingPerson(
       )
       .get();
     return row != null;
+  });
+}
+
+/** Which of `personIds` the user follows (for marking search results). */
+export async function getFollowedPersonIdsAmong(
+  userId: string,
+  personIds: number[],
+): Promise<Set<number>> {
+  if (personIds.length === 0) return new Set();
+  return traceDbQuery("getFollowedPersonIdsAmong", async () => {
+    const rows = await getDb()
+      .select({ personId: personFollows.personId })
+      .from(personFollows)
+      .where(
+        and(
+          eq(personFollows.userId, userId),
+          inArray(personFollows.personId, personIds),
+        ),
+      )
+      .all();
+    return new Set(rows.map((r) => r.personId));
   });
 }
 
