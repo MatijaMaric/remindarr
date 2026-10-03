@@ -27,10 +27,12 @@ import SuggestionsRow from "../../components/title-detail/SuggestionsRow";
 import CollectionRow from "../../components/title-detail/CollectionRow";
 import EditWatchedAtDialog from "../../components/EditWatchedAtDialog";
 import ContentAdvisoryBanner from "../../components/ContentAdvisoryBanner";
+import { useAuth } from "../../context/AuthContext";
 
 export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const { t } = useTranslation();
   const { title, tmdb, country } = data;
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [watched, setWatched] = useState(title.is_watched ?? false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -261,6 +263,11 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           offers={title.offers}
           watchProviders={watchProviders}
           watchLink={watchProviders?.link}
+          owned={
+            user
+              ? { titleId: title.id, formats: title.owned_formats ?? [] }
+              : undefined
+          }
         />
       </SectionErrorBoundary>
 

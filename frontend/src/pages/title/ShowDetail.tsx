@@ -216,6 +216,11 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           offers={title.offers}
           watchProviders={watchProviders}
           watchLink={watchProviders?.link}
+          owned={
+            user
+              ? { titleId: title.id, formats: title.owned_formats ?? [] }
+              : undefined
+          }
         />
       </SectionErrorBoundary>
 

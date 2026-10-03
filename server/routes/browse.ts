@@ -22,6 +22,7 @@ import {
   getTrackedTitleIds,
   upsertTitles,
   getSubscribedProviderIds,
+  OWNED_PROVIDER_FILTER,
   getTitlesByTmdbIds,
 } from "../db/repository";
 import type { AppEnv } from "../types";
@@ -215,8 +216,9 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
     onlyMine,
   } = c.req.valid("query");
   const genreNames = genreParam ? genreParam.split(",").filter(Boolean) : [];
+  // TMDB discover can't see owned copies, so the owned filter is dropped here.
   let providerValues = providerParam
-    ? providerParam.split(",").filter(Boolean)
+    ? providerParam.split(",").filter((p) => p && p !== OWNED_PROVIDER_FILTER)
     : [];
   const languageValues = languageParam
     ? languageParam.split(",").filter(Boolean)

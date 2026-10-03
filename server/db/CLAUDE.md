@@ -8,7 +8,7 @@
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Content        | `titles`, `providers`, `offers`, `scores`, `title_genres`, `episodes`, `streaming_alerts`                                           |
 | Auth/user      | `users`, `sessions`, `account`, `verification`, `passkey`, `oidc_states`, `invitations`                                             |
-| Tracking       | `tracked`, `watched_episodes`, `watched_titles`, `watch_history`, `title_tags`                                                      |
+| Tracking       | `tracked`, `watched_episodes`, `watched_titles`, `watch_history`, `title_tags`, `owned_media`                                       |
 | Ratings/social | `ratings`, `episode_ratings`, `episode_comments`, `episode_comment_reactions`, `follows`, `recommendations`, `recommendation_reads` |
 | Config/ops     | `settings`, `notifiers`, `integrations`, `plex_library_items`, `jobs`, `cron_jobs`                                                  |
 

@@ -616,6 +616,34 @@ export const pinnedTitles = sqliteTable(
   ],
 );
 
+export const OWNED_FORMATS = [
+  "dvd",
+  "bluray",
+  "uhd_bluray",
+  "digital",
+  "vhs",
+  "other",
+] as const;
+export type OwnedFormat = (typeof OWNED_FORMATS)[number];
+
+/** Owned copies: one row per (user, title, format). See GLOSSARY.md. */
+export const ownedMedia = sqliteTable(
+  "owned_media",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: text("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    format: text("format").$type<OwnedFormat>().notNull(),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.titleId, table.format] }),
+  ],
+);
+
 export const watchHistory = sqliteTable(
   "watch_history",
   {

@@ -35,6 +35,8 @@ interface Props {
   onlyMine?: boolean;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
+  /** Adds an "Owned by me" provider option (local /titles filtering only). */
+  showOwned?: boolean;
 }
 
 const TYPE_VALUES = [
@@ -80,6 +82,7 @@ const FilterBar = memo(function FilterBar({
   onlyMine,
   hideTracked,
   onHideTrackedChange,
+  showOwned,
 }: Props) {
   const { t, i18n } = useTranslation();
   const hasActiveFilters =
@@ -93,8 +96,12 @@ const FilterBar = memo(function FilterBar({
   // Build provider sections: region providers first, then others
   const providerSections = useMemo((): Section[] | undefined => {
     if (!providers || providers.length === 0) return undefined;
+    const ownedSections: Section[] = showOwned
+      ? [{ options: [{ value: "owned", label: t("owned.filterOption") }] }]
+      : [];
     if (!regionProviderIds || regionProviderIds.length === 0) {
       return [
+        ...ownedSections,
         {
           options: providers.map((p) => ({
             value: String(p.id),
@@ -110,12 +117,12 @@ const FilterBar = memo(function FilterBar({
     const otherOpts = providers
       .filter((p) => !regionSet.has(p.id))
       .map((p) => ({ value: String(p.id), label: p.name }));
-    const sections: Section[] = [];
+    const sections: Section[] = [...ownedSections];
     if (regionOpts.length > 0) sections.push({ options: regionOpts });
     if (otherOpts.length > 0)
       sections.push({ label: t("filter.otherGroup"), options: otherOpts });
     return sections;
-  }, [providers, regionProviderIds, t]);
+  }, [providers, regionProviderIds, showOwned, t]);
 
   // Build language sections: priority languages first, then others
   const languageSections = useMemo((): Section[] | undefined => {

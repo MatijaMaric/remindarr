@@ -1,4 +1,4 @@
-import type { Title, WatchProviderCountry } from "../../types";
+import type { OwnedFormat, Title, WatchProviderCountry } from "../../types";
 import {
   PLEX_PROVIDER_ID,
   getPlexPlatform,
@@ -8,6 +8,7 @@ import { getProviderColor } from "../../data/providerColors";
 import { Section } from "./Section";
 import { logoUrl } from "../../lib/tmdb-images";
 import { MONETIZATION_ORDER, type MonetizationType } from "./utils";
+import OwnedMediaRow from "./OwnedMediaRow";
 
 function OfferChip({ offer }: { offer: Title["offers"][number] }) {
   const color = getProviderColor(offer.provider_id);
@@ -125,17 +126,20 @@ export interface ProvidersSectionProps {
   offers: Title["offers"];
   watchProviders: WatchProviderCountry | undefined;
   watchLink: string | undefined;
+  /** Pass for a signed-in user to show the editable "Owned" row. */
+  owned?: { titleId: string; formats: OwnedFormat[] };
 }
 
 export default function ProvidersSection({
   offers,
   watchProviders,
   watchLink,
+  owned,
 }: ProvidersSectionProps) {
   const offerGroups = groupOffersByType(offers);
   const hasOffers = offerGroups.length > 0;
   const hasProviders = !!watchProviders;
-  if (!hasOffers && !hasProviders) return null;
+  if (!hasOffers && !hasProviders && !owned) return null;
 
   const providerMap: Record<
     MonetizationType,
@@ -151,32 +155,36 @@ export default function ProvidersSection({
   return (
     <Section title="Where to Watch">
       <div className="flex flex-col gap-3 max-w-4xl">
-        {MONETIZATION_ORDER.map(({ type, label }) => {
-          const groupOffers = hasOffers
-            ? (offerGroups.find((g) => g.type === type)?.offers ?? [])
-            : [];
-          const tmdbKey = providerMap[type];
-          const tmdbProviders =
-            !hasOffers && hasProviders && watchProviders
-              ? (watchProviders[tmdbKey] ?? [])
+        {owned && (
+          <OwnedMediaRow titleId={owned.titleId} formats={owned.formats} />
+        )}
+        {(hasOffers || hasProviders) &&
+          MONETIZATION_ORDER.map(({ type, label }) => {
+            const groupOffers = hasOffers
+              ? (offerGroups.find((g) => g.type === type)?.offers ?? [])
               : [];
-          const isEmpty =
-            groupOffers.length === 0 && tmdbProviders.length === 0;
-          return (
-            <ProviderRow key={type} label={label} isEmpty={isEmpty}>
-              {groupOffers.map((offer) => (
-                <OfferChip key={offer.id} offer={offer} />
-              ))}
-              {tmdbProviders.map((p) => (
-                <TmdbProviderChip
-                  key={p.provider_id}
-                  provider={p}
-                  watchLink={watchLink}
-                />
-              ))}
-            </ProviderRow>
-          );
-        })}
+            const tmdbKey = providerMap[type];
+            const tmdbProviders =
+              !hasOffers && hasProviders && watchProviders
+                ? (watchProviders[tmdbKey] ?? [])
+                : [];
+            const isEmpty =
+              groupOffers.length === 0 && tmdbProviders.length === 0;
+            return (
+              <ProviderRow key={type} label={label} isEmpty={isEmpty}>
+                {groupOffers.map((offer) => (
+                  <OfferChip key={offer.id} offer={offer} />
+                ))}
+                {tmdbProviders.map((p) => (
+                  <TmdbProviderChip
+                    key={p.provider_id}
+                    provider={p}
+                    watchLink={watchLink}
+                  />
+                ))}
+              </ProviderRow>
+            );
+          })}
       </div>
     </Section>
   );
