@@ -44,7 +44,10 @@ export default function FollowButton({
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["user-profile"] });
-      if (personId != null) void qc.invalidateQueries({ queryKey: ["person"] });
+      if (personId != null) {
+        void qc.invalidateQueries({ queryKey: ["person"] });
+        void qc.invalidateQueries({ queryKey: ["search"] });
+      }
     },
   });
 

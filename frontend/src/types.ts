@@ -103,6 +103,15 @@ export interface Episode {
   watched_episodes_count?: number;
 }
 
+// A TMDB Person matched by Browse search (type=PERSON)
+export interface SearchPerson {
+  id: number;
+  name: string;
+  profilePath: string | null;
+  department: string | null;
+  isFollowing: boolean;
+}
+
 // Search results come from the API directly with different shape
 export interface SearchTitle {
   id: string;
