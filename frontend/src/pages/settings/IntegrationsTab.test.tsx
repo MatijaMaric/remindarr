@@ -146,3 +146,28 @@ describe("JSON watchlist import", () => {
     expect(input.value).toBe("");
   });
 });
+
+it("JSON import invalidates fresh library, detail, home, stats and discovery caches", async () => {
+  spies.push(
+    spyOn(api, "importWatchlist").mockResolvedValue({
+      imported: 1,
+      skipped: 0,
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { staleTime: 300_000, retry: false } },
+  });
+  const keys = ["tracked", "title-detail", "home", "stats", "suggestions"];
+  keys.forEach((key) => client.setQueryData([key], { old: true }));
+  render(<IntegrationsTab />, { wrapper: wrapper(client) });
+  fireEvent.change(screen.getByLabelText("Import Watchlist"), {
+    target: {
+      files: [new File(["{}"], "library.json", { type: "application/json" })],
+    },
+  });
+  await waitFor(() =>
+    keys.forEach((key) =>
+      expect(client.getQueryState([key])?.isInvalidated).toBe(true),
+    ),
+  );
+});

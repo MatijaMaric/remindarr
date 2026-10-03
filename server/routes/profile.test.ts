@@ -1214,3 +1214,40 @@ describe("validation — profile extras", () => {
     expect(res.status).toBe(200);
   });
 });
+
+it("pinned favorites obey private, mutual-friends and public visibility", async () => {
+  await upsertTitles([makeParsedTitle({ id: "pinned-private" })]);
+  await app.request("/user/me/pinned/pinned-private", {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  const viewer = await createUser("viewer", "hash");
+  const session = await createSession(viewer);
+  const read = async () =>
+    (
+      await (
+        await app.request("/user/testuser", {
+          headers: { Cookie: `better-auth.session_token=${session}` },
+        })
+      ).json()
+    ).pinned;
+  await follow(viewer, userId);
+  expect(await read()).toHaveLength(0);
+  await updateProfilePublic(userId, "friends_only");
+  expect(await read()).toHaveLength(0);
+  await follow(userId, viewer);
+  expect(await read()).toHaveLength(1);
+  await updateProfilePublic(userId, "private");
+  expect(await read()).toHaveLength(0);
+  expect(
+    (
+      await (
+        await app.request("/user/testuser", { headers: authHeaders() })
+      ).json()
+    ).pinned,
+  ).toHaveLength(1);
+  await updateProfilePublic(userId, "public");
+  expect(
+    (await (await app.request("/user/testuser")).json()).pinned,
+  ).toHaveLength(1);
+});

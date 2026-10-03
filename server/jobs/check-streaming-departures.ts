@@ -16,7 +16,11 @@ import { getProvider } from "../notifications/registry";
 
 const log = logger.child({ module: "check-streaming-departures" });
 
-type DepartedProvider = { providerId: number; providerName: string };
+type DepartedProvider = {
+  providerId: number;
+  providerName: string;
+  leavingAt: string | null;
+};
 
 /**
  * After a batch of titles has been synced, check whether any tracked title
@@ -46,21 +50,33 @@ export async function checkStreamingDepartures(
 
     const titleOffers = offersByTitle.get(titleId) ?? [];
 
-    // Current set of FLATRATE/FREE provider IDs
-    const currentStreamingProviderIds = new Set(
-      titleOffers
-        .filter(
-          (o) =>
-            o.monetization_type === "FLATRATE" ||
-            o.monetization_type === "FREE",
-        )
-        .map((o) => o.provider_id)
-        .filter((id): id is number => id != null),
+    const streamingOffers = titleOffers.filter(
+      (o) =>
+        o.monetization_type === "FLATRATE" || o.monetization_type === "FREE",
     );
-
-    // 3. Find providers that are no longer in current offers (departed)
-    const departedAlerts = arrivalAlerts.filter(
-      (a) => !currentStreamingProviderIds.has(a.providerId),
+    // A provider leaves only when every streaming offer has a known end date,
+    // or when no streaming offer remains (rental offers do not count).
+    const leavingByProvider = new Map<number, string | null>();
+    for (const alert of arrivalAlerts) {
+      const current = streamingOffers.filter(
+        (o) => o.provider_id === alert.providerId,
+      );
+      if (current.length === 0) leavingByProvider.set(alert.providerId, null);
+      else if (
+        current.every(
+          (o) => o.available_to && Number.isFinite(Date.parse(o.available_to)),
+        )
+      ) {
+        leavingByProvider.set(
+          alert.providerId,
+          current
+            .map((o) => o.available_to!)
+            .sort((a, b) => Date.parse(b) - Date.parse(a))[0],
+        );
+      }
+    }
+    const departedAlerts = arrivalAlerts.filter((a) =>
+      leavingByProvider.has(a.providerId),
     );
     if (departedAlerts.length === 0) continue;
 
@@ -71,6 +87,7 @@ export async function checkStreamingDepartures(
       list.push({
         providerId: alert.providerId,
         providerName: alert.providerName,
+        leavingAt: leavingByProvider.get(alert.providerId) ?? null,
       });
       byUser.set(alert.userId, list);
     }
@@ -109,7 +126,6 @@ export async function checkStreamingDepartures(
   for (const titleId of titleIdsToNotify) {
     const byUser = departedByTitle.get(titleId)!;
     const candidateUserIds = candidatesByTitle.get(titleId)!;
-    const titleOffers = offersByTitle.get(titleId) ?? [];
     const titleRow = titlesById.get(titleId);
     if (!titleRow) continue;
 
@@ -152,10 +168,7 @@ export async function checkStreamingDepartures(
         const provider = departedProviders.find((p) => p.providerId === pid);
         if (!provider) continue;
 
-        // Check if offer has an available_to date — used for lead-time filtering
-        // (The offers table uses available_to for expiry dates)
-        const offer = titleOffers.find((o) => o.provider_id === pid);
-        const leavingAt = offer?.available_to ?? null;
+        const leavingAt = provider.leavingAt;
 
         // If there's a departure date in the future, check lead-time window
         if (leavingAt) {

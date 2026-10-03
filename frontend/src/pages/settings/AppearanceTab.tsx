@@ -1,4 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  SaveFeedback,
+  useSettingsSave,
+} from "../../components/settings/SaveFeedback";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "../../api";
@@ -55,9 +59,9 @@ function AppearanceControls({
 }) {
   const { t } = useTranslation();
   const { setTheme } = useTheme();
+  const qc = useQueryClient();
   const [settings, setSettings] = useState<AppearanceSettings>(initialData);
-  const [saved, setSaved] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedback = useSettingsSave();
 
   // Apply appearance and theme on mount from server-fetched data
   useEffect(() => {
@@ -67,24 +71,21 @@ function AppearanceControls({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount-only — initialData is stable on first render; setTheme identity not tracked
 
-  const save = useCallback(
-    async (patch: Partial<AppearanceSettings>) => {
-      const next = { ...settings, ...patch };
-      setSettings(next);
-      applyAppearance(next);
-      try {
-        const updated = await api.updateAppearanceSettings(patch);
-        setSettings(updated);
-        applyAppearance(updated);
-        setSaved(true);
-        if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => setSaved(false), 2000);
-      } catch {
-        // silently ignore
-      }
-    },
-    [settings],
-  );
+  function save(patch: Partial<AppearanceSettings>) {
+    if (feedback.status === "saving") return;
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    applyAppearance(next);
+    void feedback.save(async () => {
+      const updated = await api.updateAppearanceSettings({
+        ...next,
+        themeVariant: undefined,
+      });
+      setSettings(updated);
+      applyAppearance(updated);
+      qc.setQueryData(["appearance-settings"], updated);
+    });
+  }
 
   function handleAccentChange(accent: AccentColor) {
     save({ accentColor: accent });
@@ -95,7 +96,7 @@ function AppearanceControls({
   }
 
   return (
-    <>
+    <fieldset disabled={feedback.status === "saving"} className="min-w-0">
       <SCard
         title={t("settings.accent.title")}
         subtitle={t("settings.accent.subtitle")}
@@ -104,11 +105,7 @@ function AppearanceControls({
           value={settings.accentColor}
           onChange={handleAccentChange}
         />
-        <div className="mt-3 min-h-[18px] font-mono text-[11px]">
-          {saved && (
-            <span className="text-emerald-400">{t("settings.saved")}</span>
-          )}
-        </div>
+        <SaveFeedback {...feedback} />
       </SCard>
 
       <SCard
@@ -152,7 +149,7 @@ function AppearanceControls({
           />
         </div>
       </SCard>
-    </>
+    </fieldset>
   );
 }
 
@@ -168,12 +165,11 @@ function AppearanceSection() {
 }
 
 function HomepageLayoutSection() {
+  const qc = useQueryClient();
   const { t } = useTranslation();
-  const [layout, setLayout] = useState<HomepageSection[]>(
-    DEFAULT_HOMEPAGE_LAYOUT,
-  );
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [draftLayout, setLayout] = useState<HomepageSection[] | undefined>();
+
+  const feedback = useSettingsSave();
   const dragIndexRef = useRef<number | null>(null);
 
   const { data } = useQuery({
@@ -181,25 +177,15 @@ function HomepageLayoutSection() {
     queryFn: ({ signal }) => api.getHomepageLayout(signal),
   });
 
-  useEffect(() => {
-    if (data) {
-      setLayout(data.homepage_layout);
-    }
-  }, [data]);
+  const layout =
+    draftLayout ?? data?.homepage_layout ?? DEFAULT_HOMEPAGE_LAYOUT;
 
-  async function save(newLayout: HomepageSection[]) {
-    setSaving(true);
-    setSaved(false);
-    try {
+  function save(newLayout: HomepageSection[]) {
+    void feedback.save(async () => {
       const res = await api.updateHomepageLayout(newLayout);
       setLayout(res.homepage_layout);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // silently ignore
-    } finally {
-      setSaving(false);
-    }
+      qc.setQueryData(["homepage-layout"], res);
+    });
   }
 
   function toggleEnabled(id: string) {
@@ -218,6 +204,7 @@ function HomepageLayoutSection() {
     e.preventDefault();
     const from = dragIndexRef.current;
     if (from === null || from === index) return;
+    feedback.markDirty();
     const updated = [...layout];
     const [moved] = updated.splice(from, 1);
     updated.splice(index, 0, moved);
@@ -231,103 +218,93 @@ function HomepageLayoutSection() {
   }
 
   return (
-    <SCard
-      title={t("settings.homepage.title")}
-      subtitle={t("settings.homepage.description")}
-    >
-      <div className="flex flex-col gap-1.5">
-        {layout.map((section, index) => (
-          <div
-            key={section.id}
-            draggable
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDrop={handleDrop}
-            className={cn(
-              "flex items-center gap-3 px-3.5 py-3 rounded-[10px] cursor-grab active:cursor-grabbing select-none border transition-colors",
-              section.enabled
-                ? "bg-zinc-800 border-transparent"
-                : "bg-transparent border-white/[0.06] opacity-60",
-            )}
-          >
-            <GripVertical
-              size={16}
-              className="text-zinc-500 shrink-0"
-              aria-hidden="true"
-            />
-            <span
-              aria-hidden="true"
-              className="w-6 h-6 rounded-md bg-zinc-700 text-amber-400 font-mono font-bold text-[10px] flex items-center justify-center"
-            >
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <span className="flex-1 text-sm font-semibold text-zinc-100">
-              {t(SECTION_LABELS[section.id] ?? section.id)}
-            </span>
-            <button
-              onClick={() => toggleEnabled(section.id)}
-              className="text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer p-1"
-              aria-label={
+    <fieldset disabled={feedback.status === "saving"} className="min-w-0">
+      <SCard
+        title={t("settings.homepage.title")}
+        subtitle={t("settings.homepage.description")}
+      >
+        <div className="flex flex-col gap-1.5">
+          {layout.map((section, index) => (
+            <div
+              key={section.id}
+              draggable={feedback.status !== "saving"}
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={handleDrop}
+              className={cn(
+                "flex items-center gap-3 px-3.5 py-3 rounded-[10px] cursor-grab active:cursor-grabbing select-none border transition-colors",
                 section.enabled
-                  ? t("settings.homepage.hideSection")
-                  : t("settings.homepage.showSection")
-              }
+                  ? "bg-zinc-800 border-transparent"
+                  : "bg-transparent border-white/[0.06] opacity-60",
+              )}
             >
-              {section.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 min-h-[18px] font-mono text-[11px]">
-        {saved && (
-          <span className="text-emerald-400">
-            {t("settings.homepage.saved")}
-          </span>
-        )}
-        {saving && !saved && (
-          <span className="text-zinc-400">{t("settings.homepage.saving")}</span>
-        )}
-      </div>
-    </SCard>
+              <GripVertical
+                size={16}
+                className="text-zinc-500 shrink-0"
+                aria-hidden="true"
+              />
+              <span
+                aria-hidden="true"
+                className="w-6 h-6 rounded-md bg-zinc-700 text-amber-400 font-mono font-bold text-[10px] flex items-center justify-center"
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="flex-1 text-sm font-semibold text-zinc-100">
+                {t(SECTION_LABELS[section.id] ?? section.id)}
+              </span>
+              <button
+                onClick={() => toggleEnabled(section.id)}
+                className="text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer p-1"
+                aria-label={
+                  section.enabled
+                    ? t("settings.homepage.hideSection")
+                    : t("settings.homepage.showSection")
+                }
+              >
+                {section.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
+              </button>
+            </div>
+          ))}
+        </div>
+        <SaveFeedback {...feedback} />
+      </SCard>
+    </fieldset>
   );
 }
 
 function CrowdedWeekSection() {
+  const qc = useQueryClient();
   const { t } = useTranslation();
-  const [enabled, setEnabled] = useState(true);
-  const [threshold, setThreshold] = useState(DEFAULT_CROWDED_WEEK_THRESHOLD);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [draftEnabled, setEnabled] = useState<boolean | undefined>();
+  const [draftThreshold, setThreshold] = useState<number | undefined>();
+
+  const feedback = useSettingsSave();
 
   const { data } = useQuery({
     queryKey: ["crowded-week-settings"],
     queryFn: ({ signal }) => api.getCrowdedWeekSettings(signal),
   });
 
-  useEffect(() => {
-    if (data) {
-      setEnabled(data.crowdedWeekBadgeEnabled !== 0);
-      setThreshold(data.crowdedWeekThreshold);
-    }
-  }, [data]);
+  const enabled = draftEnabled ?? data?.crowdedWeekBadgeEnabled !== 0;
+  const threshold =
+    draftThreshold ??
+    data?.crowdedWeekThreshold ??
+    DEFAULT_CROWDED_WEEK_THRESHOLD;
 
-  async function save(updates: {
+  function save(updates: {
     crowdedWeekBadgeEnabled?: number;
     crowdedWeekThreshold?: number;
   }) {
-    setSaving(true);
-    setSaved(false);
-    try {
-      const res = await api.updateCrowdedWeekSettings(updates);
+    void feedback.save(async () => {
+      const res = await api.updateCrowdedWeekSettings({
+        crowdedWeekBadgeEnabled: enabled ? 1 : 0,
+        crowdedWeekThreshold: threshold,
+        ...updates,
+      });
       setEnabled(res.crowdedWeekBadgeEnabled !== 0);
       setThreshold(res.crowdedWeekThreshold);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // silently ignore
-    } finally {
-      setSaving(false);
-    }
+      qc.setQueryData(["crowded-week-settings"], res);
+    });
   }
 
   function handleToggle() {
@@ -340,6 +317,7 @@ function CrowdedWeekSection() {
     const val = parseInt(e.target.value, 10);
     if (isNaN(val) || val < 1 || val > 20) return;
     setThreshold(val);
+    feedback.markDirty();
   }
 
   function handleThresholdBlur() {
@@ -347,75 +325,65 @@ function CrowdedWeekSection() {
   }
 
   return (
-    <SCard
-      title={t("settings.crowdedWeek.title")}
-      subtitle={t("settings.crowdedWeek.description")}
-    >
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-200">
-            {t("settings.crowdedWeek.enableLabel")}
-          </span>
-          <button
-            onClick={handleToggle}
-            aria-pressed={enabled}
-            className={cn(
-              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
-              enabled ? "bg-amber-500" : "bg-zinc-700",
-            )}
-          >
-            <span
-              aria-hidden="true"
-              className={cn(
-                "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform",
-                enabled ? "translate-x-5" : "translate-x-0",
-              )}
-            />
-          </button>
-        </div>
-
-        {enabled && (
+    <fieldset disabled={feedback.status === "saving"} className="min-w-0">
+      <SCard
+        title={t("settings.crowdedWeek.title")}
+        subtitle={t("settings.crowdedWeek.description")}
+      >
+        <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <label
-              htmlFor="crowded-week-threshold"
-              className="text-sm font-medium text-zinc-200"
+            <span className="text-sm font-medium text-zinc-200">
+              {t("settings.crowdedWeek.enableLabel")}
+            </span>
+            <button
+              onClick={handleToggle}
+              aria-pressed={enabled}
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
+                enabled ? "bg-amber-500" : "bg-zinc-700",
+              )}
             >
-              {t("settings.crowdedWeek.thresholdLabel")}
-            </label>
-            <input
-              id="crowded-week-threshold"
-              type="number"
-              min={1}
-              max={20}
-              value={threshold}
-              onChange={handleThresholdChange}
-              onBlur={handleThresholdBlur}
-              className="w-20 rounded-md bg-zinc-800 border border-white/[0.08] text-white text-sm px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform",
+                  enabled ? "translate-x-5" : "translate-x-0",
+                )}
+              />
+            </button>
           </div>
-        )}
-      </div>
-      <div className="mt-3 min-h-[18px] font-mono text-[11px]">
-        {saved && (
-          <span className="text-emerald-400">
-            {t("settings.crowdedWeek.saved")}
-          </span>
-        )}
-        {saving && !saved && (
-          <span className="text-zinc-400">
-            {t("settings.crowdedWeek.saving")}
-          </span>
-        )}
-      </div>
-    </SCard>
+
+          {enabled && (
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="crowded-week-threshold"
+                className="text-sm font-medium text-zinc-200"
+              >
+                {t("settings.crowdedWeek.thresholdLabel")}
+              </label>
+              <input
+                id="crowded-week-threshold"
+                type="number"
+                min={1}
+                max={20}
+                value={threshold}
+                onChange={handleThresholdChange}
+                onBlur={handleThresholdBlur}
+                className="w-20 rounded-md bg-zinc-800 border border-white/[0.08] text-white text-sm px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+          )}
+        </div>
+        <SaveFeedback {...feedback} />
+      </SCard>
+    </fieldset>
   );
 }
 
 function AdvisorySection() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [saved, setSaved] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedback = useSettingsSave();
 
   const { data } = useQuery({
     queryKey: ADVISORY_QUERY_KEY,
@@ -424,48 +392,41 @@ function AdvisorySection() {
 
   if (!data) return null;
 
-  async function save(level: (typeof ADVISORY_LEVELS)[number]) {
-    try {
+  function save(level: (typeof ADVISORY_LEVELS)[number]) {
+    void feedback.save(async () => {
       const next = await api.updateAdvisorySettings({ level });
       qc.setQueryData(ADVISORY_QUERY_KEY, next);
-      setSaved(true);
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // silently ignore
-    }
+    });
   }
 
   return (
-    <SCard
-      title={t("settings.advisory.title")}
-      subtitle={t("settings.advisory.subtitle")}
-    >
-      <div
-        role="radiogroup"
-        aria-label={t("settings.advisory.title")}
-        className="flex flex-col gap-2"
+    <fieldset disabled={feedback.status === "saving"} className="min-w-0">
+      <SCard
+        title={t("settings.advisory.title")}
+        subtitle={t("settings.advisory.subtitle")}
       >
-        {ADVISORY_LEVELS.map((level) => (
-          <SRadioCard
-            key={level}
-            asRadio
-            selected={data.level === level}
-            title={t(`settings.advisory.levels.${level}.label`)}
-            desc={t(`settings.advisory.levels.${level}.desc`)}
-            onClick={() => void save(level)}
-          />
-        ))}
-      </div>
-      <p className="mt-3 text-xs text-zinc-500">
-        {t("settings.advisory.privacy")}
-      </p>
-      <div className="mt-3 min-h-[18px] font-mono text-[11px]">
-        {saved && (
-          <span className="text-emerald-400">{t("settings.saved")}</span>
-        )}
-      </div>
-    </SCard>
+        <div
+          role="radiogroup"
+          aria-label={t("settings.advisory.title")}
+          className="flex flex-col gap-2"
+        >
+          {ADVISORY_LEVELS.map((level) => (
+            <SRadioCard
+              key={level}
+              asRadio
+              selected={data.level === level}
+              title={t(`settings.advisory.levels.${level}.label`)}
+              desc={t(`settings.advisory.levels.${level}.desc`)}
+              onClick={() => void save(level)}
+            />
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-zinc-500">
+          {t("settings.advisory.privacy")}
+        </p>
+        <SaveFeedback {...feedback} />
+      </SCard>
+    </fieldset>
   );
 }
 

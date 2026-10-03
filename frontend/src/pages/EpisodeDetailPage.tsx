@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link, useNavigate } from "react-router";
@@ -150,9 +151,7 @@ export default function EpisodeDetailPage() {
       );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -460,7 +459,7 @@ export default function EpisodeDetailPage() {
           }
           anchorDate={data?.tmdb?.air_date ?? null}
           onUpdated={() => {
-            void qc.invalidateQueries({ queryKey: ["watch-history", id] });
+            void invalidateLibrary(qc);
             setEditHistoryEntry(null);
           }}
         />

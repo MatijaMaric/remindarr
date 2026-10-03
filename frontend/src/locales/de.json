@@ -875,7 +875,10 @@
     "breadcrumb": "Brotkrumennavigation",
     "buildInfo": "Remindarr · selbst gehostet",
     "sections": "Bereiche",
-    "sectionsLabel": "Einstellungsbereiche"
+    "sectionsLabel": "Einstellungsbereiche",
+    "saving": "Wird gespeichert...",
+    "unsaved": "Ungespeicherte Änderungen",
+    "unsavedError": "Die Änderungen wurden nicht gespeichert. Bitte erneut versuchen."
   },
   "notifications": {
     "all": "Alle Episoden",

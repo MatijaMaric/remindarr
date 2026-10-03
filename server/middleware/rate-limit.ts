@@ -1,3 +1,6 @@
+import { sql } from "drizzle-orm";
+import { getDb, rateLimitBuckets } from "../db/schema";
+import type { Context } from "hono";
 import { routePath } from "hono/route";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "../types";
@@ -77,55 +80,40 @@ export class MemoryRateLimitStore implements RateLimitStore {
   }
 }
 
-// ─── KV-backed fixed-window store (Cloudflare Workers) ─────────────────────
+// ─── SQL-backed fixed-window store (Cloudflare Workers) ─────────────────────
 
-interface KVRecord {
-  count: number;
-  windowStart: number;
-}
-
-export class KvRateLimitStore implements RateLimitStore {
-  constructor(private readonly kv: KVNamespace) {}
-
-  async consume(
-    key: string,
-    limit: number,
-    windowMs: number,
-    now: number,
-  ): Promise<{ allowed: boolean; retryAfterMs: number }> {
-    const windowStart = Math.floor(now / windowMs) * windowMs;
-    const kvKey = `rl:${key}:${windowStart}`;
-    const ttlSeconds = Math.max(60, Math.ceil(windowMs / 1000));
-
-    const raw = await this.kv.get(kvKey, "text");
-    let record: KVRecord;
-    if (raw !== null) {
-      try {
-        record = JSON.parse(raw) as KVRecord;
-      } catch {
-        record = { count: 0, windowStart };
-      }
-    } else {
-      record = { count: 0, windowStart };
-    }
-
-    if (record.count >= limit) {
-      const windowEnd = windowStart + windowMs;
-      return { allowed: false, retryAfterMs: windowEnd - now };
-    }
-
-    record.count += 1;
-    await this.kv.put(kvKey, JSON.stringify(record), {
-      expirationTtl: ttlSeconds,
-    });
-    return { allowed: true, retryAfterMs: 0 };
+// D1 serializes each UPSERT: concurrent isolates cannot lose increments.
+export class SqlRateLimitStore implements RateLimitStore {
+  async consume(key: string, limit: number, windowMs: number, now: number) {
+    const expiresAt = (Math.floor(now / windowMs) + 1) * windowMs;
+    const row = await getDb()
+      .insert(rateLimitBuckets)
+      .values({ key, count: 1, expiresAt })
+      .onConflictDoUpdate({
+        target: rateLimitBuckets.key,
+        set: {
+          count: sql`CASE WHEN ${rateLimitBuckets.expiresAt} <= ${now} THEN 1 ELSE ${rateLimitBuckets.count} + 1 END`,
+          expiresAt,
+        },
+      })
+      .returning({ count: rateLimitBuckets.count })
+      .get();
+    if (!row) throw new Error("Missing rate-limit counter");
+    return {
+      allowed: row.count <= limit,
+      retryAfterMs: row.count <= limit ? 0 : expiresAt - now,
+    };
   }
 }
 
-// ─── Middleware factory ─────────────────────────────────────────────────────
+export async function pruneRateLimits(now = Date.now()) {
+  await getDb().run(
+    sql`DELETE FROM rate_limit_buckets WHERE expires_at <= ${now}`,
+  );
+}
 
 interface RateLimitOptions {
-  /** Shared store instance (MemoryRateLimitStore or KvRateLimitStore). */
+  /** Shared store instance (MemoryRateLimitStore or SqlRateLimitStore). */
   store: RateLimitStore;
   /** Bucket scope — buckets are keyed by `${scope}:${ip}`. Defaults to "global". */
   scope?: string;
@@ -133,18 +121,15 @@ interface RateLimitOptions {
   limit: number;
   /** Window duration in milliseconds. */
   windowMs: number;
-  /** Function to derive a key from the request (defaults to x-forwarded-for or "anonymous"). */
-  keyGenerator?: (c: {
-    req: { header: (name: string) => string | undefined };
-  }) => string;
+  /** Defaults to the client address established by the runtime adapter. */
+  keyGenerator?: (c: Context<AppEnv>) => string;
 }
 
 export function rateLimiter(options: RateLimitOptions) {
   const { store, limit, windowMs } = options;
   const scope = options.scope ?? "global";
   const keyGenerator =
-    options.keyGenerator ??
-    ((c) => c.req.header("x-forwarded-for") ?? "anonymous");
+    options.keyGenerator ?? ((c) => c.get("clientIp") ?? "anonymous");
 
   return createMiddleware<AppEnv>(async (c, next) => {
     const ip = keyGenerator(c);
@@ -161,16 +146,14 @@ export function rateLimiter(options: RateLimitOptions) {
         now,
       ));
     } catch (err) {
-      // Fail open: a transient store failure (e.g. KV I/O error) must never turn
-      // a request — matched route OR unmatched scanner probe — into a 500. Allow
-      // the request through so it reaches its route or the 404 fallback.
-      log.warn("Rate limit store error — failing open", {
+      log.warn("Rate limit store error", {
         scope,
         ip,
         path: routePath(c) || "<unmatched>",
         error: err instanceof Error ? err.message : String(err),
       });
-      return next();
+      c.header("Retry-After", "60");
+      return c.json({ error: "Rate limiting unavailable; please retry" }, 503);
     }
 
     if (!allowed) {

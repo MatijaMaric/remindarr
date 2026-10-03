@@ -221,7 +221,7 @@ describe("GET /share/wrapped/:token/:year (public)", () => {
   });
 
   it("happy path — valid token returns username and year stats", async () => {
-    const genRes = await app.request("/share/token", {
+    const genRes = await app.request("/share/token/wrapped/2025", {
       method: "POST",
       headers: authHeaders(),
     });
@@ -234,5 +234,67 @@ describe("GET /share/wrapped/:token/:year (public)", () => {
     expect(body.year).toBe(2025);
     expect(body.movies_watched).toBe(0);
     expect(body.episodes_watched).toBe(0);
+  });
+});
+
+describe("Wrapped share scope", () => {
+  it("isolates purposes and years, rotates and independently revokes", async () => {
+    const create = async (path: string) =>
+      (
+        await (
+          await app.request(path, { method: "POST", headers: authHeaders() })
+        ).json()
+      ).token as string;
+    const watchlist = await create("/share/token");
+    const wrapped = await create("/share/token/wrapped/2025");
+    const otherYear = await create("/share/token/wrapped/2024");
+    expect((await app.request(`/share/wrapped/${watchlist}/2025`)).status).toBe(
+      404,
+    );
+    expect((await app.request(`/share/watchlist/${wrapped}`)).status).toBe(404);
+    expect((await app.request(`/share/wrapped/${wrapped}/2024`)).status).toBe(
+      404,
+    );
+    expect((await app.request(`/share/wrapped/${wrapped}/2025`)).status).toBe(
+      200,
+    );
+    const rotated = await create("/share/token/wrapped/2025");
+    expect((await app.request(`/share/wrapped/${wrapped}/2025`)).status).toBe(
+      404,
+    );
+    await app.request("/share/token/wrapped/2025", {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    expect((await app.request(`/share/wrapped/${rotated}/2025`)).status).toBe(
+      404,
+    );
+    expect(
+      await (
+        await app.request("/share/token/wrapped/2025", {
+          headers: authHeaders(),
+        })
+      ).json(),
+    ).toEqual({ token: null });
+    expect((await app.request(`/share/wrapped/${otherYear}/2024`)).status).toBe(
+      200,
+    );
+    expect((await app.request(`/share/watchlist/${watchlist}`)).status).toBe(
+      200,
+    );
+  });
+  it("requires authentication and validates year", async () => {
+    expect(
+      (await app.request("/share/token/wrapped/2025", { method: "POST" }))
+        .status,
+    ).toBe(401);
+    expect(
+      (
+        await app.request("/share/token/wrapped/nope", {
+          method: "POST",
+          headers: authHeaders(),
+        })
+      ).status,
+    ).toBe(400);
   });
 });

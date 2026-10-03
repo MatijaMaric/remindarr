@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../../lib/invalidateLibrary";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -714,6 +715,7 @@ function WatchlistShareSection() {
 }
 
 function WatchlistSection() {
+  const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -742,6 +744,7 @@ function WatchlistSection() {
     setImporting(true);
     try {
       const result = await api.importWatchlist(file);
+      await invalidateLibrary(qc);
       setMsg(
         t("profile.importComplete", {
           imported: result.imported,
@@ -821,6 +824,7 @@ function WatchlistSection() {
 }
 
 function CsvImportSection() {
+  const qc = useQueryClient();
   const [importing, setImporting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [msg, setMsg] = useState("");
@@ -834,6 +838,7 @@ function CsvImportSection() {
     setImporting(true);
     try {
       const result = await api.importCsv(file);
+      await invalidateLibrary(qc);
       const parts: string[] = [
         `${result.imported} title${result.imported !== 1 ? "s" : ""} imported`,
       ];

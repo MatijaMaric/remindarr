@@ -891,7 +891,10 @@
     "breadcrumb": "Ruta de navegación",
     "buildInfo": "Remindarr · autoalojado",
     "sections": "Secciones",
-    "sectionsLabel": "Secciones de ajustes"
+    "sectionsLabel": "Secciones de ajustes",
+    "saving": "Guardando...",
+    "unsaved": "Cambios sin guardar",
+    "unsavedError": "Los cambios no se han guardado. Vuelve a intentarlo."
   },
   "notifications": {
     "all": "Todos los episodios",

@@ -12,12 +12,24 @@ Your profile country is biographical; it does not change streaming availability.
 
 ## Features
 
-- **Browse & Discover** — Popular, upcoming, and top-rated titles with genre, provider, and language filters
-- **Watchlist** — Track titles and follow per-episode watched status for TV shows
-- **Calendar** — Monthly calendar view of releases and upcoming episodes
-- **Notifications** — Discord webhook and Web Push with configurable schedules and timezone support
-- **Authentication** — Local accounts, OpenID Connect (OIDC), and WebAuthn/Passkeys
-- **PWA** — Installable as a progressive web app
+- **Browse and discovery** — Movies, shows and people; provider, genre and language filters, recommendations and Reels.
+- **Library** — Tracking, title status, tags, owned copies, watched episodes, watch history and ratings.
+- **Calendar and stats** — Release calendar, calendar subscription feeds, viewing statistics, achievements and yearly Wrapped reviews. Watchlist links and year-specific review links can be revoked separately.
+- **Social** — Follow people and other users, recommend titles, and control profile/activity visibility. Private profiles hide pinned favorites and named ratings; friends-only means mutual following. Anonymous rating totals remain public.
+- **Notifications** — Discord, Telegram, ntfy, Gotify, webhooks and browser push, with timezone, schedule, digest and streaming-alert settings. Delivery requires a working destination; test it explicitly.
+- **Integrations and data** — Plex connection/sync, JSON watchlist export/import and CSV imports. A watchlist export is not a full instance backup.
+- **Authentication** — Local accounts, configurable OIDC and passkeys. External IdP/device combinations still require deployment validation ([#1173](https://github.com/MatijaMaric/remindarr/issues/1173)).
+- **PWA** — Installable app. Durable offline mutations and offline reload coverage remain tracked in [#1186](https://github.com/MatijaMaric/remindarr/issues/1186) and [#1187](https://github.com/MatijaMaric/remindarr/issues/1187).
+
+## First successful setup
+
+1. Set the instance region with `TMDB_COUNTRY` and configure the TMDB key. Your profile country does not change availability.
+2. Sign in and open the resumable setup guide on Home. Choose services in **Settings → Subscriptions**.
+3. Use **Browse** to find a title and **Track** it. Rate a few titles to give discovery useful input.
+4. Open **Settings → Notifications**, configure and enable a destination, and check its timezone and schedule.
+5. Press **Test** for that destination, inspect delivery history, and confirm the message arrived. A successful save or browser permission grant alone is not delivery verification.
+
+The guide can be skipped and resumed on Home. It never sends a notification automatically.
 
 ## Quick Start
 
@@ -74,7 +86,9 @@ For notifications, OIDC, backups, and every other variable see [`docs/configurat
 
 ### Reverse proxy + `X-Forwarded-For`
 
-The rate limiter and IP-based session logging key on the `x-forwarded-for` header. **Deploy behind a reverse proxy that sets this header reliably** (Caddy, nginx, Traefik, Cloudflare, etc.) — otherwise rate-limit keys fall back to `"anonymous"` and are trivially poolable. If the app is exposed directly to the internet, add a proxy or tighten limits per your threat model. See [REVIEW.md finding P1-4](REVIEW.md) for detail.
+Bun rate limits use the network peer by default. If a reverse proxy forwards client addresses, set `TRUSTED_PROXIES` to its exact comma-separated IP addresses (for example `127.0.0.1,::1`). Only those peers may supply `X-Forwarded-For`; the chain is read from right to left until the first untrusted address. The proxy must append the actual client address or overwrite the header. Do not list public clients as trusted proxies. Workers use Cloudflare's `CF-Connecting-IP`.
+
+Both global and authentication limits return a retryable HTTP 503 if their counter store fails. Workers use atomic D1 counters; KV is not used for enforcement. Apply database migrations before deploying this change.
 
 ### Cloudflare Workers
 
@@ -97,11 +111,21 @@ wrangler secret put BETTER_AUTH_SECRET
 bun run deploy:cf
 ```
 
-Runtime differences vs the Bun deploy:
+Runtime capabilities in the current source (external-service delivery is deployment-dependent):
 
-- In-memory job worker is replaced by Workers cron triggers (configured in `wrangler.toml`).
-- Cache defaults to KV; set `CACHE_BACKEND=kv` for both Bun and Workers.
-- Session IP detection uses `cf-connecting-ip` in addition to `x-forwarded-for`.
+| Capability                                               | Bun / Docker                              | Cloudflare Workers                                                                                |
+| -------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Catalogue, library, social, stats, scoped sharing        | SQLite                                    | D1                                                                                                |
+| Scheduled title/episode/trending sync                    | Local cron queue                          | D1 or Durable Object queue, five-minute recovery tick                                             |
+| Daily/weekly reminders, streaming arrivals/departures    | Supported                                 | Supported; scheduled dispatch granularity is five minutes                                         |
+| Cache                                                    | Memory or configured backend              | KV when bound, otherwise isolate memory                                                           |
+| Rate limits                                              | In-process token buckets, per Bun process | Atomic D1 fixed-window counters                                                                   |
+| Plex background sync                                     | Registered scheduled jobs                 | No periodic Plex job in the Workers cron catalogue; do not assume Bun parity                      |
+| Database file backups / maintenance                      | Local backup and maintenance jobs         | Bun maintenance endpoints unavailable; use D1 backup/export tooling                               |
+| External auth and notification delivery                  | Test your configured integrations         | Test your configured integrations ([#1173](https://github.com/MatijaMaric/remindarr/issues/1173)) |
+| Device safe areas, text scaling, cross-browser workflows | Validation remains open                   | Validation remains open ([#1172](https://github.com/MatijaMaric/remindarr/issues/1172))           |
+
+Existing watchlist tokens continue to open only the current watchlist. Old Wrapped links that reused those tokens no longer work: create a new link from the selected year's Wrapped page. Revoking one year's review does not revoke other years or your watchlist.
 
 ## Configuration
 
@@ -119,14 +143,15 @@ For OIDC, Web Push, notifications, caching, and all other options see [docs/conf
 ## Development
 
 ```bash
-bun install
-cd frontend && bun install
+bun install --frozen-lockfile
 
 bun run dev        # Start server + frontend concurrently
 bun run check      # Type check + lint + tests (run before committing)
 ```
 
-Requires [Bun](https://bun.sh) v1.0+.
+Requires [Bun](https://bun.sh) 1.4.2 (see `packageManager`). Both workspaces pin TypeScript 6.0.3. `bun run check:toolchain` checks the installed root and frontend compiler before validation; `bun run typecheck --noEmit` invokes the local compiler without downloading a different version.
+
+For stale dependencies, remove **only** the repository's root `node_modules` and `frontend/node_modules` directories, then run `bun install --frozen-lockfile` from the root. The root `bun.lock` is authoritative for this workspace. Do not alter valid TypeScript configuration to accommodate an accidentally installed compiler major version.
 
 ### Storybook
 

@@ -1,3 +1,5 @@
+import { invalidateLibrary } from "../../lib/invalidateLibrary";
+import { toast } from "sonner";
 import { useState } from "react";
 import {
   useInfiniteQuery,
@@ -63,12 +65,10 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
     },
     onError: (_err, _vars, context) => {
       if (context) setWatched(context.prev);
+      toast.error("Could not save watched status. Please retry.");
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["watch-history", title.id] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
-      void qc.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateLibrary(qc);
     },
   });
 

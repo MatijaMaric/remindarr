@@ -53,12 +53,18 @@ export default function SubscriptionsTab() {
   }
 
   async function toggleOnlyMine(value: boolean) {
+    if (saving) return;
+    setSaving(true);
+    setSaveError(false);
     setOnlyMine(value);
     try {
       await api.updateOnlyMine(value);
       await refreshSubscriptions();
     } catch {
       setOnlyMine(!value);
+      setSaveError(true);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -114,7 +120,7 @@ export default function SubscriptionsTab() {
   return (
     <div>
       {saveError && (
-        <p className="text-sm text-red-400 mb-3">
+        <p role="alert" className="text-sm text-red-400 mb-3">
           {t("settings.subscriptions.saveError")}
         </p>
       )}
@@ -183,6 +189,7 @@ export default function SubscriptionsTab() {
           sub={t("settings.subscriptions.onlyMine.description")}
           on={onlyMine}
           onChange={toggleOnlyMine}
+          disabled={saving}
         />
       </SCard>
     </div>

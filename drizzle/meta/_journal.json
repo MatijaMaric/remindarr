@@ -428,6 +428,13 @@
       "when": 1790812800000,
       "tag": "0060_person_follows",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "6",
+      "when": 1790985600000,
+      "tag": "0061_scoped_shares_rate_limits",
+      "breakpoints": true
     }
   ]
 }

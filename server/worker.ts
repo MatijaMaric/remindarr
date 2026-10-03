@@ -64,8 +64,8 @@ import {
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import {
   rateLimiter,
-  MemoryRateLimitStore,
-  KvRateLimitStore,
+  SqlRateLimitStore,
+  pruneRateLimits,
 } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
@@ -264,11 +264,11 @@ async function resolveOidcConfig(): Promise<typeof cachedOidcConfig> {
 function createApp(env: Env) {
   const app = new Hono<AppEnv>();
 
-  // Shared rate-limit store — KV-backed when available so all isolates share buckets;
-  // falls back to in-memory when CACHE_KV binding is not configured.
-  const rateLimitStore = env.CACHE_KV
-    ? new KvRateLimitStore(env.CACHE_KV)
-    : new MemoryRateLimitStore();
+  const rateLimitStore = new SqlRateLimitStore();
+  app.use("*", async (c, next) => {
+    c.set("clientIp", c.req.header("cf-connecting-ip") ?? "anonymous");
+    await next();
+  });
 
   // Per-request setup: inject platform and auth into context.
   // One-time initialization (migration, admin creation, OIDC config) is
@@ -943,6 +943,7 @@ export const handler = {
             // Daily-only work — skip on the 5-min watchdog ticks to avoid repeated
             // heavy cleanup (session expiry, old job pruning, one-time migrations).
             if (isDailyTick) {
+              await pruneRateLimits();
               // One-time migrations (idempotent — no-ops once done)
               await enqueueOnce("migrate-offers");
               await enqueueOnce("migrate-backdrops");

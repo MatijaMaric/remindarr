@@ -7,7 +7,13 @@ import {
   afterEach,
   spyOn,
 } from "bun:test";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import "../../i18n";
@@ -155,4 +161,53 @@ describe("AppearanceTab", () => {
     expect(screen.getByText(/Hide PG-13, TV-14, and above/i)).toBeDefined();
     expect(screen.getByText(/Nothing is deleted/i)).toBeDefined();
   });
+});
+
+it("shows an unsaved error after a save fails, then retries and clears it", async () => {
+  const update = spyOn(api, "updateAppearanceSettings")
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValue({
+      themeVariant: "dark",
+      accentColor: "amber",
+      density: "comfortable",
+      reduceMotion: 0,
+      highContrast: 0,
+      hideEpisodeSpoilers: 0,
+      autoplayTrailers: 0,
+    });
+  spies.push(update);
+  const client = newTestClient();
+  render(<AppearanceTab />, { wrapper: wrapper(client) });
+  fireEvent.click(await screen.findByTestId("accent-picker"));
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "Changes are not saved",
+  );
+  expect(screen.queryByText("Saved")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  expect(update).toHaveBeenCalledTimes(2);
+});
+it("retains failed homepage changes explicitly unsaved and retries the same layout", async () => {
+  let attempts = 0;
+  const update = spyOn(api, "updateHomepageLayout").mockImplementation(
+    async (layout) => {
+      if (attempts++ === 0) throw new Error("offline");
+      return { homepage_layout: layout };
+    },
+  );
+  spies.push(update);
+  render(<AppearanceTab />, { wrapper: wrapper(newTestClient()) });
+  await waitFor(() =>
+    expect(
+      screen.getAllByRole("button", { name: /hide section/i }),
+    ).toHaveLength(2),
+  );
+  fireEvent.click(screen.getAllByRole("button", { name: /hide section/i })[0]);
+  await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "Changes are not saved",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+  expect(update.mock.calls[1][0]).toEqual(update.mock.calls[0][0]);
 });

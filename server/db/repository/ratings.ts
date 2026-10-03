@@ -84,6 +84,15 @@ export async function getTitleRatings(
   });
 }
 
+// Named ratings follow profile visibility; friends means mutual following.
+function visibleRatingProfile(viewerId: string) {
+  return sql`(COALESCE(NULLIF(${users.profileVisibility}, ''), CASE WHEN ${users.profilePublic} = 1 THEN 'public' ELSE 'private' END) = 'public'
+    OR (${users.profileVisibility} = 'friends_only' AND EXISTS (
+      SELECT 1 FROM follows reverse_follow WHERE reverse_follow.follower_id = ${users.id}
+        AND reverse_follow.following_id = ${viewerId}
+    )))`;
+}
+
 export async function getFriendsRatings(userId: string, titleId: string) {
   return traceDbQuery("getFriendsRatings", async () => {
     const db = getDb();
@@ -104,7 +113,7 @@ export async function getFriendsRatings(userId: string, titleId: string) {
           eq(follows.followingId, ratings.userId),
         ),
       )
-      .where(eq(ratings.titleId, titleId))
+      .where(and(eq(ratings.titleId, titleId), visibleRatingProfile(userId)))
       .all();
   });
 }
@@ -217,7 +226,12 @@ export async function getFriendsEpisodeRatings(
           eq(follows.followingId, episodeRatings.userId),
         ),
       )
-      .where(eq(episodeRatings.episodeId, episodeId))
+      .where(
+        and(
+          eq(episodeRatings.episodeId, episodeId),
+          visibleRatingProfile(userId),
+        ),
+      )
       .all();
   });
 }
