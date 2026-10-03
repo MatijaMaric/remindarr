@@ -397,6 +397,7 @@
     "all": "Tout",
     "movies": "Films",
     "shows": "Séries",
+    "people": "Personnes",
     "allGenres": "Tous les genres",
     "allPlatforms": "Toutes les plateformes",
     "allLanguages": "Toutes les langues",
@@ -892,7 +893,10 @@
     "breadcrumb": "Fil d'Ariane",
     "buildInfo": "Remindarr · auto-hébergé",
     "sections": "Sections",
-    "sectionsLabel": "Sections des paramètres"
+    "sectionsLabel": "Sections des paramètres",
+    "saving": "Enregistrement...",
+    "unsaved": "Modifications non enregistrées",
+    "unsavedError": "Les modifications ne sont pas enregistrées. Réessayez."
   },
   "notifications": {
     "all": "Tous les épisodes",

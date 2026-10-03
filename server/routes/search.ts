@@ -15,6 +15,7 @@ import {
   type ParsedTitle,
 } from "../tmdb/parser";
 import { getTrackedTitleIds, upsertTitles } from "../db/repository";
+import { getFollowedPersonIdsAmong } from "../db/repository/person-follows";
 import { logger } from "../logger";
 import { syncFailureTotal } from "../metrics";
 import Sentry from "../sentry";
@@ -30,7 +31,7 @@ const searchQuerySchema = z.object({
   year_min: z.coerce.number().int().optional(),
   year_max: z.coerce.number().int().optional(),
   min_rating: z.coerce.number().min(0).max(10).optional(),
-  type: z.enum(["MOVIE", "SHOW"]).optional(),
+  type: z.enum(["MOVIE", "SHOW", "PERSON"]).optional(),
   language: z.string().optional(),
 });
 
@@ -47,6 +48,28 @@ app.get("/", zValidator("query", searchQuerySchema), async (c) => {
   } = c.req.valid("query");
 
   try {
+    if (typeParam === "PERSON") {
+      // People ride on the same /search/multi call; title filters don't apply.
+      // ponytail: multi returns 20 mixed results — switch to /search/person if recall matters.
+      const { results } = await searchMulti(query);
+      const persons = results.filter((r) => r.media_type === "person");
+      const user = c.get("user");
+      const followed = user
+        ? await getFollowedPersonIdsAmong(
+            user.id,
+            persons.map((p) => p.id),
+          )
+        : new Set<number>();
+      const people = persons.map((p) => ({
+        id: p.id,
+        name: p.name ?? "",
+        profilePath: p.profile_path ?? null,
+        department: p.known_for_department ?? null,
+        isFollowing: followed.has(p.id),
+      }));
+      return ok(c, { titles: [], people, count: people.length });
+    }
+
     const [genreMap, tvGenreMap, searchResult] = await Promise.all([
       getMovieGenres(),
       getTvGenres(),

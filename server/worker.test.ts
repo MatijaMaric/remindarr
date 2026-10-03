@@ -1,3 +1,4 @@
+import * as rateLimitModule from "./middleware/rate-limit";
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -267,7 +268,7 @@ describe("unknown /api/* paths fall through to 404", () => {
     }
   });
 
-  it("returns 404 (not 500) even when the rate-limit store throws", async () => {
+  it("returns retryable 503 when the rate-limit store throws", async () => {
     const throwingStore: RateLimitStore = {
       async consume() {
         throw new Error("KV unavailable");
@@ -277,7 +278,7 @@ describe("unknown /api/* paths fall through to 404", () => {
 
     const res = await app.request("/api/phpinfo.php");
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(503);
     // Store failure must never reach onError → Sentry.
     expect(captureSpy).not.toHaveBeenCalled();
   });
@@ -526,6 +527,10 @@ describe("scheduled() bootstrap KV timestamp", () => {
   });
 
   it("enqueues migrate-backdrops on the daily tick and not on the watchdog (#1308)", async () => {
+    const pruneSpy = spyOn(
+      rateLimitModule,
+      "pruneRateLimits",
+    ).mockResolvedValue(undefined);
     const fakeEnv = {
       DB: {} as D1Database,
       CACHE_KV: {
@@ -555,5 +560,7 @@ describe("scheduled() bootstrap KV timestamp", () => {
     );
     expect(enqueueOnceSpy).toHaveBeenCalledWith("migrate-backdrops");
     expect(enqueueOnceSpy).toHaveBeenCalledWith("migrate-offers");
+    expect(pruneSpy).toHaveBeenCalledTimes(1);
+    pruneSpy.mockRestore();
   });
 });

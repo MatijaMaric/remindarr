@@ -216,7 +216,9 @@ app.get("/:username", zValidator("param", usernameParamSchema), async (c) => {
     return err(c, "User not found", 404);
   }
 
-  const pinned = await getPinnedTitles(profile.user.id);
+  const pinned = profile.show_watchlist
+    ? await getPinnedTitles(profile.user.id)
+    : [];
 
   return ok(c, {
     ...profile,

@@ -27,8 +27,8 @@ export default function WrappedPage() {
   });
 
   const { data: tokenData } = useQuery({
-    queryKey: ["watchlist-share-token"],
-    queryFn: ({ signal }) => api.getWatchlistShareToken(signal),
+    queryKey: ["wrapped-share-token", year],
+    queryFn: ({ signal }) => api.getWrappedShareToken(year, signal),
   });
 
   const years = useMemo(() => {
@@ -43,10 +43,10 @@ export default function WrappedPage() {
     try {
       let token = tokenData?.token;
       if (!token) {
-        const created = await api.regenerateWatchlistShareToken();
+        const created = await api.regenerateWrappedShareToken(year);
         token = created.token;
         await queryClient.invalidateQueries({
-          queryKey: ["watchlist-share-token"],
+          queryKey: ["wrapped-share-token", year],
         });
       }
       const url = `${window.location.origin}/share/wrapped/${token}/${year}`;
@@ -106,6 +106,32 @@ export default function WrappedPage() {
         }
       />
 
+      <p className="text-sm text-zinc-400">
+        A shared link reveals only your {year} review. Older shared links must
+        be recreated; watchlist links remain separate.
+      </p>
+      {tokenData?.token && (
+        <button
+          type="button"
+          disabled={sharing}
+          onClick={async () => {
+            setSharing(true);
+            try {
+              await api.revokeWrappedShareToken(year);
+              await queryClient.invalidateQueries({
+                queryKey: ["wrapped-share-token", year],
+              });
+              toast.success("Review link revoked");
+            } catch {
+              toast.error("Could not revoke review link. Please retry.");
+            } finally {
+              setSharing(false);
+            }
+          }}
+        >
+          Revoke {year} review link
+        </button>
+      )}
       {isError && (
         <p className="text-zinc-400 text-sm py-12 text-center">
           {t("wrapped.loadError")}

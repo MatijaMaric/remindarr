@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PersonPage, { selectKnownFor, KNOWN_FOR_LIMIT } from "./PersonPage";
 import * as api from "../api";
-import { AuthContext } from "../context/AuthContext";
+import * as authModule from "../context/AuthContext";
 import type {
   PersonCastCredit,
   PersonCrewCredit,
@@ -206,16 +206,30 @@ function newTestClient() {
   });
 }
 
+// Spy on useAuth rather than rendering <AuthContext>: other page tests
+// mock.module() AuthContext with a non-component `AuthContext`, and Bun leaks
+// those mocks across files, which made <AuthContext> an invalid element type.
+let useAuthSpy: ReturnType<typeof spyOn<typeof authModule, "useAuth">> | null =
+  null;
+
+afterEach(() => {
+  useAuthSpy?.mockRestore();
+  useAuthSpy = null;
+});
+
 function renderPersonPage(user: { id: string } | null = null) {
+  useAuthSpy = spyOn(authModule, "useAuth").mockReturnValue({
+    user,
+    providers: null,
+    loading: false,
+  } as any);
   return render(
     <QueryClientProvider client={newTestClient()}>
-      <AuthContext value={{ user, providers: null, loading: false } as any}>
-        <MemoryRouter initialEntries={["/person/287"]}>
-          <Routes>
-            <Route path="/person/:personId" element={<PersonPage />} />
-          </Routes>
-        </MemoryRouter>
-      </AuthContext>
+      <MemoryRouter initialEntries={["/person/287"]}>
+        <Routes>
+          <Route path="/person/:personId" element={<PersonPage />} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }

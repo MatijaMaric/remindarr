@@ -12,6 +12,7 @@ Object.assign(process.env, {
   LOG_LEVEL: "error",
   AUTH_RATE_LIMIT_PER_MINUTE: "1000",
   GLOBAL_RATE_LIMIT_PER_MINUTE: "10000",
+  TRUSTED_PROXIES: "127.0.0.1,::1,::ffff:127.0.0.1",
   OIDC_ISSUER_URL: "",
   SENTRY_DSN: "",
   BACKUP_DIR: "",

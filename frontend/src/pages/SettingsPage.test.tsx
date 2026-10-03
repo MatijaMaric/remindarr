@@ -211,7 +211,9 @@ describe("ProfileVisibilitySection", () => {
     expect(screen.getByText("Everyone can see your watchlist")).toBeDefined();
     expect(screen.getByText("Friends Only")).toBeDefined();
     expect(
-      screen.getByText("Only mutual followers can see your watchlist"),
+      screen.getByText(
+        "Only mutual followers can see your watchlist, pinned favorites and named ratings",
+      ),
     ).toBeDefined();
     expect(screen.getByText("Private")).toBeDefined();
     expect(screen.getByText("Your watchlist is hidden")).toBeDefined();

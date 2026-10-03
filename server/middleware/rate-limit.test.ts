@@ -1,9 +1,11 @@
-import { describe, it, expect, spyOn } from "bun:test";
+import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { bunClientAddress } from "./client-address";
+import { describe, it, expect, spyOn, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import {
   rateLimiter,
   MemoryRateLimitStore,
-  KvRateLimitStore,
+  SqlRateLimitStore,
   type RateLimitStore,
 } from "./rate-limit";
 import type { AppEnv } from "../types";
@@ -39,27 +41,31 @@ describe("MemoryRateLimitStore", () => {
     expect(Number(res.headers.get("Retry-After"))).toBeGreaterThan(0);
   });
 
-  it("uses x-forwarded-for to differentiate clients", async () => {
-    const store = new MemoryRateLimitStore();
+  it("ignores spoofed forwarding headers", async () => {
     const app = new Hono<AppEnv>();
-    app.use("/test/*", rateLimiter({ store, limit: 1, windowMs: 60_000 }));
-    app.get("/test/hello", (c) => c.json({ ok: true }));
-
-    const res1 = await app.request("/test/hello", {
-      headers: { "x-forwarded-for": "1.1.1.1" },
-    });
-    expect(res1.status).toBe(200);
-
-    const res2 = await app.request("/test/hello", {
-      headers: { "x-forwarded-for": "2.2.2.2" },
-    });
-    expect(res2.status).toBe(200);
-
-    // First client is now rate limited
-    const res3 = await app.request("/test/hello", {
-      headers: { "x-forwarded-for": "1.1.1.1" },
-    });
-    expect(res3.status).toBe(429);
+    app.use(
+      "*",
+      rateLimiter({
+        store: new MemoryRateLimitStore(),
+        limit: 1,
+        windowMs: 60_000,
+      }),
+    );
+    app.get("/", (c) => c.text("ok"));
+    expect(
+      (await app.request("/", { headers: { "x-forwarded-for": "1.1.1.1" } }))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        await app.request("/", {
+          headers: {
+            "x-forwarded-for": "2.2.2.2",
+            "cf-connecting-ip": "2.2.2.2",
+          },
+        })
+      ).status,
+    ).toBe(429);
   });
 
   it("refills tokens over time", async () => {
@@ -266,167 +272,69 @@ describe("rateLimiter — cross-route enforcement", () => {
   });
 });
 
-// ─── KvRateLimitStore tests ─────────────────────────────────────────────────
+// ─── SqlRateLimitStore tests ─────────────────────────────────────────────────
 
-/** Minimal in-memory KVNamespace mock for testing. */
-class MockKvNamespace {
-  private readonly store = new Map<
-    string,
-    { value: string; expires: number }
-  >();
-  readonly putCalls: Array<{ key: string; ttl: number }> = [];
-
-  async get(key: string, _type: "text"): Promise<string | null> {
-    const entry = this.store.get(key);
-    if (!entry) return null;
-    if (Date.now() > entry.expires) {
-      this.store.delete(key);
-      return null;
-    }
-    return entry.value;
-  }
-
-  async put(
-    key: string,
-    value: string,
-    options?: { expirationTtl?: number },
-  ): Promise<void> {
-    const ttl = options?.expirationTtl ?? 60;
-    this.putCalls.push({ key, ttl });
-    this.store.set(key, { value, expires: Date.now() + ttl * 1000 });
-  }
-
-  async delete(key: string): Promise<void> {
-    this.store.delete(key);
-  }
-}
-
-describe("KvRateLimitStore", () => {
-  it("allows requests under the fixed-window limit", async () => {
-    const kv = new MockKvNamespace() as unknown as KVNamespace;
-    const store = new KvRateLimitStore(kv);
-    const now = Date.now();
-
-    for (let i = 0; i < 3; i++) {
-      const result = await store.consume("search:1.2.3.4", 3, 60_000, now);
-      expect(result.allowed).toBe(true);
-    }
-  });
-
-  it("blocks at the limit within the same window", async () => {
-    const kv = new MockKvNamespace() as unknown as KVNamespace;
-    const store = new KvRateLimitStore(kv);
-    const now = Date.now();
-
-    await store.consume("search:1.2.3.4", 2, 60_000, now);
-    await store.consume("search:1.2.3.4", 2, 60_000, now);
-    const result = await store.consume("search:1.2.3.4", 2, 60_000, now);
-    expect(result.allowed).toBe(false);
-    expect(result.retryAfterMs).toBeGreaterThan(0);
-  });
-
-  it("allows again after window rolls over", async () => {
-    const kv = new MockKvNamespace() as unknown as KVNamespace;
-    const store = new KvRateLimitStore(kv);
-    const windowMs = 60_000;
-    const now = Date.now();
-
-    // Exhaust this window
-    await store.consume("search:1.2.3.4", 1, windowMs, now);
-    const blocked = await store.consume("search:1.2.3.4", 1, windowMs, now);
-    expect(blocked.allowed).toBe(false);
-
-    // Next window — key is different because windowStart changes
-    const nextWindow = now + windowMs;
-    const result = await store.consume(
-      "search:1.2.3.4",
-      1,
-      windowMs,
-      nextWindow,
+describe("SqlRateLimitStore", () => {
+  beforeEach(setupTestDb);
+  afterAll(teardownTestDb);
+  it("atomically limits concurrent requests across stores and resets at the window boundary", async () => {
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        new SqlRateLimitStore().consume("auth:client", 1, 60_000, 1_000),
+      ),
     );
-    expect(result.allowed).toBe(true);
-  });
-
-  it("passes minimum 60s TTL to KV", async () => {
-    const kv = new MockKvNamespace() as unknown as KVNamespace;
-    const store = new KvRateLimitStore(kv);
-    const now = Date.now();
-
-    await store.consume("search:1.2.3.4", 5, 60_000, now);
-    const mock = kv as unknown as MockKvNamespace;
-    expect(mock.putCalls.length).toBeGreaterThan(0);
-    // 60_000ms → 60s, which satisfies KV minimum
-    expect(mock.putCalls[0].ttl).toBeGreaterThanOrEqual(60);
-  });
-
-  it("isolates different keys within the same window", async () => {
-    const kv = new MockKvNamespace() as unknown as KVNamespace;
-    const store = new KvRateLimitStore(kv);
-    const now = Date.now();
-
-    // Exhaust IP A
-    await store.consume("search:1.1.1.1", 1, 60_000, now);
-    const blockedA = await store.consume("search:1.1.1.1", 1, 60_000, now);
-    expect(blockedA.allowed).toBe(false);
-
-    // IP B is unaffected
-    const allowedB = await store.consume("search:2.2.2.2", 1, 60_000, now);
-    expect(allowedB.allowed).toBe(true);
+    expect(results.filter((r) => r.allowed)).toHaveLength(1);
+    expect(results[1].retryAfterMs).toBe(59_000);
+    expect(
+      (await new SqlRateLimitStore().consume("auth:client", 1, 60_000, 60_000))
+        .allowed,
+    ).toBe(true);
+    expect(
+      (
+        await new SqlRateLimitStore().consume(
+          "global:client",
+          1,
+          60_000,
+          60_000,
+        )
+      ).allowed,
+    ).toBe(true);
   });
 });
 
-// ─── Fail-open behavior on store errors (#1026) ─────────────────────────────
+describe("trusted client addresses", () => {
+  it("uses the peer by default and rejects a spoofed left-hand prefix", () => {
+    expect(bunClientAddress("203.0.113.4", "1.1.1.1")).toBe("203.0.113.4");
+    expect(
+      bunClientAddress("127.0.0.1", "1.1.1.1, 203.0.113.4", ["127.0.0.1"]),
+    ).toBe("203.0.113.4");
+    expect(
+      bunClientAddress("127.0.0.1", "203.0.113.4, 10.0.0.1", [
+        "127.0.0.1",
+        "10.0.0.1",
+      ]),
+    ).toBe("203.0.113.4");
+    expect(bunClientAddress("::ffff:127.0.0.1", "bad-ip", ["127.0.0.1"])).toBe(
+      "127.0.0.1",
+    );
+    expect(bunClientAddress(undefined, "1.1.1.1")).toBe("anonymous");
+  });
+});
 
-describe("rateLimiter fail-open on store error", () => {
-  class ThrowingStore implements RateLimitStore {
-    async consume(): Promise<{ allowed: boolean; retryAfterMs: number }> {
-      throw new Error("KV unavailable");
-    }
+describe("store outage policy", () => {
+  for (const scope of ["global", "auth"]) {
+    it(`fails closed for ${scope}`, async () => {
+      const store: RateLimitStore = {
+        consume: async () => {
+          throw new Error("unavailable");
+        },
+      };
+      const app = new Hono<AppEnv>();
+      app.use("*", rateLimiter({ store, scope, limit: 1, windowMs: 60_000 }));
+      app.get("/", (c) => c.text("must not run"));
+      const res = await app.request("/");
+      expect(res.status).toBe(503);
+      expect(res.headers.get("Retry-After")).toBe("60");
+    });
   }
-
-  it("calls next() and allows the request when store.consume throws", async () => {
-    // The rate-limit logger is a child logger; warn-level output goes to
-    // console.error. Spy there to observe the fail-open warning.
-    const errSpy = spyOn(console, "error").mockImplementation(() => {});
-    try {
-      const store = new ThrowingStore();
-      const app = new Hono<AppEnv>();
-      let nextCalled = false;
-      app.use("/test/*", rateLimiter({ store, limit: 1, windowMs: 60_000 }));
-      app.get("/test/hello", (c) => {
-        nextCalled = true;
-        return c.json({ ok: true });
-      });
-
-      const res = await app.request("/test/hello");
-
-      // Request reached the route (next was called) and succeeded — no 500/429.
-      expect(nextCalled).toBe(true);
-      expect(res.status).toBe(200);
-      // A warning was logged for the failed store.
-      const logged = errSpy.mock.calls
-        .map((args: unknown[]) => String(args[0]))
-        .join("\n");
-      expect(logged).toContain("Rate limit store error — failing open");
-    } finally {
-      errSpy.mockRestore();
-    }
-  });
-
-  it("falls through to the 404 fallback for unmatched paths when store throws", async () => {
-    const errSpy = spyOn(console, "error").mockImplementation(() => {});
-    try {
-      const store = new ThrowingStore();
-      const app = new Hono<AppEnv>();
-      app.use("/api/*", rateLimiter({ store, limit: 1, windowMs: 60_000 }));
-      app.get("*", (c) => c.json({ error: "Not found" }, 404));
-
-      const res = await app.request("/api/phpinfo.php");
-
-      // Store failure must NOT become a 500 — request reaches the 404 fallback.
-      expect(res.status).toBe(404);
-    } finally {
-      errSpy.mockRestore();
-    }
-  });
 });

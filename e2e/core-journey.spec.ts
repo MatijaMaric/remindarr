@@ -1,7 +1,19 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type TestInfo } from "@playwright/test";
 import { CoreJourneyPage } from "./pages/core-journey-page";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+// Each synthetic journey has its own client address behind the loopback-only
+// trusted proxy. Keep real per-client rate limits without sharing one bucket
+// across unrelated accounts and browser projects.
+function clientHeaders(info: TestInfo) {
+  const browser =
+    ["chromium", "firefox", "webkit"].indexOf(info.project.name) + 1;
+  return { "X-Forwarded-For": `2001:db8:${browser}::${info.line}` };
+}
+test.use({
+  extraHTTPHeaders: async ({}, use, info) => use(clientHeaders(info)),
+});
 
 test("real signup, search, track, watch, library and Stats survive refresh", async ({
   page,
@@ -41,12 +53,16 @@ test("real signup, search, track, watch, library and Stats survive refresh", asy
 test("production worker retains offline intent and cached pages across a browser restart", async ({
   playwright,
   browserName,
-}) => {
+}, testInfo) => {
   mkdirSync(".e2e", { recursive: true });
   const profile = mkdtempSync(resolve(".e2e/p-"));
   const context = await playwright[browserName].launchPersistentContext(
     profile,
-    { baseURL: "http://localhost:4337", headless: true },
+    {
+      baseURL: "http://localhost:4337",
+      headless: true,
+      extraHTTPHeaders: clientHeaders(testInfo),
+    },
   );
   const page = await context.newPage();
   const app = new CoreJourneyPage(page);
@@ -81,6 +97,7 @@ test("production worker retains offline intent and cached pages across a browser
       baseURL: "http://localhost:4337",
       headless: true,
       offline: true,
+      extraHTTPHeaders: clientHeaders(testInfo),
     }));
   const restarted = await resumed.newPage();
   try {
@@ -231,7 +248,7 @@ test("a changed account cannot receive the previous account's offline queue", as
   page,
   context,
   playwright,
-}) => {
+}, testInfo) => {
   const app = new CoreJourneyPage(page);
   await app.signup();
   await app.search();
@@ -247,6 +264,7 @@ test("a changed account cannot receive the previous account's offline queue", as
   ).toBeVisible();
   const replacement = await playwright.request.newContext({
     baseURL: "http://localhost:4337",
+    extraHTTPHeaders: clientHeaders(testInfo),
   });
   try {
     const username = `replacement_${crypto.randomUUID().slice(0, 8)}`;
@@ -268,7 +286,9 @@ test("a changed account cannot receive the previous account's offline queue", as
     await expect(
       page.getByRole("button", { name: "Queued for sync", exact: true }),
     ).toHaveCount(0);
-    expect((await (await replacement.get("/api/track")).json()).count).toBe(0);
+    const tracked = await replacement.get("/api/track");
+    expect(tracked.ok()).toBe(true);
+    expect((await tracked.json()).count).toBe(0);
   } finally {
     await replacement.dispose();
   }

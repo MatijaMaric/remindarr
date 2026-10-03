@@ -1,6 +1,7 @@
 import type {
   Title,
   SearchTitle,
+  SearchPerson,
   Provider,
   Episode,
   StatsResponse,
@@ -113,7 +114,8 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const data = await res.json();
   identity.check();
   if (!options?.method || options.method === "GET")
-    void cacheOfflineRead(url, data).catch(() => {});
+    await cacheOfflineRead(url, data).catch(() => {});
+  identity.check();
   return data;
 }
 
@@ -160,10 +162,10 @@ export async function searchTitles(
     yearMax?: number;
     minRating?: number;
     language?: string;
-    type?: "MOVIE" | "SHOW";
+    type?: "MOVIE" | "SHOW" | "PERSON";
   },
   signal?: AbortSignal,
-): Promise<{ titles: SearchTitle[]; count: number }> {
+): Promise<{ titles: SearchTitle[]; people?: SearchPerson[]; count: number }> {
   const qs = new URLSearchParams();
   qs.set("q", query);
   if (filters?.yearMin != null) qs.set("year_min", String(filters.yearMin));
@@ -1910,4 +1912,19 @@ export async function getLeaderboard(
 
 export async function getMyStreak(signal?: AbortSignal): Promise<StreakData> {
   return fetchJson<StreakData>("/streak/me", { signal });
+}
+
+export function getWrappedShareToken(
+  year: number,
+  signal?: AbortSignal,
+): Promise<{ token: string | null }> {
+  return fetchJson(`/share/token/wrapped/${year}`, { signal });
+}
+export function regenerateWrappedShareToken(
+  year: number,
+): Promise<{ token: string }> {
+  return fetchJson(`/share/token/wrapped/${year}`, { method: "POST" });
+}
+export function revokeWrappedShareToken(year: number): Promise<unknown> {
+  return fetchJson(`/share/token/wrapped/${year}`, { method: "DELETE" });
 }

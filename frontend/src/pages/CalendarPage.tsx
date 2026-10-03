@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useState, useEffect, useMemo, useRef, useId } from "react";
 import {
   useQuery,
@@ -857,9 +858,7 @@ function GridCalendar({
       toast.error("Failed to update watched status — please try again");
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["calendar"] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -895,9 +894,7 @@ function GridCalendar({
       toast.error("Failed to update watched status — please try again");
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["calendar"] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -932,9 +929,7 @@ function GridCalendar({
       toast.error("Failed to update watched status — please try again");
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["calendar"] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 

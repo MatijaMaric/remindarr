@@ -167,6 +167,9 @@ export interface TmdbSearchMultiResult {
   // TV fields
   name?: string;
   first_air_date?: string;
+  // Person fields (`name` is shared with TV)
+  profile_path?: string | null;
+  known_for_department?: string | null;
   // Common fields
   overview?: string | null;
   poster_path?: string | null;

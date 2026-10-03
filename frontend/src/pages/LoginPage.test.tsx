@@ -7,6 +7,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { createContext, useContext } from "react";
 
 import "../i18n";
 
@@ -43,20 +44,20 @@ mock.module("../lib/auth-client", () => ({
 
 // Mock useAuth directly so this test is immune to AuthContext mock.module
 // leakage from sibling test files.
+const MockAuthContext = createContext<any>(null);
 mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
-    user: null,
-    providers: { local: true, oidc: null, passkey: true },
-    loading: false,
-    sessionStatus: "authenticated",
-    login: () => Promise.resolve(),
-    signup: () => Promise.resolve(),
-    logout: () => Promise.resolve(),
-    refresh: () => Promise.resolve(),
-  }),
-  AuthContext: {
-    Provider: ({ children }: { children: React.ReactNode }) => children,
-  },
+  useAuth: () =>
+    useContext(MockAuthContext) ?? {
+      user: null,
+      providers: { local: true, oidc: null, passkey: true },
+      loading: false,
+      sessionStatus: "authenticated",
+      login: () => Promise.resolve(),
+      signup: () => Promise.resolve(),
+      logout: () => Promise.resolve(),
+      refresh: () => Promise.resolve(),
+    },
+  AuthContext: MockAuthContext,
   // AuthProvider export preserved so sibling test files that import it from
   // the same cached module don't get "Export named 'AuthProvider' not found".
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,

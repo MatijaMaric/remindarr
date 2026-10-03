@@ -106,26 +106,22 @@ describe("EditWatchedAtDialog", () => {
     });
   });
 
-  it("invalidates query caches on successful save", async () => {
+  it("invalidates fresh query caches on successful save", async () => {
     const { qc } = renderDialog();
-    const invalidateSpy = spyOn(qc, "invalidateQueries");
-
+    const keys = [
+      "stats",
+      "activity",
+      "tracked",
+      "home",
+      "title-detail",
+      "watch-history",
+    ];
+    keys.forEach((key) => qc.setQueryData([key], { old: true }));
     fireEvent.click(screen.getByText("Save"));
-
-    await waitFor(() => {
-      expect(api.patchWatchHistoryEntry).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalled();
-    });
-
-    const keys = invalidateSpy.mock.calls.map(
-      (call: any[]) => (call[0] as any)?.queryKey,
+    await waitFor(() =>
+      keys.forEach((key) =>
+        expect(qc.getQueryState([key])?.isInvalidated).toBe(true),
+      ),
     );
-    expect(keys).toContainEqual(["stats"]);
-    expect(keys).toContainEqual(["activity"]);
-
-    invalidateSpy.mockRestore();
   });
 });

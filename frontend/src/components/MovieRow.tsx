@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -85,9 +86,7 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
       toast.error("Failed to mark as watched — please try again");
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 

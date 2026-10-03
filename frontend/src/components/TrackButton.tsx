@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useState, useEffect, useId } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -80,8 +81,7 @@ export default function TrackButton({
       toast.error(t("track.addError"));
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["tracked"] });
-      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -102,8 +102,7 @@ export default function TrackButton({
       toast.error(t("track.removeError"));
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["tracked"] });
-      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      void invalidateLibrary(qc);
     },
   });
 

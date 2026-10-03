@@ -23,6 +23,7 @@ import {
   makeTmdbSearchMultiMovie,
   makeTmdbMovieDetails,
 } from "../test-utils/fixtures";
+import { followPerson } from "../db/repository/person-follows";
 import * as tmdbClient from "../tmdb/client";
 import Sentry from "../sentry";
 
@@ -168,6 +169,96 @@ describe("GET /search", () => {
     const body = await res.json();
 
     expect(body.titles[0].isTracked).toBe(true);
+  });
+});
+
+describe("GET /search — type=PERSON", () => {
+  const person = (id: number, name: string): TmdbSearchMultiResult => ({
+    id,
+    media_type: "person",
+    name,
+    profile_path: `/${id}.jpg`,
+    known_for_department: "Acting",
+  });
+
+  function mockMulti() {
+    (tmdbClient.searchMulti as any).mockResolvedValueOnce({
+      results: [
+        person(31, "Tom Hanks"),
+        makeTmdbSearchMultiMovie({ id: 42 }),
+        person(1136406, "Tom Holland"),
+      ],
+      total_pages: 1,
+      total_results: 3,
+      page: 1,
+    });
+  }
+
+  it("returns only people, without title enrichment", async () => {
+    mockMulti();
+    const res = await app.request("/search?q=tom&type=PERSON");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.titles).toEqual([]);
+    expect(body.count).toBe(2);
+    expect(body.people).toEqual([
+      {
+        id: 31,
+        name: "Tom Hanks",
+        profilePath: "/31.jpg",
+        department: "Acting",
+        isFollowing: false,
+      },
+      {
+        id: 1136406,
+        name: "Tom Holland",
+        profilePath: "/1136406.jpg",
+        department: "Acting",
+        isFollowing: false,
+      },
+    ]);
+    expect(tmdbClient.fetchMovieDetails).not.toHaveBeenCalled();
+  });
+
+  it("marks people the user follows", async () => {
+    const userId = await createUser("follower", "hash");
+    await followPerson(
+      userId,
+      { id: 31, name: "Tom Hanks", profilePath: null },
+      [],
+    );
+    mockMulti();
+
+    const authedApp = new Hono<AppEnv>();
+    authedApp.use("/search/*", async (c, next) => {
+      c.set("user", {
+        id: userId,
+        username: "follower",
+        name: null,
+        role: null,
+        is_admin: false,
+      });
+      await next();
+    });
+    authedApp.route("/search", searchApp);
+
+    const body = await (
+      await authedApp.request("/search?q=tom&type=PERSON")
+    ).json();
+    expect(body.people.map((p: any) => [p.id, p.isFollowing])).toEqual([
+      [31, true],
+      [1136406, false],
+    ]);
+  });
+
+  it("default search still excludes people", async () => {
+    mockMulti();
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: 42 }),
+    );
+    const body = await (await app.request("/search?q=tom")).json();
+    expect(body.people).toBeUndefined();
+    expect(body.titles).toHaveLength(1);
   });
 });
 
@@ -373,6 +464,11 @@ describe("GET /search — validation", () => {
 
   it("happy-path: minimal request with q only", async () => {
     const res = await app.request("/search?q=foo");
+    expect(res.status).toBe(200);
+  });
+
+  it("happy-path: q + type=PERSON", async () => {
+    const res = await app.request("/search?q=tom&type=PERSON");
     expect(res.status).toBe(200);
   });
 

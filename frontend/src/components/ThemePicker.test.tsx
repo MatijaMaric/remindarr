@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   describe,
   it,
@@ -7,7 +8,13 @@ import {
   mock,
   spyOn,
 } from "bun:test";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  waitFor,
+} from "@testing-library/react";
 import "../i18n";
 import ThemePicker from "./ThemePicker";
 import * as useThemeModule from "../hooks/useTheme";
@@ -44,7 +51,11 @@ describe("ThemePicker", () => {
       setTheme: mock(() => {}),
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
 
     expect(screen.getByRole("button", { name: "Dark" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Light" })).toBeDefined();
@@ -63,7 +74,11 @@ describe("ThemePicker", () => {
       setTheme: mock(() => {}),
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
 
     const activeButton = screen.getByRole("button", { name: "Dark" });
     expect(activeButton.getAttribute("aria-pressed")).toBe("true");
@@ -83,7 +98,11 @@ describe("ThemePicker", () => {
       setTheme,
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Light" }));
     expect(setTheme).toHaveBeenCalledWith("light");
 
@@ -97,7 +116,11 @@ describe("ThemePicker", () => {
       setTheme,
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     fireEvent.click(screen.getByRole("button", { name: "OLED" }));
     expect(setTheme).toHaveBeenCalledWith("oled");
 
@@ -111,7 +134,11 @@ describe("ThemePicker", () => {
       setTheme,
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Dark" }));
     expect(setTheme).toHaveBeenCalledWith("dark");
 
@@ -124,7 +151,11 @@ describe("ThemePicker", () => {
       setTheme: mock(() => {}),
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     const activeButton = screen.getByRole("button", { name: "Light" });
     expect(activeButton.getAttribute("aria-pressed")).toBe("true");
     expect(activeButton.className).toContain("amber-400");
@@ -138,7 +169,11 @@ describe("ThemePicker", () => {
       setTheme: mock(() => {}),
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     const activeButton = screen.getByRole("button", { name: "OLED" });
     expect(activeButton.getAttribute("aria-pressed")).toBe("true");
     expect(activeButton.className).toContain("amber-400");
@@ -153,7 +188,11 @@ describe("ThemePicker", () => {
       setTheme,
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Midnight" }));
     expect(setTheme).toHaveBeenCalledWith("midnight");
 
@@ -167,7 +206,11 @@ describe("ThemePicker", () => {
       setTheme,
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Auto" }));
     expect(setTheme).toHaveBeenCalledWith("auto");
 
@@ -180,10 +223,32 @@ describe("ThemePicker", () => {
       setTheme: mock(() => {}),
     });
 
-    render(<ThemePicker />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemePicker />
+      </QueryClientProvider>,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Moss" }));
     expect(apiSpy).toHaveBeenCalledWith({ themeVariant: "moss" });
 
     spy.mockRestore();
   });
+});
+
+it("announces an unsaved theme and retries the failed save", async () => {
+  const themeSpy = spyOn(useThemeModule, "useTheme").mockReturnValue({
+    theme: "dark",
+    setTheme: mock(() => {}),
+  });
+  apiSpy.mockRejectedValueOnce(new Error("offline"));
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ThemePicker />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Light" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("not saved");
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  themeSpy.mockRestore();
 });

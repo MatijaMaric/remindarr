@@ -629,3 +629,42 @@ describe("For you tab — suggestions", () => {
     expect(screen.queryByText(/% match/)).toBeNull();
   });
 });
+
+it("dismissal stays absent after remount with fresh cross-view caches", async () => {
+  const title = makeSearchTitle("movie-dismissed");
+  let dismissed = false;
+  apiMock.getSuggestionsAggregate.mockImplementation(() =>
+    Promise.resolve(
+      makeAggregate({ flat: dismissed ? [] : [title], groups: [] }),
+    ),
+  );
+  apiMock.dismissSuggestion.mockImplementation(async () => {
+    dismissed = true;
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { staleTime: 300_000, retry: false } },
+  });
+  for (const key of ["tracked", "home", "title-detail", "stats"])
+    client.setQueryData([key], { old: true });
+  const tree = () => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <DiscoveryPage />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const view = render(tree());
+  fireEvent.click(await screen.findByText("Not interested"));
+  await waitFor(() =>
+    expect(
+      client.getQueryData<SuggestionsAggregateResponse>(["suggestions", 60])
+        ?.flat,
+    ).toHaveLength(0),
+  );
+  for (const key of ["tracked", "home", "title-detail", "stats"])
+    expect(client.getQueryState([key])?.isInvalidated).toBe(true);
+  view.unmount();
+  render(tree());
+  expect(screen.queryByText(title.title)).toBeNull();
+  client.clear();
+});

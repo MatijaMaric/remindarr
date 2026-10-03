@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -766,6 +767,8 @@ export default function DiscoveryPage() {
 
   const handleTrackSuggestion = useCallback(
     async (titleId: string, titleData?: SearchTitle) => {
+      const wasTracked = trackedSet.has(titleId);
+      const wasDismissed = dismissedSet.has(titleId);
       setTrackedSet((prev) => new Set([...prev, titleId]));
       setDismissedSet((prev) => {
         const s = new Set(prev);
@@ -778,20 +781,30 @@ export default function DiscoveryPage() {
           undefined,
           titleData ? normalizeSearchTitle(titleData) : undefined,
         );
+        await invalidateLibrary(qc);
       } catch {
         setTrackedSet((prev) => {
           const s = new Set(prev);
-          s.delete(titleId);
+          if (wasTracked) s.add(titleId);
+          else s.delete(titleId);
+          return s;
+        });
+        setDismissedSet((prev) => {
+          const s = new Set(prev);
+          if (wasDismissed) s.add(titleId);
+          else s.delete(titleId);
           return s;
         });
         toast.error(t("discovery.trackFailed"));
       }
     },
-    [t],
+    [t, qc, trackedSet, dismissedSet],
   );
 
   const handleDismissSuggestion = useCallback(
     async (titleId: string) => {
+      const wasTracked = trackedSet.has(titleId);
+      const wasDismissed = dismissedSet.has(titleId);
       setDismissedSet((prev) => new Set([...prev, titleId]));
       setTrackedSet((prev) => {
         const s = new Set(prev);
@@ -800,30 +813,43 @@ export default function DiscoveryPage() {
       });
       try {
         await api.dismissSuggestion(titleId);
+        await invalidateLibrary(qc);
       } catch {
+        setTrackedSet((prev) => {
+          const s = new Set(prev);
+          if (wasTracked) s.add(titleId);
+          else s.delete(titleId);
+          return s;
+        });
         setDismissedSet((prev) => {
           const s = new Set(prev);
-          s.delete(titleId);
+          if (wasDismissed) s.add(titleId);
+          else s.delete(titleId);
           return s;
         });
         toast.error(t("discovery.dismissFailed"));
       }
     },
-    [t],
+    [t, qc, trackedSet, dismissedSet],
   );
 
-  const handleUndismiss = useCallback(async (titleId: string) => {
-    setDismissedSet((prev) => {
-      const s = new Set(prev);
-      s.delete(titleId);
-      return s;
-    });
-    try {
-      await api.undismissSuggestion(titleId);
-    } catch {
-      setDismissedSet((prev) => new Set([...prev, titleId]));
-    }
-  }, []);
+  const handleUndismiss = useCallback(
+    async (titleId: string) => {
+      setDismissedSet((prev) => {
+        const s = new Set(prev);
+        s.delete(titleId);
+        return s;
+      });
+      try {
+        await api.undismissSuggestion(titleId);
+        await invalidateLibrary(qc);
+      } catch {
+        setDismissedSet((prev) => new Set([...prev, titleId]));
+        toast.error(t("discovery.dismissFailed"));
+      }
+    },
+    [qc, t],
+  );
 
   // ─── Activity-tab handlers ────────────────────────────────────────────────
 
@@ -857,6 +883,7 @@ export default function DiscoveryPage() {
     async (rec: Recommendation) => {
       try {
         await api.trackTitle(rec.title.id);
+        await invalidateLibrary(qc);
         if (!rec.read_at) await api.markRecommendationRead(rec.id);
         qc.setQueryData<{ recommendations: Recommendation[] }>(
           ["recommendations"],
@@ -883,6 +910,7 @@ export default function DiscoveryPage() {
     async (rec: Recommendation) => {
       try {
         await api.deleteRecommendation(rec.id);
+        await invalidateLibrary(qc);
         qc.setQueryData<{ recommendations: Recommendation[] }>(
           ["recommendations"],
           (old) => {
@@ -953,7 +981,10 @@ export default function DiscoveryPage() {
           </div>
         ) : isEmpty ? (
           <p className="text-zinc-500 text-sm py-8 text-center">
-            {t("discovery.empty")}
+            {t("discovery.empty")}{" "}
+            <Link to="/browse" className="underline">
+              Find and track titles, then rate a few to improve recommendations.
+            </Link>
           </p>
         ) : (
           <div className="space-y-8">
@@ -1111,7 +1142,10 @@ export default function DiscoveryPage() {
           <DiscoverySkeleton />
         ) : recommendations.length === 0 ? (
           <p className="text-zinc-500 text-sm py-8 text-center">
-            {t("discovery.empty")}
+            {t("discovery.empty")}{" "}
+            <Link to="/browse" className="underline">
+              Find and track titles, then rate a few to improve recommendations.
+            </Link>
           </p>
         ) : (
           <div className="space-y-3">

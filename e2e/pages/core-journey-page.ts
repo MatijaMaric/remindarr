@@ -29,9 +29,14 @@ export class CoreJourneyPage extends BasePage {
       .getByRole("link", { name: /Synthetic Journey/ })
       .first()
       .click();
+    await expect(this.page).toHaveURL(/\/title\/movie-990001$/);
     await expect(
       this.page
-        .getByRole("heading", { name: "Synthetic Journey", exact: true })
+        .getByRole("heading", {
+          name: "Synthetic Journey",
+          exact: true,
+          level: 1,
+        })
         .first(),
     ).toBeVisible();
   }

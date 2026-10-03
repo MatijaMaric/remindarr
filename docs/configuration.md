@@ -14,6 +14,16 @@ All configuration is via environment variables. Only `TMDB_API_KEY`, `BASE_URL`,
 | `LOG_LEVEL`          | `info`           | Log verbosity: `debug`, `info`, `warn`, `error`                                             |
 | `CORS_ORIGIN`        | _(empty)_        | Comma-separated allowed CORS origins                                                        |
 
+## Rate limits and proxies
+
+Bun uses the network peer for rate-limit identity. `TRUSTED_PROXIES` defaults to empty; set exact comma-separated proxy IPs only when your reverse proxy overwrites `X-Forwarded-For` or appends the actual client address. Chains are traversed from the trusted peer toward the first untrusted address. Workers use the platform's `CF-Connecting-IP` and atomic D1 counters. Both runtimes return HTTP 503 with `Retry-After` when enforcement is unavailable.
+
+| Variable                       | Default   | Description                                 |
+| ------------------------------ | --------- | ------------------------------------------- |
+| `TRUSTED_PROXIES`              | _(empty)_ | Trusted Bun proxy IPs, e.g. `127.0.0.1,::1` |
+| `GLOBAL_RATE_LIMIT_PER_MINUTE` | `300`     | Aggregate API requests per client           |
+| `AUTH_RATE_LIMIT_PER_MINUTE`   | `20`      | Authentication requests per client          |
+
 ## TMDB
 
 | Variable                  | Default   | Description                                                              |

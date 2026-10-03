@@ -1,3 +1,4 @@
+import { updateProfilePublic } from "../db/repository/profile";
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
@@ -287,7 +288,8 @@ describe("GET /ratings/:titleId", () => {
     expect(body.friends_ratings).toHaveLength(0);
   });
 
-  it("returns friends ratings from followed users", async () => {
+  it("returns friends ratings from followed public profiles", async () => {
+    await updateProfilePublic(userBId, "public");
     // Alice follows Bob
     await follow(userAId, userBId);
 

@@ -1,6 +1,7 @@
 # Review #1218 implementation and evidence
 
-Review date: 2026-10-03. Baseline: `089e845`. Tests use isolated synthetic accounts,
+Review date: 2026-10-03. Initial baseline: `089e845`; integrated master `6ce29d3`.
+Tests use isolated synthetic accounts,
 databases, an RSA-signing test IdP and loopback HTTP receivers. No production
 accounts, notification destinations or Plex libraries are used.
 
@@ -20,6 +21,21 @@ accounts, notification destinations or Plex libraries are used.
 
 ## Validation scope and remaining manual work
 
+- Final merged `bun run check` passed: 2,596 server tests, 1,394 frontend tests,
+  one toolchain test, formatting, TypeScript, lint, production build, Wrangler
+  dry run and all bundle limits. Frozen installation passed.
+- Chromium and Firefox each passed all six production journeys. OIDC and
+  virtual-passkey login passed all three Chromium checks against the real auth
+  backend. The test fixture trusts forwarded synthetic client addresses only
+  from loopback, so unrelated test journeys do not share rate-limit buckets.
+- WebKit 1.63.0 on Windows did not pass the production-worker suite: navigation
+  stalled after signup. A direct signup/search/track comparison with service
+  workers blocked passed, which is not an offline/PWA pass. Related upstream
+  reports cover [worker/navigation hangs](https://github.com/microsoft/playwright/issues/42273)
+  and [offline emulation rejecting worker navigation](https://github.com/microsoft/playwright/issues/42775);
+  the exact cause here is not confirmed. The WebKit project remains enabled in
+  CI without a skip or a passing-results claim. Keep #1172 open pending a passing
+  supported-runtime run and native Safari checks.
 - Production browser checks: core journey, durable offline browser restart,
   expired-session denial, recovery/export guidance at 200% CSS text size and a
   500-title library at 390px width. Timing is attached as `watchlist-render.json`.
@@ -80,4 +96,7 @@ bunx playwright test e2e/oidc.spec.ts e2e/passkey.spec.ts --project=chromium --w
 The new offline store/UI and dependency upgrades produce approximately 32 KiB
 gzip for the frontend entry and 1.62 MiB gzip for the Worker. Explicit budgets
 are now 34,000 and 1,750,000 bytes respectively; the CSS budget remains 30,000.
-The Worker was bundled with Wrangler's dry run; nothing was deployed.
+Local Worker validation used Wrangler's dry run. No deployment command was run
+manually. The repository's Cloudflare Git integration subsequently reported an
+automatic deployment of PR commit `7cd285fe`; that report is not evidence of
+deployed delivery or real-service validation.

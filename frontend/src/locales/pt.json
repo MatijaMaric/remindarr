@@ -397,6 +397,7 @@
     "all": "Todos",
     "movies": "Filmes",
     "shows": "Séries",
+    "people": "Pessoas",
     "allGenres": "Todos os gêneros",
     "allPlatforms": "Todas as plataformas",
     "allLanguages": "Todos os idiomas",
@@ -892,7 +893,10 @@
     "breadcrumb": "Trilha de navegação",
     "buildInfo": "Remindarr · auto-hospedado",
     "sections": "Seções",
-    "sectionsLabel": "Seções das configurações"
+    "sectionsLabel": "Seções das configurações",
+    "saving": "A guardar...",
+    "unsaved": "Alterações não guardadas",
+    "unsavedError": "As alterações não foram guardadas. Tente novamente."
   },
   "notifications": {
     "all": "Todos os episódios",
