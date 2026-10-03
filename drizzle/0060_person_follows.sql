@@ -1,4 +1,4 @@
-CREATE TABLE `person_follows` (
+CREATE TABLE IF NOT EXISTS `person_follows` (
 	`user_id` text NOT NULL REFERENCES `users`(`id`) ON DELETE CASCADE,
 	`person_id` integer NOT NULL,
 	`name` text NOT NULL,
@@ -8,9 +8,9 @@ CREATE TABLE `person_follows` (
 	PRIMARY KEY (`user_id`, `person_id`)
 );
 --> statement-breakpoint
-CREATE INDEX `idx_person_follows_person` ON `person_follows` (`person_id`);
+CREATE INDEX IF NOT EXISTS `idx_person_follows_person` ON `person_follows` (`person_id`);
 --> statement-breakpoint
-CREATE TABLE `person_credit_alerts` (
+CREATE TABLE IF NOT EXISTS `person_credit_alerts` (
 	`notifier_id` text NOT NULL REFERENCES `notifiers`(`id`) ON DELETE CASCADE,
 	`person_id` integer NOT NULL,
 	`credit_key` text NOT NULL,
