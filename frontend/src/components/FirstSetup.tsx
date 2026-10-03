@@ -31,39 +31,31 @@ function SetupSteps({
       return true;
     }
   });
-  const providers = useQuery({
-    queryKey: ["subscription-providers"],
-    queryFn: ({ signal }) => api.getProviders(signal),
-    enabled: open,
-  });
   const tracked = useQuery({
     queryKey: ["tracked"],
     queryFn: ({ signal }) => api.getTrackedTitles(signal),
     enabled: open,
   });
+  const showGuide = open && tracked.data?.titles.length === 0;
+  const providers = useQuery({
+    queryKey: ["subscription-providers"],
+    queryFn: ({ signal }) => api.getProviders(signal),
+    enabled: showGuide,
+  });
   const notifiers = useQuery({
     queryKey: ["notifiers"],
     queryFn: ({ signal }) => api.getNotifiers(signal),
-    enabled: open,
+    enabled: showGuide,
   });
-  function toggle(value: boolean) {
-    setOpen(value);
+  function dismiss() {
+    setOpen(false);
     try {
-      localStorage.setItem(storageKey, value ? "0" : "1");
+      localStorage.setItem(storageKey, "1");
     } catch {
       /* The guide remains usable without storage. */
     }
   }
-  if (!open)
-    return (
-      <button
-        type="button"
-        onClick={() => toggle(true)}
-        className="text-sm underline"
-      >
-        Resume setup guide
-      </button>
-    );
+  if (!showGuide) return null;
   return (
     <section
       aria-label="First reminder setup"
@@ -127,11 +119,7 @@ function SetupSteps({
           Retry setup status
         </button>
       )}
-      <button
-        type="button"
-        onClick={() => toggle(false)}
-        className="text-sm underline"
-      >
+      <button type="button" onClick={dismiss} className="text-sm underline">
         Skip for now
       </button>
     </section>

@@ -27,7 +27,31 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it("can skip and resume, reports configuration without claiming verified delivery", async () => {
+it("does not flash or show onboarding for an existing library", async () => {
+  let resolveLibrary!: (data: { titles: { id: number }[] }) => void;
+  apiMock.getTrackedTitles.mockImplementation(
+    () => new Promise((resolve) => (resolveLibrary = resolve)),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const { container } = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <FirstSetup />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(container.innerHTML).toBe("");
+  resolveLibrary({ titles: [{ id: 1 }] });
+  await waitFor(() =>
+    expect(client.getQueryState(["tracked"])?.status).toBe("success"),
+  );
+  expect(container.innerHTML).toBe("");
+  expect(apiMock.getProviders).not.toHaveBeenCalled();
+  expect(apiMock.getNotifiers).not.toHaveBeenCalled();
+});
+it("dismisses completely across remounts, reports configuration without claiming verified delivery", async () => {
   apiMock.getProviders.mockResolvedValue({ providers: [], country: "HR" });
   apiMock.getTrackedTitles.mockResolvedValue({ titles: [] });
   apiMock.getNotifiers.mockResolvedValue({ notifiers: [{ enabled: true }] });
@@ -54,13 +78,12 @@ it("can skip and resume, reports configuration without claiming verified deliver
   ).toBe("/settings?tab=notifications");
   expect(apiMock.testNotifier).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Skip for now" }));
+  expect(first.container.innerHTML).toBe("");
+  expect(localStorage.getItem("setup-dismissed:setup-user")).toBe("1");
   first.unmount();
-  render(tree());
+  const second = render(tree());
   expect(
     screen.queryByRole("region", { name: "First reminder setup" }),
   ).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Resume setup guide" }));
-  expect(
-    screen.getByRole("region", { name: "First reminder setup" }),
-  ).toBeDefined();
+  expect(second.container.innerHTML).toBe("");
 });
