@@ -7,6 +7,7 @@ export {
   getOffersWithPlex,
   getTitlesNeedingSaEnrichment,
 } from "./offers";
+export { getOwnedFormats, setOwnedFormats } from "./owned-media";
 export {
   upsertPlexLibraryItems,
   deleteStaleLibraryItems,
@@ -28,6 +29,7 @@ export {
   getGenres,
   getLanguages,
   invalidateFilterCaches,
+  OWNED_PROVIDER_FILTER,
 } from "./titles";
 export type { TitleFilters, MonthFilters } from "./titles";
 

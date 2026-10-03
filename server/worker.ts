@@ -89,6 +89,7 @@ import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
 import episodeCommentsRoutes from "./routes/episode-comments";
+import ownedRoutes from "./routes/owned";
 import recommendationsRoutes from "./routes/recommendations";
 import suggestionsRoutes from "./routes/suggestions";
 import invitationsRoutes from "./routes/invitations";
@@ -509,6 +510,10 @@ function createApp(env: Env) {
   app.use("/api/episode-comments/*", episodeCommentsRateLimiter, requireAuth);
   app.use("/api/episode-comments", episodeCommentsRateLimiter, requireAuth);
   app.route("/api/episode-comments", episodeCommentsRoutes);
+
+  // Owned copies (physical/digital media) — auth required.
+  app.use("/api/owned/*", episodeCommentsRateLimiter, requireAuth);
+  app.route("/api/owned", ownedRoutes);
 
   // Recommendations routes (social broadcast)
   app.use("/api/recommendations/*", requireAuth);

@@ -22,6 +22,7 @@ import {
   tracked,
   titleGenres,
   watchedTitles,
+  ownedMedia,
 } from "../schema";
 import type {
   ParsedTitle,
@@ -32,6 +33,7 @@ import type {
 import { extractProviders } from "../../tmdb/parser";
 import { traceDbQuery } from "../../tracing";
 import { getOffersForTitles, getOffersWithPlex } from "./offers";
+import { getOwnedFormats } from "./owned-media";
 import { toCanonicalGenre } from "../../genres";
 import { canonicalProviderId } from "../../streaming-availability/provider-map";
 import type { DrizzleDb } from "../../platform/types";
@@ -485,9 +487,10 @@ export async function getTitleById(titleId: string, userId?: string) {
 
     if (!row) return null;
 
-    const [genreMap, offersMap] = await Promise.all([
+    const [genreMap, offersMap, ownedFormats] = await Promise.all([
       getGenresForTitles([row.id]),
       getOffersWithPlex([row.id], userId),
+      userId ? getOwnedFormats(userId, row.id) : [],
     ]);
     return {
       ...row,
@@ -496,6 +499,7 @@ export async function getTitleById(titleId: string, userId?: string) {
       is_public: row.is_public != null ? Boolean(row.is_public) : undefined,
       is_watched: Boolean(row.is_watched),
       offers: offersMap.get(row.id) ?? [],
+      owned_formats: ownedFormats,
     };
   });
 }
@@ -531,6 +535,9 @@ export async function getTitleLabels(
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
+
+/** Provider-filter value matching titles the user owns a copy of. */
+export const OWNED_PROVIDER_FILTER = "owned";
 
 export interface TitleFilters {
   daysBack?: number;
@@ -575,6 +582,20 @@ export async function getRecentTitles(
     }
     if (filterProviders && filterProviders.length > 0) {
       const providerConditions = filterProviders.map((p) => {
+        if (p === OWNED_PROVIDER_FILTER) {
+          if (!userId) return sql`0`;
+          return exists(
+            db
+              .select({ one: sql`1` })
+              .from(ownedMedia)
+              .where(
+                and(
+                  eq(ownedMedia.titleId, titles.id),
+                  eq(ownedMedia.userId, userId),
+                ),
+              ),
+          );
+        }
         const providerId = Number(p);
         if (!isNaN(providerId)) {
           return exists(

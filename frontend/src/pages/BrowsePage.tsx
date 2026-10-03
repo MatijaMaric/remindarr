@@ -593,6 +593,7 @@ export default function BrowsePage() {
                     onClearFilters={clearFilters}
                     hideTracked={hideTracked}
                     onHideTrackedChange={setHideTracked}
+                    showOwned={!!user}
                   />
                 </Card>
               ) : (
@@ -700,21 +701,24 @@ export default function BrowsePage() {
                 {g} ×
               </button>
             ))}
-            {provider.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setProvider(provider.filter((v) => v !== p))}
-                aria-label={t("browse.removeFilter", {
-                  name:
-                    filterProviders.find((fp) => String(fp.id) === p)?.name ??
-                    p,
-                })}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
-              >
-                {filterProviders.find((fp) => String(fp.id) === p)?.name ?? p} ×
-              </button>
-            ))}
+            {provider.map((p) => {
+              const name =
+                p === "owned"
+                  ? t("owned.filterOption")
+                  : (filterProviders.find((fp) => String(fp.id) === p)?.name ??
+                    p);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProvider(provider.filter((v) => v !== p))}
+                  aria-label={t("browse.removeFilter", { name })}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                >
+                  {name} ×
+                </button>
+              );
+            })}
             {language.map((l) => (
               <button
                 key={l}

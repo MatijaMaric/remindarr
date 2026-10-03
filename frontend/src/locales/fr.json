@@ -1170,5 +1170,21 @@
       "minutes": "{{m}} min",
       "hoursMinutes": "{{h}} h {{m}} min"
     }
+  },
+  "owned": {
+    "row": "Possédé",
+    "add": "Je le possède",
+    "edit": "Modifier",
+    "pickerLabel": "Formats que vous possédez",
+    "filterOption": "Mes possessions",
+    "saveError": "Impossible de mettre à jour vos exemplaires",
+    "formats": {
+      "dvd": "DVD",
+      "bluray": "Blu-ray",
+      "uhd_bluray": "Blu-ray 4K UHD",
+      "digital": "Numérique",
+      "vhs": "VHS",
+      "other": "Autre"
+    }
   }
 }

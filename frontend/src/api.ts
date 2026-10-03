@@ -45,6 +45,7 @@ import type {
   StreakData,
   CollectionDetails,
   TrendingSnapshot,
+  OwnedFormat,
 } from "./types";
 import { ApiError } from "./lib/api-error";
 import { identityRequest } from "./lib/identity";
@@ -353,6 +354,16 @@ export async function unhideActivityEvent(
       method: "DELETE",
     },
   );
+}
+
+export async function setOwnedFormats(
+  titleId: string,
+  formats: OwnedFormat[],
+): Promise<{ formats: OwnedFormat[] }> {
+  return fetchJson(`/owned/${encodeURIComponent(titleId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ formats }),
+  });
 }
 
 export async function pinTitle(titleId: string): Promise<{ pinned: boolean }> {

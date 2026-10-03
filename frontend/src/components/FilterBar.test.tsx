@@ -137,6 +137,23 @@ describe("FilterBar", () => {
     expect(screen.getByRole("button", { name: "All Platforms" })).toBeDefined();
   });
 
+  it("offers an 'Owned by me' provider option only when showOwned is set", () => {
+    const onProviderChange = mock(() => {});
+    const props = {
+      ...defaultProps,
+      providers: [{ id: 8, name: "Netflix" }],
+      provider: [] as string[],
+      onProviderChange,
+    };
+    const { rerender } = render(<FilterBar {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "All Platforms" }));
+    expect(screen.queryByText("Owned by me")).toBeNull();
+
+    rerender(<FilterBar {...props} showOwned />);
+    fireEvent.click(screen.getByText("Owned by me"));
+    expect(onProviderChange).toHaveBeenCalledWith(["owned"]);
+  });
+
   it("renders Hide Tracked button when handler provided", () => {
     const onHideTrackedChange = mock(() => {});
     render(
