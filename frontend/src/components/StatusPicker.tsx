@@ -89,7 +89,7 @@ export default function StatusPicker({
         aria-expanded={open}
         aria-disabled={statusMutation.isPending}
         aria-busy={statusMutation.isPending}
-        className={`w-full text-left text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 transition-colors flex items-center gap-1.5 ${activeOption.color}`}
+        className={`w-full text-left text-xs min-h-10 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 transition-colors flex items-center gap-1.5 ${activeOption.color}`}
       >
         <span className="flex-1 truncate">{t(activeOption.labelKey)}</span>
         <svg

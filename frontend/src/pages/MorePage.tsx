@@ -91,7 +91,7 @@ function MoreRow({
 export default function MorePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile("(max-width: 1279px)");
 
   if (!user) return null;
   if (!isMobile) return <Navigate to="/reels" replace />;

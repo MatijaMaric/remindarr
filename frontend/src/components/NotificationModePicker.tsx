@@ -105,7 +105,10 @@ export default function NotificationModePicker({
   const activeMode = mode ?? "all";
 
   return (
-    <div className="flex gap-1" aria-label={t("notifications.label")}>
+    <div
+      className="flex flex-wrap gap-1 [&_button]:min-h-10 [&_button]:min-w-8"
+      aria-label={t("notifications.label")}
+    >
       {MODES.map(({ value, icon: Icon, labelKey }) => {
         const isActive =
           (activeMode === value && mode !== null) ||

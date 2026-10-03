@@ -120,6 +120,7 @@ app.get("/providers", async (c) => {
   return ok(c, {
     providers: dbProviders,
     regionProviderIds: Array.from(regionIds),
+    country: CONFIG.COUNTRY,
   });
 });
 

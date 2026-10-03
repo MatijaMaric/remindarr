@@ -59,7 +59,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       <ShowHero title={title} tmdb={tmdb} country={country} />
 
       {/* Metadata strip — mobile only; desktop ShowHero already renders these fields inline */}
-      <div className="sm:hidden dark-section -mx-4 px-6 py-5 flex flex-wrap gap-x-8 gap-y-3 border-b border-white/[0.06]">
+      <div className="sm:hidden bg-zinc-900 -mx-4 px-6 py-5 flex flex-wrap gap-x-8 gap-y-3 border-b border-white/[0.06]">
         {[
           { label: "TYPE", value: "TV Show" },
           tmdb?.status ? { label: "STATUS", value: tmdb.status } : null,
@@ -213,6 +213,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {/* Streaming Availability */}
       <SectionErrorBoundary label="streaming providers">
         <ProvidersSection
+          country={country}
           offers={title.offers}
           watchProviders={watchProviders}
           watchLink={watchProviders?.link}

@@ -26,6 +26,7 @@
     "test:server": "bun test server/",
     "test:frontend": "cd frontend && bun test --isolate src/",
     "test:e2e": "playwright test",
+    "test:e2e:remediation": "bun run build && playwright test -c playwright.remediation.config.ts",
     "ux:capture": "bun run build && playwright test -c playwright.ux.config.ts",
     "lighthouse:ci": "bun run build && bun run scripts/lighthouse-ci.ts",
     "eval": "bun test evals/",

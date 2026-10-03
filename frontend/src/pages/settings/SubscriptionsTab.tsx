@@ -5,6 +5,7 @@ import * as api from "../../api";
 import type { Provider } from "../../types";
 import { SButton, SCard, SSwitch } from "../../components/settings/kit";
 import { useAuth } from "../../context/AuthContext";
+import StreamingRegion from "../../components/StreamingRegion";
 
 export default function SubscriptionsTab() {
   const { t } = useTranslation();
@@ -121,6 +122,7 @@ export default function SubscriptionsTab() {
         title={t("settings.subscriptions.title")}
         subtitle={t("settings.subscriptions.subtitle")}
       >
+        <StreamingRegion country={data?.country} help />
         {isFetching && (
           <p role="status" className="text-sm text-zinc-400 mb-3">
             {t("settings.subscriptions.loading")}

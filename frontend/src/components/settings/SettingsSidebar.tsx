@@ -25,7 +25,7 @@ export function SettingsSidebar({
       <nav
         role="tablist"
         aria-label={t("settings.sectionsLabel")}
-        className="flex sm:hidden gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] min-w-0 w-full"
+        className="flex lg:hidden gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] min-w-0 w-full"
       >
         {tabs.map((tab) => {
           const isActive = tab.value === active;
@@ -49,7 +49,7 @@ export function SettingsSidebar({
       </nav>
 
       {/* Desktop: sidebar */}
-      <aside className="hidden sm:block">
+      <aside className="hidden lg:block">
         <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 px-3.5 pb-2.5">
           {t("settings.sections")}
         </div>

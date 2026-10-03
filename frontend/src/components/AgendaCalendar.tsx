@@ -951,10 +951,11 @@ function AgendaCalendarImpl({
                                         showEps.length > 1 ? showEps.length : 1
                                       }
                                     >
-                                      <div className="bg-zinc-900 rounded-xl overflow-hidden">
+                                      <div className="bg-zinc-900 rounded-xl overflow-hidden flex sm:block [&_button]:min-h-10">
                                         <Link
                                           to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                          className="block relative"
+                                          aria-label={`${ep.show_title} ${formatEpisodeCode(ep)}`}
+                                          className="block relative w-16 shrink-0 sm:w-auto"
                                         >
                                           {imgUrl ? (
                                             <img
@@ -962,20 +963,20 @@ function AgendaCalendarImpl({
                                               alt={
                                                 ep.name || formatEpisodeCode(ep)
                                               }
-                                              className="w-full aspect-video object-cover"
+                                              className="w-full h-full object-cover sm:aspect-video sm:h-auto"
                                               loading="lazy"
                                             />
                                           ) : (
-                                            <div className="w-full aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
+                                            <div className="w-full h-full sm:aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
                                           )}
                                         </Link>
                                         <div
                                           className={
                                             density === "compact"
-                                              ? "p-1.5"
+                                              ? "p-2 flex-1 min-w-0"
                                               : density === "spacious"
-                                                ? "p-4"
-                                                : "p-3"
+                                                ? "p-4 flex-1 min-w-0"
+                                                : "p-3 flex-1 min-w-0"
                                           }
                                         >
                                           <div className="flex items-center justify-between gap-2">
@@ -983,7 +984,7 @@ function AgendaCalendarImpl({
                                               to={`/title/${ep.title_id}`}
                                               className="hover:text-amber-400 transition-colors min-w-0"
                                             >
-                                              <h3 className="font-semibold text-white text-sm truncate">
+                                              <h3 className="font-semibold text-white text-sm break-words">
                                                 {ep.show_title}
                                               </h3>
                                             </Link>

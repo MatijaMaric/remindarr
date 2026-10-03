@@ -6,6 +6,7 @@ import {
 } from "../WatchButton";
 import { getProviderColor } from "../../data/providerColors";
 import { Section } from "./Section";
+import StreamingRegion from "../StreamingRegion";
 import { logoUrl } from "../../lib/tmdb-images";
 import { MONETIZATION_ORDER, type MonetizationType } from "./utils";
 import OwnedMediaRow from "./OwnedMediaRow";
@@ -123,6 +124,7 @@ export function groupOffersByType(offers: Title["offers"]) {
 }
 
 export interface ProvidersSectionProps {
+  country?: string;
   offers: Title["offers"];
   watchProviders: WatchProviderCountry | undefined;
   watchLink: string | undefined;
@@ -135,6 +137,7 @@ export default function ProvidersSection({
   watchProviders,
   watchLink,
   owned,
+  country,
 }: ProvidersSectionProps) {
   const offerGroups = groupOffersByType(offers);
   const hasOffers = offerGroups.length > 0;
@@ -154,6 +157,7 @@ export default function ProvidersSection({
 
   return (
     <Section title="Where to Watch">
+      <StreamingRegion country={country} />
       <div className="flex flex-col gap-3 max-w-4xl">
         {owned && (
           <OwnedMediaRow titleId={owned.titleId} formats={owned.formats} />

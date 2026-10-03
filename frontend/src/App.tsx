@@ -127,9 +127,9 @@ export default function App() {
       {/* Hide top nav on reels page (mobile) and kiosk page (all sizes) */}
       <nav
         aria-label="Main navigation"
-        className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isKioskPage ? "hidden" : isReelsPage ? "hidden sm:block" : ""}`}
+        className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isKioskPage ? "hidden" : isReelsPage ? "hidden xl:block" : ""}`}
       >
-        <div className="max-w-[1440px] mx-auto px-4 flex items-center gap-8 h-14">
+        <div className="max-w-[1440px] mx-auto px-4 flex items-center gap-4 2xl:gap-8 h-14">
           {/* Logo */}
           <Link
             to="/"
@@ -143,7 +143,7 @@ export default function App() {
             </span>
           </Link>
           {/* Desktop nav links */}
-          <div className="hidden sm:flex items-center gap-6">
+          <div className="hidden xl:flex items-center gap-4">
             <NavLink
               to="/"
               end
@@ -186,7 +186,7 @@ export default function App() {
             type="button"
             aria-keyshortcuts="/"
             onClick={() => focusOrNavigateSearch(navigate, location.pathname)}
-            className="hidden sm:flex items-center gap-2 w-[260px] bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+            className="hidden xl:flex items-center gap-2 w-[220px] shrink-0 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
           >
             <span
               aria-hidden="true"
@@ -205,7 +205,7 @@ export default function App() {
             </span>
           </button>
           {/* Desktop user section */}
-          <div className="hidden sm:flex items-center gap-3">
+          <div className="hidden xl:flex items-center gap-3 shrink-0">
             {loading ? null : user ? (
               <>
                 <Link
@@ -251,7 +251,7 @@ export default function App() {
         className={
           isReelsPage || isKioskPage
             ? ""
-            : "max-w-[1440px] mx-auto px-4 py-6 pb-20 sm:pb-6"
+            : "max-w-[1440px] mx-auto px-4 py-6 pb-28 xl:pb-6"
         }
       >
         {user && !isKioskPage && <NotificationPrompt />}
@@ -558,7 +558,7 @@ export default function App() {
         </Suspense>
       </main>
       <footer
-        className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden sm:block"}`}
+        className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden xl:block"}`}
       >
         <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-400">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>

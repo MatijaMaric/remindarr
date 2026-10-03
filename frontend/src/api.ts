@@ -443,9 +443,11 @@ export async function resolveImdb(
   });
 }
 
-export async function getProviders(
-  signal?: AbortSignal,
-): Promise<{ providers: Provider[]; regionProviderIds: number[] }> {
+export async function getProviders(signal?: AbortSignal): Promise<{
+  providers: Provider[];
+  regionProviderIds: number[];
+  country?: string;
+}> {
   return fetchJson("/titles/providers", { signal });
 }
 

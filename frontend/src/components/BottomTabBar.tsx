@@ -40,9 +40,9 @@ export default function BottomTabBar() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed left-3 right-3 bottom-[18px] z-50 sm:hidden"
+      className="fixed left-3 right-3 bottom-[calc(18px+env(safe-area-inset-bottom,0px))] z-50 xl:hidden"
     >
-      <div className="flex items-center bg-zinc-900/[0.72] backdrop-blur-xl backdrop-saturate-150 border border-white/[0.08] rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] px-1.5">
+      <div className="flex items-center bg-zinc-900 backdrop-blur-xl backdrop-saturate-150 border border-white/[0.08] rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] px-1.5">
         {user ? (
           <>
             <NavLink
@@ -51,7 +51,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Home size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] font-semibold tracking-[0.02em]">
+              <span className="text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.home")}
               </span>
             </NavLink>
@@ -61,7 +61,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Search size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] font-semibold tracking-[0.02em]">
+              <span className="text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.browse")}
               </span>
             </NavLink>
@@ -71,7 +71,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <CalendarDays size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] font-semibold tracking-[0.02em]">
+              <span className="text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.calendar")}
               </span>
             </NavLink>
@@ -81,7 +81,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Bookmark size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] font-semibold tracking-[0.02em]">
+              <span className="text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.tracked")}
               </span>
             </NavLink>
@@ -105,7 +105,7 @@ export default function BottomTabBar() {
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-semibold tracking-[0.02em]">
+              <span className="text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.more")}
               </span>
             </NavLink>
@@ -117,7 +117,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Search size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] font-semibold tracking-[0.02em]">
+              <span className="text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.browse")}
               </span>
             </NavLink>
@@ -127,7 +127,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <LogIn size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-[10px] font-semibold tracking-[0.02em]">
+              <span className="text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.signIn")}
               </span>
             </NavLink>

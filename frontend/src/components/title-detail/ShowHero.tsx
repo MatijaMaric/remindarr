@@ -70,10 +70,10 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
   if (isMobile) {
     return (
       <>
-        {/* Mobile: 460px full-bleed hero with bottom-anchored poster+title */}
+        {/* Flowing content can grow for long titles and enlarged text. */}
         <div
-          className="relative -mx-4 -mt-6 overflow-hidden"
-          style={{ height: 460 }}
+          className="dark-section relative -mx-4 -mt-6 overflow-hidden flex items-end bg-[#09090b]"
+          style={{ minHeight: "min(55svh, 460px)" }}
         >
           {backdropUrl ? (
             <img
@@ -88,12 +88,12 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(180deg, rgba(9,9,11,0.3) 0%, rgba(9,9,11,0.1) 35%, #09090b 95%)",
+                "linear-gradient(180deg, rgba(9,9,11,0.3), #09090b 90%)",
             }}
           />
           {/* Bottom-anchored poster + title row */}
-          <div className="absolute bottom-0 left-0 right-0 flex items-end gap-4 px-4 pb-5">
-            <div className="w-[108px] shrink-0">
+          <div className="relative w-full flex items-end gap-3 px-4 pb-5 pt-10 bg-gradient-to-t from-[#09090b] via-[#09090b]/90 to-transparent">
+            <div className="w-[24%] max-w-[108px] shrink-0">
               {posterUrl ? (
                 <img
                   src={posterUrl}
@@ -115,7 +115,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
                   ? ` · ${title.offers[0].provider_name}`
                   : ""}
               </div>
-              <h1 className="text-[26px] leading-[1.05] font-bold text-white line-clamp-3">
+              <h1 className="text-[1.625rem] leading-tight font-bold text-white break-words">
                 {displayTitle}
               </h1>
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -176,7 +176,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
 
   return (
     <div
-      className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 sm:px-8 sm:pt-10 sm:pb-10 lg:px-16 lg:pt-14 lg:pb-12 dark-section"
+      className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 sm:px-8 sm:pt-10 sm:pb-10 lg:px-16 lg:pt-14 lg:pb-12 dark-section bg-[#030712]"
       style={
         backdropUrl
           ? {
@@ -204,7 +204,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               loading="eager"
             />
           ) : (
-            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">
+            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 border border-white/[0.08]">
               {t("titleCard.noPoster")}
             </div>
           )}

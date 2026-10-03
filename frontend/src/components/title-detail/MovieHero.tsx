@@ -42,7 +42,7 @@ export default function MovieHero({
 
   return (
     <div
-      className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 sm:px-8 sm:pt-10 sm:pb-10 lg:px-16 lg:pt-14 lg:pb-12 dark-section"
+      className="relative -mx-4 -mt-6 px-4 pt-6 pb-8 sm:px-8 sm:pt-10 sm:pb-10 lg:px-16 lg:pt-14 lg:pb-12 dark-section bg-[#030712]"
       style={
         backdropUrl
           ? {
@@ -71,7 +71,7 @@ export default function MovieHero({
               loading="eager"
             />
           ) : (
-            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 border border-white/[0.08]">
+            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 border border-white/[0.08]">
               {t("titleCard.noPoster")}
             </div>
           )}

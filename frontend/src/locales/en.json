@@ -238,6 +238,16 @@
       "confirmDescription_one": "This will remove the selected title from your watchlist. This cannot be undone.",
       "confirmDescription_other": "This will remove all {{count}} selected titles from your watchlist. This cannot be undone.",
       "untrackAll": "Untrack all"
+    },
+    "filters": {
+      "heading": "Filter library",
+      "search": "Search your library",
+      "tag": "Filter by tag",
+      "provider": "Filter by provider",
+      "allTags": "All tags",
+      "allProviders": "All providers",
+      "reset": "Clear filters",
+      "noMatches": "No titles match these filters. Try another search or clear filters."
     }
   },
   "status": {
@@ -1157,5 +1167,11 @@
       "vhs": "VHS",
       "other": "Other"
     }
+  },
+  "streamingRegion": {
+    "label": "Streaming region: {{country}}",
+    "profile": "Profile country is biographical. It does not change streaming availability.",
+    "help": "Availability uses the instance streaming region. An administrator can change TMDB_COUNTRY in the server configuration.",
+    "configuration": "Streaming region configuration"
   }
 }
