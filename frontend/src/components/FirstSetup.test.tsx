@@ -1,4 +1,4 @@
-import { afterEach, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, expect, it, spyOn } from "bun:test";
 import {
   cleanup,
   fireEvent,
@@ -9,17 +9,20 @@ import {
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
+import * as auth from "../context/AuthContext";
 import "../i18n";
 
-mock.module("../context/AuthContext", () => ({
-  useAuth: () => ({
+const { default: FirstSetup } = await import("./FirstSetup");
+let authSpy: ReturnType<typeof spyOn>;
+beforeEach(() => {
+  authSpy = spyOn(auth, "useAuth").mockReturnValue({
     user: { id: "setup-user" },
     subscriptions: { providerIds: [8] },
-  }),
-}));
-const { default: FirstSetup } = await import("./FirstSetup");
+  } as ReturnType<typeof auth.useAuth>);
+});
 afterEach(() => {
   cleanup();
+  authSpy.mockRestore();
   resetApiMock();
   localStorage.clear();
 });
