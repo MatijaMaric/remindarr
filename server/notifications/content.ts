@@ -3,6 +3,10 @@ import {
   getTrackedMoviesByReleaseDate,
   getTrackedMoviesByReleaseDateRange,
 } from "../db/repository";
+import {
+  listPersonCreditAlerts,
+  type PersonCreditAlert,
+} from "../db/repository/person-follows";
 import type {
   NotificationContent,
   NotificationEpisode,
@@ -138,4 +142,30 @@ export async function buildWeeklyDigestContent(
   const movies = mapMovies(rawMovies, now);
 
   return { episodes, movies, date: startDate };
+}
+
+/**
+ * Adds the notifier's pending New credits to a copy of the content (the
+ * content object is cached per user, so it must not be mutated). Returns the
+ * pending rows so the caller can delete them after a successful send.
+ */
+export async function attachPersonCredits(
+  notifierId: string,
+  content: NotificationContent,
+): Promise<{ content: NotificationContent; pending: PersonCreditAlert[] }> {
+  const pending = await listPersonCreditAlerts(notifierId);
+  if (pending.length === 0) return { content, pending };
+  return {
+    content: {
+      ...content,
+      personCredits: pending.map((a) => ({
+        personName: a.personName,
+        title: a.title,
+        role: a.role,
+        releaseDate: a.releaseDate,
+        posterUrl: a.posterPath,
+      })),
+    },
+    pending,
+  };
 }

@@ -404,6 +404,10 @@ import {
   renderMetrics,
 } from "../metrics";
 import Sentry from "../sentry";
+import {
+  insertPersonCreditAlerts,
+  listPersonCreditAlerts,
+} from "../db/repository/person-follows";
 
 // Suppress Sentry withMonitor calls from worker.ts
 const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(((
@@ -439,6 +443,81 @@ const fakeContent = {
   movies: [],
   date: "2026-04-30",
 };
+
+describe("New credits in Bun digests", () => {
+  const credit = {
+    personId: 31,
+    creditKey: "movie:2",
+    personName: "Tom Hanks",
+    title: "Upcoming",
+    role: null,
+    releaseDate: null,
+    posterPath: null,
+  };
+  let userId: string;
+
+  beforeEach(async () => {
+    setupTestDb();
+    await registerNotificationJobs();
+    userId = await createUser("creditsuser", "hash");
+    buildContentSpy.mockResolvedValue({ episodes: [], movies: [], date: "x" });
+    recordDeliverySpy.mockResolvedValue(undefined);
+    markNotifierSentSpy.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    getProviderSpy.mockClear();
+    buildContentSpy.mockClear();
+  });
+
+  async function notifierWithAlert() {
+    const id = await createNotifier(
+      userId,
+      "discord",
+      "Credits",
+      {},
+      nowUtc().time,
+      "UTC",
+    );
+    await insertPersonCreditAlerts([id], [credit]);
+    return id;
+  }
+
+  it("sends a digest with only New credits and clears them", async () => {
+    const send = mock(async () => {});
+    getProviderSpy.mockReturnValue({
+      name: "discord",
+      send,
+      validateConfig: () => ({ valid: true }),
+    });
+    const id = await notifierWithAlert();
+
+    enqueueJob("send-notifications");
+    await processJobs();
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(
+      (send.mock.calls[0] as unknown[])[1] as { personCredits: unknown[] },
+    ).toMatchObject({ personCredits: [{ title: "Upcoming" }] });
+    expect(await listPersonCreditAlerts(id)).toEqual([]);
+  });
+
+  it("keeps New credits queued when the send fails", async () => {
+    getProviderSpy.mockReturnValue({
+      name: "discord",
+      send: async () => {
+        throw new Error("down");
+      },
+      validateConfig: () => ({ valid: true }),
+    });
+    const id = await notifierWithAlert();
+
+    enqueueJob("send-notifications");
+    await processJobs();
+
+    expect(await listPersonCreditAlerts(id)).toHaveLength(1);
+  });
+});
 
 describe("notificationsSentTotal counter", () => {
   let metricsUserId: string;

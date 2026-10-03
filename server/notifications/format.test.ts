@@ -1,5 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import { formatProviderNames, groupEpisodesByShow } from "./format";
+import {
+  formatPersonCredit,
+  formatProviderNames,
+  groupEpisodesByShow,
+} from "./format";
 import type { NotificationEpisode } from "./types";
 
 function makeEpisode(
@@ -88,5 +92,31 @@ describe("formatProviderNames", () => {
         { providerName: "Apple TV+", providerIconUrl: null },
       ]),
     ).toBe("Apple TV+");
+  });
+});
+
+describe("formatPersonCredit", () => {
+  it("includes year and role when known", () => {
+    expect(
+      formatPersonCredit({
+        personName: "Greta Gerwig",
+        title: "Narnia",
+        role: "Director",
+        releaseDate: "2026-11-26",
+        posterUrl: null,
+      }),
+    ).toBe("Greta Gerwig: Narnia (2026) as Director");
+  });
+
+  it("omits year and role when unknown", () => {
+    expect(
+      formatPersonCredit({
+        personName: "Greta Gerwig",
+        title: "Untitled Project",
+        role: null,
+        releaseDate: null,
+        posterUrl: null,
+      }),
+    ).toBe("Greta Gerwig: Untitled Project");
   });
 });

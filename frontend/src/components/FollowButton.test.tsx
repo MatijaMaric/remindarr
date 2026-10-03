@@ -67,6 +67,8 @@ beforeEach(() => {
   spies = [
     spyOn(api, "followUser").mockResolvedValue(undefined as any),
     spyOn(api, "unfollowUser").mockResolvedValue(undefined as any),
+    spyOn(api, "followPerson").mockResolvedValue(undefined as any),
+    spyOn(api, "unfollowPerson").mockResolvedValue(undefined as any),
     spyOn(sonner.toast, "success").mockImplementation(() => "1" as any),
     spyOn(sonner.toast, "error").mockImplementation(() => "1" as any),
   ];
@@ -266,5 +268,38 @@ describe("FollowButton", () => {
         "Failed to update follow status",
       );
     });
+  });
+});
+
+describe("FollowButton for a person", () => {
+  it("follows a person by TMDB id", async () => {
+    render(<FollowButton personId={31} initialIsFollowing={false} />, {
+      wrapper: Wrapper,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() => expect(api.followPerson).toHaveBeenCalledWith(31));
+    expect(api.followUser).not.toHaveBeenCalled();
+  });
+
+  it("unfollows a followed person", async () => {
+    render(<FollowButton personId={31} initialIsFollowing />, {
+      wrapper: Wrapper,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Following" }));
+    await waitFor(() => expect(api.unfollowPerson).toHaveBeenCalledWith(31));
+  });
+
+  it("is hidden when signed out", () => {
+    const { container } = render(
+      <FollowButton personId={31} initialIsFollowing={false} />,
+      {
+        wrapper: ({ children }) => (
+          <Wrapper authValue={{ ...mockAuthValue, user: null as any }}>
+            {children}
+          </Wrapper>
+        ),
+      },
+    );
+    expect(container.innerHTML).toBe("");
   });
 });

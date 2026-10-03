@@ -33,12 +33,14 @@ export class WebhookProvider implements NotificationProvider {
       movies,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
     if (
       episodes.length === 0 &&
       movies.length === 0 &&
       streamingAlerts.length === 0 &&
-      achievementsEarned.length === 0
+      achievementsEarned.length === 0 &&
+      personCredits.length === 0
     )
       return;
 
@@ -75,6 +77,7 @@ export class WebhookProvider implements NotificationProvider {
       date,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
 
     const summaryLines: string[] = [];
@@ -127,6 +130,13 @@ export class WebhookProvider implements NotificationProvider {
         icon: ae.icon,
         points: ae.points,
         earnedAt: ae.earnedAt,
+      })),
+      person_credits: personCredits.map((pc) => ({
+        personName: pc.personName,
+        title: pc.title,
+        role: pc.role,
+        releaseDate: pc.releaseDate,
+        posterUrl: pc.posterUrl,
       })),
     };
   }

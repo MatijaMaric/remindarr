@@ -1,6 +1,6 @@
 import webpush from "web-push";
 import { logger } from "../logger";
-import { groupEpisodesByShow } from "./format";
+import { formatPersonCredit, groupEpisodesByShow } from "./format";
 import { getVapidKeys } from "./vapid";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
@@ -45,12 +45,14 @@ export class WebPushProvider implements NotificationProvider {
       movies,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
     if (
       episodes.length === 0 &&
       movies.length === 0 &&
       streamingAlerts.length === 0 &&
-      achievementsEarned.length === 0
+      achievementsEarned.length === 0 &&
+      personCredits.length === 0
     )
       return;
 
@@ -93,8 +95,13 @@ export class WebPushProvider implements NotificationProvider {
       movies,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
-    const totalCount = episodes.length + movies.length + streamingAlerts.length;
+    const totalCount =
+      episodes.length +
+      movies.length +
+      streamingAlerts.length +
+      personCredits.length;
 
     const lines: string[] = [];
     // Group episodes by show
@@ -130,6 +137,10 @@ export class WebPushProvider implements NotificationProvider {
       lines.push(
         `🏆 ${achievementsEarned.map((ae) => `${ae.title} +${ae.points} XP`).join(", ")}`,
       );
+    }
+
+    for (const pc of personCredits) {
+      lines.push(`⭐ ${formatPersonCredit(pc)}`);
     }
 
     const titleSuffix =

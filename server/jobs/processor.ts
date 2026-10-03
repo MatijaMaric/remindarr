@@ -26,6 +26,10 @@ import { enqueueAdhoc } from "./backend";
 import { handleReleaseReminder } from "./release-reminders";
 import { checkStreamingAlerts } from "./check-streaming-alerts";
 import { checkStreamingDepartures } from "./check-streaming-departures";
+import {
+  dispatchPersonCreditChecks,
+  handleCheckPersonCredits,
+} from "./person-credits";
 import { syncFailureTotal } from "../metrics";
 import { fetchMovieDetails, fetchTvDetails } from "../tmdb/client";
 import { parseMovieDetails, parseTvDetails } from "../tmdb/parser";
@@ -33,9 +37,11 @@ import { getCache } from "../cache";
 import { buildTrendingSnapshot, trendingCacheKey } from "../routes/trending";
 import { getProvider } from "../notifications/registry";
 import {
+  attachPersonCredits,
   buildNotificationContent,
   buildWeeklyDigestContent,
 } from "../notifications/content";
+import { deletePersonCreditAlerts } from "../db/repository/person-follows";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { getCurrentTimeInTimezone, nextRetryAt } from "./time-utils";
 import {
@@ -137,6 +143,12 @@ async function handleSyncEpisodes(): Promise<void> {
     shows: shows.length,
     dispatched,
   });
+  // ponytail: rides the daily episode-sync cron instead of its own cron entry.
+  try {
+    await dispatchPersonCreditChecks();
+  } catch (err) {
+    log.error("dispatchPersonCreditChecks failed", { err });
+  }
 }
 
 async function handleSyncTrending(): Promise<void> {
@@ -250,10 +262,9 @@ async function handleSendNotifications(): Promise<void> {
       }
       const weekly = notifier.digest_mode === "weekly";
       const eventKind = weekly ? "digest" : "episode_air";
-      const content = await getContentCached(
-        notifier.user_id,
-        notifier.todayDate,
-        weekly,
+      const { content, pending: personCredits } = await attachPersonCredits(
+        notifier.id,
+        await getContentCached(notifier.user_id, notifier.todayDate, weekly),
       );
 
       // Inject achievements if enabled for this notifier
@@ -288,7 +299,8 @@ async function handleSendNotifications(): Promise<void> {
       if (
         content.episodes.length === 0 &&
         content.movies.length === 0 &&
-        !content.achievementsEarned?.length
+        !content.achievementsEarned?.length &&
+        personCredits.length === 0
       ) {
         await markNotifierSent(notifier.id, notifier.todayDate);
         continue;
@@ -318,6 +330,7 @@ async function handleSendNotifications(): Promise<void> {
       if (achievementKeys.length > 0) {
         await markAchievementsNotified(notifier.user_id, achievementKeys);
       }
+      await deletePersonCreditAlerts(notifier.id, personCredits);
       await markNotifierSent(notifier.id, notifier.todayDate);
       log.info("Sent notification", {
         provider: notifier.provider,
@@ -701,6 +714,7 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> =
     "sync-episodes": () => handleSyncEpisodes(),
     "sync-trending": () => handleSyncTrending(),
     "sync-show-episodes": (data) => handleSyncShowEpisodes(data),
+    "check-person-credits": (data) => handleCheckPersonCredits(data),
     "send-notifications": () => handleSendNotifications(),
     "release-reminder": (data) =>
       handleReleaseReminder(data ? JSON.parse(data) : {}),

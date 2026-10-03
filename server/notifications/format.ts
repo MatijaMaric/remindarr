@@ -1,4 +1,4 @@
-import type { NotificationEpisode } from "./types";
+import type { NotificationEpisode, NotificationPersonCredit } from "./types";
 
 /**
  * Groups episodes by their show title, preserving insertion order.
@@ -30,4 +30,10 @@ export function formatProviderNames(
   }>,
 ): string {
   return [...new Set(offers.map((o) => o.providerName))].join(", ");
+}
+
+/** "Tom Hanks: The Movie (2027) as Captain" — one line per New credit. */
+export function formatPersonCredit(pc: NotificationPersonCredit): string {
+  const year = pc.releaseDate?.slice(0, 4);
+  return `${pc.personName}: ${pc.title}${year ? ` (${year})` : ""}${pc.role ? ` as ${pc.role}` : ""}`;
 }

@@ -30,6 +30,7 @@ import { zValidator } from "../lib/validator";
 import { episodeRuntime } from "../db/repository/episode-runtime";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import { getDb, episodes as episodesTable } from "../db/schema";
+import { isFollowingPerson } from "../db/repository/person-follows";
 import { sql, eq, and, asc } from "drizzle-orm";
 
 const log = logger.child({ module: "details" });
@@ -413,7 +414,11 @@ app.get("/person/:personId", zValidator("param", personIdParam), async (c) => {
 
   try {
     const person = await fetchPersonDetails(personId);
-    return ok(c, { person });
+    const user = c.get("user");
+    const is_following = user
+      ? await isFollowingPerson(user.id, personId)
+      : false;
+    return ok(c, { person, is_following });
   } catch (e) {
     log.error("TMDB person fetch failed", { personId, err: e });
     // When TMDB is unreachable (e.g. dev/test with a placeholder key), return

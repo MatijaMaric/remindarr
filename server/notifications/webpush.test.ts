@@ -160,6 +160,50 @@ describe("WebPushProvider.send", () => {
     sendSpy.mockRestore();
   });
 
+  it("sends New credits even when nothing else is due", async () => {
+    const onlyCredits: NotificationContent = {
+      episodes: [],
+      movies: [],
+      date: "2026-01-01",
+      personCredits: [
+        {
+          personName: "Tom Hanks",
+          title: "Upcoming",
+          role: "Captain",
+          releaseDate: "2099-01-01",
+          posterUrl: null,
+        },
+      ],
+    };
+    let capturedPayload: string | null = null;
+    const sendSpy = spyOn(
+      webpush.default,
+      "sendNotification",
+    ).mockImplementation(async (_sub: any, payload: any) => {
+      capturedPayload = payload;
+      return { statusCode: 201, body: "", headers: {} } as any;
+    });
+    await provider.send(validConfig, onlyCredits);
+    sendSpy.mockRestore();
+    expect(JSON.parse(capturedPayload!).body).toContain(
+      "Tom Hanks: Upcoming (2099) as Captain",
+    );
+  });
+
+  it("does NOT render a New credits section when personCredits is empty", async () => {
+    let capturedPayload: string | null = null;
+    const sendSpy = spyOn(
+      webpush.default,
+      "sendNotification",
+    ).mockImplementation(async (_sub: any, payload: any) => {
+      capturedPayload = payload;
+      return { statusCode: 201, body: "", headers: {} } as any;
+    });
+    await provider.send(validConfig, sampleContent);
+    sendSpy.mockRestore();
+    expect(JSON.parse(capturedPayload!).body).not.toContain("⭐");
+  });
+
   it("includes achievement info in body when achievementsEarned is populated", async () => {
     let capturedPayload: string | null = null;
     const sendSpy = spyOn(

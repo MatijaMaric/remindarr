@@ -438,6 +438,8 @@ export interface PersonDetailsResponse {
     };
     external_ids?: ExternalIds;
   };
+  /** Absent on the TMDB-unreachable fallback. */
+  is_following?: boolean;
 }
 
 // ─── Stats Types ─────────────────────────────────────────────────────────────
@@ -672,7 +674,14 @@ export interface UserProfileResponse {
   follower_count: number;
   following_count: number;
   is_following: boolean;
+  followed_people: FollowedPerson[];
   pinned: PinnedTitle[];
+}
+
+export interface FollowedPerson {
+  id: number;
+  name: string;
+  profile_path: string | null;
 }
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────

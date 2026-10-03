@@ -13,6 +13,7 @@ import {
 } from "../repository";
 import { getDb, watchedTitles } from "../schema";
 import { getUserPublicProfile } from "./profile";
+import { followPerson } from "./person-follows";
 import { sql } from "drizzle-orm";
 
 let userId: string;
@@ -502,5 +503,35 @@ describe("profile visibility access control", () => {
     expect(row).not.toBeNull();
     expect(row!.profileVisibility).toBe("public");
     expect(row!.profilePublic).toBe(1);
+  });
+});
+
+describe("followed people on the profile", () => {
+  beforeEach(async () => {
+    await followPerson(
+      userId,
+      { id: 31, name: "Tom Hanks", profilePath: null },
+      [],
+    );
+  });
+
+  it("shows followed people when the watchlist is visible", async () => {
+    const result = await getUserPublicProfile("testuser", false);
+    expect(result!.followed_people).toEqual([
+      { id: 31, name: "Tom Hanks", profile_path: null },
+    ]);
+  });
+
+  it("hides followed people from others on a private profile", async () => {
+    await updateProfilePublic(userId, "private");
+    const viewerId = await createUser("viewer", "hash");
+    const result = await getUserPublicProfile("testuser", false, viewerId);
+    expect(result!.followed_people).toEqual([]);
+  });
+
+  it("always shows the owner their own followed people", async () => {
+    await updateProfilePublic(userId, "private");
+    const result = await getUserPublicProfile("testuser", true, userId);
+    expect(result!.followed_people).toHaveLength(1);
   });
 });

@@ -1,6 +1,10 @@
 import { traceHttp } from "../tracing";
 import { httpFetch } from "../lib/http";
-import { formatProviderNames, groupEpisodesByShow } from "./format";
+import {
+  formatPersonCredit,
+  formatProviderNames,
+  groupEpisodesByShow,
+} from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -43,12 +47,14 @@ export class TelegramProvider implements NotificationProvider {
       movies,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
     if (
       episodes.length === 0 &&
       movies.length === 0 &&
       streamingAlerts.length === 0 &&
-      achievementsEarned.length === 0
+      achievementsEarned.length === 0 &&
+      personCredits.length === 0
     )
       return;
 
@@ -83,6 +89,7 @@ export class TelegramProvider implements NotificationProvider {
       date,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
     const parts: string[] = [];
     if (episodes.length > 0)
@@ -96,6 +103,10 @@ export class TelegramProvider implements NotificationProvider {
     if (achievementsEarned.length > 0)
       parts.push(
         `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`,
+      );
+    if (personCredits.length > 0)
+      parts.push(
+        `${personCredits.length} new credit${personCredits.length !== 1 ? "s" : ""}`,
       );
 
     const lines: string[] = [
@@ -146,6 +157,14 @@ export class TelegramProvider implements NotificationProvider {
         lines.push(
           `🎖 <b>${escapeHtml(ae.title)}</b> +${ae.points} XP — <i>${escapeHtml(ae.description)}</i>`,
         );
+      }
+    }
+
+    if (personCredits.length > 0) {
+      lines.push("");
+      lines.push("<b>⭐ New from people you follow:</b>");
+      for (const pc of personCredits) {
+        lines.push(`🎭 ${escapeHtml(formatPersonCredit(pc))}`);
       }
     }
 

@@ -120,6 +120,7 @@ All routes are under `/api` except `/metrics`.
 - `GET /api/share/wrapped/:token/:year` (public)
 - `GET/PUT /api/user/settings`
 - `POST/DELETE /api/social/follow`
+- `POST/DELETE /api/social/follow/person/:personId` — follow a TMDB person (New credit alerts)
 - `POST/DELETE /api/ratings`
 - `GET/POST /api/episode-comments`, `DELETE /api/episode-comments/:id`, `POST /api/episode-comments/:id/reactions`
 - `GET/POST /api/recommendations`

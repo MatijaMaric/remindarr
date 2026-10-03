@@ -5,6 +5,7 @@ import * as api from "../api";
 import ScrollableRow from "../components/ScrollableRow";
 import type { PersonCastCredit, PersonCrewCredit } from "../types";
 import ExternalLinks from "../components/ExternalLinks";
+import FollowButton from "../components/FollowButton";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useQuery } from "@tanstack/react-query";
 import { profileUrl, posterUrl as mkPosterUrl } from "../lib/tmdb-images";
@@ -229,9 +230,16 @@ export default function PersonPage() {
           </div>
         </div>
         <div className="flex-1 space-y-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white select-text">
-            {person.name}
-          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white select-text">
+              {person.name}
+            </h1>
+            <FollowButton
+              key={`${person.id}-${data.is_following}`}
+              personId={person.id}
+              initialIsFollowing={data.is_following ?? false}
+            />
+          </div>
           <div className="flex flex-wrap gap-2 text-sm">
             {person.known_for_department && (
               <span className="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded">

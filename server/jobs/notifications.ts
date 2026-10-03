@@ -9,9 +9,11 @@ import {
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 import {
+  attachPersonCredits,
   buildNotificationContent,
   buildWeeklyDigestContent,
 } from "../notifications/content";
+import { deletePersonCreditAlerts } from "../db/repository/person-follows";
 import { SubscriptionExpiredError } from "../notifications/webpush";
 import { refreshNotificationSchedule } from "./schedule";
 import { getCurrentTimeInTimezone } from "./time-utils";
@@ -128,13 +130,21 @@ export async function registerNotificationJobs() {
               continue;
             }
 
-            const content = await getWeeklyContentCached(
-              notifier.user_id,
-              notifier.todayDate,
-              endDateStr,
-            );
+            const { content, pending: personCredits } =
+              await attachPersonCredits(
+                notifier.id,
+                await getWeeklyContentCached(
+                  notifier.user_id,
+                  notifier.todayDate,
+                  endDateStr,
+                ),
+              );
 
-            if (content.episodes.length === 0 && content.movies.length === 0) {
+            if (
+              content.episodes.length === 0 &&
+              content.movies.length === 0 &&
+              personCredits.length === 0
+            ) {
               await markNotifierSent(notifier.id, notifier.todayDate);
               continue;
             }
@@ -169,6 +179,7 @@ export async function registerNotificationJobs() {
               });
               throw sendErr;
             }
+            await deletePersonCreditAlerts(notifier.id, personCredits);
             await markNotifierSent(notifier.id, notifier.todayDate);
             log.info("Sent weekly digest notification", {
               provider: notifier.provider,
@@ -184,9 +195,9 @@ export async function registerNotificationJobs() {
           }
 
           // Default daily behavior
-          const content = await getDailyContentCached(
-            notifier.user_id,
-            notifier.todayDate,
+          const { content, pending: personCredits } = await attachPersonCredits(
+            notifier.id,
+            await getDailyContentCached(notifier.user_id, notifier.todayDate),
           );
 
           // Inject achievements if enabled for this notifier
@@ -223,7 +234,8 @@ export async function registerNotificationJobs() {
           if (
             content.episodes.length === 0 &&
             content.movies.length === 0 &&
-            !content.achievementsEarned?.length
+            !content.achievementsEarned?.length &&
+            personCredits.length === 0
           ) {
             await markNotifierSent(notifier.id, notifier.todayDate);
             continue;
@@ -263,6 +275,7 @@ export async function registerNotificationJobs() {
           if (achievementKeys.length > 0) {
             await markAchievementsNotified(notifier.user_id, achievementKeys);
           }
+          await deletePersonCreditAlerts(notifier.id, personCredits);
           await markNotifierSent(notifier.id, notifier.todayDate);
           log.info("Sent notification", {
             provider: notifier.provider,

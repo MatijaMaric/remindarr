@@ -32,12 +32,21 @@ export interface NotificationAchievementEarned {
   earnedAt: string;
 }
 
+export interface NotificationPersonCredit {
+  personName: string;
+  title: string;
+  role: string | null;
+  releaseDate: string | null;
+  posterUrl: string | null;
+}
+
 export interface NotificationContent {
   episodes: NotificationEpisode[];
   movies: NotificationMovie[];
   date: string;
   streamingAlerts?: NotificationStreamingAlert[];
   achievementsEarned?: NotificationAchievementEarned[];
+  personCredits?: NotificationPersonCredit[];
 }
 
 export interface NotificationProvider {

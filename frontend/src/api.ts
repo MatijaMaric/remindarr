@@ -923,6 +923,14 @@ export async function unfollowUser(userId: string): Promise<void> {
   });
 }
 
+export async function followPerson(personId: number): Promise<void> {
+  await fetchJson(`/social/follow/person/${personId}`, { method: "POST" });
+}
+
+export async function unfollowPerson(personId: number): Promise<void> {
+  await fetchJson(`/social/follow/person/${personId}`, { method: "DELETE" });
+}
+
 export async function getFollowers(
   userId?: string,
   signal?: AbortSignal,

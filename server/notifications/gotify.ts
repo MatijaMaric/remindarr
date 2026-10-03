@@ -1,6 +1,10 @@
 import { traceHttp } from "../tracing";
 import { httpFetch } from "../lib/http";
-import { formatProviderNames, groupEpisodesByShow } from "./format";
+import {
+  formatPersonCredit,
+  formatProviderNames,
+  groupEpisodesByShow,
+} from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
 
@@ -41,12 +45,14 @@ export class GotifyProvider implements NotificationProvider {
       movies,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
     if (
       episodes.length === 0 &&
       movies.length === 0 &&
       streamingAlerts.length === 0 &&
-      achievementsEarned.length === 0
+      achievementsEarned.length === 0 &&
+      personCredits.length === 0
     )
       return;
 
@@ -78,6 +84,7 @@ export class GotifyProvider implements NotificationProvider {
       movies,
       streamingAlerts = [],
       achievementsEarned = [],
+      personCredits = [],
     } = content;
     const parts: string[] = [];
     if (episodes.length > 0)
@@ -92,11 +99,19 @@ export class GotifyProvider implements NotificationProvider {
       parts.push(
         `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`,
       );
+    if (personCredits.length > 0)
+      parts.push(
+        `${personCredits.length} new credit${personCredits.length !== 1 ? "s" : ""}`,
+      );
     return `Remindarr — ${parts.join(" and ")}`;
   }
 
   private buildMessage(content: NotificationContent): string {
-    const { streamingAlerts = [], achievementsEarned = [] } = content;
+    const {
+      streamingAlerts = [],
+      achievementsEarned = [],
+      personCredits = [],
+    } = content;
     const lines: string[] = [];
 
     const showMap = groupEpisodesByShow(content.episodes);
@@ -135,6 +150,14 @@ export class GotifyProvider implements NotificationProvider {
       lines.push("🏆 New badges:");
       for (const ae of achievementsEarned) {
         lines.push(`${ae.title} +${ae.points} XP — ${ae.description}`);
+      }
+    }
+
+    if (personCredits.length > 0) {
+      lines.push("");
+      lines.push("⭐ New from people you follow:");
+      for (const pc of personCredits) {
+        lines.push(formatPersonCredit(pc));
       }
     }
 

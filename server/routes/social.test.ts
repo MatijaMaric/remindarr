@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterAll,
+  afterEach,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
@@ -12,6 +20,12 @@ import Sentry from "../sentry";
 import { makeParsedTitle } from "../test-utils/fixtures";
 import { requireAuth, optionalAuth } from "../middleware/auth";
 import socialApp from "./social";
+import * as tmdbClient from "../tmdb/client";
+import { CONFIG } from "../config";
+import {
+  getFollowedPeople,
+  getPersonFollowers,
+} from "../db/repository/person-follows";
 import type { AppEnv } from "../types";
 
 function createMockAuth() {
@@ -139,6 +153,84 @@ describe("POST /social/follow/:userId", () => {
       method: "POST",
     });
     expect(res.status).toBe(401);
+  });
+});
+
+describe("POST/DELETE /social/follow/person/:personId", () => {
+  const originalKey = CONFIG.TMDB_API_KEY;
+  let fetchSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    CONFIG.TMDB_API_KEY = "test";
+    fetchSpy = spyOn(tmdbClient, "fetchPersonDetails").mockResolvedValue({
+      id: 31,
+      name: "Tom Hanks",
+      profile_path: "/tom.jpg",
+      combined_credits: {
+        cast: [{ id: 1, media_type: "movie", title: "Big", character: "Josh" }],
+        crew: [{ id: 7, media_type: "tv", name: "Band", job: "Producer" }],
+      },
+    } as any);
+  });
+
+  afterEach(() => {
+    CONFIG.TMDB_API_KEY = originalKey;
+    fetchSpy.mockRestore();
+  });
+
+  it("follows a person and snapshots their current credits", async () => {
+    const res = await app.request("/social/follow/person/31", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    expect(await getFollowedPeople(userAId)).toEqual([
+      { id: 31, name: "Tom Hanks", profile_path: "/tom.jpg" },
+    ]);
+    const [follower] = await getPersonFollowers(31);
+    expect(follower.seenCredits).toEqual(["movie:1", "tv:7"]);
+  });
+
+  it("unfollows a person", async () => {
+    await app.request("/social/follow/person/31", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    const res = await app.request("/social/follow/person/31", {
+      method: "DELETE",
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(200);
+    expect(await getFollowedPeople(userAId)).toEqual([]);
+  });
+
+  it("requires authentication", async () => {
+    const res = await app.request("/social/follow/person/31", {
+      method: "POST",
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when TMDB has no such person", async () => {
+    fetchSpy.mockRejectedValueOnce(new Error("404"));
+    const res = await app.request("/social/follow/person/31", {
+      method: "POST",
+      headers: authHeaders(userAToken),
+    });
+    expect(res.status).toBe(404);
+    expect(await getFollowedPeople(userAId)).toEqual([]);
+  });
+
+  describe("validation", () => {
+    it("rejects a non-numeric personId", async () => {
+      const res = await app.request("/social/follow/person/abc", {
+        method: "POST",
+        headers: authHeaders(userAToken),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.issues).toBeInstanceOf(Array);
+    });
   });
 });
 

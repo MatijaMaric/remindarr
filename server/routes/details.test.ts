@@ -22,6 +22,7 @@ import {
   makeTmdbDiscoverTv,
 } from "../test-utils/fixtures";
 import * as tmdbClient from "../tmdb/client";
+import { followPerson } from "../db/repository/person-follows";
 
 // Ensure TMDB API key is set so fallback logic is exercised
 CONFIG.TMDB_API_KEY = "test-api-key";
@@ -586,6 +587,31 @@ describe("GET /details/person/:personId", () => {
     expect(body.person.name).toBe("Test Actor");
     expect(body.person.biography).toBe("A test biography");
     expect(tmdbClient.fetchPersonDetails).toHaveBeenCalledWith(123);
+  });
+
+  it("reports whether the signed-in user follows the person", async () => {
+    const userId = await repository.createUser("fan", "hash");
+    await followPerson(
+      userId,
+      { id: 123, name: "Test Actor", profilePath: null },
+      [],
+    );
+    (tmdbClient.fetchPersonDetails as any).mockResolvedValue({
+      id: 123,
+      name: "Test Actor",
+      combined_credits: { cast: [], crew: [] },
+    });
+    const authed = new Hono<AppEnv>();
+    authed.use("*", async (c, next) => {
+      c.set("user", { id: userId } as any);
+      await next();
+    });
+    authed.route("/details", detailsApp);
+
+    const own = await (await authed.request("/details/person/123")).json();
+    expect(own.is_following).toBe(true);
+    const anon = await (await app.request("/details/person/123")).json();
+    expect(anon.is_following).toBe(false);
   });
 
   it("returns 400 for invalid person ID", async () => {
