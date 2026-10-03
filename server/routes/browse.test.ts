@@ -561,6 +561,26 @@ describe("GET /browse", () => {
       const filters = callArgs.filters as Record<string, string>;
       expect(filters.withProviders).toBe("8");
     });
+
+    it("drops the owned filter, which TMDB can't evaluate", async () => {
+      (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+        results: [],
+        total_pages: 1,
+        total_results: 0,
+        page: 1,
+      });
+
+      const res = await app.request(
+        "/browse?category=popular&type=MOVIE&provider=owned,8",
+      );
+      expect(res.status).toBe(200);
+
+      const callArgs = (
+        (tmdbClient.discoverMovies as any).mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
+      const filters = callArgs.filters as Record<string, string>;
+      expect(filters.withProviders).toBe("8");
+    });
   });
 
   describe("upstream failures (#1139)", () => {

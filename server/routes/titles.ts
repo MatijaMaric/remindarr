@@ -6,6 +6,7 @@ import {
   getGenres,
   getLanguages,
   getSubscribedProviderIds,
+  OWNED_PROVIDER_FILTER,
 } from "../db/repository";
 import { getMovieWatchProviders, getTvWatchProviders } from "../tmdb/client";
 import { canonicalProviderId } from "../streaming-availability/provider-map";
@@ -74,15 +75,13 @@ app.get("/", zValidator("query", titlesQuerySchema), async (c) => {
     : [];
 
   if (onlyMine && user) {
-    const subscribedIds = await getSubscribedProviderIds(user.id);
-    if (subscribedIds.length === 0) {
-      return ok(c, { titles: [], count: 0 });
-    }
-    const subscribedStrings = subscribedIds.map(String);
+    // "My services" = subscribed providers plus anything the user owns.
+    const mine = [
+      ...(await getSubscribedProviderIds(user.id)).map(String),
+      OWNED_PROVIDER_FILTER,
+    ];
     providers =
-      providers.length > 0
-        ? providers.filter((p) => subscribedStrings.includes(p))
-        : subscribedStrings;
+      providers.length > 0 ? providers.filter((p) => mine.includes(p)) : mine;
     if (providers.length === 0) {
       return ok(c, { titles: [], count: 0 });
     }

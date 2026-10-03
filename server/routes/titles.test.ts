@@ -15,6 +15,7 @@ import {
   trackTitle,
   createUser,
   setSubscribedProviderIds,
+  setOwnedFormats,
 } from "../db/repository";
 import titlesApp from "./titles";
 import type { AppEnv } from "../types";
@@ -500,6 +501,57 @@ describe("GET /titles?onlyMine", () => {
     const body = await res.json();
     expect(body.titles).toHaveLength(1);
     expect(body.titles[0].title).toBe("Netflix Movie");
+  });
+
+  it("includes owned titles even without subscribed providers", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({ id: "owned-t", title: "Owned", releaseDate: today }),
+      makeParsedTitle({ id: "other-t", title: "Other", releaseDate: today }),
+    ]);
+    const userId = await createUser("onlymineowned", "hash");
+    await setOwnedFormats(userId, "owned-t", ["bluray"]);
+
+    const res = await makeAuthedApp(userId).request(
+      "/titles?daysBack=365&onlyMine=true",
+    );
+    const body = await res.json();
+    expect(body.titles.map((t: { id: string }) => t.id)).toEqual(["owned-t"]);
+  });
+
+  it("provider=owned ORs with streaming providers", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "nf-t",
+        title: "Netflix",
+        releaseDate: today,
+        offers: [makeParsedOffer({ titleId: "nf-t", providerId: 8 })],
+      }),
+      makeParsedTitle({ id: "owned-t2", title: "Owned", releaseDate: today }),
+      makeParsedTitle({ id: "none-t", title: "None", releaseDate: today }),
+    ]);
+    const userId = await createUser("ownedfilter", "hash");
+    await setOwnedFormats(userId, "owned-t2", ["dvd"]);
+
+    const res = await makeAuthedApp(userId).request(
+      "/titles?daysBack=365&provider=owned,8",
+    );
+    const body = await res.json();
+    expect(body.titles.map((t: { id: string }) => t.id).sort()).toEqual([
+      "nf-t",
+      "owned-t2",
+    ]);
+  });
+
+  it("provider=owned matches nothing for anonymous users", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    await upsertTitles([
+      makeParsedTitle({ id: "anon-o", title: "Anon", releaseDate: today }),
+    ]);
+    const res = await app.request("/titles?daysBack=365&provider=owned");
+    const body = await res.json();
+    expect(body.titles).toHaveLength(0);
   });
 
   it("ignores onlyMine when user is not authenticated", async () => {

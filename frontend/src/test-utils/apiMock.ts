@@ -83,6 +83,7 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   pinTitle: async () => ({}),
   unpinTitle: async () => ({}),
   reorderPinnedTitles: async () => ({}),
+  setOwnedFormats: async () => ({ formats: [] }),
 
   // ── Watch / ratings ───────────────────────────────────────────────────────
   watchEpisode: async () => ({}),

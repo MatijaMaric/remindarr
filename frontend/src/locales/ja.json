@@ -1111,5 +1111,21 @@
       "minutes": "{{m}} 分",
       "hoursMinutes": "{{h}} 時間 {{m}} 分"
     }
+  },
+  "owned": {
+    "row": "所有",
+    "add": "持っている",
+    "edit": "編集",
+    "pickerLabel": "所有している形式",
+    "filterOption": "所有作品",
+    "saveError": "所有情報を更新できませんでした",
+    "formats": {
+      "dvd": "DVD",
+      "bluray": "Blu-ray",
+      "uhd_bluray": "4K UHD Blu-ray",
+      "digital": "デジタル",
+      "vhs": "VHS",
+      "other": "その他"
+    }
   }
 }

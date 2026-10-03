@@ -20,6 +20,16 @@ export interface Offer {
   provider_icon_url: string;
 }
 
+export const OWNED_FORMATS = [
+  "dvd",
+  "bluray",
+  "uhd_bluray",
+  "digital",
+  "vhs",
+  "other",
+] as const;
+export type OwnedFormat = (typeof OWNED_FORMATS)[number];
+
 export interface Title {
   id: string;
   object_type: "MOVIE" | "SHOW";
@@ -65,6 +75,8 @@ export interface Title {
   latest_released_air_date?: string | null;
   next_episode_air_date?: string | null;
   offers: Offer[];
+  /** Formats the current user owns; only present on title detail. */
+  owned_formats?: OwnedFormat[];
   tracked_at?: string;
   notes?: string;
   tags?: string[];
