@@ -1,3 +1,4 @@
+import * as outbound from "../lib/outbound";
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { DiscordProvider } from "./discord";
 import type { NotificationContent } from "./types";
@@ -48,7 +49,7 @@ describe("DiscordProvider.send", () => {
 
   beforeEach(() => {
     fetchCalls = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+    fetchSpy = spyOn(outbound, "integrationFetch").mockImplementation((async (
       url: string | URL | Request,
       options?: any,
     ) => {

@@ -79,9 +79,14 @@ export async function startMockOidcServer(
   publicJwk.use = "sig";
 
   const issuer = `http://127.0.0.1:${port}`;
-  const state: { lastCode: string | null; lastRedirectUri: string | null } = {
+  const state: {
+    lastCode: string | null;
+    lastRedirectUri: string | null;
+    nonce: string | null;
+  } = {
     lastCode: null,
     lastRedirectUri: null,
+    nonce: null,
   };
 
   const buildClaims = () => ({
@@ -94,7 +99,7 @@ export async function startMockOidcServer(
   });
 
   const mintIdToken = async (audience: string): Promise<string> => {
-    return new SignJWT(buildClaims())
+    return new SignJWT({ ...buildClaims(), nonce: state.nonce })
       .setProtectedHeader({ alg: "RS256", kid })
       .setIssuer(issuer)
       .setAudience(audience)
@@ -153,6 +158,7 @@ export async function startMockOidcServer(
         const code = `mock-code-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         state.lastCode = code;
         state.lastRedirectUri = redirectUri;
+        state.nonce = url.searchParams.get("nonce");
         const redirect = new URL(redirectUri);
         redirect.searchParams.set("code", code);
         if (authState) redirect.searchParams.set("state", authState);
@@ -165,6 +171,14 @@ export async function startMockOidcServer(
       if (req.method === "POST" && pathname === "/token") {
         const body = await readBody(req);
         const form = parseForm(body);
+        if (
+          !state.lastCode ||
+          form.code !== state.lastCode ||
+          form.redirect_uri !== state.lastRedirectUri
+        ) {
+          return sendJson(res, 400, { error: "invalid_grant" });
+        }
+        state.lastCode = null;
         const clientId = form.client_id ?? "test";
         const accessToken = `mock-access-${Date.now()}`;
         const idToken = await mintIdToken(clientId);

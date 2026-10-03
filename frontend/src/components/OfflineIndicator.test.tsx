@@ -1,6 +1,9 @@
 import { describe, it, expect, afterEach } from "bun:test";
 import { render, screen, act, cleanup } from "@testing-library/react";
 import OfflineIndicator from "./OfflineIndicator";
+import "../i18n";
+import { AuthContext } from "../context/AuthContext";
+import type { ContextType } from "react";
 
 function setOnline(value: boolean) {
   Object.defineProperty(navigator, "onLine", { value, configurable: true });
@@ -14,9 +17,19 @@ afterEach(() => {
 describe("OfflineIndicator", () => {
   it("explains that private data and writes need a connection", () => {
     setOnline(false);
-    render(<OfflineIndicator />);
+    render(
+      <AuthContext
+        value={
+          { user: null, sessionStatus: "unknown" } as ContextType<
+            typeof AuthContext
+          >
+        }
+      >
+        <OfflineIndicator />
+      </AuthContext>,
+    );
     expect(screen.getByRole("status").textContent).toContain(
-      "changes are not saved offline",
+      "Reconnect to verify your account",
     );
     act(() => {
       setOnline(true);
@@ -28,7 +41,7 @@ describe("OfflineIndicator", () => {
       window.dispatchEvent(new Event("offline"));
     });
     expect(screen.getByRole("status").textContent).toContain(
-      "reconnect and try again",
+      "Saved data is unavailable or has expired",
     );
   });
 });

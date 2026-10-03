@@ -38,9 +38,7 @@ test.describe("OIDC login flow", () => {
     await oidcButton.click();
 
     // Successful flows land on "/" (callback `callbackURL: "/"` in LoginPage).
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
-      timeout: 30_000,
-    });
+    await expect(page).toHaveURL("/", { timeout: 30_000 });
 
     // Session should be set browser-side — hit get-session via the page
     // context so cookies from the OIDC redirect roundtrip are included.

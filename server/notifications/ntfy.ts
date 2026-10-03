@@ -1,5 +1,5 @@
 import { traceHttp } from "../tracing";
-import { httpFetch } from "../lib/http";
+import { integrationFetch } from "../lib/outbound";
 import {
   formatPersonCredit,
   formatProviderNames,
@@ -74,15 +74,14 @@ export class NtfyProvider implements NotificationProvider {
     }
 
     await traceHttp("POST", config.url, async () => {
-      const response = await httpFetch(config.url, {
+      const response = await integrationFetch(config.url, {
         method: "POST",
         headers,
         body: message,
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`Ntfy request failed (${response.status}): ${text}`);
+        throw new Error(`Ntfy request failed (${response.status})`);
       }
     });
   }

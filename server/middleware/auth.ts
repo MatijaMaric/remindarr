@@ -56,6 +56,10 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     if (!session?.user) {
       return c.json({ error: "Session expired" }, 401);
     }
+    const expectedAccount = c.req.header("X-Remindarr-Account");
+    if (expectedAccount && expectedAccount !== session.user.id) {
+      return c.json({ error: "Account changed; queued request rejected" }, 409);
+    }
     c.set("user", toAuthUser(session.user as BetterAuthSessionUser));
   } catch {
     return c.json({ error: "Authentication required" }, 401);

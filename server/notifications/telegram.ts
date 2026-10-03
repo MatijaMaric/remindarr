@@ -1,5 +1,5 @@
 import { traceHttp } from "../tracing";
-import { httpFetch } from "../lib/http";
+import { integrationFetch } from "../lib/outbound";
 import {
   formatPersonCredit,
   formatProviderNames,
@@ -62,7 +62,7 @@ export class TelegramProvider implements NotificationProvider {
     const url = `${TELEGRAM_API}/bot${config.botToken}/sendMessage`;
 
     await traceHttp("POST", url, async () => {
-      const response = await httpFetch(url, {
+      const response = await integrationFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -74,10 +74,7 @@ export class TelegramProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        const json = await response.json().catch(() => ({}));
-        throw new Error(
-          `Telegram API error (${response.status}): ${json.description ?? "Unknown error"}`,
-        );
+        throw new Error(`Telegram API error (${response.status})`);
       }
     });
   }

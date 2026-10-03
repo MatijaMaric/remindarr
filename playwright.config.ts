@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   MOCK_OIDC_URL,
+  MOCK_WEBHOOK_URL,
   E2E_DB_DIR,
   E2E_DB_PATH,
 } from "./e2e/fixtures/constants";
@@ -51,6 +52,7 @@ const backendEnv: Record<string, string> = {
   // the flows we exercise (feed, passkey, OIDC, webhook notifications).
   // Tests never call TMDB.
   TMDB_API_KEY: "e2e-placeholder-tmdb-key",
+  OUTBOUND_PRIVATE_ORIGINS: MOCK_WEBHOOK_URL,
 
   // Raise the auth rate-limit so high-volume flows (passkey enrol +
   // challenge + assertion + sign-out + session check) don't 429.
@@ -74,6 +76,7 @@ export default defineConfig({
     "**/*.test.ts",
     "**/share-security.spec.ts",
     "**/identity-isolation.spec.ts",
+    "**/core-journey.spec.ts",
   ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -104,9 +107,14 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: "bun run e2e/fixtures/oidc-server.ts",
+      url: `${MOCK_OIDC_URL}/.well-known/openid-configuration`,
+      reuseExistingServer: false,
+    },
+    {
       command: "bun run dev:server",
       url: "http://localhost:3000/api/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120_000,
       stdout: "pipe",
       stderr: "pipe",

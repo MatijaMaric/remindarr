@@ -299,7 +299,8 @@ describe("POST /notifiers/:id/test", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toBe("Connection refused");
+    expect(body.message).toContain("operator outbound policy");
+    expect(body.message).not.toContain("Connection refused");
   });
 
   it("captures non-SubscriptionExpiredError in Sentry", async () => {

@@ -5,6 +5,10 @@ import { getDb } from "../db/schema";
 import { users, account } from "../db/schema";
 import { createOidcState, consumeOidcState } from "../db/repository";
 import type { Platform } from "../platform/types";
+import { generateKeyPair, exportJWK, SignJWT } from "jose";
+
+const signingKey = generateKeyPair("RS256", { extractable: true });
+let authorizationNonce: string | undefined;
 
 const platform: Platform = {
   hashPassword: async (password: string) => Bun.password.hash(password),
@@ -34,23 +38,46 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-/** Create a minimal fake JWT with the given claims (uses base64 that atob() can handle). */
-function makeIdToken(claims: Record<string, unknown>): string {
-  const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const payload = btoa(JSON.stringify(claims));
-  return `${header}.${payload}.fakesig`;
+/** Sign disposable IdP claims so the real issuer, audience and nonce checks run. */
+async function makeIdToken(
+  claims: Record<string, unknown>,
+  expired = false,
+): Promise<string> {
+  return new SignJWT({ ...claims, nonce: authorizationNonce })
+    .setProtectedHeader({ alg: "RS256", kid: "test-key" })
+    .setIssuer(MOCK_ISSUER)
+    .setAudience(MOCK_CLIENT_ID)
+    .setIssuedAt()
+    .setExpirationTime(expired ? "-5m" : "5m")
+    .sign((await signingKey).privateKey);
 }
 
 /** Build a standard mock fetch handler for the OIDC provider. */
 function makeMockFetch(
   userinfoClaims: Record<string, unknown>,
-  opts?: { tokenStatus?: number; userinfoStatus?: number },
+  opts?: {
+    tokenStatus?: number;
+    userinfoStatus?: number;
+    expiredToken?: boolean;
+  },
 ) {
   return async (
     input: RequestInfo | URL,
     _init?: RequestInit,
   ): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input);
+    if (url === MOCK_DISCOVERY.jwks_uri) {
+      return jsonResponse({
+        keys: [
+          {
+            ...(await exportJWK((await signingKey).publicKey)),
+            kid: "test-key",
+            alg: "RS256",
+            use: "sig",
+          },
+        ],
+      });
+    }
 
     if (url.includes(".well-known/openid-configuration")) {
       return jsonResponse(MOCK_DISCOVERY);
@@ -64,7 +91,7 @@ function makeMockFetch(
           status,
         );
       }
-      const idToken = makeIdToken(userinfoClaims);
+      const idToken = await makeIdToken(userinfoClaims, opts?.expiredToken);
       return jsonResponse({
         access_token: "mock-access-token",
         token_type: "Bearer",
@@ -357,12 +384,15 @@ describe("OIDC callback flow", () => {
       adminValue?: string;
       tokenStatus?: number;
       userinfoStatus?: number;
+      legacyCallback?: boolean;
+      expiredToken?: boolean;
     },
   ): Promise<{ callbackRes: Response }> {
     fetchSpy.mockImplementation(
       makeMockFetch(userinfoClaims, {
         tokenStatus: opts?.tokenStatus,
         userinfoStatus: opts?.userinfoStatus,
+        expiredToken: opts?.expiredToken,
       }),
     );
 
@@ -387,9 +417,13 @@ describe("OIDC callback flow", () => {
     if (authorizeRes.status === 302) {
       const location = authorizeRes.headers.get("location") ?? "";
       state = new URL(location).searchParams.get("state") ?? "";
+      authorizationNonce =
+        new URL(location).searchParams.get("nonce") ?? undefined;
     } else {
       const body = (await authorizeRes.json()) as { url?: string };
       state = new URL(body.url!).searchParams.get("state") ?? "";
+      authorizationNonce =
+        new URL(body.url!).searchParams.get("nonce") ?? undefined;
     }
     expect(state).toBeTruthy();
 
@@ -400,7 +434,7 @@ describe("OIDC callback flow", () => {
     // Step 2: simulate the provider redirecting back with code + state
     const callbackRes = await auth.handler(
       new Request(
-        `http://localhost:3000/api/auth/callback/pocketid?code=test-auth-code&state=${state}`,
+        `http://localhost:3000/api/auth/${opts?.legacyCallback ? "oauth2/" : ""}callback/pocketid?code=test-auth-code&state=${state}`,
         {
           method: "GET",
           headers: cookieHeader ? { Cookie: cookieHeader } : {},
@@ -422,6 +456,61 @@ describe("OIDC callback flow", () => {
     const db = getDb();
     const allUsers = await db.select().from(users).all();
     expect(allUsers.some((u) => u.name === "Alice OIDC")).toBe(true);
+  });
+
+  test("an expired signed identity token cannot create an account", async () => {
+    const { callbackRes } = await runOidcFlow(
+      { sub: "expired", email: "expired@example.com", name: "Expired" },
+      { expiredToken: true },
+    );
+    expect(callbackRes.headers.get("location")).toContain("error=");
+    expect(await getDb().select().from(account).all()).toHaveLength(0);
+  });
+
+  test("legacy generic OAuth callback remains accepted after the auth upgrade", async () => {
+    const { callbackRes } = await runOidcFlow(
+      { sub: "legacy", email: "legacy@example.com", name: "Legacy" },
+      { legacyCallback: true },
+    );
+    expect(callbackRes.headers.get("location")).not.toContain("error=");
+    expect(
+      callbackRes.headers
+        .getSetCookie()
+        .some((cookie) => cookie.includes("session_token")),
+    ).toBe(true);
+  });
+
+  test("verified OIDC email cannot claim an existing unverified password account", async () => {
+    fetchSpy.mockImplementation(
+      makeMockFetch({ sub: "real-victim", name: "Victim" }),
+    );
+    const auth = makeAuth();
+    const response = await auth.handler(
+      new Request("http://localhost:3000/api/auth/sign-up/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Pre-registered",
+          username: "preregistered",
+          email: "victim@example.com",
+          password: "test-password-123",
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const { callbackRes } = await runOidcFlow({
+      sub: "real-victim",
+      name: "Victim",
+      email: "victim@example.com",
+      email_verified: true,
+    });
+    expect(callbackRes.headers.get("location")).toContain("error=");
+    const accounts = await getDb().select().from(account).all();
+    expect(accounts.some((a) => a.providerId === "pocketid")).toBe(false);
+    const localUser = (await getDb().select().from(users).all()).find(
+      (u) => u.email === "victim@example.com",
+    );
+    expect(localUser?.emailVerified).toBe(false);
   });
 
   test("successful callback creates an account record linked to pocketid provider", async () => {

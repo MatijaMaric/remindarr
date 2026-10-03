@@ -18,6 +18,16 @@ let app: Hono<AppEnv>;
 let validToken: string;
 let adminToken: string;
 
+it("rejects queued writes when the authenticated cookie belongs to another account", async () => {
+  const response = await app.request("/protected/test", {
+    headers: {
+      Cookie: `${COOKIE_NAME}=${validToken}`,
+      "X-Remindarr-Account": "another-account",
+    },
+  });
+  expect(response.status).toBe(409);
+});
+
 /**
  * Mock auth that mirrors what requireAdmin does in production:
  * - Normal getSession calls use the session cookie to look up the DB.

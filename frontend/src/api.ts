@@ -50,6 +50,12 @@ import type {
 } from "./types";
 import { ApiError } from "./lib/api-error";
 import { identityRequest } from "./lib/identity";
+import {
+  cacheOfflineRead,
+  offlineRead,
+  queueWatchlist,
+  pendingWatchlist,
+} from "./lib/offline";
 
 const BASE = "/api";
 
@@ -82,11 +88,33 @@ async function doFetch(url: string, options: RequestInit): Promise<Response> {
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const identity = identityRequest(options?.signal);
-  const res = await doFetch(url, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  if (!navigator.onLine && (!options?.method || options.method === "GET")) {
+    const cached = await offlineRead<T>(url);
+    identity.check();
+    if (cached !== undefined) return cached;
+  }
+  let res: Response;
+  try {
+    res = await doFetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (error) {
+    identity.check();
+    if (
+      error instanceof TypeError &&
+      (!options?.method || options.method === "GET")
+    ) {
+      const cached = await offlineRead<T>(url);
+      identity.check();
+      if (cached !== undefined) return cached;
+    }
+    throw error;
+  }
   const data = await res.json();
+  identity.check();
+  if (!options?.method || options.method === "GET")
+    await cacheOfflineRead(url, data).catch(() => {});
   identity.check();
   return data;
 }
@@ -203,17 +231,38 @@ export async function trackTitle(
   id: string,
   notes?: string,
   titleData?: Title,
-): Promise<void> {
-  await fetchJson(`/track/${encodeURIComponent(id)}`, {
-    method: "POST",
-    body: JSON.stringify({ notes, titleData }),
-  });
+): Promise<{ queued: boolean }> {
+  const url = `/track/${encodeURIComponent(id)}`;
+  const body = JSON.stringify({ notes, titleData });
+  return writeWatchlist(url, "POST", body);
 }
 
-export async function untrackTitle(id: string): Promise<void> {
-  await fetchJson(`/track/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+export async function untrackTitle(id: string): Promise<{ queued: boolean }> {
+  const url = `/track/${encodeURIComponent(id)}`;
+  return writeWatchlist(url, "DELETE");
+}
+
+async function writeWatchlist(
+  url: string,
+  method: string,
+  body?: string,
+): Promise<{ queued: boolean }> {
+  const identity = identityRequest();
+  const pending = await pendingWatchlist();
+  identity.check();
+  if (pending.some((entry) => entry.url === url))
+    return queueWatchlist(url, method, body);
+  if (!navigator.onLine) return queueWatchlist(url, method, body);
+  try {
+    await fetchJson(url, { method, body });
+    return { queued: false };
+  } catch (error) {
+    identity.check();
+    // A network outage can happen while the browser still reports online.
+    // HTTP errors (including denied sessions) must never become queued success.
+    if (error instanceof TypeError) return queueWatchlist(url, method, body);
+    throw error;
+  }
 }
 
 export async function getTrackedTitles(signal?: AbortSignal): Promise<{

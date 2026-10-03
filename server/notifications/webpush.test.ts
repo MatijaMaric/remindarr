@@ -1,3 +1,4 @@
+import * as outbound from "../lib/outbound";
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { CONFIG } from "../config";
 import type { NotificationContent } from "./types";
@@ -45,9 +46,13 @@ const validConfig = {
   auth: "test-auth-key",
 };
 
+let fetchSpy: ReturnType<typeof spyOn>;
 let setVapidDetailsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
+  fetchSpy = spyOn(outbound, "integrationFetch").mockResolvedValue(
+    new Response(null, { status: 201 }),
+  );
   CONFIG.VAPID_PUBLIC_KEY = "test-public-key";
   CONFIG.VAPID_PRIVATE_KEY = "test-private-key";
   CONFIG.VAPID_SUBJECT = "mailto:test@example.com";
@@ -58,6 +63,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  fetchSpy.mockRestore();
   setVapidDetailsSpy.mockRestore();
   CONFIG.VAPID_PUBLIC_KEY = savedVapidPublicKey;
   CONFIG.VAPID_PRIVATE_KEY = savedVapidPrivateKey;
@@ -94,10 +100,15 @@ describe("WebPushProvider.send", () => {
     let sentPayload: string | undefined;
     const sendSpy = spyOn(
       webpush.default,
-      "sendNotification",
-    ).mockImplementation(async (_sub: any, payload: any) => {
+      "generateRequestDetails",
+    ).mockImplementation((_sub: any, payload: any) => {
       sentPayload = payload;
-      return { statusCode: 201 } as any;
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
     });
 
     await provider.send(validConfig, sampleContent);
@@ -113,7 +124,7 @@ describe("WebPushProvider.send", () => {
   });
 
   it("skips sending when content is empty", async () => {
-    const sendSpy = spyOn(webpush.default, "sendNotification");
+    const sendSpy = spyOn(webpush.default, "generateRequestDetails");
 
     await provider.send(validConfig, {
       date: "2026-03-15",
@@ -126,13 +137,17 @@ describe("WebPushProvider.send", () => {
   });
 
   it("throws SubscriptionExpiredError on 410", async () => {
+    fetchSpy.mockResolvedValue(new Response(null, { status: 410 }));
     const sendSpy = spyOn(
       webpush.default,
-      "sendNotification",
-    ).mockImplementation(async () => {
-      const err: any = new Error("Gone");
-      err.statusCode = 410;
-      throw err;
+      "generateRequestDetails",
+    ).mockImplementation(() => {
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
     });
 
     await expect(provider.send(validConfig, sampleContent)).rejects.toThrow(
@@ -143,14 +158,19 @@ describe("WebPushProvider.send", () => {
   });
 
   it("throws generic error on other failures", async () => {
+    fetchSpy.mockResolvedValue(
+      new Response("internal receiver secret", { status: 500 }),
+    );
     const sendSpy = spyOn(
       webpush.default,
-      "sendNotification",
-    ).mockImplementation(async () => {
-      const err: any = new Error("Server Error");
-      err.statusCode = 500;
-      err.body = "Internal Server Error";
-      throw err;
+      "generateRequestDetails",
+    ).mockImplementation(() => {
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
     });
 
     await expect(provider.send(validConfig, sampleContent)).rejects.toThrow(
@@ -178,10 +198,15 @@ describe("WebPushProvider.send", () => {
     let capturedPayload: string | null = null;
     const sendSpy = spyOn(
       webpush.default,
-      "sendNotification",
-    ).mockImplementation(async (_sub: any, payload: any) => {
+      "generateRequestDetails",
+    ).mockImplementation((_sub: any, payload: any) => {
       capturedPayload = payload;
-      return { statusCode: 201, body: "", headers: {} } as any;
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
     });
     await provider.send(validConfig, onlyCredits);
     sendSpy.mockRestore();
@@ -194,10 +219,15 @@ describe("WebPushProvider.send", () => {
     let capturedPayload: string | null = null;
     const sendSpy = spyOn(
       webpush.default,
-      "sendNotification",
-    ).mockImplementation(async (_sub: any, payload: any) => {
+      "generateRequestDetails",
+    ).mockImplementation((_sub: any, payload: any) => {
       capturedPayload = payload;
-      return { statusCode: 201, body: "", headers: {} } as any;
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
     });
     await provider.send(validConfig, sampleContent);
     sendSpy.mockRestore();
@@ -208,10 +238,15 @@ describe("WebPushProvider.send", () => {
     let capturedPayload: string | null = null;
     const sendSpy = spyOn(
       webpush.default,
-      "sendNotification",
-    ).mockImplementation(async (_sub: any, payload: any) => {
+      "generateRequestDetails",
+    ).mockImplementation((_sub: any, payload: any) => {
       capturedPayload = payload;
-      return { statusCode: 201, body: "", headers: {} } as any;
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
     });
 
     const contentWithAchievements: NotificationContent = {
@@ -240,10 +275,15 @@ describe("WebPushProvider.send", () => {
     let capturedPayload: string | null = null;
     const sendSpy = spyOn(
       webpush.default,
-      "sendNotification",
-    ).mockImplementation(async (_sub: any, payload: any) => {
+      "generateRequestDetails",
+    ).mockImplementation((_sub: any, payload: any) => {
       capturedPayload = payload;
-      return { statusCode: 201, body: "", headers: {} } as any;
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
     });
 
     const contentNoAchievements: NotificationContent = {

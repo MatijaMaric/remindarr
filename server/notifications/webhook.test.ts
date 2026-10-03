@@ -1,3 +1,4 @@
+import * as outbound from "../lib/outbound";
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { WebhookProvider } from "./webhook";
 import type { NotificationContent } from "./types";
@@ -42,7 +43,7 @@ describe("WebhookProvider.send", () => {
 
   beforeEach(() => {
     fetchCalls = [];
-    fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+    fetchSpy = spyOn(outbound, "integrationFetch").mockImplementation((async (
       url: string | URL | Request,
       options?: RequestInit,
     ) => {

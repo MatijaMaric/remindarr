@@ -226,6 +226,12 @@ export default function LoginPage() {
                 {loading ? t("login.signingIn") : t("login.signIn")}
               </button>
             </form>
+            <details className="mt-4 text-sm text-zinc-300">
+              <summary className="cursor-pointer underline">
+                {t("login.recoveryTitle")}
+              </summary>
+              <p className="mt-2">{t("login.recoveryHelp")}</p>
+            </details>
           </>
         )}
 

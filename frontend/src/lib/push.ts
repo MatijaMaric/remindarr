@@ -41,7 +41,7 @@ export async function subscribeToPush(
 }
 
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
-  if (!isPushSupported()) return null;
+  if (!isPushSupported() || Notification.permission !== "granted") return null;
   const timeout = new Promise<null>((resolve) =>
     setTimeout(() => resolve(null), 5000),
   );

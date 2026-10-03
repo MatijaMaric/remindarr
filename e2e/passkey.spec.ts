@@ -63,13 +63,7 @@ test.describe("Passkey signup + login", () => {
       }
     });
 
-    // If the authenticator refuses to enrol (e.g. the build in CI doesn't
-    // expose the client helper), mark the test as skipped with context so the
-    // reviewer can see why — shipping 3 solid specs beats failing 4.
-    test.skip(
-      !addResult.ok,
-      `passkey enrolment unavailable in this build: ${"error" in addResult ? addResult.error : "unknown"}`,
-    );
+    expect(addResult.ok, "virtual passkey enrolment must succeed").toBe(true);
 
     // Sign the user out to prove the passkey alone can sign them back in.
     // Clearing cookies is enough for the frontend to treat the user as
