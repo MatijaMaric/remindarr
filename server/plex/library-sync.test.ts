@@ -69,6 +69,9 @@ beforeEach(async () => {
 });
 
 afterAll(() => {
+  mockGetLibrarySections.mockRestore();
+  mockGetAllMovies.mockRestore();
+  mockGetShows.mockRestore();
   teardownTestDb();
 });
 
