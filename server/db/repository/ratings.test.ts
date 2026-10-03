@@ -24,6 +24,7 @@ import {
   getFriendsLovedThisWeek,
 } from "./ratings";
 import { getDb } from "../schema";
+import { updateProfilePublic } from "./profile";
 import { episodes } from "../schema";
 
 let userA: string;
@@ -37,6 +38,8 @@ beforeEach(async () => {
   userA = await createUser("alice", "hash");
   userB = await createUser("bob", "hash");
   userC = await createUser("carol", "hash");
+  await updateProfilePublic(userB, "public");
+  await updateProfilePublic(userC, "public");
   await upsertTitles([
     makeParsedTitle({ id: "movie-1", title: "Test Movie" }),
     makeParsedTitle({ id: "movie-2", title: "Another Movie" }),
@@ -391,4 +394,28 @@ describe("getFriendsLovedThisWeek", () => {
     const result = await getFriendsLovedThisWeek(userA, 1);
     expect(result.length).toBe(1);
   });
+});
+
+it("gates named title and episode ratings on profile visibility and mutual following", async () => {
+  await rateTitle(userB, "movie-1", "LOVE");
+  await rateEpisode(userB, episodeId1, "LIKE");
+  await follow(userA, userB);
+  for (const visibility of ["private", "friends_only", "public"] as const) {
+    await updateProfilePublic(userB, visibility);
+    expect((await getFriendsRatings(userA, "movie-1")).length).toBe(
+      visibility === "public" ? 1 : 0,
+    );
+    expect((await getFriendsEpisodeRatings(userA, episodeId1)).length).toBe(
+      visibility === "public" ? 1 : 0,
+    );
+  }
+  await follow(userB, userA);
+  await updateProfilePublic(userB, "friends_only");
+  expect(await getFriendsRatings(userA, "movie-1")).toHaveLength(1);
+  expect(await getFriendsEpisodeRatings(userA, episodeId1)).toHaveLength(1);
+  await updateProfilePublic(userB, "private");
+  expect(await getFriendsRatings(userA, "movie-1")).toHaveLength(0);
+  expect(await getFriendsEpisodeRatings(userA, episodeId1)).toHaveLength(0);
+  expect(await getUserRating(userB, "movie-1")).toBe("LOVE");
+  expect((await getTitleRatings("movie-1")).LOVE).toBe(1);
 });

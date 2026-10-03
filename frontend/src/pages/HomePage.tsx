@@ -1,3 +1,5 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
+import FirstSetup from "../components/FirstSetup";
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
@@ -228,9 +230,7 @@ export default function HomePage() {
       toast.error(t("home.errors.watchedStatus"));
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["home", "auth"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -256,9 +256,7 @@ export default function HomePage() {
       toast.error(t("home.errors.markEpisodes"));
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["home", "auth"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -283,9 +281,7 @@ export default function HomePage() {
       toast.error(t("home.errors.markEpisode"));
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["home", "auth"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -725,6 +721,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      <FirstSetup />
       {layout.filter((s) => s.enabled).map((s) => renderSection(s.id))}
       {continueWatching.length > 0 && (
         <section>

@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { Menu } from "@base-ui/react/menu";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "../components/ui/card";
@@ -146,7 +147,7 @@ export default function TrackedPage() {
     queryFn: ({ signal }) => api.getTrackedTitles(signal),
   });
   const refetch = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: ["tracked"] });
+    void invalidateLibrary(qc);
   }, [qc]);
   const allTitles: Title[] = useMemo(() => data?.titles ?? [], [data]);
   useScrollRestoration("tracked", !loading);

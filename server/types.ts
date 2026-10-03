@@ -10,7 +10,9 @@ export type AuthUser = {
 };
 
 export type AppEnv = {
+  Bindings: { peerAddress?: string };
   Variables: {
+    clientIp?: string;
     user?: AuthUser;
     platform?: Platform;
     auth?: BetterAuthInstance;

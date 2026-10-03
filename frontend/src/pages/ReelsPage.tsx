@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import {
   useState,
   useEffect,
@@ -455,10 +456,7 @@ export default function ReelsPage() {
       );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["reels", source] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
-      void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -475,7 +473,7 @@ export default function ReelsPage() {
     onError: () => {
       showActionError("Failed to undo");
     },
-    onSettled: () => void qc.invalidateQueries({ queryKey: ["reels", source] }),
+    onSettled: () => void invalidateLibrary(qc),
   });
 
   const bulkWatchMutation = useMutation({
@@ -486,9 +484,7 @@ export default function ReelsPage() {
     },
     onError: () => showActionError("Failed to mark episodes as watched"),
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["reels", source] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -513,9 +509,7 @@ export default function ReelsPage() {
           : "Failed to watch episode",
       ),
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["reels", source] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -534,7 +528,7 @@ export default function ReelsPage() {
         : api.rateEpisode(episodeId, value),
     onMutate: ({ value, isActive }) => setReelsRating(isActive ? null : value),
     onError: () => setReelsRating(null),
-    onSettled: () => void qc.invalidateQueries({ queryKey: ["reels", source] }),
+    onSettled: () => void invalidateLibrary(qc),
   });
 
   const markWatched = useCallback(

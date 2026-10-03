@@ -804,14 +804,14 @@
       "saving": "Saving..."
     },
     "profileVisibility": "Profile Visibility",
-    "profileVisibilityDescription": "Control which titles are visible on your public profile.",
+    "profileVisibilityDescription": "Control who can see your watchlist, pinned favorites and named title or episode ratings. Anonymous rating totals remain public.",
     "showWatchlist": "Show watchlist on public profile",
     "showWatchlistOnProfile": "Show watchlist on public profile",
     "showWatchlistDescription": "When enabled, your tracked titles will be visible on your public profile.",
     "visibility_public": "Public",
     "visibility_public_desc": "Everyone can see your watchlist",
     "visibility_friends_only": "Friends Only",
-    "visibility_friends_only_desc": "Only mutual followers can see your watchlist",
+    "visibility_friends_only_desc": "Only mutual followers can see your watchlist, pinned favorites and named ratings",
     "visibility_private": "Private",
     "visibility_private_desc": "Your watchlist is hidden",
     "showAll": "Show All",
@@ -875,7 +875,10 @@
     "breadcrumb": "Breadcrumb",
     "buildInfo": "Remindarr · self-hosted",
     "sections": "Sections",
-    "sectionsLabel": "Settings sections"
+    "sectionsLabel": "Settings sections",
+    "saving": "Saving...",
+    "unsaved": "Unsaved changes",
+    "unsavedError": "Changes are not saved. Please retry."
   },
   "notifications": {
     "all": "All episodes",

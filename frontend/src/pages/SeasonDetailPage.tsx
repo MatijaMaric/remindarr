@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useMemo, useRef, useState } from "react";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -119,9 +120,7 @@ export default function SeasonDetailPage() {
       );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -157,9 +156,7 @@ export default function SeasonDetailPage() {
       );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 
@@ -208,9 +205,7 @@ export default function SeasonDetailPage() {
       );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["season-status", id, season] });
-      void qc.invalidateQueries({ queryKey: ["stats"] });
-      void qc.invalidateQueries({ queryKey: ["activity"] });
+      void invalidateLibrary(qc);
     },
   });
 

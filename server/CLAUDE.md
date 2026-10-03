@@ -79,7 +79,7 @@ Use the platform interface, not Bun-specific APIs, in shared code.
 
 ## Key patterns (server-wide)
 
-- Rate limiting: token bucket keyed by `x-forwarded-for`. Deployments MUST terminate at a proxy that sets this header.
+- Rate limiting: Bun uses network peers, with forwarded chains accepted only from `TRUSTED_PROXIES`; Workers use the platform client IP and atomic D1 counters. Store errors fail closed.
 - Auth middleware is composable: `optionalAuth` → `requireAuth` → `requireAdmin` (all in `server/middleware/auth.ts`)
 - OIDC settings have env-var precedence over DB (admin UI editable but env overrides)
 - All DB writes use transactions for consistency

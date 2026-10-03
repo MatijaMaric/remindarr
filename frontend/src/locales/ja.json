@@ -859,7 +859,10 @@
     "breadcrumb": "パンくずリスト",
     "buildInfo": "Remindarr · セルフホスト",
     "sections": "セクション",
-    "sectionsLabel": "設定のセクション"
+    "sectionsLabel": "設定のセクション",
+    "saving": "保存中...",
+    "unsaved": "未保存の変更",
+    "unsavedError": "変更は保存されていません。もう一度お試しください。"
   },
   "notifications": {
     "all": "すべてのエピソード",

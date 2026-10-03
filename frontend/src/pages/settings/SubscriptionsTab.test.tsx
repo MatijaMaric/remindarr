@@ -271,3 +271,16 @@ describe("SubscriptionsTab", () => {
     });
   });
 });
+
+it("rolls back only-mine and announces a failed preference save", async () => {
+  spies.push(
+    spyOn(api, "updateOnlyMine").mockRejectedValue(new Error("offline")),
+  );
+  render(<SubscriptionsTab />, { wrapper: Wrapper });
+  const toggle = await screen.findByRole("switch", {
+    name: /only show titles/i,
+  });
+  fireEvent.click(toggle);
+  expect(await screen.findByRole("alert")).toBeDefined();
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
+});

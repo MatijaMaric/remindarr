@@ -29,6 +29,28 @@ import type { DrizzleDb } from "../platform/types";
 
 // ─── Table Definitions ──────────────────────────────────────────────────────
 
+export const wrappedShareTokens = sqliteTable(
+  "wrapped_share_tokens",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(),
+    token: text("token").notNull().unique(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.year] })],
+);
+
+export const rateLimitBuckets = sqliteTable(
+  "rate_limit_buckets",
+  {
+    key: text("key").primaryKey(),
+    count: integer("count").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [index("idx_rate_limit_expiry").on(table.expiresAt)],
+);
+
 export const titles = sqliteTable(
   "titles",
   {
@@ -1216,6 +1238,8 @@ export type UserAchievementEarnRow = typeof userAchievementEarns.$inferSelect;
 export type UserStreakRow = typeof userStreaks.$inferSelect;
 
 export const schemaExports = {
+  wrappedShareTokens,
+  rateLimitBuckets,
   titles,
   providers,
   offers,

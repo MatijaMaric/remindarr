@@ -271,3 +271,46 @@ describe("checkStreamingDepartures", () => {
     expect(counts.get("getUnalertedProvidersBulk")).toBe(titleIds.length);
   });
 });
+
+it("warns inside the lead window once, including the transition to removed availability", async () => {
+  await insertTracked(userId, TITLE_ID);
+  await insertArrivalAlert(userId, TITLE_ID, PROVIDER_ID, PROVIDER_NAME);
+  await insertNotifier(userId);
+  await getDb()
+    .update(users)
+    .set({ streamingDeparturesEnabled: 1, departureAlertLeadDays: 7 })
+    .run();
+  await insertOffer(TITLE_ID, PROVIDER_ID);
+  await getDb()
+    .update(offers)
+    .set({ availableTo: new Date(Date.now() + 10 * 86400000).toISOString() })
+    .run();
+  await checkStreamingDepartures([TITLE_ID]);
+  expect(mockSend).not.toHaveBeenCalled();
+  await getDb()
+    .update(offers)
+    .set({ availableTo: new Date(Date.now() + 86400000).toISOString() })
+    .run();
+  await checkStreamingDepartures([TITLE_ID]);
+  expect(mockSend).toHaveBeenCalledTimes(1);
+  await getDb().delete(offers).run();
+  await checkStreamingDepartures([TITLE_ID]);
+  expect(mockSend).toHaveBeenCalledTimes(1);
+});
+it("does not warn while another streaming offer from that provider has no end date", async () => {
+  await insertTracked(userId, TITLE_ID);
+  await insertArrivalAlert(userId, TITLE_ID, PROVIDER_ID, PROVIDER_NAME);
+  await insertNotifier(userId);
+  await getDb()
+    .update(users)
+    .set({ streamingDeparturesEnabled: 1, departureAlertLeadDays: 7 })
+    .run();
+  await insertOffer(TITLE_ID, PROVIDER_ID);
+  await getDb()
+    .update(offers)
+    .set({ availableTo: new Date(Date.now() + 86400000).toISOString() })
+    .run();
+  await insertOffer(TITLE_ID, PROVIDER_ID, "FREE");
+  await checkStreamingDepartures([TITLE_ID]);
+  expect(mockSend).not.toHaveBeenCalled();
+});

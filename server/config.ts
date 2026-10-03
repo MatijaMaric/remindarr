@@ -41,6 +41,11 @@ export const CONFIG = {
   BASE_URL: process.env.BASE_URL || "",
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || "",
 
+  TRUSTED_PROXIES: (process.env.TRUSTED_PROXIES || "")
+    .split(",")
+    .map((ip) => ip.trim())
+    .filter(Boolean),
+
   // Rate limit knob for /api/auth/* — keeps brute-force protection on by
   // default but lets e2e / CI raise the cap so test flows don't 429.
   AUTH_RATE_LIMIT_PER_MINUTE:

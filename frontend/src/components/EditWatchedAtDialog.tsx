@@ -1,3 +1,4 @@
+import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -65,11 +66,7 @@ export default function EditWatchedAtDialog({
     try {
       const result = await api.patchWatchHistoryEntry(entryId, toYMD(selected));
       onUpdated(result.watchedAt);
-      qc.invalidateQueries({ queryKey: ["watch-history"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: ["activity"] });
-      qc.invalidateQueries({ queryKey: ["calendar"] });
-      qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      void invalidateLibrary(qc);
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save";

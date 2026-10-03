@@ -1,3 +1,4 @@
+import { bunClientAddress } from "./middleware/client-address";
 import "./instrument";
 import { routePath } from "hono/route";
 import { Hono } from "hono";
@@ -176,6 +177,17 @@ setOnOidcSettingsChanged(async () => {
 });
 
 const app = new Hono<AppEnv>();
+app.use("*", async (c, next) => {
+  c.set(
+    "clientIp",
+    bunClientAddress(
+      c.env?.peerAddress,
+      c.req.header("x-forwarded-for"),
+      CONFIG.TRUSTED_PROXIES,
+    ),
+  );
+  await next();
+});
 
 // Inject platform and auth into context for route handlers
 app.use("*", async (c, next) => {
@@ -589,7 +601,8 @@ startWorker();
 
 const server = Bun.serve({
   port: CONFIG.PORT,
-  fetch: app.fetch,
+  fetch: (request, server) =>
+    app.fetch(request, { peerAddress: server.requestIP(request)?.address }),
 });
 
 logger.info("Server started", { port: CONFIG.PORT });

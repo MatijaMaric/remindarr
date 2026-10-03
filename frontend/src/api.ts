@@ -1864,3 +1864,18 @@ export async function getLeaderboard(
 export async function getMyStreak(signal?: AbortSignal): Promise<StreakData> {
   return fetchJson<StreakData>("/streak/me", { signal });
 }
+
+export function getWrappedShareToken(
+  year: number,
+  signal?: AbortSignal,
+): Promise<{ token: string | null }> {
+  return fetchJson(`/share/token/wrapped/${year}`, { signal });
+}
+export function regenerateWrappedShareToken(
+  year: number,
+): Promise<{ token: string }> {
+  return fetchJson(`/share/token/wrapped/${year}`, { method: "POST" });
+}
+export function revokeWrappedShareToken(year: number): Promise<unknown> {
+  return fetchJson(`/share/token/wrapped/${year}`, { method: "DELETE" });
+}

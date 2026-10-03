@@ -1,3 +1,8 @@
+import {
+  getWrappedShareToken,
+  setWrappedShareToken,
+  getUserByWrappedShareToken,
+} from "../db/repository/wrapped-shares";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -47,6 +52,58 @@ app.delete("/token", requireAuth, async (c) => {
   return c.json({ success: true });
 });
 
+const yearParam = z.object({
+  year: z.coerce
+    .number()
+    .int()
+    .min(1970)
+    .refine(
+      (year) => year <= new Date().getUTCFullYear(),
+      "Year cannot be in the future",
+    ),
+});
+
+app.get(
+  "/token/wrapped/:year",
+  requireAuth,
+  zValidator("param", yearParam),
+  async (c) => {
+    return c.json({
+      token: await getWrappedShareToken(
+        c.get("user")!.id,
+        c.req.valid("param").year,
+      ),
+    });
+  },
+);
+app.post(
+  "/token/wrapped/:year",
+  requireAuth,
+  zValidator("param", yearParam),
+  async (c) => {
+    const token = crypto.randomUUID().replace(/-/g, "");
+    await setWrappedShareToken(
+      c.get("user")!.id,
+      c.req.valid("param").year,
+      token,
+    );
+    return c.json({ token });
+  },
+);
+app.delete(
+  "/token/wrapped/:year",
+  requireAuth,
+  zValidator("param", yearParam),
+  async (c) => {
+    await setWrappedShareToken(
+      c.get("user")!.id,
+      c.req.valid("param").year,
+      null,
+    );
+    return c.json({ success: true });
+  },
+);
+
 // GET /api/share/watchlist/:token  (public)
 app.get(
   "/watchlist/:token",
@@ -77,7 +134,7 @@ app.get(
     if (year > currentYear) {
       return err(c, "Year cannot be in the future", 400);
     }
-    const user = await getUserByWatchlistShareToken(token);
+    const user = await getUserByWrappedShareToken(token, year);
     if (!user) {
       return c.json({ error: "Not found" }, 404);
     }
