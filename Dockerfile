@@ -5,6 +5,7 @@ COPY package.json bun.lock ./
 COPY frontend/package.json frontend/bun.lock ./frontend/
 RUN cd frontend && bun install --frozen-lockfile --ignore-scripts
 COPY frontend/ ./frontend/
+COPY scripts/ ./scripts/
 RUN cd frontend && bun run build
 
 # Stage 2: Build server
