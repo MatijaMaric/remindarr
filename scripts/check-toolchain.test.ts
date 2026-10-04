@@ -1,5 +1,11 @@
 import { expect, it } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkToolchain } from "./check-toolchain";
@@ -24,4 +30,21 @@ it("rejects compiler drift in either workspace with a repair instruction", () =>
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+it("Dockerfile frontend-build copies scripts before bun run build", () => {
+  const frontendPkg = JSON.parse(
+    readFileSync(new URL("../frontend/package.json", import.meta.url), "utf8"),
+  ) as { scripts: { build: string } };
+  const dockerfile = readFileSync(
+    new URL("../Dockerfile", import.meta.url),
+    "utf8",
+  );
+  const frontendStage = dockerfile.split(/FROM .* AS server-build/)[0];
+  const copyScripts = frontendStage.search(/COPY scripts\//);
+  const build = frontendStage.indexOf("bun run build");
+
+  expect(frontendPkg.scripts.build).toContain("../scripts/check-toolchain.ts");
+  expect(copyScripts).toBeGreaterThan(-1);
+  expect(build).toBeGreaterThan(copyScripts);
 });
