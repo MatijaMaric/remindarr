@@ -47,7 +47,8 @@ import { getCurrentTimeInTimezone, nextRetryAt } from "./time-utils";
 import {
   listEarnedSince,
   markAchievementsNotified,
-  upsertUserAchievement,
+  upsertUserAchievements,
+  type UserAchievementUpsert,
 } from "../db/repository/achievements";
 import { recomputeStreakFromHistory } from "../db/repository/streaks";
 import { getSetting, setSetting } from "../db/repository/settings";
@@ -506,6 +507,8 @@ async function handleEvaluateAchievements(data: string | null): Promise<void> {
     return;
   }
 
+  const pending: Array<UserAchievementUpsert & { kind: AchievementKind }> = [];
+
   for (const kind of kinds) {
     const matchingAchievements = ACHIEVEMENTS.filter((a) => a.kind === kind);
     for (const a of matchingAchievements) {
@@ -553,20 +556,12 @@ async function handleEvaluateAchievements(data: string | null): Promise<void> {
             });
             continue;
         }
-        const earnedAt = result.earned ? new Date().toISOString() : null;
-        const { newlyEarned } = await upsertUserAchievement(
-          userId,
-          a.key,
-          result.progress,
-          earnedAt,
-        );
-        if (newlyEarned) {
-          log.info("Achievement newly earned (deferred)", {
-            userId,
-            key: a.key,
-            kind,
-          });
-        }
+        pending.push({
+          key: a.key,
+          kind,
+          progress: result.progress,
+          earnedAt: result.earned ? new Date().toISOString() : null,
+        });
       } catch (err) {
         log.error("evaluate-achievements: error evaluating achievement", {
           userId,
@@ -576,6 +571,25 @@ async function handleEvaluateAchievements(data: string | null): Promise<void> {
         });
       }
     }
+  }
+
+  if (pending.length === 0) return;
+
+  try {
+    const results = await upsertUserAchievements(userId, pending);
+    for (const item of pending) {
+      if (!results.get(item.key)?.newlyEarned) continue;
+      log.info("Achievement newly earned (deferred)", {
+        userId,
+        key: item.key,
+        kind: item.kind,
+      });
+    }
+  } catch (err) {
+    log.error("evaluate-achievements: error persisting achievements", {
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -606,6 +620,7 @@ async function handleBackfillAchievements(
     try {
       await recomputeStreakFromHistory(userId);
 
+      const pending: UserAchievementUpsert[] = [];
       for (const a of ACHIEVEMENTS) {
         try {
           let result: { progress: number; earned: boolean };
@@ -665,18 +680,26 @@ async function handleBackfillAchievements(
             default:
               continue;
           }
-          const earnedAt = result.earned ? new Date().toISOString() : null;
-          await upsertUserAchievement(
-            userId,
-            a.key,
-            result.progress,
-            earnedAt,
-            { earnedNotified: 1 },
-          );
+          pending.push({
+            key: a.key,
+            progress: result.progress,
+            earnedAt: result.earned ? new Date().toISOString() : null,
+            earnedNotified: 1,
+          });
         } catch (err) {
           log.warn("Backfill: error evaluating achievement for user", {
             userId,
             key: a.key,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+      if (pending.length > 0) {
+        try {
+          await upsertUserAchievements(userId, pending);
+        } catch (err) {
+          log.warn("Backfill: error persisting achievements for user", {
+            userId,
             error: err instanceof Error ? err.message : String(err),
           });
         }

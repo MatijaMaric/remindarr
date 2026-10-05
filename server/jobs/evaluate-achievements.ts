@@ -18,10 +18,12 @@ import {
   evaluateLongFilm,
   evaluateMiniseriesCompleted,
   evaluateDeepShowCompleted,
+  type RepeatEvalResult,
 } from "../achievements/evaluate";
 import {
-  upsertUserAchievement,
+  upsertUserAchievements,
   appendUserAchievementEarns,
+  type UserAchievementUpsert,
 } from "../db/repository/achievements";
 import { logger } from "../logger";
 import { registerHandler } from "./worker";
@@ -45,6 +47,13 @@ export async function runEvaluateAchievements(
     log.warn("evaluate-achievements: invalid job data");
     return;
   }
+
+  const pending: Array<
+    UserAchievementUpsert & {
+      kind: AchievementKind;
+      newEarns?: RepeatEvalResult["newEarns"];
+    }
+  > = [];
 
   for (const kind of kinds) {
     const matchingAchievements = ACHIEVEMENTS.filter((a) => a.kind === kind);
@@ -70,22 +79,12 @@ export async function runEvaluateAchievements(
               (min, e) => (e.earnedAt < min ? e.earnedAt : min),
               repeatResult.newEarns[0].earnedAt,
             );
-            await upsertUserAchievement(
-              userId,
-              a.key,
-              repeatResult.progress,
-              firstEarnedAt,
-            );
-            await appendUserAchievementEarns(
-              userId,
-              a.key,
-              repeatResult.newEarns,
-            );
-            log.info("Repeatable achievement newly earned (deferred)", {
-              userId,
+            pending.push({
               key: a.key,
               kind,
-              newEarns: repeatResult.newEarns.length,
+              progress: repeatResult.progress,
+              earnedAt: firstEarnedAt,
+              newEarns: repeatResult.newEarns,
             });
           }
           continue;
@@ -155,20 +154,12 @@ export async function runEvaluateAchievements(
             continue;
         }
 
-        const earnedAt = result.earned ? new Date().toISOString() : null;
-        const { newlyEarned } = await upsertUserAchievement(
-          userId,
-          a.key,
-          result.progress,
-          earnedAt,
-        );
-        if (newlyEarned) {
-          log.info("Achievement newly earned (deferred)", {
-            userId,
-            key: a.key,
-            kind,
-          });
-        }
+        pending.push({
+          key: a.key,
+          kind,
+          progress: result.progress,
+          earnedAt: result.earned ? new Date().toISOString() : null,
+        });
       } catch (err) {
         log.error("evaluate-achievements: error evaluating achievement", {
           userId,
@@ -179,6 +170,45 @@ export async function runEvaluateAchievements(
         // Continue with other achievements even if one fails
       }
     }
+  }
+
+  if (pending.length === 0) return;
+
+  try {
+    const results = await upsertUserAchievements(userId, pending);
+    for (const item of pending) {
+      try {
+        if (item.newEarns && item.newEarns.length > 0) {
+          await appendUserAchievementEarns(userId, item.key, item.newEarns);
+          log.info("Repeatable achievement newly earned (deferred)", {
+            userId,
+            key: item.key,
+            kind: item.kind,
+            newEarns: item.newEarns.length,
+          });
+          continue;
+        }
+        if (results.get(item.key)?.newlyEarned) {
+          log.info("Achievement newly earned (deferred)", {
+            userId,
+            key: item.key,
+            kind: item.kind,
+          });
+        }
+      } catch (err) {
+        log.error("evaluate-achievements: error evaluating achievement", {
+          userId,
+          key: item.key,
+          kind: item.kind,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  } catch (err) {
+    log.error("evaluate-achievements: error persisting achievements", {
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 

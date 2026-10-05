@@ -52,12 +52,12 @@ describe("evaluate-achievements job handler", () => {
     expect(typeof handler).toBe("function");
   });
 
-  it("evaluates count_movies kind and calls upsertUserAchievement", async () => {
+  it("evaluates count_movies kind and batches user achievement upserts", async () => {
     const handler = getHandler("evaluate-achievements")!;
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
     const evalSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({
       progress: 5,
       earned: false,
@@ -68,24 +68,23 @@ describe("evaluate-achievements job handler", () => {
     );
 
     expect(evalSpy).toHaveBeenCalled();
-    expect(upsertSpy).toHaveBeenCalled();
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
 
-    // Verify upsert was called with the right userId and a non-null key
-    const calls = upsertSpy.mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    expect(calls[0][0]).toBe(userId);
-    expect(typeof calls[0][1]).toBe("string"); // key
+    const [calledUserId, entries] = upsertSpy.mock.calls[0];
+    expect(calledUserId).toBe(userId);
+    expect(entries.length).toBeGreaterThan(1);
+    expect(typeof entries[0].key).toBe("string");
 
     upsertSpy.mockRestore();
     evalSpy.mockRestore();
   });
 
-  it("evaluates count_episodes kind and calls upsertUserAchievement", async () => {
+  it("evaluates count_episodes kind and batches user achievement upserts", async () => {
     const handler = getHandler("evaluate-achievements")!;
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: true });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
     const evalSpy = spyOn(evaluate, "evaluateCountEpisodes").mockResolvedValue({
       progress: 100,
       earned: true,
@@ -96,13 +95,11 @@ describe("evaluate-achievements job handler", () => {
     );
 
     expect(evalSpy).toHaveBeenCalled();
-    expect(upsertSpy).toHaveBeenCalled();
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
 
-    // Verify earnedAt is a non-null ISO string when earned=true
-    const calls = upsertSpy.mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    // earnedAt (4th arg) should be a string (ISO date) when earned=true
-    expect(typeof calls[0][3]).toBe("string");
+    const entries = upsertSpy.mock.calls[0][1];
+    expect(entries.length).toBeGreaterThan(1);
+    expect(typeof entries[0].earnedAt).toBe("string");
 
     upsertSpy.mockRestore();
     evalSpy.mockRestore();
@@ -116,8 +113,8 @@ describe("evaluate-achievements job handler", () => {
     ).mockResolvedValue({ progress: 0, earned: false });
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
 
     await handler(
       makeJob({ userId, kinds: ["speed_binge_season"], titleId: undefined }),
@@ -138,8 +135,8 @@ describe("evaluate-achievements job handler", () => {
     ).mockResolvedValue({ progress: 3, earned: false });
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
 
     await handler(
       makeJob({ userId, kinds: ["speed_binge_season"], titleId: "movie-1" }),
@@ -156,8 +153,8 @@ describe("evaluate-achievements job handler", () => {
     const handler = getHandler("evaluate-achievements")!;
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
 
     // Missing userId
     await handler(makeJob({ kinds: ["count_movies"] }));
@@ -174,8 +171,8 @@ describe("evaluate-achievements job handler", () => {
     const handler = getHandler("evaluate-achievements")!;
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
     const evalSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({
       progress: 2,
       earned: false,
@@ -185,10 +182,9 @@ describe("evaluate-achievements job handler", () => {
       makeJob({ userId, kinds: ["count_movies"], titleId: undefined }),
     );
 
-    const calls = upsertSpy.mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    // earnedAt (4th arg) should be null when earned=false
-    expect(calls[0][3]).toBeNull();
+    const entries = upsertSpy.mock.calls[0][1];
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries[0].earnedAt).toBeNull();
 
     upsertSpy.mockRestore();
     evalSpy.mockRestore();
