@@ -197,4 +197,17 @@ describe("UserProfilePage error handling", () => {
     expect(screen.getByText("@alice")).toBeDefined();
     expect(screen.queryByText("Failed to load profile")).toBeNull();
   });
+
+  it("renders the hero when followed_people is omitted", async () => {
+    apiMock.getUserProfile.mockResolvedValue({
+      ...profileFixture,
+      show_watchlist: true,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("profile-hero")).toBeDefined();
+    });
+  });
 });

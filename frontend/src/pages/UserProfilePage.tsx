@@ -211,7 +211,7 @@ export default function UserProfilePage() {
             )}
             {show_watchlist && (
               <FollowedPeopleCard
-                people={followed_people}
+                people={followed_people ?? []}
                 isOwnProfile={is_own_profile}
               />
             )}

@@ -67,8 +67,10 @@ test.describe("Settings — Account tab", () => {
     // Auth provider field
     await expect(page.locator('input[value="local"]').first()).toBeVisible();
 
-    // Role field
-    await expect(page.locator('input[value="user"]').first()).toBeVisible();
+    // Role is the translated label (profile.user), not the raw role id.
+    await expect(page.getByRole("textbox", { name: "Role" })).toHaveValue(
+      "User",
+    );
 
     // Breadcrumb — the amber-highlighted tab name in the breadcrumb area
     await expect(page.getByText("/settings")).toBeVisible();

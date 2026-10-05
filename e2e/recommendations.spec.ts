@@ -94,9 +94,7 @@ test.describe("Recommendations", () => {
     // Message
     await expect(page.getByText(/You will love this one!/)).toBeVisible();
     // Track and Dismiss buttons
-    await expect(
-      page.getByRole("button", { name: "Add to watchlist" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Track" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Dismiss" })).toBeVisible();
   });
 
