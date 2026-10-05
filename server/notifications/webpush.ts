@@ -15,6 +15,19 @@ export class SubscriptionExpiredError extends Error {
   }
 }
 
+function failureDetail(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const cause =
+    err.cause instanceof Error
+      ? `${err.cause.name}: ${err.cause.message}`
+      : err.cause === undefined
+        ? ""
+        : String(err.cause);
+  return cause
+    ? `${err.name}: ${err.message} (cause: ${cause})`
+    : `${err.name}: ${err.message}`;
+}
+
 export class WebPushProvider implements NotificationProvider {
   readonly name = "webpush";
 
@@ -93,7 +106,8 @@ export class WebPushProvider implements NotificationProvider {
         throw new SubscriptionExpiredError(config.endpoint);
       }
       throw new Error(
-        `Web push failed (${statusCode ?? "unknown"}). Check the subscription and operator outbound policy.`,
+        `Web push failed (${statusCode ?? "unknown"}). Check the subscription and operator outbound policy. ${failureDetail(err)}`,
+        { cause: err },
       );
     }
   }
