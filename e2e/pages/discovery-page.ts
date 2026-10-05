@@ -32,7 +32,7 @@ export class DiscoveryPage extends BasePage {
 
   /** The Track/Tracked button on the hero card (always the first Track button on the page). */
   trackButton() {
-    return this.page.getByRole("button", { name: "Add to watchlist" }).first();
+    return this.page.getByRole("button", { name: "Track" }).first();
   }
 
   viewDetailsLink() {

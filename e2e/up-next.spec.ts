@@ -72,6 +72,20 @@ async function setupHomeMocks(
       json: { continue_watching: [], start_watching: [] },
     }),
   );
+  // FirstSetup GETs /api/track. An unmocked 401 signs the user out before
+  // Up Next can render. A non-empty library skips the guide's notifier fetch.
+  await page.route(
+    (url) => url.pathname === "/api/track",
+    (route) =>
+      route.fulfill({
+        json: {
+          titles: [{ id: "tt-existing" }],
+          count: 1,
+          profile_public: true,
+          profile_visibility: "public",
+        },
+      }),
+  );
   await page.route("**/api/user/settings/subscriptions**", (route) =>
     route.fulfill({ json: { providerIds: [] } }),
   );

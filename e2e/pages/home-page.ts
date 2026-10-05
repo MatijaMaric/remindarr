@@ -73,6 +73,21 @@ export class HomePage extends BasePage {
         json: { continue_watching: [], start_watching: [] },
       }),
     );
+    // FirstSetup GETs /api/track. An unmocked 401 dispatches auth:unauthorized
+    // and replaces the signed-in home with the landing page. A non-empty
+    // library also keeps the setup guide from fetching notifiers.
+    await this.page.route(
+      (url) => url.pathname === "/api/track",
+      (route) =>
+        route.fulfill({
+          json: {
+            titles: [{ id: "tt-existing" }],
+            count: 1,
+            profile_public: true,
+            profile_visibility: "public",
+          },
+        }),
+    );
     // AuthContext calls getSubscriptions() after auth succeeds.
     // If unmocked it hits the real server with a fake userId and gets 401,
     // which triggers the auth:unauthorized event and logs the user out.

@@ -60,6 +60,7 @@ const OWN_PROFILE_RESPONSE = {
   follower_count: 3,
   following_count: 5,
   is_following: false,
+  followed_people: [],
   pinned: [],
 };
 
@@ -119,6 +120,7 @@ const ALICE_PROFILE_RESPONSE = {
   follower_count: 10,
   following_count: 4,
   is_following: false,
+  followed_people: [],
   pinned: [],
 };
 
