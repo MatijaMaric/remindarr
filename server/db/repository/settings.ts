@@ -72,6 +72,7 @@ export async function setSetting(key: string, value: string) {
       })
       .run();
     forgetOidcRows();
+    forgetVapidRows();
   });
 }
 
@@ -80,6 +81,7 @@ export async function deleteSetting(key: string) {
     const db = getDb();
     await db.delete(settings).where(eq(settings.key, key)).run();
     forgetOidcRows();
+    forgetVapidRows();
   });
 }
 
@@ -99,6 +101,28 @@ export async function getSettingsByPrefix(
     }
     return result;
   });
+}
+
+// Same per-handle cache as OIDC. A /tick calls getVapidKeys once per web-push
+// send; without this each send re-reads the three vapid keys (#1330).
+const vapidRowsCache = new WeakMap<object, Promise<Record<string, string>>>();
+
+export function getVapidSettings(): Promise<Record<string, string>> {
+  const db = getDb();
+  const cached = vapidRowsCache.get(db);
+  if (cached) return cached;
+
+  let pending: Promise<Record<string, string>>;
+  pending = getSettingsByPrefix("vapid_").catch((err: unknown) => {
+    if (vapidRowsCache.get(db) === pending) vapidRowsCache.delete(db);
+    throw err;
+  });
+  vapidRowsCache.set(db, pending);
+  return pending;
+}
+
+function forgetVapidRows() {
+  vapidRowsCache.delete(getDb());
 }
 
 // ─── OIDC Config Resolution ─────────────────────────────────────────────────

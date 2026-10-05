@@ -5,7 +5,23 @@ CONFIG.DB_PATH = ":memory:";
 
 import { getVapidKeys, getVapidPublicKey } from "./vapid";
 import { getSetting, setSetting, deleteSetting } from "../db/repository";
+import { getRawDb } from "../db/bun-db";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+
+function countSettingsSelects(run: () => Promise<unknown>): Promise<number> {
+  const db = getRawDb();
+  const original = db.prepare.bind(db);
+  let count = 0;
+  db.prepare = ((sql: string) => {
+    if (/^\s*select\b/i.test(sql) && /from\s+"settings"/i.test(sql)) count++;
+    return original(sql);
+  }) as typeof db.prepare;
+  return run()
+    .finally(() => {
+      db.prepare = original as typeof db.prepare;
+    })
+    .then(() => count);
+}
 
 describe("vapid", () => {
   const originalPublic = CONFIG.VAPID_PUBLIC_KEY;
@@ -68,6 +84,35 @@ describe("vapid", () => {
     const keys = await getVapidKeys();
     expect(keys.publicKey).toBe("env-public");
     expect(keys.privateKey).toBe("env-private");
+  });
+
+  it("reads vapid settings once when one tick resolves keys twice", async () => {
+    await setSetting("vapid_public_key", "db-public");
+    await setSetting("vapid_private_key", "db-private");
+    await setSetting("vapid_subject", "mailto:db@example.com");
+
+    const selects = await countSettingsSelects(async () => {
+      const first = await getVapidKeys();
+      const second = await getVapidKeys();
+      expect(second).toEqual(first);
+      expect(first).toEqual({
+        publicKey: "db-public",
+        privateKey: "db-private",
+        subject: "mailto:db@example.com",
+      });
+    });
+
+    expect(selects).toBe(1);
+  });
+
+  it("sees a vapid subject written after the first read", async () => {
+    await setSetting("vapid_public_key", "db-public");
+    await setSetting("vapid_private_key", "db-private");
+    await setSetting("vapid_subject", "mailto:first@example.com");
+    expect((await getVapidKeys()).subject).toBe("mailto:first@example.com");
+
+    await setSetting("vapid_subject", "mailto:second@example.com");
+    expect((await getVapidKeys()).subject).toBe("mailto:second@example.com");
   });
 
   it("getVapidPublicKey returns only the public key", async () => {
