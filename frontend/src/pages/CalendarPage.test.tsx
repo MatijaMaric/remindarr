@@ -34,15 +34,45 @@ import "../i18n";
 const { default: CalendarPage, SlideOverPanel } =
   await import("./CalendarPage");
 
-function Wrapper({ children }: { children: ReactNode }) {
+// Signed-out session for calendar UI. Passed through the real AuthContext
+// provider — do not spyOn(useAuth). A module spy returning `user: null` stays
+// on the shared export and makes SettingsPage render nothing (`if (!user)
+// return null`), so Profile Visibility's waitFor times out in a full run.
+const signedOutAuth = {
+  user: null,
+  providers: null,
+  loading: false,
+  sessionStatus: "authenticated" as const,
+  subscriptions: null,
+  refreshSubscriptions: () => Promise.resolve(),
+  login: () => Promise.resolve(),
+  signup: () => Promise.resolve(),
+  logout: () => Promise.resolve(),
+  refresh: () => Promise.resolve(),
+};
+
+function Providers({
+  children,
+  path = "/",
+}: {
+  children: ReactNode;
+  path?: string;
+}) {
   return (
     <QueryClientProvider client={newTestClient()}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
+        <AuthContextModule.AuthContext value={signedOutAuth as any}>
+          {children}
+        </AuthContextModule.AuthContext>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
 
-let useAuthSpy: ReturnType<typeof spyOn<typeof AuthContextModule, "useAuth">>;
+function Wrapper({ children }: { children: ReactNode }) {
+  return <Providers>{children}</Providers>;
+}
+
 let useIsMobileSpy: ReturnType<
   typeof spyOn<typeof useIsMobileModule, "useIsMobile">
 >;
@@ -51,18 +81,6 @@ let mockWatchMovie: ReturnType<typeof spyOn<typeof api, "watchMovie">>;
 let mockUnwatchMovie: ReturnType<typeof spyOn<typeof api, "unwatchMovie">>;
 
 beforeEach(() => {
-  useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
-    user: null,
-    providers: null,
-    loading: false,
-    sessionStatus: "authenticated",
-    subscriptions: null,
-    refreshSubscriptions: mock(() => Promise.resolve()),
-    login: mock(() => Promise.resolve()),
-    signup: mock(() => Promise.resolve()),
-    logout: mock(() => Promise.resolve()),
-    refresh: mock(() => Promise.resolve()),
-  });
   useIsMobileSpy = spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(
     false,
   );
@@ -90,7 +108,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  useAuthSpy.mockRestore();
   useIsMobileSpy.mockRestore();
   mockWatchMovie.mockRestore();
   mockUnwatchMovie.mockRestore();
@@ -121,11 +138,9 @@ describe("CalendarPage", () => {
   it("shows an error in week view when the calendar fetch fails", async () => {
     apiSpies[0].mockRejectedValue(new Error("network"));
     render(
-      <QueryClientProvider client={newTestClient()}>
-        <MemoryRouter initialEntries={["/?view=week"]}>
-          <CalendarPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <Providers path="/?view=week">
+        <CalendarPage />
+      </Providers>,
     );
 
     expect(
@@ -149,11 +164,9 @@ describe("CalendarPage", () => {
 
   it("opens a labelled day dialog and restores its invoking day on Escape or close", async () => {
     render(
-      <QueryClientProvider client={newTestClient()}>
-        <MemoryRouter initialEntries={["/?month=2024-03"]}>
-          <CalendarPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <Providers path="/?month=2024-03">
+        <CalendarPage />
+      </Providers>,
     );
     const day = await screen.findByRole("button", { name: "20", exact: true });
     const dateLabel = new Date(2024, 2, 20).toLocaleDateString(undefined, {
@@ -351,11 +364,9 @@ describe("CalendarPage", () => {
 
   it("?view=week param activates week view", async () => {
     render(
-      <QueryClientProvider client={newTestClient()}>
-        <MemoryRouter initialEntries={["/?view=week"]}>
-          <CalendarPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <Providers path="/?view=week">
+        <CalendarPage />
+      </Providers>,
     );
     const columns = await waitFor(() =>
       screen.getAllByTestId("week-day-column"),
@@ -400,11 +411,9 @@ describe("CalendarPage", () => {
 
   it("?density=compact param activates compact density", () => {
     render(
-      <QueryClientProvider client={newTestClient()}>
-        <MemoryRouter initialEntries={["/?density=compact"]}>
-          <CalendarPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <Providers path="/?density=compact">
+        <CalendarPage />
+      </Providers>,
     );
     const compactBtn = screen.getByRole("button", { name: /compact/i });
     expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
@@ -442,20 +451,18 @@ describe("SlideOverPanel — movie watched toggle", () => {
     onToggleTitleWatched?: (id: string, watched: boolean) => void,
   ) {
     return render(
-      <QueryClientProvider client={newTestClient()}>
-        <MemoryRouter>
-          <SlideOverPanel
-            selectedDate="2024-03-01"
-            items={[{ type: "title", data: movieTitle }]}
-            episodes={[]}
-            titles={[movieTitle]}
-            onClose={noop}
-            onToggleWatched={noop as never}
-            onBulkToggle={noop as never}
-            onToggleTitleWatched={onToggleTitleWatched}
-          />
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <Providers>
+        <SlideOverPanel
+          selectedDate="2024-03-01"
+          items={[{ type: "title", data: movieTitle }]}
+          episodes={[]}
+          titles={[movieTitle]}
+          onClose={noop}
+          onToggleWatched={noop as never}
+          onBulkToggle={noop as never}
+          onToggleTitleWatched={onToggleTitleWatched}
+        />
+      </Providers>,
     );
   }
 
