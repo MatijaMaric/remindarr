@@ -88,6 +88,10 @@ beforeEach(async () => {
 });
 
 afterAll(() => {
+  mockGetLibrarySections.mockRestore();
+  mockGetWatchedMovies.mockRestore();
+  mockGetWatchedEpisodes.mockRestore();
+  mockGetShowsInSection.mockRestore();
   teardownTestDb();
 });
 
