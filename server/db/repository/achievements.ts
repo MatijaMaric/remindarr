@@ -20,6 +20,58 @@ import { getCache } from "../../cache";
 
 export type { AchievementDefRow, UserAchievementRow, UserAchievementEarnRow };
 
+function achievementMetadata(a: Achievement): string | null {
+  const metadataFields: Record<string, unknown> = {};
+  if (a.genre !== undefined) metadataFields.genre = a.genre;
+  if (a.seasons !== undefined) metadataFields.seasons = a.seasons;
+  if (a.windowHours !== undefined) metadataFields.windowHours = a.windowHours;
+  return Object.keys(metadataFields).length > 0
+    ? JSON.stringify(metadataFields)
+    : null;
+}
+
+function achievementDefValues(a: Achievement, meta?: AchievementMeta) {
+  return {
+    key: a.key,
+    kind: a.kind,
+    threshold: a.threshold,
+    points: a.points,
+    title: a.title,
+    description: a.description,
+    icon: a.icon,
+    metadata: achievementMetadata(a),
+    repeatable: meta?.repeatable ? 1 : 0,
+    tier: meta?.tier ?? "one-shot",
+    family: meta?.family ?? null,
+    rungIndex: meta?.rungIndex ?? null,
+    category: meta?.category ?? "special",
+  };
+}
+
+function achievementDefUnchanged(
+  row: AchievementDefRow | undefined,
+  values: ReturnType<typeof achievementDefValues>,
+): boolean {
+  if (!row) return false;
+  return (
+    row.kind === values.kind &&
+    row.threshold === values.threshold &&
+    row.points === values.points &&
+    row.title === values.title &&
+    row.description === values.description &&
+    row.icon === values.icon &&
+    (row.metadata ?? null) === values.metadata &&
+    row.repeatable === values.repeatable &&
+    row.tier === values.tier &&
+    (row.family ?? null) === values.family &&
+    (row.rungIndex ?? null) === values.rungIndex &&
+    row.category === values.category
+  );
+}
+
+// 13 bound params per row. D1 caps a statement at 100, so 7 rows = 91.
+const ACHIEVEMENT_DEF_CHUNK = 7;
+
 /**
  * Upsert a single achievement definition into the achievements table.
  * metadata stores optional fields (genre, seasons, windowHours) as JSON.
@@ -31,14 +83,7 @@ export async function upsertAchievementDef(
 ): Promise<void> {
   return traceDbQuery("upsertAchievementDef", async () => {
     const db = getDb();
-    const metadataFields: Record<string, unknown> = {};
-    if (a.genre !== undefined) metadataFields.genre = a.genre;
-    if (a.seasons !== undefined) metadataFields.seasons = a.seasons;
-    if (a.windowHours !== undefined) metadataFields.windowHours = a.windowHours;
-    const metadata =
-      Object.keys(metadataFields).length > 0
-        ? JSON.stringify(metadataFields)
-        : null;
+    const metadata = achievementMetadata(a);
 
     const newCols = meta
       ? {
@@ -77,6 +122,53 @@ export async function upsertAchievementDef(
         },
       })
       .run();
+  });
+}
+
+/**
+ * Upsert many achievement definitions in chunked multi-row statements.
+ * Skips the write when every row already matches. One Sentry span for the
+ * whole call — the cron must not emit `upsertAchievementDef` once per row.
+ */
+export async function upsertAchievementDefs(
+  entries: ReadonlyArray<{ achievement: Achievement; meta?: AchievementMeta }>,
+): Promise<void> {
+  if (entries.length === 0) return;
+  return traceDbQuery("upsertAchievementDefs", async () => {
+    const db = getDb();
+    const rows = entries.map(({ achievement, meta }) =>
+      achievementDefValues(achievement, meta),
+    );
+    const existing = await db.select().from(achievements).all();
+    const byKey = new Map(existing.map((row) => [row.key, row]));
+    if (rows.every((row) => achievementDefUnchanged(byKey.get(row.key), row))) {
+      return;
+    }
+
+    for (let i = 0; i < rows.length; i += ACHIEVEMENT_DEF_CHUNK) {
+      const chunk = rows.slice(i, i + ACHIEVEMENT_DEF_CHUNK);
+      await db
+        .insert(achievements)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: achievements.key,
+          set: {
+            kind: sql`excluded.kind`,
+            threshold: sql`excluded.threshold`,
+            points: sql`excluded.points`,
+            title: sql`excluded.title`,
+            description: sql`excluded.description`,
+            icon: sql`excluded.icon`,
+            metadata: sql`excluded.metadata`,
+            repeatable: sql`excluded.repeatable`,
+            tier: sql`excluded.tier`,
+            family: sql`excluded.family`,
+            rungIndex: sql`excluded.rung_index`,
+            category: sql`excluded.category`,
+          },
+        })
+        .run();
+    }
   });
 }
 
